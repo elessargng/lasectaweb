@@ -66,13 +66,13 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, anchorEl, play }) => {
         transform,
         zIndex: 100,
       }}
-      className="w-80 bg-surface border border-outline-ghost/90 text-on-surface p-5 rounded-md shadow-2xl pointer-events-none select-none animate-in fade-in-0 zoom-in-95 duration-200"
+      className="w-84 bg-surface border border-outline-ghost/90 text-on-surface p-5 rounded-md shadow-2xl pointer-events-none select-none animate-in fade-in-0 zoom-in-95 duration-200"
     >
       {/* Runic Corner Details */}
-      <span className="absolute top-1.5 left-2.5 text-[9px] text-theme-main/40 font-display select-none">ᚠ</span>
-      <span className="absolute top-1.5 right-2.5 text-[9px] text-theme-main/40 font-display select-none">ᚦ</span>
-      <span className="absolute bottom-1.5 left-2.5 text-[9px] text-theme-main/40 font-display select-none">ᚨ</span>
-      <span className="absolute bottom-1.5 right-2.5 text-[9px] text-theme-main/40 font-display select-none">ᛟ</span>
+      <span className="absolute top-1.5 left-2.5 text-[10px] text-theme-main/40 font-display select-none">ᚠ</span>
+      <span className="absolute top-1.5 right-2.5 text-[10px] text-theme-main/40 font-display select-none">ᚦ</span>
+      <span className="absolute bottom-1.5 left-2.5 text-[10px] text-theme-main/40 font-display select-none">ᚨ</span>
+      <span className="absolute bottom-1.5 right-2.5 text-[10px] text-theme-main/40 font-display select-none">ᛟ</span>
 
       {/* Header Info */}
       <div className="flex flex-col gap-1 pr-2">
@@ -80,19 +80,19 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, anchorEl, play }) => {
           {play.name}
         </h4>
         {play.script_name && play.script_name !== play.name && (
-          <p className="text-xs text-on-surface-muted font-body italic">
+          <p className="text-base text-on-surface-muted font-body font-bold italic">
             Guion: {play.script_name}
           </p>
         )}
       </div>
 
-      <div className="border-b border-outline-ghost/40 my-3"></div>
+      <div className="border-b border-outline-ghost/40 my-3.5"></div>
 
       {/* Play Details */}
-      <div className="flex flex-col gap-2.5 text-[15px] font-body">
+      <div className="flex flex-col gap-3 text-[17px] font-body">
         {/* Date and time */}
         <div className="flex items-center gap-2.5 text-on-surface">
-          <Calendar className="w-4 h-4 text-theme-main shrink-0" />
+          <Calendar className="w-5 h-5 text-theme-main shrink-0" />
           <span>
             {capitalizedWeekday}, {dateFormatted} — <span className="font-semibold text-white">{timeFormatted}h</span>
           </span>
@@ -102,29 +102,29 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, anchorEl, play }) => {
         <div className="flex items-center gap-2.5">
           {play.in_person ? (
             <>
-              <MapPin className="w-4 h-4 text-theme-main shrink-0" />
+              <MapPin className="w-5 h-5 text-theme-main shrink-0" />
               <span className="text-on-surface-muted">Presencial</span>
             </>
           ) : (
             <>
-              <Globe className="w-4 h-4 text-theme-main shrink-0" />
+              <Globe className="w-5 h-5 text-theme-main shrink-0" />
               <span className="text-on-surface-muted">Online</span>
             </>
           )}
         </div>
       </div>
 
-      <div className="border-b border-outline-ghost/40 my-3"></div>
+      <div className="border-b border-outline-ghost/40 my-3.5"></div>
 
       {/* Player Lists / RSVP */}
       <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2 text-theme-main font-display text-xs tracking-wider uppercase font-semibold">
-          <Users className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-2.5 text-theme-main font-display text-sm tracking-wider uppercase font-semibold">
+          <Users className="w-[18px] h-[18px]" />
           <span>Listas de Inscripción</span>
         </div>
 
         {play.lists && play.lists.length > 0 ? (
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-3">
             {play.lists
               .sort((a, b) => a.order - b.order)
               .map((list) => {
@@ -134,12 +134,12 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, anchorEl, play }) => {
                   : 0;
 
                 return (
-                  <div key={list.id} className="flex flex-col gap-1">
-                    <div className="flex justify-between items-baseline text-sm">
+                  <div key={list.id} className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-baseline text-base">
                       <span className="font-body text-on-surface-muted font-medium">
                         {list.name}
                       </span>
-                      <span className="font-display text-xs text-on-surface font-semibold">
+                      <span className="font-display text-sm text-on-surface font-semibold">
                         {list.player_count}
                         {list.max_players !== null && (
                           <span className="text-on-surface-muted font-normal"> / {list.max_players}</span>
@@ -148,7 +148,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, anchorEl, play }) => {
                     </div>
 
                     {list.max_players !== null && (
-                      <div className="w-full h-1.5 bg-surface-low border border-outline-ghost/30 rounded-sm overflow-hidden">
+                      <div className="w-full h-2 bg-surface-low border border-outline-ghost/30 rounded-sm overflow-hidden">
                         <div
                           style={{ width: `${percent}%` }}
                           className={`h-full rounded-sm transition-all duration-500 ${
@@ -162,7 +162,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, anchorEl, play }) => {
               })}
           </div>
         ) : (
-          <p className="text-xs text-on-surface-muted font-body italic">
+          <p className="text-sm text-on-surface-muted font-body italic">
             No hay listas configuradas en esta partida.
           </p>
         )}
