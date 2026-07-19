@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
+import { Modal } from "./Modal";
 
 import {
   CirclePlus
@@ -53,6 +54,8 @@ function isSameDay(dateStr: string, target: Date): boolean {
 
 function MiniCalendar({ plays, narrador }: { plays: PublicPlaySchema[], narrador: boolean }) {
   const days = getNextDays(new Date(), 7);
+  const [hoveredPlay, setHoveredPlay] = useState<PublicPlaySchema | null>(null);
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
   return (
     <div className="w-full overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-thin scrollbar-thumb-theme-main/20 scrollbar-track-transparent">
@@ -93,7 +96,14 @@ function MiniCalendar({ plays, narrador }: { plays: PublicPlaySchema[], narrador
                         href={playLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        title={`Ver partida: ${play.name}`}
+                        onMouseEnter={(e) => {
+                          setHoveredPlay(play);
+                          setAnchorEl(e.currentTarget);
+                        }}
+                        onMouseLeave={() => {
+                          setHoveredPlay(null);
+                          setAnchorEl(null);
+                        }}
                         className="block w-full py-1 px-1.5 bg-theme-container/40 hover:bg-theme-main/30 text-theme-main border border-theme-main/30 hover:border-theme-main rounded text-xs md:text-sm font-semibold text-center transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 shadow-sm"
                       >
                         {playTime}
@@ -116,6 +126,12 @@ function MiniCalendar({ plays, narrador }: { plays: PublicPlaySchema[], narrador
           );
         })}
       </div>
+
+      <Modal
+        isOpen={!!hoveredPlay}
+        anchorEl={anchorEl}
+        play={hoveredPlay}
+      />
     </div>
   );
 }
