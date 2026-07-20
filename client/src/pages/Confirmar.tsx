@@ -4,6 +4,7 @@ import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
 import Cita from '../components/Cita';
 import { Check, X, Loader2 } from 'lucide-react';
+import { parseApiResponse } from '../utils/api';
 
 const Confirmar = () => {
   const [searchParams] = useSearchParams();
@@ -27,11 +28,7 @@ const Confirmar = () => {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api';
         const response = await fetch(`${apiUrl}/auth/confirm?token=${token}`);
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'No se pudo verificar el token.');
-        }
+        const data = await parseApiResponse(response);
 
         setStatus('success');
         setMessage(data.message || 'Tu cuenta ha sido verificada correctamente.');

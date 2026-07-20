@@ -29,14 +29,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const savedToken = Cookies.get('token');
-    const savedUser = Cookies.get('user');
+    let savedToken = localStorage.getItem('token');
+    let savedUser = localStorage.getItem('user');
+
+    // Migration logic from legacy cookies if present
+    if (!savedToken || !savedUser) {
+      const cookieToken = Cookies.get('token');
+      const cookieUser = Cookies.get('user');
+      if (cookieToken && cookieUser) {
+        savedToken = cookieToken;
+        savedUser = cookieUser;
+        try {
+          localStorage.setItem('token', cookieToken);
+          localStorage.setItem('user', cookieUser);
+        } catch (e) {
+          console.error('Error migrating cookies to localStorage', e);
+        }
+      }
+      // Clean up legacy cookies
+      Cookies.remove('token');
+      Cookies.remove('user');
+    }
 
     if (savedToken && savedUser) {
       try {
         setToken(savedToken);
         setUser(JSON.parse(savedUser));
       } catch (e) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
         Cookies.remove('token');
         Cookies.remove('user');
       }
@@ -47,13 +68,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = (userData: User, newToken: string) => {
     setUser(userData);
     setToken(newToken);
-    Cookies.set('token', newToken, { expires: 7 }); // expires in 7 days
-    Cookies.set('user', JSON.stringify(userData), { expires: 7 });
+    try {
+      localStorage.setItem('token', newToken);
+      localStorage.setItem('user', JSON.stringify(userData));
+    } catch (e) {
+      console.error('Error saving to localStorage', e);
+    }
+    // Clean up legacy cookies
+    Cookies.remove('token');
+    Cookies.remove('user');
   };
 
   const logout = () => {
     setUser(null);
     setToken(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     Cookies.remove('token');
     Cookies.remove('user');
   };
@@ -62,7 +92,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (user) {
       const updatedUser = { ...user, ...updateData };
       setUser(updatedUser);
-      Cookies.set('user', JSON.stringify(updatedUser), { expires: 7 });
+      try {
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      } catch (e) {
+        console.error('Error updating localStorage user', e);
+      }
     }
   };
 

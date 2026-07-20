@@ -40,6 +40,10 @@ import { seedAdminUser } from './utils/seeder';
 import { VillacuervosRepository } from './repositories/VillacuervosRepository';
 import { VillacuervosService } from './services/VillacuervosService';
 import { VillacuervosController } from './controllers/VillacuervosController';
+import { TwitterRepository } from './repositories/TwitterRepository';
+import { InstagramRepository } from './repositories/InstagramRepository';
+import { SocialMediaService } from './services/SocialMediaService';
+import { VigilanteService } from './services/VigilanteService';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -49,7 +53,15 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// Serve profile picture uploads statically
+const uploadDirSetting = process.env.UPLOAD_DIR || './uploads';
+const uploadPath = path.isAbsolute(uploadDirSetting)
+  ? uploadDirSetting
+  : path.resolve(process.cwd(), uploadDirSetting);
+app.use('/uploads', express.static(uploadPath));
 
 // Initialize dependencies
 const userRepository = new UserRepository();
@@ -64,6 +76,11 @@ const threadController = new ThreadController(threadService);
 const villacuervosRepository = new VillacuervosRepository();
 const villacuervosService = new VillacuervosService(villacuervosRepository, userRepository);
 const villacuervosController = new VillacuervosController(villacuervosService);
+
+const twitterRepository = new TwitterRepository();
+const instagramRepository = new InstagramRepository();
+const socialMediaService = new SocialMediaService(twitterRepository, instagramRepository);
+const vigilanteService = new VigilanteService(villacuervosService, socialMediaService);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', api: 'La Secta' });
@@ -106,6 +123,9 @@ DatabaseRepository.getInstance()
     
     // Seed admin user if configured
     await seedAdminUser(userRepository);
+    
+    // Arrancar el servicio de vigilancia de partidas
+    vigilanteService.start();
     
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

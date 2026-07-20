@@ -5,6 +5,7 @@ import AuthModal from './AuthModal';
 import Button from './Button';
 import HeaderLink from './HeaderLink';
 import { Key } from 'lucide-react';
+import { getAvatarUrl } from '../utils/api';
 
 const Layout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -50,7 +51,7 @@ const Layout = () => {
                 {/* Desktop Full Profile */}
                 <Link to="/profile" className="hidden lg:flex items-center gap-4 hover:bg-surface-container-low p-2 pr-6 rounded-full ring-1 ring-outline-ghost transition-all cursor-pointer group shadow-md" aria-label="Perfil de usuario">
                   <div className="w-12 h-12 rounded-full bg-theme-container flex items-center justify-center ring-1 ring-theme-main/50 group-hover:ring-theme-main shadow-[0_0_8px_rgba(var(--color-theme-main),0.2)] transition-all overflow-hidden">
-                    <img src={user.profilePicture || "/avatar.png"} alt="Avatar del usuario" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
+                    <img src={getAvatarUrl(user.profilePicture)} alt="Avatar del usuario" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
                   </div>
                   <div className="flex flex-col items-start leading-tight">
                     <span className="text-lg font-display font-medium text-on-surface group-hover:text-theme-main transition-colors">{user.username}</span>
@@ -63,7 +64,7 @@ const Layout = () => {
                 </Link>
                 {/* Mobile / Tablet Avatar Only */}
                 <Link to="/profile" className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full bg-theme-container ring-1 ring-theme-main/50 hover:ring-theme-main shadow-[0_0_8px_rgba(var(--color-theme-main),0.2)] overflow-hidden shrink-0" aria-label="Perfil de usuario">
-                  <img src={user.profilePicture || "/avatar.png"} alt="Avatar del usuario" className="w-full h-full object-cover opacity-90 transition-opacity" />
+                  <img src={getAvatarUrl(user.profilePicture)} alt="Avatar del usuario" className="w-full h-full object-cover opacity-90 transition-opacity" />
                 </Link>
               </>
             ) : (
@@ -116,7 +117,7 @@ const Layout = () => {
             <div className="mb-8 pb-8 border-b border-outline-ghost">
               <Link to="/profile" onClick={closeMenu} className="flex items-center gap-4 hover:bg-surface-container-low p-3 rounded-xl ring-1 ring-outline-ghost transition-all group">
                 <div className="w-14 h-14 rounded-full bg-theme-container flex items-center justify-center ring-1 ring-theme-main/50 group-hover:ring-theme-main shadow-[0_0_8px_rgba(var(--color-theme-main),0.2)] transition-all overflow-hidden shrink-0">
-                  <img src={user.profilePicture || "/avatar.png"} alt="Avatar del usuario" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
+                  <img src={getAvatarUrl(user.profilePicture)} alt="Avatar del usuario" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
                 </div>
                 <div className="flex flex-col items-start leading-tight">
                   <span className="text-xl font-display font-medium text-on-surface group-hover:text-theme-main transition-colors">{user.username}</span>

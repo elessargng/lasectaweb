@@ -5,6 +5,7 @@ import Button from '../components/Button';
 import PageHeader from '../components/PageHeader';
 import { Check, Plus } from 'lucide-react';
 import { compressImage } from '../utils/image';
+import { parseApiResponse, getAvatarUrl } from '../utils/api';
 
 const AVATAR_OPTIONS = [
   { id: 'default', url: '/avatar.png', label: 'Adepto' },
@@ -72,10 +73,8 @@ const Profile = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-      if (response.ok) {
-        const data = await response.json();
-        setRequests(data);
-      }
+      const data = await parseApiResponse(response);
+      setRequests(data);
     } catch (err) {
       console.error('Error fetching role requests', err);
     }
@@ -118,10 +117,7 @@ const Profile = () => {
         },
         body: JSON.stringify({ requestedRole })
       });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'No se pudo procesar la solicitud.');
-      }
+      await parseApiResponse(response);
       setSuccess(`Solicitud enviada con éxito para convertirte en ${requestedRole === 'editor' ? 'Editor' : 'Narrador'}.`);
       fetchMyRequests();
     } catch (err: any) {
@@ -150,11 +146,7 @@ const Profile = () => {
         body: JSON.stringify(formData)
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update profile');
-      }
+      const data = await parseApiResponse(response);
 
       updateUser(data);
       setSuccess('Perfil actualizado correctamente');
@@ -195,7 +187,7 @@ const Profile = () => {
           <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-6 md:gap-8 mb-8">
             <div className="w-32 h-32 rounded-full overflow-hidden border border-outline-ghost shadow-md flex-shrink-0 bg-background ring-2 ring-theme-main/50">
               <img
-                src={isEditing ? (formData.profilePicture || "/avatar.png") : (user.profilePicture || "/avatar.png")}
+                src={getAvatarUrl(isEditing ? formData.profilePicture : user.profilePicture)}
                 alt="Avatar"
                 className="w-full h-full object-cover grayscale-[0.2] transition-all duration-700"
               />
@@ -325,7 +317,7 @@ const Profile = () => {
                       variant="text"
                       className={`relative w-16 h-16 rounded overflow-hidden flex-shrink-0 transition-all ${formData.profilePicture === avatar.url ? 'ring-2 ring-theme-main ring-offset-2 ring-offset-surface' : 'opacity-70 hover:opacity-100 ring-1 ring-outline-ghost'}`}
                     >
-                      <img src={avatar.url} alt={avatar.label} className="w-full h-full object-cover" />
+                      <img src={getAvatarUrl(avatar.url)} alt={avatar.label} className="w-full h-full object-cover" />
                       {formData.profilePicture === avatar.url && (
                         <div className="absolute inset-0 bg-theme-main/20 flex justify-center items-center backdrop-blur-[1px]">
                           <Check className="text-white drop-shadow-md" size={24} />

@@ -17,7 +17,7 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
 
     jwt.verify(token, JWT_SECRET, (err, user) => {
       if (err) {
-        res.sendStatus(403);
+        res.status(403).json({ error: 'Tu sesión ha expirado o el token es inválido. Por favor, vuelve a iniciar sesión.' });
         return;
       }
 
@@ -25,6 +25,6 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
       next();
     });
   } else {
-    res.sendStatus(401);
+    res.status(401).json({ error: 'No autorizado. Token no proporcionado.' });
   }
 };

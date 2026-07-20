@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
 import { Check, X, Shield, BookOpen, User as UserIcon, Loader2 } from 'lucide-react';
+import { parseApiResponse, getAvatarUrl } from '../utils/api';
 
 interface UserRow {
   id: string;
@@ -53,8 +54,7 @@ const Gestion = () => {
       const usersRes = await fetch(`${apiUrl}/auth/users`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!usersRes.ok) throw new Error('Error al cargar la lista de usuarios.');
-      const usersData = await usersRes.json();
+      const usersData = await parseApiResponse(usersRes);
       setUsers(usersData);
 
       // Obtener solicitudes si es admin o narrador
@@ -62,10 +62,8 @@ const Gestion = () => {
         const reqsRes = await fetch(`${apiUrl}/auth/role-requests/pending`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (reqsRes.ok) {
-          const reqsData = await reqsRes.json();
-          setRequests(reqsData);
-        }
+        const reqsData = await parseApiResponse(reqsRes);
+        setRequests(reqsData);
       }
     } catch (err: any) {
       setError(err.message || 'Error de conexión.');
@@ -102,8 +100,7 @@ const Gestion = () => {
         },
         body: JSON.stringify({ approve })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'No se pudo resolver la solicitud.');
+      await parseApiResponse(res);
 
       setSuccess(approve ? 'Solicitud aprobada con éxito.' : 'Solicitud rechazada con éxito.');
       fetchUsersAndRequests();
@@ -144,8 +141,7 @@ const Gestion = () => {
         body: JSON.stringify({ roles: newRoles })
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al actualizar roles.');
+      await parseApiResponse(res);
 
       setSuccess(`Roles de ${targetUser.username} actualizados correctamente.`);
       fetchUsersAndRequests();
@@ -272,7 +268,7 @@ const Gestion = () => {
                         <td className="py-4 px-6">
                           <div className="flex items-center gap-4">
                             <div className="w-10 h-10 rounded-full overflow-hidden border border-outline-ghost bg-background flex-shrink-0">
-                              <img src={u.profilePicture || "/avatar.png"} alt="Avatar" className="w-full h-full object-cover" />
+                              <img src={getAvatarUrl(u.profilePicture)} alt="Avatar" className="w-full h-full object-cover" />
                             </div>
                             <div className="flex flex-col">
                               <p className="text-on-surface font-medium leading-tight">{u.realName || u.username}</p>

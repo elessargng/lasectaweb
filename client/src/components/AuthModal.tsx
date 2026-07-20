@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { X, Check, Plus } from 'lucide-react';
 import Button from './Button';
 import { compressImage } from '../utils/image';
+import { parseApiResponse } from '../utils/api';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -90,11 +91,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         body: JSON.stringify(body)
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Algo salió mal en el ritual.');
-      }
+      const data = await parseApiResponse(response);
 
       if (isLogin) {
         login(data.user, data.token);
