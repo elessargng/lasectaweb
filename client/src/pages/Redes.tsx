@@ -94,7 +94,7 @@ const Redes = () => {
 
               {/* TikTok */}
               <a
-                href="https://www.tiktok.com/@lasecta.botc"
+                href="https://www.tiktok.com/@lasectabotc"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group flex items-start gap-4 bg-surface-low hover:bg-surface-highest border border-outline-ghost hover:border-theme-main/30 p-5 rounded transition-all duration-300"
