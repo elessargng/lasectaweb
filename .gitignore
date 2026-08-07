@@ -50,6 +50,7 @@ database.sqlite
 
 # Compilados de Node/TypeScript
 server/dist/
+server/uploads/
 dist/
 
 CLAUDE.md
