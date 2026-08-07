@@ -44,13 +44,17 @@ import { TwitterRepository } from './repositories/TwitterRepository';
 import { InstagramRepository } from './repositories/InstagramRepository';
 import { SocialMediaService } from './services/SocialMediaService';
 import { VigilanteService } from './services/VigilanteService';
+import { LibraryRepository } from './repositories/LibraryRepository';
+import { LibraryService } from './services/LibraryService';
+import { LibraryController } from './controllers/LibraryController';
+import { libraryUpload } from './middlewares/upload';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors({
   origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -81,6 +85,10 @@ const twitterRepository = new TwitterRepository();
 const instagramRepository = new InstagramRepository();
 const socialMediaService = new SocialMediaService(twitterRepository, instagramRepository);
 const vigilanteService = new VigilanteService(villacuervosService, socialMediaService);
+
+const libraryRepository = new LibraryRepository();
+const libraryService = new LibraryService(libraryRepository, userRepository);
+const libraryController = new LibraryController(libraryService);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', api: 'La Secta' });
@@ -116,6 +124,20 @@ app.get('/api/villacuervos/plays/pending', villacuervosController.getPendingPlay
 app.post('/api/villacuervos/plays', authenticateJWT as express.RequestHandler, villacuervosController.createPlay as express.RequestHandler);
 app.patch('/api/villacuervos/plays/:playSlug', authenticateJWT as express.RequestHandler, villacuervosController.updatePlay as express.RequestHandler);
 
+// Rutas de La Biblioteca
+app.get('/api/library/tree', libraryController.getTree);
+app.post('/api/library/sections', authenticateJWT as express.RequestHandler, libraryController.createSection as express.RequestHandler);
+app.put('/api/library/sections/:id', authenticateJWT as express.RequestHandler, libraryController.updateSection as express.RequestHandler);
+app.delete('/api/library/sections/:id', authenticateJWT as express.RequestHandler, libraryController.deleteSection as express.RequestHandler);
+
+app.post('/api/library/documents', authenticateJWT as express.RequestHandler, libraryUpload.single('file'), libraryController.createDocument as express.RequestHandler);
+app.put('/api/library/documents/:id', authenticateJWT as express.RequestHandler, libraryController.updateDocument as express.RequestHandler);
+app.delete('/api/library/documents/:id', authenticateJWT as express.RequestHandler, libraryController.deleteDocument as express.RequestHandler);
+
+app.post('/api/library/documents/:id/versions', authenticateJWT as express.RequestHandler, libraryUpload.single('file'), libraryController.addVersion as express.RequestHandler);
+app.delete('/api/library/versions/:id', authenticateJWT as express.RequestHandler, libraryController.deleteVersion as express.RequestHandler);
+app.get('/api/library/versions/:id/download', libraryController.downloadVersion);
+
 // Initialize database then start server
 DatabaseRepository.getInstance()
   .then(async () => {
@@ -134,3 +156,4 @@ DatabaseRepository.getInstance()
   .catch((err) => {
     console.error('Failed to initialize database', err);
   });
+

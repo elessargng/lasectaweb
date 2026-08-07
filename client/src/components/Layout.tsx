@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Outlet, Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AuthModal from './AuthModal';
+import ChangelogModal from './ChangelogModal';
+import Footer from './Footer';
 import Button from './Button';
 import HeaderLink from './HeaderLink';
 import { Key } from 'lucide-react';
@@ -10,13 +12,8 @@ import { getAvatarUrl } from '../utils/api';
 const Layout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isChangelogModalOpen, setIsChangelogModalOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
-
-  const hasAccessToGestion = !!(isAuthenticated && user && user.roles && (
-    user.roles.includes('admin') || 
-    user.roles.includes('narrador') || 
-    user.roles.includes('editor')
-  ));
 
   const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const closeMenu = () => setIsMobileMenuOpen(false);
@@ -37,10 +34,10 @@ const Layout = () => {
             <nav className="hidden lg:flex gap-6 ml-8 mt-2 items-center flex-wrap">
               <HeaderLink to="/grimorio">Grimorio</HeaderLink>
               <HeaderLink to="/escrituras">Códice</HeaderLink>
+              <HeaderLink to="/biblioteca">Biblioteca</HeaderLink>
               <HeaderLink to="/plaza">Plaza</HeaderLink>
               <HeaderLink to="/rituales">Rituales</HeaderLink>
               <HeaderLink to="/redes">Redes</HeaderLink>
-              {hasAccessToGestion && <HeaderLink to="/gestion">Gestión</HeaderLink>}
             </nav>
           </div>
 
@@ -174,6 +171,21 @@ const Layout = () => {
               )}
             </NavLink>
             <NavLink
+              to="/biblioteca"
+              onClick={closeMenu}
+              className={({ isActive }) =>
+                `text-xl font-display transition-colors flex items-center gap-4 ${
+                  isActive ? 'text-theme-main font-medium' : 'text-on-surface-muted hover:text-on-surface'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-theme-main' : 'bg-theme-main/50'}`}></span> Biblioteca
+                </>
+              )}
+            </NavLink>
+            <NavLink
               to="/plaza"
               onClick={closeMenu}
               className={({ isActive }) =>
@@ -218,23 +230,6 @@ const Layout = () => {
                 </>
               )}
             </NavLink>
-            {hasAccessToGestion && (
-              <NavLink
-                to="/gestion"
-                onClick={closeMenu}
-                className={({ isActive }) =>
-                  `text-xl font-display transition-colors flex items-center gap-4 ${
-                    isActive ? 'text-theme-main font-medium' : 'text-on-surface-muted hover:text-on-surface'
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-theme-main' : 'bg-theme-main/50'}`}></span> Gestión
-                  </>
-                )}
-              </NavLink>
-            )}
 
             {isAuthenticated && (
               <Button onClick={() => { logout(); closeMenu(); }} variant="text" className="text-xl font-display text-red-400 hover:text-red-300 transition-colors flex items-center gap-4 mt-4 text-left">
@@ -254,7 +249,10 @@ const Layout = () => {
         <Outlet />
       </main>
 
+      <Footer onOpenChangelog={() => setIsChangelogModalOpen(true)} />
+
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      <ChangelogModal isOpen={isChangelogModalOpen} onClose={() => setIsChangelogModalOpen(false)} />
     </div>
   );
 };

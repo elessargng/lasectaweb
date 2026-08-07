@@ -22,10 +22,12 @@ export class UserRepository {
 
   async findByUsername(username: string): Promise<User | undefined> {
     const db = await DatabaseRepository.getInstance();
-    const row = await db.get<any>('SELECT * FROM users WHERE username = ?', [username]);
+    const cleanUsername = (username || '').trim();
+    const row = await db.get<any>('SELECT * FROM users WHERE LOWER(username) = LOWER(?)', [cleanUsername]);
     if (!row) return undefined;
     return this.mapRowToUser(row);
   }
+
 
   async findById(id: string): Promise<User | undefined> {
     const db = await DatabaseRepository.getInstance();

@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import PageHeader from '../components/PageHeader';
-import { Check, Plus } from 'lucide-react';
+import { Check, Plus, Shield } from 'lucide-react';
 import { compressImage } from '../utils/image';
 import { parseApiResponse, getAvatarUrl } from '../utils/api';
 
@@ -20,6 +20,12 @@ const Profile = () => {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [customAvatar, setCustomAvatar] = useState<string | null>(null);
+
+  const hasAccessToGestion = !!(user && user.roles && (
+    user.roles.includes('admin') || 
+    user.roles.includes('narrador') || 
+    user.roles.includes('editor')
+  ));
 
   const handleLogout = () => {
     logout();
@@ -168,6 +174,12 @@ const Profile = () => {
         <div className="bg-transparent md:bg-surface border-0 md:border border-transparent md:border-outline-ghost rounded-none md:rounded shadow-none md:shadow-2xl px-4 py-6 md:p-10 relative">
 
           <div className="flex md:absolute md:top-10 md:right-10 gap-3 mb-8 md:mb-0 justify-end w-full md:w-auto flex-wrap md:flex-nowrap z-20">
+            {hasAccessToGestion && !isEditing && (
+              <Button onClick={() => navigate('/gestion')} variant="primary" className="px-4 py-2 flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Gestión
+              </Button>
+            )}
             {!isEditing && (
               <Button onClick={handleLogout} variant="danger" className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium shadow-sm transition-colors border-none">
                 Cerrar Sesión
@@ -346,19 +358,22 @@ const Profile = () => {
             </form>
           )}
 
-          <div className="bg-surface-low p-6 border border-outline-ghost shadow-inner rounded">
-            <h3 className="text-xl font-display text-on-surface mb-4">Registro Akáshico (Partidas)</h3>
-            <ul className="space-y-3 font-body text-on-surface-muted text-[15px]">
-              <li className="flex justify-between items-center border-b border-outline-ghost/50 pb-2">
-                <span>Trouble Brewing - Demonio: Imp</span>
-                <span className="text-on-surface-variant font-medium">Derrota</span>
-              </li>
-              <li className="flex justify-between items-center border-b border-outline-ghost/50 pb-2">
-                <span>Bad Moon Rising - Demonio: Zombuul</span>
-                <span className="text-theme-main font-medium">Victoria</span>
-              </li>
-            </ul>
-          </div>
+          {hasAccessToGestion && (
+            <div className="bg-surface-low p-6 border border-theme-main/30 shadow-inner rounded flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h3 className="text-xl font-display text-on-surface mb-1 flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-theme-main" />
+                  Panel de Gestión
+                </h3>
+                <p className="text-sm font-body text-on-surface-muted">
+                  Accede al panel de administración para gestionar rituales, códices y roles de adeptos.
+                </p>
+              </div>
+              <Button onClick={() => navigate('/gestion')} variant="primary" className="px-6 py-2 shrink-0">
+                Ir a Gestión
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { X, Check, Plus } from 'lucide-react';
 import Button from './Button';
@@ -26,6 +27,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [customAvatar, setCustomAvatar] = useState<string | null>(null);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -43,6 +45,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       setSuccessMessage('');
       setError('');
       setCustomAvatar(null);
+      setAcceptTerms(false);
     }
   }, [isOpen]);
 
@@ -78,6 +81,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!isLogin && !acceptTerms) {
+      setError('Debes aceptar la Política de Privacidad para unirte a La Secta.');
+      return;
+    }
 
     try {
       const endpoint = isLogin ? '/login' : '/register';
@@ -236,10 +244,41 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     </label>
                   </div>
                 </div>
+
+                {/* Privacy Policy Agreement Checkbox */}
+                <div className="flex items-start gap-2.5 mt-3 pt-3 border-t border-outline-ghost/50">
+                  <input
+                    required
+                    type="checkbox"
+                    id="acceptTerms"
+                    name="acceptTerms"
+                    checked={acceptTerms}
+                    onChange={(e) => setAcceptTerms(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded border-outline-ghost text-theme-main focus:ring-theme-main accent-theme-main bg-surface-low cursor-pointer shrink-0"
+                  />
+                  <label htmlFor="acceptTerms" className="text-xs font-body text-on-surface-muted leading-snug cursor-pointer select-none">
+                    He leído y acepto la{' '}
+                    <Link 
+                      to="/privacidad" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-theme-main hover:underline font-semibold"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Política de Privacidad
+                    </Link>{' '}
+                    y las condiciones de La Secta.
+                  </label>
+                </div>
               </>
             )}
 
-            <Button type="submit" variant="primary" className="mt-4 py-3">
+            <Button 
+              type="submit" 
+              variant="primary" 
+              className={`mt-4 py-3 ${!isLogin && !acceptTerms ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={!isLogin && !acceptTerms}
+            >
               {isLogin ? 'Entrar al Grimorio' : 'Completar Ritual'}
             </Button>
           </form>

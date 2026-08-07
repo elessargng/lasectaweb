@@ -50,19 +50,24 @@ export class UserService {
   }
 
   async loginUser(username: string, passwordPlain: string): Promise<{ user: Partial<User>, token: string }> {
-    const user = await this.userRepository.findByUsername(username);
+    const cleanUsername = (username || '').trim();
+    const user = await this.userRepository.findByUsername(cleanUsername);
     if (!user) {
+      console.log(`[LOGIN INTENTO FALLIDO] No existe ningún usuario registrado como: "${cleanUsername}"`);
       throw new Error('Credenciales inválidas');
     }
 
     const isValid = await bcrypt.compare(passwordPlain, user.passwordHash);
     if (!isValid) {
+      console.log(`[LOGIN INTENTO FALLIDO] Contraseña no coincide para el usuario: "${user.username}"`);
       throw new Error('Credenciales inválidas');
     }
 
     if (!user.isConfirmed) {
+      console.log(`[LOGIN INTENTO FALLIDO] El usuario "${user.username}" no está confirmado.`);
       throw new Error('Por favor, confirma tu correo electrónico antes de iniciar sesión.');
     }
+
 
     const JWT_SECRET = process.env.JWT_SECRET || 'secret';
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });

@@ -10,6 +10,10 @@ import Redes from './pages/Redes';
 import Confirmar from './pages/Confirmar';
 import Gestion from './pages/Gestion';
 import Landing from './pages/Landing';
+import AvisoLegal from './pages/AvisoLegal';
+import Privacidad from './pages/Privacidad';
+import CookiesPage from './pages/Cookies';
+import Biblioteca from './pages/Biblioteca';
 
 function App() {
   return (
@@ -19,6 +23,7 @@ function App() {
           <Route index element={<Atrio />} />
           <Route path="grimorio" element={<Grimorio />} />
           <Route path="escrituras" element={<Escrituras />} />
+          <Route path="biblioteca" element={<Biblioteca />} />
           <Route path="plaza" element={<Plaza />} />
           <Route path="rituales" element={<Rituales />} />
           <Route path="redes" element={<Redes />} />
@@ -26,10 +31,14 @@ function App() {
           <Route path="confirmar" element={<Confirmar />} />
           <Route path="gestion" element={<Gestion />} />
           <Route path="landing" element={<Landing />} />
+          <Route path="aviso-legal" element={<AvisoLegal />} />
+          <Route path="privacidad" element={<Privacidad />} />
+          <Route path="cookies" element={<CookiesPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
   );
 }
+
 
 export default App;

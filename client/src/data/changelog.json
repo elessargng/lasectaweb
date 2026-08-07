@@ -1,0 +1,34 @@
+[
+  {
+    "version": "0.2.0",
+    "date": "2026-08-07",
+    "title": "Historia y Biblioteca de La Secta",
+    "description": "Se incorpora la historia de la comunidad en el Grimorio y una nueva sección de Biblioteca para la documentación.",
+    "changes": [
+      {
+        "category": "Novedades y Secciones",
+        "items": [
+          "Historia de La Secta: Incorporada la historia detallada de la comunidad al Grimorio.",
+          "Nueva Sección Biblioteca: Espacio exclusivo para almacenar y consultar la documentación oficial de La Secta."
+        ]
+      }
+    ]
+  },
+  {
+    "version": "0.1.0",
+    "date": "2026-08-07",
+    "title": "Primera Versión de La Secta",
+    "description": "Versión inicial de la plataforma con las características fundamentales para la comunidad.",
+    "changes": [
+      {
+        "category": "Novedades y Secciones",
+        "items": [
+          "Información general (Grimorio): Conoce todo sobre la comunidad y el club.",
+          "Reglas de funcionamiento de la secta (Códice): Guías, leyes y normativas de convivencia.",
+          "Redes Sociales: Enlaces directos a nuestras plataformas oficiales.",
+          "Gestión básica de usuario: Sistema de registro, inicio de sesión, avatar personalizado y gestión de perfil."
+        ]
+      }
+    ]
+  }
+]
