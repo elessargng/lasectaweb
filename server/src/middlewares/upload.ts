@@ -17,10 +17,10 @@ const getLibraryUploadPath = (): string => {
 };
 
 const storage = multer.diskStorage({
-  destination: (req: Request, file: Express.Multer.File, cb) => {
+  destination: (req: Request, file: any, cb: (error: Error | null, destination: string) => void) => {
     cb(null, getLibraryUploadPath());
   },
-  filename: (req: Request, file: Express.Multer.File, cb) => {
+  filename: (req: Request, file: any, cb: (error: Error | null, filename: string) => void) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname);
     cb(null, `doc-${uniqueSuffix}${ext}`);

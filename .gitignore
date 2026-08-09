@@ -5,6 +5,7 @@ web_modules/
 .npm/
 pnpm-lock.yaml
 yarn-error.log
+deployment/
 
 # --- Python (Entornos virtuales y caché) ---
 __pycache__/

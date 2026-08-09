@@ -18,14 +18,44 @@ export class LibraryService {
     }
   }
 
-  public async getTree(): Promise<LibrarySection[]> {
+  public async getTree(userId?: string): Promise<LibrarySection[]> {
+    const user = userId ? await this.userRepository.findById(userId) : null;
+    const isAdmin = user?.roles?.includes('admin') || false;
+    const userRoles = user?.roles || [];
+
     const rawSections = await this.libraryRepository.getAllSections();
     const rawDocs = await this.libraryRepository.getAllDocuments();
     const rawVersions = await this.libraryRepository.getAllVersions();
 
+    // Filtramos documentos según el acceso del usuario
+    const allowedDocs = rawDocs.filter(doc => {
+      // Si el usuario es administrador, puede ver todo
+      if (isAdmin) return true;
+
+      // Determinamos el nivel de acceso del documento (por defecto es 'all')
+      const accessLevel = doc.accessLevel || 'all';
+
+      if (accessLevel === 'all') {
+        return true;
+      }
+      
+      if (accessLevel === 'registered') {
+        // Solo usuarios registrados
+        return !!user;
+      }
+
+      if (accessLevel === 'roles') {
+        // Solo usuarios con alguno de los roles permitidos
+        const allowed = doc.allowedRoles || [];
+        return !!user && (allowed.length === 0 || allowed.some(role => userRoles.includes(role as any)));
+      }
+
+      return false;
+    });
+
     // Asociar versiones a sus documentos correspondientes
     const docMap = new Map<string, LibraryDocument>();
-    for (const doc of rawDocs) {
+    for (const doc of allowedDocs) {
       const docVersions = rawVersions.filter(v => v.documentId === doc.id);
       docMap.set(doc.id, { ...doc, versions: docVersions });
     }
@@ -43,12 +73,11 @@ export class LibraryService {
     const sectionMap = new Map<string, LibrarySection & { hasSubDocuments: boolean }>();
     for (const sec of rawSections) {
       const docsInSec = docsBySection.get(sec.id) || [];
-      const hasSubDocsCount = await this.libraryRepository.countSubDocuments(sec.id);
       sectionMap.set(sec.id, {
         ...sec,
         documents: docsInSec,
         subsections: [],
-        hasSubDocuments: hasSubDocsCount > 0
+        hasSubDocuments: false
       });
     }
 
@@ -61,6 +90,24 @@ export class LibraryService {
       } else {
         rootSections.push(sec);
       }
+    }
+
+    // Determinar recursivamente si tiene documentos visibles
+    const checkHasSubDocs = (sec: LibrarySection & { hasSubDocuments: boolean }): boolean => {
+      let hasDocs = (sec.documents && sec.documents.length > 0) || false;
+      if (sec.subsections) {
+        for (const sub of sec.subsections as (LibrarySection & { hasSubDocuments: boolean })[]) {
+          if (checkHasSubDocs(sub)) {
+            hasDocs = true;
+          }
+        }
+      }
+      sec.hasSubDocuments = hasDocs;
+      return hasDocs;
+    };
+
+    for (const root of rootSections) {
+      checkHasSubDocs(root);
     }
 
     return rootSections;
@@ -124,7 +171,7 @@ export class LibraryService {
   public async createDocument(
     userId: string,
     dto: CreateDocumentDTO,
-    file?: Express.Multer.File
+    file?: any
   ): Promise<LibraryDocument> {
     await this.verifyAdmin(userId);
 
@@ -149,7 +196,15 @@ export class LibraryService {
     const docId = crypto.randomUUID();
     const position = dto.position ?? 0;
 
-    const doc = await this.libraryRepository.createDocument(docId, dto.sectionId, dto.title.trim(), dto.description, position);
+    const doc = await this.libraryRepository.createDocument(
+      docId,
+      dto.sectionId,
+      dto.title.trim(),
+      dto.description,
+      position,
+      dto.accessLevel || 'all',
+      dto.allowedRoles || []
+    );
 
     // Crear primera versión del documento
     const versionId = crypto.randomUUID();
@@ -181,7 +236,15 @@ export class LibraryService {
       }
     }
 
-    const updated = await this.libraryRepository.updateDocument(id, dto.sectionId, dto.title?.trim(), dto.description, dto.position);
+    const updated = await this.libraryRepository.updateDocument(
+      id,
+      dto.sectionId,
+      dto.title?.trim(),
+      dto.description,
+      dto.position,
+      dto.accessLevel,
+      dto.allowedRoles
+    );
     if (!updated) {
       throw new Error('No se pudo actualizar el documento.');
     }
@@ -208,7 +271,7 @@ export class LibraryService {
     userId: string,
     documentId: string,
     label: string,
-    file?: Express.Multer.File
+    file?: any
   ): Promise<LibraryDocumentVersion> {
     await this.verifyAdmin(userId);
 
@@ -250,10 +313,43 @@ export class LibraryService {
     return this.libraryRepository.deleteVersion(id);
   }
 
-  public async getVersionDownloadInfo(versionId: string): Promise<{ absolutePath: string; originalFilename: string; mimeType: string }> {
+  public async getVersionDownloadInfo(
+    versionId: string,
+    userId?: string
+  ): Promise<{ absolutePath: string; originalFilename: string; mimeType: string }> {
     const version = await this.libraryRepository.getVersionById(versionId);
     if (!version) {
       throw new Error('La versión del documento solicitada no existe.');
+    }
+
+    const doc = await this.libraryRepository.getDocumentById(version.documentId);
+    if (!doc) {
+      throw new Error('El documento solicitado no existe.');
+    }
+
+    // Comprobar nivel de acceso del documento
+    const accessLevel = doc.accessLevel || 'all';
+    if (accessLevel !== 'all') {
+      if (!userId) {
+        throw new Error('No tienes permisos suficientes para descargar este documento. Debes iniciar sesión.');
+      }
+
+      const user = await this.userRepository.findById(userId);
+      if (!user) {
+        throw new Error('Usuario inválido.');
+      }
+
+      const isAdmin = user.roles?.includes('admin') || false;
+      if (!isAdmin) {
+        if (accessLevel === 'roles') {
+          const allowed = doc.allowedRoles || [];
+          const userRoles = user.roles || [];
+          const hasRole = allowed.length === 0 || allowed.some(role => userRoles.includes(role as any));
+          if (!hasRole) {
+            throw new Error('No tienes permisos suficientes para descargar este documento (rol no autorizado).');
+          }
+        }
+      }
     }
 
     const libraryDirSetting = process.env.LIBRARY_STORAGE_PATH || './uploads/library';

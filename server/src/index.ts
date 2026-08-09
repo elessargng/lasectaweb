@@ -34,7 +34,7 @@ import { AuthController } from './controllers/AuthController';
 import { ThreadRepository } from './repositories/ThreadRepository';
 import { ThreadService } from './services/ThreadService';
 import { ThreadController } from './controllers/ThreadController';
-import { authenticateJWT } from './middlewares/auth';
+import { authenticateJWT, optionalAuthenticateJWT } from './middlewares/auth';
 import { DatabaseRepository } from './repositories/DatabaseRepository';
 import { seedAdminUser } from './utils/seeder';
 import { VillacuervosRepository } from './repositories/VillacuervosRepository';
@@ -125,7 +125,7 @@ app.post('/api/villacuervos/plays', authenticateJWT as express.RequestHandler, v
 app.patch('/api/villacuervos/plays/:playSlug', authenticateJWT as express.RequestHandler, villacuervosController.updatePlay as express.RequestHandler);
 
 // Rutas de La Biblioteca
-app.get('/api/library/tree', libraryController.getTree);
+app.get('/api/library/tree', optionalAuthenticateJWT as express.RequestHandler, libraryController.getTree as express.RequestHandler);
 app.post('/api/library/sections', authenticateJWT as express.RequestHandler, libraryController.createSection as express.RequestHandler);
 app.put('/api/library/sections/:id', authenticateJWT as express.RequestHandler, libraryController.updateSection as express.RequestHandler);
 app.delete('/api/library/sections/:id', authenticateJWT as express.RequestHandler, libraryController.deleteSection as express.RequestHandler);
@@ -136,7 +136,7 @@ app.delete('/api/library/documents/:id', authenticateJWT as express.RequestHandl
 
 app.post('/api/library/documents/:id/versions', authenticateJWT as express.RequestHandler, libraryUpload.single('file'), libraryController.addVersion as express.RequestHandler);
 app.delete('/api/library/versions/:id', authenticateJWT as express.RequestHandler, libraryController.deleteVersion as express.RequestHandler);
-app.get('/api/library/versions/:id/download', libraryController.downloadVersion);
+app.get('/api/library/versions/:id/download', optionalAuthenticateJWT as express.RequestHandler, libraryController.downloadVersion as express.RequestHandler);
 
 // Initialize database then start server
 DatabaseRepository.getInstance()

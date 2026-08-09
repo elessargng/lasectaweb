@@ -80,33 +80,57 @@ export class LibraryRepository {
   public async getAllDocuments(): Promise<LibraryDocument[]> {
     const db = await DatabaseRepository.getInstance();
     const docs = await db.all<any[]>(
-      'SELECT id, sectionId, title, description, position, createdAt FROM library_documents ORDER BY position ASC, createdAt ASC'
+      'SELECT id, sectionId, title, description, position, accessLevel, allowedRoles, createdAt FROM library_documents ORDER BY position ASC, createdAt ASC'
     );
-    return docs.map(d => ({ ...d, versions: [] }));
+    return docs.map(d => ({
+      ...d,
+      allowedRoles: d.allowedRoles ? JSON.parse(d.allowedRoles) : [],
+      versions: []
+    }));
   }
 
   public async getDocumentById(id: string): Promise<LibraryDocument | undefined> {
     const db = await DatabaseRepository.getInstance();
     const doc = await db.get<any>(
-      'SELECT id, sectionId, title, description, position, createdAt FROM library_documents WHERE id = ?',
+      'SELECT id, sectionId, title, description, position, accessLevel, allowedRoles, createdAt FROM library_documents WHERE id = ?',
       [id]
     );
     if (!doc) return undefined;
     const versions = await this.getVersionsByDocumentId(id);
-    return { ...doc, versions };
+    return {
+      ...doc,
+      allowedRoles: doc.allowedRoles ? JSON.parse(doc.allowedRoles) : [],
+      versions
+    };
   }
 
-  public async createDocument(id: string, sectionId: string, title: string, description: string | undefined, position: number): Promise<LibraryDocument> {
+  public async createDocument(
+    id: string,
+    sectionId: string,
+    title: string,
+    description: string | undefined,
+    position: number,
+    accessLevel: 'all' | 'registered' | 'roles' = 'all',
+    allowedRoles: string[] = []
+  ): Promise<LibraryDocument> {
     const db = await DatabaseRepository.getInstance();
     await db.run(
-      'INSERT INTO library_documents (id, sectionId, title, description, position) VALUES (?, ?, ?, ?, ?)',
-      [id, sectionId, title, description || null, position]
+      'INSERT INTO library_documents (id, sectionId, title, description, position, accessLevel, allowedRoles) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, sectionId, title, description || null, position, accessLevel, JSON.stringify(allowedRoles)]
     );
     const created = await this.getDocumentById(id);
     return created!;
   }
 
-  public async updateDocument(id: string, sectionId?: string, title?: string, description?: string, position?: number): Promise<LibraryDocument | undefined> {
+  public async updateDocument(
+    id: string,
+    sectionId?: string,
+    title?: string,
+    description?: string,
+    position?: number,
+    accessLevel?: 'all' | 'registered' | 'roles',
+    allowedRoles?: string[]
+  ): Promise<LibraryDocument | undefined> {
     const db = await DatabaseRepository.getInstance();
     const current = await this.getDocumentById(id);
     if (!current) return undefined;
@@ -115,10 +139,12 @@ export class LibraryRepository {
     const newTitle = title !== undefined ? title : current.title;
     const newDesc = description !== undefined ? description : current.description;
     const newPos = position !== undefined ? position : current.position;
+    const newAccessLevel = accessLevel !== undefined ? accessLevel : (current.accessLevel || 'all');
+    const newAllowedRoles = allowedRoles !== undefined ? allowedRoles : (current.allowedRoles || []);
 
     await db.run(
-      'UPDATE library_documents SET sectionId = ?, title = ?, description = ?, position = ? WHERE id = ?',
-      [newSectionId, newTitle, newDesc || null, newPos, id]
+      'UPDATE library_documents SET sectionId = ?, title = ?, description = ?, position = ?, accessLevel = ?, allowedRoles = ? WHERE id = ?',
+      [newSectionId, newTitle, newDesc || null, newPos, newAccessLevel, JSON.stringify(newAllowedRoles), id]
     );
     return this.getDocumentById(id);
   }

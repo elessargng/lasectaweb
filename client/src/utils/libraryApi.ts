@@ -19,6 +19,8 @@ export interface LibraryDocument {
   title: string;
   description?: string;
   position: number;
+  accessLevel?: 'all' | 'registered' | 'roles';
+  allowedRoles?: string[];
   createdAt: string;
   versions: LibraryDocumentVersion[];
 }
@@ -47,7 +49,9 @@ function getAuthHeaders(isFormData = false): HeadersInit {
 }
 
 export async function fetchLibraryTree(): Promise<LibrarySection[]> {
-  const res = await fetch(`${API_URL}/library/tree`);
+  const res = await fetch(`${API_URL}/library/tree`, {
+    headers: getAuthHeaders()
+  });
   return parseApiResponse<LibrarySection[]>(res);
 }
 
@@ -83,7 +87,9 @@ export async function createLibraryDocument(
   label: string,
   file: File,
   description?: string,
-  position?: number
+  position?: number,
+  accessLevel?: 'all' | 'registered' | 'roles',
+  allowedRoles?: string[]
 ): Promise<LibraryDocument> {
   const formData = new FormData();
   formData.append('sectionId', sectionId);
@@ -92,6 +98,8 @@ export async function createLibraryDocument(
   formData.append('file', file);
   if (description) formData.append('description', description);
   if (position !== undefined) formData.append('position', position.toString());
+  if (accessLevel) formData.append('accessLevel', accessLevel);
+  if (allowedRoles) formData.append('allowedRoles', JSON.stringify(allowedRoles));
 
   const res = await fetch(`${API_URL}/library/documents`, {
     method: 'POST',
@@ -101,11 +109,19 @@ export async function createLibraryDocument(
   return parseApiResponse<LibraryDocument>(res);
 }
 
-export async function updateLibraryDocument(id: string, title?: string, sectionId?: string, description?: string, position?: number): Promise<LibraryDocument> {
+export async function updateLibraryDocument(
+  id: string,
+  title?: string,
+  sectionId?: string,
+  description?: string,
+  position?: number,
+  accessLevel?: 'all' | 'registered' | 'roles',
+  allowedRoles?: string[]
+): Promise<LibraryDocument> {
   const res = await fetch(`${API_URL}/library/documents/${id}`, {
     method: 'PUT',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ title, sectionId, description, position })
+    body: JSON.stringify({ title, sectionId, description, position, accessLevel, allowedRoles })
   });
   return parseApiResponse<LibraryDocument>(res);
 }
@@ -139,6 +155,52 @@ export async function deleteLibraryDocumentVersion(versionId: string): Promise<v
   await parseApiResponse(res);
 }
 
-export function getLibraryVersionDownloadUrl(versionId: string): string {
-  return `${API_URL}/library/versions/${versionId}/download`;
+export function getLibraryVersionDownloadUrl(versionId: string, inline = false): string {
+  const token = localStorage.getItem('token');
+  const queryParams: string[] = [];
+  if (token) {
+    queryParams.push(`token=${encodeURIComponent(token)}`);
+  }
+  if (inline) {
+    queryParams.push('inline=true');
+  }
+  const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+  return `${API_URL}/library/versions/${versionId}/download${queryString}`;
 }
+
+export type ViewableType = 'pdf' | 'html' | 'txt' | 'image' | null;
+
+export function getViewableType(version: LibraryDocumentVersion): ViewableType {
+  const mime = (version.mimeType || '').toLowerCase();
+  const ext = (version.originalFilename || '').split('.').pop()?.toLowerCase() || '';
+
+  // 1. PDF
+  if (mime === 'application/pdf' || ext === 'pdf') {
+    return 'pdf';
+  }
+
+  // 2. HTML
+  if (mime === 'text/html' || mime === 'application/xhtml+xml' || ext === 'html' || ext === 'htm') {
+    return 'html';
+  }
+
+  // 3. Imagen
+  if (
+    mime.startsWith('image/') ||
+    ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'avif', 'ico'].includes(ext)
+  ) {
+    return 'image';
+  }
+
+  // 4. Texto Plano (TXT)
+  if (
+    mime === 'text/plain' ||
+    mime.startsWith('text/') ||
+    ['txt', 'text', 'md', 'markdown', 'log', 'json', 'csv', 'xml'].includes(ext)
+  ) {
+    return 'txt';
+  }
+
+  return null;
+}
+

@@ -1,5 +1,27 @@
 [
   {
+    "version": "0.3.0",
+    "date": "2026-08-09",
+    "title": "Securización y Visor de La Biblioteca",
+    "description": "Se añade control de acceso y visibilidad restringida por roles a los documentos de La Biblioteca, además de un visor de archivos integrado.",
+    "changes": [
+      {
+        "category": "Seguridad y Accesos",
+        "items": [
+          "Restricción de Documentos: Control de acceso configurable por documento (todos, usuarios registrados o roles específicos).",
+          "Protección de Descargas: Verificación de permisos y autenticación al descargar o previsualizar archivos de La Biblioteca."
+        ]
+      },
+      {
+        "category": "Visor de Documentos",
+        "items": [
+          "Visor Integrado: Previsualización directa en un visor modal para archivos PDF, HTML, TXT e imágenes con botón de descarga rápida.",
+          "Descarga Directa: Mantenida la descarga directa al hacer clic sobre archivos de otros formatos."
+        ]
+      }
+    ]
+  },
+  {
     "version": "0.2.0",
     "date": "2026-08-07",
     "title": "Historia y Biblioteca de La Secta",

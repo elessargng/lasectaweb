@@ -6,6 +6,7 @@ export interface AuthRequest extends Request {
     id: string;
     username: string;
   };
+  file?: any;
 }
 
 export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunction): void => {
@@ -26,5 +27,28 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
     });
   } else {
     res.status(401).json({ error: 'No autorizado. Token no proporcionado.' });
+  }
+};
+
+export const optionalAuthenticateJWT = (req: AuthRequest, res: Response, next: NextFunction): void => {
+  let token: string | undefined;
+
+  const authHeader = req.headers.authorization;
+  if (authHeader) {
+    token = authHeader.split(' ')[1];
+  } else if (req.query.token) {
+    token = req.query.token as string;
+  }
+
+  if (token) {
+    const JWT_SECRET = process.env.JWT_SECRET || 'secret';
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+      if (!err && user) {
+        req.user = user as any;
+      }
+      next();
+    });
+  } else {
+    next();
   }
 };

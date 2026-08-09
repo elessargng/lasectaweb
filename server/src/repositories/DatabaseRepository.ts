@@ -151,6 +151,14 @@ export class DatabaseRepository {
         CREATE INDEX IF NOT EXISTS idx_library_document_versions_documentId ON library_document_versions(documentId);
       `);
     });
+
+    // Migración 003: Restricciones de acceso para documentos en La Biblioteca
+    await this.applyMigration('003_add_document_access_control', async (db) => {
+      await db.exec(`
+        ALTER TABLE library_documents ADD COLUMN accessLevel TEXT DEFAULT 'all';
+        ALTER TABLE library_documents ADD COLUMN allowedRoles TEXT;
+      `);
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

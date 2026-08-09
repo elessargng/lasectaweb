@@ -5,9 +5,9 @@ import { AuthRequest } from '../middlewares/auth';
 export class LibraryController {
   constructor(private libraryService: LibraryService) {}
 
-  public getTree = async (req: Request, res: Response): Promise<void> => {
+  public getTree = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const tree = await this.libraryService.getTree();
+      const tree = await this.libraryService.getTree(req.user?.id);
       res.status(200).json(tree);
     } catch (error: any) {
       res.status(500).json({ error: error.message || 'Error al obtener La Biblioteca.' });
@@ -71,8 +71,17 @@ export class LibraryController {
         res.status(401).json({ error: 'No autorizado.' });
         return;
       }
-      const { sectionId, title, description, position, label } = req.body;
+      const { sectionId, title, description, position, label, accessLevel, allowedRoles } = req.body;
       const file = req.file;
+
+      let parsedAllowedRoles = allowedRoles;
+      if (typeof allowedRoles === 'string') {
+        try {
+          parsedAllowedRoles = JSON.parse(allowedRoles);
+        } catch {
+          parsedAllowedRoles = allowedRoles.split(',').map((r: string) => r.trim()).filter(Boolean);
+        }
+      }
 
       const doc = await this.libraryService.createDocument(
         req.user.id,
@@ -81,7 +90,9 @@ export class LibraryController {
           title,
           description,
           position: position ? Number(position) : undefined,
-          label
+          label,
+          accessLevel,
+          allowedRoles: parsedAllowedRoles
         },
         file
       );
@@ -98,13 +109,24 @@ export class LibraryController {
         return;
       }
       const { id } = req.params;
-      const { sectionId, title, description, position } = req.body;
+      const { sectionId, title, description, position, accessLevel, allowedRoles } = req.body;
+
+      let parsedAllowedRoles = allowedRoles;
+      if (typeof allowedRoles === 'string') {
+        try {
+          parsedAllowedRoles = JSON.parse(allowedRoles);
+        } catch {
+          parsedAllowedRoles = allowedRoles.split(',').map((r: string) => r.trim()).filter(Boolean);
+        }
+      }
 
       const doc = await this.libraryService.updateDocument(req.user.id, id as string, {
         sectionId,
         title,
         description,
-        position: position !== undefined ? Number(position) : undefined
+        position: position !== undefined ? Number(position) : undefined,
+        accessLevel,
+        allowedRoles: parsedAllowedRoles
       });
       res.status(200).json(doc);
     } catch (error: any) {
@@ -157,11 +179,18 @@ export class LibraryController {
     }
   };
 
-  public downloadVersion = async (req: Request, res: Response): Promise<void> => {
+  public downloadVersion = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params; // versionId
-      const info = await this.libraryService.getVersionDownloadInfo(id as string);
+      const info = await this.libraryService.getVersionDownloadInfo(id as string, req.user?.id);
       
+      if (req.query.inline === 'true') {
+        res.setHeader('Content-Type', info.mimeType);
+        res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(info.originalFilename)}"`);
+        res.sendFile(info.absolutePath);
+        return;
+      }
+
       res.setHeader('Content-Type', info.mimeType);
       res.download(info.absolutePath, info.originalFilename);
     } catch (error: any) {

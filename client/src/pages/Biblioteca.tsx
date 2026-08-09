@@ -11,8 +11,10 @@ import {
   addLibraryDocumentVersion,
   deleteLibraryDocumentVersion,
   getLibraryVersionDownloadUrl,
+  getViewableType,
   type LibrarySection,
-  type LibraryDocument
+  type LibraryDocument,
+  type LibraryDocumentVersion
 } from '../utils/libraryApi';
 import {
   BookOpen,
@@ -31,7 +33,14 @@ import {
   AlertCircle,
   CheckCircle,
   Loader2,
-  Tag
+  Tag,
+  Lock,
+  Globe,
+  Shield,
+  Eye,
+  FileCode,
+  FileImage,
+  ExternalLink
 } from 'lucide-react';
 
 import Button from '../components/Button';
@@ -66,6 +75,8 @@ export default function Biblioteca() {
     documentId?: string;
     currentTitle?: string;
     currentDesc?: string;
+    currentAccessLevel?: 'all' | 'registered' | 'roles';
+    currentAllowedRoles?: string[];
   }>({ isOpen: false, mode: 'create' });
 
   const [addVersionModal, setAddVersionModal] = useState<{
@@ -82,6 +93,58 @@ export default function Biblioteca() {
     currentTargetId?: string | null;
   }>({ isOpen: false, type: 'section', id: '', name: '' });
 
+  // State del Visor de Documentos
+  const [viewerModal, setViewerModal] = useState<{
+    isOpen: boolean;
+    version?: LibraryDocumentVersion;
+    documentTitle?: string;
+  }>({ isOpen: false });
+
+  const [txtContent, setTxtContent] = useState<string | null>(null);
+  const [loadingTxt, setLoadingTxt] = useState<boolean>(false);
+  const [txtError, setTxtError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (viewerModal.isOpen && viewerModal.version) {
+      const type = getViewableType(viewerModal.version);
+      if (type === 'txt') {
+        setLoadingTxt(true);
+        setTxtError(null);
+        setTxtContent(null);
+        const url = getLibraryVersionDownloadUrl(viewerModal.version.id, true);
+        fetch(url)
+          .then(res => {
+            if (!res.ok) throw new Error('Error al cargar el contenido de texto.');
+            return res.text();
+          })
+          .then(text => setTxtContent(text))
+          .catch(err => setTxtError(err.message || 'Error al obtener el contenido del archivo.'))
+          .finally(() => setLoadingTxt(false));
+      }
+    }
+  }, [viewerModal.isOpen, viewerModal.version]);
+
+  const handleVersionClick = (version: LibraryDocumentVersion, docTitle: string, e: React.MouseEvent) => {
+    const viewType = getViewableType(version);
+    if (viewType) {
+      e.preventDefault();
+      setViewerModal({
+        isOpen: true,
+        version,
+        documentTitle: docTitle
+      });
+    }
+  };
+
+  const formatBytes = (bytes: number, decimals = 1): string => {
+    if (!bytes || bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  };
+
   // Form State
   const [sectionNameInput, setSectionNameInput] = useState('');
   const [sectionParentIdInput, setSectionParentIdInput] = useState<string>('');
@@ -91,6 +154,8 @@ export default function Biblioteca() {
   const [docSectionIdInput, setDocSectionIdInput] = useState('');
   const [docVersionLabelInput, setDocVersionLabelInput] = useState('PDF');
   const [docFileInput, setDocFileInput] = useState<File | null>(null);
+  const [docAccessLevelInput, setDocAccessLevelInput] = useState<'all' | 'registered' | 'roles'>('all');
+  const [docAllowedRolesInput, setDocAllowedRolesInput] = useState<string[]>([]);
 
   const [versionLabelInput, setVersionLabelInput] = useState('');
   const [versionFileInput, setVersionFileInput] = useState<File | null>(null);
@@ -222,6 +287,8 @@ export default function Biblioteca() {
     setDocSectionIdInput(sectionId);
     setDocVersionLabelInput('PDF');
     setDocFileInput(null);
+    setDocAccessLevelInput('all');
+    setDocAllowedRolesInput([]);
     setDocumentModal({ isOpen: true, mode: 'create', sectionId });
   };
 
@@ -229,7 +296,18 @@ export default function Biblioteca() {
     setDocTitleInput(doc.title);
     setDocDescInput(doc.description || '');
     setDocSectionIdInput(doc.sectionId);
-    setDocumentModal({ isOpen: true, mode: 'edit', documentId: doc.id, sectionId: doc.sectionId, currentTitle: doc.title, currentDesc: doc.description });
+    setDocAccessLevelInput(doc.accessLevel || 'all');
+    setDocAllowedRolesInput(doc.allowedRoles || []);
+    setDocumentModal({
+      isOpen: true,
+      mode: 'edit',
+      documentId: doc.id,
+      sectionId: doc.sectionId,
+      currentTitle: doc.title,
+      currentDesc: doc.description,
+      currentAccessLevel: doc.accessLevel || 'all',
+      currentAllowedRoles: doc.allowedRoles || []
+    });
   };
 
   const handleSaveDocument = async (e: FormEvent) => {
@@ -249,11 +327,22 @@ export default function Biblioteca() {
           docTitleInput.trim(),
           docVersionLabelInput.trim() || 'PDF',
           docFileInput,
-          docDescInput.trim() || undefined
+          docDescInput.trim() || undefined,
+          undefined,
+          docAccessLevelInput,
+          docAccessLevelInput === 'roles' ? docAllowedRolesInput : []
         );
         showSuccess('Documento y versión subidos correctamente.');
       } else if (documentModal.mode === 'edit' && documentModal.documentId) {
-        await updateLibraryDocument(documentModal.documentId, docTitleInput.trim(), docSectionIdInput, docDescInput.trim() || undefined);
+        await updateLibraryDocument(
+          documentModal.documentId,
+          docTitleInput.trim(),
+          docSectionIdInput,
+          docDescInput.trim() || undefined,
+          undefined,
+          docAccessLevelInput,
+          docAccessLevelInput === 'roles' ? docAllowedRolesInput : []
+        );
         showSuccess('Documento actualizado correctamente.');
       }
       setDocumentModal({ isOpen: false, mode: 'create' });
@@ -474,46 +563,95 @@ export default function Biblioteca() {
                       <FileText className="w-4 h-4 text-theme-main shrink-0 mt-1" />
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2 flex-wrap">
-                          {/* Pulsar en el título descarga la primera versión disponible */}
+                          {/* Pulsar en el título abre el visor si es compatible, o descarga la primera versión */}
                           {doc.versions.length > 0 ? (
                             <a
                               href={getLibraryVersionDownloadUrl(doc.versions[0].id)}
-                              download
-                              className="font-display font-medium text-base text-on-surface hover:text-theme-main transition-colors flex items-center gap-1.5 group"
-                              title={`Descargar ${doc.title}`}
+                              download={!getViewableType(doc.versions[0])}
+                              onClick={(e) => handleVersionClick(doc.versions[0], doc.title, e)}
+                              className="font-display font-medium text-base text-on-surface hover:text-theme-main transition-colors flex items-center gap-1.5 group cursor-pointer"
+                              title={
+                                getViewableType(doc.versions[0])
+                                  ? `Ver ${doc.title}`
+                                  : `Descargar ${doc.title}`
+                              }
                             >
                               <span>{doc.title}</span>
-                              <Download className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity text-theme-main" />
+                              {getViewableType(doc.versions[0]) ? (
+                                <Eye className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity text-theme-main" />
+                              ) : (
+                                <Download className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity text-theme-main" />
+                              )}
                             </a>
                           ) : (
                             <span className="font-display font-medium text-base text-on-surface">{doc.title}</span>
                           )}
 
-                          {/* Versiones etiquetadas */}
+                          {/* Versiones etiquetadas y Nivel de Acceso */}
                           <div className="flex items-center gap-1.5 ml-2 flex-wrap">
-                            {doc.versions.map(v => (
-                              <div key={v.id} className="inline-flex items-center gap-1 group/ver">
-                                <a
-                                  href={getLibraryVersionDownloadUrl(v.id)}
-                                  download
-                                  className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-theme-main/15 text-theme-main border border-theme-main/30 hover:bg-theme-main hover:text-background transition-all"
-                                  title={`Descargar versión ${v.label} (${v.originalFilename})`}
-                                >
-                                  <Tag className="w-3 h-3" />
-                                  <span>{v.label}</span>
-                                </a>
-                                {isAdmin && doc.versions.length > 1 && (
-                                  <button
-                                    onClick={() => handleDeleteVersion(v.id, v.label, doc.title)}
-                                    className="text-red-400/60 hover:text-red-400 opacity-0 group-hover/ver:opacity-100 transition-opacity p-0.5"
-                                    title={`Eliminar versión ${v.label}`}
+                            {doc.accessLevel === 'registered' && (
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30" title="Restringido: Solo usuarios registrados">
+                                <Lock className="w-3 h-3" />
+                                <span>Registrados</span>
+                              </span>
+                            )}
+                            {doc.accessLevel === 'roles' && (
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30" title={`Restringido: Solo roles ${(doc.allowedRoles || []).join(', ')}`}>
+                                <Shield className="w-3 h-3" />
+                                <span>{(doc.allowedRoles || []).join(', ') || 'Sin roles'}</span>
+                              </span>
+                            )}
+                            {doc.versions.map(v => {
+                              const viewType = getViewableType(v);
+                              return (
+                                <div key={v.id} className="inline-flex items-center gap-1 group/ver">
+                                  <a
+                                    href={getLibraryVersionDownloadUrl(v.id)}
+                                    download={!viewType}
+                                    onClick={(e) => handleVersionClick(v, doc.title, e)}
+                                    className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-theme-main/15 text-theme-main border border-theme-main/30 hover:bg-theme-main hover:text-background transition-all cursor-pointer"
+                                    title={
+                                      viewType
+                                        ? `Ver versión ${v.label} (${v.originalFilename})`
+                                        : `Descargar versión ${v.label} (${v.originalFilename})`
+                                    }
                                   >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                )}
-                              </div>
-                            ))}
+                                    {viewType ? <Eye className="w-3 h-3" /> : <Tag className="w-3 h-3" />}
+                                    <span>{v.label}</span>
+                                  </a>
+                                  {isAdmin && doc.versions.length > 1 && (
+                                    <button
+                                      onClick={() => handleDeleteVersion(v.id, v.label, doc.title)}
+                                      className="text-red-400/60 hover:text-red-400 opacity-0 group-hover/ver:opacity-100 transition-opacity p-0.5"
+                                      title={`Eliminar versión ${v.label}`}
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
+
+                          {/* Indicador de Restricción */}
+                          {doc.accessLevel === 'registered' && (
+                            <span 
+                              className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                              title="Visible solo para usuarios registrados"
+                            >
+                              <Lock className="w-2.5 h-2.5" />
+                              <span>Registrados</span>
+                            </span>
+                          )}
+                          {doc.accessLevel === 'roles' && (
+                            <span 
+                              className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                              title={`Visible solo para roles: ${(doc.allowedRoles || []).join(', ')}`}
+                            >
+                              <Shield className="w-2.5 h-2.5" />
+                              <span>{(doc.allowedRoles || []).map(r => r === 'admin' ? 'Admin' : r === 'narrador' ? 'Narrador' : r === 'editor' ? 'Editor' : r).join(', ')}</span>
+                            </span>
+                          )}
                         </div>
 
                         {doc.description && (
@@ -790,6 +928,75 @@ export default function Biblioteca() {
                 />
               </div>
 
+              <div>
+                <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+                  Restricción de Acceso
+                </label>
+                <div className="grid grid-cols-3 gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setDocAccessLevelInput('all')}
+                    className={`flex items-center justify-center gap-1.5 p-2 rounded-xl border text-xs font-medium transition-all ${
+                      docAccessLevelInput === 'all'
+                        ? 'bg-theme-main/20 border-theme-main text-theme-main font-semibold'
+                        : 'bg-surface-container border-outline-ghost/60 text-on-surface-muted hover:border-outline-ghost hover:text-on-surface'
+                    }`}
+                  >
+                    <Globe className="w-3.5 h-3.5" />
+                    <span>Todos</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDocAccessLevelInput('registered')}
+                    className={`flex items-center justify-center gap-1.5 p-2 rounded-xl border text-xs font-medium transition-all ${
+                      docAccessLevelInput === 'registered'
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-semibold'
+                        : 'bg-surface-container border-outline-ghost/60 text-on-surface-muted hover:border-outline-ghost hover:text-on-surface'
+                    }`}
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Registrados</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDocAccessLevelInput('roles')}
+                    className={`flex items-center justify-center gap-1.5 p-2 rounded-xl border text-xs font-medium transition-all ${
+                      docAccessLevelInput === 'roles'
+                        ? 'bg-purple-500/20 border-purple-500 text-purple-300 font-semibold'
+                        : 'bg-surface-container border-outline-ghost/60 text-on-surface-muted hover:border-outline-ghost hover:text-on-surface'
+                    }`}
+                  >
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>Por Roles</span>
+                  </button>
+                </div>
+
+                {docAccessLevelInput === 'roles' && (
+                  <div className="p-3 rounded-xl bg-surface-container-low/60 border border-purple-500/30 flex flex-col gap-2 mt-2">
+                    <span className="text-xs font-medium text-purple-200">Selecciona los roles con acceso:</span>
+                    <div className="flex items-center gap-4 flex-wrap">
+                      {['narrador', 'editor', 'admin'].map(role => (
+                        <label key={role} className="inline-flex items-center gap-2 text-xs text-on-surface cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={docAllowedRolesInput.includes(role)}
+                            onChange={e => {
+                              if (e.target.checked) {
+                                setDocAllowedRolesInput([...docAllowedRolesInput, role]);
+                              } else {
+                                setDocAllowedRolesInput(docAllowedRolesInput.filter(r => r !== role));
+                              }
+                            }}
+                            className="rounded bg-surface-container border-outline-ghost text-purple-500 focus:ring-purple-500/40"
+                          />
+                          <span className="capitalize">{role}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {documentModal.mode === 'create' && (
                 <>
                   <div>
@@ -957,6 +1164,141 @@ export default function Biblioteca() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: VISOR DE DOCUMENTOS */}
+      {viewerModal.isOpen && viewerModal.version && (
+        <div className="fixed inset-0 z-50 bg-background/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 animate-in fade-in duration-200">
+          <div className="bg-theme-container border border-outline-ghost/80 rounded-2xl max-w-5xl w-full max-h-[95vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Header del Visor */}
+            <div className="flex items-center justify-between p-4 border-b border-outline-ghost/60 bg-surface-container/50 shrink-0 gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                {/* Icono según formato */}
+                <div className="w-9 h-9 rounded-xl bg-theme-main/10 border border-theme-main/30 flex items-center justify-center text-theme-main shrink-0">
+                  {getViewableType(viewerModal.version) === 'pdf' && <FileText className="w-5 h-5 text-red-400" />}
+                  {getViewableType(viewerModal.version) === 'html' && <FileCode className="w-5 h-5 text-amber-400" />}
+                  {getViewableType(viewerModal.version) === 'txt' && <FileText className="w-5 h-5 text-sky-400" />}
+                  {getViewableType(viewerModal.version) === 'image' && <FileImage className="w-5 h-5 text-purple-400" />}
+                </div>
+
+                <div className="flex flex-col min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-lg font-display font-semibold text-on-surface truncate">
+                      {viewerModal.documentTitle}
+                    </h3>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-theme-main/20 text-theme-main border border-theme-main/30">
+                      {viewerModal.version.label}
+                    </span>
+                  </div>
+                  <p className="text-xs text-on-surface-muted truncate">
+                    {viewerModal.version.originalFilename} • {formatBytes(viewerModal.version.fileSize)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Botón Descargar y Cerrar */}
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={getLibraryVersionDownloadUrl(viewerModal.version.id)}
+                  download
+                  className="px-3.5 py-1.5 text-xs font-display font-semibold text-background bg-theme-main hover:bg-theme-main/90 rounded-xl transition-all flex items-center gap-1.5 shadow-md"
+                  title="Descargar archivo"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Descargar</span>
+                </a>
+
+                <a
+                  href={getLibraryVersionDownloadUrl(viewerModal.version.id, true)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1.5 text-on-surface-muted hover:text-on-surface bg-surface-container/60 hover:bg-surface-container rounded-xl transition-all hidden sm:flex"
+                  title="Abrir en pestaña nueva"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+
+                <button
+                  onClick={() => setViewerModal({ isOpen: false })}
+                  className="p-1.5 text-on-surface-muted hover:text-on-surface bg-surface-container/60 hover:bg-surface-container rounded-xl transition-all"
+                  title="Cerrar visor"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Cuerpo del Visor */}
+            <div className="flex-1 p-2 sm:p-4 bg-background/50 overflow-auto flex flex-col justify-center items-center">
+              {getViewableType(viewerModal.version) === 'pdf' && (
+                <iframe
+                  src={getLibraryVersionDownloadUrl(viewerModal.version.id, true)}
+                  className="w-full h-[75vh] rounded-xl border border-outline-ghost/40 bg-surface-container"
+                  title={viewerModal.version.originalFilename}
+                />
+              )}
+
+              {getViewableType(viewerModal.version) === 'html' && (
+                <iframe
+                  src={getLibraryVersionDownloadUrl(viewerModal.version.id, true)}
+                  className="w-full h-[75vh] rounded-xl border border-outline-ghost/40 bg-white"
+                  title={viewerModal.version.originalFilename}
+                  sandbox="allow-same-origin allow-scripts"
+                />
+              )}
+
+              {getViewableType(viewerModal.version) === 'txt' && (
+                <div className="w-full h-[75vh] flex flex-col">
+                  {loadingTxt ? (
+                    <div className="flex flex-col items-center justify-center h-full gap-2 text-on-surface-muted">
+                      <Loader2 className="w-8 h-8 animate-spin text-theme-main" />
+                      <p className="text-sm font-display">Cargando documento de texto...</p>
+                    </div>
+                  ) : txtError ? (
+                    <div className="flex flex-col items-center justify-center h-full gap-3 text-red-400">
+                      <AlertCircle className="w-8 h-8" />
+                      <p className="text-sm">{txtError}</p>
+                      <iframe
+                        src={getLibraryVersionDownloadUrl(viewerModal.version.id, true)}
+                        className="w-full h-full rounded-xl border border-outline-ghost/40 bg-surface-container"
+                        title={viewerModal.version.originalFilename}
+                      />
+                    </div>
+                  ) : (
+                    <pre className="w-full h-full p-4 sm:p-6 rounded-xl bg-surface-container border border-outline-ghost/40 text-on-surface font-mono text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words overflow-auto">
+                      {txtContent}
+                    </pre>
+                  )}
+                </div>
+              )}
+
+              {getViewableType(viewerModal.version) === 'image' && (
+                <div className="w-full h-[75vh] flex items-center justify-center p-2 bg-surface-container/30 rounded-xl border border-outline-ghost/30 overflow-auto">
+                  <img
+                    src={getLibraryVersionDownloadUrl(viewerModal.version.id, true)}
+                    alt={viewerModal.version.originalFilename}
+                    className="max-h-full max-w-full object-contain rounded-lg shadow-2xl"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Footer del Visor */}
+            <div className="p-3 border-t border-outline-ghost/60 bg-surface-container/30 flex items-center justify-between text-xs text-on-surface-muted shrink-0 px-4">
+              <span>Formato: {viewerModal.version.mimeType}</span>
+              <div className="flex items-center gap-3">
+                <a
+                  href={getLibraryVersionDownloadUrl(viewerModal.version.id)}
+                  download
+                  className="hover:text-theme-main transition-colors flex items-center gap-1 font-medium"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Descargar archivo</span>
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       )}

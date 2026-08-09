@@ -14,6 +14,8 @@ export interface LibraryDocument {
   title: string;
   description?: string;
   position: number;
+  accessLevel?: 'all' | 'registered' | 'roles';
+  allowedRoles?: string[];
   createdAt: string;
   versions: LibraryDocumentVersion[];
 }
@@ -47,6 +49,8 @@ export interface CreateDocumentDTO {
   description?: string;
   position?: number;
   label: string;
+  accessLevel?: 'all' | 'registered' | 'roles';
+  allowedRoles?: string[];
 }
 
 export interface UpdateDocumentDTO {
@@ -54,6 +58,8 @@ export interface UpdateDocumentDTO {
   title?: string;
   description?: string;
   position?: number;
+  accessLevel?: 'all' | 'registered' | 'roles';
+  allowedRoles?: string[];
 }
 
 export interface AddVersionDTO {
