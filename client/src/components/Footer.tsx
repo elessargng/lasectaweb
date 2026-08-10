@@ -1,13 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { History, Sparkles } from 'lucide-react';
+import changelogData from '../data/changelog.json';
 
 interface FooterProps {
   onOpenChangelog: () => void;
   version?: string;
 }
 
-const Footer: React.FC<FooterProps> = ({ onOpenChangelog, version = '0.1.0' }) => {
+const Footer: React.FC<FooterProps> = ({ onOpenChangelog, version = changelogData[0]?.version || '0.1.0' }) => {
   return (
     <footer className="w-full bg-theme-container border-t border-outline-ghost shadow-2xl relative z-30 font-body">
       <div className="max-w-7xl mx-auto px-6 md:px-10 py-6 md:py-8 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-4">

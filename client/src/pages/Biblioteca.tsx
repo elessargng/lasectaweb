@@ -788,6 +788,8 @@ export default function Biblioteca() {
           {tree.map(sec => renderSectionNode(sec, 0))}
         </div>
       )}
+        </div>
+      </div>
 
       {/* MODAL: SECCIÓN (TÍTULO / SUBTÍTULO) */}
       {sectionModal.isOpen && (
@@ -1302,8 +1304,6 @@ export default function Biblioteca() {
           </div>
         </div>
       )}
-        </div>
-      </div>
     </div>
   );
 }
