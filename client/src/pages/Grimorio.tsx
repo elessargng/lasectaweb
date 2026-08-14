@@ -1,177 +1,409 @@
-import { Link } from 'react-router-dom';
-import Cita from '../components/Cita';
+import React, { useState, useMemo } from 'react';
 import PageHeader from '../components/PageHeader';
-import { Compass, History } from 'lucide-react';
+import Button from '../components/Button';
+import Cita from '../components/Cita';
+import { allBotcCharacters } from '../data/botcRoles';
+import {
+  Search,
+  BookOpen,
+  Shield,
+  Skull,
+  Ghost,
+  Sparkles,
+  ExternalLink,
+  Crown,
+  ScrollText,
+  UserCheck,
+  Zap,
+  HelpCircle
+} from 'lucide-react';
 
-const Grimorio = () => {
+const Grimorio: React.FC = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedEdition, setSelectedEdition] = useState<string>('all');
+  const [selectedTeam, setSelectedTeam] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'characters' | 'editions' | 'rules' | 'guides'>('characters');
+
+  const filteredCharacters = useMemo(() => {
+    return allBotcCharacters.filter(char => {
+      const matchesSearch =
+        char.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        char.originalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        char.ability.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        char.summary.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesEdition = selectedEdition === 'all' || char.edition === selectedEdition;
+      const matchesTeam = selectedTeam === 'all' || char.team === selectedTeam;
+
+      return matchesSearch && matchesEdition && matchesTeam;
+    });
+  }, [searchTerm, selectedEdition, selectedTeam]);
+
+  const getTeamBadge = (team: string) => {
+    switch (team) {
+      case 'townsfolk':
+        return { label: 'Aldeano', bg: 'bg-blue-900/60 border-blue-500/40 text-blue-300', icon: Shield };
+      case 'outsider':
+        return { label: 'Forastero', bg: 'bg-cyan-900/60 border-cyan-500/40 text-cyan-300', icon: Ghost };
+      case 'minion':
+        return { label: 'Esbirro', bg: 'bg-rose-950/70 border-rose-600/50 text-rose-300', icon: Skull };
+      case 'demon':
+        return { label: 'Demonio', bg: 'bg-red-950 border-red-500 text-red-400 font-bold animate-pulse', icon: Crown };
+      case 'traveller':
+        return { label: 'Viajero', bg: 'bg-purple-900/60 border-purple-500/40 text-purple-300', icon: Zap };
+      default:
+        return { label: 'Legendario', bg: 'bg-amber-900/60 border-amber-500/40 text-amber-300', icon: Sparkles };
+    }
+  };
+
   return (
     <div className="flex flex-col w-full">
       <PageHeader
-        title="El Grimorio"
-        imageSrc="/calendar_banner_wide.jpg"
-        imageAlt="Calendario"
+        title="El Grimorio Wiki"
+        imageSrc="/wiki_banner.jpg"
+        imageAlt="Grimorio Wiki BotC"
       />
-      <div className="max-w-5xl w-full mx-auto px-0 md:px-8 py-4 md:py-10 relative z-20 -mt-20">
-        <div className="bg-transparent md:bg-surface border-0 md:border border-transparent md:border-outline-ghost rounded-none md:rounded shadow-none md:shadow-2xl px-4 py-6 md:p-10 md:pt-8 relative">
+
+      <div className="max-w-7xl w-full mx-auto px-0 md:px-8 py-4 md:py-10 relative z-20 -mt-20">
+        <div className="bg-transparent md:bg-surface border-0 md:border border-transparent md:border-outline-ghost rounded-none md:rounded shadow-none md:shadow-2xl px-4 py-6 md:p-10 relative space-y-8">
           
-          {/* Primer bloque: Cita e información general */}
-          <div className="bg-surface-low p-4 md:p-8 border border-outline-ghost shadow-inner mb-8 relative z-20 space-y-6">
-            <Cita texto="El fuego de la plaza consume mi última coartada. Escucho susurros en las esquinas; no son los vivos quienes me preocupan, sino los ojos fríos de mis víctimas de cada noche. Aunque sus cuerpos yazcan sin vida,* sus espíritus siguen votando... y hoy me señalan a mí*." />
+          <Cita texto="Bienvenido al compendio del conocimiento prohibido. Aquí hallarás la lista completa de roles, habilidades y leyes de Blood on the Clocktower." />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4">
-              <div>
-                <h3 className="text-xl font-display text-theme-main mb-3">¿Qué es Blood in the Clocktower?</h3>
-                <p className="text-on-surface text-base font-body leading-relaxed">
-                  Es un juego de deducción social para entre 5 y 20 jugadores en el que el bien y el mal libran una batalla de ingenio. Un Narrador guía la historia, mientras que cada participante recibe un rol único con habilidades especiales. Lo que lo hace especial es que los jugadores asesinados siguen participando activamente, teniendo un voto fantasmal para influir en el destino del pueblo.
-                </p>
+          {/* Banner de Enlace a la Wiki Oficial */}
+          <div className="bg-gradient-to-r from-theme-container via-surface-low to-theme-container border border-theme-main/40 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-theme-main/20 border border-theme-main/60 flex items-center justify-center shrink-0">
+                <BookOpen className="w-7 h-7 text-theme-main" />
               </div>
               <div>
-                <h3 className="text-xl font-display text-theme-main mb-3">¿Cómo jugamos?</h3>
-                <p className="text-on-surface text-base font-body leading-relaxed">
-                  En La Secta nos reunimos habitualmente de manera online para desatar el caos. Utilizamos la plataforma <a href="https://www.botc.app" target="_blank" rel="noopener noreferrer" className="text-theme-main hover:underline">botc.app</a> para visualizar el grimorio en tiempo real y gestionar las interacciones del pueblo, mientras que toda la diplomacia, las acusaciones y los susurros ocurren a través de nuestros canales de voz dedicados en Telegram. La narración inmersiva, las alianzas secretas y las puñaladas por la espalda están garantizadas en cada sesión.
-                </p>
-              </div>
-              <div>
-                <h3 className="text-xl font-display text-theme-main mb-3">¿Quiénes somos?</h3>
-                <p className="text-on-surface text-base font-body leading-relaxed">
-                  Somos una comunidad de aficionados a Blood on the Clocktower, abierta e inclusiva, cuyo objetivo es compartir nuestra pasión y generar espacios y oportunidades para jugar, conversar, conocernos e interactuar entre nosotros, creando una comunidad activa donde cada partida sea también una ocasión para conectar con otras personas.
+                <h2 className="text-xl md:text-2xl font-display text-theme-main">Wiki Oficial de Blood on the Clocktower</h2>
+                <p className="text-on-surface-muted text-sm font-body">
+                  Accede al recurso global oficial con todas las aclaraciones avanzadas, scripts comunitarios y fichas técnicas.
                 </p>
               </div>
             </div>
+            <a
+              href="https://wiki.bloodontheclocktower.com/Main_Page"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-theme-main hover:bg-theme-main/80 text-background font-display font-semibold px-6 py-3 rounded shadow-lg transition-all shrink-0 cursor-pointer"
+            >
+              Visitar Wiki Oficial <ExternalLink size={18} />
+            </a>
           </div>
 
-          {/* Segundo bloque: Historia de La Secta */}
-          <div className="bg-surface-low p-4 md:p-8 border border-outline-ghost shadow-inner mb-8 relative z-20 space-y-8">
-            <div className="border-b border-outline-ghost/60 pb-4">
-              <div className="flex items-center gap-3 mb-2">
-                <History className="w-6 h-6 text-theme-main" />
-                <h2 className="text-2xl md:text-3xl font-display text-theme-main">Historia de La Secta</h2>
-              </div>
-              <p className="text-on-surface-muted italic font-display text-lg">
-                Quiénes somos, de dónde venimos, a dónde vamos.
-              </p>
-            </div>
-
-            {/* Obra de Gauguin */}
-            <div className="my-6 space-y-2">
-              <div className="overflow-hidden rounded border border-outline-ghost shadow-lg bg-surface">
-                <img
-                  src="/historia/imagen_1.jpg"
-                  alt="Paul Gauguin - ¿De dónde venimos? ¿Quiénes somos? ¿Adónde vamos? (1897)"
-                  className="w-full max-h-[380px] object-cover hover:scale-[1.01] transition-transform duration-500"
-                />
-              </div>
-              <p className="text-xs text-center text-on-surface-muted italic font-body">
-                Paul Gauguin - ¿De dónde venimos? ¿Quiénes somos? ¿Adónde vamos? (1897)
-              </p>
-            </div>
-
-            {/* Texto de Origen */}
-            <div className="space-y-4 text-on-surface font-body leading-relaxed text-base">
-              <p className="italic text-on-surface-muted border-l-2 border-theme-main/60 pl-4 py-1">
-                Dicen los que saben algo de esto que las personas y comunidades se definen por aquello que hacen y que “el mejor predictor de la conducta futura es la conducta pasada”. Por eso quizá la mejor manera de explicar quiénes somos y a dónde vamos es explicar de dónde venimos y cómo nos hemos construido como colectivo.
-              </p>
-              <p>
-                Esta comunidad nace en verano de 2023, alrededor de uno de los pioneros en esto de juntar gente para jugar a Blood on the Clocktower: <strong className="text-theme-main font-semibold">Javier Rodríguez - “Mishigeek”</strong> y de su canal de Discord en el que había comenzado a organizar partidas unos meses antes, alrededor de junio. Durante esos meses de verano se congregan distintos aficionados e interesados al juego de distintos puntos de España y Latinoamérica, como <span className="text-on-surface-bright font-medium">Andreu “Nafsica”</span>, <span className="text-on-surface-bright font-medium">Marina</span> y <span className="text-on-surface-bright font-medium">Carlos</span>, entorno a este canal, jugando las primeras partidas comunitarias.
-              </p>
-              <p>
-                Otra parte significativa procede de haber probado el juego en las jornadas <strong className="text-on-surface-bright">Tierra de Nadie</strong> en agosto de 2022, en el <strong className="text-on-surface-bright">Campamento Barton</strong> de mayo de 2023 gracias a las copias de Kalino y Roberto y muy especialmente de las <strong className="text-on-surface-bright">CLBSK 2023</strong> (convivencias lúdicas de la BSK, uno de los foros de juegos de mesa precursores en castellano), donde comenzó la “fiebre” con el juego, ya que desde que llegó Guillermo Ribeiro con su copia ese viernes de julio no se paró de jugar, ininterrumpidamente, hasta que finalizaron las jornadas el domingo por la tarde: <span className="text-on-surface-bright font-medium">Alicia, Amarillo, Bea, Adrian o Calvo</span> fueron algunos de los que no pararon de jugar ese fin de semana.
-              </p>
-            </div>
-
-            {/* Dinámicas y Logotipo */}
-            <div className="space-y-4 text-on-surface font-body leading-relaxed text-base pt-2">
-              <h3 className="text-xl font-display text-theme-main">Sesgos, Moscas y la Identidad del Culto</h3>
-              <p>
-                En esas primeras partidas, tanto presenciales como telemáticas, comenzamos a experimentar las dinámicas características del juego: esa persistencia en acusar a alguien y de interpretar cualquier señal, por débil que sea, como evidencia de nuestra certeza (<em className="text-theme-main/90">el sesgo de confirmación</em>), el sobreestimar las posibilidades de una opción, por ejemplo que quien dice ser santo sea el demonio con esa coartada, porque recientemente o con alguna frecuencia eso ha sucedido así (<em className="text-theme-main/90">sesgo de disponibilidad</em>) o cómo olvidamos tan fácilmente hipótesis e información que teníamos como válida ante una nueva información que aparece (derivado de la gran carga cognitiva que supone el juego y la reorientación atencional) y empezamos a generar una jerga propia para algunos de estos efectos, por ejemplo, para esto último referirnos a que <strong className="text-on-surface-bright">“nos hemos distraído con una mosca”</strong> y hemos olvidado las hipótesis que teníamos o que alguien está <strong className="text-on-surface-bright">“soltando moscas”</strong> para distraer nuestra atención.
-              </p>
-              <p>
-                Por este motivo el primer logotipo, diseñado por Bea, incluía la cabeza de una mosca dentro del triángulo del icono del “Líder de culto”: la mosca representaba una de las dinámicas del juego junto con la jerga identitaria de la comunidad y el triángulo el nombre de grupo, “la secta”, a través del personaje más representativo, y utilizando el color azul del alineamiento “bueno” del juego original. Más tarde, en verano de 2026 y con la actualización de la comunidad a través de distintos grupos de trabajo, se actualizó el logotipo para mantener la tradición y la esencia conservando el triángulo del sectario y renovando la imagen principal focalizando en el sectario junto con un cambio de color al morado “corporativo” del rediseño de la web.
-              </p>
-              <p>
-                Hasta ese verano de 2023 y en paralelo se comienzan a organizar las primeras sesiones presenciales en clubes o locales particulares y el juego comienza a tener cierta repercusión en la “ludosfera”.
-              </p>
-              <p>
-                En ese verano se crean los canales propios de Discord y Telegram, para comenzar a organizar la comunidad de manera independiente y se incorpora por esas fechas uno de los pioneros en la divulgación del juego en Latinoamérica, <strong className="text-theme-main font-semibold">“Sapaki”</strong>.
-              </p>
-            </div>
-
-            {/* Captura partida 2023 */}
-            <div className="my-6 space-y-2">
-              <div className="overflow-hidden rounded border border-outline-ghost shadow-lg bg-surface flex justify-center">
-                <img
-                  src="/historia/imagen_2.jpg"
-                  alt="Partida convocada en verano de 2023"
-                  className="w-full max-h-[450px] object-contain hover:scale-[1.01] transition-transform duration-500"
-                />
-              </div>
-              <p className="text-xs text-center text-on-surface-muted italic font-body">
-                Aquí podemos ver una de las partidas convocadas en verano de 2023, y Gabriel “Goodwizard” entre los jugadores.
-              </p>
-            </div>
-
-            {/* Organización y divulgación */}
-            <div className="space-y-4 text-on-surface font-body leading-relaxed text-base">
-              <p>
-                Progresivamente vamos organizándonos como comunidad con un objetivo común que es el que define a la comunidad: generar un espacio común y plural en el que poder disfrutar de esta afición tanto compartiendo partidas de forma telemática como con jornadas o partidas presenciales. Y uno de los pasos significativos es la creación de una cuenta común para este grupo, bautizado como <strong className="text-theme-main font-semibold">“La secta”</strong> y que buscaba ser el espacio compartido para los aficionados a BotC en castellano, el 26 de septiembre de 2023, apenas unos días después de otra de las jornadas en las que no se paró de jugar en todas las convivencias: <strong className="text-on-surface-bright">Asturlúdicas</strong>.
-              </p>
-              <p>
-                Creamos en octubre de 2023 un canal de YouTube para la divulgación del juego y de la propia comunidad, <a href="https://www.youtube.com/@Lasecta_botc" target="_blank" rel="noopener noreferrer" className="text-theme-main hover:underline font-medium">youtube.com/@Lasecta_botc</a>, con distintos recursos como tutoriales para aprender a jugar o narrar, además de partidas.
-              </p>
-              <p>
-                También con el objetivo de hacer llegar el juego y la comunidad a más personas se han llevado adelante proyectos como la <strong className="text-on-surface-bright">“Escuela de verano”</strong> o el taller de narración <strong className="text-on-surface-bright">“El veranuco de la secta”</strong> coordinado por <span className="text-on-surface-bright font-medium">Alicia – “Harishka”</span> para enseñar tanto a jugar como a narrar.
-              </p>
-            </div>
-
-            {/* Sectarias y Eventos */}
-            <div className="space-y-4 text-on-surface font-body leading-relaxed text-base pt-2">
-              <h3 className="text-xl font-display text-theme-main">Espacios Propios: Sectarias y Convivencias</h3>
-              <p>
-                Uno de los objetivos era generar espacios propios en los que jugar y eso se inauguró con las primeras convivencias, <strong className="text-theme-main font-semibold">“Sectarias I”</strong> en enero de 2024, en Chinchón, unas convivencias para unas 30 personas centradas en Clocktower.
-              </p>
-            </div>
-
-            {/* Foto acreditación Sectarias */}
-            <div className="my-6 space-y-2">
-              <div className="overflow-hidden rounded border border-outline-ghost shadow-lg bg-surface flex justify-center">
-                <img
-                  src="/historia/imagen_3.jpg"
-                  alt="Acreditación Sectarias Enero 2024 - Calvo Expósito"
-                  className="w-full max-w-md max-h-[400px] object-cover rounded hover:scale-[1.01] transition-transform duration-500"
-                />
-              </div>
-              <p className="text-xs text-center text-on-surface-muted italic font-body">
-                Otras 72 horas de juego casi ininterrumpido.
-              </p>
-            </div>
-
-            <div className="space-y-4 text-on-surface font-body leading-relaxed text-base">
-              <p>
-                Continuamos asistiendo a jornadas y convivencias (De Empatadas, Campamento Barton, Asturlúdicas y muchas más) y en todo este tiempo y hasta hoy ha ido creciendo esta familia que ha servido de excusa para poner en contacto a muchísima gente.
-              </p>
-              <p>
-                En la fecha en la que se redacta este resumen contamos con distintos grupos de trabajo orientados a cuidar a la comunidad, organizar y coordinar eventos y jornadas, promocionar la comunidad o dar continuidad a la divulgación y canal de vídeo.
-              </p>
-              <p className="italic text-on-surface-muted">
-                Esto podría explicar de dónde venimos, qué somos y hacia dónde nos dirigimos.
-              </p>
-            </div>
-
-            {/* Cierre / Séneca */}
-            <div className="mt-8 pt-6 border-t border-outline-ghost/50 bg-surface/60 p-6 rounded border border-outline-ghost shadow-sm space-y-3 text-center">
-              <Compass className="w-6 h-6 text-theme-main mx-auto mb-1" />
-              <p className="text-base md:text-lg font-display text-on-surface italic max-w-2xl mx-auto leading-relaxed">
-                «Decía Séneca que <span className="text-theme-main">“ningún viento es favorable para el que no sabe a qué puerto se dirige”</span>. Nosotros sí conocemos el rumbo: venimos del entusiasmo de unos pocos, somos la pasión de muchos y vamos, simplemente, hacia la próxima partida.»
-              </p>
-              <p className="text-sm font-body text-theme-main/90 font-medium pt-2">
-                Porque al final, las grandes preguntas de Gauguin siempre se responden mejor frente a un Grimorio abierto.
-              </p>
-            </div>
+          {/* Pestañas de Navegación Principal */}
+          <div className="bg-surface-low/90 p-2 rounded-2xl border border-outline-ghost/80 shadow-inner flex flex-wrap gap-2">
+            {[
+              { id: 'characters', label: 'Compendio de Personajes', badge: allBotcCharacters.length, icon: UserCheck },
+              { id: 'editions', label: 'Ediciones Oficiales', icon: Crown },
+              { id: 'rules', label: 'Reglamento y Setup', icon: ScrollText },
+              { id: 'guides', label: 'Consejos de Narrador', icon: HelpCircle },
+            ].map(tab => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as 'characters' | 'editions' | 'rules' | 'guides')}
+                  className={`px-5 py-3 rounded-xl font-display text-sm md:text-base transition-all duration-200 cursor-pointer flex items-center gap-2.5 ${
+                    isActive
+                      ? 'bg-theme-main text-background font-bold shadow-lg shadow-theme-main/30 ring-1 ring-theme-main/50'
+                      : 'text-on-surface-muted hover:text-on-surface hover:bg-surface-container/70'
+                  }`}
+                >
+                  <Icon size={18} className={isActive ? 'text-background' : 'text-theme-main/80'} />
+                  <span>{tab.label}</span>
+                  {tab.badge !== undefined && (
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-sans ${
+                      isActive
+                        ? 'bg-background/25 text-background font-bold'
+                        : 'bg-surface-container text-on-surface-muted border border-outline-ghost'
+                    }`}>
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
-          <Link to="/escrituras" className="inline-block text-theme-main hover:text-on-surface transition-colors font-display text-[15px] underline relative z-20">
-            El Códice &rarr;
-          </Link>
+          {/* TAB 1: PERSONAJES CON BUSCADOR Y FILTROS */}
+          {activeTab === 'characters' && (
+            <div className="space-y-6">
+              {/* Barra de Búsqueda y Filtros */}
+              <div className="bg-surface-low border border-outline-ghost p-4 md:p-6 rounded-xl space-y-4 shadow-md">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-muted w-5 h-5" />
+                  <input
+                    type="text"
+                    placeholder="Buscar entre los personajes por nombre (ej: Lavandera, Imp, Poisoner, Monje...)"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-background border border-outline-ghost rounded-lg pl-12 pr-4 py-3 text-on-surface placeholder:text-on-surface-muted focus:outline-none focus:border-theme-main transition-colors font-body"
+                  />
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center pt-2">
+                  {/* Filtro de Edición */}
+                  <div className="flex items-center gap-2 flex-wrap text-sm">
+                    <span className="text-on-surface-muted font-display">Edición:</span>
+                    {[
+                      { id: 'all', label: 'Todas' },
+                      { id: 'trouble-brewing', label: 'Trouble Brewing' },
+                      { id: 'bad-moon-rising', label: 'Bad Moon Rising' },
+                      { id: 'sects-and-violets', label: 'Sects & Violets' },
+                      { id: 'traveller', label: 'Viajeros' },
+                      { id: 'fabled', label: 'Legendarios' },
+                      { id: 'experimental', label: 'Experimental' }
+                    ].map(ed => (
+                      <button
+                        key={ed.id}
+                        onClick={() => setSelectedEdition(ed.id)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-display transition-all cursor-pointer ${
+                          selectedEdition === ed.id
+                            ? 'bg-theme-main text-background font-semibold shadow'
+                            : 'bg-background hover:bg-surface border border-outline-ghost text-on-surface-muted'
+                        }`}
+                      >
+                        {ed.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Filtro de Bando */}
+                  <div className="flex items-center gap-2 flex-wrap text-sm">
+                    <span className="text-on-surface-muted font-display">Bando:</span>
+                    {[
+                      { id: 'all', label: 'Todos' },
+                      { id: 'townsfolk', label: 'Aldeanos' },
+                      { id: 'outsider', label: 'Forasteros' },
+                      { id: 'minion', label: 'Esbirros' },
+                      { id: 'demon', label: 'Demonios' },
+                      { id: 'traveller', label: 'Viajeros' },
+                      { id: 'fabled', label: 'Legendarios' }
+                    ].map(team => (
+                      <button
+                        key={team.id}
+                        onClick={() => setSelectedTeam(team.id)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-display transition-all cursor-pointer ${
+                          selectedTeam === team.id
+                            ? 'bg-theme-main text-background font-semibold shadow'
+                            : 'bg-background hover:bg-surface border border-outline-ghost text-on-surface-muted'
+                        }`}
+                      >
+                        {team.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="text-xs text-on-surface-muted font-display pt-1">
+                  Mostrando {filteredCharacters.length} de {allBotcCharacters.length} personajes.
+                </div>
+              </div>
+
+              {/* Grid de Tarjetas de Personajes */}
+              {filteredCharacters.length === 0 ? (
+                <div className="text-center py-12 bg-surface-low border border-outline-ghost rounded-xl">
+                  <Ghost className="w-12 h-12 text-on-surface-muted mx-auto mb-3 opacity-60" />
+                  <p className="text-lg font-display text-on-surface">No se encontraron personajes con los filtros seleccionados.</p>
+                  <p className="text-sm text-on-surface-muted font-body mt-1">Prueba a borrar el término de búsqueda o seleccionar "Todas".</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredCharacters.map(char => {
+                    const badge = getTeamBadge(char.team);
+                    const BadgeIcon = badge.icon;
+                    return (
+                      <div
+                        key={char.id}
+                        className="bg-surface-low border border-outline-ghost hover:border-theme-main/60 rounded-xl p-5 shadow-md hover:shadow-xl transition-all flex flex-col justify-between group space-y-4"
+                      >
+                        <div>
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <h3 className="text-xl font-display text-theme-main group-hover:text-on-surface-bright transition-colors">
+                                {char.name}
+                              </h3>
+                              <span className="text-xs font-body text-on-surface-muted italic">
+                                ({char.originalName})
+                              </span>
+                            </div>
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border font-display ${badge.bg}`}>
+                              <BadgeIcon size={12} /> {badge.label}
+                            </span>
+                          </div>
+
+                          <div className="mt-3 p-3 bg-background/60 rounded-lg border border-outline-ghost/40">
+                            <p className="text-sm font-body text-on-surface leading-relaxed italic">
+                              "{char.ability}"
+                            </p>
+                          </div>
+
+                          <p className="text-xs text-on-surface-muted font-body mt-3 leading-normal">
+                            {char.summary}
+                          </p>
+                        </div>
+
+                        <div className="pt-2 border-t border-outline-ghost/40 flex items-center justify-between text-xs text-on-surface-muted font-display">
+                          <span className="capitalize">{char.edition.replace(/-/g, ' ')}</span>
+                          <a
+                            href={`https://wiki.bloodontheclocktower.com/${encodeURIComponent(char.originalName)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-theme-main hover:underline flex items-center gap-1 group-hover:text-theme-main/90"
+                          >
+                            Ver en Wiki <ExternalLink size={12} />
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 2: EDICIONES */}
+          {activeTab === 'editions' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="bg-surface-low border border-outline-ghost p-6 rounded-xl space-y-4 hover:border-theme-main/50 transition-all flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="h-44 rounded-lg bg-theme-container flex items-center justify-center p-4 border border-outline-ghost">
+                    <img src="/Logo_trouble_brewing.png" alt="Trouble Brewing" className="max-h-full object-contain drop-shadow" />
+                  </div>
+                  <h3 className="text-2xl font-display text-theme-main">Trouble Brewing</h3>
+                  <p className="text-sm text-on-surface font-body leading-relaxed">
+                    La edición fundamental e ideal para empezar. Enfocada en la lógica pura, la obtención directa de pistas y la interacción entre roles buenos confirmables contra la astucia del Imp y sus esbirros.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => { setSelectedEdition('trouble-brewing'); setActiveTab('characters'); }}
+                  variant="outline"
+                  className="w-full mt-4"
+                >
+                  Explorar Roles de TB
+                </Button>
+              </div>
+
+              <div className="bg-surface-low border border-outline-ghost p-6 rounded-xl space-y-4 hover:border-theme-main/50 transition-all flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="h-44 rounded-lg bg-theme-container flex items-center justify-center p-4 border border-outline-ghost">
+                    <img src="/Logo_bad_moon_rising.png" alt="Bad Moon Rising" className="max-h-full object-contain drop-shadow" />
+                  </div>
+                  <h3 className="text-2xl font-display text-theme-main">Bad Moon Rising</h3>
+                  <p className="text-sm text-on-surface font-body leading-relaxed">
+                    Edición violenta y llena de muertes múltiples por la noche. La supervivencia, las protecciones y deducir la causa exacta de cada muerte son las claves para cazar al demonio.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => { setSelectedEdition('bad-moon-rising'); setActiveTab('characters'); }}
+                  variant="outline"
+                  className="w-full mt-4"
+                >
+                  Explorar Roles de BMR
+                </Button>
+              </div>
+
+              <div className="bg-surface-low border border-outline-ghost p-6 rounded-xl space-y-4 hover:border-theme-main/50 transition-all flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="h-44 rounded-lg bg-theme-container flex items-center justify-center p-4 border border-outline-ghost">
+                    <img src="/Logo_sects_and_violets.png" alt="Sects & Violets" className="max-h-full object-contain drop-shadow" />
+                  </div>
+                  <h3 className="text-2xl font-display text-theme-main">Sects & Violets</h3>
+                  <p className="text-sm text-on-surface font-body leading-relaxed">
+                    Edición caótica centrada en la locura, las alteraciones de información y cambios constantes de roles. La mente del pueblo se pone a prueba contra el engaño supremo.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => { setSelectedEdition('sects-and-violets'); setActiveTab('characters'); }}
+                  variant="outline"
+                  className="w-full mt-4"
+                >
+                  Explorar Roles de S&V
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: REGLAMENTO Y SETUP */}
+          {activeTab === 'rules' && (
+            <div className="bg-surface-low border border-outline-ghost p-6 md:p-8 rounded-xl space-y-6">
+              <h2 className="text-2xl font-display text-theme-main border-b border-outline-ghost pb-3 flex items-center gap-2">
+                <ScrollText className="w-6 h-6 text-theme-main" /> Reglas Básicas de Juego
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-body text-on-surface text-base">
+                <div className="space-y-3 bg-background/50 p-5 rounded-lg border border-outline-ghost/60">
+                  <h3 className="text-lg font-display text-theme-main">1. Ciclo Día y Noche</h3>
+                  <p>
+                    Durante la <strong>Noche</strong>, el pueblo duerme con los ojos cerrados. El Narrador despierta a los roles uno por uno en secreto para que usen sus habilidades o reciban señales. Durante el <strong>Día</strong>, todos debaten abiertamente, forman alianzas y hacen nominaciones para ejecutar a un sospechoso.
+                  </p>
+                </div>
+
+                <div className="space-y-3 bg-background/50 p-5 rounded-lg border border-outline-ghost/60">
+                  <h3 className="text-lg font-display text-theme-main">2. Los Muertos Siguen Jugando</h3>
+                  <p>
+                    A diferencia de otros juegos de deducción social, en Blood on the Clocktower <strong>los jugadores asesinados no quedan fuera</strong>. Siguen participando activamente en los debates y conservan <strong>un voto fantasma único</strong> para la votación final o estratégica.
+                  </p>
+                </div>
+
+                <div className="space-y-3 bg-background/50 p-5 rounded-lg border border-outline-ghost/60">
+                  <h3 className="text-lg font-display text-theme-main">3. Nominaciones y Ejecución</h3>
+                  <p>
+                    Cada jugador vivo puede nominar a otro jugador una vez al día. Para que la acusación prospere debe alcanzar al menos la mitad de los votos de jugadores vivos. Solo se ejecuta al sospechoso con mayor número de votos al final del día.
+                  </p>
+                </div>
+
+                <div className="space-y-3 bg-background/50 p-5 rounded-lg border border-outline-ghost/60">
+                  <h3 className="text-lg font-display text-theme-main">4. Condición de Victoria</h3>
+                  <p>
+                    <strong>El Bando Bueno gana</strong> si el Demonio es ejecutado en la plaza pública. <strong>El Bando Malvado gana</strong> si solo quedan 2 jugadores vivos (el Demonio y otro participante) o si se cumple una condición especial de victoria malvada.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: CONSEJOS DE NARRADOR */}
+          {activeTab === 'guides' && (
+            <div className="bg-surface-low border border-outline-ghost p-6 md:p-8 rounded-xl space-y-6">
+              <h2 className="text-2xl font-display text-theme-main border-b border-outline-ghost pb-3 flex items-center gap-2">
+                <HelpCircle className="w-6 h-6 text-theme-main" /> Consejos para el Narrador (Storyteller)
+              </h2>
+
+              <div className="space-y-4 font-body text-on-surface text-base leading-relaxed">
+                <p>
+                  El Narrador no es un árbitro pasivo: es el director de la experiencia. Su meta no es ganar ni favorecer a un bando, sino crear una partida emocionante, equilibrada e inolvidable para todos los participantes.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+                  <div className="bg-background/50 p-5 rounded-lg border border-outline-ghost/60 space-y-2">
+                    <h3 className="font-display text-lg text-theme-main">Mantén el Ritmo</h3>
+                    <p className="text-sm text-on-surface-muted">
+                      Procura que la fase de noche sea fluida y que el debate durante el día tenga un tiempo límite razonable para mantener la tensión.
+                    </p>
+                  </div>
+
+                  <div className="bg-background/50 p-5 rounded-lg border border-outline-ghost/60 space-y-2">
+                    <h3 className="font-display text-lg text-theme-main">Administra la Borrachera</h3>
+                    <p className="text-sm text-on-surface-muted">
+                      Si hay un Borracho o Envenenador en juego, da información falsa creíble pero que encaje con la partida para mantener el misterio.
+                    </p>
+                  </div>
+
+                  <div className="bg-background/50 p-5 rounded-lg border border-outline-ghost/60 space-y-2">
+                    <h3 className="font-display text-lg text-theme-main">Fomenta la Inclusión</h3>
+                    <p className="text-sm text-on-surface-muted">
+                      Asegúrate de que los jugadores nuevos o más tímidos tengan oportunidad de hablar y usar sus votos fantasmas con libertad.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
     </div>

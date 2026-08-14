@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Profile from './pages/Profile';
 import Atrio from './pages/Atrio';
+import Cronicas from './pages/Cronicas';
 import Grimorio from './pages/Grimorio';
 import Escrituras from './pages/Escrituras';
 import Plaza from './pages/Plaza';
@@ -21,6 +22,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Atrio />} />
+          <Route path="cronicas" element={<Cronicas />} />
           <Route path="grimorio" element={<Grimorio />} />
           <Route path="escrituras" element={<Escrituras />} />
           <Route path="biblioteca" element={<Biblioteca />} />

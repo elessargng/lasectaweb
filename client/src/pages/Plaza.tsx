@@ -26,15 +26,15 @@ const Plaza = () => {
           <h3 className="text-3xl font-display text-theme-main mb-4">Sección en Construcción</h3>
 
           <p className="text-on-surface-muted text-lg font-body leading-relaxed max-w-lg mb-8">
-            Los escribas e iniciados de La Secta están preparando este espacio en las profundidades del Grimorio. Muy pronto se abrirán las puertas para debatir, proponer y votar los edictos que gobernarán el Culto.
+            Los escribas e iniciados de La Secta están preparando este espacio en las profundidades de las Crónicas. Muy pronto se abrirán las puertas para debatir, proponer y votar los edictos que gobernarán el Culto.
           </p>
 
           <div className="flex gap-4">
             <Button to="/" variant="primary" className="px-8 py-3">
               Volver al Atrio
             </Button>
-            <Button to="/grimorio" variant="outline" className="px-8 py-3">
-              Ver el Grimorio
+            <Button to="/cronicas" variant="outline" className="px-8 py-3">
+              Ver las Crónicas
             </Button>
           </div>
         </div>

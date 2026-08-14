@@ -3,7 +3,20 @@ import fs from 'fs';
 import path from 'path';
 import { LibraryRepository } from '../repositories/LibraryRepository';
 import { UserRepository } from '../repositories/UserRepository';
-import { LibrarySection, LibraryDocument, LibraryDocumentVersion, CreateSectionDTO, UpdateSectionDTO, CreateDocumentDTO, UpdateDocumentDTO } from '../types/library';
+import {
+  LibrarySection,
+  LibraryDocument,
+  LibraryLink,
+  LibraryItem,
+  BaseLibraryItem,
+  LibraryDocumentVersion,
+  CreateSectionDTO,
+  UpdateSectionDTO,
+  CreateDocumentDTO,
+  UpdateDocumentDTO,
+  CreateLinkDTO,
+  UpdateLinkDTO
+} from '../types/library';
 
 export class LibraryService {
   constructor(
@@ -18,64 +31,107 @@ export class LibraryService {
     }
   }
 
+  private parseYoutubeInfo(url: string): { isYoutube: boolean; linkType: 'normal' | 'youtube'; thumbnailUrl?: string } {
+    const isYoutube = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//i.test(url);
+    if (!isYoutube) {
+      return { isYoutube: false, linkType: 'normal' };
+    }
+
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    const videoId = (match && match[2].length === 11) ? match[2] : null;
+    const thumbnailUrl = videoId
+      ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+      : undefined;
+
+    return {
+      isYoutube: true,
+      linkType: 'youtube',
+      thumbnailUrl
+    };
+  }
+
   public async getTree(userId?: string): Promise<LibrarySection[]> {
     const user = userId ? await this.userRepository.findById(userId) : null;
     const isAdmin = user?.roles?.includes('admin') || false;
     const userRoles = user?.roles || [];
 
     const rawSections = await this.libraryRepository.getAllSections();
-    const rawDocs = await this.libraryRepository.getAllDocuments();
+    const rawItems = await this.libraryRepository.getAllRawItems();
+    const rawLinks = await this.libraryRepository.getAllLinks();
     const rawVersions = await this.libraryRepository.getAllVersions();
 
-    // Filtramos documentos según el acceso del usuario
-    const allowedDocs = rawDocs.filter(doc => {
-      // Si el usuario es administrador, puede ver todo
+    const linkMap = new Map<string, LibraryLink>();
+    for (const link of rawLinks) {
+      linkMap.set(link.id, link);
+    }
+
+    // Filtrar items según control de acceso del usuario
+    const allowedRawItems = rawItems.filter(item => {
       if (isAdmin) return true;
 
-      // Determinamos el nivel de acceso del documento (por defecto es 'all')
-      const accessLevel = doc.accessLevel || 'all';
+      const accessLevel = item.accessLevel || 'all';
 
-      if (accessLevel === 'all') {
-        return true;
-      }
-      
-      if (accessLevel === 'registered') {
-        // Solo usuarios registrados
-        return !!user;
-      }
+      if (accessLevel === 'all') return true;
+
+      if (accessLevel === 'registered') return !!user;
 
       if (accessLevel === 'roles') {
-        // Solo usuarios con alguno de los roles permitidos
-        const allowed = doc.allowedRoles || [];
+        const allowed = item.allowedRoles || [];
         return !!user && (allowed.length === 0 || allowed.some(role => userRoles.includes(role as any)));
       }
 
       return false;
     });
 
-    // Asociar versiones a sus documentos correspondientes
-    const docMap = new Map<string, LibraryDocument>();
-    for (const doc of allowedDocs) {
-      const docVersions = rawVersions.filter(v => v.documentId === doc.id);
-      docMap.set(doc.id, { ...doc, versions: docVersions });
+    // Construir objetos polimórficos LibraryItem (LibraryDocument | LibraryLink)
+    const polymorphicItems: LibraryItem[] = [];
+    for (const raw of allowedRawItems) {
+      if (raw.itemType === 'link') {
+        const fullLink = linkMap.get(raw.id);
+        if (fullLink) {
+          polymorphicItems.push(fullLink);
+        } else {
+          // Si no estuviera en library_links, construir por defecto
+          const ytInfo = this.parseYoutubeInfo((raw as any).url || '');
+          polymorphicItems.push({
+            ...raw,
+            itemType: 'link',
+            url: (raw as any).url || '',
+            linkType: ytInfo.linkType,
+            thumbnailUrl: ytInfo.thumbnailUrl
+          });
+        }
+      } else {
+        // Documento con archivo físico
+        const docVersions = rawVersions.filter(v => v.documentId === raw.id);
+        polymorphicItems.push({
+          ...raw,
+          itemType: 'document',
+          versions: docVersions
+        });
+      }
     }
 
-    // Agrupar documentos por id de sección
-    const docsBySection = new Map<string, LibraryDocument[]>();
-    for (const doc of docMap.values()) {
-      if (!docsBySection.has(doc.sectionId)) {
-        docsBySection.set(doc.sectionId, []);
+    // Agrupar items por sección
+    const itemsBySection = new Map<string, LibraryItem[]>();
+    for (const item of polymorphicItems) {
+      if (!itemsBySection.has(item.sectionId)) {
+        itemsBySection.set(item.sectionId, []);
       }
-      docsBySection.get(doc.sectionId)!.push(doc);
+      itemsBySection.get(item.sectionId)!.push(item);
     }
 
     // Mapa de secciones enriquecidas
     const sectionMap = new Map<string, LibrarySection & { hasSubDocuments: boolean }>();
     for (const sec of rawSections) {
-      const docsInSec = docsBySection.get(sec.id) || [];
+      const itemsInSec = itemsBySection.get(sec.id) || [];
+      const docsInSec = itemsInSec.filter((i): i is LibraryDocument => i.itemType === 'document');
+
       sectionMap.set(sec.id, {
         ...sec,
-        documents: docsInSec,
+        items: itemsInSec,
+        documents: docsInSec, // Para compatibilidad
         subsections: [],
         hasSubDocuments: false
       });
@@ -92,18 +148,18 @@ export class LibraryService {
       }
     }
 
-    // Determinar recursivamente si tiene documentos visibles
+    // Determinar si una sección contiene items
     const checkHasSubDocs = (sec: LibrarySection & { hasSubDocuments: boolean }): boolean => {
-      let hasDocs = (sec.documents && sec.documents.length > 0) || false;
+      let hasItems = (sec.items && sec.items.length > 0) || false;
       if (sec.subsections) {
         for (const sub of sec.subsections as (LibrarySection & { hasSubDocuments: boolean })[]) {
           if (checkHasSubDocs(sub)) {
-            hasDocs = true;
+            hasItems = true;
           }
         }
       }
-      sec.hasSubDocuments = hasDocs;
-      return hasDocs;
+      sec.hasSubDocuments = hasItems;
+      return hasItems;
     };
 
     for (const root of rootSections) {
@@ -113,6 +169,7 @@ export class LibraryService {
     return rootSections;
   }
 
+  // --- GESTIÓN DE SECCIONES ---
   public async createSection(userId: string, dto: CreateSectionDTO): Promise<LibrarySection> {
     await this.verifyAdmin(userId);
 
@@ -159,15 +216,15 @@ export class LibraryService {
       throw new Error('La sección especificada no existe.');
     }
 
-    // REGLA CRÍTICA: No se puede borrar una sección/subtítulo si contiene documentos bajo ella
     const subDocCount = await this.libraryRepository.countSubDocuments(id);
     if (subDocCount > 0) {
-      throw new Error('No se puede borrar una sección o subtítulo que contenga documentos bajo ella.');
+      throw new Error('No se puede borrar una sección o subtítulo que contenga elementos bajo ella.');
     }
 
     return this.libraryRepository.deleteSection(id);
   }
 
+  // --- GESTIÓN DE DOCUMENTOS (ARCHIVOS) ---
   public async createDocument(
     userId: string,
     dto: CreateDocumentDTO,
@@ -196,7 +253,7 @@ export class LibraryService {
     const docId = crypto.randomUUID();
     const position = dto.position ?? 0;
 
-    const doc = await this.libraryRepository.createDocument(
+    await this.libraryRepository.createDocument(
       docId,
       dto.sectionId,
       dto.title.trim(),
@@ -206,7 +263,6 @@ export class LibraryService {
       dto.allowedRoles || []
     );
 
-    // Crear primera versión del documento
     const versionId = crypto.randomUUID();
     await this.libraryRepository.createVersion(
       versionId,
@@ -259,7 +315,6 @@ export class LibraryService {
       throw new Error('El documento especificado no existe.');
     }
 
-    // Eliminar archivos físicos en disco
     for (const v of doc.versions) {
       this.deletePhysicalFile(v.filename);
     }
@@ -267,6 +322,101 @@ export class LibraryService {
     return this.libraryRepository.deleteDocument(id);
   }
 
+  // --- GESTIÓN DE ENLACES ---
+  public async createLink(userId: string, dto: CreateLinkDTO): Promise<LibraryLink> {
+    await this.verifyAdmin(userId);
+
+    if (!dto.title || dto.title.trim() === '') {
+      throw new Error('El título del enlace es obligatorio.');
+    }
+    if (!dto.url || dto.url.trim() === '') {
+      throw new Error('La dirección URL del enlace es obligatoria.');
+    }
+    if (!dto.sectionId) {
+      throw new Error('Debe especificar una sección para el enlace.');
+    }
+
+    const section = await this.libraryRepository.getSectionById(dto.sectionId);
+    if (!section) {
+      throw new Error('La sección especificada no existe.');
+    }
+
+    const linkId = crypto.randomUUID();
+    const position = dto.position ?? 0;
+    const url = dto.url.trim();
+
+    const ytInfo = this.parseYoutubeInfo(url);
+
+    return this.libraryRepository.createLink(
+      linkId,
+      dto.sectionId,
+      dto.title.trim(),
+      url,
+      ytInfo.linkType,
+      ytInfo.thumbnailUrl,
+      dto.description,
+      position,
+      dto.accessLevel || 'all',
+      dto.allowedRoles || []
+    );
+  }
+
+  public async updateLink(userId: string, id: string, dto: UpdateLinkDTO): Promise<LibraryLink> {
+    await this.verifyAdmin(userId);
+
+    const currentLink = await this.libraryRepository.getLinkById(id);
+    if (!currentLink) {
+      throw new Error('El enlace especificado no existe.');
+    }
+
+    if (dto.sectionId) {
+      const section = await this.libraryRepository.getSectionById(dto.sectionId);
+      if (!section) {
+        throw new Error('La sección especificada no existe.');
+      }
+    }
+
+    let linkType = currentLink.linkType;
+    let thumbnailUrl = currentLink.thumbnailUrl;
+    const newUrl = dto.url !== undefined ? dto.url.trim() : currentLink.url;
+
+    if (dto.url !== undefined) {
+      const ytInfo = this.parseYoutubeInfo(newUrl);
+      linkType = ytInfo.linkType;
+      thumbnailUrl = ytInfo.thumbnailUrl;
+    }
+
+    const updated = await this.libraryRepository.updateLink(
+      id,
+      dto.sectionId,
+      dto.title?.trim(),
+      newUrl,
+      linkType,
+      thumbnailUrl,
+      dto.description,
+      dto.position,
+      dto.accessLevel,
+      dto.allowedRoles
+    );
+
+    if (!updated) {
+      throw new Error('No se pudo actualizar el enlace.');
+    }
+    return updated;
+  }
+
+  public async deleteLink(userId: string, id: string): Promise<boolean> {
+    await this.verifyAdmin(userId);
+
+    const link = await this.libraryRepository.getLinkById(id);
+    if (!link) {
+      throw new Error('El enlace especificado no existe.');
+    }
+
+    return this.libraryRepository.deleteLink(id);
+  }
+
+  // --- VERSIONES ---
   public async addVersion(
     userId: string,
     documentId: string,
@@ -307,9 +457,7 @@ export class LibraryService {
       throw new Error('La versión especificada no existe.');
     }
 
-    // Borrar archivo del disco
     this.deletePhysicalFile(version.filename);
-
     return this.libraryRepository.deleteVersion(id);
   }
 
@@ -327,7 +475,6 @@ export class LibraryService {
       throw new Error('El documento solicitado no existe.');
     }
 
-    // Comprobar nivel de acceso del documento
     const accessLevel = doc.accessLevel || 'all';
     if (accessLevel !== 'all') {
       if (!userId) {

@@ -159,6 +159,47 @@ export class DatabaseRepository {
         ALTER TABLE library_documents ADD COLUMN allowedRoles TEXT;
       `);
     });
+
+    // Migración 004: Modelo polimórfico library_items y enlaces
+    await this.applyMigration('004_refactor_library_items_and_links', async (db) => {
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS library_items (
+          id TEXT PRIMARY KEY,
+          sectionId TEXT NOT NULL,
+          itemType TEXT NOT NULL DEFAULT 'document',
+          title TEXT NOT NULL,
+          description TEXT,
+          position INTEGER DEFAULT 0,
+          accessLevel TEXT DEFAULT 'all',
+          allowedRoles TEXT,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (sectionId) REFERENCES library_sections(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS library_links (
+          itemId TEXT PRIMARY KEY,
+          url TEXT NOT NULL,
+          linkType TEXT NOT NULL,
+          thumbnailUrl TEXT,
+          FOREIGN KEY (itemId) REFERENCES library_items(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_library_items_sectionId ON library_items(sectionId);
+      `);
+
+      const tableExists = await db.get<{ count: number }>(
+        "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='library_documents'"
+      );
+
+      if (tableExists && tableExists.count > 0) {
+        await db.exec(`
+          INSERT OR IGNORE INTO library_items (id, sectionId, itemType, title, description, position, accessLevel, allowedRoles, createdAt)
+          SELECT id, sectionId, 'document', title, description, position,
+                 COALESCE(accessLevel, 'all'), allowedRoles, createdAt
+          FROM library_documents;
+        `);
+      }
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

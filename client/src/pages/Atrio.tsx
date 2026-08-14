@@ -28,7 +28,8 @@ const Atrio: React.FC = () => {
 
   const quickActions = [
     { label: 'Ir a la Plaza', icon: MessageSquare, path: '/plaza', desc: 'Participa en las discusiones' },
-    { label: 'Explorar Grimorio', icon: BookOpen, path: '/grimorio', desc: 'Consulta los conocimientos' },
+    { label: 'Explorar Crónicas', icon: BookOpen, path: '/cronicas', desc: 'Conoce la historia del culto' },
+    { label: 'Grimorio Wiki', icon: BookOpen, path: '/grimorio', desc: 'Enciclopedia de BotC' },
     { label: 'Ver Rituales', icon: Calendar, path: '/rituales', desc: 'No te pierdas los eventos' },
   ]; 
 

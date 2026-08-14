@@ -1,5 +1,26 @@
 [
   {
+    "version": "0.4.0",
+    "date": "2026-08-14",
+    "title": "Anales, Wiki en Grimorio y Recursos Multimedia en Biblioteca",
+    "description": "Renombrado de la sección Grimorio a Anales, integración de la nueva Wiki dentro de Grimorio y capacidad para publicar enlaces web y vídeos de YouTube en la Biblioteca.",
+    "changes": [
+      {
+        "category": "Novedades y Secciones",
+        "items": [
+          "Sección Anales: El antiguo Grimorio pasa a denominarse Anales.",
+          "Wiki en Grimorio: Incorporación de la Wiki como nueva experiencia dentro de la sección Grimorio."
+        ]
+      },
+      {
+        "category": "La Biblioteca",
+        "items": [
+          "Publicación de Enlaces y Vídeos: Posibilidad de compartir enlaces a páginas web y vídeos de YouTube con títulos y previsualizaciones integradas."
+        ]
+      }
+    ]
+  },
+  {
     "version": "0.3.0",
     "date": "2026-08-09",
     "title": "Securización y Visor de La Biblioteca",
@@ -25,12 +46,12 @@
     "version": "0.2.0",
     "date": "2026-08-07",
     "title": "Historia y Biblioteca de La Secta",
-    "description": "Se incorpora la historia de la comunidad en el Grimorio y una nueva sección de Biblioteca para la documentación.",
+    "description": "Se incorpora la historia de la comunidad en las Crónicas y una nueva sección de Biblioteca para la documentación.",
     "changes": [
       {
         "category": "Novedades y Secciones",
         "items": [
-          "Historia de La Secta: Incorporada la historia detallada de la comunidad al Grimorio.",
+          "Historia de La Secta: Incorporada la historia detallada de la comunidad a las Crónicas.",
           "Nueva Sección Biblioteca: Espacio exclusivo para almacenar y consultar la documentación oficial de La Secta."
         ]
       }
@@ -45,7 +66,7 @@
       {
         "category": "Novedades y Secciones",
         "items": [
-          "Información general (Grimorio): Conoce todo sobre la comunidad y el club.",
+          "Información general (Crónicas): Conoce todo sobre la comunidad y el club.",
           "Reglas de funcionamiento de la secta (Códice): Guías, leyes y normativas de convivencia.",
           "Redes Sociales: Enlaces directos a nuestras plataformas oficiales.",
           "Gestión básica de usuario: Sistema de registro, inicio de sesión, avatar personalizado y gestión de perfil."

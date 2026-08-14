@@ -32,6 +32,7 @@ const Layout = () => {
             </Link>
 
             <nav className="hidden lg:flex gap-6 ml-8 mt-2 items-center flex-wrap">
+              <HeaderLink to="/cronicas">Crónicas</HeaderLink>
               <HeaderLink to="/grimorio">Grimorio</HeaderLink>
               <HeaderLink to="/escrituras">Códice</HeaderLink>
               <HeaderLink to="/biblioteca">Biblioteca</HeaderLink>
@@ -140,6 +141,21 @@ const Layout = () => {
 
           {/* Navigation Links in Mobile Menu */}
           <nav className="flex flex-col gap-6">
+            <NavLink
+              to="/cronicas"
+              onClick={closeMenu}
+              className={({ isActive }) =>
+                `text-xl font-display transition-colors flex items-center gap-4 ${
+                  isActive ? 'text-theme-main font-medium' : 'text-on-surface-muted hover:text-on-surface'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-theme-main' : 'bg-theme-main/50'}`}></span> Crónicas
+                </>
+              )}
+            </NavLink>
             <NavLink
               to="/grimorio"
               onClick={closeMenu}

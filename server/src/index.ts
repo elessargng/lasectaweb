@@ -134,6 +134,10 @@ app.post('/api/library/documents', authenticateJWT as express.RequestHandler, li
 app.put('/api/library/documents/:id', authenticateJWT as express.RequestHandler, libraryController.updateDocument as express.RequestHandler);
 app.delete('/api/library/documents/:id', authenticateJWT as express.RequestHandler, libraryController.deleteDocument as express.RequestHandler);
 
+app.post('/api/library/links', authenticateJWT as express.RequestHandler, libraryController.createLink as express.RequestHandler);
+app.put('/api/library/links/:id', authenticateJWT as express.RequestHandler, libraryController.updateLink as express.RequestHandler);
+app.delete('/api/library/links/:id', authenticateJWT as express.RequestHandler, libraryController.deleteLink as express.RequestHandler);
+
 app.post('/api/library/documents/:id/versions', authenticateJWT as express.RequestHandler, libraryUpload.single('file'), libraryController.addVersion as express.RequestHandler);
 app.delete('/api/library/versions/:id', authenticateJWT as express.RequestHandler, libraryController.deleteVersion as express.RequestHandler);
 app.get('/api/library/versions/:id/download', optionalAuthenticateJWT as express.RequestHandler, libraryController.downloadVersion as express.RequestHandler);

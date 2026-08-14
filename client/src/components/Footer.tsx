@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { History, Sparkles } from 'lucide-react';
 import changelogData from '../data/changelog.json';
@@ -8,7 +8,24 @@ interface FooterProps {
   version?: string;
 }
 
-const Footer: React.FC<FooterProps> = ({ onOpenChangelog, version = changelogData[0]?.version || '0.1.0' }) => {
+const Footer: React.FC<FooterProps> = ({ onOpenChangelog, version: propVersion }) => {
+  const [currentVersion, setCurrentVersion] = useState<string>(propVersion || changelogData[0]?.version || '0.1.0');
+
+  useEffect(() => {
+    if (propVersion) {
+      setCurrentVersion(propVersion);
+      return;
+    }
+
+    fetch('/changelog.json')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0 && data[0].version) {
+          setCurrentVersion(data[0].version);
+        }
+      })
+      .catch(() => {});
+  }, [propVersion]);
   return (
     <footer className="w-full bg-theme-container border-t border-outline-ghost shadow-2xl relative z-30 font-body">
       <div className="max-w-7xl mx-auto px-6 md:px-10 py-6 md:py-8 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-4">
@@ -58,7 +75,7 @@ const Footer: React.FC<FooterProps> = ({ onOpenChangelog, version = changelogDat
             title="Ver historial de cambios (Changelog)"
           >
             <Sparkles className="w-3.5 h-3.5 text-theme-main group-hover:rotate-12 transition-transform" />
-            <span className="font-semibold tracking-wide">v{version}</span>
+            <span className="font-semibold tracking-wide">v{currentVersion}</span>
             <span className="hidden xs:inline text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 bg-theme-main/20 text-theme-main rounded-sm ml-1 group-hover:bg-theme-main group-hover:text-background transition-colors">
               Changelog
             </span>

@@ -109,7 +109,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       }
     } catch (err: any) {
       if (err.message === 'Failed to fetch') {
-        setError('Los dioses no responden. El grimorio no pudo conectar con el servidor.');
+        setError('Los dioses no responden. Las crónicas no pudieron conectar con el servidor.');
       } else {
         setError(err.message);
       }
@@ -279,7 +279,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               className={`mt-4 py-3 ${!isLogin && !acceptTerms ? 'opacity-50 cursor-not-allowed' : ''}`}
               disabled={!isLogin && !acceptTerms}
             >
-              {isLogin ? 'Entrar al Grimorio' : 'Completar Ritual'}
+              {isLogin ? 'Entrar a las Crónicas' : 'Completar Ritual'}
             </Button>
           </form>
         </div>

@@ -165,7 +165,7 @@ const Profile = () => {
   return (
     <div className="flex flex-col w-full">
       <PageHeader
-        title={`El Grimorio de ${user.username}`}
+        title={`Las Crónicas de ${user.username}`}
         imageSrc="/moon_banner_wide.jpg"
         imageAlt="Bosque Oscuro y Luna"
       />

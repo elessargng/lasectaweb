@@ -148,6 +148,86 @@ export class LibraryController {
     }
   };
 
+  // --- ENLACES ---
+  public createLink = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'No autorizado.' });
+        return;
+      }
+      const { sectionId, title, url, description, position, accessLevel, allowedRoles } = req.body;
+
+      let parsedAllowedRoles = allowedRoles;
+      if (typeof allowedRoles === 'string') {
+        try {
+          parsedAllowedRoles = JSON.parse(allowedRoles);
+        } catch {
+          parsedAllowedRoles = allowedRoles.split(',').map((r: string) => r.trim()).filter(Boolean);
+        }
+      }
+
+      const link = await this.libraryService.createLink(req.user.id, {
+        sectionId,
+        title,
+        url,
+        description,
+        position: position ? Number(position) : undefined,
+        accessLevel,
+        allowedRoles: parsedAllowedRoles
+      });
+      res.status(201).json(link);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  };
+
+  public updateLink = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'No autorizado.' });
+        return;
+      }
+      const { id } = req.params;
+      const { sectionId, title, url, description, position, accessLevel, allowedRoles } = req.body;
+
+      let parsedAllowedRoles = allowedRoles;
+      if (typeof allowedRoles === 'string') {
+        try {
+          parsedAllowedRoles = JSON.parse(allowedRoles);
+        } catch {
+          parsedAllowedRoles = allowedRoles.split(',').map((r: string) => r.trim()).filter(Boolean);
+        }
+      }
+
+      const link = await this.libraryService.updateLink(req.user.id, id as string, {
+        sectionId,
+        title,
+        url,
+        description,
+        position: position !== undefined ? Number(position) : undefined,
+        accessLevel,
+        allowedRoles: parsedAllowedRoles
+      });
+      res.status(200).json(link);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  };
+
+  public deleteLink = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'No autorizado.' });
+        return;
+      }
+      const { id } = req.params;
+      await this.libraryService.deleteLink(req.user.id, id as string);
+      res.status(200).json({ message: 'Enlace eliminado correctamente.' });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  };
+
   public addVersion = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       if (!req.user) {

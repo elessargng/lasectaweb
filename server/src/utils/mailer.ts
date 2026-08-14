@@ -25,7 +25,7 @@ export async function sendConfirmationEmail(email: string, username: string, tok
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px; background-color: #121212; color: #ffffff;">
       <h2 style="color: #e53e3e; text-align: center;">Portal de La Secta</h2>
       <p>Hola <strong>${username}</strong>,</p>
-      <p>Tu ritual de registro ha comenzado. Para completar el enlace de tu cuenta y tener acceso total al Grimorio, por favor confirma tu dirección de correo electrónico haciendo clic en el siguiente botón:</p>
+      <p>Tu ritual de registro ha comenzado. Para completar el enlace de tu cuenta y tener acceso total a las Crónicas, por favor confirma tu dirección de correo electrónico haciendo clic en el siguiente botón:</p>
       <div style="text-align: center; margin: 30px 0;">
         <a href="${confirmationUrl}" style="background-color: #e53e3e; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">Confirmar Cuenta</a>
       </div>

@@ -1,107 +1,56 @@
-import { DatabaseRepository } from './DatabaseRepository';
-import { LibrarySection, LibraryDocument, LibraryDocumentVersion } from '../types/library';
+import { LibraryItemRepository } from './LibraryItemRepository';
+import { LibraryDocumentRepository } from './LibraryDocumentRepository';
+import { LibraryLinkRepository } from './LibraryLinkRepository';
+import { LibrarySection, LibraryDocument, LibraryLink, LibraryDocumentVersion, BaseLibraryItem } from '../types/library';
 
 export class LibraryRepository {
+  public itemRepo: LibraryItemRepository;
+  public documentRepo: LibraryDocumentRepository;
+  public linkRepo: LibraryLinkRepository;
 
-  // --- SECCIONES (TÍTULOS / SUBTÍTULOS) ---
+  constructor() {
+    this.itemRepo = new LibraryItemRepository();
+    this.documentRepo = new LibraryDocumentRepository();
+    this.linkRepo = new LibraryLinkRepository();
+  }
 
+  // --- SECCIONES ---
   public async getAllSections(): Promise<LibrarySection[]> {
-    const db = await DatabaseRepository.getInstance();
-    return db.all<LibrarySection[]>(
-      'SELECT id, name, parentId, position, createdAt FROM library_sections ORDER BY position ASC, createdAt ASC'
-    );
+    return this.itemRepo.getAllSections();
   }
 
   public async getSectionById(id: string): Promise<LibrarySection | undefined> {
-    const db = await DatabaseRepository.getInstance();
-    return db.get<LibrarySection>(
-      'SELECT id, name, parentId, position, createdAt FROM library_sections WHERE id = ?',
-      [id]
-    );
+    return this.itemRepo.getSectionById(id);
   }
 
   public async createSection(id: string, name: string, parentId: string | null, position: number): Promise<LibrarySection> {
-    const db = await DatabaseRepository.getInstance();
-    await db.run(
-      'INSERT INTO library_sections (id, name, parentId, position) VALUES (?, ?, ?, ?)',
-      [id, name, parentId, position]
-    );
-    const created = await this.getSectionById(id);
-    return created!;
+    return this.itemRepo.createSection(id, name, parentId, position);
   }
 
   public async updateSection(id: string, name?: string, parentId?: string | null, position?: number): Promise<LibrarySection | undefined> {
-    const db = await DatabaseRepository.getInstance();
-    const current = await this.getSectionById(id);
-    if (!current) return undefined;
-
-    const newName = name !== undefined ? name : current.name;
-    const newParentId = parentId !== undefined ? parentId : current.parentId;
-    const newPosition = position !== undefined ? position : current.position;
-
-    await db.run(
-      'UPDATE library_sections SET name = ?, parentId = ?, position = ? WHERE id = ?',
-      [newName, newParentId, newPosition, id]
-    );
-    return this.getSectionById(id);
+    return this.itemRepo.updateSection(id, name, parentId, position);
   }
 
   public async deleteSection(id: string): Promise<boolean> {
-    const db = await DatabaseRepository.getInstance();
-    const result = await db.run('DELETE FROM library_sections WHERE id = ?', [id]);
-    return (result.changes ?? 0) > 0;
+    return this.itemRepo.deleteSection(id);
   }
 
-  /**
-   * Comprueba recursivamente cuántos documentos existen bajo una sección o cualquiera de sus subtítulos
-   */
   public async countSubDocuments(sectionId: string): Promise<number> {
-    const db = await DatabaseRepository.getInstance();
-    
-    // Consulta recursiva CTE en SQLite
-    const query = `
-      WITH RECURSIVE section_tree(id) AS (
-        SELECT id FROM library_sections WHERE id = ?
-        UNION ALL
-        SELECT s.id FROM library_sections s
-        JOIN section_tree st ON s.parentId = st.id
-      )
-      SELECT COUNT(*) as count
-      FROM library_documents
-      WHERE sectionId IN (SELECT id FROM section_tree)
-    `;
+    return this.itemRepo.countSubItems(sectionId);
+  }
 
-    const row = await db.get<{ count: number }>(query, [sectionId]);
-    return row ? row.count : 0;
+  // --- ITEMS BASE ---
+  public async getAllRawItems(): Promise<BaseLibraryItem[]> {
+    return this.itemRepo.getAllRawItems();
+  }
+
+  public async getItemById(id: string): Promise<BaseLibraryItem | undefined> {
+    return this.itemRepo.getItemById(id);
   }
 
   // --- DOCUMENTOS ---
-
-  public async getAllDocuments(): Promise<LibraryDocument[]> {
-    const db = await DatabaseRepository.getInstance();
-    const docs = await db.all<any[]>(
-      'SELECT id, sectionId, title, description, position, accessLevel, allowedRoles, createdAt FROM library_documents ORDER BY position ASC, createdAt ASC'
-    );
-    return docs.map(d => ({
-      ...d,
-      allowedRoles: d.allowedRoles ? JSON.parse(d.allowedRoles) : [],
-      versions: []
-    }));
-  }
-
   public async getDocumentById(id: string): Promise<LibraryDocument | undefined> {
-    const db = await DatabaseRepository.getInstance();
-    const doc = await db.get<any>(
-      'SELECT id, sectionId, title, description, position, accessLevel, allowedRoles, createdAt FROM library_documents WHERE id = ?',
-      [id]
-    );
-    if (!doc) return undefined;
-    const versions = await this.getVersionsByDocumentId(id);
-    return {
-      ...doc,
-      allowedRoles: doc.allowedRoles ? JSON.parse(doc.allowedRoles) : [],
-      versions
-    };
+    return this.documentRepo.getDocumentById(id);
   }
 
   public async createDocument(
@@ -113,13 +62,7 @@ export class LibraryRepository {
     accessLevel: 'all' | 'registered' | 'roles' = 'all',
     allowedRoles: string[] = []
   ): Promise<LibraryDocument> {
-    const db = await DatabaseRepository.getInstance();
-    await db.run(
-      'INSERT INTO library_documents (id, sectionId, title, description, position, accessLevel, allowedRoles) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [id, sectionId, title, description || null, position, accessLevel, JSON.stringify(allowedRoles)]
-    );
-    const created = await this.getDocumentById(id);
-    return created!;
+    return this.documentRepo.createDocument(id, sectionId, title, description, position, accessLevel, allowedRoles);
   }
 
   public async updateDocument(
@@ -131,53 +74,24 @@ export class LibraryRepository {
     accessLevel?: 'all' | 'registered' | 'roles',
     allowedRoles?: string[]
   ): Promise<LibraryDocument | undefined> {
-    const db = await DatabaseRepository.getInstance();
-    const current = await this.getDocumentById(id);
-    if (!current) return undefined;
-
-    const newSectionId = sectionId !== undefined ? sectionId : current.sectionId;
-    const newTitle = title !== undefined ? title : current.title;
-    const newDesc = description !== undefined ? description : current.description;
-    const newPos = position !== undefined ? position : current.position;
-    const newAccessLevel = accessLevel !== undefined ? accessLevel : (current.accessLevel || 'all');
-    const newAllowedRoles = allowedRoles !== undefined ? allowedRoles : (current.allowedRoles || []);
-
-    await db.run(
-      'UPDATE library_documents SET sectionId = ?, title = ?, description = ?, position = ?, accessLevel = ?, allowedRoles = ? WHERE id = ?',
-      [newSectionId, newTitle, newDesc || null, newPos, newAccessLevel, JSON.stringify(newAllowedRoles), id]
-    );
-    return this.getDocumentById(id);
+    return this.documentRepo.updateDocument(id, sectionId, title, description, position, accessLevel, allowedRoles);
   }
 
   public async deleteDocument(id: string): Promise<boolean> {
-    const db = await DatabaseRepository.getInstance();
-    const result = await db.run('DELETE FROM library_documents WHERE id = ?', [id]);
-    return (result.changes ?? 0) > 0;
+    return this.documentRepo.deleteDocument(id);
   }
 
   // --- VERSIONES DE DOCUMENTO ---
-
   public async getAllVersions(): Promise<LibraryDocumentVersion[]> {
-    const db = await DatabaseRepository.getInstance();
-    return db.all<LibraryDocumentVersion[]>(
-      'SELECT id, documentId, label, filename, originalFilename, mimeType, fileSize, createdAt FROM library_document_versions ORDER BY createdAt ASC'
-    );
+    return this.documentRepo.getAllVersions();
   }
 
   public async getVersionsByDocumentId(documentId: string): Promise<LibraryDocumentVersion[]> {
-    const db = await DatabaseRepository.getInstance();
-    return db.all<LibraryDocumentVersion[]>(
-      'SELECT id, documentId, label, filename, originalFilename, mimeType, fileSize, createdAt FROM library_document_versions WHERE documentId = ? ORDER BY createdAt ASC',
-      [documentId]
-    );
+    return this.documentRepo.getVersionsByDocumentId(documentId);
   }
 
   public async getVersionById(id: string): Promise<LibraryDocumentVersion | undefined> {
-    const db = await DatabaseRepository.getInstance();
-    return db.get<LibraryDocumentVersion>(
-      'SELECT id, documentId, label, filename, originalFilename, mimeType, fileSize, createdAt FROM library_document_versions WHERE id = ?',
-      [id]
-    );
+    return this.documentRepo.getVersionById(id);
   }
 
   public async createVersion(
@@ -189,18 +103,53 @@ export class LibraryRepository {
     mimeType: string,
     fileSize: number
   ): Promise<LibraryDocumentVersion> {
-    const db = await DatabaseRepository.getInstance();
-    await db.run(
-      'INSERT INTO library_document_versions (id, documentId, label, filename, originalFilename, mimeType, fileSize) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [id, documentId, label, filename, originalFilename, mimeType, fileSize]
-    );
-    const version = await this.getVersionById(id);
-    return version!;
+    return this.documentRepo.createVersion(id, documentId, label, filename, originalFilename, mimeType, fileSize);
   }
 
   public async deleteVersion(id: string): Promise<boolean> {
-    const db = await DatabaseRepository.getInstance();
-    const result = await db.run('DELETE FROM library_document_versions WHERE id = ?', [id]);
-    return (result.changes ?? 0) > 0;
+    return this.documentRepo.deleteVersion(id);
+  }
+
+  // --- ENLACES ---
+  public async getLinkById(id: string): Promise<LibraryLink | undefined> {
+    return this.linkRepo.getLinkById(id);
+  }
+
+  public async getAllLinks(): Promise<LibraryLink[]> {
+    return this.linkRepo.getAllLinks();
+  }
+
+  public async createLink(
+    id: string,
+    sectionId: string,
+    title: string,
+    url: string,
+    linkType: 'normal' | 'youtube',
+    thumbnailUrl?: string,
+    description?: string,
+    position: number = 0,
+    accessLevel: 'all' | 'registered' | 'roles' = 'all',
+    allowedRoles: string[] = []
+  ): Promise<LibraryLink> {
+    return this.linkRepo.createLink(id, sectionId, title, url, linkType, thumbnailUrl, description, position, accessLevel, allowedRoles);
+  }
+
+  public async updateLink(
+    id: string,
+    sectionId?: string,
+    title?: string,
+    url?: string,
+    linkType?: 'normal' | 'youtube',
+    thumbnailUrl?: string,
+    description?: string,
+    position?: number,
+    accessLevel?: 'all' | 'registered' | 'roles',
+    allowedRoles?: string[]
+  ): Promise<LibraryLink | undefined> {
+    return this.linkRepo.updateLink(id, sectionId, title, url, linkType, thumbnailUrl, description, position, accessLevel, allowedRoles);
+  }
+
+  public async deleteLink(id: string): Promise<boolean> {
+    return this.linkRepo.deleteLink(id);
   }
 }

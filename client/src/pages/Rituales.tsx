@@ -33,8 +33,8 @@ const Rituales = () => {
             <Button to="/" variant="primary" className="px-8 py-3">
               Volver al Atrio
             </Button>
-            <Button to="/grimorio" variant="outline" className="px-8 py-3">
-              Ver el Grimorio
+            <Button to="/cronicas" variant="outline" className="px-8 py-3">
+              Ver las Crónicas
             </Button>
           </div>
         </div>

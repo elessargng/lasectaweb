@@ -156,7 +156,7 @@ const Gestion = () => {
     return (
       <div className="flex flex-col w-full items-center justify-center min-h-[50vh] gap-4">
         <Loader2 className="animate-spin text-theme-main h-12 w-12" />
-        <p className="font-display text-on-surface-muted">Leyendo el grimorio de usuarios...</p>
+        <p className="font-display text-on-surface-muted">Leyendo las crónicas de usuarios...</p>
       </div>
     );
   }

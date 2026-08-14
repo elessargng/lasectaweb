@@ -2,6 +2,20 @@ import { parseApiResponse } from './api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api';
 
+export type LibraryItemType = 'document' | 'link';
+
+export interface BaseLibraryItem {
+  id: string;
+  sectionId: string;
+  itemType: LibraryItemType;
+  title: string;
+  description?: string;
+  position: number;
+  accessLevel?: 'all' | 'registered' | 'roles';
+  allowedRoles?: string[];
+  createdAt: string;
+}
+
 export interface LibraryDocumentVersion {
   id: string;
   documentId: string;
@@ -13,17 +27,19 @@ export interface LibraryDocumentVersion {
   createdAt: string;
 }
 
-export interface LibraryDocument {
-  id: string;
-  sectionId: string;
-  title: string;
-  description?: string;
-  position: number;
-  accessLevel?: 'all' | 'registered' | 'roles';
-  allowedRoles?: string[];
-  createdAt: string;
+export interface LibraryDocument extends BaseLibraryItem {
+  itemType: 'document';
   versions: LibraryDocumentVersion[];
 }
+
+export interface LibraryLink extends BaseLibraryItem {
+  itemType: 'link';
+  url: string;
+  linkType: 'normal' | 'youtube';
+  thumbnailUrl?: string;
+}
+
+export type LibraryItem = LibraryDocument | LibraryLink;
 
 export interface LibrarySection {
   id: string;
@@ -32,7 +48,8 @@ export interface LibrarySection {
   position: number;
   createdAt: string;
   subsections?: LibrarySection[];
-  documents?: LibraryDocument[];
+  items?: LibraryItem[];
+  documents?: LibraryDocument[]; // Compatibilidad
   hasSubDocuments?: boolean;
 }
 
@@ -134,6 +151,49 @@ export async function deleteLibraryDocument(id: string): Promise<void> {
   await parseApiResponse(res);
 }
 
+export async function createLibraryLink(
+  sectionId: string,
+  title: string,
+  url: string,
+  description?: string,
+  position?: number,
+  accessLevel?: 'all' | 'registered' | 'roles',
+  allowedRoles?: string[]
+): Promise<LibraryLink> {
+  const res = await fetch(`${API_URL}/library/links`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ sectionId, title, url, description, position, accessLevel, allowedRoles })
+  });
+  return parseApiResponse<LibraryLink>(res);
+}
+
+export async function updateLibraryLink(
+  id: string,
+  title?: string,
+  url?: string,
+  sectionId?: string,
+  description?: string,
+  position?: number,
+  accessLevel?: 'all' | 'registered' | 'roles',
+  allowedRoles?: string[]
+): Promise<LibraryLink> {
+  const res = await fetch(`${API_URL}/library/links/${id}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ title, url, sectionId, description, position, accessLevel, allowedRoles })
+  });
+  return parseApiResponse<LibraryLink>(res);
+}
+
+export async function deleteLibraryLink(id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/library/links/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  await parseApiResponse(res);
+}
+
 export async function addLibraryDocumentVersion(documentId: string, label: string, file: File): Promise<LibraryDocumentVersion> {
   const formData = new FormData();
   formData.append('label', label);
@@ -174,27 +234,19 @@ export function getViewableType(version: LibraryDocumentVersion): ViewableType {
   const mime = (version.mimeType || '').toLowerCase();
   const ext = (version.originalFilename || '').split('.').pop()?.toLowerCase() || '';
 
-  // 1. PDF
   if (mime === 'application/pdf' || ext === 'pdf') {
     return 'pdf';
   }
-
-  // 2. HTML
   if (mime === 'text/html' || mime === 'application/xhtml+xml' || ext === 'html' || ext === 'htm') {
     return 'html';
   }
-
-  // 3. Imagen
   if (
     mime.startsWith('image/') ||
     ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'avif', 'ico'].includes(ext)
   ) {
     return 'image';
   }
-
-  // 4. Texto Plano (TXT)
   if (
-    mime === 'text/plain' ||
     mime.startsWith('text/') ||
     ['txt', 'text', 'md', 'markdown', 'log', 'json', 'csv', 'xml'].includes(ext)
   ) {
@@ -203,4 +255,3 @@ export function getViewableType(version: LibraryDocumentVersion): ViewableType {
 
   return null;
 }
-
