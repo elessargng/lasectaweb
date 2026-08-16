@@ -46,7 +46,9 @@ import {
   FileCode,
   FileImage,
   ExternalLink,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Copy,
+  Check
 } from 'lucide-react';
 
 import Button from '../components/Button';
@@ -122,12 +124,27 @@ export default function Biblioteca() {
     isOpen: boolean;
     version?: LibraryDocumentVersion;
     documentTitle?: string;
+    accessLevel?: string;
   }>({ isOpen: false });
 
   const [txtContent, setTxtContent] = useState<string | null>(null);
   const [loadingTxt, setLoadingTxt] = useState<boolean>(false);
   const [txtError, setTxtError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
+
+  const handleCopyLink = () => {
+    if (!viewerModal.version) return;
+    const isPublic = !viewerModal.accessLevel || viewerModal.accessLevel === 'all';
+    // Para documentos públicos, no incluimos token en la URL a copiar para que sea un enlace público accesible sin autenticación
+    const urlPath = getLibraryVersionDownloadUrl(viewerModal.version, true, !isPublic);
+    const fullUrl = urlPath.startsWith('http')
+      ? urlPath
+      : `${window.location.origin}${urlPath}`;
+    navigator.clipboard.writeText(fullUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
 
   useEffect(() => {
     const checkMobile = () => {
@@ -148,7 +165,7 @@ export default function Biblioteca() {
         setLoadingTxt(true);
         setTxtError(null);
         setTxtContent(null);
-        const url = getLibraryVersionDownloadUrl(viewerModal.version.id, true);
+        const url = getLibraryVersionDownloadUrl(viewerModal.version, true);
         fetch(url)
           .then(res => {
             if (!res.ok) throw new Error('Error al cargar el contenido de texto.');
@@ -161,14 +178,15 @@ export default function Biblioteca() {
     }
   }, [viewerModal.isOpen, viewerModal.version]);
 
-  const handleVersionClick = (version: LibraryDocumentVersion, docTitle: string, e: React.MouseEvent) => {
+  const handleVersionClick = (version: LibraryDocumentVersion, docTitle: string, accessLevel?: string, e?: React.MouseEvent) => {
     const viewType = getViewableType(version);
     if (viewType) {
-      e.preventDefault();
+      if (e) e.preventDefault();
       setViewerModal({
         isOpen: true,
         version,
-        documentTitle: docTitle
+        documentTitle: docTitle,
+        accessLevel: accessLevel || 'all'
       });
     }
   };
@@ -815,20 +833,49 @@ export default function Biblioteca() {
 
                   // Render de Documento (Archivo)
                   const doc = item as LibraryDocument;
+                  const singleVersion = doc.versions && doc.versions.length === 1 ? doc.versions[0] : null;
+                  const isSingleImage = singleVersion ? getViewableType(singleVersion) === 'image' : false;
+
                   return (
                     <div
                       key={doc.id}
-                      className="flex flex-col md:flex-row md:items-center justify-between p-3 rounded-xl bg-surface-container/40 border border-outline-ghost/40 hover:border-theme-main/30 transition-all gap-2"
+                      className="flex flex-col md:flex-row md:items-center justify-between p-3 rounded-xl bg-surface-container/40 border border-outline-ghost/40 hover:border-theme-main/30 transition-all gap-3"
                     >
-                      <div className="flex items-start gap-2.5 min-w-0">
-                        <FileText className="w-4 h-4 text-theme-main shrink-0 mt-1" />
-                        <div className="flex flex-col">
+                      <div className="flex items-start md:items-center gap-3 min-w-0 flex-1">
+                        {isSingleImage && singleVersion ? (
+                          <a
+                            href={getLibraryVersionDownloadUrl(singleVersion)}
+                            onClick={(e) => handleVersionClick(singleVersion, doc.title, doc.accessLevel, e)}
+                            className="relative shrink-0 group/thumb block rounded-lg overflow-hidden border border-purple-500/30 hover:border-purple-500 transition-all cursor-pointer"
+                            title={`Ver ${doc.title}`}
+                          >
+                            <img
+                              src={getLibraryVersionDownloadUrl(singleVersion, true)}
+                              alt={doc.title}
+                              className="w-24 h-14 object-cover group-hover/thumb:scale-105 transition-transform duration-300 bg-surface-container"
+                              loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity">
+                              <Eye className="w-5 h-5 text-white drop-shadow-md" />
+                            </div>
+                          </a>
+                        ) : (
+                          <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center shrink-0">
+                            {doc.versions && doc.versions.length > 0 && getViewableType(doc.versions[0]) === 'image' ? (
+                              <FileImage className="w-5 h-5" />
+                            ) : (
+                              <FileText className="w-5 h-5" />
+                            )}
+                          </div>
+                        )}
+
+                        <div className="flex flex-col min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             {doc.versions && doc.versions.length > 0 ? (
                               <a
-                                href={getLibraryVersionDownloadUrl(doc.versions[0].id)}
+                                href={getLibraryVersionDownloadUrl(doc.versions[0])}
                                 download={!getViewableType(doc.versions[0])}
-                                onClick={(e) => handleVersionClick(doc.versions[0], doc.title, e)}
+                                onClick={(e) => handleVersionClick(doc.versions[0], doc.title, doc.accessLevel, e)}
                                 className="font-display font-medium text-base text-on-surface hover:text-theme-main transition-colors flex items-center gap-1.5 group cursor-pointer"
                                 title={
                                   getViewableType(doc.versions[0])
@@ -865,9 +912,9 @@ export default function Biblioteca() {
                                 return (
                                   <div key={v.id} className="inline-flex items-center gap-1 group/ver">
                                     <a
-                                      href={getLibraryVersionDownloadUrl(v.id)}
+                                      href={getLibraryVersionDownloadUrl(v)}
                                       download={!viewType}
-                                      onClick={(e) => handleVersionClick(v, doc.title, e)}
+                                      onClick={(e) => handleVersionClick(v, doc.title, doc.accessLevel, e)}
                                       className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-theme-main/15 text-theme-main border border-theme-main/30 hover:bg-theme-main hover:text-background transition-all cursor-pointer"
                                       title={
                                         viewType
@@ -1599,7 +1646,7 @@ export default function Biblioteca() {
 
               <div className="flex items-center gap-2 shrink-0">
                 <a
-                  href={getLibraryVersionDownloadUrl(viewerModal.version.id)}
+                  href={getLibraryVersionDownloadUrl(viewerModal.version)}
                   download
                   className="px-3.5 py-1.5 text-xs font-display font-semibold text-background bg-theme-main hover:bg-theme-main/90 rounded-xl transition-all flex items-center gap-1.5 shadow-md"
                   title="Descargar archivo"
@@ -1608,8 +1655,28 @@ export default function Biblioteca() {
                   <span>Descargar</span>
                 </a>
 
+                {(!viewerModal.accessLevel || viewerModal.accessLevel === 'all') && (
+                  <button
+                    onClick={handleCopyLink}
+                    className="px-3.5 py-1.5 text-xs font-display font-semibold text-on-surface bg-surface-container/80 hover:bg-surface-container border border-outline-ghost/40 rounded-xl transition-all flex items-center gap-1.5 shadow-sm"
+                    title="Copiar enlace público directo al archivo"
+                  >
+                    {copiedLink ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-emerald-400">¡Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-theme-main" />
+                        <span>Copiar enlace</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
                 <a
-                  href={getLibraryVersionDownloadUrl(viewerModal.version.id, true)}
+                  href={getLibraryVersionDownloadUrl(viewerModal.version, true)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-1.5 text-on-surface-muted hover:text-on-surface bg-surface-container/60 hover:bg-surface-container rounded-xl transition-all flex"
@@ -1642,7 +1709,7 @@ export default function Biblioteca() {
                       Para una lectura óptima y fluida en dispositivos móviles, te recomendamos abrir este archivo PDF en una pestaña de tu navegador.
                     </p>
                     <a
-                      href={getLibraryVersionDownloadUrl(viewerModal.version.id, true)}
+                      href={getLibraryVersionDownloadUrl(viewerModal.version, true)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-6 py-3 font-display font-medium text-sm text-background bg-theme-main hover:bg-theme-main/90 rounded-xl transition-all flex items-center gap-2 shadow-lg"
@@ -1653,7 +1720,7 @@ export default function Biblioteca() {
                   </div>
                 ) : (
                   <iframe
-                    src={getLibraryVersionDownloadUrl(viewerModal.version.id, true)}
+                    src={getLibraryVersionDownloadUrl(viewerModal.version, true)}
                     className="w-full h-[75vh] rounded-xl border border-outline-ghost/40 bg-surface-container"
                     title={viewerModal.version.originalFilename}
                   />
@@ -1673,7 +1740,7 @@ export default function Biblioteca() {
                       Este documento contiene formato HTML interactivo. Para garantizar su correcto funcionamiento y visualización en tu iPhone, ábrelo en una nueva pestaña.
                     </p>
                     <a
-                      href={getLibraryVersionDownloadUrl(viewerModal.version.id, true)}
+                      href={getLibraryVersionDownloadUrl(viewerModal.version, true)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-6 py-3 font-display font-medium text-sm text-background bg-theme-main hover:bg-theme-main/90 rounded-xl transition-all flex items-center gap-2 shadow-lg"
@@ -1684,7 +1751,7 @@ export default function Biblioteca() {
                   </div>
                 ) : (
                   <iframe
-                    src={getLibraryVersionDownloadUrl(viewerModal.version.id, true)}
+                    src={getLibraryVersionDownloadUrl(viewerModal.version, true)}
                     className="w-full h-[75vh] rounded-xl border border-outline-ghost/40 bg-white"
                     title={viewerModal.version.originalFilename}
                     sandbox="allow-same-origin allow-scripts"
@@ -1704,7 +1771,7 @@ export default function Biblioteca() {
                       <AlertCircle className="w-8 h-8" />
                       <p className="text-sm">{txtError}</p>
                       <iframe
-                        src={getLibraryVersionDownloadUrl(viewerModal.version.id, true)}
+                        src={getLibraryVersionDownloadUrl(viewerModal.version, true)}
                         className="w-full h-full rounded-xl border border-outline-ghost/40 bg-surface-container"
                         title={viewerModal.version.originalFilename}
                       />
@@ -1720,7 +1787,7 @@ export default function Biblioteca() {
               {getViewableType(viewerModal.version) === 'image' && (
                 <div className="w-full h-[75vh] flex items-center justify-center p-2 bg-surface-container/30 rounded-xl border border-outline-ghost/30 overflow-auto">
                   <img
-                    src={getLibraryVersionDownloadUrl(viewerModal.version.id, true)}
+                    src={getLibraryVersionDownloadUrl(viewerModal.version, true)}
                     alt={viewerModal.version.originalFilename}
                     className="max-h-full max-w-full object-contain rounded-lg shadow-2xl"
                   />
@@ -1731,8 +1798,27 @@ export default function Biblioteca() {
             <div className="p-3 border-t border-outline-ghost/60 bg-surface-container/30 flex items-center justify-between text-xs text-on-surface-muted shrink-0 px-4">
               <span>Formato: {viewerModal.version.mimeType}</span>
               <div className="flex items-center gap-3">
+                {(!viewerModal.accessLevel || viewerModal.accessLevel === 'all') && (
+                  <button
+                    onClick={handleCopyLink}
+                    className="hover:text-theme-main transition-colors flex items-center gap-1 font-medium"
+                    title="Copiar enlace público directo"
+                  >
+                    {copiedLink ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-emerald-400">¡Enlace copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copiar enlace directo</span>
+                      </>
+                    )}
+                  </button>
+                )}
                 <a
-                  href={getLibraryVersionDownloadUrl(viewerModal.version.id)}
+                  href={getLibraryVersionDownloadUrl(viewerModal.version)}
                   download
                   className="hover:text-theme-main transition-colors flex items-center gap-1 font-medium"
                 >

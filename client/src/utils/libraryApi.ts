@@ -215,17 +215,33 @@ export async function deleteLibraryDocumentVersion(versionId: string): Promise<v
   await parseApiResponse(res);
 }
 
-export function getLibraryVersionDownloadUrl(versionId: string, inline = false): string {
+export function getLibraryVersionDownloadUrl(
+  versionOrId: string | { id: string; originalFilename?: string },
+  inline = false,
+  includeToken = true,
+  filename?: string
+): string {
+  let id: string;
+  let name: string | undefined = filename;
+
+  if (typeof versionOrId === 'object' && versionOrId !== null) {
+    id = versionOrId.id;
+    name = name || versionOrId.originalFilename;
+  } else {
+    id = versionOrId;
+  }
+
   const token = localStorage.getItem('token');
   const queryParams: string[] = [];
-  if (token) {
+  if (includeToken && token) {
     queryParams.push(`token=${encodeURIComponent(token)}`);
   }
   if (inline) {
     queryParams.push('inline=true');
   }
   const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
-  return `${API_URL}/library/versions/${versionId}/download${queryString}`;
+  const pathFilename = name ? `/${encodeURIComponent(name)}` : '';
+  return `${API_URL}/library/versions/${id}/download${pathFilename}${queryString}`;
 }
 
 export type ViewableType = 'pdf' | 'html' | 'txt' | 'image' | null;

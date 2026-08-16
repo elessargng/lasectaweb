@@ -140,7 +140,7 @@ app.delete('/api/library/links/:id', authenticateJWT as express.RequestHandler, 
 
 app.post('/api/library/documents/:id/versions', authenticateJWT as express.RequestHandler, libraryUpload.single('file'), libraryController.addVersion as express.RequestHandler);
 app.delete('/api/library/versions/:id', authenticateJWT as express.RequestHandler, libraryController.deleteVersion as express.RequestHandler);
-app.get('/api/library/versions/:id/download', optionalAuthenticateJWT as express.RequestHandler, libraryController.downloadVersion as express.RequestHandler);
+app.get(['/api/library/versions/:id/download', '/api/library/versions/:id/download/:filename'], optionalAuthenticateJWT as express.RequestHandler, libraryController.downloadVersion as express.RequestHandler);
 
 // Initialize database then start server
 DatabaseRepository.getInstance()

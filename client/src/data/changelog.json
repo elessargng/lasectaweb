@@ -1,5 +1,21 @@
 [
   {
+    "version": "0.5.0",
+    "date": "2026-08-16",
+    "title": "Mejoras y Correcciones en La Biblioteca",
+    "description": "Corrección del error al subir documentos, incorporación del botón para copiar enlace público directo en el visor e integración de miniaturas para imágenes.",
+    "changes": [
+      {
+        "category": "La Biblioteca",
+        "items": [
+          "Corrección de Subida de Documentos: Solucionado el problema con las restricciones de clave foránea al subir nuevos archivos (PDF, JPG, etc.).",
+          "Enlace Público Directo: Añadido botón en el visor para copiar la URL directa a archivos e imágenes públicas incluyendo su nombre original y extensión.",
+          "Miniaturas de Imágenes: Incorporación de miniaturas visuales en la lista de la biblioteca para documentos de tipo imagen con versión única."
+        ]
+      }
+    ]
+  },
+  {
     "version": "0.4.0",
     "date": "2026-08-14",
     "title": "Anales, Wiki en Grimorio y Recursos Multimedia en Biblioteca",

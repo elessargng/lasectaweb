@@ -200,6 +200,34 @@ export class DatabaseRepository {
         `);
       }
     });
+
+    // Migración 005: Corregir clave foránea de library_document_versions para apuntar a library_items
+    await this.applyMigration('005_fix_library_document_versions_fk', async (db) => {
+      await db.exec(`
+        CREATE TABLE library_document_versions_new (
+          id TEXT PRIMARY KEY,
+          documentId TEXT NOT NULL,
+          label TEXT NOT NULL,
+          filename TEXT NOT NULL,
+          originalFilename TEXT NOT NULL,
+          mimeType TEXT NOT NULL,
+          fileSize INTEGER NOT NULL,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (documentId) REFERENCES library_items(id) ON DELETE CASCADE
+        );
+
+        INSERT INTO library_document_versions_new (id, documentId, label, filename, originalFilename, mimeType, fileSize, createdAt)
+        SELECT id, documentId, label, filename, originalFilename, mimeType, fileSize, createdAt
+        FROM library_document_versions
+        WHERE documentId IN (SELECT id FROM library_items);
+
+        DROP TABLE library_document_versions;
+
+        ALTER TABLE library_document_versions_new RENAME TO library_document_versions;
+
+        CREATE INDEX IF NOT EXISTS idx_library_document_versions_documentId ON library_document_versions(documentId);
+      `);
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {
