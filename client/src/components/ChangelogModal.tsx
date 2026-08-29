@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { X, Sparkles, Tag, Calendar, CheckCircle2, History } from 'lucide-react';
 import Button from './Button';
-import defaultChangelogData from '../data/changelog.json';
+import changelogData from '../data/changelog.json';
 
 export interface ChangelogItem {
   category: string;
@@ -22,20 +22,6 @@ interface ChangelogModalProps {
 }
 
 const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
-  const [changelogData, setChangelogData] = useState<ChangelogEntry[]>(defaultChangelogData);
-
-  useEffect(() => {
-    // Attempt to fetch fresh changelog.json from public folder if updated on server
-    fetch('/changelog.json')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setChangelogData(data);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {

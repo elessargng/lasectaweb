@@ -1,5 +1,7 @@
 export type LibraryItemType = 'document' | 'link';
 
+export type LibraryAccessLevel = 'all' | 'registered' | 'roles';
+
 export interface BaseLibraryItem {
   id: string;
   sectionId: string;
@@ -7,7 +9,7 @@ export interface BaseLibraryItem {
   title: string;
   description?: string;
   position: number;
-  accessLevel?: 'all' | 'registered' | 'roles';
+  accessLevel?: LibraryAccessLevel;
   allowedRoles?: string[];
   createdAt: string;
 }
@@ -42,6 +44,9 @@ export interface LibrarySection {
   name: string;
   parentId: string | null;
   position: number;
+  icon?: string | null;
+  accessLevel?: LibraryAccessLevel;
+  allowedRoles?: string[];
   createdAt: string;
   subsections?: LibrarySection[];
   items?: LibraryItem[];
@@ -53,12 +58,18 @@ export interface CreateSectionDTO {
   name: string;
   parentId?: string | null;
   position?: number;
+  icon?: string | null;
+  accessLevel?: LibraryAccessLevel;
+  allowedRoles?: string[];
 }
 
 export interface UpdateSectionDTO {
   name?: string;
   parentId?: string | null;
   position?: number;
+  icon?: string | null;
+  accessLevel?: LibraryAccessLevel;
+  allowedRoles?: string[];
 }
 
 export interface CreateDocumentDTO {

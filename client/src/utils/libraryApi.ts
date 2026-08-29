@@ -4,6 +4,11 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api';
 
 export type LibraryItemType = 'document' | 'link';
 
+export type LibraryAccessLevel = 'all' | 'registered' | 'roles';
+
+/** Roles asignables en las restricciones de acceso de La Biblioteca */
+export const LIBRARY_ASSIGNABLE_ROLES = ['narrador', 'editor', 'admin'] as const;
+
 export interface BaseLibraryItem {
   id: string;
   sectionId: string;
@@ -11,7 +16,7 @@ export interface BaseLibraryItem {
   title: string;
   description?: string;
   position: number;
-  accessLevel?: 'all' | 'registered' | 'roles';
+  accessLevel?: LibraryAccessLevel;
   allowedRoles?: string[];
   createdAt: string;
 }
@@ -46,6 +51,9 @@ export interface LibrarySection {
   name: string;
   parentId: string | null;
   position: number;
+  icon?: string | null;
+  accessLevel?: LibraryAccessLevel;
+  allowedRoles?: string[];
   createdAt: string;
   subsections?: LibrarySection[];
   items?: LibraryItem[];
@@ -72,20 +80,35 @@ export async function fetchLibraryTree(): Promise<LibrarySection[]> {
   return parseApiResponse<LibrarySection[]>(res);
 }
 
-export async function createLibrarySection(name: string, parentId?: string | null, position?: number): Promise<LibrarySection> {
+export async function createLibrarySection(
+  name: string,
+  parentId?: string | null,
+  position?: number,
+  accessLevel?: LibraryAccessLevel,
+  allowedRoles?: string[],
+  icon?: string | null
+): Promise<LibrarySection> {
   const res = await fetch(`${API_URL}/library/sections`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ name, parentId: parentId || null, position })
+    body: JSON.stringify({ name, parentId: parentId || null, position, accessLevel, allowedRoles, icon })
   });
   return parseApiResponse<LibrarySection>(res);
 }
 
-export async function updateLibrarySection(id: string, name?: string, parentId?: string | null, position?: number): Promise<LibrarySection> {
+export async function updateLibrarySection(
+  id: string,
+  name?: string,
+  parentId?: string | null,
+  position?: number,
+  accessLevel?: LibraryAccessLevel,
+  allowedRoles?: string[],
+  icon?: string | null
+): Promise<LibrarySection> {
   const res = await fetch(`${API_URL}/library/sections/${id}`, {
     method: 'PUT',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ name, parentId, position })
+    body: JSON.stringify({ name, parentId, position, accessLevel, allowedRoles, icon })
   });
   return parseApiResponse<LibrarySection>(res);
 }

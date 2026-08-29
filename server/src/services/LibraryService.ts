@@ -17,6 +17,7 @@ import {
   CreateLinkDTO,
   UpdateLinkDTO
 } from '../types/library';
+import { AccessContext, canAccess } from '../utils/libraryAccess';
 
 export class LibraryService {
   constructor(
@@ -51,12 +52,55 @@ export class LibraryService {
     };
   }
 
-  public async getTree(userId?: string): Promise<LibrarySection[]> {
+  private async buildAccessContext(userId?: string): Promise<AccessContext> {
     const user = userId ? await this.userRepository.findById(userId) : null;
-    const isAdmin = user?.roles?.includes('admin') || false;
-    const userRoles = user?.roles || [];
+    return {
+      isAuthenticated: !!user,
+      isAdmin: user?.roles?.includes('admin') || false,
+      roles: user?.roles || []
+    };
+  }
 
-    const rawSections = await this.libraryRepository.getAllSections();
+  /**
+   * Devuelve el conjunto de secciones visibles aplicando cascada restrictiva:
+   * una sección solo es visible si ella y todos sus ancestros lo son.
+   */
+  private getVisibleSectionIds(sections: LibrarySection[], ctx: AccessContext): Set<string> {
+    const sectionById = new Map(sections.map(s => [s.id, s]));
+    const visible = new Set<string>();
+    const resolved = new Map<string, boolean>();
+
+    const isVisible = (id: string, seen: Set<string>): boolean => {
+      if (resolved.has(id)) return resolved.get(id)!;
+      // Protección frente a ciclos de parentId en datos corruptos
+      if (seen.has(id)) return false;
+      seen.add(id);
+
+      const section = sectionById.get(id);
+      if (!section) return false;
+
+      let result = canAccess(section, ctx);
+      if (result && section.parentId && sectionById.has(section.parentId)) {
+        result = isVisible(section.parentId, seen);
+      }
+
+      resolved.set(id, result);
+      return result;
+    };
+
+    for (const sec of sections) {
+      if (isVisible(sec.id, new Set())) {
+        visible.add(sec.id);
+      }
+    }
+
+    return visible;
+  }
+
+  public async getTree(userId?: string): Promise<LibrarySection[]> {
+    const ctx = await this.buildAccessContext(userId);
+
+    const allRawSections = await this.libraryRepository.getAllSections();
     const rawItems = await this.libraryRepository.getAllRawItems();
     const rawLinks = await this.libraryRepository.getAllLinks();
     const rawVersions = await this.libraryRepository.getAllVersions();
@@ -66,23 +110,14 @@ export class LibraryService {
       linkMap.set(link.id, link);
     }
 
-    // Filtrar items según control de acceso del usuario
-    const allowedRawItems = rawItems.filter(item => {
-      if (isAdmin) return true;
+    // Filtrar secciones (carpetas) en cascada: si no ves la carpeta, no ves nada debajo
+    const visibleSectionIds = this.getVisibleSectionIds(allRawSections, ctx);
+    const rawSections = allRawSections.filter(s => visibleSectionIds.has(s.id));
 
-      const accessLevel = item.accessLevel || 'all';
-
-      if (accessLevel === 'all') return true;
-
-      if (accessLevel === 'registered') return !!user;
-
-      if (accessLevel === 'roles') {
-        const allowed = item.allowedRoles || [];
-        return !!user && (allowed.length === 0 || allowed.some(role => userRoles.includes(role as any)));
-      }
-
-      return false;
-    });
+    // Filtrar items según control de acceso del usuario y de su carpeta contenedora
+    const allowedRawItems = rawItems.filter(
+      item => visibleSectionIds.has(item.sectionId) && canAccess(item, ctx)
+    );
 
     // Construir objetos polimórficos LibraryItem (LibraryDocument | LibraryLink)
     const polymorphicItems: LibraryItem[] = [];
@@ -186,7 +221,18 @@ export class LibraryService {
 
     const id = crypto.randomUUID();
     const position = dto.position ?? 0;
-    return this.libraryRepository.createSection(id, dto.name.trim(), dto.parentId || null, position);
+    const accessLevel = dto.accessLevel || 'all';
+    const allowedRoles = accessLevel === 'roles' ? (dto.allowedRoles || []) : [];
+
+    return this.libraryRepository.createSection(
+      id,
+      dto.name.trim(),
+      dto.parentId || null,
+      position,
+      accessLevel,
+      allowedRoles,
+      dto.icon ? dto.icon.trim() : null
+    );
   }
 
   public async updateSection(userId: string, id: string, dto: UpdateSectionDTO): Promise<LibrarySection> {
@@ -201,7 +247,20 @@ export class LibraryService {
       throw new Error('Una sección no puede ser su propio padre.');
     }
 
-    const updated = await this.libraryRepository.updateSection(id, dto.name?.trim(), dto.parentId, dto.position);
+    // Si se pasa a un nivel distinto de 'roles', los roles dejan de tener sentido
+    const allowedRoles = dto.accessLevel !== undefined && dto.accessLevel !== 'roles'
+      ? []
+      : dto.allowedRoles;
+
+    const updated = await this.libraryRepository.updateSection(
+      id,
+      dto.name?.trim(),
+      dto.parentId,
+      dto.position,
+      dto.accessLevel,
+      allowedRoles,
+      dto.icon === undefined ? undefined : (dto.icon ? dto.icon.trim() : null)
+    );
     if (!updated) {
       throw new Error('No se pudo actualizar la sección.');
     }
@@ -475,28 +534,25 @@ export class LibraryService {
       throw new Error('El documento solicitado no existe.');
     }
 
-    const accessLevel = doc.accessLevel || 'all';
-    if (accessLevel !== 'all') {
-      if (!userId) {
-        throw new Error('No tienes permisos suficientes para descargar este documento. Debes iniciar sesión.');
-      }
+    const ctx = await this.buildAccessContext(userId);
 
-      const user = await this.userRepository.findById(userId);
-      if (!user) {
-        throw new Error('Usuario inválido.');
-      }
+    if (!canAccess(doc, ctx)) {
+      throw new Error(
+        ctx.isAuthenticated
+          ? 'No tienes permisos suficientes para descargar este documento.'
+          : 'No tienes permisos suficientes para descargar este documento. Debes iniciar sesión.'
+      );
+    }
 
-      const isAdmin = user.roles?.includes('admin') || false;
-      if (!isAdmin) {
-        if (accessLevel === 'roles') {
-          const allowed = doc.allowedRoles || [];
-          const userRoles = user.roles || [];
-          const hasRole = allowed.length === 0 || allowed.some(role => userRoles.includes(role as any));
-          if (!hasRole) {
-            throw new Error('No tienes permisos suficientes para descargar este documento (rol no autorizado).');
-          }
-        }
-      }
+    // Cascada restrictiva: la carpeta contenedora y sus ancestros también deben ser visibles
+    const allSections = await this.libraryRepository.getAllSections();
+    const visibleSectionIds = this.getVisibleSectionIds(allSections, ctx);
+    if (!visibleSectionIds.has(doc.sectionId)) {
+      throw new Error(
+        ctx.isAuthenticated
+          ? 'No tienes permisos suficientes para acceder a la carpeta que contiene este documento.'
+          : 'No tienes permisos suficientes para acceder a este documento. Debes iniciar sesión.'
+      );
     }
 
     const libraryDirSetting = process.env.LIBRARY_STORAGE_PATH || './uploads/library';

@@ -1,34 +1,63 @@
 import { DatabaseRepository } from './DatabaseRepository';
-import { BaseLibraryItem, LibraryItem, LibrarySection } from '../types/library';
+import { BaseLibraryItem, LibraryAccessLevel, LibraryItem, LibrarySection } from '../types/library';
+
+const SECTION_COLUMNS = 'id, name, parentId, position, icon, accessLevel, allowedRoles, createdAt';
 
 export class LibraryItemRepository {
+  private mapSection(row: any): LibrarySection {
+    return {
+      ...row,
+      icon: row.icon || null,
+      accessLevel: row.accessLevel || 'all',
+      allowedRoles: row.allowedRoles ? JSON.parse(row.allowedRoles) : []
+    };
+  }
+
   // --- SECCIONES ---
   public async getAllSections(): Promise<LibrarySection[]> {
     const db = await DatabaseRepository.getInstance();
-    return db.all<LibrarySection[]>(
-      'SELECT id, name, parentId, position, createdAt FROM library_sections ORDER BY position ASC, createdAt ASC'
+    const rows = await db.all<any[]>(
+      `SELECT ${SECTION_COLUMNS} FROM library_sections ORDER BY position ASC, createdAt ASC`
     );
+    return rows.map(r => this.mapSection(r));
   }
 
   public async getSectionById(id: string): Promise<LibrarySection | undefined> {
     const db = await DatabaseRepository.getInstance();
-    return db.get<LibrarySection>(
-      'SELECT id, name, parentId, position, createdAt FROM library_sections WHERE id = ?',
+    const row = await db.get<any>(
+      `SELECT ${SECTION_COLUMNS} FROM library_sections WHERE id = ?`,
       [id]
     );
+    return row ? this.mapSection(row) : undefined;
   }
 
-  public async createSection(id: string, name: string, parentId: string | null, position: number): Promise<LibrarySection> {
+  public async createSection(
+    id: string,
+    name: string,
+    parentId: string | null,
+    position: number,
+    accessLevel: LibraryAccessLevel = 'all',
+    allowedRoles: string[] = [],
+    icon: string | null = null
+  ): Promise<LibrarySection> {
     const db = await DatabaseRepository.getInstance();
     await db.run(
-      'INSERT INTO library_sections (id, name, parentId, position) VALUES (?, ?, ?, ?)',
-      [id, name, parentId, position]
+      'INSERT INTO library_sections (id, name, parentId, position, icon, accessLevel, allowedRoles) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, name, parentId, position, icon, accessLevel, JSON.stringify(allowedRoles || [])]
     );
     const created = await this.getSectionById(id);
     return created!;
   }
 
-  public async updateSection(id: string, name?: string, parentId?: string | null, position?: number): Promise<LibrarySection | undefined> {
+  public async updateSection(
+    id: string,
+    name?: string,
+    parentId?: string | null,
+    position?: number,
+    accessLevel?: LibraryAccessLevel,
+    allowedRoles?: string[],
+    icon?: string | null
+  ): Promise<LibrarySection | undefined> {
     const db = await DatabaseRepository.getInstance();
     const current = await this.getSectionById(id);
     if (!current) return undefined;
@@ -36,10 +65,13 @@ export class LibraryItemRepository {
     const newName = name !== undefined ? name : current.name;
     const newParentId = parentId !== undefined ? parentId : current.parentId;
     const newPosition = position !== undefined ? position : current.position;
+    const newAccessLevel = accessLevel !== undefined ? accessLevel : (current.accessLevel || 'all');
+    const newAllowedRoles = allowedRoles !== undefined ? allowedRoles : (current.allowedRoles || []);
+    const newIcon = icon !== undefined ? icon : (current.icon ?? null);
 
     await db.run(
-      'UPDATE library_sections SET name = ?, parentId = ?, position = ? WHERE id = ?',
-      [newName, newParentId, newPosition, id]
+      'UPDATE library_sections SET name = ?, parentId = ?, position = ?, icon = ?, accessLevel = ?, allowedRoles = ? WHERE id = ?',
+      [newName, newParentId, newPosition, newIcon, newAccessLevel, JSON.stringify(newAllowedRoles), id]
     );
     return this.getSectionById(id);
   }

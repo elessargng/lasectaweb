@@ -1,5 +1,27 @@
 [
   {
+    "version": "0.6.0",
+    "date": "2026-08-29",
+    "title": "Nueva Vista de La Biblioteca y Seguridad en Carpetas",
+    "description": "Rediseño del primer nivel de La Biblioteca en formato de tarjetas con iconos personalizables y extensión del control de acceso de los documentos a las carpetas.",
+    "changes": [
+      {
+        "category": "La Biblioteca",
+        "items": [
+          "Vista en Tarjetas: El primer nivel de La Biblioteca se muestra ahora como tarjetas, con una navegación más visual y clara.",
+          "Iconos Personalizables: Cada biblioteca puede tener su propio icono, seleccionable desde un catálogo de iconos."
+        ]
+      },
+      {
+        "category": "Seguridad y Accesos",
+        "items": [
+          "Restricción de Carpetas: El control de acceso configurable (todos, usuarios registrados o roles específicos) se extiende también a las carpetas, además de a los documentos.",
+          "Herencia de Permisos: El contenido de una carpeta restringida queda oculto para quienes no tienen acceso a ella."
+        ]
+      }
+    ]
+  },
+  {
     "version": "0.5.0",
     "date": "2026-08-16",
     "title": "Mejoras y Correcciones en La Biblioteca",

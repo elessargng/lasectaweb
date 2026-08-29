@@ -1,7 +1,7 @@
 import { LibraryItemRepository } from './LibraryItemRepository';
 import { LibraryDocumentRepository } from './LibraryDocumentRepository';
 import { LibraryLinkRepository } from './LibraryLinkRepository';
-import { LibrarySection, LibraryDocument, LibraryLink, LibraryDocumentVersion, BaseLibraryItem } from '../types/library';
+import { LibrarySection, LibraryDocument, LibraryLink, LibraryDocumentVersion, BaseLibraryItem, LibraryAccessLevel } from '../types/library';
 
 export class LibraryRepository {
   public itemRepo: LibraryItemRepository;
@@ -23,12 +23,28 @@ export class LibraryRepository {
     return this.itemRepo.getSectionById(id);
   }
 
-  public async createSection(id: string, name: string, parentId: string | null, position: number): Promise<LibrarySection> {
-    return this.itemRepo.createSection(id, name, parentId, position);
+  public async createSection(
+    id: string,
+    name: string,
+    parentId: string | null,
+    position: number,
+    accessLevel: LibraryAccessLevel = 'all',
+    allowedRoles: string[] = [],
+    icon: string | null = null
+  ): Promise<LibrarySection> {
+    return this.itemRepo.createSection(id, name, parentId, position, accessLevel, allowedRoles, icon);
   }
 
-  public async updateSection(id: string, name?: string, parentId?: string | null, position?: number): Promise<LibrarySection | undefined> {
-    return this.itemRepo.updateSection(id, name, parentId, position);
+  public async updateSection(
+    id: string,
+    name?: string,
+    parentId?: string | null,
+    position?: number,
+    accessLevel?: LibraryAccessLevel,
+    allowedRoles?: string[],
+    icon?: string | null
+  ): Promise<LibrarySection | undefined> {
+    return this.itemRepo.updateSection(id, name, parentId, position, accessLevel, allowedRoles, icon);
   }
 
   public async deleteSection(id: string): Promise<boolean> {

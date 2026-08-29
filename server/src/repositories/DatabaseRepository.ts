@@ -228,6 +228,21 @@ export class DatabaseRepository {
         CREATE INDEX IF NOT EXISTS idx_library_document_versions_documentId ON library_document_versions(documentId);
       `);
     });
+
+    // Migración 006: Restricciones de acceso para secciones (carpetas) de La Biblioteca
+    await this.applyMigration('006_add_section_access_control', async (db) => {
+      await db.exec(`
+        ALTER TABLE library_sections ADD COLUMN accessLevel TEXT DEFAULT 'all';
+        ALTER TABLE library_sections ADD COLUMN allowedRoles TEXT;
+      `);
+    });
+
+    // Migración 007: Icono asociado a las carpetas de La Biblioteca
+    await this.applyMigration('007_add_section_icon', async (db) => {
+      await db.exec(`
+        ALTER TABLE library_sections ADD COLUMN icon TEXT;
+      `);
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

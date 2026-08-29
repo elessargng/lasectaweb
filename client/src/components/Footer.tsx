@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { History, Sparkles } from 'lucide-react';
 import changelogData from '../data/changelog.json';
@@ -9,23 +9,8 @@ interface FooterProps {
 }
 
 const Footer: React.FC<FooterProps> = ({ onOpenChangelog, version: propVersion }) => {
-  const [currentVersion, setCurrentVersion] = useState<string>(propVersion || changelogData[0]?.version || '0.1.0');
+  const currentVersion = propVersion || changelogData[0]?.version || '0.1.0';
 
-  useEffect(() => {
-    if (propVersion) {
-      setCurrentVersion(propVersion);
-      return;
-    }
-
-    fetch('/changelog.json')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0 && data[0].version) {
-          setCurrentVersion(data[0].version);
-        }
-      })
-      .catch(() => {});
-  }, [propVersion]);
   return (
     <footer className="w-full bg-theme-container border-t border-outline-ghost shadow-2xl relative z-30 font-body">
       <div className="max-w-7xl mx-auto px-6 md:px-10 py-6 md:py-8 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-4">

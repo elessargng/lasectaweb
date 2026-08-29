@@ -19,7 +19,8 @@ import {
   type LibraryDocument,
   type LibraryLink,
   type LibraryItem,
-  type LibraryDocumentVersion
+  type LibraryDocumentVersion,
+  type LibraryAccessLevel
 } from '../utils/libraryApi';
 import {
   BookOpen,
@@ -40,7 +41,6 @@ import {
   Loader2,
   Tag,
   Lock,
-  Globe,
   Shield,
   Eye,
   FileCode,
@@ -48,12 +48,17 @@ import {
   ExternalLink,
   Link as LinkIcon,
   Copy,
-  Check
+  Check,
+  ArrowLeft
 } from 'lucide-react';
 
 import Button from '../components/Button';
 import PageHeader from '../components/PageHeader';
 import Cita from '../components/Cita';
+import AccessBadge from '../components/AccessBadge';
+import AccessLevelSelector from '../components/AccessLevelSelector';
+import IconPicker from '../components/IconPicker';
+import { getLibraryIcon } from '../utils/libraryIcons';
 
 const Youtube = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -73,6 +78,9 @@ export default function Biblioteca() {
   // Secciones expandidas
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
+  // Carpeta raíz seleccionada (vista drill-down). null = rejilla de tarjetas.
+  const [selectedRootId, setSelectedRootId] = useState<string | null>(null);
+
   // Modales
   const [sectionModal, setSectionModal] = useState<{
     isOpen: boolean;
@@ -80,6 +88,9 @@ export default function Biblioteca() {
     sectionId?: string;
     parentId?: string | null;
     currentName?: string;
+    currentAccessLevel?: LibraryAccessLevel;
+    currentAllowedRoles?: string[];
+    currentIcon?: string | null;
   }>({ isOpen: false, mode: 'create_title' });
 
   const [documentModal, setDocumentModal] = useState<{
@@ -89,7 +100,7 @@ export default function Biblioteca() {
     documentId?: string;
     currentTitle?: string;
     currentDesc?: string;
-    currentAccessLevel?: 'all' | 'registered' | 'roles';
+    currentAccessLevel?: LibraryAccessLevel;
     currentAllowedRoles?: string[];
   }>({ isOpen: false, mode: 'create' });
 
@@ -101,7 +112,7 @@ export default function Biblioteca() {
     currentTitle?: string;
     currentUrl?: string;
     currentDesc?: string;
-    currentAccessLevel?: 'all' | 'registered' | 'roles';
+    currentAccessLevel?: LibraryAccessLevel;
     currentAllowedRoles?: string[];
   }>({ isOpen: false, mode: 'create' });
 
@@ -203,6 +214,9 @@ export default function Biblioteca() {
   // Form State para Sección
   const [sectionNameInput, setSectionNameInput] = useState('');
   const [sectionParentIdInput, setSectionParentIdInput] = useState<string>('');
+  const [sectionAccessLevelInput, setSectionAccessLevelInput] = useState<LibraryAccessLevel>('all');
+  const [sectionAllowedRolesInput, setSectionAllowedRolesInput] = useState<string[]>([]);
+  const [sectionIconInput, setSectionIconInput] = useState<string | null>(null);
   
   // Form State para Documento
   const [docTitleInput, setDocTitleInput] = useState('');
@@ -210,7 +224,7 @@ export default function Biblioteca() {
   const [docSectionIdInput, setDocSectionIdInput] = useState('');
   const [docVersionLabelInput, setDocVersionLabelInput] = useState('PDF');
   const [docFileInput, setDocFileInput] = useState<File | null>(null);
-  const [docAccessLevelInput, setDocAccessLevelInput] = useState<'all' | 'registered' | 'roles'>('all');
+  const [docAccessLevelInput, setDocAccessLevelInput] = useState<LibraryAccessLevel>('all');
   const [docAllowedRolesInput, setDocAllowedRolesInput] = useState<string[]>([]);
 
   // Form State para Enlace
@@ -218,7 +232,7 @@ export default function Biblioteca() {
   const [linkUrlInput, setLinkUrlInput] = useState('');
   const [linkDescInput, setLinkDescInput] = useState('');
   const [linkSectionIdInput, setLinkSectionIdInput] = useState('');
-  const [linkAccessLevelInput, setLinkAccessLevelInput] = useState<'all' | 'registered' | 'roles'>('all');
+  const [linkAccessLevelInput, setLinkAccessLevelInput] = useState<LibraryAccessLevel>('all');
   const [linkAllowedRolesInput, setLinkAllowedRolesInput] = useState<string[]>([]);
 
   // Form State para Versión & Mover
@@ -282,19 +296,37 @@ export default function Biblioteca() {
   const handleOpenCreateTitle = () => {
     setSectionNameInput('');
     setSectionParentIdInput('');
+    setSectionAccessLevelInput('all');
+    setSectionAllowedRolesInput([]);
+    setSectionIconInput(null);
     setSectionModal({ isOpen: true, mode: 'create_title' });
   };
 
   const handleOpenCreateSubtitle = (parentId: string) => {
     setSectionNameInput('');
     setSectionParentIdInput(parentId);
+    setSectionAccessLevelInput('all');
+    setSectionAllowedRolesInput([]);
+    setSectionIconInput(null);
     setSectionModal({ isOpen: true, mode: 'create_subtitle', parentId });
   };
 
   const handleOpenEditSection = (section: LibrarySection) => {
     setSectionNameInput(section.name);
     setSectionParentIdInput(section.parentId || '');
-    setSectionModal({ isOpen: true, mode: 'edit', sectionId: section.id, currentName: section.name, parentId: section.parentId });
+    setSectionAccessLevelInput(section.accessLevel || 'all');
+    setSectionAllowedRolesInput(section.allowedRoles || []);
+    setSectionIconInput(section.icon || null);
+    setSectionModal({
+      isOpen: true,
+      mode: 'edit',
+      sectionId: section.id,
+      currentName: section.name,
+      parentId: section.parentId,
+      currentAccessLevel: section.accessLevel || 'all',
+      currentAllowedRoles: section.allowedRoles || [],
+      currentIcon: section.icon || null
+    });
   };
 
   const handleSaveSection = async (e: FormEvent) => {
@@ -303,12 +335,29 @@ export default function Biblioteca() {
 
     try {
       setSubmitting(true);
+      const allowedRoles = sectionAccessLevelInput === 'roles' ? sectionAllowedRolesInput : [];
+
       if (sectionModal.mode === 'create_title' || sectionModal.mode === 'create_subtitle') {
         const parentId = sectionModal.mode === 'create_subtitle' ? sectionModal.parentId : (sectionParentIdInput || null);
-        await createLibrarySection(sectionNameInput.trim(), parentId);
+        await createLibrarySection(
+          sectionNameInput.trim(),
+          parentId,
+          undefined,
+          sectionAccessLevelInput,
+          allowedRoles,
+          sectionIconInput
+        );
         showSuccess('Sección creada con éxito.');
       } else if (sectionModal.mode === 'edit' && sectionModal.sectionId) {
-        await updateLibrarySection(sectionModal.sectionId, sectionNameInput.trim());
+        await updateLibrarySection(
+          sectionModal.sectionId,
+          sectionNameInput.trim(),
+          undefined,
+          undefined,
+          sectionAccessLevelInput,
+          allowedRoles,
+          sectionIconInput
+        );
         showSuccess('Sección actualizada con éxito.');
       }
       setSectionModal({ isOpen: false, mode: 'create_title' });
@@ -596,13 +645,345 @@ export default function Biblioteca() {
     }
   };
 
+  // ACCIONES DE ADMIN SOBRE UNA CARPETA (reutilizadas en el árbol, las tarjetas y la cabecera)
+  const renderSectionAdminActions = (section: LibrarySection) => {
+    const isDeletable = !section.hasSubDocuments;
+
+    return (
+      <>
+        <button
+          onClick={() => handleOpenCreateSubtitle(section.id)}
+          className="p-1.5 text-xs text-amber-300/80 hover:text-amber-300 hover:bg-amber-500/10 rounded-lg transition-all flex items-center gap-1"
+          title="Añadir subcarpeta"
+        >
+          <FolderPlus className="w-4 h-4" />
+        </button>
+
+        <button
+          onClick={() => handleOpenCreateDocument(section.id)}
+          className="p-1.5 text-xs text-emerald-400/80 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-all flex items-center gap-1"
+          title="Añadir documento (archivo)"
+        >
+          <FilePlus className="w-4 h-4" />
+        </button>
+
+        <button
+          onClick={() => handleOpenCreateLink(section.id)}
+          className="p-1.5 text-xs text-sky-400/80 hover:text-sky-400 hover:bg-sky-500/10 rounded-lg transition-all flex items-center gap-1"
+          title="Añadir enlace (web / youtube)"
+        >
+          <LinkIcon className="w-4 h-4" />
+        </button>
+
+        <button
+          onClick={() => handleOpenMoveModal('section', section.id, section.name, section.parentId)}
+          className="p-1.5 text-xs text-sky-400/80 hover:text-sky-400 hover:bg-sky-500/10 rounded-lg transition-all"
+          title="Mover carpeta"
+        >
+          <Move className="w-4 h-4" />
+        </button>
+
+        <button
+          onClick={() => handleOpenEditSection(section)}
+          className="p-1.5 text-xs text-on-surface-muted hover:text-white hover:bg-surface-container-high rounded-lg transition-all"
+          title="Editar carpeta (nombre, icono y acceso)"
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
+
+        <button
+          onClick={() => handleDeleteSection(section)}
+          disabled={!isDeletable}
+          className={`p-1.5 text-xs rounded-lg transition-all ${
+            isDeletable
+              ? 'text-red-400/80 hover:text-red-400 hover:bg-red-500/10 cursor-pointer'
+              : 'text-on-surface-muted/30 cursor-not-allowed opacity-40'
+          }`}
+          title={
+            isDeletable
+              ? 'Borrar carpeta'
+              : 'No se puede borrar una carpeta que contenga elementos colgados'
+          }
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </>
+    );
+  };
+
+  // RENDERIZAR LISTA DE ELEMENTOS (DOCUMENTOS / ENLACES)
+  const renderItemsList = (itemsList: LibraryItem[]) =>
+    itemsList.map(item => {
+      const isLink = item.itemType === 'link';
+
+      if (isLink) {
+        const link = item as LibraryLink;
+        const isYoutube = link.linkType === 'youtube';
+
+        return (
+          <div
+            key={link.id}
+            className="flex flex-col md:flex-row md:items-center justify-between p-3 rounded-xl bg-surface-container/40 border border-outline-ghost/40 hover:border-theme-main/30 transition-all gap-3"
+          >
+            <div className="flex items-start md:items-center gap-3 min-w-0 flex-1">
+              {/* Icono o Miniatura de YouTube */}
+              {isYoutube && link.thumbnailUrl ? (
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative shrink-0 group/thumb block rounded-lg overflow-hidden border border-red-500/30 hover:border-red-500 transition-all"
+                >
+                  <img
+                    src={link.thumbnailUrl}
+                    alt={link.title}
+                    className="w-24 h-14 object-cover group-hover/thumb:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover/thumb:bg-black/20 transition-colors">
+                    <Youtube className="w-6 h-6 text-red-500 drop-shadow-md" />
+                  </div>
+                </a>
+              ) : (
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
+                  isYoutube
+                    ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                    : 'bg-sky-500/10 border-sky-500/30 text-sky-400'
+                }`}>
+                  {isYoutube ? <Youtube className="w-5 h-5" /> : <LinkIcon className="w-5 h-5" />}
+                </div>
+              )}
+
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-display font-medium text-base text-on-surface hover:text-theme-main transition-colors flex items-center gap-1.5 group cursor-pointer"
+                    title={`Abrir enlace: ${link.url}`}
+                  >
+                    <span>{link.title}</span>
+                    <ExternalLink className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity text-theme-main" />
+                  </a>
+
+                  {/* Badges de Enlace */}
+                  {isYoutube ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/30">
+                      <Youtube className="w-3 h-3" />
+                      <span>YouTube</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                      <LinkIcon className="w-3 h-3" />
+                      <span>Enlace Web</span>
+                    </span>
+                  )}
+
+                  {link.accessLevel === 'registered' && (
+                    <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20" title="Visible solo para usuarios registrados">
+                      <Lock className="w-2.5 h-2.5" />
+                      <span>Registrados</span>
+                    </span>
+                  )}
+                  {link.accessLevel === 'roles' && (
+                    <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20" title={`Visible solo para roles: ${(link.allowedRoles || []).join(', ')}`}>
+                      <Shield className="w-2.5 h-2.5" />
+                      <span>{(link.allowedRoles || []).join(', ')}</span>
+                    </span>
+                  )}
+                </div>
+
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-on-surface-muted/70 hover:text-theme-main truncate max-w-md mt-0.5 block"
+                >
+                  {link.url}
+                </a>
+
+                {link.description && (
+                  <p className="text-xs text-on-surface-muted mt-0.5 line-clamp-2">{link.description}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Acciones Admin en Enlace */}
+            {isAdmin && (
+              <div className="flex items-center gap-1 shrink-0 self-end md:self-center">
+                <button
+                  onClick={() => handleOpenEditLink(link)}
+                  className="p-1.5 text-xs text-on-surface-muted hover:text-white hover:bg-surface-container-high rounded-lg transition-all"
+                  title="Editar enlace"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+
+                <button
+                  onClick={() => handleDeleteLink(link)}
+                  className="p-1.5 text-xs text-red-400/80 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                  title="Eliminar enlace"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      // Render de Documento (Archivo)
+      const doc = item as LibraryDocument;
+      const singleVersion = doc.versions && doc.versions.length === 1 ? doc.versions[0] : null;
+      const isSingleImage = singleVersion ? getViewableType(singleVersion) === 'image' : false;
+
+      return (
+        <div
+          key={doc.id}
+          className="flex flex-col md:flex-row md:items-center justify-between p-3 rounded-xl bg-surface-container/40 border border-outline-ghost/40 hover:border-theme-main/30 transition-all gap-3"
+        >
+          <div className="flex items-start md:items-center gap-3 min-w-0 flex-1">
+            {isSingleImage && singleVersion ? (
+              <a
+                href={getLibraryVersionDownloadUrl(singleVersion)}
+                onClick={(e) => handleVersionClick(singleVersion, doc.title, doc.accessLevel, e)}
+                className="relative shrink-0 group/thumb block rounded-lg overflow-hidden border border-purple-500/30 hover:border-purple-500 transition-all cursor-pointer"
+                title={`Ver ${doc.title}`}
+              >
+                <img
+                  src={getLibraryVersionDownloadUrl(singleVersion, true)}
+                  alt={doc.title}
+                  className="w-24 h-14 object-cover group-hover/thumb:scale-105 transition-transform duration-300 bg-surface-container"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity">
+                  <Eye className="w-5 h-5 text-white drop-shadow-md" />
+                </div>
+              </a>
+            ) : (
+              <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center shrink-0">
+                {doc.versions && doc.versions.length > 0 && getViewableType(doc.versions[0]) === 'image' ? (
+                  <FileImage className="w-5 h-5" />
+                ) : (
+                  <FileText className="w-5 h-5" />
+                )}
+              </div>
+            )}
+
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                {doc.versions && doc.versions.length > 0 ? (
+                  <a
+                    href={getLibraryVersionDownloadUrl(doc.versions[0])}
+                    download={!getViewableType(doc.versions[0])}
+                    onClick={(e) => handleVersionClick(doc.versions[0], doc.title, doc.accessLevel, e)}
+                    className="font-display font-medium text-base text-on-surface hover:text-theme-main transition-colors flex items-center gap-1.5 group cursor-pointer"
+                    title={
+                      getViewableType(doc.versions[0])
+                        ? `Ver ${doc.title}`
+                        : `Descargar ${doc.title}`
+                    }
+                  >
+                    <span>{doc.title}</span>
+                    {getViewableType(doc.versions[0]) ? (
+                      <Eye className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity text-theme-main" />
+                    ) : (
+                      <Download className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity text-theme-main" />
+                    )}
+                  </a>
+                ) : (
+                  <span className="font-display font-medium text-base text-on-surface">{doc.title}</span>
+                )}
+
+                <div className="flex items-center gap-1.5 ml-2 flex-wrap">
+                  <AccessBadge accessLevel={doc.accessLevel} allowedRoles={doc.allowedRoles} />
+                  {(doc.versions || []).map(v => {
+                    const viewType = getViewableType(v);
+                    return (
+                      <div key={v.id} className="inline-flex items-center gap-1 group/ver">
+                        <a
+                          href={getLibraryVersionDownloadUrl(v)}
+                          download={!viewType}
+                          onClick={(e) => handleVersionClick(v, doc.title, doc.accessLevel, e)}
+                          className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-theme-main/15 text-theme-main border border-theme-main/30 hover:bg-theme-main hover:text-background transition-all cursor-pointer"
+                          title={
+                            viewType
+                              ? `Ver versión ${v.label} (${v.originalFilename})`
+                              : `Descargar versión ${v.label} (${v.originalFilename})`
+                          }
+                        >
+                          {viewType ? <Eye className="w-3 h-3" /> : <Tag className="w-3 h-3" />}
+                          <span>{v.label}</span>
+                        </a>
+                        {isAdmin && doc.versions.length > 1 && (
+                          <button
+                            onClick={() => handleDeleteVersion(v.id, v.label, doc.title)}
+                            className="text-red-400/60 hover:text-red-400 opacity-0 group-hover/ver:opacity-100 transition-opacity p-0.5"
+                            title={`Eliminar versión ${v.label}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {doc.description && (
+                <p className="text-xs text-on-surface-muted mt-0.5 line-clamp-2">{doc.description}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Acciones de Admin en Documento */}
+          {isAdmin && (
+            <div className="flex items-center gap-1 shrink-0 self-end md:self-center">
+              <button
+                onClick={() => handleOpenAddVersion(doc)}
+                className="px-2 py-1 text-xs text-emerald-300 hover:text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-lg transition-all flex items-center gap-1"
+                title="Añadir nueva versión al documento"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Versión</span>
+              </button>
+
+              <button
+                onClick={() => handleOpenMoveModal('document', doc.id, doc.title, doc.sectionId)}
+                className="p-1.5 text-xs text-sky-400/80 hover:text-sky-400 hover:bg-sky-500/10 rounded-lg transition-all"
+                title="Mover documento de sección"
+              >
+                <Move className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => handleOpenEditDocument(doc)}
+                className="p-1.5 text-xs text-on-surface-muted hover:text-white hover:bg-surface-container-high rounded-lg transition-all"
+                title="Editar título del documento"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => handleDeleteDocument(doc)}
+                className="p-1.5 text-xs text-red-400/80 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                title="Eliminar documento"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    });
+
   // RENDERIZAR ARBOL RECURSIVO
   const renderSectionNode = (section: LibrarySection, depth: number = 0) => {
     const isExpanded = !!expandedSections[section.id];
     const hasSubsections = section.subsections && section.subsections.length > 0;
     const itemsList: LibraryItem[] = section.items || (section.documents as any[]) || [];
     const hasItems = itemsList.length > 0;
-    const isDeletable = !section.hasSubDocuments;
+    const SectionIcon = getLibraryIcon(section.icon);
 
     return (
       <div key={section.id} className="w-full my-1.5 transition-all">
@@ -624,7 +1005,7 @@ export default function Biblioteca() {
               {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </button>
 
-            <Folder className={`w-5 h-5 shrink-0 ${depth === 0 ? 'text-theme-main' : 'text-amber-400/90'}`} />
+            <SectionIcon className={`w-5 h-5 shrink-0 ${depth === 0 ? 'text-theme-main' : 'text-amber-400/90'}`} />
 
             <span
               onClick={() => toggleSection(section.id)}
@@ -634,67 +1015,18 @@ export default function Biblioteca() {
             >
               {section.name}
             </span>
+
+            <AccessBadge
+              accessLevel={section.accessLevel}
+              allowedRoles={section.allowedRoles}
+              subject="carpeta"
+            />
           </div>
 
           {/* Acciones de Admin en Sección */}
           {isAdmin && (
             <div className="flex items-center gap-1 shrink-0 ml-2">
-              <button
-                onClick={() => handleOpenCreateSubtitle(section.id)}
-                className="p-1.5 text-xs text-amber-300/80 hover:text-amber-300 hover:bg-amber-500/10 rounded-lg transition-all flex items-center gap-1"
-                title="Añadir subtítulo"
-              >
-                <FolderPlus className="w-4 h-4" />
-              </button>
-
-              <button
-                onClick={() => handleOpenCreateDocument(section.id)}
-                className="p-1.5 text-xs text-emerald-400/80 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-all flex items-center gap-1"
-                title="Añadir documento (archivo)"
-              >
-                <FilePlus className="w-4 h-4" />
-              </button>
-
-              <button
-                onClick={() => handleOpenCreateLink(section.id)}
-                className="p-1.5 text-xs text-sky-400/80 hover:text-sky-400 hover:bg-sky-500/10 rounded-lg transition-all flex items-center gap-1"
-                title="Añadir enlace (web / youtube)"
-              >
-                <LinkIcon className="w-4 h-4" />
-              </button>
-
-              <button
-                onClick={() => handleOpenMoveModal('section', section.id, section.name, section.parentId)}
-                className="p-1.5 text-xs text-sky-400/80 hover:text-sky-400 hover:bg-sky-500/10 rounded-lg transition-all"
-                title="Mover sección"
-              >
-                <Move className="w-4 h-4" />
-              </button>
-
-              <button
-                onClick={() => handleOpenEditSection(section)}
-                className="p-1.5 text-xs text-on-surface-muted hover:text-white hover:bg-surface-container-high rounded-lg transition-all"
-                title="Editar título"
-              >
-                <Pencil className="w-4 h-4" />
-              </button>
-
-              <button
-                onClick={() => handleDeleteSection(section)}
-                disabled={!isDeletable}
-                className={`p-1.5 text-xs rounded-lg transition-all ${
-                  isDeletable
-                    ? 'text-red-400/80 hover:text-red-400 hover:bg-red-500/10 cursor-pointer'
-                    : 'text-on-surface-muted/30 cursor-not-allowed opacity-40'
-                }`}
-                title={
-                  isDeletable
-                    ? 'Borrar sección'
-                    : 'No se puede borrar una sección que contenga elementos colgados'
-                }
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {renderSectionAdminActions(section)}
             </div>
           )}
         </div>
@@ -712,282 +1044,74 @@ export default function Biblioteca() {
             {/* Elementos (Documentos / Enlaces) colgados */}
             {hasItems && (
               <div className={`flex flex-col gap-2 mt-2 ${depth === 0 ? 'ml-6 md:ml-8' : 'ml-10 md:ml-12'}`}>
-                {itemsList.map(item => {
-                  const isLink = item.itemType === 'link';
-
-                  if (isLink) {
-                    const link = item as LibraryLink;
-                    const isYoutube = link.linkType === 'youtube';
-
-                    return (
-                      <div
-                        key={link.id}
-                        className="flex flex-col md:flex-row md:items-center justify-between p-3 rounded-xl bg-surface-container/40 border border-outline-ghost/40 hover:border-theme-main/30 transition-all gap-3"
-                      >
-                        <div className="flex items-start md:items-center gap-3 min-w-0 flex-1">
-                          {/* Icono o Miniatura de YouTube */}
-                          {isYoutube && link.thumbnailUrl ? (
-                            <a
-                              href={link.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="relative shrink-0 group/thumb block rounded-lg overflow-hidden border border-red-500/30 hover:border-red-500 transition-all"
-                            >
-                              <img
-                                src={link.thumbnailUrl}
-                                alt={link.title}
-                                className="w-24 h-14 object-cover group-hover/thumb:scale-105 transition-transform duration-300"
-                              />
-                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover/thumb:bg-black/20 transition-colors">
-                                <Youtube className="w-6 h-6 text-red-500 drop-shadow-md" />
-                              </div>
-                            </a>
-                          ) : (
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
-                              isYoutube
-                                ? 'bg-red-500/10 border-red-500/30 text-red-400'
-                                : 'bg-sky-500/10 border-sky-500/30 text-sky-400'
-                            }`}>
-                              {isYoutube ? <Youtube className="w-5 h-5" /> : <LinkIcon className="w-5 h-5" />}
-                            </div>
-                          )}
-
-                          <div className="flex flex-col min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <a
-                                href={link.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="font-display font-medium text-base text-on-surface hover:text-theme-main transition-colors flex items-center gap-1.5 group cursor-pointer"
-                                title={`Abrir enlace: ${link.url}`}
-                              >
-                                <span>{link.title}</span>
-                                <ExternalLink className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity text-theme-main" />
-                              </a>
-
-                              {/* Badges de Enlace */}
-                              {isYoutube ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/30">
-                                  <Youtube className="w-3 h-3" />
-                                  <span>YouTube</span>
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">
-                                  <LinkIcon className="w-3 h-3" />
-                                  <span>Enlace Web</span>
-                                </span>
-                              )}
-
-                              {link.accessLevel === 'registered' && (
-                                <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20" title="Visible solo para usuarios registrados">
-                                  <Lock className="w-2.5 h-2.5" />
-                                  <span>Registrados</span>
-                                </span>
-                              )}
-                              {link.accessLevel === 'roles' && (
-                                <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20" title={`Visible solo para roles: ${(link.allowedRoles || []).join(', ')}`}>
-                                  <Shield className="w-2.5 h-2.5" />
-                                  <span>{(link.allowedRoles || []).join(', ')}</span>
-                                </span>
-                              )}
-                            </div>
-
-                            <a
-                              href={link.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-on-surface-muted/70 hover:text-theme-main truncate max-w-md mt-0.5 block"
-                            >
-                              {link.url}
-                            </a>
-
-                            {link.description && (
-                              <p className="text-xs text-on-surface-muted mt-0.5 line-clamp-2">{link.description}</p>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Acciones Admin en Enlace */}
-                        {isAdmin && (
-                          <div className="flex items-center gap-1 shrink-0 self-end md:self-center">
-                            <button
-                              onClick={() => handleOpenEditLink(link)}
-                              className="p-1.5 text-xs text-on-surface-muted hover:text-white hover:bg-surface-container-high rounded-lg transition-all"
-                              title="Editar enlace"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-
-                            <button
-                              onClick={() => handleDeleteLink(link)}
-                              className="p-1.5 text-xs text-red-400/80 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                              title="Eliminar enlace"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
-
-                  // Render de Documento (Archivo)
-                  const doc = item as LibraryDocument;
-                  const singleVersion = doc.versions && doc.versions.length === 1 ? doc.versions[0] : null;
-                  const isSingleImage = singleVersion ? getViewableType(singleVersion) === 'image' : false;
-
-                  return (
-                    <div
-                      key={doc.id}
-                      className="flex flex-col md:flex-row md:items-center justify-between p-3 rounded-xl bg-surface-container/40 border border-outline-ghost/40 hover:border-theme-main/30 transition-all gap-3"
-                    >
-                      <div className="flex items-start md:items-center gap-3 min-w-0 flex-1">
-                        {isSingleImage && singleVersion ? (
-                          <a
-                            href={getLibraryVersionDownloadUrl(singleVersion)}
-                            onClick={(e) => handleVersionClick(singleVersion, doc.title, doc.accessLevel, e)}
-                            className="relative shrink-0 group/thumb block rounded-lg overflow-hidden border border-purple-500/30 hover:border-purple-500 transition-all cursor-pointer"
-                            title={`Ver ${doc.title}`}
-                          >
-                            <img
-                              src={getLibraryVersionDownloadUrl(singleVersion, true)}
-                              alt={doc.title}
-                              className="w-24 h-14 object-cover group-hover/thumb:scale-105 transition-transform duration-300 bg-surface-container"
-                              loading="lazy"
-                            />
-                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity">
-                              <Eye className="w-5 h-5 text-white drop-shadow-md" />
-                            </div>
-                          </a>
-                        ) : (
-                          <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center shrink-0">
-                            {doc.versions && doc.versions.length > 0 && getViewableType(doc.versions[0]) === 'image' ? (
-                              <FileImage className="w-5 h-5" />
-                            ) : (
-                              <FileText className="w-5 h-5" />
-                            )}
-                          </div>
-                        )}
-
-                        <div className="flex flex-col min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {doc.versions && doc.versions.length > 0 ? (
-                              <a
-                                href={getLibraryVersionDownloadUrl(doc.versions[0])}
-                                download={!getViewableType(doc.versions[0])}
-                                onClick={(e) => handleVersionClick(doc.versions[0], doc.title, doc.accessLevel, e)}
-                                className="font-display font-medium text-base text-on-surface hover:text-theme-main transition-colors flex items-center gap-1.5 group cursor-pointer"
-                                title={
-                                  getViewableType(doc.versions[0])
-                                    ? `Ver ${doc.title}`
-                                    : `Descargar ${doc.title}`
-                                }
-                              >
-                                <span>{doc.title}</span>
-                                {getViewableType(doc.versions[0]) ? (
-                                  <Eye className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity text-theme-main" />
-                                ) : (
-                                  <Download className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity text-theme-main" />
-                                )}
-                              </a>
-                            ) : (
-                              <span className="font-display font-medium text-base text-on-surface">{doc.title}</span>
-                            )}
-
-                            <div className="flex items-center gap-1.5 ml-2 flex-wrap">
-                              {doc.accessLevel === 'registered' && (
-                                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30" title="Restringido: Solo usuarios registrados">
-                                  <Lock className="w-3 h-3" />
-                                  <span>Registrados</span>
-                                </span>
-                              )}
-                              {doc.accessLevel === 'roles' && (
-                                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30" title={`Restringido: Solo roles ${(doc.allowedRoles || []).join(', ')}`}>
-                                  <Shield className="w-3 h-3" />
-                                  <span>{(doc.allowedRoles || []).join(', ') || 'Sin roles'}</span>
-                                </span>
-                              )}
-                              {(doc.versions || []).map(v => {
-                                const viewType = getViewableType(v);
-                                return (
-                                  <div key={v.id} className="inline-flex items-center gap-1 group/ver">
-                                    <a
-                                      href={getLibraryVersionDownloadUrl(v)}
-                                      download={!viewType}
-                                      onClick={(e) => handleVersionClick(v, doc.title, doc.accessLevel, e)}
-                                      className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-theme-main/15 text-theme-main border border-theme-main/30 hover:bg-theme-main hover:text-background transition-all cursor-pointer"
-                                      title={
-                                        viewType
-                                          ? `Ver versión ${v.label} (${v.originalFilename})`
-                                          : `Descargar versión ${v.label} (${v.originalFilename})`
-                                      }
-                                    >
-                                      {viewType ? <Eye className="w-3 h-3" /> : <Tag className="w-3 h-3" />}
-                                      <span>{v.label}</span>
-                                    </a>
-                                    {isAdmin && doc.versions.length > 1 && (
-                                      <button
-                                        onClick={() => handleDeleteVersion(v.id, v.label, doc.title)}
-                                        className="text-red-400/60 hover:text-red-400 opacity-0 group-hover/ver:opacity-100 transition-opacity p-0.5"
-                                        title={`Eliminar versión ${v.label}`}
-                                      >
-                                        <X className="w-3 h-3" />
-                                      </button>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {doc.description && (
-                            <p className="text-xs text-on-surface-muted mt-0.5 line-clamp-2">{doc.description}</p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Acciones de Admin en Documento */}
-                      {isAdmin && (
-                        <div className="flex items-center gap-1 shrink-0 self-end md:self-center">
-                          <button
-                            onClick={() => handleOpenAddVersion(doc)}
-                            className="px-2 py-1 text-xs text-emerald-300 hover:text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-lg transition-all flex items-center gap-1"
-                            title="Añadir nueva versión al documento"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">Versión</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleOpenMoveModal('document', doc.id, doc.title, doc.sectionId)}
-                            className="p-1.5 text-xs text-sky-400/80 hover:text-sky-400 hover:bg-sky-500/10 rounded-lg transition-all"
-                            title="Mover documento de sección"
-                          >
-                            <Move className="w-4 h-4" />
-                          </button>
-
-                          <button
-                            onClick={() => handleOpenEditDocument(doc)}
-                            className="p-1.5 text-xs text-on-surface-muted hover:text-white hover:bg-surface-container-high rounded-lg transition-all"
-                            title="Editar título del documento"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-
-                          <button
-                            onClick={() => handleDeleteDocument(doc)}
-                            className="p-1.5 text-xs text-red-400/80 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                            title="Eliminar documento"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {renderItemsList(itemsList)}
               </div>
             )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Cuenta recursiva de elementos (documentos y enlaces) colgados de una sección
+  const countItemsDeep = (section: LibrarySection): number => {
+    const own = (section.items || (section.documents as any[]) || []).length;
+    const inSubs = (section.subsections || []).reduce((acc, sub) => acc + countItemsDeep(sub), 0);
+    return own + inSubs;
+  };
+
+  const selectedRoot = selectedRootId ? tree.find(sec => sec.id === selectedRootId) : undefined;
+
+  // Si la carpeta seleccionada desaparece (borrada o dejó de ser visible), volvemos a la rejilla
+  useEffect(() => {
+    if (selectedRootId && !loading && !tree.some(sec => sec.id === selectedRootId)) {
+      setSelectedRootId(null);
+    }
+  }, [tree, selectedRootId, loading]);
+
+  const renderRootCard = (section: LibrarySection) => {
+    const SectionIcon = getLibraryIcon(section.icon);
+    const subCount = (section.subsections || []).length;
+    const itemCount = countItemsDeep(section);
+
+    return (
+      <div
+        key={section.id}
+        className="group relative flex flex-col rounded-2xl bg-surface-container/70 border border-outline-ghost hover:border-theme-main/60 hover:bg-surface-container transition-all shadow-md hover:shadow-xl hover:-translate-y-0.5"
+      >
+        <button
+          type="button"
+          onClick={() => setSelectedRootId(section.id)}
+          className="flex flex-col items-center text-center gap-3 p-5 md:p-6 w-full"
+        >
+          <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-theme-main/10 border border-theme-main/30 flex items-center justify-center text-theme-main shadow-[0_0_15px_rgba(var(--color-theme-main),0.15)] group-hover:bg-theme-main/20 transition-colors">
+            <SectionIcon className="w-8 h-8 md:w-10 md:h-10" />
+          </div>
+
+          <div className="flex flex-col items-center gap-1.5 min-w-0 w-full">
+            <span className="font-display font-semibold text-base md:text-lg text-on-surface tracking-wide break-words">
+              {section.name}
+            </span>
+
+            <span className="text-xs text-on-surface-muted">
+              {subCount > 0 && `${subCount} ${subCount === 1 ? 'subcarpeta' : 'subcarpetas'}`}
+              {subCount > 0 && itemCount > 0 && ' · '}
+              {itemCount > 0 && `${itemCount} ${itemCount === 1 ? 'elemento' : 'elementos'}`}
+              {subCount === 0 && itemCount === 0 && 'Vacía'}
+            </span>
+
+            <AccessBadge
+              accessLevel={section.accessLevel}
+              allowedRoles={section.allowedRoles}
+              subject="carpeta"
+            />
+          </div>
+        </button>
+
+        {/* Acciones de Admin sobre la carpeta raíz */}
+        {isAdmin && (
+          <div className="flex items-center justify-center gap-0.5 flex-wrap px-2 pb-3 pt-1 border-t border-outline-ghost/40 mt-auto">
+            {renderSectionAdminActions(section)}
           </div>
         )}
       </div>
@@ -1010,26 +1134,52 @@ export default function Biblioteca() {
             <Cita texto="Regla número uno de la magia: *Nunca te fíes de nada que parezca pensar por sí mismo si no puedes ver dónde tiene el cerebro.*" />
           </div>
 
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-outline-ghost/60">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-theme-main/10 border border-theme-main/30 flex items-center justify-center text-theme-main shadow-[0_0_15px_rgba(var(--color-theme-main),0.2)]">
-                <BookOpen className="w-6 h-6" />
-              </div>
-              <h2 className="text-2xl md:text-3xl font-display text-on-surface">
-                Archivos, Documentos y Enlaces
-              </h2>
-            </div>
-
-            {isAdmin && (
-              <Button
-                onClick={handleOpenCreateTitle}
-                variant="primary"
-                className="shrink-0 flex items-center gap-2 px-5 py-2.5 shadow-lg"
+          <div className="flex flex-col gap-3 mb-6 pb-4 border-b border-outline-ghost/60">
+            {selectedRoot && (
+              <button
+                type="button"
+                onClick={() => setSelectedRootId(null)}
+                className="self-start inline-flex items-center gap-1.5 text-sm text-on-surface-muted hover:text-theme-main transition-colors font-display"
               >
-                <Plus className="w-4 h-4" />
-                <span>Nuevo Título Raíz</span>
-              </Button>
+                <ArrowLeft className="w-4 h-4" />
+                <span>Volver a La Biblioteca</span>
+              </button>
             )}
+
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-theme-main/10 border border-theme-main/30 flex items-center justify-center text-theme-main shadow-[0_0_15px_rgba(var(--color-theme-main),0.2)] shrink-0">
+                  {selectedRoot ? (
+                    (() => {
+                      const RootIcon = getLibraryIcon(selectedRoot.icon);
+                      return <RootIcon className="w-6 h-6" />;
+                    })()
+                  ) : (
+                    <BookOpen className="w-6 h-6" />
+                  )}
+                </div>
+                <h2 className="text-2xl md:text-3xl font-display text-on-surface truncate">
+                  {selectedRoot ? selectedRoot.name : 'Archivos, Documentos y Enlaces'}
+                </h2>
+              </div>
+
+              {isAdmin && !selectedRoot && (
+                <Button
+                  onClick={handleOpenCreateTitle}
+                  variant="primary"
+                  className="shrink-0 flex items-center gap-2 px-5 py-2.5 shadow-lg"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Nuevo Título Raíz</span>
+                </Button>
+              )}
+
+              {isAdmin && selectedRoot && (
+                <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+                  {renderSectionAdminActions(selectedRoot)}
+                </div>
+              )}
+            </div>
           </div>
 
           {error && (
@@ -1062,9 +1212,32 @@ export default function Biblioteca() {
                 Actualmente no hay ningún documento o enlace publicado. {isAdmin && 'Haz clic en "Nuevo Título Raíz" para empezar.'}
               </p>
             </div>
+          ) : selectedRoot ? (
+            (selectedRoot.subsections || []).length === 0 &&
+            ((selectedRoot.items || (selectedRoot.documents as any[]) || []).length === 0) ? (
+              <div className="text-center py-16 px-4 bg-surface-container/30 rounded-2xl border border-outline-ghost/50">
+                <Folder className="w-12 h-12 text-on-surface-muted/40 mx-auto mb-3" />
+                <h3 className="text-lg font-display text-on-surface mb-1">Esta carpeta está vacía</h3>
+                <p className="text-sm text-on-surface-muted max-w-md mx-auto">
+                  Todavía no contiene subcarpetas, documentos ni enlaces.
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {(selectedRoot.subsections || []).map(sub => renderSectionNode(sub, 0))}
+
+                {(selectedRoot.items || (selectedRoot.documents as any[]) || []).length > 0 && (
+                  <div className="flex flex-col gap-2 mt-2">
+                    {renderItemsList(
+                      (selectedRoot.items || (selectedRoot.documents as any[]) || []) as LibraryItem[]
+                    )}
+                  </div>
+                )}
+              </div>
+            )
           ) : (
-            <div className="flex flex-col gap-2">
-              {tree.map(sec => renderSectionNode(sec, 0))}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+              {tree.map(sec => renderRootCard(sec))}
             </div>
           )}
         </div>
@@ -1127,6 +1300,20 @@ export default function Biblioteca() {
                   </select>
                 </div>
               )}
+
+              <IconPicker
+                value={sectionIconInput}
+                onChange={setSectionIconInput}
+                helpText="El icono se muestra en la tarjeta de la carpeta cuando ésta es de primer nivel."
+              />
+
+              <AccessLevelSelector
+                accessLevel={sectionAccessLevelInput}
+                allowedRoles={sectionAllowedRolesInput}
+                onAccessLevelChange={setSectionAccessLevelInput}
+                onAllowedRolesChange={setSectionAllowedRolesInput}
+                helpText="La restricción se aplica en cascada: quien no pueda ver esta carpeta tampoco verá sus subcarpetas ni ningún elemento que contenga, aunque estos sean públicos."
+              />
 
               <div className="flex justify-end gap-3 mt-2 pt-3 border-t border-outline-ghost/50">
                 <Button
@@ -1209,74 +1396,12 @@ export default function Biblioteca() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
-                  Restricción de Acceso
-                </label>
-                <div className="grid grid-cols-3 gap-2 mb-2">
-                  <button
-                    type="button"
-                    onClick={() => setDocAccessLevelInput('all')}
-                    className={`flex items-center justify-center gap-1.5 p-2 rounded-xl border text-xs font-medium transition-all ${
-                      docAccessLevelInput === 'all'
-                        ? 'bg-theme-main/20 border-theme-main text-theme-main font-semibold'
-                        : 'bg-surface-container border-outline-ghost/60 text-on-surface-muted hover:border-outline-ghost hover:text-on-surface'
-                    }`}
-                  >
-                    <Globe className="w-3.5 h-3.5" />
-                    <span>Todos</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDocAccessLevelInput('registered')}
-                    className={`flex items-center justify-center gap-1.5 p-2 rounded-xl border text-xs font-medium transition-all ${
-                      docAccessLevelInput === 'registered'
-                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-semibold'
-                        : 'bg-surface-container border-outline-ghost/60 text-on-surface-muted hover:border-outline-ghost hover:text-on-surface'
-                    }`}
-                  >
-                    <Lock className="w-3.5 h-3.5" />
-                    <span>Registrados</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDocAccessLevelInput('roles')}
-                    className={`flex items-center justify-center gap-1.5 p-2 rounded-xl border text-xs font-medium transition-all ${
-                      docAccessLevelInput === 'roles'
-                        ? 'bg-purple-500/20 border-purple-500 text-purple-300 font-semibold'
-                        : 'bg-surface-container border-outline-ghost/60 text-on-surface-muted hover:border-outline-ghost hover:text-on-surface'
-                    }`}
-                  >
-                    <Shield className="w-3.5 h-3.5" />
-                    <span>Por Roles</span>
-                  </button>
-                </div>
-
-                {docAccessLevelInput === 'roles' && (
-                  <div className="p-3 rounded-xl bg-surface-container-low/60 border border-purple-500/30 flex flex-col gap-2 mt-2">
-                    <span className="text-xs font-medium text-purple-200">Selecciona los roles con acceso:</span>
-                    <div className="flex items-center gap-4 flex-wrap">
-                      {['narrador', 'editor', 'admin'].map(role => (
-                        <label key={role} className="inline-flex items-center gap-2 text-xs text-on-surface cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={docAllowedRolesInput.includes(role)}
-                            onChange={e => {
-                              if (e.target.checked) {
-                                setDocAllowedRolesInput([...docAllowedRolesInput, role]);
-                              } else {
-                                setDocAllowedRolesInput(docAllowedRolesInput.filter(r => r !== role));
-                              }
-                            }}
-                            className="rounded bg-surface-container border-outline-ghost text-purple-500 focus:ring-purple-500/40"
-                          />
-                          <span className="capitalize">{role}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <AccessLevelSelector
+                accessLevel={docAccessLevelInput}
+                allowedRoles={docAllowedRolesInput}
+                onAccessLevelChange={setDocAccessLevelInput}
+                onAllowedRolesChange={setDocAllowedRolesInput}
+              />
 
               {documentModal.mode === 'create' && (
                 <>
@@ -1406,74 +1531,12 @@ export default function Biblioteca() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
-                  Restricción de Acceso
-                </label>
-                <div className="grid grid-cols-3 gap-2 mb-2">
-                  <button
-                    type="button"
-                    onClick={() => setLinkAccessLevelInput('all')}
-                    className={`flex items-center justify-center gap-1.5 p-2 rounded-xl border text-xs font-medium transition-all ${
-                      linkAccessLevelInput === 'all'
-                        ? 'bg-theme-main/20 border-theme-main text-theme-main font-semibold'
-                        : 'bg-surface-container border-outline-ghost/60 text-on-surface-muted hover:border-outline-ghost hover:text-on-surface'
-                    }`}
-                  >
-                    <Globe className="w-3.5 h-3.5" />
-                    <span>Todos</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLinkAccessLevelInput('registered')}
-                    className={`flex items-center justify-center gap-1.5 p-2 rounded-xl border text-xs font-medium transition-all ${
-                      linkAccessLevelInput === 'registered'
-                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-semibold'
-                        : 'bg-surface-container border-outline-ghost/60 text-on-surface-muted hover:border-outline-ghost hover:text-on-surface'
-                    }`}
-                  >
-                    <Lock className="w-3.5 h-3.5" />
-                    <span>Registrados</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLinkAccessLevelInput('roles')}
-                    className={`flex items-center justify-center gap-1.5 p-2 rounded-xl border text-xs font-medium transition-all ${
-                      linkAccessLevelInput === 'roles'
-                        ? 'bg-purple-500/20 border-purple-500 text-purple-300 font-semibold'
-                        : 'bg-surface-container border-outline-ghost/60 text-on-surface-muted hover:border-outline-ghost hover:text-on-surface'
-                    }`}
-                  >
-                    <Shield className="w-3.5 h-3.5" />
-                    <span>Por Roles</span>
-                  </button>
-                </div>
-
-                {linkAccessLevelInput === 'roles' && (
-                  <div className="p-3 rounded-xl bg-surface-container-low/60 border border-purple-500/30 flex flex-col gap-2 mt-2">
-                    <span className="text-xs font-medium text-purple-200">Selecciona los roles con acceso:</span>
-                    <div className="flex items-center gap-4 flex-wrap">
-                      {['narrador', 'editor', 'admin'].map(role => (
-                        <label key={role} className="inline-flex items-center gap-2 text-xs text-on-surface cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={linkAllowedRolesInput.includes(role)}
-                            onChange={e => {
-                              if (e.target.checked) {
-                                setLinkAllowedRolesInput([...linkAllowedRolesInput, role]);
-                              } else {
-                                setLinkAllowedRolesInput(linkAllowedRolesInput.filter(r => r !== role));
-                              }
-                            }}
-                            className="rounded bg-surface-container border-outline-ghost text-purple-500 focus:ring-purple-500/40"
-                          />
-                          <span className="capitalize">{role}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <AccessLevelSelector
+                accessLevel={linkAccessLevelInput}
+                allowedRoles={linkAllowedRolesInput}
+                onAccessLevelChange={setLinkAccessLevelInput}
+                onAllowedRolesChange={setLinkAllowedRolesInput}
+              />
 
               <div className="flex justify-end gap-3 mt-2 pt-3 border-t border-outline-ghost/50">
                 <Button

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { LibraryService } from '../services/LibraryService';
 import { AuthRequest } from '../middlewares/auth';
+import { parseAllowedRoles } from '../utils/libraryAccess';
 
 export class LibraryController {
   constructor(private libraryService: LibraryService) {}
@@ -20,11 +21,14 @@ export class LibraryController {
         res.status(401).json({ error: 'No autorizado.' });
         return;
       }
-      const { name, parentId, position } = req.body;
+      const { name, parentId, position, icon, accessLevel, allowedRoles } = req.body;
       const section = await this.libraryService.createSection(req.user.id, {
         name,
         parentId,
-        position: position ? Number(position) : undefined
+        position: position ? Number(position) : undefined,
+        icon,
+        accessLevel,
+        allowedRoles: parseAllowedRoles(allowedRoles)
       });
       res.status(201).json(section);
     } catch (error: any) {
@@ -39,11 +43,14 @@ export class LibraryController {
         return;
       }
       const { id } = req.params;
-      const { name, parentId, position } = req.body;
+      const { name, parentId, position, icon, accessLevel, allowedRoles } = req.body;
       const updated = await this.libraryService.updateSection(req.user.id, id as string, {
         name,
         parentId,
-        position: position !== undefined ? Number(position) : undefined
+        position: position !== undefined ? Number(position) : undefined,
+        icon,
+        accessLevel,
+        allowedRoles: parseAllowedRoles(allowedRoles)
       });
       res.status(200).json(updated);
     } catch (error: any) {
@@ -74,14 +81,7 @@ export class LibraryController {
       const { sectionId, title, description, position, label, accessLevel, allowedRoles } = req.body;
       const file = req.file;
 
-      let parsedAllowedRoles = allowedRoles;
-      if (typeof allowedRoles === 'string') {
-        try {
-          parsedAllowedRoles = JSON.parse(allowedRoles);
-        } catch {
-          parsedAllowedRoles = allowedRoles.split(',').map((r: string) => r.trim()).filter(Boolean);
-        }
-      }
+      const parsedAllowedRoles = parseAllowedRoles(allowedRoles);
 
       const doc = await this.libraryService.createDocument(
         req.user.id,
@@ -111,14 +111,7 @@ export class LibraryController {
       const { id } = req.params;
       const { sectionId, title, description, position, accessLevel, allowedRoles } = req.body;
 
-      let parsedAllowedRoles = allowedRoles;
-      if (typeof allowedRoles === 'string') {
-        try {
-          parsedAllowedRoles = JSON.parse(allowedRoles);
-        } catch {
-          parsedAllowedRoles = allowedRoles.split(',').map((r: string) => r.trim()).filter(Boolean);
-        }
-      }
+      const parsedAllowedRoles = parseAllowedRoles(allowedRoles);
 
       const doc = await this.libraryService.updateDocument(req.user.id, id as string, {
         sectionId,
@@ -157,14 +150,7 @@ export class LibraryController {
       }
       const { sectionId, title, url, description, position, accessLevel, allowedRoles } = req.body;
 
-      let parsedAllowedRoles = allowedRoles;
-      if (typeof allowedRoles === 'string') {
-        try {
-          parsedAllowedRoles = JSON.parse(allowedRoles);
-        } catch {
-          parsedAllowedRoles = allowedRoles.split(',').map((r: string) => r.trim()).filter(Boolean);
-        }
-      }
+      const parsedAllowedRoles = parseAllowedRoles(allowedRoles);
 
       const link = await this.libraryService.createLink(req.user.id, {
         sectionId,
@@ -190,14 +176,7 @@ export class LibraryController {
       const { id } = req.params;
       const { sectionId, title, url, description, position, accessLevel, allowedRoles } = req.body;
 
-      let parsedAllowedRoles = allowedRoles;
-      if (typeof allowedRoles === 'string') {
-        try {
-          parsedAllowedRoles = JSON.parse(allowedRoles);
-        } catch {
-          parsedAllowedRoles = allowedRoles.split(',').map((r: string) => r.trim()).filter(Boolean);
-        }
-      }
+      const parsedAllowedRoles = parseAllowedRoles(allowedRoles);
 
       const link = await this.libraryService.updateLink(req.user.id, id as string, {
         sectionId,
