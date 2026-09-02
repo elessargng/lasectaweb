@@ -11,6 +11,9 @@ import {
   createLibraryLink,
   updateLibraryLink,
   deleteLibraryLink,
+  createLibraryPovMatch,
+  updateLibraryPovMatch,
+  deleteLibraryPovMatch,
   addLibraryDocumentVersion,
   deleteLibraryDocumentVersion,
   getLibraryVersionDownloadUrl,
@@ -18,9 +21,11 @@ import {
   type LibrarySection,
   type LibraryDocument,
   type LibraryLink,
+  type LibraryPovMatch,
   type LibraryItem,
   type LibraryDocumentVersion,
-  type LibraryAccessLevel
+  type LibraryAccessLevel,
+  type PovInputDTO
 } from '../utils/libraryApi';
 import {
   BookOpen,
@@ -49,7 +54,8 @@ import {
   Link as LinkIcon,
   Copy,
   Check,
-  ArrowLeft
+  ArrowLeft,
+  Sparkles
 } from 'lucide-react';
 
 import Button from '../components/Button';
@@ -59,6 +65,9 @@ import AccessBadge from '../components/AccessBadge';
 import AccessLevelSelector from '../components/AccessLevelSelector';
 import IconPicker from '../components/IconPicker';
 import { getLibraryIcon } from '../utils/libraryIcons';
+import PovMatchCard from '../components/library/PovMatchCard';
+import PovMatchPlayerModal from '../components/library/PovMatchPlayerModal';
+import PovMatchFormModal from '../components/library/PovMatchFormModal';
 
 const Youtube = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -116,6 +125,18 @@ export default function Biblioteca() {
     currentAllowedRoles?: string[];
   }>({ isOpen: false, mode: 'create' });
 
+  const [povModal, setPovModal] = useState<{
+    isOpen: boolean;
+    mode: 'create' | 'edit';
+    sectionId?: string;
+    match?: LibraryPovMatch | null;
+  }>({ isOpen: false, mode: 'create', match: null });
+
+  const [povPlayerModal, setPovPlayerModal] = useState<{
+    isOpen: boolean;
+    match: LibraryPovMatch | null;
+  }>({ isOpen: false, match: null });
+
   const [addVersionModal, setAddVersionModal] = useState<{
     isOpen: boolean;
     documentId: string;
@@ -124,7 +145,7 @@ export default function Biblioteca() {
 
   const [moveModal, setMoveModal] = useState<{
     isOpen: boolean;
-    type: 'section' | 'document';
+    type: 'section' | 'document' | 'link' | 'pov_match';
     id: string;
     name: string;
     currentTargetId?: string | null;
@@ -569,6 +590,79 @@ export default function Biblioteca() {
     }
   };
 
+  // --- PARTIDA POV HANDLERS ---
+  const handleOpenCreatePovMatch = (sectionId: string) => {
+    setPovModal({
+      isOpen: true,
+      mode: 'create',
+      sectionId,
+      match: null
+    });
+  };
+
+  const handleOpenEditPovMatch = (match: LibraryPovMatch) => {
+    setPovModal({
+      isOpen: true,
+      mode: 'edit',
+      sectionId: match.sectionId,
+      match
+    });
+  };
+
+  const handleSavePovMatch = async (data: {
+    sectionId: string;
+    title: string;
+    description?: string;
+    accessLevel: LibraryAccessLevel;
+    allowedRoles: string[];
+    povs: PovInputDTO[];
+  }) => {
+    if (povModal.mode === 'create') {
+      await createLibraryPovMatch({
+        sectionId: data.sectionId,
+        title: data.title,
+        description: data.description,
+        accessLevel: data.accessLevel,
+        allowedRoles: data.allowedRoles,
+        povs: data.povs
+      });
+      showSuccess('Partida POV creada correctamente.');
+    } else if (povModal.mode === 'edit' && povModal.match) {
+      await updateLibraryPovMatch(povModal.match.id, {
+        sectionId: data.sectionId,
+        title: data.title,
+        description: data.description,
+        accessLevel: data.accessLevel,
+        allowedRoles: data.allowedRoles,
+        povs: data.povs
+      });
+      showSuccess('Partida POV actualizada correctamente.');
+    }
+    setPovModal({ isOpen: false, mode: 'create', match: null });
+    await loadTree();
+  };
+
+  const handleDeletePovMatch = async (match: LibraryPovMatch) => {
+    if (!confirm(`¿Estás seguro de eliminar la partida POV "${match.title}" y todas sus perspectivas asociadas?`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await deleteLibraryPovMatch(match.id);
+      showSuccess(`La partida POV "${match.title}" ha sido eliminada.`);
+      await loadTree();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenPovPlayer = (match: LibraryPovMatch) => {
+    setPovPlayerModal({ isOpen: true, match });
+  };
+
   // --- VERSIÓN HANDLERS ---
   const handleOpenAddVersion = (doc: LibraryDocument) => {
     setVersionLabelInput('');
@@ -614,7 +708,12 @@ export default function Biblioteca() {
   };
 
   // --- MOVER HANDLERS ---
-  const handleOpenMoveModal = (type: 'section' | 'document', id: string, name: string, currentTargetId?: string | null) => {
+  const handleOpenMoveModal = (
+    type: 'section' | 'document' | 'link' | 'pov_match',
+    id: string,
+    name: string,
+    currentTargetId?: string | null
+  ) => {
     setMoveTargetIdInput(currentTargetId || '');
     setMoveModal({ isOpen: true, type, id, name, currentTargetId });
   };
@@ -627,6 +726,22 @@ export default function Biblioteca() {
         const targetParent = moveTargetIdInput === '' ? null : moveTargetIdInput;
         await updateLibrarySection(moveModal.id, undefined, targetParent);
         showSuccess(`Sección "${moveModal.name}" movida correctamente.`);
+      } else if (moveModal.type === 'pov_match') {
+        if (!moveTargetIdInput) {
+          setError('Debes seleccionar una sección de destino.');
+          setSubmitting(false);
+          return;
+        }
+        await updateLibraryPovMatch(moveModal.id, { sectionId: moveTargetIdInput });
+        showSuccess(`Partida POV "${moveModal.name}" movida correctamente.`);
+      } else if (moveModal.type === 'link') {
+        if (!moveTargetIdInput) {
+          setError('Debes seleccionar una sección de destino.');
+          setSubmitting(false);
+          return;
+        }
+        await updateLibraryLink(moveModal.id, undefined, undefined, moveTargetIdInput);
+        showSuccess(`Enlace "${moveModal.name}" movido correctamente.`);
       } else {
         if (!moveTargetIdInput) {
           setError('Debes seleccionar una sección de destino.');
@@ -676,6 +791,14 @@ export default function Biblioteca() {
         </button>
 
         <button
+          onClick={() => handleOpenCreatePovMatch(section.id)}
+          className="p-1.5 text-xs text-purple-400/80 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-all flex items-center gap-1"
+          title="Añadir partida POV (multicámara)"
+        >
+          <Sparkles className="w-4 h-4" />
+        </button>
+
+        <button
           onClick={() => handleOpenMoveModal('section', section.id, section.name, section.parentId)}
           className="p-1.5 text-xs text-sky-400/80 hover:text-sky-400 hover:bg-sky-500/10 rounded-lg transition-all"
           title="Mover carpeta"
@@ -711,9 +834,24 @@ export default function Biblioteca() {
     );
   };
 
-  // RENDERIZAR LISTA DE ELEMENTOS (DOCUMENTOS / ENLACES)
+  // RENDERIZAR LISTA DE ELEMENTOS (PARTIDAS POV / DOCUMENTOS / ENLACES)
   const renderItemsList = (itemsList: LibraryItem[]) =>
     itemsList.map(item => {
+      if (item.itemType === 'pov_match') {
+        const match = item as LibraryPovMatch;
+        return (
+          <PovMatchCard
+            key={match.id}
+            match={match}
+            isAdmin={isAdmin}
+            onOpenPlayer={handleOpenPovPlayer}
+            onEdit={handleOpenEditPovMatch}
+            onMove={(m) => handleOpenMoveModal('pov_match', m.id, m.title, m.sectionId)}
+            onDelete={handleDeletePovMatch}
+          />
+        );
+      }
+
       const isLink = item.itemType === 'link';
 
       if (isLink) {
@@ -1893,6 +2031,24 @@ export default function Biblioteca() {
           </div>
         </div>
       )}
+
+      {/* MODAL: PARTIDA POV (FORMULARIO ALTA / EDICIÓN) */}
+      <PovMatchFormModal
+        isOpen={povModal.isOpen}
+        mode={povModal.mode}
+        sectionId={povModal.sectionId}
+        match={povModal.match}
+        sectionsList={flatSectionsList}
+        onClose={() => setPovModal({ isOpen: false, mode: 'create', match: null })}
+        onSave={handleSavePovMatch}
+      />
+
+      {/* MODAL: REPRODUCTOR PARTIDA POV */}
+      <PovMatchPlayerModal
+        isOpen={povPlayerModal.isOpen}
+        match={povPlayerModal.match}
+        onClose={() => setPovPlayerModal({ isOpen: false, match: null })}
+      />
     </div>
   );
 }

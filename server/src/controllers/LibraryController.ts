@@ -207,6 +207,80 @@ export class LibraryController {
     }
   };
 
+  // --- PARTIDAS POV ---
+  public getPovMatch = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const match = await this.libraryService.getPovMatchById(id as string, req.user?.id);
+      res.status(200).json(match);
+    } catch (error: any) {
+      res.status(404).json({ error: error.message || 'Error al obtener la partida POV.' });
+    }
+  };
+
+  public createPovMatch = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'No autorizado.' });
+        return;
+      }
+      const { sectionId, title, description, position, accessLevel, allowedRoles, povs } = req.body;
+      const parsedAllowedRoles = parseAllowedRoles(allowedRoles);
+
+      const match = await this.libraryService.createPovMatch(req.user.id, {
+        sectionId,
+        title,
+        description,
+        position: position !== undefined ? Number(position) : undefined,
+        accessLevel,
+        allowedRoles: parsedAllowedRoles,
+        povs: Array.isArray(povs) ? povs : []
+      });
+      res.status(201).json(match);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  };
+
+  public updatePovMatch = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'No autorizado.' });
+        return;
+      }
+      const { id } = req.params;
+      const { sectionId, title, description, position, accessLevel, allowedRoles, povs } = req.body;
+      const parsedAllowedRoles = parseAllowedRoles(allowedRoles);
+
+      const match = await this.libraryService.updatePovMatch(req.user.id, id as string, {
+        sectionId,
+        title,
+        description,
+        position: position !== undefined ? Number(position) : undefined,
+        accessLevel,
+        allowedRoles: parsedAllowedRoles,
+        povs: povs !== undefined && Array.isArray(povs) ? povs : undefined
+      });
+      res.status(200).json(match);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  };
+
+  public deletePovMatch = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'No autorizado.' });
+        return;
+      }
+      const { id } = req.params;
+      await this.libraryService.deletePovMatch(req.user.id, id as string);
+      res.status(200).json({ message: 'Partida POV eliminada correctamente.' });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  };
+
   public addVersion = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       if (!req.user) {

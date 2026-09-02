@@ -243,6 +243,34 @@ export class DatabaseRepository {
         ALTER TABLE library_sections ADD COLUMN icon TEXT;
       `);
     });
+
+    // Migración 008: Partidas POV y cámaras/perspectivas de La Biblioteca
+    await this.applyMigration('008_add_pov_matches_and_povs', async (db) => {
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS library_pov_matches (
+          itemId TEXT PRIMARY KEY,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (itemId) REFERENCES library_items(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS library_povs (
+          id TEXT PRIMARY KEY,
+          matchId TEXT NOT NULL,
+          name TEXT NOT NULL,
+          sectaUserId TEXT,
+          initialAlignment TEXT NOT NULL,
+          character TEXT NOT NULL,
+          characterType TEXT NOT NULL,
+          youtubeUrl TEXT NOT NULL,
+          youtubeId TEXT,
+          position INTEGER DEFAULT 0,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (matchId) REFERENCES library_items(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_library_povs_matchId ON library_povs(matchId);
+      `);
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

@@ -1,5 +1,27 @@
 [
   {
+    "version": "0.7.0",
+    "date": "2026-09-02",
+    "title": "Partidas POV Multicámara en La Biblioteca",
+    "description": "Llegada de las partidas multicámara con visor interactivo y selector anti-spoilers para seguir partidas de Blood on the Clocktower desde múltiples perspectivas.",
+    "changes": [
+      {
+        "category": "Partidas POV y Multicámara",
+        "items": [
+          "Subida y Gestión Multicámara: Soporte para publicar partidas completas vinculando múltiples perspectivas (Narrador, Demonio, Esbirros, Forasteros, Aldeanos y Viajeros) con enlaces a YouTube.",
+          "Selector Anti-Spoilers: Selector previo interactivo que permite elegir perspectiva por rol o por jugador, evitando spoilers de personajes y alineamientos hasta que el usuario decida explorarlos.",
+          "Reproductor Interactivo: Panel lateral para cambiar de cámara al instante entre jugadores o mediante accesos rápidos de rol, con control para ocultar o revelar roles en tiempo real."
+        ]
+      },
+      {
+        "category": "La Biblioteca",
+        "items": [
+          "Nuevo Tipo de Recurso: Integración nativa de partidas POV en las carpetas de La Biblioteca con diseño visual distintivo y control de acceso por roles."
+        ]
+      }
+    ]
+  },
+  {
     "version": "0.6.0",
     "date": "2026-08-29",
     "title": "Nueva Vista de La Biblioteca y Seguridad en Carpetas",

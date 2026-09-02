@@ -2,9 +2,13 @@ import { parseApiResponse } from './api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api';
 
-export type LibraryItemType = 'document' | 'link';
+export type LibraryItemType = 'document' | 'link' | 'pov_match';
 
 export type LibraryAccessLevel = 'all' | 'registered' | 'roles';
+
+export type CharacterType = 'demonio' | 'esbirro' | 'forastero' | 'aldeano' | 'viajero' | 'narrador';
+
+export type InitialAlignment = 'bueno' | 'malo' | 'na';
 
 /** Roles asignables en las restricciones de acceso de La Biblioteca */
 export const LIBRARY_ASSIGNABLE_ROLES = ['narrador', 'editor', 'admin'] as const;
@@ -19,6 +23,19 @@ export interface BaseLibraryItem {
   accessLevel?: LibraryAccessLevel;
   allowedRoles?: string[];
   createdAt: string;
+}
+
+export interface LibraryPov {
+  id: string;
+  matchId: string;
+  name: string;
+  sectaUserId?: string | null;
+  initialAlignment: InitialAlignment;
+  character: string;
+  characterType: CharacterType;
+  youtubeUrl: string;
+  youtubeId?: string | null;
+  position: number;
 }
 
 export interface LibraryDocumentVersion {
@@ -44,7 +61,43 @@ export interface LibraryLink extends BaseLibraryItem {
   thumbnailUrl?: string;
 }
 
-export type LibraryItem = LibraryDocument | LibraryLink;
+export interface LibraryPovMatch extends BaseLibraryItem {
+  itemType: 'pov_match';
+  povs: LibraryPov[];
+}
+
+export type LibraryItem = LibraryDocument | LibraryLink | LibraryPovMatch;
+
+export interface PovInputDTO {
+  id?: string;
+  name: string;
+  sectaUserId?: string | null;
+  initialAlignment: InitialAlignment;
+  character: string;
+  characterType: CharacterType;
+  youtubeUrl: string;
+  position?: number;
+}
+
+export interface CreatePovMatchDTO {
+  sectionId: string;
+  title: string;
+  description?: string;
+  position?: number;
+  accessLevel?: LibraryAccessLevel;
+  allowedRoles?: string[];
+  povs: PovInputDTO[];
+}
+
+export interface UpdatePovMatchDTO {
+  sectionId?: string;
+  title?: string;
+  description?: string;
+  position?: number;
+  accessLevel?: LibraryAccessLevel;
+  allowedRoles?: string[];
+  povs?: PovInputDTO[];
+}
 
 export interface LibrarySection {
   id: string;
@@ -215,6 +268,46 @@ export async function deleteLibraryLink(id: string): Promise<void> {
     headers: getAuthHeaders()
   });
   await parseApiResponse(res);
+}
+
+export async function fetchLibraryPovMatchById(id: string): Promise<LibraryPovMatch> {
+  const res = await fetch(`${API_URL}/library/pov-matches/${id}`, {
+    headers: getAuthHeaders()
+  });
+  return parseApiResponse<LibraryPovMatch>(res);
+}
+
+export async function createLibraryPovMatch(dto: CreatePovMatchDTO): Promise<LibraryPovMatch> {
+  const res = await fetch(`${API_URL}/library/pov-matches`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(dto)
+  });
+  return parseApiResponse<LibraryPovMatch>(res);
+}
+
+export async function updateLibraryPovMatch(id: string, dto: UpdatePovMatchDTO): Promise<LibraryPovMatch> {
+  const res = await fetch(`${API_URL}/library/pov-matches/${id}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(dto)
+  });
+  return parseApiResponse<LibraryPovMatch>(res);
+}
+
+export async function deleteLibraryPovMatch(id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/library/pov-matches/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  await parseApiResponse(res);
+}
+
+export function extractYoutubeVideoId(url: string): string | null {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
 }
 
 export async function addLibraryDocumentVersion(documentId: string, label: string, file: File): Promise<LibraryDocumentVersion> {

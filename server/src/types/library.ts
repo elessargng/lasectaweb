@@ -1,6 +1,10 @@
-export type LibraryItemType = 'document' | 'link';
+export type LibraryItemType = 'document' | 'link' | 'pov_match';
 
 export type LibraryAccessLevel = 'all' | 'registered' | 'roles';
+
+export type CharacterType = 'demonio' | 'esbirro' | 'forastero' | 'aldeano' | 'viajero' | 'narrador';
+
+export type InitialAlignment = 'bueno' | 'malo' | 'na';
 
 export interface BaseLibraryItem {
   id: string;
@@ -12,6 +16,19 @@ export interface BaseLibraryItem {
   accessLevel?: LibraryAccessLevel;
   allowedRoles?: string[];
   createdAt: string;
+}
+
+export interface LibraryPov {
+  id: string;
+  matchId: string;
+  name: string;
+  sectaUserId?: string | null;
+  initialAlignment: InitialAlignment;
+  character: string;
+  characterType: CharacterType;
+  youtubeUrl: string;
+  youtubeId?: string | null;
+  position: number;
 }
 
 export interface LibraryDocument extends BaseLibraryItem {
@@ -26,7 +43,12 @@ export interface LibraryLink extends BaseLibraryItem {
   thumbnailUrl?: string;
 }
 
-export type LibraryItem = LibraryDocument | LibraryLink;
+export interface LibraryPovMatch extends BaseLibraryItem {
+  itemType: 'pov_match';
+  povs: LibraryPov[];
+}
+
+export type LibraryItem = LibraryDocument | LibraryLink | LibraryPovMatch;
 
 export interface LibraryDocumentVersion {
   id: string;
@@ -114,4 +136,35 @@ export interface UpdateLinkDTO {
 export interface AddVersionDTO {
   documentId: string;
   label: string;
+}
+
+export interface PovInputDTO {
+  id?: string;
+  name: string;
+  sectaUserId?: string | null;
+  initialAlignment: InitialAlignment;
+  character: string;
+  characterType: CharacterType;
+  youtubeUrl: string;
+  position?: number;
+}
+
+export interface CreatePovMatchDTO {
+  sectionId: string;
+  title: string;
+  description?: string;
+  position?: number;
+  accessLevel?: LibraryAccessLevel;
+  allowedRoles?: string[];
+  povs: PovInputDTO[];
+}
+
+export interface UpdatePovMatchDTO {
+  sectionId?: string;
+  title?: string;
+  description?: string;
+  position?: number;
+  accessLevel?: LibraryAccessLevel;
+  allowedRoles?: string[];
+  povs?: PovInputDTO[];
 }

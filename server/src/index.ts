@@ -138,6 +138,11 @@ app.post('/api/library/links', authenticateJWT as express.RequestHandler, librar
 app.put('/api/library/links/:id', authenticateJWT as express.RequestHandler, libraryController.updateLink as express.RequestHandler);
 app.delete('/api/library/links/:id', authenticateJWT as express.RequestHandler, libraryController.deleteLink as express.RequestHandler);
 
+app.get('/api/library/pov-matches/:id', optionalAuthenticateJWT as express.RequestHandler, libraryController.getPovMatch as express.RequestHandler);
+app.post('/api/library/pov-matches', authenticateJWT as express.RequestHandler, libraryController.createPovMatch as express.RequestHandler);
+app.put('/api/library/pov-matches/:id', authenticateJWT as express.RequestHandler, libraryController.updatePovMatch as express.RequestHandler);
+app.delete('/api/library/pov-matches/:id', authenticateJWT as express.RequestHandler, libraryController.deletePovMatch as express.RequestHandler);
+
 app.post('/api/library/documents/:id/versions', authenticateJWT as express.RequestHandler, libraryUpload.single('file'), libraryController.addVersion as express.RequestHandler);
 app.delete('/api/library/versions/:id', authenticateJWT as express.RequestHandler, libraryController.deleteVersion as express.RequestHandler);
 app.get(['/api/library/versions/:id/download', '/api/library/versions/:id/download/:filename'], optionalAuthenticateJWT as express.RequestHandler, libraryController.downloadVersion as express.RequestHandler);

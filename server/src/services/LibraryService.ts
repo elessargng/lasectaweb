@@ -7,6 +7,8 @@ import {
   LibrarySection,
   LibraryDocument,
   LibraryLink,
+  LibraryPovMatch,
+  LibraryPov,
   LibraryItem,
   BaseLibraryItem,
   LibraryDocumentVersion,
@@ -15,7 +17,10 @@ import {
   CreateDocumentDTO,
   UpdateDocumentDTO,
   CreateLinkDTO,
-  UpdateLinkDTO
+  UpdateLinkDTO,
+  CreatePovMatchDTO,
+  UpdatePovMatchDTO,
+  PovInputDTO
 } from '../types/library';
 import { AccessContext, canAccess } from '../utils/libraryAccess';
 
@@ -32,15 +37,20 @@ export class LibraryService {
     }
   }
 
+  public extractYoutubeVideoId(url: string): string | null {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  }
+
   private parseYoutubeInfo(url: string): { isYoutube: boolean; linkType: 'normal' | 'youtube'; thumbnailUrl?: string } {
     const isYoutube = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//i.test(url);
     if (!isYoutube) {
       return { isYoutube: false, linkType: 'normal' };
     }
 
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    const videoId = (match && match[2].length === 11) ? match[2] : null;
+    const videoId = this.extractYoutubeVideoId(url);
     const thumbnailUrl = videoId
       ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
       : undefined;
@@ -103,11 +113,17 @@ export class LibraryService {
     const allRawSections = await this.libraryRepository.getAllSections();
     const rawItems = await this.libraryRepository.getAllRawItems();
     const rawLinks = await this.libraryRepository.getAllLinks();
+    const rawPovMatches = await this.libraryRepository.getAllPovMatches();
     const rawVersions = await this.libraryRepository.getAllVersions();
 
     const linkMap = new Map<string, LibraryLink>();
     for (const link of rawLinks) {
       linkMap.set(link.id, link);
+    }
+
+    const povMatchMap = new Map<string, LibraryPovMatch>();
+    for (const match of rawPovMatches) {
+      povMatchMap.set(match.id, match);
     }
 
     // Filtrar secciones (carpetas) en cascada: si no ves la carpeta, no ves nada debajo
@@ -119,7 +135,7 @@ export class LibraryService {
       item => visibleSectionIds.has(item.sectionId) && canAccess(item, ctx)
     );
 
-    // Construir objetos polimórficos LibraryItem (LibraryDocument | LibraryLink)
+    // Construir objetos polimórficos LibraryItem (LibraryDocument | LibraryLink | LibraryPovMatch)
     const polymorphicItems: LibraryItem[] = [];
     for (const raw of allowedRawItems) {
       if (raw.itemType === 'link') {
@@ -135,6 +151,17 @@ export class LibraryService {
             url: (raw as any).url || '',
             linkType: ytInfo.linkType,
             thumbnailUrl: ytInfo.thumbnailUrl
+          });
+        }
+      } else if (raw.itemType === 'pov_match') {
+        const fullMatch = povMatchMap.get(raw.id);
+        if (fullMatch) {
+          polymorphicItems.push(fullMatch);
+        } else {
+          polymorphicItems.push({
+            ...raw,
+            itemType: 'pov_match',
+            povs: []
           });
         }
       } else {
@@ -473,6 +500,170 @@ export class LibraryService {
     }
 
     return this.libraryRepository.deleteLink(id);
+  }
+
+  // --- GESTIÓN DE PARTIDAS POV ---
+  public async getPovMatchById(id: string, userId?: string): Promise<LibraryPovMatch> {
+    const match = await this.libraryRepository.getPovMatchById(id);
+    if (!match) {
+      throw new Error('La partida POV especificada no existe.');
+    }
+
+    const ctx = await this.buildAccessContext(userId);
+    if (!canAccess(match, ctx)) {
+      throw new Error(
+        ctx.isAuthenticated
+          ? 'No tienes permisos suficientes para acceder a esta partida POV.'
+          : 'No tienes permisos suficientes para acceder a esta partida POV. Debes iniciar sesión.'
+      );
+    }
+
+    const allSections = await this.libraryRepository.getAllSections();
+    const visibleSectionIds = this.getVisibleSectionIds(allSections, ctx);
+    if (!visibleSectionIds.has(match.sectionId)) {
+      throw new Error(
+        ctx.isAuthenticated
+          ? 'No tienes permisos suficientes para acceder a la carpeta que contiene esta partida.'
+          : 'No tienes permisos suficientes para acceder a esta partida. Debes iniciar sesión.'
+      );
+    }
+
+    return match;
+  }
+
+  public async createPovMatch(userId: string, dto: CreatePovMatchDTO): Promise<LibraryPovMatch> {
+    await this.verifyAdmin(userId);
+
+    if (!dto.title || dto.title.trim() === '') {
+      throw new Error('El título de la partida POV es obligatorio.');
+    }
+    if (!dto.sectionId) {
+      throw new Error('Debe especificar una sección para la partida POV.');
+    }
+
+    const section = await this.libraryRepository.getSectionById(dto.sectionId);
+    if (!section) {
+      throw new Error('La sección especificada no existe.');
+    }
+
+    const matchId = crypto.randomUUID();
+    const position = dto.position ?? 0;
+
+    const formattedPovs = (dto.povs || []).map((p, index) => {
+      if (!p.name || p.name.trim() === '') {
+        throw new Error(`El nombre del jugador en el POV #${index + 1} es obligatorio.`);
+      }
+      if (!p.character || p.character.trim() === '') {
+        throw new Error(`El personaje en el POV #${index + 1} es obligatorio.`);
+      }
+      if (!p.youtubeUrl || p.youtubeUrl.trim() === '') {
+        throw new Error(`El enlace de YouTube en el POV #${index + 1} es obligatorio.`);
+      }
+
+      return {
+        id: p.id || crypto.randomUUID(),
+        name: p.name.trim(),
+        sectaUserId: p.sectaUserId || null,
+        initialAlignment: p.initialAlignment || 'bueno',
+        character: p.character.trim(),
+        characterType: p.characterType || 'aldeano',
+        youtubeUrl: p.youtubeUrl.trim(),
+        youtubeId: this.extractYoutubeVideoId(p.youtubeUrl.trim()),
+        position: p.position !== undefined ? p.position : index
+      };
+    });
+
+    return this.libraryRepository.createPovMatch(
+      matchId,
+      dto.sectionId,
+      dto.title.trim(),
+      dto.description,
+      position,
+      dto.accessLevel || 'all',
+      dto.allowedRoles || [],
+      formattedPovs
+    );
+  }
+
+  public async updatePovMatch(userId: string, id: string, dto: UpdatePovMatchDTO): Promise<LibraryPovMatch> {
+    await this.verifyAdmin(userId);
+
+    const currentMatch = await this.libraryRepository.getPovMatchById(id);
+    if (!currentMatch) {
+      throw new Error('La partida POV especificada no existe.');
+    }
+
+    if (dto.sectionId) {
+      const section = await this.libraryRepository.getSectionById(dto.sectionId);
+      if (!section) {
+        throw new Error('La sección especificada no existe.');
+      }
+    }
+
+    let formattedPovs: Array<{
+      id: string;
+      name: string;
+      sectaUserId?: string | null;
+      initialAlignment: any;
+      character: string;
+      characterType: any;
+      youtubeUrl: string;
+      youtubeId?: string | null;
+      position: number;
+    }> | undefined = undefined;
+
+    if (dto.povs !== undefined) {
+      formattedPovs = dto.povs.map((p, index) => {
+        if (!p.name || p.name.trim() === '') {
+          throw new Error(`El nombre del jugador en el POV #${index + 1} es obligatorio.`);
+        }
+        if (!p.character || p.character.trim() === '') {
+          throw new Error(`El personaje en el POV #${index + 1} es obligatorio.`);
+        }
+        if (!p.youtubeUrl || p.youtubeUrl.trim() === '') {
+          throw new Error(`El enlace de YouTube en el POV #${index + 1} es obligatorio.`);
+        }
+
+        return {
+          id: p.id || crypto.randomUUID(),
+          name: p.name.trim(),
+          sectaUserId: p.sectaUserId || null,
+          initialAlignment: p.initialAlignment || 'bueno',
+          character: p.character.trim(),
+          characterType: p.characterType || 'aldeano',
+          youtubeUrl: p.youtubeUrl.trim(),
+          youtubeId: this.extractYoutubeVideoId(p.youtubeUrl.trim()),
+          position: p.position !== undefined ? p.position : index
+        };
+      });
+    }
+
+    const updated = await this.libraryRepository.updatePovMatch(
+      id,
+      dto.sectionId,
+      dto.title?.trim(),
+      dto.description,
+      dto.position,
+      dto.accessLevel,
+      dto.allowedRoles,
+      formattedPovs
+    );
+
+    if (!updated) {
+      throw new Error('No se pudo actualizar la partida POV.');
+    }
+    return updated;
+  }
+
+  public async deletePovMatch(userId: string, id: string): Promise<boolean> {
+    await this.verifyAdmin(userId);
+
+    const match = await this.libraryRepository.getPovMatchById(id);
+    if (!match) {
+      throw new Error('La partida POV especificada no existe.');
+    }
+
+    return this.libraryRepository.deletePovMatch(id);
   }
 
   // --- VERSIONES ---
