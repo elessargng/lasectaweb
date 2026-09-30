@@ -1,5 +1,50 @@
 [
   {
+    "version": "0.8.0",
+    "date": "2026-09-29",
+    "title": "La Plaza: Votaciones de la Comunidad y Códice Vivo",
+    "description": "Llega La Plaza, donde cualquier persona registrada puede proponer y votar los cambios de la comunidad. El Códice pasa a ser un documento vivo, que solo cambia por votación, con histórico de cada norma y protecciones para que nadie pueda alterar lo que se votó.",
+    "changes": [
+      {
+        "category": "La Plaza",
+        "items": [
+          "Propuestas y Votaciones: Cualquier persona registrada puede convocar una votación. Los edictos crean, modifican o derogan normas del Códice; los acuerdos son decisiones puntuales que no tocan las normas.",
+          "Plazos y Vía Rápida: Las votaciones duran 14 días y se aprueban con más votos a favor que en contra. Una propuesta con amplio apoyo y como mucho un voto en contra puede cerrarse antes por vía rápida.",
+          "Voto Anónimo: Nadie, ni siquiera el servidor, puede saber qué ha votado cada persona. La lista de quién ha participado y el registro de votos se guardan por separado y sin relación entre sí.",
+          "Sello de Voto: Al votar recibes un sello de cuatro palabras que solo tienes tú, con el que puedes comprobar en cualquier momento que tu voto consta y se ha contado.",
+          "Modo Secreto: Para las votaciones en las que pueda haber presiones, comprobar un voto lo anula y hay que votar de nuevo. Así nadie puede obligarte a demostrar qué has votado.",
+          "Comentarios: Cada propuesta tiene su propio espacio de debate."
+        ]
+      },
+      {
+        "category": "Resultados Verificables",
+        "items": [
+          "Registro Sellado: Cada voto queda encadenado al anterior mediante una huella digital, de forma que cambiar, añadir o quitar un voto rompe la cadena y se detecta.",
+          "Enunciado Sellado: El texto de una propuesta queda sellado al convocarla, así que lo que se vota es siempre lo que se propuso.",
+          "Resultado Sellado: El resultado de cada votación queda sellado al cerrarse y se comprueba contra los votos, así que no se puede dar por aprobada una votación rechazada.",
+          "Descarga y Verificación Independiente: El registro completo de cada votación cerrada se puede descargar y comprobar por tu cuenta con un pequeño programa, sin depender de la web.",
+          "Resultado por Correo: Al cerrarse cada votación, toda la comunidad recibe un correo con el resultado, la huella final y, si cambia una norma, el texto aprobado. Cada buzón guarda así su propia copia de lo que se decidió. El correo invita además a activar los avisos del vigilante a quien aún no los tenga.",
+          "Vigilante Automático: Cada hora se revisan todas las votaciones y el Códice. Si algo no cuadra, avisa por correo a quienes administran y a toda persona que lo active en su perfil. Tiene su propia página, explicada sin tecnicismos, con qué hace y cómo sacarle partido."
+        ]
+      },
+      {
+        "category": "El Códice",
+        "items": [
+          "Códice Vivo: Las normas se cargan desde La Plaza y se actualizan solas cuando se aprueba una votación. Las normas anteriores a La Plaza se conservan como fundacionales.",
+          "Histórico de Normas: Cada norma muestra todas sus versiones anteriores y la votación que aprobó cada cambio.",
+          "Leyes Comprobables: El texto en vigor de cada norma se comprueba contra la votación que lo aprobó, de modo que el Códice dice siempre lo que decidió la comunidad."
+        ]
+      },
+      {
+        "category": "Perfil",
+        "items": [
+          "Avisos del Vigilante: Nueva opción en tu perfil para recibir por correo los avisos del vigilante. Viene desactivada y puedes activarla o desactivarla cuando quieras; quienes administran la web los reciben siempre. Junto a la opción, un enlace explica qué es el vigilante y cómo funciona.",
+          "Mejora de Seguridad: Revisión de los datos que se pueden modificar al editar el perfil."
+        ]
+      }
+    ]
+  },
+  {
     "version": "0.7.0",
     "date": "2026-09-02",
     "title": "Partidas POV Multicámara en La Biblioteca",

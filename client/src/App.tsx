@@ -6,6 +6,8 @@ import Cronicas from './pages/Cronicas';
 import Grimorio from './pages/Grimorio';
 import Escrituras from './pages/Escrituras';
 import Plaza from './pages/Plaza';
+import PlazaPropuesta from './pages/PlazaPropuesta';
+import PlazaVigilante from './pages/PlazaVigilante';
 import Rituales from './pages/Rituales';
 import Redes from './pages/Redes';
 import Confirmar from './pages/Confirmar';
@@ -27,6 +29,8 @@ function App() {
           <Route path="escrituras" element={<Escrituras />} />
           <Route path="biblioteca" element={<Biblioteca />} />
           <Route path="plaza" element={<Plaza />} />
+          <Route path="plaza/vigilante" element={<PlazaVigilante />} />
+          <Route path="plaza/:id" element={<PlazaPropuesta />} />
           <Route path="rituales" element={<Rituales />} />
           <Route path="redes" element={<Redes />} />
           <Route path="profile" element={<Profile />} />

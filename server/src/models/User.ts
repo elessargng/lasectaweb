@@ -11,5 +11,7 @@ export interface User {
   confirmationToken?: string;
   confirmationTokenExpires?: Date;
   roles: ('editor' | 'narrador' | 'admin')[];
+  /** Quiere recibir por correo las incidencias que detecte el vigilante de La Plaza. */
+  vigilanteAlerts?: boolean;
   createdAt: Date;
 }

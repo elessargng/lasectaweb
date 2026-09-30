@@ -7,6 +7,16 @@ import { sendConfirmationEmail } from '../utils/mailer';
 import { RoleRequestRepository } from '../repositories/RoleRequestRepository';
 import { RoleRequest } from '../models/RoleRequest';
 
+/** Campos del perfil que cada persona puede cambiar por sí misma. */
+const PROFILE_EDITABLE_FIELDS = [
+  'realName',
+  'botcUsername',
+  'email',
+  'telegramUsername',
+  'profilePicture',
+  'vigilanteAlerts'
+] as const;
+
 export class UserService {
   constructor(
     private userRepository: UserRepository,
@@ -117,9 +127,20 @@ export class UserService {
     const user = await this.userRepository.findById(userId);
     if (!user) throw new Error('Usuario no encontrado');
 
+    // Solo los campos que cada cual puede editar de su propio perfil. Mezclar
+    // el cuerpo de la petición tal cual permitía cambiarse los roles (y hacerse
+    // admin) o darse por confirmado con un simple PUT.
+    const editable: Partial<User> = {};
+    for (const field of PROFILE_EDITABLE_FIELDS) {
+      if (updateData[field] !== undefined) (editable as any)[field] = updateData[field];
+    }
+    if (editable.vigilanteAlerts !== undefined) {
+      editable.vigilanteAlerts = editable.vigilanteAlerts === true;
+    }
+
     const updatedUser = {
       ...user,
-      ...updateData,
+      ...editable,
       id: user.id // Asegurar que el ID no cambia
     };
 

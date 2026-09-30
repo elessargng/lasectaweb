@@ -14,6 +14,7 @@ export class UserRepository {
     return {
       ...row,
       isConfirmed: row.isConfirmed === 1,
+      vigilanteAlerts: row.vigilanteAlerts === 1,
       confirmationTokenExpires: row.confirmationTokenExpires ? new Date(row.confirmationTokenExpires) : undefined,
       roles,
       createdAt: new Date(row.createdAt)
@@ -97,7 +98,8 @@ export class UserRepository {
          profilePicture = ?,
          isConfirmed = ?,
          confirmationToken = ?,
-         confirmationTokenExpires = ?
+         confirmationTokenExpires = ?,
+         vigilanteAlerts = ?
        WHERE id = ?`,
       [
         user.username,
@@ -109,6 +111,7 @@ export class UserRepository {
         user.isConfirmed ? 1 : 0,
         user.confirmationToken || null,
         user.confirmationTokenExpires ? user.confirmationTokenExpires.toISOString() : null,
+        user.vigilanteAlerts ? 1 : 0,
         user.id
       ]
     );

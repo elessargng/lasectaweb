@@ -10,6 +10,8 @@ interface User {
   telegramUsername: string;
   profilePicture: string;
   roles: string[];
+  /** Recibe por correo los avisos del vigilante de La Plaza. */
+  vigilanteAlerts?: boolean;
 }
 
 interface AuthContextType {

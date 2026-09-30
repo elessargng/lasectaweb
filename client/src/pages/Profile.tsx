@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import Button from '../components/Button';
 import PageHeader from '../components/PageHeader';
-import { Check, Plus, Shield } from 'lucide-react';
+import { Check, Plus, Shield, Eye } from 'lucide-react';
 import { compressImage } from '../utils/image';
 import { parseApiResponse, getAvatarUrl } from '../utils/api';
 
@@ -41,6 +41,10 @@ const Profile = () => {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [savingAlerts, setSavingAlerts] = useState(false);
+  // Quien administra recibe siempre los avisos del vigilante.
+  const isAdmin = !!user?.roles?.includes('admin');
+  const alertsOn = isAdmin || !!user?.vigilanteAlerts;
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -128,6 +132,37 @@ const Profile = () => {
       fetchMyRequests();
     } catch (err: any) {
       setError(err.message);
+    }
+  };
+
+  // El interruptor se guarda al momento, sin pasar por "Editar Perfil": es una
+  // preferencia, no un dato personal.
+  const toggleVigilanteAlerts = async () => {
+    setError('');
+    setSuccess('');
+    setSavingAlerts(true);
+    const enabled = !user.vigilanteAlerts;
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api';
+      const response = await fetch(`${apiUrl}/auth/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ vigilanteAlerts: enabled })
+      });
+      const data = await parseApiResponse(response);
+      updateUser({ vigilanteAlerts: !!data.vigilanteAlerts });
+      setSuccess(
+        enabled
+          ? 'Avisos del vigilante activados. Solo recibirás un correo si detecta un problema.'
+          : 'Avisos del vigilante desactivados.'
+      );
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSavingAlerts(false);
     }
   };
 
@@ -239,6 +274,48 @@ const Profile = () => {
                     <p className="text-sm text-on-surface-muted font-display mb-1">Usuario de Telegram</p>
                     <p className="text-on-surface font-body">{user.telegramUsername || '-'}</p>
                   </div>
+                </div>
+              </div>
+
+              {/* Avisos del vigilante */}
+              <div className="bg-surface-low p-6 border border-outline-ghost shadow-inner rounded mb-8">
+                <h3 className="text-xl font-display text-on-surface mb-6 border-b border-outline-ghost/50 pb-2 flex items-center gap-2">
+                  <Eye className="w-5 h-5 text-theme-main" />
+                  Avisos del Vigilante
+                </h3>
+                <div className="flex justify-between items-center gap-4">
+                  <div>
+                    <p className="font-display text-on-surface text-base" id="vigilante-alerts-label">
+                      Recibir por correo los avisos del vigilante
+                    </p>
+                    <p className="text-sm font-body text-on-surface-muted mt-1">
+                      El vigilante comprueba cada hora que las votaciones y el Códice están en
+                      orden. Solo te escribirá si algo no cuadra.{' '}
+                      {isAdmin && 'Como administrador los recibes siempre. '}
+                      <Link to="/plaza/vigilante" className="text-theme-main hover:underline">
+                        Qué es y cómo funciona
+                      </Link>
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={alertsOn}
+                    aria-labelledby="vigilante-alerts-label"
+                    onClick={toggleVigilanteAlerts}
+                    disabled={savingAlerts || isAdmin}
+                    className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main disabled:opacity-60 ${
+                      alertsOn
+                        ? 'bg-theme-main border-theme-main'
+                        : 'bg-surface border-outline-ghost'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 rounded-full bg-on-surface shadow transition-transform ${
+                        alertsOn ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
                 </div>
               </div>
 

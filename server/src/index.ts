@@ -48,6 +48,16 @@ import { LibraryRepository } from './repositories/LibraryRepository';
 import { LibraryService } from './services/LibraryService';
 import { LibraryController } from './controllers/LibraryController';
 import { libraryUpload } from './middlewares/upload';
+import { User } from './models/User';
+import { PlazaRepository } from './repositories/PlazaRepository';
+import { PlazaService } from './services/PlazaService';
+import { PlazaController } from './controllers/PlazaController';
+import { PlazaVigilanteService } from './services/PlazaVigilanteService';
+import { CodiceRepository } from './repositories/CodiceRepository';
+import { CodiceService } from './services/CodiceService';
+import { CodiceController } from './controllers/CodiceController';
+import { seedCodice } from './utils/codiceSeeder';
+import { sendPlazaIntegrityAlert, sendPlazaResultAnnouncement } from './utils/mailer';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -89,6 +99,52 @@ const vigilanteService = new VigilanteService(villacuervosService, socialMediaSe
 const libraryRepository = new LibraryRepository();
 const libraryService = new LibraryService(libraryRepository, userRepository);
 const libraryController = new LibraryController(libraryService);
+
+const plazaRepository = new PlazaRepository();
+const plazaService = new PlazaService(plazaRepository);
+const plazaController = new PlazaController(plazaService);
+
+const codiceRepository = new CodiceRepository();
+const codiceService = new CodiceService(codiceRepository, plazaRepository);
+const codiceController = new CodiceController(codiceService);
+
+// Dependencia mutua: La Plaza aplica al Códice lo que se aprueba, y el Códice
+// consulta las votaciones para mostrar de dónde viene cada versión.
+plazaService.setCodiceService(codiceService);
+// Y el Códice no aplica ni da por buena ninguna votación sin verificarla antes.
+codiceService.setProposalVerifier((proposalId) => plazaService.verifyProposal(proposalId));
+
+// El resultado de cada votación se anuncia a toda la comunidad: cada buzón
+// guarda una copia de la huella final que el servidor no puede tocar.
+const reachableUsers = async () =>
+  (await userRepository.listAll()).filter((u: User) => u.isConfirmed && !!u.email);
+
+/** Recibe los avisos del vigilante: siempre quien administra, y quien los active. */
+const receivesVigilanteAlerts = (u: User) => !!u.vigilanteAlerts || u.roles.includes('admin');
+
+plazaService.setResultNotifier(async (result) =>
+  sendPlazaResultAnnouncement(
+    (await reachableUsers()).map((u) => ({ email: u.email, receivesAlerts: receivesVigilanteAlerts(u) })),
+    result
+  )
+);
+
+// El aviso de integridad llega siempre a quienes administran, y además a toda
+// persona que lo active en su perfil: un aviso que solo llega a una persona se
+// puede silenciar sin que se note. La incidencia, además, queda a la vista en
+// la verificación pública de cada votación y del Códice.
+const plazaVigilanteService = new PlazaVigilanteService(plazaService, () => codiceService.applyPendingProposals(), () => codiceService.verifyCodice(), async (problems) => {
+  const recipients = (await reachableUsers()).filter(receivesVigilanteAlerts).map((u) => u.email);
+
+  const incidents = await Promise.all(
+    problems.map(async (p) => {
+      const proposal = await plazaRepository.findProposalById(p.proposalId);
+      return { proposalId: p.proposalId, title: proposal?.title, problem: p.problem };
+    })
+  );
+
+  await sendPlazaIntegrityAlert(recipients, incidents);
+});
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', api: 'La Secta' });
@@ -134,6 +190,35 @@ app.post('/api/library/documents', authenticateJWT as express.RequestHandler, li
 app.put('/api/library/documents/:id', authenticateJWT as express.RequestHandler, libraryController.updateDocument as express.RequestHandler);
 app.delete('/api/library/documents/:id', authenticateJWT as express.RequestHandler, libraryController.deleteDocument as express.RequestHandler);
 
+
+// Rutas del Códice (lectura pública: las normas son de todos)
+app.get('/api/codice', codiceController.getCodice);
+app.get('/api/codice/sections', codiceController.listSections);
+app.get('/api/codice/rules/:id/history', codiceController.getRuleHistory as express.RequestHandler);
+// Verificación del Códice: comprueba que el texto de las leyes en vigor es el
+// que se aprobó. Pública, como la verificación de las votaciones.
+app.get('/api/codice/verify', codiceController.verifyCodice);
+
+// Rutas de La Plaza
+// Lectura abierta: el registro y la verificación son públicos por diseño, y
+// cualquiera debe poder comprobar una votación sin necesidad de tener cuenta.
+app.get('/api/plaza/proposals', plazaController.listProposals);
+app.get('/api/plaza/proposals/:id', optionalAuthenticateJWT as express.RequestHandler, plazaController.getProposal as express.RequestHandler);
+app.get('/api/plaza/proposals/:id/record', plazaController.getPublicRecord as express.RequestHandler);
+app.get('/api/plaza/proposals/:id/verify', plazaController.verifyProposal as express.RequestHandler);
+
+// Escritura: cualquier persona registrada puede convocar, votar y comentar.
+app.post('/api/plaza/proposals', authenticateJWT as express.RequestHandler, plazaController.createProposal as express.RequestHandler);
+app.post('/api/plaza/proposals/:id/vote', authenticateJWT as express.RequestHandler, plazaController.castVote as express.RequestHandler);
+app.post('/api/plaza/proposals/:id/comments', authenticateJWT as express.RequestHandler, plazaController.addComment as express.RequestHandler);
+
+// Comprobar un sello no requiere identificarse: el sello es la credencial.
+app.post('/api/plaza/proposals/:id/check-receipt', plazaController.checkReceipt as express.RequestHandler);
+// Segunda fase de la anulación, contra el censo. Va sin autenticar y por
+// separado a propósito: el token es la credencial, y así el servidor no puede
+// relacionar quién recupera el turno con qué voto se destruyó.
+app.post('/api/plaza/proposals/:id/release-turn', plazaController.releaseTurn as express.RequestHandler);
+
 app.post('/api/library/links', authenticateJWT as express.RequestHandler, libraryController.createLink as express.RequestHandler);
 app.put('/api/library/links/:id', authenticateJWT as express.RequestHandler, libraryController.updateLink as express.RequestHandler);
 app.delete('/api/library/links/:id', authenticateJWT as express.RequestHandler, libraryController.deleteLink as express.RequestHandler);
@@ -157,6 +242,8 @@ DatabaseRepository.getInstance()
     
     // Arrancar el servicio de vigilancia de partidas
     vigilanteService.start();
+    await seedCodice(codiceRepository);
+    plazaVigilanteService.start();
     
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

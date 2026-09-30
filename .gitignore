@@ -57,4 +57,4 @@ dist/
 CLAUDE.md
 
 #Evitamos subir la bbdd
-database.sqlite
+database.sqlite*

@@ -1,0 +1,1216 @@
+<title>El Sello de la Plaza</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600&display=swap">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #121212;
+    --surface-low: #181818;
+    --surface-container: #1e1e1e;
+    --surface-high: #242424;
+    --ink: #dfd8c8;
+    --ink-muted: #a69f92;
+    --ink-faint: #7d766b;
+    --ritual: #b19cd9;
+    --ritual-deep: #4a3b69;
+    --ritual-container: #2a2140;
+    --outline: #3a322c;
+    --blood: #8f3232;
+    --blood-bg: #2a1414;
+    --moss: #4a8f6a;
+    --moss-bg: #14241b;
+    --display: 'Cinzel', 'Palatino Linotype', Georgia, serif;
+    --body: 'Crimson Text', Georgia, 'Times New Roman', serif;
+    --accentface: 'Cormorant Garamond', Georgia, serif;
+    --mono: ui-monospace, 'Cascadia Code', 'SFMono-Regular', Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 1.0625rem;
+    line-height: 1.7;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 0 1.5rem 6rem;
+  }
+
+  /* ---------- Cabecera ---------- */
+
+  header.doc {
+    padding: 5rem 0 3rem;
+    text-align: center;
+    border-bottom: 1px solid var(--outline);
+    margin-bottom: 3.5rem;
+  }
+
+  .eyebrow {
+    font-family: var(--display);
+    font-size: 0.6875rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ritual);
+    margin: 0 0 1.75rem;
+  }
+
+  header.doc h1 {
+    font-family: var(--display);
+    font-size: clamp(2.25rem, 6vw, 3.5rem);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+    text-wrap: balance;
+    margin: 0 0 1.5rem;
+  }
+
+  .standfirst {
+    font-family: var(--accentface);
+    font-size: 1.3125rem;
+    font-weight: 300;
+    font-style: italic;
+    line-height: 1.6;
+    color: var(--ink-muted);
+    max-width: 32rem;
+    margin: 0 auto;
+    text-wrap: balance;
+  }
+
+  .meta {
+    display: flex;
+    justify-content: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    margin-top: 2.5rem;
+    font-family: var(--display);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* ---------- Estructura ---------- */
+
+  section { margin-bottom: 4rem; }
+
+  h2 {
+    font-family: var(--display);
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--ink);
+    text-wrap: balance;
+    margin: 0 0 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--outline);
+  }
+
+  h3 {
+    font-family: var(--display);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--ritual);
+    margin: 2.5rem 0 0.75rem;
+    text-wrap: balance;
+  }
+
+  p { margin: 0 0 1.125rem; }
+
+  p.lead {
+    font-size: 1.1875rem;
+    color: var(--ink);
+  }
+
+  strong { font-weight: 700; color: var(--ink); }
+  em { font-style: italic; }
+
+  a { color: var(--ritual); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--ritual); outline-offset: 3px; }
+
+  ul, ol { margin: 0 0 1.25rem; padding-left: 1.5rem; }
+  li { margin-bottom: 0.5rem; }
+  li::marker { color: var(--ritual); }
+
+  /* ---------- Cita destacada ---------- */
+
+  .pull {
+    font-family: var(--accentface);
+    font-size: 1.375rem;
+    font-weight: 300;
+    font-style: italic;
+    line-height: 1.55;
+    color: var(--ritual);
+    border-left: 2px solid var(--ritual-deep);
+    padding: 0.25rem 0 0.25rem 1.5rem;
+    margin: 2rem 0;
+    text-wrap: balance;
+  }
+
+  /* ---------- El recibo ---------- */
+
+  .receipt {
+    background: var(--surface-container);
+    border: 1px solid var(--ritual-deep);
+    border-radius: 3px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    margin: 2rem 0;
+  }
+
+  .receipt-label {
+    font-family: var(--display);
+    font-size: 0.625rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 1rem;
+  }
+
+  .receipt-words {
+    font-family: var(--display);
+    font-size: clamp(1.25rem, 4.5vw, 1.875rem);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--ritual);
+    margin: 0;
+    line-height: 1.3;
+  }
+
+  /* ---------- Los dos modos ---------- */
+
+  .modes {
+    display: grid;
+    gap: 1.25rem;
+    margin: 2rem 0;
+  }
+
+  @media (min-width: 40rem) {
+    .modes { grid-template-columns: 1fr 1fr; }
+  }
+
+  .mode {
+    background: var(--surface);
+    border: 1px solid var(--outline);
+    border-radius: 3px;
+    padding: 1.75rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .mode--normal { border-top: 3px solid var(--moss); }
+  .mode--secreto { border-top: 3px solid var(--blood); }
+
+  .mode-name {
+    font-family: var(--display);
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .mode--normal .mode-name { color: var(--moss); }
+  .mode--secreto .mode-name { color: var(--blood); }
+
+  .mode-tag {
+    font-family: var(--display);
+    font-size: 0.625rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0;
+  }
+
+  .mode p { margin: 0; font-size: 1rem; color: var(--ink-muted); }
+  .mode p.mode-key { color: var(--ink); }
+
+  .mode-when {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--outline);
+    font-size: 0.9375rem;
+    font-style: italic;
+    color: var(--ink-faint);
+  }
+
+  /* ---------- Pantallas de ejemplo ---------- */
+
+  .screen {
+    background: var(--surface-low);
+    border: 1px solid var(--outline);
+    border-radius: 3px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+  }
+
+  .screen-caption {
+    font-family: var(--display);
+    font-size: 0.625rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 1rem;
+  }
+
+  .answer {
+    border-radius: 3px;
+    padding: 1.125rem 1.25rem;
+    display: flex;
+    gap: 0.875rem;
+    align-items: flex-start;
+    margin-bottom: 0.875rem;
+    font-size: 1rem;
+  }
+
+  .answer:last-child { margin-bottom: 0; }
+
+  .answer-good { background: var(--moss-bg); border: 1px solid var(--moss); }
+  .answer-bad { background: var(--blood-bg); border: 1px solid var(--blood); }
+
+  .answer-sigil {
+    font-size: 1.125rem;
+    line-height: 1.4;
+    flex-shrink: 0;
+  }
+
+  .answer p { margin: 0; }
+  .answer-good strong { color: var(--moss); }
+  .answer-bad strong { color: #c25151; }
+
+  .warnbox {
+    background: var(--blood-bg);
+    border: 1px solid var(--blood);
+    border-radius: 3px;
+    padding: 1.25rem 1.375rem;
+    margin: 1.5rem 0;
+  }
+
+  .warnbox p { margin: 0 0 0.875rem; }
+  .warnbox p:last-child { margin: 0; }
+  .warnbox .btnrow {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+
+  .fakebtn {
+    font-family: var(--display);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    padding: 0.5rem 1rem;
+    border-radius: 3px;
+    border: 1px solid var(--outline);
+    background: var(--surface-high);
+    color: var(--ink-muted);
+  }
+
+  .fakebtn--danger {
+    background: var(--blood);
+    border-color: var(--blood);
+    color: #f2ece0;
+  }
+
+  /* ---------- Tabla ---------- */
+
+  .tablewrap {
+    overflow-x: auto;
+    margin: 1.75rem 0;
+    border: 1px solid var(--outline);
+    border-radius: 3px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+    min-width: 26rem;
+  }
+
+  th {
+    font-family: var(--display);
+    font-size: 0.625rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--ink-faint);
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--outline);
+    background: var(--surface);
+    font-weight: 600;
+  }
+
+  td {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--outline);
+    color: var(--ink-muted);
+    vertical-align: top;
+  }
+
+  tr:last-child td { border-bottom: none; }
+  td:first-child { color: var(--ink); }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* ---------- La cadena ---------- */
+
+  .chain {
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    background: var(--surface);
+    border: 1px solid var(--outline);
+    border-radius: 3px;
+    padding: 1.25rem;
+    overflow-x: auto;
+    margin: 1.75rem 0;
+    line-height: 1.9;
+    color: var(--ink-muted);
+  }
+
+  .chain .row-void { color: #c25151; }
+  .chain .row-hl { color: var(--ritual); }
+  .chain .cmt { color: var(--ink-faint); font-style: italic; }
+
+  /* ---------- Esquema de tablas ---------- */
+
+  .schema {
+    display: grid;
+    gap: 1rem;
+    margin: 1.75rem 0;
+  }
+
+  @media (min-width: 40rem) {
+    .schema { grid-template-columns: 1fr auto 1fr; align-items: center; }
+  }
+
+  .schema-box {
+    background: var(--surface);
+    border: 1px solid var(--outline);
+    border-radius: 3px;
+    padding: 1.25rem;
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    line-height: 1.8;
+  }
+
+  .schema-box h4 {
+    font-family: var(--display);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ritual);
+    margin: 0 0 0.75rem;
+  }
+
+  .schema-box ul { list-style: none; padding: 0; margin: 0; color: var(--ink-muted); }
+  .schema-box li { margin: 0; }
+
+  .schema-cut {
+    text-align: center;
+    font-family: var(--display);
+    font-size: 0.625rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--blood);
+    padding: 0.5rem;
+  }
+
+  .schema-cut span {
+    display: block;
+    font-size: 1.5rem;
+    letter-spacing: 0;
+    margin-bottom: 0.25rem;
+  }
+
+  /* ---------- Reglas de aprobación ---------- */
+
+  .rules {
+    display: grid;
+    gap: 1.25rem;
+    margin: 1.75rem 0;
+  }
+
+  @media (min-width: 42rem) {
+    .rules { grid-template-columns: 1fr 1fr; }
+  }
+
+  .rule {
+    background: var(--surface);
+    border: 1px solid var(--outline);
+    border-radius: 3px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .rule--ordinary { border-top: 3px solid var(--ritual-deep); }
+  .rule--fast { border-top: 3px solid var(--ritual); }
+
+  .rule-head { margin: 0; }
+
+  .rule-when {
+    font-family: var(--display);
+    font-size: 0.625rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 0.375rem;
+  }
+
+  .rule-name {
+    font-family: var(--display);
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--ritual);
+    margin: 0;
+  }
+
+  .conds { list-style: none; padding: 0; margin: 0; }
+
+  .conds li {
+    display: flex;
+    gap: 0.75rem;
+    align-items: baseline;
+    padding: 0.625rem 0;
+    border-bottom: 1px solid var(--outline);
+    font-size: 1rem;
+    color: var(--ink);
+    margin: 0;
+  }
+
+  .conds li:last-child { border-bottom: none; }
+
+  .cond-mark {
+    color: var(--ritual);
+    flex-shrink: 0;
+    font-size: 0.875rem;
+  }
+
+  .rule-note {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-style: italic;
+    color: var(--ink-faint);
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--outline);
+  }
+
+  /* ---------- Ejemplo narrado ---------- */
+
+  .example-step {
+    display: flex;
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+    align-items: flex-start;
+  }
+
+  .step-num {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: 1px solid var(--ritual-deep);
+    background: var(--ritual-container);
+    color: var(--ritual);
+    font-family: var(--display);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .step-body { flex: 1; min-width: 0; }
+  .step-body > :first-child { margin-top: 0; }
+  .step-body h3 { margin-top: 0; }
+
+  .voters {
+    display: grid;
+    gap: 0.875rem;
+    margin: 1.25rem 0;
+  }
+
+  @media (min-width: 34rem) {
+    .voters { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  .voter {
+    background: var(--surface-container);
+    border: 1px solid var(--outline);
+    border-top: 2px solid var(--ritual-deep);
+    border-radius: 3px;
+    padding: 1rem 0.875rem;
+    text-align: center;
+  }
+
+  .voter-name {
+    font-family: var(--display);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 0 0 0.5rem;
+  }
+
+  .voter-choice {
+    font-size: 0.875rem;
+    color: var(--ink-muted);
+    margin: 0 0 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--outline);
+  }
+
+  .voter-seal {
+    font-family: var(--display);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--ritual);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .results-card {
+    background: var(--surface-low);
+    border: 1px solid var(--outline);
+    border-radius: 3px;
+    padding: 1.5rem;
+    margin: 1.25rem 0;
+  }
+
+  .results-card h4 {
+    font-family: var(--display);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 0 0 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--outline);
+  }
+
+  .tally { margin: 0 0 1.25rem; }
+
+  .tally-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 0.625rem;
+    font-size: 0.9375rem;
+  }
+
+  .tally-label { color: var(--ink-muted); min-width: 5rem; }
+
+  .tally-bar {
+    flex: 1;
+    height: 0.5rem;
+    background: var(--surface-high);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .tally-fill { display: block; height: 100%; background: var(--ritual-deep); }
+  .tally-fill--win { background: var(--ritual); }
+
+  .tally-num {
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    min-width: 1.5rem;
+    text-align: right;
+    font-size: 0.9375rem;
+  }
+
+  .fingerprint {
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    background: var(--surface-high);
+    border-radius: 2px;
+    padding: 0.75rem 0.875rem;
+    color: var(--ritual);
+    word-break: break-all;
+    margin: 0;
+  }
+
+  .fingerprint-label {
+    font-family: var(--display);
+    font-size: 0.625rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 0.5rem;
+  }
+
+  /* ---------- Sección técnica ---------- */
+
+  .tech-divider {
+    margin: 5rem 0 3.5rem;
+    padding-top: 3rem;
+    border-top: 1px solid var(--outline);
+    text-align: center;
+  }
+
+  .tech-divider p {
+    font-family: var(--display);
+    font-size: 0.6875rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 0.75rem;
+  }
+
+  .tech-divider .note {
+    font-family: var(--accentface);
+    font-style: italic;
+    font-size: 1.0625rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--ink-muted);
+    margin: 0;
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.875em;
+    background: var(--surface-high);
+    padding: 0.1em 0.4em;
+    border-radius: 2px;
+    color: var(--ink);
+  }
+
+  /* ---------- Decisiones pendientes ---------- */
+
+  .open {
+    background: var(--ritual-container);
+    border: 1px solid var(--ritual-deep);
+    border-radius: 3px;
+    padding: 1.5rem;
+    margin: 1.75rem 0;
+  }
+
+  .open h3 {
+    margin-top: 0;
+    color: var(--ritual);
+  }
+
+  .open p:last-child { margin-bottom: 0; }
+
+  footer.doc {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--outline);
+    font-size: 0.9375rem;
+    color: var(--ink-faint);
+    text-align: center;
+  }
+
+  footer.doc p { margin: 0 0 0.5rem; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="doc">
+    <p class="eyebrow">Propuesta técnica · La Plaza</p>
+    <h1>El Sello de la Plaza</h1>
+    <p class="standfirst">Un sistema de voto seguro para las decisiones del Culto: cada voto queda sellado, cada persona puede comprobar el suyo y cualquiera puede verificar el recuento completo.</p>
+    <div class="meta">
+      <span>Borrador para debate</span>
+      <span>Septiembre 2026</span>
+      <span>Lectura: 6 min</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>De qué va esto</h2>
+    <p class="lead">La Plaza servirá para proponer y votar los edictos que gobiernan La Secta. Para que esas votaciones decidan algo de verdad, el recuento tiene que ser <strong>verificable</strong>: que cualquiera pueda comprobar que su voto está donde debe y que las cuentas salen.</p>
+    <p>Eso es lo que hace este sistema. No pide que te creas el resultado: te da la manera de comprobarlo tú.</p>
+    <p>No hace falta ser técnico para leer esta propuesta. La parte de arriba explica cómo funcionará para quien vote; el detalle de cómo está construido está al final, claramente separado.</p>
+  </section>
+
+  <section>
+    <h2>Las tres promesas</h2>
+    <p>El sistema se compromete a tres cosas, y cada una tiene un mecanismo concreto detrás:</p>
+    <ol>
+      <li><strong>Tu voto queda sellado.</strong> Los votos se guardan encadenados unos a otros, de forma que el registro no se puede alterar sin que el propio sistema lo detecte.</li>
+      <li><strong>Y lo que se vota, también.</strong> El enunciado de una propuesta queda sellado al convocarla, y el texto de una ley aprobada queda sellado en el Códice: ni uno ni otro se pueden editar después sin que se note.</li>
+      <li><strong>Tu voto es secreto.</strong> Lo que votas se guarda en un registro y quién ha votado en otro, sin ninguna conexión entre ambos. Se publica quién participó —como en cualquier asamblea— pero la relación entre tu nombre y tu voto no se guarda en ninguna parte.</li>
+      <li><strong>El recuento lo puede comprobar cualquiera.</strong> El registro completo de cada votación se publica al cerrarse, junto con la lista de quién participó, y además un vigilante automático lo revisa cada hora.</li>
+    </ol>
+    <p>Lo que el sistema no hace —y no pretende hacer— es sustituir a la comunidad: hay condiciones del Códice que solo puede verificar quien conoce a la gente. Auditar las votaciones al cerrarse es parte del funcionamiento, no un extra.</p>
+    <p class="pull">No necesitas creerte el resultado. Puedes comprobarlo.</p>
+  </section>
+
+  <section>
+    <h2>Cómo se vota</h2>
+    <p>Entras en La Plaza, ves la votación abierta, eliges tu opción y confirmas. Igual que cualquier votación de cualquier web. La diferencia aparece justo después: recibes un <strong>sello</strong>, cuatro palabras que identifican tu voto.</p>
+
+    <div class="receipt">
+      <p class="receipt-label">Tu voto ha quedado sellado como</p>
+      <p class="receipt-words">CUERVO · LUNAR · SIETE · SELLADO</p>
+    </div>
+
+    <p>Son palabras en vez de un código incomprensible porque tienen que servirle a todo el mundo: se pueden leer en voz alta, apuntar en un papel o dictar por teléfono. Las genera tu navegador al votar, y <strong>el servidor nunca llega a conocerlas</strong>: solo guarda un rastro que sirve para reconocerlas si algún día las presentas.</p>
+    <p>Eso significa que el sello es tuyo y de nadie más. Guárdalo como guardarías una llave: <strong>quien tenga tu sello puede destruir tu voto</strong> en una votación secreta. No podrá votar en tu lugar ni saber qué votaste sin él, pero sí borrarlo.</p>
+    <p>El sello <strong>se muestra en pantalla y no se envía por correo</strong>. Es deliberado, y ahora por partida doble: un correo con tu sello guardado en una bandeja de entrada es una copia que no controlas, y además el servidor no podría enviártelo aunque quisiera, porque no lo conoce.</p>
+
+    <h3>Comprobar tu voto</h3>
+    <p>En la página de resultados hay una caja donde escribes tus cuatro palabras. El sistema responde una de dos cosas, sin jerga:</p>
+
+    <div class="screen">
+      <p class="screen-caption">Respuestas posibles</p>
+      <div class="answer answer-good">
+        <span class="answer-sigil">✓</span>
+        <p><strong>Voto a favor.</strong> Registrado y sellado el 3 de septiembre.</p>
+      </div>
+      <div class="answer answer-bad">
+        <span class="answer-sigil">⚠</span>
+        <p><strong>Este sello no consta en el registro.</strong> Comprueba las palabras, y si son correctas avisa en La Plaza.</p>
+      </div>
+    </div>
+
+    <p>Y aquí está la decisión importante de la propuesta: <em>qué pasa</em> cuando compruebas tu voto depende del tipo de votación.</p>
+  </section>
+
+  <section>
+    <h2>Dos tipos de votación</h2>
+    <p>Al convocar una votación se elige el modo, y no se puede cambiar después. La pantalla de voto explica siempre en qué modo estás <strong>antes</strong> de que votes.</p>
+
+    <div class="modes">
+      <div class="mode mode--normal">
+        <p class="mode-tag">Modo</p>
+        <p class="mode-name">Normal</p>
+        <p class="mode-key">Comprueba tu voto cuantas veces quieras. Verás lo que votaste y tu voto sigue contando.</p>
+        <p class="mode-when">Para lo habitual: normas de convivencia, calendario, decisiones de organización.</p>
+      </div>
+      <div class="mode mode--secreto">
+        <p class="mode-tag">Modo</p>
+        <p class="mode-name">Secreto</p>
+        <p class="mode-key">Si compruebas tu voto, verás lo que votaste pero <strong>ese voto se destruye</strong> y deja de contar. Puedes volver a votar mientras la votación siga abierta.</p>
+        <p class="mode-when">Para lo sensible: conflictos entre personas, decisiones donde pueda haber presiones.</p>
+      </div>
+    </div>
+
+    <h3>Por qué existe el modo Secreto</h3>
+    <p>Parece absurdo que comprobar tu voto lo destruya. Tiene una razón muy concreta: <strong>si puedes demostrarle a alguien lo que votaste, alguien puede exigírtelo.</strong></p>
+    <p>Un sello que muestra tu voto es una prueba. Y una prueba se puede pedir: «enséñame que votaste lo que tocaba». En el momento en que puedes renunciar al secreto de tu voto, alguien puede presionarte para que renuncies. El secreto del voto no existe para que tú lo guardes —existe para que <em>nadie pueda pedírtelo</em>.</p>
+    <p>El modo Secreto rompe eso de raíz: si muestras tu sello a alguien, ese voto ya no vale nada. No hay nada que exigir. Es el mismo mecanismo que usan las plataformas de voto interno de organizaciones grandes, y es la razón por la que lo hacen.</p>
+    <p>La contrapartida es que comprobar te cuesta el voto, y eso desanima a hacerlo. Por eso <strong>no es el modo por defecto</strong>: en la mayoría de las decisiones del Culto nadie presiona a nadie, y lo que interesa es que comprobar sea gratis. Se reserva para cuando de verdad haga falta.</p>
+
+    <h3>Y como puedes volver a votar, no pierdes tu voz</h3>
+    <p>En modo Secreto, anular tu voto al comprobarlo no te deja fuera de la decisión: mientras la votación esté abierta, puedes votar de nuevo. Cuenta siempre tu último voto. Esto es importante por dos razones —que comprobar no te castigue, y que si alguien te presionó, puedas deshacerlo después en privado.</p>
+    <p>El turno para volver a votar es <strong>siempre de quien emitió el voto</strong>, nunca de quien presenta el sello. Si alguien usara tu sello para destruir tu voto, el turno seguiría siendo tuyo: esa persona no ganaría nada, y tú podrías votar otra vez. Es la parte del daño que sí se puede evitar, y se evita.</p>
+
+    <div class="warnbox">
+      <p class="screen-caption" style="color:#c25151">Confirmación en modo Secreto</p>
+      <p><strong>Si continúas, tu voto se anulará y no se contará.</strong> Podrás volver a votar mientras la votación siga abierta. ¿Seguro que quieres comprobarlo?</p>
+      <div class="btnrow">
+        <span class="fakebtn">Cancelar</span>
+        <span class="fakebtn fakebtn--danger">Sí, comprobar y anular mi voto</span>
+      </div>
+    </div>
+
+    <p>Este aviso no es opcional. Sin él, la gente anularía su voto por curiosidad sin entender qué acaba de hacer.</p>
+  </section>
+
+  <section>
+    <h2>Lo que se vota tampoco se puede cambiar</h2>
+    <p>Hay una trampa más sutil que tocar los votos: dejar los votos en paz y <strong>cambiar el texto de lo que se está votando</strong>. Si el enunciado de una propuesta se pudiera editar a mitad de la votación, la gente acabaría habiendo votado una cosa distinta de la que leyó, y el recuento seguiría siendo impecable.</p>
+    <p>Por eso el enunciado se sella al convocar la votación: el título, la explicación y —si es un edicto— el texto exacto que se propone para la norma. <strong>A partir de ese momento son inmutables.</strong> Cualquier cambio posterior rompe el registro desde el primer eslabón y el vigilante lo detecta.</p>
+    <p>La contrapartida es que una errata ya no se puede corregir: habría que retirar la propuesta y convocarla de nuevo. Es deliberado —lo que se somete a votación conviene revisarlo antes— y es el precio de que nadie pueda tocarlo después.</p>
+
+    <h3>Y las leyes en vigor, tampoco</h3>
+    <p>Lo mismo se aplica al final del recorrido. Una vez aprobada una norma, su texto en el Códice <strong>también está sellado</strong>, y cada versión queda encadenada con la anterior de esa misma norma. Editar una ley directamente en la base de datos rompe su cadena de versiones, y el vigilante avisa a toda la comunidad.</p>
+    <p>Además, cada versión guarda la huella de la votación que la aprobó. Eso permite una comprobación que de otro modo sería imposible: <strong>que el texto que está en vigor sea exactamente el que se votó</strong>, y no una versión retocada después.</p>
+    <p class="pull">Se sella el voto, se sella lo que se vota y se sella el resultado. Las tres cosas, o el sistema tendría una puerta abierta.</p>
+
+    <h2>Cómo queda sellado el registro</h2>
+    <p>Los votos no se guardan como una lista de elementos sueltos. Cada voto lleva una huella que incluye la huella del voto anterior, como los eslabones de una cadena. Si una sola línea del registro cambiara, su huella dejaría de encajar con la siguiente —y la siguiente con la otra, y así hasta el final. El registro se delata a sí mismo.</p>
+    <p>Al cerrar la votación se calcula una <strong>huella final</strong> que resume toda la cadena, y se publica junto al resultado. Quien descargue el registro se lleva esa huella consigo: es su copia, fuera de la web, y basta compararla más adelante para saber si el registro sigue siendo el mismo.</p>
+    <p>Es el mismo principio que usan las cadenas de bloques, sin necesitar ninguna cadena de bloques.</p>
+
+    <h3>Las anulaciones también van en la cadena</h3>
+    <p>Cuando alguien anula su voto en modo Secreto, ese voto <strong>no se borra</strong> —se añade una anotación de anulación al final de la cadena. Así el registro se mantiene íntegro y queda constancia pública de cuántas anulaciones hubo en cada votación.</p>
+
+    <div class="chain"><span class="cmt">— así se ve el registro de una votación —</span><br>
+#11  VOTO       opción B     huella=7c4a…<br>
+#12  VOTO       opción A     huella=91fd…<br>
+#13  VOTO       opción B     huella=2e08…<br>
+<span class="row-void">#14  ANULACIÓN  del #12      huella=b5c1…   ← el voto #12 deja de contar</span><br>
+<span class="row-hl">#15  VOTO       opción B     huella=44a7…   ← quien anuló vuelve a votar</span><br>
+#16  CIERRE     14 votos     huella=e390…</div>
+
+    <p>Toda anulación es una línea visible en el registro, y el total se publica con el resultado.</p>
+  </section>
+
+  <section>
+    <h2>Por qué tu voto es secreto</h2>
+    <p>Esta es la parte que hace que la privacidad sea real y no una promesa. Se usan <strong>dos registros completamente separados</strong>:</p>
+
+    <div class="schema">
+      <div class="schema-box">
+        <h4>Quién ha participado</h4>
+        <ul>
+          <li>votación</li>
+          <li>persona</li>
+          <li>fecha</li>
+        </ul>
+      </div>
+      <div class="schema-cut">
+        <span>⊘</span>
+        Sin conexión
+      </div>
+      <div class="schema-box">
+        <h4>Qué se ha votado</h4>
+        <ul>
+          <li>votación</li>
+          <li>opción elegida</li>
+          <li>sello</li>
+          <li>huella</li>
+        </ul>
+      </div>
+    </div>
+
+    <p>El primer registro solo sirve para saber si ya votaste, y así evitar votos duplicados. El segundo guarda lo que se votó. <strong>No existe ningún campo que una los dos</strong> —ni cifrado, ni disimulado. No es que la relación esté protegida: es que no se guarda en ninguna parte.</p>
+    <p>Ni con acceso completo a los dos registros se pueden emparejar. Es la diferencia entre «tenemos el dato pero prometemos no mirarlo» y «no tenemos el dato».</p>
+    <p>Por eso se puede publicar la lista de votantes sin que eso afecte al secreto: el primer registro es el que se hace público, y no contiene ni una sola opción votada.</p>
+  </section>
+
+  <section>
+    <h2>Quién comprueba el recuento</h2>
+    <p>Hay tres niveles de comprobación, y no se sustituyen entre sí: cualquiera puede llegar tan lejos como quiera.</p>
+
+    <h3>1 · Tu sello</h3>
+    <p>Escribes tus cuatro palabras y ves tu voto. Comprueba una cosa: que <em>tu</em> voto está en el registro y dice lo que dijiste. No requiere saber nada.</p>
+
+    <h3>2 · El registro público y la lista de votantes</h3>
+    <p>Al cerrar cada votación, <strong>el registro completo queda publicado y descargable</strong> en la propia página de resultados: todas las líneas, con su sello, su huella y su fecha. Sin nombres —el registro de votos no contiene identidades— pero íntegro.</p>
+    <p>Y junto a él se publica la <strong>lista de quienes participaron</strong>. Esto no revela ningún voto: dice que Ana participó, no lo que Ana votó. Es lo mismo que ocurre en una asamblea, donde todo el mundo ve quién levanta la mano para votar aunque el voto vaya en urna.</p>
+    <p>Lo que aporta la lista es que el recuento se pueda cuadrar con personas reales. Si hay veinte votos, hay veinte nombres, y son nombres que la comunidad reconoce. Si alguien se creara varias cuentas para votar más de una vez, aparecería en la lista un puñado de nombres que nadie ha visto jugar nunca —y eso lo detecta cualquiera que lea la lista, sin necesidad de entender nada del sistema.</p>
+    <p>La lista se publica <strong>al cerrar la votación</strong>, no durante. Ver en tiempo real quién ha votado y quién no solo invita a dar la lata a quien falta, y no aporta nada a la comprobación.</p>
+
+    <h3>Hay cosas que el sistema no puede comprobar</h3>
+    <p>El Códice pide haber jugado en La Secta en los últimos sesenta días para poder proponer y votar. <strong>Ningún automatismo comprueba eso</strong>, y no se pretende que lo haga: es responsabilidad de cada cual al votar, y de la comunidad al revisar después quién lo hizo.</p>
+    <p>Por eso la lista de votantes importa tanto como la cadena de huellas. La criptografía garantiza que los votos son los que se emitieron; que quien votó tenía derecho a hacerlo lo garantiza la gente que conoce a esa gente.</p>
+    <p class="pull">Auditar una votación al cerrarse es sano. Descarga el registro, cuenta los votos, repasa los nombres.</p>
+    <p>No hace falta ser nadie en particular ni saber de criptografía: mirar la lista y pensar «a este no lo he visto jugar nunca» es exactamente el tipo de comprobación que ningún sistema puede hacer por la comunidad. Si algo no cuadra, los comentarios de la propuesta están ahí para decirlo.</p>
+    <p>Eso es lo que hace posible comprobar a mano. Con ese archivo, cualquiera puede:</p>
+    <ul>
+      <li><strong>Contar los votos.</strong> Sumar las líneas y ver si el total coincide con el resultado publicado. Esto solo requiere saber contar.</li>
+      <li><strong>Cuadrar votos y votantes.</strong> Los votos vigentes tienen que ser tantos como personas en la lista, menos las anulaciones que no volvieron a votar. Las tres cifras se publican, así que la resta la puede hacer cualquiera.</li>
+      <li><strong>Buscar su sello</strong> en la lista, sin pasar por el formulario de la web.</li>
+      <li><strong>Recorrer la cadena.</strong> Cada línea incluye la huella de la anterior; comprobar que encajan de principio a fin es repetir la misma operación en cada eslabón. Es lo que hace el vigilante, y es exactamente lo que puede hacer cualquiera con el archivo delante.</li>
+      <li><strong>Guardar tu copia y comparar después.</strong> Si te descargas el archivo el día del cierre, tienes una copia que no está en manos de nadie. Volver a descargarlo semanas después y ver que la huella final es la misma demuestra que el registro no se ha tocado desde entonces.</li>
+    </ul>
+    <p>Para recorrer la cadena se publica también un <strong>script de verificación</strong> junto al archivo: unas pocas líneas, legibles, que comprueban los eslabones y el recuento y responden si todo encaja. Quien sepa programar puede leerlo y ejecutarlo; quien no, puede pedirle a alguien de fuera de la comunidad que lo haga. Esa es la prueba de que no hay que confiar en la web: la comprobación se puede hacer sin ella.</p>
+    <p>Cuantas más personas guarden su copia el día del cierre, más sólida es la garantía —porque cualquiera de esas copias sirve para contrastar.</p>
+
+    <h3>3 · El vigilante</h3>
+    <p>Y como no se puede depender de que alguien se acuerde de comprobar, un proceso automático recorre el registro de todas las votaciones <strong>cada hora y al cerrar cada una</strong>, haciendo la misma verificación del punto anterior: comprueba los eslabones de la cadena y cuadra el número de votos con el de participantes. Si algo no encaja:</p>
+    <ul>
+      <li>La votación se marca en La Plaza, visible para todo el mundo</li>
+      <li>Se manda un aviso por correo a <strong>toda la comunidad</strong></li>
+      <li>El aviso se publica automáticamente</li>
+    </ul>
+    <p class="pull">El vigilante no comprueba en lugar de nadie: hace lo mismo que puede hacer cualquiera, solo que sin descanso.</p>
+  </section>
+
+  <section>
+    <h2>Quién vota y quién propone</h2>
+    <p><strong>Cualquier persona registrada vota, y cualquiera puede convocar una votación.</strong> Un voto por persona, sin antigüedad mínima ni requisitos añadidos. La Plaza es horizontal: nadie tiene que aprobar tu propuesta para que se someta a votación.</p>
+    <p>Quien administra la plataforma administra la web —el servidor, las cuentas, los contenidos—, no la comunidad. No hay ningún permiso especial para proponer ni para votar.</p>
+
+    <h3>Cuatro cosas que se pueden proponer</h3>
+    <p>Al convocar una votación, lo primero que se elige es qué se está proponiendo. Y solo hay cuatro posibilidades:</p>
+
+    <div class="modes">
+      <div class="mode mode--secreto">
+        <p class="mode-tag">No toca el Códice</p>
+        <p class="mode-name">Un acuerdo puntual</p>
+        <p class="mode-key">Decide algo <strong>concreto</strong>: una compra de merchandising, una fecha, un gasto. Se aprueba, se ejecuta y se cierra.</p>
+        <p class="mode-when">Queda en el archivo de acuerdos, como constancia de qué se decidió y cuándo.</p>
+      </div>
+      <div class="mode mode--normal">
+        <p class="mode-tag">Cambia el Códice</p>
+        <p class="mode-name">Un edicto</p>
+        <p class="mode-key">Y siempre de una de estas tres formas: <strong>crear</strong> una norma nueva, <strong>modificar</strong> una que ya está en vigor, o <strong>derogarla</strong>.</p>
+        <p class="mode-when">La norma queda en el Códice, enlazada a la votación que la aprobó.</p>
+      </div>
+    </div>
+
+    <p>La distinción no es cuánto obligan —ambas obligan igual si se aprueban— sino <strong>si cambian las normas o no</strong>. Comprar merchandising es vinculante, pero no tiene sentido que figure como norma permanente del Culto; por eso va al archivo de acuerdos y no al Códice.</p>
+    <p>Y las dos cosas son excluyentes por definición: un acuerdo puntual nunca modifica una norma, y un edicto que no cambiara ninguna norma no sería nada. El sistema no admite esas combinaciones —ni en el formulario ni en el servidor—, así que no hay forma de crear una propuesta ambigua sobre lo que hace.</p>
+    <p>Ambas usan exactamente el mismo sistema de sellado y comprobación. Lo único que cambia es dónde queda el resultado.</p>
+  </section>
+
+  <section>
+    <h2>Cuándo se aprueba una propuesta</h2>
+    <p>Hay dos caminos: el plazo ordinario de catorce días, y una vía rápida para las propuestas que tienen respaldo amplio y ninguna oposición real.</p>
+
+    <div class="rules">
+      <div class="rule rule--ordinary">
+        <p class="rule-head">
+          <span class="rule-when">A los 14 días</span>
+          <span class="rule-name">Plazo ordinario</span>
+        </p>
+        <ul class="conds">
+          <li><span class="cond-mark">▸</span> Más votos positivos que negativos</li>
+        </ul>
+        <p class="rule-note">Al cumplirse el plazo se cierra y se cuenta. Empate o mayoría negativa: no se aprueba.</p>
+      </div>
+
+      <div class="rule rule--fast">
+        <p class="rule-head">
+          <span class="rule-when">Antes de los 14 días</span>
+          <span class="rule-name">Vía rápida</span>
+        </p>
+        <ul class="conds">
+          <li><span class="cond-mark">▸</span> Al menos <strong>15 votos positivos</strong></li>
+          <li><span class="cond-mark">▸</span> Como máximo <strong>1 voto negativo</strong></li>
+          <li><span class="cond-mark">▸</span> Han pasado al menos <strong>3 días</strong> desde la propuesta</li>
+        </ul>
+        <p class="rule-note">Las tres condiciones a la vez. Si aparece un segundo voto negativo, la vía rápida se cierra y la propuesta espera los 14 días.</p>
+      </div>
+    </div>
+
+    <p>La vía rápida sirve para lo que tiene consenso evidente: nadie debería esperar dos semanas para aprobar algo que quince personas quieren y nadie discute. Los tres días de espera mínima existen para que la propuesta haya estado a la vista el tiempo suficiente como para que quien discrepe pueda hacerlo.</p>
+    <p>Y funciona en los dos sentidos: <strong>un solo voto negativo no bloquea nada</strong> —se admite uno— pero <strong>dos ya devuelven la propuesta al plazo completo</strong>. Si hay discusión real, se debate durante catorce días. Si no la hay, se aprueba en tres.</p>
+
+    <h3>Comentarios</h3>
+    <p>En toda propuesta se puede comentar: para pedir cambios antes de que la gente vote, para explicar por qué te parece bien o por qué te parece mal. Los comentarios van con nombre y son públicos —son un debate, no un voto—, y por eso están completamente separados del registro de votos: comentar no revela lo que has votado, ni votar te obliga a comentar.</p>
+    <p>Esto es lo que hace útiles los tres días de la vía rápida: dan margen para que alguien señale un problema y la propuesta se retire o se reformule antes de aprobarse.</p>
+  </section>
+
+  <section>
+    <h2>Un ejemplo completo, de principio a fin</h2>
+    <p>Tres personas —Ana, Bruno y Carmen— votan un acuerdo puntual. Modo Normal, para que comprobar no cueste el voto.</p>
+
+    <div class="example-step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3>Alguien convoca la votación</h3>
+        <p>Bruno propone: <em>«¿Compramos camisetas del Culto?»</em> con dos opciones, <strong>Sí</strong> y <strong>No</strong>. Bruno no es administrador ni necesita serlo: cualquiera puede convocar. Al empezar elige <strong>un acuerdo puntual</strong>, porque comprar camisetas no cambia ninguna norma —y al elegirlo, el formulario ni le pregunta por el Códice—. El plazo es el de siempre: catorce días, o antes si se cumplen las condiciones de la vía rápida.</p>
+      </div>
+    </div>
+
+    <div class="example-step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3>Los tres votan y reciben su sello</h3>
+        <p>Cada uno entra, elige y confirma. Al confirmar, la pantalla le muestra sus cuatro palabras:</p>
+        <div class="voters">
+          <div class="voter">
+            <p class="voter-name">Ana</p>
+            <p class="voter-choice">Votó <strong>Sí</strong></p>
+            <p class="voter-seal">CUERVO<br>LUNAR<br>SIETE<br>SELLADO</p>
+          </div>
+          <div class="voter">
+            <p class="voter-name">Bruno</p>
+            <p class="voter-choice">Votó <strong>Sí</strong></p>
+            <p class="voter-seal">ABISMO<br>ARCANO<br>TRECE<br>ATADO</p>
+          </div>
+          <div class="voter">
+            <p class="voter-name">Carmen</p>
+            <p class="voter-choice">Votó <strong>No</strong></p>
+            <p class="voter-seal">NIEBLA<br>GRIS<br>DOS<br>MARCADO</p>
+          </div>
+        </div>
+        <p>Cada sello es distinto y no se parece al de nadie: no hay forma de deducir quién es quién a partir de las palabras. Ana lo apunta en el móvil, Bruno hace una captura, Carmen no lo apunta —y no pasa nada, porque puede volver a consultarlo mientras la votación esté abierta.</p>
+      </div>
+    </div>
+
+    <div class="example-step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3>Se cierra la votación y se publica el resultado</h3>
+        <p>Con solo tres votos, la vía rápida no se activa —haría falta un mínimo de quince positivos—, así que la votación agota sus catorce días. Al vencer el plazo hay más positivos que negativos, así que se aprueba. La página de resultados muestra esto, visible para toda la comunidad:</p>
+        <div class="results-card">
+          <h4>¿Compramos camisetas del Culto?</h4>
+          <div class="tally">
+            <div class="tally-row">
+              <span class="tally-label">Sí</span>
+              <span class="tally-bar"><span class="tally-fill tally-fill--win" style="width:66.6%"></span></span>
+              <span class="tally-num">2</span>
+            </div>
+            <div class="tally-row">
+              <span class="tally-label">No</span>
+              <span class="tally-bar"><span class="tally-fill" style="width:33.3%"></span></span>
+              <span class="tally-num">1</span>
+            </div>
+          </div>
+          <p class="fingerprint-label">Aprobado · 3 votos · 0 anulaciones · Cerrado por plazo</p>
+          <p style="margin:0 0 1rem;font-size:0.9375rem;color:var(--ink-muted)">Participaron: <strong style="color:var(--ink)">Ana, Bruno, Carmen</strong></p>
+          <p class="fingerprint-label">Huella final</p>
+          <p class="fingerprint">e390f7c4a91fd2e08b5c144a7d6103ba</p>
+        </div>
+        <p>Tres votos y tres nombres: las cifras cuadran. La lista dice quién participó, nunca qué votó cada cual.</p>
+        <p>Y junto al resultado, dos enlaces: <strong>descargar el registro</strong> y <strong>descargar el script de verificación</strong>.</p>
+      </div>
+    </div>
+
+    <div class="example-step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h3>Ana comprueba su voto en dos segundos</h3>
+        <p>Escribe <code>CUERVO LUNAR SIETE SELLADO</code> en la caja de comprobación y ve:</p>
+        <div class="answer answer-good" style="margin-bottom:0">
+          <span class="answer-sigil">✓</span>
+          <p><strong>Voto Sí.</strong> Registrado y sellado el 3 de septiembre.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="example-step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <h3>Carmen quiere comprobar el recuento entero</h3>
+        <p>No le basta con su voto: quiere saber si las cuentas salen. Descarga el registro y ve el contenido completo de la votación:</p>
+        <div class="chain">línea  tipo        opción   sello                        huella<br>
+──────────────────────────────────────────────────────────────────<br>
+1      APERTURA    —        —                        a01f…<br>
+2      VOTO        Sí       CUERVO LUNAR SIETE SELLADO   7c4a…<br>
+3      VOTO        Sí       ABISMO ARCANO TRECE ATADO    91fd…<br>
+<span class="row-hl">4      VOTO        No       NIEBLA GRIS DOS MARCADO      2e08…   ← el de Carmen</span><br>
+5      CIERRE      plazo    —                        e390…</div>
+        <p>Con este archivo delante, Carmen puede hacer cuatro cosas <strong>sin depender de la web</strong>:</p>
+        <ul>
+          <li><strong>Contar.</strong> Hay tres líneas de tipo VOTO: dos «Sí» y una «No». Coincide con el resultado publicado. Esto solo requiere saber contar.</li>
+          <li><strong>Buscar su sello.</strong> <code>NIEBLA GRIS DOS MARCADO</code> está en la línea 4, con «No». Su voto se contó como debía.</li>
+          <li><strong>Cuadrar con la lista de votantes.</strong> Tres líneas de voto y tres nombres publicados: Ana, Bruno y ella misma. Si hubiera cuatro votos y tres nombres, o un cuarto nombre que nadie conoce, se vería aquí sin más que mirar.</li>
+          <li><strong>Repasar quién votó.</strong> Los tres nombres son gente con la que Carmen ha jugado, así que cumplen lo que pide el Códice. Eso no lo comprueba el sistema: lo comprueba ella al leer la lista.</li>
+          <li><strong>Comprobar los eslabones.</strong> Ejecuta el script sobre el archivo y este recorre la cadena línea a línea. Si todo encaja, responde que el registro es íntegro.</li>
+        </ul>
+        <p>Carmen guarda el archivo. Tres semanas después vuelve a descargarlo: la huella final sigue siendo <code>e390f7c4…</code>, la misma que apuntó. El registro no se ha tocado.</p>
+      </div>
+    </div>
+
+    <div class="example-step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <h3>Qué pasaría si el registro se alterase</h3>
+        <p>Supongamos que el «No» de Carmen apareciera un día como «Sí». El resultado diría 3 a 0. Pero:</p>
+        <ul>
+          <li>La huella de la línea 4 ya no encajaría con la 5, y el <strong>vigilante lo detectaría en menos de una hora</strong> y avisaría por correo a toda la comunidad.</li>
+          <li>La huella final habría cambiado, y <strong>ya no coincidiría con la copia que Carmen descargó</strong>.</li>
+          <li>Al comprobar su sello, Carmen vería «Voto Sí» cuando ella votó «No», y podría demostrarlo con su archivo.</li>
+        </ul>
+        <p>Tres avisos independientes para una sola línea modificada, y ninguno depende de que alguien estuviera vigilando en ese momento.</p>
+        <p>Y si en lugar de cambiar un voto apareciera uno de más, el archivo tendría cuatro líneas frente a tres nombres en la lista de votantes. La cuenta no saldría, y para verlo basta con contar.</p>
+      </div>
+    </div>
+
+    <p class="pull">Con tres votos se ve a mano. Con trescientos, lo hace el script. El mecanismo es el mismo.</p>
+  </section>
+
+  <div class="tech-divider">
+    <p>Detalle técnico</p>
+    <p class="note">Lo esencial de la propuesta acaba aquí. Lo que sigue es para quien quiera revisar la implementación.</p>
+  </div>
+
+  <section>
+    <h2>Implementación</h2>
+
+    <h3>Sin dependencias nuevas</h3>
+    <p>Todo se construye con el módulo <code>crypto</code> de Node, ya incluido: SHA-256 para la cadena de huellas. El núcleo criptográfico son unas cuarenta líneas propias, sin librerías de terceros en la parte sensible.</p>
+
+    <h3>Esquema</h3>
+    <p>Dos tablas sin clave foránea ni columna común que las relacione:</p>
+    <div class="chain">poll_participation          votes<br>
+──────────────────────      ──────────────────────<br>
+poll_id                     id<br>
+user_id        <span class="row-void">←──╳──→</span>      poll_id<br>
+voted_at                    kind        (voto | anulación | cierre)<br>
+                            choice<br>
+                            ref_id      (para anulaciones)<br>
+                            receipt_words<br>
+                            created_at<br>
+                            prev_hash<br>
+                            hash</div>
+
+    <p><code>hash = SHA256(id | poll_id | kind | choice | ref_id | created_at | prev_hash)</code></p>
+
+    <h3>Dos detalles que son fáciles de pasar por alto</h3>
+    <p><strong>Orden de inserción.</strong> Si los votos se insertan en el mismo orden en que se registra la participación, los tiempos permiten emparejar las dos tablas y la separación se rompe. Hay que aleatorizar el orden de inserción o agrupar por lotes con retardo.</p>
+    <p><strong>El modo va en la cadena.</strong> El modo (Normal / Secreto) se registra en la primera entrada de la cadena al crear la votación, para que no se pueda cambiar a mitad de votación.</p>
+
+    <h3>Recuento</h3>
+    <p>Cuenta la última entrada de tipo <code>voto</code> que no tenga una <code>anulación</code> posterior apuntando a ella. Las anulaciones se cuentan y se publican como total agregado, nunca asociadas a nadie.</p>
+
+    <h3>Registro público y verificación independiente</h3>
+    <p>Al cerrar una votación se exponen dos archivos en un endpoint público, descargables como JSON y como CSV: la tabla <code>votes</code> de esa votación (sin identidades) y la lista de <code>user_id</code> de <code>poll_participation</code> resueltos a nombre de usuario (sin fechas, para no dar un orden que permita correlacionar con el de los votos).</p>
+    <p>Son dos archivos separados y así deben permanecer: publicar ambos permite cuadrar cifras, mientras que cruzarlos en una sola estructura reintroduciría por la puerta de atrás la relación que el esquema evita.</p>
+    <p>Junto al archivo se publica un script de verificación independiente —sin dependencias, ejecutable con Node— que recalcula <code>SHA256(id | poll_id | kind | choice | ref_id | created_at | prev_hash)</code> línea a línea, comprueba el encadenamiento completo, rehace el recuento y, opcionalmente, compara la huella final con un valor pasado por argumento (una copia guardada previamente). Devuelve código de salida distinto de cero si algo no encaja.</p>
+    <p>El script es el mismo código que usa el vigilante, publicado aparte para que pueda ejecutarse fuera del servidor. Ahí está la garantía real: la verificación no depende de la web que guarda los votos.</p>
+
+    <h3>Edictos y acuerdos</h3>
+    <p>La columna <code>kind</code> (<code>edicto</code> | <code>acuerdo</code>) y la columna <code>targetAction</code> (<code>crear</code> | <code>modificar</code> | <code>derogar</code>, o vacía) están acopladas por una invariante que se valida en el servicio, no solo en la interfaz: un <code>acuerdo</code> no puede llevar <code>targetAction</code>, y un <code>edicto</code> tiene que llevarla. Crear una propuesta que las contradiga devuelve un error explicando cuál de las dos cosas se quería hacer.</p>
+    <p>Los edictos aprobados generan una versión en el Códice, enlazada a su votación. Los acuerdos van a un archivo histórico plano. El sistema de sellado y verificación es idéntico para ambos.</p>
+
+    <h3>Evaluación de los umbrales</h3>
+    <p>Las condiciones se comprueban <strong>en cada voto emitido</strong> a partir del tercer día, no en una pasada diaria: en cuanto se cumplen las tres de la vía rápida, la votación se cierra. El cron diario solo cierra las que llegan a los catorce días.</p>
+    <p>El recuento que se evalúa es siempre el <strong>vigente</strong>, no el histórico de la cadena: en modo Secreto, un voto anulado deja de contar para los umbrales, y el revoto vuelve a contar. Un segundo negativo desactiva la vía rápida de forma permanente para esa propuesta —aunque después se anule, la propuesta ya ha demostrado que hay discusión y espera el plazo completo.</p>
+    <p>El cierre por vía rápida se registra en la cadena como una entrada <code>CIERRE</code> normal, con el motivo (<code>plazo</code> | <code>via_rapida</code>) incluido en la huella, para que el archivo público refleje por qué se cerró cuando se cerró.</p>
+
+    <h3>Comentarios</h3>
+    <p>Tabla independiente con <code>user_id</code>, ligada a la propuesta y nunca al registro de votos. No entra en la cadena de huellas —no es parte del recuento— y no se incluye en el archivo público de la votación, que solo contiene votos sin identidades.</p>
+
+    <h3>Encaje con lo que ya existe</h3>
+    <ul>
+      <li><strong>Arquitectura:</strong> <code>VotingService</code> siguiendo el patrón controllers / services / repositories actual</li>
+      <li><strong>Autenticación:</strong> el JWT y los roles existentes</li>
+      <li><strong>Vigilante:</strong> <code>node-cron</code>, ya en uso</li>
+      <li><strong>Avisos:</strong> <code>mailer.ts</code> con Resend, ya en uso</li>
+      <li><strong>Base de datos:</strong> SQLite actual, sin cambios de motor</li>
+    </ul>
+
+    <h3>Copias de seguridad</h3>
+    <p>La huella final de cada votación cerrada se registra en una tabla aparte de solo lectura, incluida en el archivo público. Sin eso, restaurar una copia de seguridad anterior sustituiría el registro sellado sin dejar rastro visible.</p>
+
+    <h3>Sobre el anclaje externo</h3>
+    <p>Lo ideal sería publicar la huella final en un sitio ajeno a la web —un mensaje con fecha que nadie pudiera reescribir después—. Existe un <code>TwitterRepository</code> en el proyecto, pero la API de publicación de Twitter es de pago y las credenciales están sin configurar, así que <strong>hoy no hay ningún canal externo disponible</strong> y la propuesta no lo da por hecho.</p>
+    <p>Lo que se hace en su lugar: la huella final se publica en la página de resultados y se incluye en el archivo descargable, de modo que la custodia externa la ejerce quien descarga. No es equivalente a un testigo público con fecha, pero es real y no depende de ningún servicio de pago.</p>
+    <p>Si en algún momento hay un canal disponible —una cuenta con API activa, un repositorio público donde volcar las huellas, cualquier sitio fuera del servidor— añadirlo es un cambio pequeño y el diseño ya lo contempla: solo hay que llamar a un publicador más al cerrar la votación.</p>
+
+    <h3>Sellado del enunciado</h3>
+    <p>La entrada de apertura de cada votación incluye <code>contentHash</code>, la huella SHA-256 del enunciado: título, descripción, clase, modo y —para un edicto— la acción sobre el Códice, la norma afectada, el texto propuesto y sus condiciones.</p>
+    <p>Como esa huella entra en la huella de la apertura, y la apertura es el primer eslabón de la cadena, editar cualquiera de esos campos invalida el registro completo. La verificación recalcula la huella del contenido actual y la compara con la sellada; si difieren, devuelve <code>contentTampered</code>.</p>
+    <p>Las condiciones se unen con <code>U+001F</code> antes de hashear, no con cadena vacía: unirlas sin separador dejaría que <code>["ab","c"]</code> y <code>["a","bc"]</code> produjeran la misma huella.</p>
+
+    <h3>Sellado del Códice</h3>
+    <p>Cada fila de <code>codice_versions</code> lleva <code>prevHash</code> y <code>hash</code>, encadenados por norma: la versión 1 enlaza con el génesis y cada siguiente con la anterior. La huella cubre el texto, las condiciones, el origen y la votación de procedencia.</p>
+    <p>Se guarda además <code>proposalFinalHash</code>, la huella final de la votación que aprobó esa versión. Es lo que permite comprobar que el texto en vigor procede de una votación concreta y no se retocó después.</p>
+    <p>Un <code>UPDATE</code> sobre el texto de una ley, o un <code>DELETE</code> de una versión del histórico, rompen la cadena de esa norma. <code>GET /api/codice/verify</code> las recorre todas y devuelve solo las que fallan; el vigilante hace lo mismo en cada ciclo y avisa a toda la comunidad.</p>
+
+    <h3>El sello y sus dos tokens</h3>
+    <p>El sello son cuatro palabras de un diccionario temático (40 x 32 x 32 x 24 = 983.040 combinaciones). Lo genera el navegador de quien vota, y <strong>el servidor nunca lo recibe entero</strong>: de él se derivan dos tokens independientes que viajan por separado.</p>
+    <div class="chain">T_urna  = HMAC(sello, "urna")   <span class="cmt">-- localiza el voto en el registro</span><br>
+T_censo = HMAC(sello, "censo")  <span class="cmt">-- localiza la participacion</span></div>
+    <p>La urna guarda <code>SHA256(T_urna)</code> junto al voto; el censo guarda <code>SHA256(T_censo)</code> junto a la persona. Las dos huellas no tienen nada en común, así que ni con acceso completo a ambas tablas se pueden emparejar.</p>
+    <p>Anular un voto son entonces <strong>dos operaciones distintas</strong>: una contra la urna, que destruye el voto sin saber de quién era, y otra contra el censo, que devuelve el turno sin saber qué voto se destruyó. El cliente las hace con unos segundos de separación, para que su cercanía en el tiempo no permita relacionarlas.</p>
+    <p>Ahí está la diferencia que importa: quien consiga un sello ajeno podrá destruir ese voto —eso es inevitable si el sello sirve para localizarlo—, pero <strong>no puede quedarse con el turno</strong>, porque el token de censo apunta siempre a la fila de su propietario. El daño se limita a destruir; no da ningún voto extra a quien lo hace.</p>
+  </section>
+
+  <section>
+    <h2>Lo que queda por acordar</h2>
+    <div class="open">
+      <h3>Si edictos y acuerdos comparten los mismos umbrales</h3>
+      <p>Las reglas descritas se aplican por igual a ambas clases. Cabe plantearse si un edicto —que permanece hasta que otro lo derogue— debería exigir más respaldo que un acuerdo puntual, o si la simetría es preferible por sencillez. Está implementado como dos valores configurables, así que cambiarlo no requiere rehacer nada.</p>
+    </div>
+  </section>
+
+  <footer class="doc">
+    <p>Borrador para debate de La Secta · Septiembre 2026</p>
+    <p>Este documento describe una propuesta, no una implementación terminada.</p>
+  </footer>
+
+</div>
