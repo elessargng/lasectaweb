@@ -1,7 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type MouseEvent } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 import { Modal } from "./Modal";
+import { listRituals, type Ritual } from "../utils/ritualsApi";
+import { RITUAL_KINDS, kindOf, alpha } from "./rituales/ritualKinds";
+import { addDays, coversDay, dayKey, expandOccurrences, formatTime, isSameDay, keyOf, startOfDay } from "./rituales/ritualDates";
 
 import {
   CirclePlus
@@ -26,48 +29,77 @@ export interface PublicPlaySchema {
   lists: PublicPlayListSchema[];
 }
 
-const API_URL = `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api'}`;
-
-
-async function fetchPendingPlays(): Promise<PublicPlaySchema[]> {
-  const response = await fetch(`${API_URL}/villacuervos/plays/pending`);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return response.json();
-}
+const DAYS_SHOWN = 7;
 
 function getNextDays(startDate: Date, count: number): Date[] {
-  return Array.from({ length: count }, (_, i) => {
-    const day = new Date(startDate);
-    day.setDate(day.getDate() + i);
-    return day;
-  });
+  return Array.from({ length: count }, (_, i) => addDays(startDate, i));
 }
 
-function isSameDay(dateStr: string, target: Date): boolean {
-  const d = new Date(dateStr);
+/** Las de Villacuervos se abren allí; las de aquí, en su día de la agenda. */
+function externalLink(ritual: Ritual): string | undefined {
+  return ritual.source === 'villacuervos' ? ritual.villacuervosUrl ?? ritual.link : undefined;
+}
+
+function RitualPill({ ritual, day, onHover }: {
+  ritual: Ritual;
+  day: Date;
+  onHover: (ritual: Ritual | null, el: HTMLElement | null) => void;
+}) {
+  const style = RITUAL_KINDS[kindOf(ritual)];
+  const Icon = style.icon;
+  const cancelled = ritual.status === 'cancelado';
+  // Una jornada de varios días muestra la hora solo el día en que empieza.
+  const label = isSameDay(new Date(ritual.startsAt), day) ? formatTime(ritual.startsAt) : style.shortLabel;
+
+  const className = `flex items-center justify-center gap-1 w-full py-1 px-1.5 border rounded text-xs md:text-sm font-semibold text-center transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 shadow-sm ${cancelled ? 'line-through opacity-50' : ''}`;
+  const colors = { color: style.color, backgroundColor: alpha(style.color, 0.15), borderColor: alpha(style.color, 0.45) };
+  const content = (
+    <>
+      <Icon size={13} className="shrink-0" />
+      <span className="truncate">{label}</span>
+    </>
+  );
+  const hoverProps = {
+    onMouseEnter: (e: MouseEvent<HTMLElement>) => onHover(ritual, e.currentTarget),
+    onMouseLeave: () => onHover(null, null)
+  };
+
+  const external = externalLink(ritual);
+  if (external) {
+    return (
+      <a href={external} target="_blank" rel="noopener noreferrer" className={className} style={colors} {...hoverProps}>
+        {content}
+      </a>
+    );
+  }
   return (
-    d.getFullYear() === target.getFullYear() &&
-    d.getMonth() === target.getMonth() &&
-    d.getDate() === target.getDate()
+    <Link to={`/rituales?dia=${dayKey(day)}`} className={className} style={colors} {...hoverProps}>
+      {content}
+    </Link>
   );
 }
 
-function MiniCalendar({ plays, narrador }: { plays: PublicPlaySchema[], narrador: boolean }) {
-  const days = getNextDays(new Date(), 7);
-  const [hoveredPlay, setHoveredPlay] = useState<PublicPlaySchema | null>(null);
+function MiniCalendar({ rituals, narrador }: { rituals: Ritual[], narrador: boolean }) {
+  const days = getNextDays(startOfDay(new Date()), DAYS_SHOWN);
+  const [hoveredRitual, setHoveredRitual] = useState<Ritual | null>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+
+  const handleHover = (ritual: Ritual | null, el: HTMLElement | null) => {
+    setHoveredRitual(ritual);
+    setAnchorEl(el);
+  };
 
   return (
     <div className="w-full overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-thin scrollbar-thumb-theme-main/20 scrollbar-track-transparent">
       <div className="flex md:grid md:grid-cols-7 gap-3 min-w-max md:min-w-0 w-full">
         {days.map((day, i) => {
-          const todayGames = plays.filter((play) => isSameDay(play.date, day));
-          const hasGame = todayGames.length > 0;
+          const todayRituals = rituals.filter((ritual) => coversDay(ritual, day));
+          const hasRitual = todayRituals.length > 0;
 
           return (
             <div
               key={i}
-              className={`rounded-lg p-3 text-center w-[100px] md:w-auto flex flex-col border transition-colors ${hasGame
+              className={`rounded-lg p-3 text-center w-[100px] md:w-auto flex flex-col border transition-colors ${hasRitual
                 ? 'bg-theme-container/10 border-theme-main/50'
                 : 'bg-surface-low/30 border-outline-ghost/50 opacity-70'
                 }`}
@@ -81,41 +113,17 @@ function MiniCalendar({ plays, narrador }: { plays: PublicPlaySchema[], narrador
                 </span>
               </div>
 
-              {hasGame && (
+              {hasRitual && (
                 <div className="flex flex-col gap-1.5 mt-1.5 w-full">
-                  {todayGames.map((play) => {
-                    const playTime = new Date(play.date).toLocaleTimeString('es-ES', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    });
-                    const playLink = `https://villacuervos.es/partidas/la-secta/${play.id}/${play.slug}`;
-
-                    return (
-                      <a
-                        key={play.id}
-                        href={playLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onMouseEnter={(e) => {
-                          setHoveredPlay(play);
-                          setAnchorEl(e.currentTarget);
-                        }}
-                        onMouseLeave={() => {
-                          setHoveredPlay(null);
-                          setAnchorEl(null);
-                        }}
-                        className="block w-full py-1 px-1.5 bg-theme-container/40 hover:bg-theme-main/30 text-theme-main border border-theme-main/30 hover:border-theme-main rounded text-xs md:text-sm font-semibold text-center transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 shadow-sm"
-                      >
-                        {playTime}
-                      </a>
-                    );
-                  })}
+                  {todayRituals.map((ritual) => (
+                    <RitualPill key={keyOf(ritual)} ritual={ritual} day={day} onHover={handleHover} />
+                  ))}
                 </div>
               )}
 
               {narrador && (
                 <Link
-                  to={`/rituales?nuevo=${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`}
+                  to={`/rituales?nuevo=${dayKey(day)}`}
                   title="Añadir nueva partida"
                   className="mt-auto pt-3 text-theme-main/70 hover:text-theme-main transition-colors flex justify-center"
                 >
@@ -128,9 +136,9 @@ function MiniCalendar({ plays, narrador }: { plays: PublicPlaySchema[], narrador
       </div>
 
       <Modal
-        isOpen={!!hoveredPlay}
+        isOpen={!!hoveredRitual}
         anchorEl={anchorEl}
-        play={hoveredPlay}
+        ritual={hoveredRitual}
       />
     </div>
   );
@@ -138,7 +146,7 @@ function MiniCalendar({ plays, narrador }: { plays: PublicPlaySchema[], narrador
 
 // --- Container: fetches data and renders the calendar ---
 export default function CalendarWidget() {
-  const [plays, setPlays] = useState<PublicPlaySchema[]>([]);
+  const [rituals, setRituals] = useState<Ritual[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -147,8 +155,12 @@ export default function CalendarWidget() {
   const isNarrador = (user?.roles || []).includes('narrador') || (user?.roles || []).includes('admin');
 
   useEffect(() => {
-    fetchPendingPlays()
-      .then((data) => setPlays(data))
+    // Partidas de La Secta y de Villacuervos, presenciales y jornadas. Las
+    // periódicas llegan como serie y aquí se despliegan.
+    const from = startOfDay(new Date());
+    const to = addDays(from, DAYS_SHOWN);
+    listRituals(from, to)
+      .then((data) => setRituals(expandOccurrences(data, from, to)))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
@@ -156,5 +168,5 @@ export default function CalendarWidget() {
   if (loading) return <p>Loading calendar…</p>;
   if (error) return <p>Error: {error}</p>;
 
-  return <MiniCalendar plays={plays} narrador={isNarrador} />;
+  return <MiniCalendar rituals={rituals} narrador={isNarrador} />;
 }

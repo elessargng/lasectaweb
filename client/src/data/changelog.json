@@ -1,5 +1,49 @@
 [
   {
+    "version": "1.0.0",
+    "date": "2026-10-06",
+    "title": "Rituales: La Agenda del Culto",
+    "description": "La sección Rituales se convierte en la agenda de la comunidad: partidas online y presenciales, eventos y jornadas en un mismo calendario, con inscripción a las partidas, integración con Villacuervos y exportación para calendarios y redes sociales.",
+    "changes": [
+      {
+        "category": "La Agenda",
+        "items": [
+          "Vistas de Mes, Semana y Agenda: Consulta los rituales en un calendario mensual, semana a semana o como listado del mes. La vista y el día elegidos se guardan en la dirección, para compartirlos o recargar sin perderlos.",
+          "Tipos de Ritual: Partidas online de La Secta, partidas online de Villacuervos, partidas presenciales y eventos o jornadas de uno o varios días, cada uno con su color e icono.",
+          "Filtro por Tipo: La leyenda sirve también de filtro para mostrar u ocultar cada clase de ritual.",
+          "Detalle del Día: Al pulsar un día o un ritual se muestra el detalle de esa jornada, con el ritual elegido resaltado, la hora, el lugar con enlace al mapa, el guion, el narrador, las plazas y el enlace a la sala.",
+          "Rituales Cancelados: Un ritual suspendido sigue viéndose en la agenda, tachado, en lugar de desaparecer."
+        ]
+      },
+      {
+        "category": "Inscripción en Partidas",
+        "items": [
+          "Apuntarse y Desapuntarse: Cualquier persona registrada puede apuntarse a las partidas online de La Secta desde la propia agenda, y desapuntarse hasta que empiece la partida.",
+          "Lista de Apuntados: Cada partida muestra quién se ha apuntado, por orden de inscripción y con su avatar. Las plazas no cierran la lista: quien se apunta cuando ya están cubiertas queda debajo de una marca.",
+          "Listas de Villacuervos: Las partidas publicadas en Villacuervos muestran sus listas de inscripción (narración, jugadores...) leídas directamente de allí."
+        ]
+      },
+      {
+        "category": "Convocatoria de Rituales",
+        "items": [
+          "Convocar desde la Web: Narradores y administradores pueden convocar, modificar, cancelar y borrar rituales desde la agenda, o directamente desde un día del calendario del Atrio.",
+          "Valores Propuestos: Al convocar se proponen la hora habitual de cada tipo (22:00 las online, 21:30 el resto) y la sala de La Secta en botc.app para las partidas online.",
+          "Partidas Periódicas: Las partidas presenciales pueden repetirse cada 7 o 14 días, cada cierto número de días o cada mes en el mismo día de la semana, con fecha de fin opcional.",
+          "Publicación en Villacuervos: Una partida online puede publicarse a la vez en Villacuervos al convocarla. Las partidas de La Secta en Villacuervos aparecen también en la agenda sin duplicarse."
+        ]
+      },
+      {
+        "category": "Exportación",
+        "items": [
+          "Calendario (.ics): Descarga los rituales del mes para importarlos en Google Calendar, Outlook o el calendario del móvil. Al volver a importarlos se actualizan en lugar de duplicarse.",
+          "Datos en JSON: Exporta los rituales del mes en bruto para usarlos en otras herramientas.",
+          "Imagen para Redes: Genera el cartel de la Agenda Sectaria del mes como imagen, con plantillas para uso general, Instagram (4:5) y TikTok (9:16).",
+          "Exporta lo que Ves: La exportación respeta los filtros por tipo de ritual que estén activos."
+        ]
+      }
+    ]
+  },
+  {
     "version": "0.8.0",
     "date": "2026-09-29",
     "title": "La Plaza: Votaciones de la Comunidad y Códice Vivo",
