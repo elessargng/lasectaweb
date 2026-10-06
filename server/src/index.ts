@@ -57,6 +57,10 @@ import { CodiceRepository } from './repositories/CodiceRepository';
 import { CodiceService } from './services/CodiceService';
 import { CodiceController } from './controllers/CodiceController';
 import { seedCodice } from './utils/codiceSeeder';
+import { RitualRepository } from './repositories/RitualRepository';
+import { RitualSignupRepository } from './repositories/RitualSignupRepository';
+import { RitualService } from './services/RitualService';
+import { RitualController } from './controllers/RitualController';
 import { sendPlazaIntegrityAlert, sendPlazaResultAnnouncement } from './utils/mailer';
 
 const app = express();
@@ -90,6 +94,11 @@ const threadController = new ThreadController(threadService);
 const villacuervosRepository = new VillacuervosRepository();
 const villacuervosService = new VillacuervosService(villacuervosRepository, userRepository);
 const villacuervosController = new VillacuervosController(villacuervosService);
+
+const ritualRepository = new RitualRepository();
+const ritualSignupRepository = new RitualSignupRepository();
+const ritualService = new RitualService(ritualRepository, userRepository, villacuervosService, ritualSignupRepository);
+const ritualController = new RitualController(ritualService);
 
 const twitterRepository = new TwitterRepository();
 const instagramRepository = new InstagramRepository();
@@ -179,6 +188,17 @@ app.get('/api/villacuervos/translations/:slug', villacuervosController.getTransl
 app.get('/api/villacuervos/plays/pending', villacuervosController.getPendingPlays as express.RequestHandler);
 app.post('/api/villacuervos/plays', authenticateJWT as express.RequestHandler, villacuervosController.createPlay as express.RequestHandler);
 app.patch('/api/villacuervos/plays/:playSlug', authenticateJWT as express.RequestHandler, villacuervosController.updatePlay as express.RequestHandler);
+
+// Rutas de Rituales (la agenda es pública; convocar es cosa de narradores)
+app.get('/api/rituals', ritualController.list);
+app.get('/api/rituals/storytellers', authenticateJWT as express.RequestHandler, ritualController.listStorytellers as express.RequestHandler);
+app.get('/api/rituals/:id', ritualController.get);
+app.post('/api/rituals', authenticateJWT as express.RequestHandler, ritualController.create as express.RequestHandler);
+app.put('/api/rituals/:id', authenticateJWT as express.RequestHandler, ritualController.update as express.RequestHandler);
+app.delete('/api/rituals/:id', authenticateJWT as express.RequestHandler, ritualController.delete as express.RequestHandler);
+// Apuntarse y desapuntarse: cualquier persona registrada.
+app.post('/api/rituals/:id/signups', authenticateJWT as express.RequestHandler, ritualController.signUp as express.RequestHandler);
+app.delete('/api/rituals/:id/signups', authenticateJWT as express.RequestHandler, ritualController.leave as express.RequestHandler);
 
 // Rutas de La Biblioteca
 app.get('/api/library/tree', optionalAuthenticateJWT as express.RequestHandler, libraryController.getTree as express.RequestHandler);

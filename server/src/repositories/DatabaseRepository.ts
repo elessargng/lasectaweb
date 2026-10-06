@@ -542,6 +542,105 @@ export class DatabaseRepository {
         ALTER TABLE users ADD COLUMN vigilanteAlerts INTEGER NOT NULL DEFAULT 0;
       `);
     });
+
+    // Migración 014: Rituales — la agenda de eventos de La Secta
+    //
+    // Un ritual es cualquier cosa que se apunta en la agenda: una partida online
+    // en botc.app (llevada por La Secta o por Villacuervos), una partida
+    // presencial o unas jornadas. Las columnas comunes viven aquí; lo propio de
+    // cada tipo se irá añadiendo con migraciones nuevas según se defina.
+    await this.applyMigration('014_add_rituals_table', async (db) => {
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS rituals (
+          id TEXT PRIMARY KEY,
+          -- partida_online | partida_presencial | jornada
+          type TEXT NOT NULL,
+          -- Solo en las partidas online: secta | villacuervos
+          managedBy TEXT,
+          title TEXT NOT NULL,
+          description TEXT,
+          startsAt DATETIME NOT NULL,
+          -- Opcional: las jornadas pueden durar varios días.
+          endsAt DATETIME,
+          -- Dirección, para lo presencial.
+          location TEXT,
+          -- Sala de botc.app o página de la partida en Villacuervos.
+          link TEXT,
+          scriptName TEXT,
+          maxPlayers INTEGER,
+          storytellerId TEXT,
+          -- programado | cancelado
+          status TEXT NOT NULL DEFAULT 'programado',
+          createdBy TEXT NOT NULL,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updatedAt DATETIME,
+          FOREIGN KEY (storytellerId) REFERENCES users(id) ON DELETE SET NULL,
+          FOREIGN KEY (createdBy) REFERENCES users(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_rituals_startsAt ON rituals(startsAt);
+      `);
+    });
+
+    // Migración 015: periodicidad de las partidas presenciales y vínculo con Villacuervos
+    //
+    // Las partidas de Villacuervos no se convocan aquí: se leen de su API. Una
+    // partida online de La Secta puede publicarse también allí, y entonces se
+    // guarda qué partida le corresponde para no mostrarla dos veces.
+    //
+    // Las partidas (online y presenciales) solo tienen hora de convocatoria; la
+    // fecha de fin queda para las jornadas.
+    await this.applyMigration('015_add_ritual_recurrence_and_villacuervos_link', async (db) => {
+      await db.exec(`
+        -- Cada cuántos días se repite. Solo en las partidas presenciales.
+        ALTER TABLE rituals ADD COLUMN recurrenceDays INTEGER;
+        -- Último día en que puede repetirse. Vacío: sin final.
+        ALTER TABLE rituals ADD COLUMN recurrenceUntil DATETIME;
+        ALTER TABLE rituals ADD COLUMN villacuervosPlayId INTEGER;
+        ALTER TABLE rituals ADD COLUMN villacuervosSlug TEXT;
+
+        UPDATE rituals SET managedBy = 'secta' WHERE type = 'partida_online';
+        UPDATE rituals SET endsAt = NULL WHERE type <> 'jornada';
+      `);
+    });
+
+    // Migración 016: periodicidad mensual de las partidas presenciales
+    //
+    // "Cada mes" no son 30 días: es el mismo día de la semana en la misma
+    // posición del mes (el segundo jueves, el último sábado...), tenga el mes
+    // 28, 30 o 31 días. Por eso va en su propia columna y no en recurrenceDays.
+    // Una serie usa una de las dos, nunca ambas.
+    await this.applyMigration('016_add_ritual_monthly_recurrence', async (db) => {
+      await db.exec(`
+        ALTER TABLE rituals ADD COLUMN recurrenceMonths INTEGER;
+      `);
+    });
+
+    // Migración 017: inscripción en las partidas de La Secta
+    //
+    // El orden de inscripción importa, así que lo fija el id autoincremental y
+    // no la fecha (dos personas pueden apuntarse en el mismo segundo). Las
+    // plazas no limitan: puede haber más gente apuntada que plazas.
+    //
+    // occurrence distingue las repeticiones de una serie periódica, que son
+    // partidas distintas con su propia lista: es la fecha de inicio de esa
+    // repetición, en ISO. En una partida suelta va vacío.
+    await this.applyMigration('017_add_ritual_signups', async (db) => {
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS ritual_signups (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          ritualId TEXT NOT NULL,
+          occurrence TEXT NOT NULL DEFAULT '',
+          userId TEXT NOT NULL,
+          createdAt DATETIME NOT NULL,
+          FOREIGN KEY (ritualId) REFERENCES rituals(id) ON DELETE CASCADE,
+          FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
+          UNIQUE(ritualId, occurrence, userId)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_ritual_signups_ritual ON ritual_signups(ritualId, occurrence, id);
+      `);
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

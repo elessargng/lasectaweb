@@ -115,7 +115,7 @@ function MiniCalendar({ plays, narrador }: { plays: PublicPlaySchema[], narrador
 
               {narrador && (
                 <Link
-                  to="/rituales"
+                  to={`/rituales?nuevo=${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`}
                   title="Añadir nueva partida"
                   className="mt-auto pt-3 text-theme-main/70 hover:text-theme-main transition-colors flex justify-center"
                 >
