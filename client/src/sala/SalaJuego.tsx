@@ -8,6 +8,7 @@ import MenuNarrador from './MenuNarrador';
 import Mesa, { type FocoAsiento, type TamanosMesa } from './Mesa';
 import type { OpcionMenu } from './MenuDesplegable';
 import MenuUsuario from './MenuUsuario';
+import PanelAccesibilidad from './PanelAccesibilidad';
 import PanelAtajos from './PanelAtajos';
 import PanelInterfaz from './PanelInterfaz';
 import PanelPartida from './PanelPartida';
@@ -15,6 +16,7 @@ import PanelUsuario, { type ResultadoPerfil } from './PanelUsuario';
 import RegistroVotaciones from './RegistroVotaciones';
 import ZonaNarradores from './ZonaNarradores';
 import { esAtajo, puedeUsarAtajo, useAtajos } from './atajos';
+import { AvisosContexto, useAvisosActivos, type TipoAviso } from './avisosConfig';
 import { avisosDeCambio } from './avisosSala';
 import { setSonidosActivos, tocarCampanada, tocarTic } from './sonidos';
 import { ID_BOTON_MENU_NARRADOR, ID_SIN_NARRADOR, idNombreNarrador } from './ids';
@@ -80,6 +82,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // El foco estaba en un control que puede desaparecer con el cambio.
   const rescatarFocoRef = useRef<string | null>(null);
 
+  // Qué avisos quiere el lector (Preferencias > Accesibilidad). Todo aviso pasa por anunciar().
+  const { activos: avisosActivos, cambiar: cambiarAviso, cambiarTodos: cambiarTodosAvisos } = useAvisosActivos();
+  const anunciar = (tipo: TipoAviso, texto: string) => {
+    if (avisosActivos[tipo]) setAnuncio(texto);
+  };
+
   const alCambiar = (anterior: SalaEstado | null, nuevo: SalaEstado) => {
     if (!anterior) return;
     // ¿Este cambio viene de una acción propia? (La marca vale para el siguiente cambio.)
@@ -104,13 +112,16 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     const grimorio = nuevo.configuracion.grimorioJugadores;
     const juego = nuevo.participantes.some((p) => p.id === nuevo.yo && p.rol === 'jugador');
     if (grimorio !== anterior.configuracion.grimorioJugadores && juego) {
-      avisos.push(
-        grimorio
+      avisos.push({
+        tipo: 'grimorio',
+        texto: grimorio
           ? 'El narrador ha activado el grimorio para los jugadores: puedes cambiar las fichas en el tuyo.'
           : 'El narrador ha desactivado el grimorio para los jugadores.',
-      );
+      });
     }
-    if (avisos.length) setAnuncio(avisos.join(' '));
+    // Solo los tipos que se quieren oír.
+    const textos = avisos.filter((a) => avisosActivos[a.tipo]).map((a) => a.texto);
+    if (textos.length) setAnuncio(textos.join(' '));
 
     // Cambio de narradores: si es fruto de la propia acción y le afecta a uno, el
     // foco va a su cuadro o al aviso de que no hay; si no, se rescata si se pierde.
@@ -186,14 +197,14 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const alternarMano = async () => {
     const levantada = !manoLevantada;
     const r = await pedir('sala:levantarMano', { levantada });
-    if (r.ok) setAnuncio(levantada ? 'Has levantado la mano.' : 'Has bajado la mano.');
+    if (r.ok) anunciar('miMano', levantada ? 'Has levantado la mano.' : 'Has bajado la mano.');
     else setAviso(r.error);
     // false: el menú (si se ha usado) se cierra y el foco vuelve a su botón.
     return false;
   };
   const elegirFormaMano = async (forma: FormaMano) => {
     const r = await pedir('sala:elegirMano', { forma });
-    if (r.ok) setAnuncio(`Tu mano: ${nombreMano(forma).toLocaleLowerCase('es')}.`);
+    if (r.ok) anunciar('miMano', `Tu mano: ${nombreMano(forma).toLocaleLowerCase('es')}.`);
     else setAviso(r.error);
     return false;
   };
@@ -299,6 +310,14 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       ),
     },
     {
+      id: 'accesibilidad',
+      etiqueta: 'Accesibilidad',
+      conControles: true,
+      contenido: (
+        <PanelAccesibilidad activos={avisosActivos} onCambiar={cambiarAviso} onCambiarTodos={cambiarTodosAvisos} />
+      ),
+    },
+    {
       id: 'atajos',
       etiqueta: 'Atajos de teclado',
       conControles: true,
@@ -376,116 +395,116 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   } as CSSProperties;
 
   return (
-    <div className="contents" style={tamanos}>
-      <Cabecera
-        derecha={
-          <div className="flex items-center gap-2">
-            {conexion === 'expulsadaPorNarrador' && (
-          <p ref={expulsadoRef} tabIndex={-1} className="focus:outline-none">
-            Un narrador te ha expulsado de la sala.
-          </p>
-        )}
+    <AvisosContexto.Provider value={avisosActivos}>
+      <div className="contents" style={tamanos}>
+        <Cabecera
+          derecha={
+            <div className="flex items-center gap-2">
+              {conexion === 'expulsadaPorNarrador' && (
+                <p ref={expulsadoRef} tabIndex={-1} className="focus:outline-none">
+                  Un narrador te ha expulsado de la sala.
+                </p>
+              )}
 
-        {estado && (
-              <MenuNarrador
-                estado={estado}
-                pedir={pedirPropio}
-                onAsientos={() => setEditandoAsientos((v) => !v)}
-              />
-            )}
-            {puedeLevantarMano && yo && (
-              <MenuMano
-                forma={yo.formaMano}
-                levantada={manoLevantada}
-                onAlternar={alternarMano}
-                onElegirForma={elegirFormaMano}
-              />
-            )}
-            {/* Solo narradores: el servidor solo les manda a ellos el registro */}
-            {yo?.rol === 'narrador' && estado && <RegistroVotaciones votaciones={estado.votaciones} />}
-            {estado && <ListaParticipantes participantes={estado.participantes} yo={estado.yo} />}
-            <MenuUsuario
-              nombre={yo?.nombre ?? (alias || cuenta?.username || invitado || '')}
-              avatar={yo?.avatar ?? null}
-              conCuenta={!!cuenta}
-              onPreferencias={() => setPreferenciasAbiertas(true)}
-              enLaSala={enLaSala}
-              onSalir={onSalir}
-            />
-          </div>
-        }
-      />
-
-      {/* La sala ocupa todo el ancho: los narradores van arriba a la izquierda */}
-      <main className="flex-1 w-full px-4 py-6">
-        {/* Oculto a la vista (ocupaba sitio), pero es el título de la página para el lector y el destino del foco al entrar */}
-        <h1 ref={tituloRef} tabIndex={-1} className="sr-only">
-          Sala de juego
-        </h1>
-
-        <div aria-live="polite" className="sr-only">
-          {anuncio}
-        </div>
-
-        {/* Flota abajo: no empuja el contenido ni genera scroll */}
-        <div
-          aria-live="polite"
-          className="pointer-events-none fixed bottom-4 left-1/2 z-40 flex w-[min(90vw,32rem)] -translate-x-1/2 flex-col gap-2"
-        >
-          {(conexion === 'conectando' || conexion === 'reconectando' || conexion === 'error') && (
-            <p className="rounded border border-outline-ghost bg-surface px-4 py-2 text-center text-on-surface-muted shadow-lg">
-              {MENSAJE_CONEXION[conexion]}
-            </p>
-          )}
-          {aviso && (
-            <p className="rounded border border-red-400/60 bg-surface px-4 py-2 text-center shadow-lg">{aviso}</p>
-          )}
-        </div>
-
-        {conexion === 'expulsada' && (
-          <div className="flex flex-col items-start gap-4">
-            <p id="sala-expulsada">
-              Has entrado en la sala desde otra ventana o dispositivo, así que aquí se ha cerrado.
-            </p>
-            <button
-              ref={volverRef}
-              type="button"
-              onClick={reconectar}
-              aria-describedby="sala-expulsada"
-              className={botonPrincipal}
-            >
-              Volver a entrar aquí
-            </button>
-          </div>
-        )}
-
-        {estado && (
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-            <ZonaNarradores estado={estado} pedir={pedirPropio} onError={setAviso} />
-            <div className="min-w-0 flex-1">
-              <Mesa
-                estado={estado}
-                manual={{ avatar: preferencias.tamanoAvatar, ficha: preferencias.tamanoFicha }}
-                auto={{ avatar: preferencias.avatarAuto, ficha: preferencias.fichaAuto }}
-                onTamanos={setTamanosMesa}
-                editando={editando}
-                grimorio={yo?.rol === 'jugador' && estado.configuracion.grimorioJugadores}
-                pedir={pedirPropio}
-                onError={setAviso}
-                onAnuncio={setAnuncio}
-                focoAsientoRef={focoAsientoRef}
-                onTerminar={terminarAsientos}
-                desfaseReloj={desfaseReloj}
+              {estado && (
+                <MenuNarrador estado={estado} pedir={pedirPropio} onAsientos={() => setEditandoAsientos((v) => !v)} />
+              )}
+              {puedeLevantarMano && yo && (
+                <MenuMano
+                  forma={yo.formaMano}
+                  levantada={manoLevantada}
+                  onAlternar={alternarMano}
+                  onElegirForma={elegirFormaMano}
+                />
+              )}
+              {/* Solo narradores: el servidor solo les manda a ellos el registro */}
+              {yo?.rol === 'narrador' && estado && <RegistroVotaciones votaciones={estado.votaciones} />}
+              {estado && <ListaParticipantes participantes={estado.participantes} yo={estado.yo} />}
+              <MenuUsuario
+                nombre={yo?.nombre ?? (alias || cuenta?.username || invitado || '')}
+                avatar={yo?.avatar ?? null}
+                conCuenta={!!cuenta}
+                onPreferencias={() => setPreferenciasAbiertas(true)}
+                enLaSala={enLaSala}
+                onSalir={onSalir}
               />
             </div>
-          </div>
-        )}
-      </main>
+          }
+        />
 
-      {preferenciasAbiertas && (
-        <DialogoPreferencias pestanas={pestanasPreferencias} onCerrar={() => setPreferenciasAbiertas(false)} />
-      )}
-    </div>
+        {/* La sala ocupa todo el ancho: los narradores van arriba a la izquierda */}
+        <main className="flex-1 w-full px-4 py-6">
+          {/* Oculto a la vista (ocupaba sitio), pero es el título de la página para el lector y el destino del foco al entrar */}
+          <h1 ref={tituloRef} tabIndex={-1} className="sr-only">
+            Sala de juego
+          </h1>
+
+          <div aria-live="polite" className="sr-only">
+            {anuncio}
+          </div>
+
+          {/* Flota abajo: no empuja el contenido ni genera scroll. Conexión y errores se
+            ven siempre; se leen si se quiere (Preferencias > Accesibilidad). */}
+          <div className="pointer-events-none fixed bottom-4 left-1/2 z-40 flex w-[min(90vw,32rem)] -translate-x-1/2 flex-col gap-2">
+            <div aria-live={avisosActivos.conexion ? 'polite' : 'off'}>
+              {(conexion === 'conectando' || conexion === 'reconectando' || conexion === 'error') && (
+                <p className="rounded border border-outline-ghost bg-surface px-4 py-2 text-center text-on-surface-muted shadow-lg">
+                  {MENSAJE_CONEXION[conexion]}
+                </p>
+              )}
+            </div>
+            <div aria-live={avisosActivos.errores ? 'polite' : 'off'}>
+              {aviso && (
+                <p className="rounded border border-red-400/60 bg-surface px-4 py-2 text-center shadow-lg">{aviso}</p>
+              )}
+            </div>
+          </div>
+
+          {conexion === 'expulsada' && (
+            <div className="flex flex-col items-start gap-4">
+              <p id="sala-expulsada">
+                Has entrado en la sala desde otra ventana o dispositivo, así que aquí se ha cerrado.
+              </p>
+              <button
+                ref={volverRef}
+                type="button"
+                onClick={reconectar}
+                aria-describedby="sala-expulsada"
+                className={botonPrincipal}
+              >
+                Volver a entrar aquí
+              </button>
+            </div>
+          )}
+
+          {estado && (
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+              <ZonaNarradores estado={estado} pedir={pedirPropio} onError={setAviso} />
+              <div className="min-w-0 flex-1">
+                <Mesa
+                  estado={estado}
+                  manual={{ avatar: preferencias.tamanoAvatar, ficha: preferencias.tamanoFicha }}
+                  auto={{ avatar: preferencias.avatarAuto, ficha: preferencias.fichaAuto }}
+                  onTamanos={setTamanosMesa}
+                  editando={editando}
+                  grimorio={yo?.rol === 'jugador' && estado.configuracion.grimorioJugadores}
+                  pedir={pedirPropio}
+                  onError={setAviso}
+                  onAnuncio={anunciar}
+                  focoAsientoRef={focoAsientoRef}
+                  onTerminar={terminarAsientos}
+                  desfaseReloj={desfaseReloj}
+                />
+              </div>
+            </div>
+          )}
+        </main>
+
+        {preferenciasAbiertas && (
+          <DialogoPreferencias pestanas={pestanasPreferencias} onCerrar={() => setPreferenciasAbiertas(false)} />
+        )}
+      </div>
+    </AvisosContexto.Provider>
   );
 };
 

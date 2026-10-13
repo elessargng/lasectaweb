@@ -3,6 +3,7 @@ import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { getAvatarUrl } from '../utils/api';
 import { compressImage } from '../utils/image';
 import { AVATAR_INVITADO, AVATARES_SALA } from './avatares';
+import { useAriaLive } from './avisosConfig';
 import { botonPrincipal } from './estilos';
 import { NOMBRE_MAX } from './invitado';
 
@@ -40,6 +41,8 @@ const PanelUsuario = ({ nombreActual, avatarElegido, cuenta, onGuardar }: PanelU
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<ResultadoPerfil | null>(null);
   const error = resultado && !resultado.ok ? resultado : null;
+  // Errores y «Guardado» se leen según Preferencias > Accesibilidad.
+  const ariaLive = useAriaLive(error ? 'errores' : 'preferencias');
 
   const guardar = async (e: FormEvent) => {
     e.preventDefault();
@@ -143,7 +146,7 @@ const PanelUsuario = ({ nombreActual, avatarElegido, cuenta, onGuardar }: PanelU
         <p className="mt-2 text-xs text-on-surface-muted">Tu imagen solo se verá en la sala; no cambia tu perfil.</p>
       </fieldset>
 
-      <div aria-live="polite">
+      <div aria-live={ariaLive}>
         {error && (
           <p id="sala-pref-error" className="text-sm text-red-400">
             {error.error}

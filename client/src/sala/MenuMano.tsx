@@ -32,7 +32,9 @@ const MenuMano = ({ forma, levantada, onAlternar, onElegirForma }: MenuManoProps
     <MenuDesplegable
       id="sala-menu-mano"
       alinear="derecha"
-      etiqueta={`Tu mano: ${nombreMano(forma).toLocaleLowerCase('es')}, ${levantada ? 'levantada' : 'bajada'}`}
+      etiqueta="Tu mano"
+      // El estado, en la descripción: al bajarse sola (al votar) no se anuncia
+      descripcion={`${nombreMano(forma)}, ${levantada ? 'levantada' : 'bajada'}`}
       boton={<Mano forma={forma} className={`h-7 w-7 ${levantada ? '' : 'opacity-60'}`} />}
       botonClassName={botonIcono}
       opciones={opciones}

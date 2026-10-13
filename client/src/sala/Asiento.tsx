@@ -65,7 +65,8 @@ const Asiento = ({ id, numero, ocupante, esYo, puedeSentarse, onSentarse, asa, d
           >
             {ocupante ? (
               <>
-                <span className="sr-only">Asiento {numero}: </span>
+                {/* Solo el número: «3, Ana» (la lista ya dice que son asientos) */}
+                <span className="sr-only">{numero}, </span>
                 <span className={ocupante.conectado ? 'font-semibold' : 'text-on-surface-muted'}>{ocupante.nombre}</span>
                 {esYo && ' (tú)'}
                 {!ocupante.conectado && <span className="text-on-surface-muted"> (desconectado)</span>}

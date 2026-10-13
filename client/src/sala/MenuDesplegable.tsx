@@ -20,6 +20,12 @@ interface MenuDesplegableProps {
   boton: ReactNode;
   /** Nombre accesible del botón cuando solo lleva un icono. */
   etiqueta?: string;
+  /**
+   * Estado que cambia (p. ej. «levantada»): va como descripción y no en el nombre,
+   * porque los lectores anuncian cada cambio del nombre del botón con el foco y
+   * no los de su descripción. Se oye al llegar al botón.
+   */
+  descripcion?: string;
   botonClassName: string;
   opciones: OpcionMenu[];
   /** Hacia dónde se abre la lista. */
@@ -35,7 +41,15 @@ const opcionClass =
  * «contraído/expandido». Escape o salir con el foco lo cierran. Si no hay
  * opciones, no sale.
  */
-const MenuDesplegable = ({ id, boton, etiqueta, botonClassName, opciones, alinear = 'izquierda' }: MenuDesplegableProps) => {
+const MenuDesplegable = ({
+  id,
+  boton,
+  etiqueta,
+  descripcion,
+  botonClassName,
+  opciones,
+  alinear = 'izquierda',
+}: MenuDesplegableProps) => {
   const [abierto, setAbierto] = useState(false);
   const botonRef = useRef<HTMLButtonElement>(null);
   const contenedorRef = useRef<HTMLDivElement>(null);
@@ -89,6 +103,7 @@ const MenuDesplegable = ({ id, boton, etiqueta, botonClassName, opciones, alinea
         id={`${id}-boton`}
         type="button"
         aria-label={etiqueta}
+        aria-describedby={descripcion ? `${id}-estado` : undefined}
         aria-expanded={abierto}
         aria-controls={id}
         onClick={() => setAbierto((v) => !v)}
@@ -96,6 +111,11 @@ const MenuDesplegable = ({ id, boton, etiqueta, botonClassName, opciones, alinea
       >
         {boton}
       </button>
+      {descripcion && (
+        <span id={`${id}-estado`} className="sr-only">
+          {descripcion}
+        </span>
+      )}
       <ul
         id={id}
         hidden={!abierto}

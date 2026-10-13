@@ -56,7 +56,13 @@ export function limpiarAvatarSala(valor: unknown): string | null {
 }
 
 /** Un asiento recién puesto: libre, con su ficha viva y sin marca. */
-const asientoNuevo = (): SalaAsiento => ({ id: randomUUID(), ocupante: null, muerto: false, marcado: false });
+const asientoNuevo = (): SalaAsiento => ({
+  id: randomUUID(),
+  ocupante: null,
+  muerto: false,
+  marcado: false,
+  votosMarca: null,
+});
 
 /** Quién se conecta, según el token o el nombre de invitado. */
 export interface SalaLlegada {
@@ -244,10 +250,25 @@ export class SalaService {
   }
 
   /** Pone o quita la calavera a la ficha de un asiento. Solo puede llevarla una: ponérsela se la quita a las demás. */
-  marcar(asientoId: string, marcado: boolean): void {
-    if (marcado) for (const a of this.mesa) a.marcado = false;
+  marcar(asientoId: string, marcado: boolean, votos: number | null = null): void {
+    if (marcado) this.desmarcar();
     const asiento = this.mesa.find((a) => a.id === asientoId);
-    if (asiento) asiento.marcado = marcado;
+    if (!asiento) return;
+    asiento.marcado = marcado;
+    asiento.votosMarca = marcado ? votos : null;
+  }
+
+  /** Quita la calavera a quien la lleve. */
+  desmarcar(): void {
+    for (const a of this.mesa) {
+      a.marcado = false;
+      a.votosMarca = null;
+    }
+  }
+
+  /** Si alguna ficha lleva la calavera. */
+  hayMarca(): boolean {
+    return this.mesa.some((a) => a.marcado);
   }
 
   /** Mata o revive la ficha de un asiento; al morir pierde la calavera. No comprueba permisos. */
@@ -255,7 +276,10 @@ export class SalaService {
     const asiento = this.mesa.find((a) => a.id === asientoId);
     if (!asiento) return;
     asiento.muerto = muerto;
-    if (muerto) asiento.marcado = false;
+    if (muerto) {
+      asiento.marcado = false;
+      asiento.votosMarca = null;
+    }
   }
 
   configuracion(): SalaConfiguracion {

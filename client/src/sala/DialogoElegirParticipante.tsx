@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import Dialog from '../components/Dialog';
+import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario } from './estilos';
 import type { SalaParticipante, SalaResultado } from './useSala';
 
@@ -33,6 +34,7 @@ const DialogoElegirParticipante = ({
   const [elegido, setElegido] = useState(candidatos[0]?.id ?? '');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
+  const ariaLive = useAriaLive('errores');
 
   const elegir = async (e: FormEvent) => {
     e.preventDefault();
@@ -88,7 +90,7 @@ const DialogoElegirParticipante = ({
                 ))}
               </select>
             </div>
-            <div aria-live="polite">
+            <div aria-live={ariaLive}>
               {error && (
                 <p id="sala-elegir-error" className="text-sm text-red-400">
                   {error}

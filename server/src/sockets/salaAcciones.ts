@@ -233,8 +233,22 @@ export const SALA_ACCIONES: Record<string, Accion> = {
         (datos as { asientoId?: unknown; marcado?: unknown; cerrarNominacion?: unknown }) ?? {};
       if (typeof asientoId !== 'string' || !sala.hayAsiento(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (typeof marcado !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
-      sala.marcar(asientoId, marcado);
+      // Si se marca al nominado de una nominación ya votada, se guardan sus votos
+      // (el narrador los ve, para saber si otra votación empata).
+      const n = sala.nominacion();
+      const votos = n?.votacion?.terminada && n.hasta === asientoId ? n.votacion.votos : null;
+      sala.marcar(asientoId, marcado, votos);
       if (cerrarNominacion !== false) sala.cerrarNominacion();
+      return { ok: true };
+    },
+  },
+
+  /** Quita la calavera a quien la lleve (desde el panel de la nominación; no la cierra). */
+  'narrador:desmarcar': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.hayMarca(),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'Nadie lleva la calavera.' : 'Solo un narrador puede desmarcar.'),
+    hacer: (sala) => {
+      sala.desmarcar();
       return { ok: true };
     },
   },

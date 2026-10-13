@@ -1,5 +1,6 @@
 import { nombreMano } from './formasMano';
 import { datosAsiento } from './nombresAsiento';
+import type { TipoAviso } from './avisosConfig';
 import type { SalaEstado, SalaParticipante } from './useSala';
 
 /**
@@ -13,27 +14,36 @@ import type { SalaEstado, SalaParticipante } from './useSala';
  * Los cambios de sitio de quien ya estaba sentado (mezclar, mover) no se dicen
  * uno a uno: serían una ráfaga.
  */
-export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): string[] {
+/** Un aviso para el lector, con su tipo (para que cada uno elija cuáles quiere: avisosConfig). */
+export interface Aviso {
+  tipo: TipoAviso;
+  texto: string;
+}
+
+export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): Aviso[] {
   const yo = nuevo.yo;
   const antes = new Map(anterior.participantes.map((p) => [p.id, p]));
   const ahora = new Map(nuevo.participantes.map((p) => [p.id, p]));
   const narra = (p?: SalaParticipante) => p?.rol === 'narrador';
-  const avisos: string[] = [];
+  const avisos: Aviso[] = [];
+  const avisa = (tipo: TipoAviso, texto: string) => {
+    avisos.push({ tipo, texto });
+  };
 
   // Narradores: quién empieza o deja de narrar, entra, se va o pierde la conexión.
   for (const p of nuevo.participantes) {
     const previo = antes.get(p.id);
     if (!narra(p)) continue;
     if (p.id === yo) {
-      if (!narra(previo)) avisos.push('Ahora eres narrador.');
+      if (!narra(previo)) avisa('narradores', 'Ahora eres narrador.');
     } else if (!previo) {
-      avisos.push(`${p.nombre}, que narra, ha entrado en la sala.`);
+      avisa('narradores', `${p.nombre}, que narra, ha entrado en la sala.`);
     } else if (!narra(previo)) {
-      avisos.push(`${p.nombre} ahora narra.`);
+      avisa('narradores', `${p.nombre} ahora narra.`);
     } else if (previo.conectado && !p.conectado) {
-      avisos.push(`${p.nombre}, que narra, ha perdido la conexión.`);
+      avisa('narradores', `${p.nombre}, que narra, ha perdido la conexión.`);
     } else if (!previo.conectado && p.conectado) {
-      avisos.push(`${p.nombre}, que narra, ha vuelto.`);
+      avisa('narradores', `${p.nombre}, que narra, ha vuelto.`);
     }
   }
   const narrabanAntes = anterior.participantes.filter((p) => narra(p));
@@ -41,11 +51,11 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): string[
   for (const p of narrabanAntes) {
     const actual = ahora.get(p.id);
     if (narra(actual)) continue;
-    if (p.id === yo) avisos.push('Ya no eres narrador.');
-    else if (!actual) avisos.push(`${p.nombre}, que narraba, se ha ido de la sala.`);
-    else if (quedanNarradores) avisos.push(`${p.nombre} ya no narra.`);
+    if (p.id === yo) avisa('narradores', 'Ya no eres narrador.');
+    else if (!actual) avisa('narradores', `${p.nombre}, que narraba, se ha ido de la sala.`);
+    else if (quedanNarradores) avisa('narradores', `${p.nombre} ya no narra.`);
   }
-  if (narrabanAntes.length > 0 && !quedanNarradores) avisos.push('La sala se ha quedado sin narrador.');
+  if (narrabanAntes.length > 0 && !quedanNarradores) avisa('narradores', 'La sala se ha quedado sin narrador.');
 
   // Asientos: quién se sienta y quién se levanta (o se va y lo deja libre).
   const asientoDe = (e: SalaEstado, id: string) => e.asientos.findIndex((a) => a.ocupante === id) + 1;
@@ -55,14 +65,14 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): string[
     const actual = ahora.get(a.ocupante);
     const numero = asientoDe(anterior, a.ocupante);
     if (!quien) continue;
-    if (!actual) avisos.push(`${quien.nombre} se ha ido y deja libre el asiento ${numero}.`);
+    if (!actual) avisa('asientos', `${quien.nombre} se ha ido y deja libre el asiento ${numero}.`);
     // Si se ha levantado para narrar, ya se ha dicho que ahora narra.
-    else if (!narra(actual)) avisos.push(`${quien.nombre} se levanta del asiento ${numero}.`);
+    else if (!narra(actual)) avisa('asientos', `${quien.nombre} se levanta del asiento ${numero}.`);
   }
   for (const a of nuevo.asientos) {
     if (!a.ocupante || a.ocupante === yo || asientoDe(anterior, a.ocupante)) continue;
     const quien = ahora.get(a.ocupante);
-    if (quien) avisos.push(`${quien.nombre} se sienta en el asiento ${asientoDe(nuevo, a.ocupante)}.`);
+    if (quien) avisa('asientos', `${quien.nombre} se sienta en el asiento ${asientoDe(nuevo, a.ocupante)}.`);
   }
 
   const forma = (p: SalaParticipante) => nombreMano(p.formaMano).toLocaleLowerCase('es');
@@ -79,13 +89,13 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): string[
       return !!v && v.orden.slice(pasoAntes, v.paso).some((id) => nuevo.asientos.find((a) => a.id === id)?.ocupante === p.id);
     })();
     if (!p.manoLevantada && votoContado) continue;
-    avisos.push(p.manoLevantada ? `${p.nombre} levanta la mano (${forma(p)}).` : `${p.nombre} baja la mano.`);
+    avisa('manos', p.manoLevantada ? `${p.nombre} levanta la mano (${forma(p)}).` : `${p.nombre} baja la mano.`);
   }
   // Cambio de forma con la mano levantada (con ella bajada no se ve).
   for (const p of nuevo.participantes) {
     const previo = antes.get(p.id);
     if (!previo || p.id === yo || !p.manoLevantada || !previo.manoLevantada || previo.formaMano === p.formaMano) continue;
-    avisos.push(`${p.nombre} cambia la mano a ${forma(p)}.`);
+    avisa('manos', `${p.nombre} cambia la mano a ${forma(p)}.`);
   }
 
   // Fichas: quién (o qué asiento) muere, revive o lleva la calavera.
@@ -102,14 +112,14 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): string[
     if (!previo) continue;
     const q = quien(nuevo, a.id);
     if (previo.muerto !== a.muerto) {
-      if (q === null) avisos.push(a.muerto ? 'Has muerto.' : 'Has revivido.');
-      else avisos.push(`${mayuscula(q)} ha ${a.muerto ? 'muerto' : 'revivido'}.`);
+      if (q === null) avisa('muertes', a.muerto ? 'Has muerto.' : 'Has revivido.');
+      else avisa('muertes', `${mayuscula(q)} ha ${a.muerto ? 'muerto' : 'revivido'}.`);
     }
     if (previo.marcado !== a.marcado) {
       // Al pasar la calavera a otra ficha, basta con decir a cuál.
       // Al morir se le quita sola: basta con decir que ha muerto.
-      if (a.marcado) avisos.push(`Calavera para ${q ?? 'ti'}.`);
-      else if (!seMarca && !(a.muerto && !previo.muerto)) avisos.push(`Se quita la calavera a ${q ?? 'ti'}.`);
+      if (a.marcado) avisa('calavera', `Calavera para ${q ?? 'ti'}.`);
+      else if (!seMarca && !(a.muerto && !previo.muerto)) avisa('calavera', `Se quita la calavera a ${q ?? 'ti'}.`);
     }
   }
 
@@ -123,18 +133,18 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): string[
   if (nomAhora && (nomAhora.desde !== nomAntes?.desde || nomAhora.hasta !== nomAntes?.hasta)) {
     const sujeto = mayuscula(nominacionDe(nuevo, nomAhora.desde));
     if (nomAhora.desde === nomAhora.hasta) {
-      avisos.push(`${sujeto} se nomina.`);
+      avisa('nominaciones', `${sujeto} se nomina.`);
     } else {
       const objeto = nominacionDe(nuevo, nomAhora.hasta).replace(/^el /, 'al ');
-      avisos.push(`${sujeto} nomina ${objeto.startsWith('al ') ? objeto : `a ${objeto}`}.`);
+      avisa('nominaciones', `${sujeto} nomina ${objeto.startsWith('al ') ? objeto : `a ${objeto}`}.`);
     }
   } else if (nomAntes && !nomAhora && !seMarca && !nuevo.asientos.some((a) => antesAsiento.get(a.id)?.marcado && !a.marcado)) {
     // Si se ha cerrado al poner o quitar la calavera, ya se ha dicho eso.
-    avisos.push('Nominación cerrada.');
+    avisa('nominaciones', 'Nominación cerrada.');
   }
   const votAntes = nomAntes?.votacion;
   const votAhora = nomAhora?.votacion;
-  if (votAhora && !votAntes) avisos.push('Empieza la votación.');
+  if (votAhora && !votAntes) avisa('resultadoVotacion', 'Empieza la votación.');
   // Cada ficha por la que pasa la aguja: su nombre, y si vota, el total de votos.
   // (Quien use lector pondrá una velocidad de agujas que le dé tiempo a oírlo.)
   if (votAhora) {
@@ -142,14 +152,14 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): string[
     for (const id of votAhora.orden.slice(desdePaso, votAhora.paso)) {
       const nombre = mayuscula(nominacionDe(nuevo, id));
       const resultado = votAhora.resultados[id];
-      avisos.push(typeof resultado === 'number' ? `${nombre}, ${resultado}.` : `${nombre}.`);
+      avisa('votoAVoto', typeof resultado === 'number' ? `${nombre}, ${resultado}.` : `${nombre}.`);
     }
   }
   if (votAhora?.terminada && !votAntes?.terminada) {
-    avisos.push(`Votación terminada: ${votAhora.votos === 1 ? '1 voto' : `${votAhora.votos} votos`}.`);
+    avisa('resultadoVotacion', `Votación terminada: ${votAhora.votos === 1 ? '1 voto' : `${votAhora.votos} votos`}.`);
   }
   if (nomAhora?.cuentaAtrasFin && nomAhora.cuentaAtrasFin !== nomAntes?.cuentaAtrasFin) {
-    avisos.push(`Cuenta atrás: ${nuevo.configuracion.segundosCuentaAtras} segundos.`);
+    avisa('cuentaAtras', `Cuenta atrás: ${nuevo.configuracion.segundosCuentaAtras} segundos.`);
   }
 
   return avisos;

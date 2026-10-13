@@ -8,6 +8,7 @@ import {
   type AccionAtajo,
   type Atajo,
 } from './atajos';
+import { useAriaLive } from './avisosConfig';
 import { botonSecundario } from './estilos';
 
 interface PanelAtajosProps {
@@ -24,6 +25,7 @@ interface PanelAtajosProps {
 const PanelAtajos = ({ atajos, onCambiar }: PanelAtajosProps) => {
   const [escuchando, setEscuchando] = useState<AccionAtajo | null>(null);
   const [aviso, setAviso] = useState('');
+  const ariaLive = useAriaLive('preferencias');
   // Al capturar Espacio o Intro con el foco en «Cambiar», el navegador hace después
   // clic en el botón: ese clic se ignora para no volver a escuchar.
   const ignorarClicRef = useRef(false);
@@ -99,7 +101,7 @@ const PanelAtajos = ({ atajos, onCambiar }: PanelAtajosProps) => {
           </li>
         ))}
       </ul>
-      <p aria-live="polite" className="text-sm text-on-surface-muted">
+      <p aria-live={ariaLive} className="text-sm text-on-surface-muted">
         {aviso}
       </p>
     </div>

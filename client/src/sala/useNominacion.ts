@@ -113,6 +113,15 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
         ? {
             marcado: !!nominado?.marcado,
             puedeCuentaAtras: acciones.includes('narrador:cuentaAtras'),
+            marcaActual: (() => {
+              const marcado = asientos.find((a) => a.marcado);
+              if (!marcado) return null;
+              const { numero, ocupante } = datosAsiento(estado, marcado.id);
+              const votos = marcado.votosMarca;
+              return `${describirAsiento(numero, ocupante)}${votos === null ? '' : `, ${votos === 1 ? '1 voto' : `${votos} votos`}`}`;
+            })(),
+            // Desmarcar no cierra la nominación
+            onDesmarcar: acciones.includes('narrador:desmarcar') ? () => void actuar('narrador:desmarcar') : null,
             onCuentaAtras: () => actuar('narrador:cuentaAtras'),
             // Marcar (o desmarcar) cierra la nominación: el foco vuelve a la ficha de quien nominaba.
             onMarca: async () => {

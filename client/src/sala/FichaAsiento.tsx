@@ -41,8 +41,10 @@ interface FichaAsientoProps {
  * Mientras se elige a quién nomina, es un botón para elegirla. Un jugador con
  * grimorio puede cambiar las fichas en el suyo. Si no, solo se ve.
  *
- * Su nombre dice de qué asiento es, quién se sienta y su estado; al matar o
- * revivir el foco vuelve a ella, así que el lector oye el estado nuevo.
+ * Su nombre dice de qué asiento es y quién se sienta; su estado (muerta,
+ * calavera, mano, voto) va en la descripción, que se oye al llegar a ella pero
+ * no se anuncia al cambiar. Al matar o revivir el foco vuelve a ella, así que el
+ * lector oye el estado nuevo.
  */
 const FichaAsiento = ({ asiento, numero, ocupante, modo, pedir, onError, onNominar, eligiendo, voto }: FichaAsientoProps) => {
   const ficha = <FichaRedonda muerto={asiento.muerto} marcado={asiento.marcado} voto={voto} />;
@@ -104,7 +106,10 @@ const FichaAsiento = ({ asiento, numero, ocupante, modo, pedir, onError, onNomin
 
   const estado = [
     asiento.muerto && 'muerta',
-    asiento.marcado && 'con la calavera',
+    asiento.marcado &&
+      (asiento.votosMarca !== null && modo === 'narrador'
+        ? `con la calavera (${asiento.votosMarca === 1 ? '1 voto' : `${asiento.votosMarca} votos`})`
+        : 'con la calavera'),
     ocupante?.manoLevantada && `mano levantada (${nombreMano(ocupante.formaMano).toLocaleLowerCase('es')})`,
     voto === null && 'no vota',
     typeof voto === 'number' && `vota (${voto === 1 ? '1 voto' : `${voto} votos`})`,
@@ -113,9 +118,25 @@ const FichaAsiento = ({ asiento, numero, ocupante, modo, pedir, onError, onNomin
   return (
     <MenuDesplegable
       id={`sala-ficha-${asiento.id}`}
-      etiqueta={`Ficha del ${describirAsiento(numero, ocupante)}${estado.length ? `, ${estado.join(', ')}` : ''}`}
-      boton={ficha}
-      botonClassName="block cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      // Nombre fijo y el estado en la descripción: así, con el foco en la ficha, no se
+      // anuncia cada cambio (la mano que baja al votar, los votos…)
+      etiqueta={`Ficha del ${describirAsiento(numero, ocupante)}`}
+      descripcion={estado.length ? estado.join(', ') : undefined}
+      boton={
+        <>
+          {ficha}
+          {/* Para el narrador, con cuántos votos se puso la calavera (para ver empates) */}
+          {modo === 'narrador' && asiento.marcado && asiento.votosMarca !== null && (
+            <span
+              aria-hidden="true"
+              className="absolute -bottom-[12%] -left-[12%] flex h-[42%] min-w-[42%] items-center justify-center rounded-full border border-[#efe6d2] bg-[#2b211a] px-1 text-[calc(var(--sala-ficha,4.5rem)*0.22)] font-semibold text-[#efe6d2] shadow-md"
+            >
+              {asiento.votosMarca}
+            </span>
+          )}
+        </>
+      }
+      botonClassName="relative block cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       opciones={opciones}
     />
   );

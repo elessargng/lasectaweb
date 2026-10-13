@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import Agujas from './Agujas';
+import { useAriaLive, type TipoAviso } from './avisosConfig';
 import AsaMover from './AsaMover';
 import Asiento from './Asiento';
 import CuentaAtras from './CuentaAtras';
@@ -43,8 +44,8 @@ interface MesaProps {
   /** Pide una acción a la sala (ver `useSala`). */
   pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
   onError: (mensaje: string) => void;
-  /** Avisos solo para el lector (p. ej. que otro te ha levantado del asiento). */
-  onAnuncio: (mensaje: string) => void;
+  /** Avisos solo para el lector, con su tipo (p. ej. que otro te ha levantado del asiento). */
+  onAnuncio: (tipo: TipoAviso, mensaje: string) => void;
   /**
    * Cambio de asiento que ha pedido uno mismo (sentarse aquí, o levantarse desde
    * el menú de usuario): cuando llega, el foco va al nombre del asiento y no se
@@ -128,6 +129,7 @@ const Mesa = ({
   // jugador con grimorio, para cambiarlas en el suyo; si no, solo se ven.
   const modoFichas = acciones.includes('narrador:cambiarVida') ? 'narrador' : grimorio ? 'grimorio' : 'ver';
   const mesaRef = useRef<HTMLDivElement>(null);
+  const ariaLiveAsientos = useAriaLive('editarAsientos');
 
   // Lado de la mesa en pantalla, para los tamaños automáticos.
   const [ladoMesa, setLadoMesa] = useState(0);
@@ -143,8 +145,15 @@ const Mesa = ({
   useEffect(() => {
     onTamanos({ avatar, ficha });
   }, [avatar, ficha, onTamanos]);
-  const mover = useMoverAsientos({ asientos, participantes, mesaRef, pedir, onError, onAnuncio });
-  const nominar = useNominacion({ estado, pedir, onError, onAnuncio });
+  const mover = useMoverAsientos({
+    asientos,
+    participantes,
+    mesaRef,
+    pedir,
+    onError,
+    onAnuncio: (m) => onAnuncio('moverJugadores', m),
+  });
+  const nominar = useNominacion({ estado, pedir, onError, onAnuncio: (m) => onAnuncio('nominaciones', m) });
   // Asientos (desde 0) de quien nomina y del nominado, para las agujas.
   const { nominacion } = estado;
   const posicionDe = (id: string) => asientos.findIndex((a) => a.id === id);
@@ -156,7 +165,7 @@ const Mesa = ({
   // Lo que se arrastra con el puntero: se dibuja siguiéndolo.
   const arrastrado = mover.activo?.modo === 'puntero' ? mover.activo : null;
 
-  // Al sentarse o levantarse, el foco va al nombre del asiento («Asiento 3: Ana
+  // Al sentarse o levantarse, el foco va al nombre del asiento («3, Ana
   // (tú)» / «Asiento 3, libre») cuando llegue el cambio.
   // Mi asiento en la última pintura, para saber si otro me ha levantado.
   const miAsientoRef = useRef<string | null>(null);
@@ -181,12 +190,12 @@ const Mesa = ({
     const narro = participantes.some((p) => p.id === yo && p.rol === 'narrador');
     if (antes && ahora && antes !== ahora) {
       // Me han cambiado de sitio (mezclar).
-      onAnuncio(`Ahora estás en el asiento ${asientos.findIndex((a) => a.id === ahora) + 1}.`);
+      onAnuncio('miAsiento', `Ahora estás en el asiento ${asientos.findIndex((a) => a.id === ahora) + 1}.`);
       return;
     }
     if (antes && antes !== ahora) {
       const sigue = asientos.some((a) => a.id === antes);
-      if (!narro) onAnuncio(sigue ? 'Te han levantado del asiento.' : 'Se ha eliminado tu asiento.');
+      if (!narro) onAnuncio('miAsiento', sigue ? 'Te han levantado del asiento.' : 'Se ha eliminado tu asiento.');
       const perdido = !document.activeElement || document.activeElement === document.body;
       if (perdido) document.getElementById(sigue ? idNombreAsiento(antes) : 'sala-asientos')?.focus();
     }
@@ -208,7 +217,7 @@ const Mesa = ({
     setPidiendo(false);
     if (!r.ok) onError(r.error);
     // Al mezclar no cambia nada donde está el foco: se le dice al lector.
-    else if (cambio === 'mezclar') onAnuncio('Jugadores mezclados.');
+    else if (cambio === 'mezclar') onAnuncio('mezclar', 'Jugadores mezclados.');
   };
 
   // Sin `disabled` (tiraría el foco al body): se marcan y no hacen nada.
@@ -361,7 +370,7 @@ const Mesa = ({
               key={nominacion.cuentaAtrasFin}
               fin={nominacion.cuentaAtrasFin}
               desfase={desfaseReloj}
-              onTermina={() => onAnuncio('Tiempo.')}
+              onTermina={() => onAnuncio('cuentaAtras', 'Tiempo.')}
             />
           )}
           {nominar.cancelar && (
@@ -378,7 +387,7 @@ const Mesa = ({
           )}
           {editando && (
             <div className="flex flex-col items-center gap-3 rounded border border-outline-ghost bg-surface/90 p-4">
-              <p aria-live="polite" className="text-sm text-on-surface-muted">
+              <p aria-live={ariaLiveAsientos} className="text-sm text-on-surface-muted">
                 {textoAsientos(total)}
               </p>
               <button
