@@ -12,6 +12,12 @@ interface CuadroAvatarProps {
   pie?: ReactNode;
   /** Cuadro sin nadie: borde discontinuo. */
   vacio?: boolean;
+  /**
+   * El pie va fuera de la caja del componente, que mide solo el cuadro, para
+   * colocarlo por su centro (asientos de la mesa): encima (jugadores, porque
+   * debajo van las fichas) o debajo. Sin esto, va debajo dentro de la caja.
+   */
+  pieFuera?: 'arriba' | 'abajo';
 }
 
 /**
@@ -21,8 +27,8 @@ interface CuadroAvatarProps {
  *
  * La imagen no se lee (alt vacío): el pie dice de quién es.
  */
-const CuadroAvatar = ({ titulo, imagen, contenido, pie, vacio = false }: CuadroAvatarProps) => (
-  <div className="w-[var(--sala-avatar,10rem)]">
+const CuadroAvatar = ({ titulo, imagen, contenido, pie, vacio = false, pieFuera }: CuadroAvatarProps) => (
+  <div className="relative w-[var(--sala-avatar,10rem)]">
     {titulo && (
       <p aria-hidden="true" className="mb-1 truncate text-center text-xs font-semibold uppercase tracking-wide text-theme-main">
         {titulo}
@@ -35,7 +41,11 @@ const CuadroAvatar = ({ titulo, imagen, contenido, pie, vacio = false }: CuadroA
     >
       {contenido ?? (imagen && <img src={getAvatarUrl(imagen)} alt="" className="h-full w-full object-cover" />)}
     </div>
-    {pie}
+    {pieFuera ? (
+      <div className={`absolute left-0 w-full ${pieFuera === 'arriba' ? 'bottom-full' : 'top-full'}`}>{pie}</div>
+    ) : (
+      pie
+    )}
   </div>
 );
 

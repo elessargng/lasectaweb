@@ -1,17 +1,30 @@
-import { useState, type FormEvent } from 'react';
+import { ImagePlus } from 'lucide-react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { getAvatarUrl } from '../utils/api';
+import { compressImage } from '../utils/image';
 import { AVATAR_INVITADO, AVATARES_SALA } from './avatares';
 import { botonPrincipal } from './estilos';
 import { NOMBRE_MAX } from './invitado';
 
-export type ResultadoPerfil = { ok: true } | { ok: false; error: string; campo: 'nombre' | 'avatar' };
+/** Si sale bien, `avatar` es cómo queda guardado (la ruta, si se ha subido una imagen). */
+export type ResultadoPerfil = { ok: true; avatar: string } | { ok: false; error: string; campo: 'nombre' | 'avatar' };
+
+/** Lado máximo con el que se sube una imagen propia: el de los cuadros más grandes. */
+const LADO_IMAGEN_PROPIA = 256;
+
+/** Una imagen propia ya subida a la sala (las predefinidas van por /avatar(s)…). */
+const esImagenPropia = (avatar: string) => avatar.startsWith('/uploads/sala/');
 
 interface PanelUsuarioProps {
   nombreActual: string;
-  /** Avatar elegido para la sala; vacío: el por defecto (el de la cuenta, o el logo si es invitado). */
+  /**
+   * Avatar elegido para la sala; vacío: el por defecto (el de la cuenta, o el
+   * logo si es invitado). Puede ser una imagen propia, que solo cambia la sala.
+   */
   avatarElegido: string;
   /** Con cuenta: el avatar de su cuenta en la web (null si no tiene). */
   cuenta: { avatar: string | null } | null;
+  /** `avatar` puede ser una imagen nueva en base64 (data URL), que se sube al guardar. */
   onGuardar: (nombre: string, avatar: string) => Promise<ResultadoPerfil>;
 }
 
@@ -22,6 +35,8 @@ const inputClass =
 const PanelUsuario = ({ nombreActual, avatarElegido, cuenta, onGuardar }: PanelUsuarioProps) => {
   const [nombre, setNombre] = useState(nombreActual);
   const [avatar, setAvatar] = useState(avatarElegido);
+  // Imagen propia: la ya subida, o una nueva elegida aquí (data URL) hasta guardar.
+  const [propia, setPropia] = useState<string | null>(esImagenPropia(avatarElegido) ? avatarElegido : null);
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<ResultadoPerfil | null>(null);
   const error = resultado && !resultado.ok ? resultado : null;
@@ -31,8 +46,28 @@ const PanelUsuario = ({ nombreActual, avatarElegido, cuenta, onGuardar }: PanelU
     if (enviando) return;
     setEnviando(true);
     setResultado(null);
-    setResultado(await onGuardar(nombre, avatar));
+    const r = await onGuardar(nombre, avatar);
+    // Una imagen nueva queda guardada con su ruta: se cambia, para no volver a subirla.
+    if (r.ok && r.avatar !== avatar) {
+      setAvatar(r.avatar);
+      setPropia(r.avatar);
+    }
+    setResultado(r);
     setEnviando(false);
+  };
+
+  const elegirImagen = async (e: ChangeEvent<HTMLInputElement>) => {
+    const archivo = e.target.files?.[0];
+    e.target.value = '';
+    if (!archivo) return;
+    setResultado(null);
+    try {
+      const imagen = await compressImage(archivo, LADO_IMAGEN_PROPIA);
+      setPropia(imagen);
+      setAvatar(imagen);
+    } catch {
+      setResultado({ ok: false, error: 'No se pudo leer la imagen. Prueba con otra.', campo: 'avatar' });
+    }
   };
 
   // La primera opción (valor vacío) es la de por defecto: el avatar de la cuenta o,
@@ -43,6 +78,7 @@ const PanelUsuario = ({ nombreActual, avatarElegido, cuenta, onGuardar }: PanelU
   const opciones = [
     porDefecto,
     ...AVATARES_SALA.filter((a) => cuenta || a.url !== AVATAR_INVITADO).map((a) => ({ ...a, imagen: a.url })),
+    ...(propia ? [{ url: propia, etiqueta: 'Tu imagen', imagen: propia }] : []),
   ];
 
   return (
@@ -71,7 +107,7 @@ const PanelUsuario = ({ nombreActual, avatarElegido, cuenta, onGuardar }: PanelU
         )}
       </div>
 
-      <fieldset>
+      <fieldset aria-describedby={error?.campo === 'avatar' ? 'sala-pref-error' : undefined}>
         <legend className="mb-2 text-sm text-on-surface-muted">Avatar</legend>
         <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-3">
           {opciones.map((o) => (
@@ -92,7 +128,19 @@ const PanelUsuario = ({ nombreActual, avatarElegido, cuenta, onGuardar }: PanelU
               </span>
             </label>
           ))}
+          {/* Subir una imagen propia: solo cambia la sala, no el perfil de la web */}
+          <label className="flex cursor-pointer flex-col items-center gap-1 rounded p-1 text-center text-xs opacity-70 hover:opacity-100 focus-within:opacity-100 focus-within:ring-2 focus-within:ring-theme-main">
+            <span
+              aria-hidden="true"
+              className="flex aspect-square w-full items-center justify-center rounded border border-dashed border-outline-ghost bg-background"
+            >
+              <ImagePlus className="h-1/3 w-1/3 text-on-surface-muted" />
+            </span>
+            Subir imagen
+            <input type="file" accept="image/*" onChange={elegirImagen} className="sr-only" />
+          </label>
         </div>
+        <p className="mt-2 text-xs text-on-surface-muted">Tu imagen solo se verá en la sala; no cambia tu perfil.</p>
       </fieldset>
 
       <div aria-live="polite">
@@ -102,6 +150,9 @@ const PanelUsuario = ({ nombreActual, avatarElegido, cuenta, onGuardar }: PanelU
           </p>
         )}
         {resultado?.ok && <p className="text-sm text-on-surface-muted">Guardado.</p>}
+        {!resultado && avatar.startsWith('data:') && (
+          <p className="text-sm text-on-surface-muted">Imagen elegida. Pulsa Guardar para usarla.</p>
+        )}
       </div>
 
       <div>

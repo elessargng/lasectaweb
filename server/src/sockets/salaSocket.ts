@@ -43,14 +43,31 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
   const difundir = () => {
     const participantes = sala.participantes();
     const asientos = sala.asientos();
+    const configuracion = sala.configuracion();
+    const nominacion = sala.nominacion();
+    const votaciones = sala.votaciones();
+    const ahora = Date.now();
     for (const { socketId, clave, id } of sala.conexiones()) {
       const yo = sala.participanteDe(clave)!;
-      const estado: SalaEstado = { participantes, asientos, yo: id, acciones: accionesPermitidas(sala, yo) };
+      const estado: SalaEstado = {
+        participantes,
+        asientos,
+        configuracion,
+        nominacion,
+        ahora,
+        // El registro de votaciones es solo para los narradores.
+        votaciones: yo.rol === 'narrador' ? votaciones : [],
+        yo: id,
+        acciones: accionesPermitidas(sala, yo),
+      };
       io.to(socketId).emit('sala:estado', estado);
     }
   };
 
   const conexionViva = (socketId: string) => io.sockets.sockets.has(socketId);
+
+  // La votación avanza sola con el tiempo: cada paso se manda a todos.
+  sala.alCambiarSola = difundir;
 
   io.use(async (socket, next) => {
     const { token, nombre, alias, avatar, clienteId } = socket.handshake.auth ?? {};
@@ -101,7 +118,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     // Su cuenta ya estaba en la sala desde otra conexión: esa se cierra. El aviso
     // llega antes que el cierre, y el cliente no intenta reconectar.
     if (expulsar) {
-      io.to(expulsar).emit('sala:expulsado');
+      io.to(expulsar).emit('sala:expulsado', { motivo: 'otraConexion' });
       io.sockets.sockets.get(expulsar)?.disconnect(true);
     }
     difundir();
@@ -109,8 +126,13 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     // Una sola puerta para todas las acciones: { accion, datos } y respuesta por ack.
     socket.on('sala:accion', (peticion: { accion?: unknown; datos?: unknown } | null, ack?: (r: SalaResultado) => void) => {
       const nombre = typeof peticion?.accion === 'string' ? peticion.accion : '';
-      const resultado = ejecutarAccion(sala, sala.participanteDe(clave), nombre, peticion?.datos);
+      const { expulsar: expulsados = [], ...resultado } = ejecutarAccion(sala, sala.participanteDe(clave), nombre, peticion?.datos);
       if (typeof ack === 'function') ack(resultado);
+      // Expulsados por un narrador: se les avisa y se cierra su conexión (sin reintento).
+      for (const socketId of expulsados) {
+        io.to(socketId).emit('sala:expulsado', { motivo: 'narrador' });
+        io.sockets.sockets.get(socketId)?.disconnect(true);
+      }
       if (resultado.ok) difundir();
     });
 

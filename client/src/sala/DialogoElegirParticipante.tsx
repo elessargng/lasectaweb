@@ -11,6 +11,8 @@ interface DialogoElegirParticipanteProps {
   /** Qué decir si no hay a quién elegir. */
   sinCandidatos: string;
   candidatos: SalaParticipante[];
+  /** Algo más que decir de cada candidato («asiento 3»). */
+  detalle?: (p: SalaParticipante) => string;
   onElegir: (participanteId: string) => Promise<SalaResultado>;
   onCerrar: () => void;
 }
@@ -24,6 +26,7 @@ const DialogoElegirParticipante = ({
   confirmar,
   sinCandidatos,
   candidatos,
+  detalle,
   onElegir,
   onCerrar,
 }: DialogoElegirParticipanteProps) => {
@@ -80,6 +83,7 @@ const DialogoElegirParticipante = ({
                   <option key={p.id} value={p.id}>
                     {p.nombre}
                     {p.conCuenta ? '' : ' (invitado)'}
+                    {detalle ? `, ${detalle(p)}` : ''}
                   </option>
                 ))}
               </select>

@@ -1,4 +1,5 @@
-export const compressImage = (file: File): Promise<string> => {
+/** Reduce la imagen a `maxLado` píxeles como mucho (150 por defecto) y la devuelve como JPEG en base64. */
+export const compressImage = (file: File, maxLado = 150): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -7,8 +8,8 @@ export const compressImage = (file: File): Promise<string> => {
       img.src = event.target?.result as string;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 150;
-        const MAX_HEIGHT = 150;
+        const MAX_WIDTH = maxLado;
+        const MAX_HEIGHT = maxLado;
         let width = img.width;
         let height = img.height;
 

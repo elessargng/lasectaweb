@@ -1,0 +1,156 @@
+import { nombreMano } from './formasMano';
+import { datosAsiento } from './nombresAsiento';
+import type { SalaEstado, SalaParticipante } from './useSala';
+
+/**
+ * Qué decirle al lector cuando cambia la sala por algo que han hecho otros:
+ * quién narra, quién entra o sale narrando, quién se sienta o se levanta, quién
+ * levanta o baja la mano; qué fichas mueren, reviven o llevan la calavera, y las
+ * nominaciones (con su cuenta atrás y su votación). Solo frases cortas (van a un aria-live polite) y casi nunca
+ * sobre uno mismo, que tiene sus propios avisos (foco, «Te han levantado»…);
+ * sí se dice si uno muere o revive.
+ *
+ * Los cambios de sitio de quien ya estaba sentado (mezclar, mover) no se dicen
+ * uno a uno: serían una ráfaga.
+ */
+export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): string[] {
+  const yo = nuevo.yo;
+  const antes = new Map(anterior.participantes.map((p) => [p.id, p]));
+  const ahora = new Map(nuevo.participantes.map((p) => [p.id, p]));
+  const narra = (p?: SalaParticipante) => p?.rol === 'narrador';
+  const avisos: string[] = [];
+
+  // Narradores: quién empieza o deja de narrar, entra, se va o pierde la conexión.
+  for (const p of nuevo.participantes) {
+    const previo = antes.get(p.id);
+    if (!narra(p)) continue;
+    if (p.id === yo) {
+      if (!narra(previo)) avisos.push('Ahora eres narrador.');
+    } else if (!previo) {
+      avisos.push(`${p.nombre}, que narra, ha entrado en la sala.`);
+    } else if (!narra(previo)) {
+      avisos.push(`${p.nombre} ahora narra.`);
+    } else if (previo.conectado && !p.conectado) {
+      avisos.push(`${p.nombre}, que narra, ha perdido la conexión.`);
+    } else if (!previo.conectado && p.conectado) {
+      avisos.push(`${p.nombre}, que narra, ha vuelto.`);
+    }
+  }
+  const narrabanAntes = anterior.participantes.filter((p) => narra(p));
+  const quedanNarradores = nuevo.participantes.some((p) => narra(p));
+  for (const p of narrabanAntes) {
+    const actual = ahora.get(p.id);
+    if (narra(actual)) continue;
+    if (p.id === yo) avisos.push('Ya no eres narrador.');
+    else if (!actual) avisos.push(`${p.nombre}, que narraba, se ha ido de la sala.`);
+    else if (quedanNarradores) avisos.push(`${p.nombre} ya no narra.`);
+  }
+  if (narrabanAntes.length > 0 && !quedanNarradores) avisos.push('La sala se ha quedado sin narrador.');
+
+  // Asientos: quién se sienta y quién se levanta (o se va y lo deja libre).
+  const asientoDe = (e: SalaEstado, id: string) => e.asientos.findIndex((a) => a.ocupante === id) + 1;
+  for (const a of anterior.asientos) {
+    if (!a.ocupante || a.ocupante === yo || asientoDe(nuevo, a.ocupante)) continue;
+    const quien = antes.get(a.ocupante);
+    const actual = ahora.get(a.ocupante);
+    const numero = asientoDe(anterior, a.ocupante);
+    if (!quien) continue;
+    if (!actual) avisos.push(`${quien.nombre} se ha ido y deja libre el asiento ${numero}.`);
+    // Si se ha levantado para narrar, ya se ha dicho que ahora narra.
+    else if (!narra(actual)) avisos.push(`${quien.nombre} se levanta del asiento ${numero}.`);
+  }
+  for (const a of nuevo.asientos) {
+    if (!a.ocupante || a.ocupante === yo || asientoDe(anterior, a.ocupante)) continue;
+    const quien = ahora.get(a.ocupante);
+    if (quien) avisos.push(`${quien.nombre} se sienta en el asiento ${asientoDe(nuevo, a.ocupante)}.`);
+  }
+
+  const forma = (p: SalaParticipante) => nombreMano(p.formaMano).toLocaleLowerCase('es');
+  // Manos levantadas (las propias las avisa quien la levanta).
+  for (const p of nuevo.participantes) {
+    const previo = antes.get(p.id);
+    if (!previo || p.id === yo || previo.manoLevantada === p.manoLevantada) continue;
+    // Bajarla por levantarse del asiento no se dice (ya se dice que se levanta), ni
+    // al contarse su voto (se baja sola; ya se dice que vota).
+    if (!p.manoLevantada && p.rol !== 'jugador') continue;
+    const votoContado = (() => {
+      const v = nuevo.nominacion?.votacion;
+      const pasoAntes = anterior.nominacion?.votacion?.paso ?? 0;
+      return !!v && v.orden.slice(pasoAntes, v.paso).some((id) => nuevo.asientos.find((a) => a.id === id)?.ocupante === p.id);
+    })();
+    if (!p.manoLevantada && votoContado) continue;
+    avisos.push(p.manoLevantada ? `${p.nombre} levanta la mano (${forma(p)}).` : `${p.nombre} baja la mano.`);
+  }
+  // Cambio de forma con la mano levantada (con ella bajada no se ve).
+  for (const p of nuevo.participantes) {
+    const previo = antes.get(p.id);
+    if (!previo || p.id === yo || !p.manoLevantada || !previo.manoLevantada || previo.formaMano === p.formaMano) continue;
+    avisos.push(`${p.nombre} cambia la mano a ${forma(p)}.`);
+  }
+
+  // Fichas: quién (o qué asiento) muere, revive o lleva la calavera.
+  // «Bea» si hay alguien sentado; si no, «la ficha del asiento 3». A uno mismo, «Has muerto».
+  const quien = (e: SalaEstado, asientoId: string) => {
+    const { numero, ocupante } = datosAsiento(e, asientoId);
+    return ocupante ? (ocupante.id === yo ? null : ocupante.nombre) : `la ficha del asiento ${numero}`;
+  };
+  const mayuscula = (t: string) => t.charAt(0).toLocaleUpperCase('es') + t.slice(1);
+  const antesAsiento = new Map(anterior.asientos.map((a) => [a.id, a]));
+  const seMarca = nuevo.asientos.some((a) => a.marcado && !antesAsiento.get(a.id)?.marcado);
+  for (const a of nuevo.asientos) {
+    const previo = antesAsiento.get(a.id);
+    if (!previo) continue;
+    const q = quien(nuevo, a.id);
+    if (previo.muerto !== a.muerto) {
+      if (q === null) avisos.push(a.muerto ? 'Has muerto.' : 'Has revivido.');
+      else avisos.push(`${mayuscula(q)} ha ${a.muerto ? 'muerto' : 'revivido'}.`);
+    }
+    if (previo.marcado !== a.marcado) {
+      // Al pasar la calavera a otra ficha, basta con decir a cuál.
+      // Al morir se le quita sola: basta con decir que ha muerto.
+      if (a.marcado) avisos.push(`Calavera para ${q ?? 'ti'}.`);
+      else if (!seMarca && !(a.muerto && !previo.muerto)) avisos.push(`Se quita la calavera a ${q ?? 'ti'}.`);
+    }
+  }
+
+  // Nominación: de qué ficha a qué ficha, la cuenta atrás y el cierre.
+  const nomAntes = anterior.nominacion;
+  const nomAhora = nuevo.nominacion;
+  const nominacionDe = (e: SalaEstado, id: string) => {
+    const { numero, ocupante } = datosAsiento(e, id);
+    return ocupante ? ocupante.nombre : `el asiento ${numero}`;
+  };
+  if (nomAhora && (nomAhora.desde !== nomAntes?.desde || nomAhora.hasta !== nomAntes?.hasta)) {
+    const sujeto = mayuscula(nominacionDe(nuevo, nomAhora.desde));
+    if (nomAhora.desde === nomAhora.hasta) {
+      avisos.push(`${sujeto} se nomina.`);
+    } else {
+      const objeto = nominacionDe(nuevo, nomAhora.hasta).replace(/^el /, 'al ');
+      avisos.push(`${sujeto} nomina ${objeto.startsWith('al ') ? objeto : `a ${objeto}`}.`);
+    }
+  } else if (nomAntes && !nomAhora && !seMarca && !nuevo.asientos.some((a) => antesAsiento.get(a.id)?.marcado && !a.marcado)) {
+    // Si se ha cerrado al poner o quitar la calavera, ya se ha dicho eso.
+    avisos.push('Nominación cerrada.');
+  }
+  const votAntes = nomAntes?.votacion;
+  const votAhora = nomAhora?.votacion;
+  if (votAhora && !votAntes) avisos.push('Empieza la votación.');
+  // Cada ficha por la que pasa la aguja: su nombre, y si vota, el total de votos.
+  // (Quien use lector pondrá una velocidad de agujas que le dé tiempo a oírlo.)
+  if (votAhora) {
+    const desdePaso = votAntes ? votAntes.paso : 0;
+    for (const id of votAhora.orden.slice(desdePaso, votAhora.paso)) {
+      const nombre = mayuscula(nominacionDe(nuevo, id));
+      const resultado = votAhora.resultados[id];
+      avisos.push(typeof resultado === 'number' ? `${nombre}, ${resultado}.` : `${nombre}.`);
+    }
+  }
+  if (votAhora?.terminada && !votAntes?.terminada) {
+    avisos.push(`Votación terminada: ${votAhora.votos === 1 ? '1 voto' : `${votAhora.votos} votos`}.`);
+  }
+  if (nomAhora?.cuentaAtrasFin && nomAhora.cuentaAtrasFin !== nomAntes?.cuentaAtrasFin) {
+    avisos.push(`Cuenta atrás: ${nuevo.configuracion.segundosCuentaAtras} segundos.`);
+  }
+
+  return avisos;
+}

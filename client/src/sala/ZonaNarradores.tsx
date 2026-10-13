@@ -14,8 +14,9 @@ interface ZonaNarradoresProps {
 }
 
 /**
- * Arriba a la izquierda: un cuadro por narrador, uno al lado del otro, y debajo
- * «Hacerse narrador» si el servidor lo permite (`estado.acciones`). Las opciones
+ * Arriba a la izquierda: un cuadro por narrador, uno al lado del otro. Sin
+ * narrador, un cuadro vacío con «Hacerse narrador» dentro si el servidor lo
+ * permite (`estado.acciones`); también está en el menú de usuario. Las opciones
  * del narrador van en la cabecera (MenuNarrador).
  */
 const ZonaNarradores = ({ estado, pedir, onError }: ZonaNarradoresProps) => {
@@ -53,21 +54,25 @@ const ZonaNarradores = ({ estado, pedir, onError }: ZonaNarradoresProps) => {
           titulo="Narrador"
           vacio
           contenido={
-            <p id={ID_SIN_NARRADOR} tabIndex={-1} className="text-center text-sm text-on-surface-muted focus:outline-none">
-              La sala no tiene narrador.
-            </p>
+            <div className="flex flex-col items-center gap-2 text-center">
+              {/* No se ve (el cuadro vacío ya lo dice), pero el lector lo lee y recibe el foco al quedarse la sala sin narrador */}
+              <p id={ID_SIN_NARRADOR} tabIndex={-1} className="sr-only">
+                La sala no tiene narrador.
+              </p>
+              {puede('sala:hacerseNarrador') && (
+                <button
+                  type="button"
+                  onClick={hacerseNarrador}
+                  aria-disabled={pidiendo}
+                  className={`${botonPrincipal} px-2 py-1 text-xs`}
+                >
+                  Hacerse narrador
+                </button>
+              )}
+            </div>
           }
         />
       )}
-
-      {puede('sala:hacerseNarrador') && (
-        <div className="w-40">
-          <button type="button" onClick={hacerseNarrador} aria-disabled={pidiendo} className={`${botonPrincipal} w-full`}>
-            Hacerse narrador
-          </button>
-        </div>
-      )}
-
     </div>
   );
 };

@@ -8,6 +8,8 @@ interface MenuUsuarioProps {
   conCuenta: boolean;
   /** Abre las preferencias (el diálogo lo pinta la sala). */
   onPreferencias: () => void;
+  /** Opciones según tu situación en la sala (hacerse narrador, levantarse, dejar de narrar); van entre Preferencias y salir. */
+  enLaSala: OpcionMenu[];
   onSalir: () => void;
 }
 
@@ -16,9 +18,10 @@ interface MenuUsuarioProps {
  * sus opciones. El nombre accesible del botón empieza por el nombre visible y
  * añade «tus opciones», para que se entienda qué abre.
  */
-const MenuUsuario = ({ nombre, avatar, conCuenta, onPreferencias, onSalir }: MenuUsuarioProps) => {
+const MenuUsuario = ({ nombre, avatar, conCuenta, onPreferencias, enLaSala, onSalir }: MenuUsuarioProps) => {
   const opciones: OpcionMenu[] = [
     { id: 'preferencias', etiqueta: 'Preferencias', abreDialogo: true, elegir: onPreferencias },
+    ...enLaSala,
     { id: 'salir', etiqueta: conCuenta ? 'Cerrar sesión' : 'Salir de la sala', elegir: onSalir },
   ];
 

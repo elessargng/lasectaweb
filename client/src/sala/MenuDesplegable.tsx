@@ -5,6 +5,10 @@ export interface OpcionMenu {
   etiqueta: string;
   /** Abre un diálogo en lugar de actuar directamente. */
   abreDialogo?: boolean;
+  /** Aún no hace nada (p. ej. «próximamente»): se ve y se lee, pero no actúa. */
+  deshabilitada?: boolean;
+  /** Es la elegida de un grupo (p. ej. la forma de la mano): se lee como pulsada y lleva ✓. */
+  marcada?: boolean;
   /** Para las que actúan directamente: devuelve si salió bien. */
   elegir: () => Promise<boolean> | void;
 }
@@ -23,7 +27,7 @@ interface MenuDesplegableProps {
 }
 
 const opcionClass =
-  'w-full text-left px-3 py-2 text-sm text-on-surface hover:bg-theme-container focus:outline-none focus-visible:bg-theme-container';
+  'w-full text-left px-3 py-2 text-sm text-on-surface hover:bg-theme-container focus:outline-none focus-visible:bg-theme-container aria-disabled:text-on-surface-muted aria-disabled:hover:bg-transparent';
 
 /**
  * Botón que despliega una lista de botones (no un menú ARIA): se recorre con Tab
@@ -68,6 +72,7 @@ const MenuDesplegable = ({ id, boton, etiqueta, botonClassName, opciones, alinea
   // diálogo lo devuelva ahí al cerrarse. Si actúa y sale bien, el cambio de la
   // sala mueve el foco; cerrar antes lo dejaría en el aire mientras responde.
   const elegir = async (opcion: OpcionMenu) => {
+    if (opcion.deshabilitada) return;
     if (opcion.abreDialogo) {
       cerrar();
       opcion.elegir();
@@ -101,9 +106,16 @@ const MenuDesplegable = ({ id, boton, etiqueta, botonClassName, opciones, alinea
             <button
               type="button"
               aria-haspopup={opcion.abreDialogo ? 'dialog' : undefined}
+              aria-disabled={opcion.deshabilitada || undefined}
+              aria-pressed={opcion.marcada === undefined ? undefined : opcion.marcada}
               onClick={() => elegir(opcion)}
               className={opcionClass}
             >
+              {opcion.marcada !== undefined && (
+                <span aria-hidden="true" className="mr-2 inline-block w-3">
+                  {opcion.marcada ? '✓' : ''}
+                </span>
+              )}
               {opcion.etiqueta}
             </button>
           </li>
