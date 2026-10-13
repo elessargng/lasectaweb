@@ -18,7 +18,9 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
 
     jwt.verify(token, JWT_SECRET, (err, user) => {
       if (err) {
-        res.status(403).json({ error: 'Tu sesión ha expirado o el token es inválido. Por favor, vuelve a iniciar sesión.' });
+        // 401 (no 403) y un código propio: el cliente lo usa para dar la sesión por
+        // cerrada, y no confundirlo con un «no tienes permisos».
+        res.status(401).json({ error: 'Tu sesión ha caducado. Vuelve a iniciar sesión.', code: 'SESSION_EXPIRED' });
         return;
       }
 
@@ -26,7 +28,7 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
       next();
     });
   } else {
-    res.status(401).json({ error: 'No autorizado. Token no proporcionado.' });
+    res.status(401).json({ error: 'Necesitas iniciar sesión para hacer esto.', code: 'NO_SESSION' });
   }
 };
 

@@ -32,12 +32,12 @@ const Button: React.FC<ButtonProps> = ({
   const content = (
     <>
       {!isTextVariant && (
-        <>
+        <span aria-hidden="true">
           <span className="btn-rune btn-rune-tl">ᚠ</span>
           <span className="btn-rune btn-rune-tr">ᚦ</span>
           <span className="btn-rune btn-rune-bl">ᚨ</span>
           <span className="btn-rune btn-rune-br">ᛟ</span>
-        </>
+        </span>
       )}
       {children}
     </>

@@ -4,6 +4,7 @@ import Button from '../Button';
 import type { Ritual, RitualInput, RitualStatus, RitualType, Storyteller } from '../../utils/ritualsApi';
 import { RITUAL_KINDS, alpha, kindFromParts } from './ritualKinds';
 import { describeMonthlyPosition, toLocalDateInput, toLocalInput } from './ritualDates';
+import Dialog from '../Dialog';
 
 interface RitualFormModalProps {
   isOpen: boolean;
@@ -157,13 +158,13 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
 
   return (
     <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
-      <div className="bg-theme-container border border-outline-ghost rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <Dialog onClose={onClose} labelledBy="ritual-form-titulo" className="bg-theme-container border border-outline-ghost rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between p-5 border-b border-outline-ghost/50 bg-surface-container/40 shrink-0">
-          <h3 className="text-xl font-display text-on-surface font-semibold flex items-center gap-2">
+          <h3 id="ritual-form-titulo" className="text-xl font-display text-on-surface font-semibold flex items-center gap-2">
             <Sparkles className="w-5 h-5" style={{ color: accent }} />
             <span>{ritual ? 'Modificar ritual' : 'Convocar un ritual'}</span>
           </h3>
-          <button onClick={onClose} className="text-on-surface-muted hover:text-on-surface">
+          <button type="button" onClick={onClose} aria-label="Cerrar" className="text-on-surface-muted hover:text-on-surface">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -236,8 +237,8 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
           )}
 
           <div>
-            <label className={labelClass}>Título</label>
-            <input
+            <label htmlFor="ritual-titulo" className={labelClass}>Título</label>
+            <input id="ritual-titulo"
               type="text"
               required
               value={title}
@@ -249,18 +250,18 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
 
           {isGame ? (
             <div>
-              <label className={labelClass}>Convocatoria</label>
-              <input type="datetime-local" required value={startsAt} onChange={(e) => setStartsAt(e.target.value)} className={inputClass} />
+              <label htmlFor="ritual-convocatoria" className={labelClass}>Convocatoria</label>
+              <input id="ritual-convocatoria" type="datetime-local" required value={startsAt} onChange={(e) => setStartsAt(e.target.value)} className={inputClass} />
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={labelClass}>Empieza</label>
-                <input type="datetime-local" required value={startsAt} onChange={(e) => setStartsAt(e.target.value)} className={inputClass} />
+                <label htmlFor="ritual-empieza" className={labelClass}>Empieza</label>
+                <input id="ritual-empieza" type="datetime-local" required value={startsAt} onChange={(e) => setStartsAt(e.target.value)} className={inputClass} />
               </div>
               <div>
-                <label className={labelClass}>Termina</label>
-                <input type="datetime-local" value={endsAt} min={startsAt} onChange={(e) => setEndsAt(e.target.value)} className={inputClass} />
+                <label htmlFor="ritual-termina" className={labelClass}>Termina</label>
+                <input id="ritual-termina" type="datetime-local" value={endsAt} min={startsAt} onChange={(e) => setEndsAt(e.target.value)} className={inputClass} />
               </div>
             </div>
           )}
@@ -301,8 +302,8 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {recurrence === 'otra' && (
                     <div>
-                      <label className={labelClass}>Repetir cada (días)</label>
-                      <input
+                      <label htmlFor="ritual-repetir-cada" className={labelClass}>Repetir cada (días)</label>
+                      <input id="ritual-repetir-cada"
                         type="number"
                         min={1}
                         max={365}
@@ -314,8 +315,8 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
                     </div>
                   )}
                   <div>
-                    <label className={labelClass}>Hasta (opcional)</label>
-                    <input
+                    <label htmlFor="ritual-hasta" className={labelClass}>Hasta (opcional)</label>
+                    <input id="ritual-hasta"
                       type="date"
                       value={recurrenceUntil}
                       min={startsAt.slice(0, 10)}
@@ -330,8 +331,8 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
 
           {!isOnline && (
             <div>
-              <label className={labelClass}>Lugar</label>
-              <input
+              <label htmlFor="ritual-lugar" className={labelClass}>Lugar</label>
+              <input id="ritual-lugar"
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
@@ -357,8 +358,8 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
           {isGame && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="sm:col-span-1">
-                <label className={labelClass}>Guion</label>
-                <input
+                <label htmlFor="ritual-guion" className={labelClass}>Guion</label>
+                <input id="ritual-guion"
                   type="text"
                   value={scriptName}
                   onChange={(e) => setScriptName(e.target.value)}
@@ -367,8 +368,8 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
                 />
               </div>
               <div>
-                <label className={labelClass}>Narrador</label>
-                <select value={storytellerId} onChange={(e) => setStorytellerId(e.target.value)} className={inputClass}>
+                <label htmlFor="ritual-narrador" className={labelClass}>Narrador</label>
+                <select id="ritual-narrador" value={storytellerId} onChange={(e) => setStorytellerId(e.target.value)} className={inputClass}>
                   <option value="">Sin asignar</option>
                   {storytellers.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -378,8 +379,8 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
                 </select>
               </div>
               <div>
-                <label className={labelClass}>Plazas</label>
-                <input
+                <label htmlFor="ritual-plazas" className={labelClass}>Plazas</label>
+                <input id="ritual-plazas"
                   type="number"
                   min={1}
                   value={maxPlayers}
@@ -392,8 +393,8 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
           )}
 
           <div>
-            <label className={labelClass}>Descripción (opcional)</label>
-            <textarea
+            <label htmlFor="ritual-descripcion" className={labelClass}>Descripción (opcional)</label>
+            <textarea id="ritual-descripcion"
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -423,7 +424,7 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
             </Button>
           </div>
         </form>
-      </div>
+      </Dialog>
     </div>
   );
 };

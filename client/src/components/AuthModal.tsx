@@ -5,6 +5,7 @@ import { X, Check, Plus } from 'lucide-react';
 import Button from './Button';
 import { compressImage } from '../utils/image';
 import { parseApiResponse } from '../utils/api';
+import Dialog from './Dialog';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [successMessage, setSuccessMessage] = useState('');
   const [customAvatar, setCustomAvatar] = useState<string | null>(null);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [remember, setRemember] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -90,7 +92,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     try {
       const endpoint = isLogin ? '/login' : '/register';
       const body = isLogin 
-        ? { username: formData.username, password: formData.password }
+        ? { username: formData.username, password: formData.password, remember }
         : formData;
 
       const response = await fetch(`${API_URL}${endpoint}`, {
@@ -102,7 +104,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       const data = await parseApiResponse(response);
 
       if (isLogin) {
-        login(data.user, data.token);
+        login(data.user, data.token, remember);
         onClose();
       } else {
         setSuccessMessage(data.message || 'El ritual de registro ha comenzado. Por favor, revisa tu correo electrónico para confirmar tu cuenta.');
@@ -119,11 +121,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   if (successMessage) {
     return (
       <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-        <div className="bg-surface border border-outline-ghost rounded shadow-2xl w-full max-w-md overflow-hidden flex flex-col p-8 text-center gap-6">
+        <Dialog onClose={onClose} labelledBy="auth-exito-titulo" className="bg-surface border border-outline-ghost rounded shadow-2xl w-full max-w-md overflow-hidden flex flex-col p-8 text-center gap-6">
           <div className="w-16 h-16 bg-theme-main/10 rounded-full flex justify-center items-center mx-auto border border-theme-main/30 animate-pulse">
             <Check className="text-theme-main" size={32} />
           </div>
-          <h2 className="text-2xl font-display text-on-surface">Ritual Iniciado</h2>
+          <h2 id="auth-exito-titulo" className="text-2xl font-display text-on-surface">Ritual Iniciado</h2>
           <p className="text-on-surface-muted font-body text-sm leading-relaxed">
             {successMessage}
           </p>
@@ -137,19 +139,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           >
             Volver a Identificarse
           </Button>
-        </div>
+        </Dialog>
       </div>
     );
   }
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-      <div className="bg-surface border border-outline-ghost rounded shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+      <Dialog onClose={onClose} labelledBy="auth-titulo" className="bg-surface border border-outline-ghost rounded shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
         <div className="flex justify-between items-center p-6 border-b border-outline-ghost">
-          <h2 className="text-2xl font-display text-on-surface">
+          <h2 id="auth-titulo" className="text-2xl font-display text-on-surface">
             {isLogin ? 'Iniciar Sesión' : 'Unirse a la Secta'}
           </h2>
-          <Button onClick={onClose} variant="text" className="text-on-surface-muted hover:text-theme-main transition-colors">
+          <Button onClick={onClose} variant="text" aria-label="Cerrar" className="text-on-surface-muted hover:text-theme-main transition-colors">
             <X size={24} />
           </Button>
         </div>
@@ -180,45 +182,68 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-display text-on-surface-muted">Nombre de usuario</label>
-              <input required name="username" value={formData.username} onChange={handleChange} className="bg-surface-low border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
+              <label htmlFor="auth-nombre-de-usuario" className="text-sm font-display text-on-surface-muted">Nombre de usuario</label>
+              <input id="auth-nombre-de-usuario" required name="username" value={formData.username} onChange={handleChange} className="bg-surface-low border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-display text-on-surface-muted">Contraseña</label>
-              <input required type="password" name="password" value={formData.password} onChange={handleChange} className="bg-surface-low border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
+              <label htmlFor="auth-contrasena" className="text-sm font-display text-on-surface-muted">Contraseña</label>
+              <input id="auth-contrasena" required type="password" name="password" value={formData.password} onChange={handleChange} className="bg-surface-low border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
             </div>
+
+            {isLogin && (
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2.5">
+                  <input
+                    type="checkbox"
+                    id="auth-recordarme"
+                    name="remember"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                    aria-describedby="auth-recordarme-ayuda"
+                    className="w-4 h-4 rounded border-outline-ghost text-theme-main focus:ring-theme-main accent-theme-main bg-surface-low cursor-pointer shrink-0"
+                  />
+                  <label htmlFor="auth-recordarme" className="text-sm font-display text-on-surface-muted cursor-pointer select-none">
+                    Recordarme
+                  </label>
+                </div>
+                <p id="auth-recordarme-ayuda" className="text-xs font-body text-on-surface-muted opacity-80">
+                  Mantiene la sesión 30 días en este navegador. No lo marques en un equipo compartido.
+                </p>
+              </div>
+            )}
 
             {!isLogin && (
               <>
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-display text-on-surface-muted">Nombre real</label>
-                  <input required name="realName" value={formData.realName} onChange={handleChange} className="bg-surface-low border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
+                  <label htmlFor="auth-nombre-real" className="text-sm font-display text-on-surface-muted">Nombre real</label>
+                  <input id="auth-nombre-real" required name="realName" value={formData.realName} onChange={handleChange} className="bg-surface-low border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
                 </div>
                 
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-display text-on-surface-muted">Nombre en BotC.app</label>
-                  <input name="botcUsername" value={formData.botcUsername} onChange={handleChange} className="bg-surface-low border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
+                  <label htmlFor="auth-nombre-en-botc-app" className="text-sm font-display text-on-surface-muted">Nombre en BotC.app</label>
+                  <input id="auth-nombre-en-botc-app" name="botcUsername" value={formData.botcUsername} onChange={handleChange} className="bg-surface-low border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-display text-on-surface-muted">Correo electrónico</label>
-                  <input required type="email" name="email" value={formData.email} onChange={handleChange} className="bg-surface-low border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
+                  <label htmlFor="auth-correo-electronico" className="text-sm font-display text-on-surface-muted">Correo electrónico</label>
+                  <input id="auth-correo-electronico" required type="email" name="email" value={formData.email} onChange={handleChange} className="bg-surface-low border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-display text-on-surface-muted">Usuario de Telegram</label>
-                  <input name="telegramUsername" value={formData.telegramUsername} onChange={handleChange} className="bg-surface-low border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
+                  <label htmlFor="auth-usuario-de-telegram" className="text-sm font-display text-on-surface-muted">Usuario de Telegram</label>
+                  <input id="auth-usuario-de-telegram" name="telegramUsername" value={formData.telegramUsername} onChange={handleChange} className="bg-surface-low border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
                 </div>
 
                 <div className="flex flex-col gap-2 mt-2">
-                  <label className="text-sm font-display text-on-surface-muted">Selecciona tu Avatar</label>
-                  <div className="flex gap-3 overflow-x-auto pb-2 pt-1">
+                  <p id="auth-avatar" className="text-sm font-display text-on-surface-muted">Selecciona tu Avatar</p>
+                  <div role="group" aria-labelledby="auth-avatar" className="flex gap-3 overflow-x-auto pb-2 pt-1">
                     {visibleAvatars.map((avatar) => (
                       <Button
                         key={avatar.id}
                         type="button"
                         onClick={() => selectAvatar(avatar.url)}
+                        aria-pressed={formData.profilePicture === avatar.url}
                         variant="text"
                         className={`relative w-16 h-16 rounded overflow-hidden flex-shrink-0 transition-all ${formData.profilePicture === avatar.url ? 'ring-2 ring-theme-main ring-offset-2 ring-offset-surface' : 'opacity-70 hover:opacity-100 ring-1 ring-outline-ghost'}`}
                       >
@@ -232,13 +257,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     ))}
                     
                     {/* Custom upload option */}
-                    <label className="relative w-16 h-16 rounded overflow-hidden flex-shrink-0 transition-all flex flex-col justify-center items-center border border-dashed border-outline-ghost hover:border-theme-main cursor-pointer opacity-70 hover:opacity-100 bg-surface-low">
+                    <label className="relative w-16 h-16 rounded overflow-hidden flex-shrink-0 transition-all flex flex-col justify-center items-center border border-dashed border-outline-ghost hover:border-theme-main cursor-pointer opacity-70 hover:opacity-100 focus-within:opacity-100 focus-within:ring-2 focus-within:ring-theme-main bg-surface-low">
                       <Plus size={20} className="text-on-surface-muted" />
-                      <span className="text-[9px] font-display uppercase mt-1">Subir</span>
+                      <span className="text-[9px] font-display uppercase mt-1" aria-hidden="true">Subir</span>
                       <input 
                         type="file" 
                         accept="image/*" 
-                        className="hidden" 
+                        aria-label="Subir una imagen propia"
+                        className="sr-only" 
                         onChange={handleFileChange} 
                       />
                     </label>
@@ -283,7 +309,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             </Button>
           </form>
         </div>
-      </div>
+      </Dialog>
     </div>
   );
 };

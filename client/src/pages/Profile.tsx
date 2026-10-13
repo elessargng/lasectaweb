@@ -378,31 +378,32 @@ const Profile = () => {
               <h3 className="text-xl font-display text-on-surface mb-6 border-b border-outline-ghost/50 pb-2">Editar Información</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-display text-on-surface-muted">Nombre Real</label>
-                  <input name="realName" value={formData.realName} onChange={handleChange} className="bg-surface border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
+                  <label htmlFor="perfil-nombre-real" className="text-sm font-display text-on-surface-muted">Nombre Real</label>
+                  <input id="perfil-nombre-real" name="realName" value={formData.realName} onChange={handleChange} className="bg-surface border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-display text-on-surface-muted">Usuario en BotC.app</label>
-                  <input name="botcUsername" value={formData.botcUsername} onChange={handleChange} className="bg-surface border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
+                  <label htmlFor="perfil-usuario-en-botc-app" className="text-sm font-display text-on-surface-muted">Usuario en BotC.app</label>
+                  <input id="perfil-usuario-en-botc-app" name="botcUsername" value={formData.botcUsername} onChange={handleChange} className="bg-surface border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-display text-on-surface-muted">Correo Electrónico</label>
-                  <input required type="email" name="email" value={formData.email} onChange={handleChange} className="bg-surface border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
+                  <label htmlFor="perfil-correo-electronico" className="text-sm font-display text-on-surface-muted">Correo Electrónico</label>
+                  <input id="perfil-correo-electronico" required type="email" name="email" value={formData.email} onChange={handleChange} className="bg-surface border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-display text-on-surface-muted">Usuario de Telegram</label>
-                  <input name="telegramUsername" value={formData.telegramUsername} onChange={handleChange} className="bg-surface border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
+                  <label htmlFor="perfil-usuario-de-telegram" className="text-sm font-display text-on-surface-muted">Usuario de Telegram</label>
+                  <input id="perfil-usuario-de-telegram" name="telegramUsername" value={formData.telegramUsername} onChange={handleChange} className="bg-surface border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
                 </div>
               </div>
 
               <div className="flex flex-col gap-2 mt-4 mb-6">
-                <label className="text-sm font-display text-on-surface-muted">Selecciona tu Avatar</label>
-                <div className="flex gap-3 overflow-x-auto pb-2 pt-1">
+                <p id="perfil-avatar" className="text-sm font-display text-on-surface-muted">Selecciona tu Avatar</p>
+                <div role="group" aria-labelledby="perfil-avatar" className="flex gap-3 overflow-x-auto pb-2 pt-1">
                   {visibleAvatars.map((avatar) => (
                     <Button
                       key={avatar.id}
                       type="button"
                       onClick={() => selectAvatar(avatar.url)}
+                      aria-pressed={formData.profilePicture === avatar.url}
                       variant="text"
                       className={`relative w-16 h-16 rounded overflow-hidden flex-shrink-0 transition-all ${formData.profilePicture === avatar.url ? 'ring-2 ring-theme-main ring-offset-2 ring-offset-surface' : 'opacity-70 hover:opacity-100 ring-1 ring-outline-ghost'}`}
                     >
@@ -416,13 +417,14 @@ const Profile = () => {
                   ))}
 
                   {/* Custom upload option */}
-                  <label className="relative w-16 h-16 rounded overflow-hidden flex-shrink-0 transition-all flex flex-col justify-center items-center border border-dashed border-outline-ghost hover:border-theme-main cursor-pointer opacity-70 hover:opacity-100 bg-surface-low">
+                  <label className="relative w-16 h-16 rounded overflow-hidden flex-shrink-0 transition-all flex flex-col justify-center items-center border border-dashed border-outline-ghost hover:border-theme-main cursor-pointer opacity-70 hover:opacity-100 focus-within:opacity-100 focus-within:ring-2 focus-within:ring-theme-main bg-surface-low">
                     <Plus size={20} className="text-on-surface-muted" />
-                    <span className="text-[9px] font-display uppercase mt-1">Subir</span>
+                    <span className="text-[9px] font-display uppercase mt-1" aria-hidden="true">Subir</span>
                     <input
                       type="file"
                       accept="image/*"
-                      className="hidden"
+                      aria-label="Subir una imagen propia"
+                      className="sr-only"
                       onChange={handleFileChange}
                     />
                   </label>

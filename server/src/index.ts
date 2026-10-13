@@ -26,6 +26,7 @@ if (!loaded) {
 }
 
 import express from 'express';
+import http from 'http';
 import cors from 'cors';
 import { UserRepository } from './repositories/UserRepository';
 import { RoleRequestRepository } from './repositories/RoleRequestRepository';
@@ -61,6 +62,7 @@ import { RitualRepository } from './repositories/RitualRepository';
 import { RitualSignupRepository } from './repositories/RitualSignupRepository';
 import { RitualService } from './services/RitualService';
 import { RitualController } from './controllers/RitualController';
+import { iniciarSalaSocket } from './sockets/salaSocket';
 import { sendPlazaIntegrityAlert, sendPlazaResultAnnouncement } from './utils/mailer';
 
 const app = express();
@@ -265,7 +267,10 @@ DatabaseRepository.getInstance()
     await seedCodice(codiceRepository);
     plazaVigilanteService.start();
     
-    app.listen(PORT, () => {
+    // La sala de juego va por WebSocket sobre el mismo servidor HTTP
+    const httpServer = http.createServer(app);
+    iniciarSalaSocket(httpServer, async (id) => (await userRepository.findById(id))?.profilePicture || null);
+    httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
   })

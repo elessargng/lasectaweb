@@ -7,6 +7,10 @@ import { sendConfirmationEmail } from '../utils/mailer';
 import { RoleRequestRepository } from '../repositories/RoleRequestRepository';
 import { RoleRequest } from '../models/RoleRequest';
 
+// Duración del token de sesión: un día por defecto, 30 con «Recordarme».
+const SESSION_TTL = '1d';
+const SESSION_REMEMBER_TTL = '30d';
+
 /** Campos del perfil que cada persona puede cambiar por sí misma. */
 const PROFILE_EDITABLE_FIELDS = [
   'realName',
@@ -59,7 +63,7 @@ export class UserService {
     };
   }
 
-  async loginUser(username: string, passwordPlain: string): Promise<{ user: Partial<User>, token: string }> {
+  async loginUser(username: string, passwordPlain: string, remember = false): Promise<{ user: Partial<User>, token: string }> {
     const cleanUsername = (username || '').trim();
     const user = await this.userRepository.findByUsername(cleanUsername);
     if (!user) {
@@ -80,7 +84,10 @@ export class UserService {
 
 
     const JWT_SECRET = process.env.JWT_SECRET || 'secret';
-    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+    // «Recordarme» alarga la sesión; sin marcarla, dura un día (y el cliente la
+    // guarda solo mientras el navegador siga abierto).
+    const expiresIn = remember ? SESSION_REMEMBER_TTL : SESSION_TTL;
+    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn });
     const { passwordHash: _, confirmationToken: __, confirmationTokenExpires: ___, ...userWithoutPassword } = user;
 
     return {

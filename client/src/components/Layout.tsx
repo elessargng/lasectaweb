@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Outlet, Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AuthModal from './AuthModal';
@@ -6,17 +6,32 @@ import ChangelogModal from './ChangelogModal';
 import Footer from './Footer';
 import Button from './Button';
 import HeaderLink from './HeaderLink';
-import { Key } from 'lucide-react';
+import { Key, X } from 'lucide-react';
 import { getAvatarUrl } from '../utils/api';
 
 const Layout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isChangelogModalOpen, setIsChangelogModalOpen] = useState(false);
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, sessionExpired, dismissSessionExpired } = useAuth();
 
   const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const closeMenu = () => setIsMobileMenuOpen(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Menú móvil abierto: el foco entra en él y Escape lo cierra devolviendo el foco al botón.
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    menuRef.current?.querySelector<HTMLElement>('a[href], button')?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setIsMobileMenuOpen(false);
+      menuButtonRef.current?.focus();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isMobileMenuOpen]);
 
   return (
     <div className="min-h-screen flex flex-col selection:bg-theme-main selection:text-background overflow-x-clip">
@@ -87,9 +102,12 @@ const Layout = () => {
 
             {/* Mobile Hamburger Button */}
             <button
+              ref={menuButtonRef}
               onClick={toggleMenu}
-              className="lg:hidden flex flex-col justify-center items-center w-10 h-10 space-y-1.5 focus:outline-none z-[60]"
-              aria-label="Abrir menú"
+              className="lg:hidden flex flex-col justify-center items-center w-10 h-10 space-y-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main rounded z-[60]"
+              aria-label="Menú"
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="menu-movil"
             >
               <span className={`block w-6 h-0.5 bg-theme-main transition-transform duration-300 ${isMobileMenuOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
               <span className={`block w-6 h-0.5 bg-theme-main transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-0' : ''}`}></span>
@@ -97,16 +115,39 @@ const Layout = () => {
             </button>
           </div>
         </div>
+
+        {/* Aviso de sesión caducada: la región existe siempre para que el lector lo anuncie al aparecer. */}
+        <div role="status">
+          {sessionExpired && !isAuthenticated && (
+            <div className="border-t border-outline-ghost bg-surface">
+              <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 px-6 py-2 md:px-10">
+                <p className="text-sm font-body text-on-surface">Tu sesión ha caducado. Vuelve a entrar para seguir.</p>
+                <div className="flex items-center gap-2">
+                  <Button onClick={() => setIsAuthModalOpen(true)} variant="primary" className="px-4 py-1.5 text-sm">
+                    Volver a entrar
+                  </Button>
+                  <Button onClick={dismissSessionExpired} variant="text" aria-label="Cerrar aviso" className="text-on-surface-muted hover:text-theme-main transition-colors p-1">
+                    <X size={18} />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </header>
 
       {/* Mobile Menu Overlay */}
       <div
+        aria-hidden="true"
         className={`fixed inset-0 bg-background/80 backdrop-blur-md z-[50] transition-opacity duration-300 lg:hidden ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={closeMenu}
       ></div>
 
-      {/* Mobile Side Menu */}
+      {/* Mobile Side Menu: cerrado queda fuera de pantalla, y también fuera del tabulador y del lector */}
       <div
+        id="menu-movil"
+        ref={menuRef}
+        inert={!isMobileMenuOpen}
         className={`fixed top-0 right-0 h-full w-3/4 max-w-sm bg-theme-container border-l border-outline-ghost shadow-2xl z-[55] transform transition-transform duration-300 ease-in-out lg:hidden flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="p-6 pt-24 flex flex-col h-full overflow-y-auto">

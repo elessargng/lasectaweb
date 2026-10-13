@@ -1,4 +1,5 @@
 import { parseApiResponse } from './api';
+import { getStoredToken } from './session';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api';
 
@@ -115,7 +116,7 @@ export interface LibrarySection {
 }
 
 function getAuthHeaders(isFormData = false): HeadersInit {
-  const token = localStorage.getItem('token');
+  const token = getStoredToken();
   const headers: Record<string, string> = {};
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -347,7 +348,7 @@ export function getLibraryVersionDownloadUrl(
     id = versionOrId;
   }
 
-  const token = localStorage.getItem('token');
+  const token = getStoredToken();
   const queryParams: string[] = [];
   if (includeToken && token) {
     queryParams.push(`token=${encodeURIComponent(token)}`);

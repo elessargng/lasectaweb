@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { X, Loader2, History, Vote, Landmark, ExternalLink } from 'lucide-react';
 import { getRuleHistory, formatDate, type RuleHistory } from '../../utils/plazaApi';
+import Dialog from '../Dialog';
 
 interface RuleHistoryModalProps {
   ruleId: string | null;
@@ -34,30 +35,15 @@ const RuleHistoryModal = ({ ruleId, onClose }: RuleHistoryModalProps) => {
       .finally(() => setLoading(false));
   }, [ruleId]);
 
-  // Cerrar con Escape, como cualquier modal.
-  useEffect(() => {
-    if (!ruleId) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [ruleId, onClose]);
-
   if (!ruleId) return null;
 
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 px-4 py-8"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Histórico de la norma"
     >
-      <div
-        className="w-full max-w-2xl bg-surface border border-outline-ghost rounded shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+      {/* Fondo: pulsar fuera cierra (con teclado se cierra con Escape) */}
+      <div aria-hidden="true" className="fixed inset-0" onClick={onClose} />
+      <Dialog onClose={onClose} label="Histórico de la norma" className="relative w-full max-w-2xl bg-surface border border-outline-ghost rounded shadow-2xl">
         <div className="flex items-start justify-between gap-4 p-5 border-b border-outline-ghost">
           <div>
             <p className="flex items-center gap-2 text-xs uppercase tracking-[0.16em] font-display text-on-surface-muted mb-1">
@@ -188,7 +174,7 @@ const RuleHistoryModal = ({ ruleId, onClose }: RuleHistoryModalProps) => {
             </>
           )}
         </div>
-      </div>
+      </Dialog>
     </div>,
     document.body
   );

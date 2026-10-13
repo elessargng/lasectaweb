@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
 import Button from '../Button';
 import type { VoteChoice, ProposalMode } from '../../utils/plazaApi';
+import Dialog from '../Dialog';
 
 interface VoteConfirmModalProps {
   choice: VoteChoice | null;
@@ -28,16 +28,6 @@ const VoteConfirmModal = ({
   onConfirm,
   onCancel
 }: VoteConfirmModalProps) => {
-  // Cerrar con Escape, salvo mientras se está enviando el voto.
-  useEffect(() => {
-    if (!choice) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !voting) onCancel();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [choice, voting, onCancel]);
-
   if (!choice) return null;
 
   const inFavour = choice === 'si';
@@ -45,15 +35,10 @@ const VoteConfirmModal = ({
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 py-8"
-      onClick={() => !voting && onCancel()}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Confirmar el voto"
     >
-      <div
-        className="w-full max-w-md bg-surface border border-outline-ghost rounded shadow-2xl p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
+      {/* Fondo: pulsar fuera cancela (con teclado, Escape) */}
+      <div aria-hidden="true" className="absolute inset-0" onClick={() => !voting && onCancel()} />
+      <Dialog onClose={() => !voting && onCancel()} label="Confirmar el voto" className="relative w-full max-w-md bg-surface border border-outline-ghost rounded shadow-2xl p-6">
         <p
           className={`flex items-center gap-2.5 font-display text-lg mb-4 ${
             inFavour ? 'text-green-500' : 'text-red-400'
@@ -105,7 +90,7 @@ const VoteConfirmModal = ({
             Cancelar
           </Button>
         </div>
-      </div>
+      </Dialog>
     </div>,
     document.body
   );

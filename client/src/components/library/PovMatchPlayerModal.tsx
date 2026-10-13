@@ -25,6 +25,7 @@ import {
   Sparkles,
   Clock
 } from 'lucide-react';
+import Dialog from '../Dialog';
 
 interface PovMatchPlayerModalProps {
   isOpen: boolean;
@@ -332,7 +333,7 @@ export const PovMatchPlayerModal: React.FC<PovMatchPlayerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-background/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 animate-in fade-in duration-200">
-      <div className="bg-theme-container border border-outline-ghost/80 rounded-2xl max-w-6xl w-full max-h-[96vh] flex flex-col shadow-2xl overflow-hidden">
+      <Dialog onClose={onClose} labelledBy="povmatch-player-titulo" className="bg-theme-container border border-outline-ghost/80 rounded-2xl max-w-6xl w-full max-h-[96vh] flex flex-col shadow-2xl overflow-hidden">
         
         {/* Cabecera del Modal */}
         <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-outline-ghost/60 bg-surface-container/50 shrink-0 gap-3">
@@ -342,7 +343,7 @@ export const PovMatchPlayerModal: React.FC<PovMatchPlayerModalProps> = ({
             </div>
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base sm:text-lg font-display font-semibold text-on-surface truncate">
+                <h3 id="povmatch-player-titulo" className="text-base sm:text-lg font-display font-semibold text-on-surface truncate">
                   {match.title}
                 </h3>
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-theme-main/20 text-theme-main border border-theme-main/30">
@@ -1004,7 +1005,7 @@ export const PovMatchPlayerModal: React.FC<PovMatchPlayerModalProps> = ({
             </div>
           )}
         </div>
-      </div>
+      </Dialog>
     </div>
   );
 };

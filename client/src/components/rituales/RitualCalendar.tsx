@@ -72,7 +72,7 @@ export const RitualCalendar = ({
               tabIndex={0}
               onClick={() => onSelectDay(day)}
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onSelectDay(day))}
-              aria-label={`${day.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}, ${dayRituals.length} rituales`}
+              aria-label={`${day.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}, ${dayRituals.length === 1 ? 'un ritual' : `${dayRituals.length} rituales`}`}
               className={`group relative min-h-[4.25rem] md:min-h-[7.25rem] p-1 md:p-1.5 flex flex-col text-left cursor-pointer transition-colors duration-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-theme-main ${
                 isToday
                   ? 'bg-gradient-to-b from-theme-container/45 to-surface-container-low hover:from-theme-container/60'
@@ -123,6 +123,7 @@ export const RitualCalendar = ({
                     <div
                       key={keyOf(band)}
                       title={band.title}
+                      aria-hidden="true"
                       onClick={(e) => {
                         e.stopPropagation();
                         onSelectRitual(day, band);
@@ -146,6 +147,7 @@ export const RitualCalendar = ({
                     <div
                       key={keyOf(r)}
                       title={r.title}
+                      aria-hidden="true"
                       onClick={(e) => {
                         e.stopPropagation();
                         onSelectRitual(day, r);

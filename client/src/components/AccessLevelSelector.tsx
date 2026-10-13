@@ -42,15 +42,16 @@ export default function AccessLevelSelector({
 
   return (
     <div>
-      <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+      <p id="restriccion-acceso" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
         Restricción de Acceso
-      </label>
-      <div className="grid grid-cols-3 gap-2 mb-2">
+      </p>
+      <div role="group" aria-labelledby="restriccion-acceso" className="grid grid-cols-3 gap-2 mb-2">
         {options.map(({ level, label, icon: Icon, active }) => (
           <button
             key={level}
             type="button"
             onClick={() => onAccessLevelChange(level)}
+            aria-pressed={accessLevel === level}
             className={`${BUTTON_BASE} ${accessLevel === level ? active : BUTTON_INACTIVE}`}
           >
             <Icon className="w-3.5 h-3.5" />

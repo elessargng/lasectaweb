@@ -1,0 +1,37 @@
+/* Tailwind solo mira el código de la sala, no el de la web */
+@import "tailwindcss" source(".");
+
+/*
+ * Estilos propios de la sala de juego. No importa index.css a propósito: la
+ * sala no hereda la decoración de la web (patrón de fondo, mayúsculas en los
+ * títulos, fuentes góticas). Solo conserva los colores, con el morado de La Secta.
+ */
+/* Solo para el nombre de La Secta en la cabecera; el resto, letra legible */
+@font-face {
+  font-family: 'Teutonic No1';
+  src: url('/fonts/teutonic1.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@theme {
+  --font-body: system-ui, sans-serif;
+  --font-teutonic1: "Teutonic No1", "Cinzel", serif;
+
+  --color-background: #0a0a0a;
+  --color-surface: #121212;
+  --color-on-surface: #dfd8c8;
+  --color-on-surface-muted: #a69f92;
+  --color-outline-ghost: #3a322c;
+
+  --color-theme-main: #b19cd9;
+  --color-theme-container: #4a3b69;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-on-surface);
+    font-family: var(--font-body);
+  }
+}

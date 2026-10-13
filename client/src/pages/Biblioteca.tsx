@@ -68,6 +68,7 @@ import { getLibraryIcon } from '../utils/libraryIcons';
 import PovMatchCard from '../components/library/PovMatchCard';
 import PovMatchPlayerModal from '../components/library/PovMatchPlayerModal';
 import PovMatchFormModal from '../components/library/PovMatchFormModal';
+import Dialog from '../components/Dialog';
 
 const Youtube = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -1137,8 +1138,8 @@ export default function Biblioteca() {
             <button
               onClick={() => toggleSection(section.id)}
               className="p-1 text-on-surface-muted hover:text-theme-main transition-colors shrink-0"
-              title={isExpanded ? 'Colapsar' : 'Expandir'}
-              aria-label="Expandir o colapsar sección"
+              aria-label={section.name}
+              aria-expanded={isExpanded}
             >
               {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </button>
@@ -1146,6 +1147,7 @@ export default function Biblioteca() {
             <SectionIcon className={`w-5 h-5 shrink-0 ${depth === 0 ? 'text-theme-main' : 'text-amber-400/90'}`} />
 
             <span
+              aria-hidden="true"
               onClick={() => toggleSection(section.id)}
               className={`cursor-pointer truncate font-display tracking-wide ${
                 depth === 0 ? 'text-lg font-semibold text-on-surface' : 'text-base font-medium text-on-surface/90'
@@ -1324,7 +1326,7 @@ export default function Biblioteca() {
             <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 flex items-center gap-3">
               <AlertCircle className="w-5 h-5 shrink-0" />
               <span className="text-sm flex-1">{error}</span>
-              <button onClick={() => setError(null)} className="text-red-400 hover:text-red-200">
+              <button type="button" onClick={() => setError(null)} aria-label="Descartar aviso" className="text-red-400 hover:text-red-200">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1384,9 +1386,9 @@ export default function Biblioteca() {
       {/* MODAL: SECCIÓN */}
       {sectionModal.isOpen && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-theme-container border border-outline-ghost rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+          <Dialog onClose={() => setSectionModal({ isOpen: false, mode: 'create_title' })} labelledBy="biblioteca-seccion-titulo" className="bg-theme-container border border-outline-ghost rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between mb-4 border-b border-outline-ghost/50 pb-3">
-              <h3 className="text-xl font-display text-on-surface font-semibold flex items-center gap-2">
+              <h3 id="biblioteca-seccion-titulo" className="text-xl font-display text-on-surface font-semibold flex items-center gap-2">
                 <Folder className="w-5 h-5 text-theme-main" />
                 <span>
                   {sectionModal.mode === 'create_title'
@@ -1397,7 +1399,9 @@ export default function Biblioteca() {
                 </span>
               </h3>
               <button
+                type="button"
                 onClick={() => setSectionModal({ isOpen: false, mode: 'create_title' })}
+                aria-label="Cerrar"
                 className="text-on-surface-muted hover:text-on-surface"
               >
                 <X className="w-5 h-5" />
@@ -1406,10 +1410,10 @@ export default function Biblioteca() {
 
             <form onSubmit={handleSaveSection} className="flex flex-col gap-4">
               <div>
-                <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+                <label htmlFor="biblioteca-nombre-de-la-seccion-titulo" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
                   Nombre de la sección / Título
                 </label>
-                <input
+                <input id="biblioteca-nombre-de-la-seccion-titulo"
                   type="text"
                   required
                   value={sectionNameInput}
@@ -1421,10 +1425,10 @@ export default function Biblioteca() {
 
               {sectionModal.mode === 'create_title' && (
                 <div>
-                  <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+                  <label htmlFor="biblioteca-ubicacion-padre" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
                     Ubicación Padre (Opcional)
                   </label>
-                  <select
+                  <select id="biblioteca-ubicacion-padre"
                     value={sectionParentIdInput}
                     onChange={e => setSectionParentIdInput(e.target.value)}
                     className="w-full bg-surface-container border border-outline-ghost rounded-xl px-4 py-2.5 text-on-surface focus:outline-none focus:border-theme-main transition-colors text-sm"
@@ -1466,21 +1470,23 @@ export default function Biblioteca() {
                 </Button>
               </div>
             </form>
-          </div>
+          </Dialog>
         </div>
       )}
 
       {/* MODAL: DOCUMENTO (ARCHIVO) */}
       {documentModal.isOpen && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-theme-container border border-outline-ghost rounded-2xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+          <Dialog onClose={() => setDocumentModal({ isOpen: false, mode: 'create' })} labelledBy="biblioteca-documento-titulo" className="bg-theme-container border border-outline-ghost rounded-2xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between mb-4 border-b border-outline-ghost/50 pb-3">
-              <h3 className="text-xl font-display text-on-surface font-semibold flex items-center gap-2">
+              <h3 id="biblioteca-documento-titulo" className="text-xl font-display text-on-surface font-semibold flex items-center gap-2">
                 <FileText className="w-5 h-5 text-emerald-400" />
                 <span>{documentModal.mode === 'create' ? 'Añadir Nuevo Documento' : 'Editar Documento'}</span>
               </h3>
               <button
+                type="button"
                 onClick={() => setDocumentModal({ isOpen: false, mode: 'create' })}
+                aria-label="Cerrar"
                 className="text-on-surface-muted hover:text-on-surface"
               >
                 <X className="w-5 h-5" />
@@ -1489,10 +1495,10 @@ export default function Biblioteca() {
 
             <form onSubmit={handleSaveDocument} className="flex flex-col gap-4">
               <div>
-                <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+                <label htmlFor="biblioteca-titulo-del-documento" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
                   Título del Documento
                 </label>
-                <input
+                <input id="biblioteca-titulo-del-documento"
                   type="text"
                   required
                   value={docTitleInput}
@@ -1504,10 +1510,10 @@ export default function Biblioteca() {
 
               {documentModal.mode === 'edit' && (
                 <div>
-                  <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+                  <label htmlFor="biblioteca-seccion-perteneciente" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
                     Sección Perteneciente
                   </label>
-                  <select
+                  <select id="biblioteca-seccion-perteneciente"
                     value={docSectionIdInput}
                     onChange={e => setDocSectionIdInput(e.target.value)}
                     className="w-full bg-surface-container border border-outline-ghost rounded-xl px-4 py-2.5 text-on-surface focus:outline-none focus:border-theme-main transition-colors text-sm"
@@ -1522,10 +1528,10 @@ export default function Biblioteca() {
               )}
 
               <div>
-                <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+                <label htmlFor="biblioteca-descripcion" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
                   Descripción (Opcional)
                 </label>
-                <textarea
+                <textarea id="biblioteca-descripcion"
                   rows={2}
                   value={docDescInput}
                   onChange={e => setDocDescInput(e.target.value)}
@@ -1544,10 +1550,10 @@ export default function Biblioteca() {
               {documentModal.mode === 'create' && (
                 <>
                   <div>
-                    <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+                    <label htmlFor="biblioteca-etiqueta-de-la-primera-version" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
                       Etiqueta de la primera versión
                     </label>
-                    <input
+                    <input id="biblioteca-etiqueta-de-la-primera-version"
                       type="text"
                       required
                       value={docVersionLabelInput}
@@ -1558,10 +1564,10 @@ export default function Biblioteca() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+                    <label htmlFor="biblioteca-archivo-fisico" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
                       Archivo Físico (PDF, DOCX, etc.)
                     </label>
-                    <input
+                    <input id="biblioteca-archivo-fisico"
                       type="file"
                       required
                       onChange={e => setDocFileInput(e.target.files ? e.target.files[0] : null)}
@@ -1584,21 +1590,23 @@ export default function Biblioteca() {
                 </Button>
               </div>
             </form>
-          </div>
+          </Dialog>
         </div>
       )}
 
       {/* MODAL: ENLACE (WEB / YOUTUBE) */}
       {linkModal.isOpen && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-theme-container border border-outline-ghost rounded-2xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+          <Dialog onClose={() => setLinkModal({ isOpen: false, mode: 'create' })} labelledBy="biblioteca-enlace-titulo" className="bg-theme-container border border-outline-ghost rounded-2xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between mb-4 border-b border-outline-ghost/50 pb-3">
-              <h3 className="text-xl font-display text-on-surface font-semibold flex items-center gap-2">
+              <h3 id="biblioteca-enlace-titulo" className="text-xl font-display text-on-surface font-semibold flex items-center gap-2">
                 <LinkIcon className="w-5 h-5 text-sky-400" />
                 <span>{linkModal.mode === 'create' ? 'Añadir Nuevo Enlace' : 'Editar Enlace'}</span>
               </h3>
               <button
+                type="button"
                 onClick={() => setLinkModal({ isOpen: false, mode: 'create' })}
+                aria-label="Cerrar"
                 className="text-on-surface-muted hover:text-on-surface"
               >
                 <X className="w-5 h-5" />
@@ -1607,10 +1615,10 @@ export default function Biblioteca() {
 
             <form onSubmit={handleSaveLink} className="flex flex-col gap-4">
               <div>
-                <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+                <label htmlFor="biblioteca-titulo-del-enlace" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
                   Título del Enlace (Texto Visible)
                 </label>
-                <input
+                <input id="biblioteca-titulo-del-enlace"
                   type="text"
                   required
                   value={linkTitleInput}
@@ -1621,10 +1629,10 @@ export default function Biblioteca() {
               </div>
 
               <div>
-                <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+                <label htmlFor="biblioteca-direccion-url-de-destino" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
                   Dirección URL de Destino
                 </label>
-                <input
+                <input id="biblioteca-direccion-url-de-destino"
                   type="url"
                   required
                   value={linkUrlInput}
@@ -1639,10 +1647,10 @@ export default function Biblioteca() {
 
               {linkModal.mode === 'edit' && (
                 <div>
-                  <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+                  <label htmlFor="biblioteca-seccion-perteneciente-2" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
                     Sección Perteneciente
                   </label>
-                  <select
+                  <select id="biblioteca-seccion-perteneciente-2"
                     value={linkSectionIdInput}
                     onChange={e => setLinkSectionIdInput(e.target.value)}
                     className="w-full bg-surface-container border border-outline-ghost rounded-xl px-4 py-2.5 text-on-surface focus:outline-none focus:border-theme-main transition-colors text-sm"
@@ -1657,10 +1665,10 @@ export default function Biblioteca() {
               )}
 
               <div>
-                <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+                <label htmlFor="biblioteca-descripcion-2" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
                   Descripción (Opcional)
                 </label>
-                <textarea
+                <textarea id="biblioteca-descripcion-2"
                   rows={2}
                   value={linkDescInput}
                   onChange={e => setLinkDescInput(e.target.value)}
@@ -1689,21 +1697,23 @@ export default function Biblioteca() {
                 </Button>
               </div>
             </form>
-          </div>
+          </Dialog>
         </div>
       )}
 
       {/* MODAL: AÑADIR VERSIÓN */}
       {addVersionModal.isOpen && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-theme-container border border-outline-ghost rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+          <Dialog onClose={() => setAddVersionModal({ isOpen: false, documentId: '', documentTitle: '' })} labelledBy="biblioteca-version-titulo" className="bg-theme-container border border-outline-ghost rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between mb-4 border-b border-outline-ghost/50 pb-3">
-              <h3 className="text-xl font-display text-on-surface font-semibold flex items-center gap-2">
+              <h3 id="biblioteca-version-titulo" className="text-xl font-display text-on-surface font-semibold flex items-center gap-2">
                 <Plus className="w-5 h-5 text-emerald-400" />
                 <span>Añadir Versión</span>
               </h3>
               <button
+                type="button"
                 onClick={() => setAddVersionModal({ isOpen: false, documentId: '', documentTitle: '' })}
+                aria-label="Cerrar"
                 className="text-on-surface-muted hover:text-on-surface"
               >
                 <X className="w-5 h-5" />
@@ -1716,10 +1726,10 @@ export default function Biblioteca() {
 
             <form onSubmit={handleSaveVersion} className="flex flex-col gap-4">
               <div>
-                <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+                <label htmlFor="biblioteca-etiqueta-de-version" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
                   Etiqueta de Versión
                 </label>
-                <input
+                <input id="biblioteca-etiqueta-de-version"
                   type="text"
                   required
                   value={versionLabelInput}
@@ -1730,10 +1740,10 @@ export default function Biblioteca() {
               </div>
 
               <div>
-                <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+                <label htmlFor="biblioteca-archivo" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
                   Archivo
                 </label>
-                <input
+                <input id="biblioteca-archivo"
                   type="file"
                   required
                   onChange={e => setVersionFileInput(e.target.files ? e.target.files[0] : null)}
@@ -1754,21 +1764,23 @@ export default function Biblioteca() {
                 </Button>
               </div>
             </form>
-          </div>
+          </Dialog>
         </div>
       )}
 
       {/* MODAL: MOVER ELEMENTO */}
       {moveModal.isOpen && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-theme-container border border-outline-ghost rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+          <Dialog onClose={() => setMoveModal({ isOpen: false, type: 'section', id: '', name: '' })} labelledBy="biblioteca-mover-titulo" className="bg-theme-container border border-outline-ghost rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between mb-4 border-b border-outline-ghost/50 pb-3">
-              <h3 className="text-xl font-display text-on-surface font-semibold flex items-center gap-2">
+              <h3 id="biblioteca-mover-titulo" className="text-xl font-display text-on-surface font-semibold flex items-center gap-2">
                 <Move className="w-5 h-5 text-sky-400" />
                 <span>Mover {moveModal.type === 'section' ? 'Sección' : 'Documento'}</span>
               </h3>
               <button
+                type="button"
                 onClick={() => setMoveModal({ isOpen: false, type: 'section', id: '', name: '' })}
+                aria-label="Cerrar"
                 className="text-on-surface-muted hover:text-on-surface"
               >
                 <X className="w-5 h-5" />
@@ -1781,10 +1793,10 @@ export default function Biblioteca() {
 
             <form onSubmit={handleExecuteMove} className="flex flex-col gap-4">
               <div>
-                <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+                <label htmlFor="biblioteca-ubicacion-de-destino" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
                   Ubicación de Destino
                 </label>
-                <select
+                <select id="biblioteca-ubicacion-de-destino"
                   value={moveTargetIdInput}
                   onChange={e => setMoveTargetIdInput(e.target.value)}
                   className="w-full bg-surface-container border border-outline-ghost rounded-xl px-4 py-2.5 text-on-surface focus:outline-none focus:border-theme-main transition-colors text-sm"
@@ -1813,14 +1825,14 @@ export default function Biblioteca() {
                 </Button>
               </div>
             </form>
-          </div>
+          </Dialog>
         </div>
       )}
 
       {/* MODAL: VISOR DE DOCUMENTOS */}
       {viewerModal.isOpen && viewerModal.version && (
         <div className="fixed inset-0 z-50 bg-background/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 animate-in fade-in duration-200">
-          <div className="bg-theme-container border border-outline-ghost/80 rounded-2xl max-w-5xl w-full max-h-[95vh] flex flex-col shadow-2xl overflow-hidden">
+          <Dialog onClose={() => setViewerModal({ isOpen: false })} labelledBy="biblioteca-visor-titulo" className="bg-theme-container border border-outline-ghost/80 rounded-2xl max-w-5xl w-full max-h-[95vh] flex flex-col shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-outline-ghost/60 bg-surface-container/50 shrink-0 gap-3">
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className="w-9 h-9 rounded-xl bg-theme-main/10 border border-theme-main/30 flex items-center justify-center text-theme-main shrink-0">
@@ -1832,7 +1844,7 @@ export default function Biblioteca() {
 
                 <div className="flex flex-col min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-lg font-display font-semibold text-on-surface truncate">
+                    <h3 id="biblioteca-visor-titulo" className="text-lg font-display font-semibold text-on-surface truncate">
                       {viewerModal.documentTitle}
                     </h3>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-theme-main/20 text-theme-main border border-theme-main/30">
@@ -2028,7 +2040,7 @@ export default function Biblioteca() {
                 </a>
               </div>
             </div>
-          </div>
+          </Dialog>
         </div>
       )}
 

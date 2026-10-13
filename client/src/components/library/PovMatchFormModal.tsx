@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import Button from '../Button';
 import AccessLevelSelector from '../AccessLevelSelector';
+import Dialog from '../Dialog';
 
 interface PovMatchFormModalProps {
   isOpen: boolean;
@@ -199,15 +200,15 @@ export const PovMatchFormModal: React.FC<PovMatchFormModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in zoom-in duration-200">
-      <div className="bg-theme-container border border-outline-ghost rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <Dialog onClose={onClose} labelledBy="povmatch-titulo" className="bg-theme-container border border-outline-ghost rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
         
         {/* Cabecera del modal */}
         <div className="flex items-center justify-between p-5 border-b border-outline-ghost/50 bg-surface-container/40 shrink-0">
-          <h3 className="text-xl font-display text-on-surface font-semibold flex items-center gap-2">
+          <h3 id="povmatch-titulo" className="text-xl font-display text-on-surface font-semibold flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-theme-main" />
             <span>{mode === 'create' ? 'Nueva Partida POV (Multicámara)' : 'Editar Partida POV'}</span>
           </h3>
-          <button onClick={onClose} className="text-on-surface-muted hover:text-on-surface">
+          <button type="button" onClick={onClose} aria-label="Cerrar" className="text-on-surface-muted hover:text-on-surface">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -228,10 +229,10 @@ export const PovMatchFormModal: React.FC<PovMatchFormModalProps> = ({
             </h4>
 
             <div>
-              <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+              <label htmlFor="povmatch-titulo-de-la-partida" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
                 Título de la Partida
               </label>
-              <input
+              <input id="povmatch-titulo-de-la-partida"
                 type="text"
                 required
                 value={title}
@@ -242,10 +243,10 @@ export const PovMatchFormModal: React.FC<PovMatchFormModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+              <label htmlFor="povmatch-carpeta-seccion-de-destino" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
                 Carpeta / Sección de Destino
               </label>
-              <select
+              <select id="povmatch-carpeta-seccion-de-destino"
                 value={selectedSectionId}
                 onChange={e => setSelectedSectionId(e.target.value)}
                 className="w-full bg-surface-container border border-outline-ghost rounded-xl px-4 py-2.5 text-on-surface focus:outline-none focus:border-theme-main transition-colors text-sm"
@@ -259,10 +260,10 @@ export const PovMatchFormModal: React.FC<PovMatchFormModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
+              <label htmlFor="povmatch-descripcion" className="block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1">
                 Descripción (Opcional)
               </label>
-              <textarea
+              <textarea id="povmatch-descripcion"
                 rows={2}
                 value={description}
                 onChange={e => setDescription(e.target.value)}
@@ -347,10 +348,10 @@ export const PovMatchFormModal: React.FC<PovMatchFormModalProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                     {/* 1. Nombre del jugador */}
                     <div>
-                      <label className="block text-[11px] font-display text-on-surface-muted uppercase mb-1">
+                      <label htmlFor={`povmatch-pov-${index}-nombre-del-jugador`} className="block text-[11px] font-display text-on-surface-muted uppercase mb-1">
                         1. Nombre del Jugador *
                       </label>
-                      <input
+                      <input id={`povmatch-pov-${index}-nombre-del-jugador`}
                         type="text"
                         required
                         value={pov.name}
@@ -362,10 +363,10 @@ export const PovMatchFormModal: React.FC<PovMatchFormModalProps> = ({
 
                     {/* 2. Usuario en la secta (opcional) */}
                     <div>
-                      <label className="block text-[11px] font-display text-on-surface-muted uppercase mb-1">
+                      <label htmlFor={`povmatch-pov-${index}-usuario-secta`} className="block text-[11px] font-display text-on-surface-muted uppercase mb-1">
                         2. Usuario Secta (Opcional)
                       </label>
-                      <input
+                      <input id={`povmatch-pov-${index}-usuario-secta`}
                         type="text"
                         value={pov.sectaUserId || ''}
                         onChange={e => handleUpdatePovField(index, 'sectaUserId', e.target.value)}
@@ -376,10 +377,10 @@ export const PovMatchFormModal: React.FC<PovMatchFormModalProps> = ({
 
                     {/* 3. Alineamiento Inicial */}
                     <div>
-                      <label className="block text-[11px] font-display text-on-surface-muted uppercase mb-1">
+                      <label htmlFor={`povmatch-pov-${index}-alineamiento-inicial`} className="block text-[11px] font-display text-on-surface-muted uppercase mb-1">
                         3. Alineamiento Inicial *
                       </label>
-                      <select
+                      <select id={`povmatch-pov-${index}-alineamiento-inicial`}
                         value={pov.initialAlignment}
                         onChange={e => handleUpdatePovField(index, 'initialAlignment', e.target.value as InitialAlignment)}
                         className="w-full bg-surface-container border border-outline-ghost rounded-lg px-3 py-1.5 text-xs text-on-surface focus:outline-none focus:border-theme-main"
@@ -392,10 +393,10 @@ export const PovMatchFormModal: React.FC<PovMatchFormModalProps> = ({
 
                     {/* 4. Personaje */}
                     <div>
-                      <label className="block text-[11px] font-display text-on-surface-muted uppercase mb-1">
+                      <label htmlFor={`povmatch-pov-${index}-personaje`} className="block text-[11px] font-display text-on-surface-muted uppercase mb-1">
                         4. Personaje *
                       </label>
-                      <input
+                      <input id={`povmatch-pov-${index}-personaje`}
                         type="text"
                         required
                         value={pov.character}
@@ -407,10 +408,10 @@ export const PovMatchFormModal: React.FC<PovMatchFormModalProps> = ({
 
                     {/* 5. Tipo de personaje */}
                     <div>
-                      <label className="block text-[11px] font-display text-on-surface-muted uppercase mb-1">
+                      <label htmlFor={`povmatch-pov-${index}-tipo-de-personaje`} className="block text-[11px] font-display text-on-surface-muted uppercase mb-1">
                         5. Tipo de Personaje *
                       </label>
-                      <select
+                      <select id={`povmatch-pov-${index}-tipo-de-personaje`}
                         value={pov.characterType}
                         onChange={e => handleUpdatePovField(index, 'characterType', e.target.value as CharacterType)}
                         className="w-full bg-surface-container border border-outline-ghost rounded-lg px-3 py-1.5 text-xs text-on-surface focus:outline-none focus:border-theme-main"
@@ -426,11 +427,11 @@ export const PovMatchFormModal: React.FC<PovMatchFormModalProps> = ({
 
                     {/* 6. Enlace a YT */}
                     <div>
-                      <label className="block text-[11px] font-display text-on-surface-muted uppercase mb-1 flex items-center gap-1">
+                      <label htmlFor={`povmatch-pov-${index}-enlace-de-youtube`} className="block text-[11px] font-display text-on-surface-muted uppercase mb-1 flex items-center gap-1">
                         <LinkIcon className="w-3 h-3" />
                         <span>6. Enlace de YouTube *</span>
                       </label>
-                      <input
+                      <input id={`povmatch-pov-${index}-enlace-de-youtube`}
                         type="url"
                         required
                         value={pov.youtubeUrl}
@@ -455,7 +456,7 @@ export const PovMatchFormModal: React.FC<PovMatchFormModalProps> = ({
             </Button>
           </div>
         </form>
-      </div>
+      </Dialog>
     </div>
   );
 };

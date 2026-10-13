@@ -1,3 +1,5 @@
+import { notifySessionExpired } from './session';
+
 /**
  * Helper utility to safely parse API fetch responses and handle error statuses cleanly.
  */
@@ -22,12 +24,20 @@ export async function parseApiResponse<T = any>(response: Response): Promise<T> 
   }
 
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-      const authError = data?.error || data?.message;
-      if (authError && typeof authError === 'string' && authError !== 'Forbidden' && authError !== 'Unauthorized') {
-        throw new Error(authError);
+    const authError = data?.error || data?.message;
+    const hasAuthMessage = typeof authError === 'string' && authError !== 'Forbidden' && authError !== 'Unauthorized';
+
+    if (response.status === 401) {
+      // El servidor no acepta la sesión: se cierra también en la web, para no
+      // seguir mostrándote dentro. (Un 401 sin código es un login fallido.)
+      if (data?.code === 'SESSION_EXPIRED' || data?.code === 'NO_SESSION') {
+        notifySessionExpired();
       }
-      throw new Error('Tu sesión ha expirado o no tienes permisos para realizar esta acción. Por favor, vuelve a iniciar sesión.');
+      throw new Error(hasAuthMessage ? authError : 'Necesitas iniciar sesión para hacer esto.');
+    }
+
+    if (response.status === 403) {
+      throw new Error(hasAuthMessage ? authError : 'No tienes permisos para realizar esta acción.');
     }
 
     const errorMessage = data?.error || data?.message || `Error en el servidor (${response.status})`;

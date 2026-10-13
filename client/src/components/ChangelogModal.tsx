@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { X, Sparkles, Tag, Calendar, CheckCircle2, History } from 'lucide-react';
 import Button from './Button';
 import changelogData from '../data/changelog.json';
+import Dialog from './Dialog';
 
 export interface ChangelogItem {
   category: string;
@@ -22,16 +23,6 @@ interface ChangelogModalProps {
 }
 
 const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
-
   if (!isOpen) return null;
 
   const formatDate = (dateStr: string) => {
@@ -50,17 +41,15 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
   return (
     <div 
       className="fixed inset-0 bg-background/85 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200"
-      onClick={onClose}
     >
-      <div 
-        className="bg-surface border border-outline-ghost rounded-lg shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] relative"
-        onClick={(e) => e.stopPropagation()}
-      >
+      {/* Fondo: pulsar fuera cierra (con teclado se cierra con Escape) */}
+      <div aria-hidden="true" className="absolute inset-0" onClick={onClose} />
+      <Dialog onClose={onClose} labelledBy="changelog-title" className="bg-surface border border-outline-ghost rounded-lg shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] relative">
         {/* Runic Corner Details */}
-        <span className="absolute top-2 left-3 text-xs text-theme-main/30 font-display select-none pointer-events-none">ᚠ</span>
-        <span className="absolute top-2 right-12 text-xs text-theme-main/30 font-display select-none pointer-events-none">ᚦ</span>
-        <span className="absolute bottom-2 left-3 text-xs text-theme-main/30 font-display select-none pointer-events-none">ᚨ</span>
-        <span className="absolute bottom-2 right-3 text-xs text-theme-main/30 font-display select-none pointer-events-none">ᛟ</span>
+        <span aria-hidden="true" className="absolute top-2 left-3 text-xs text-theme-main/30 font-display select-none pointer-events-none">ᚠ</span>
+        <span aria-hidden="true" className="absolute top-2 right-12 text-xs text-theme-main/30 font-display select-none pointer-events-none">ᚦ</span>
+        <span aria-hidden="true" className="absolute bottom-2 left-3 text-xs text-theme-main/30 font-display select-none pointer-events-none">ᚨ</span>
+        <span aria-hidden="true" className="absolute bottom-2 right-3 text-xs text-theme-main/30 font-display select-none pointer-events-none">ᛟ</span>
 
         {/* Modal Header */}
         <div className="flex justify-between items-center px-6 py-5 border-b border-outline-ghost/80 bg-surface-low/50">
@@ -69,7 +58,7 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
               <History size={20} />
             </div>
             <div>
-              <h2 className="text-xl font-display font-bold text-on-surface flex items-center gap-2">
+              <h2 id="changelog-title" className="text-xl font-display font-bold text-on-surface flex items-center gap-2">
                 Historial de Cambios
               </h2>
               <p className="text-xs font-body text-on-surface-muted">
@@ -167,7 +156,7 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
             Entendido
           </Button>
         </div>
-      </div>
+      </Dialog>
     </div>
   );
 };
