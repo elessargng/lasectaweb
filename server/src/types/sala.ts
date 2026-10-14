@@ -1,3 +1,5 @@
+import { SalaMensajesPrivados } from './chat';
+
 /** Papel de cada participante en la sala de juego. Todo el que entra es visitante. */
 export type SalaRol = 'narrador' | 'jugador' | 'visitante';
 
@@ -94,6 +96,8 @@ export interface SalaConfiguracion {
   grimorioJugadores: boolean;
   /** Lo que tarda la aguja en pasar de una ficha a la siguiente al votar, en segundos. */
   segundosPorFicha: number;
+  /** Mensajes privados entre jugadores: ninguno, solo con los vecinos o con todos. */
+  mensajes: SalaMensajesPrivados;
 }
 
 /**
@@ -155,6 +159,25 @@ export interface SalaFase {
   reinicios: number;
 }
 
+/** Una conversación privada (voz y vídeo) entre dos o más jugadores o narradores. */
+export interface SalaConversacion {
+  id: string;
+  /** ids de los que hablan en ella (jugadores y narradores). */
+  miembros: string[];
+  /**
+   * ids de los visitantes que la escuchan (ni hablan ni se ven). A los jugadores
+   * no se les manda: no saben que están.
+   */
+  oyentes: string[];
+}
+
+/** Una invitación a conversar, pendiente de que `para` la acepte o la rechace. */
+export interface SalaInvitacion {
+  id: string;
+  de: string;
+  para: string;
+}
+
 /** Lo que el servidor manda a cada cliente cada vez que cambia la sala. */
 export interface SalaEstado {
   participantes: SalaParticipante[];
@@ -169,6 +192,12 @@ export interface SalaEstado {
   bolsa: string[];
   /** Revelando el grimorio (final de la partida), o null. */
   revelacion: SalaRevelacion | null;
+  /** Hay videollamada (cámaras y micrófonos) en esta sala. */
+  video: boolean;
+  /** Las conversaciones privadas en curso (todos ven quién habla con quién, no qué). */
+  conversaciones: SalaConversacion[];
+  /** Las invitaciones a conversar que ha hecho o recibido quien recibe el mensaje. */
+  invitaciones: SalaInvitacion[];
   /** Hora del servidor (ms) al mandar el estado: el cliente la usa para la cuenta atrás. */
   ahora: number;
   /** Registro de nominaciones y votaciones (en orden); solo se manda a los narradores. */

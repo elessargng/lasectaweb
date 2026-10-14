@@ -1,3 +1,6 @@
+import type { VideoTrack } from 'livekit-client';
+import BotonesContacto, { type ContactoParticipante } from './BotonesContacto';
+import VideoPista from './VideoPista';
 import CuadroAvatar from './CuadroAvatar';
 import { botonPrincipal } from './estilos';
 import { idNombreNarrador } from './ids';
@@ -11,6 +14,13 @@ interface CuadroNarradorProps {
    * «solicitado» (desactivado) mientras el narrador responde.
    */
   grimorio?: { onSolicitar: () => void } | 'solicitado';
+  /** Escribirle y conversar con él (lo que se pueda; escribirle, siempre). */
+  contacto?: ContactoParticipante;
+  /** Su cámara, si la tiene encendida en la mesa (la propia, en espejo). */
+  video?: VideoTrack | null;
+  espejo?: boolean;
+  hablando?: boolean;
+  enConversacion?: boolean;
 }
 
 /**
@@ -24,10 +34,22 @@ interface CuadroNarradorProps {
  * «Grimorio solicitado» (desactivado) hasta que el narrador responde: así el
  * foco no se pierde y se sabe que está pedido.
  */
-const CuadroNarrador = ({ narrador, esYo, grimorio }: CuadroNarradorProps) => (
-  <div className="group relative">
+const CuadroNarrador = ({
+  narrador,
+  esYo,
+  grimorio,
+  contacto,
+  video,
+  espejo = false,
+  hablando = false,
+  enConversacion = false,
+}: CuadroNarradorProps) => (
+  <div className={`group relative rounded ${hablando ? 'ring-2 ring-[#b19cd9] ring-offset-2 ring-offset-background' : ''}`}>
     <CuadroAvatar
       titulo="Narrador"
+      // Mensaje y conversación junto al rótulo «Narrador», arriba
+      junto={contacto && <BotonesContacto nombre={narrador.nombre} {...contacto} />}
+      contenido={video ? <VideoPista pista={video} espejo={espejo} /> : undefined}
       imagen={narrador.avatar}
       pie={
         <p id={idNombreNarrador(narrador.id)} tabIndex={-1} className="mt-2 text-center font-semibold break-words focus:outline-none">
@@ -35,6 +57,7 @@ const CuadroNarrador = ({ narrador, esYo, grimorio }: CuadroNarradorProps) => (
           {narrador.nombre}
           {esYo && ' (tú)'}
           {!narrador.conectado && <span className="font-normal text-on-surface-muted"> (desconectado)</span>}
+          {enConversacion && <span className="sr-only"> (en una conversación privada)</span>}
         </p>
       }
     />

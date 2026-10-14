@@ -81,6 +81,9 @@ import { RitualSignupRepository } from './repositories/RitualSignupRepository';
 import { RitualService } from './services/RitualService';
 import { RitualController } from './controllers/RitualController';
 import { iniciarSalaSocket } from './sockets/salaSocket';
+import { MemoriaChatRepository } from './repositories/ChatRepository';
+import { leerConfigVideollamada } from './config/videollamada';
+import { LiveKitProveedor } from './services/videollamada/LiveKitProveedor';
 import { sendPlazaIntegrityAlert, sendPlazaResultAnnouncement } from './utils/mailer';
 
 const app = express();
@@ -118,6 +121,8 @@ const villacuervosService = new VillacuervosService(villacuervosRepository, user
 // una vez por semana con Villacuervos. Cada pieza recibe lo que necesita;
 // ninguna crea sus dependencias.
 const configPersonajes = leerConfigPersonajes();
+const configVideollamada = leerConfigVideollamada();
+if (!configVideollamada) console.log('[Videollamada] Sin LIVEKIT_URL/LIVEKIT_API_KEY/LIVEKIT_API_SECRET: la sala no tendrá cámaras ni micrófonos.');
 const personajeRepository = new PersonajeRepository();
 const idiomaRepository = new IdiomaRepository();
 const traduccionRepository = new TraduccionRepository();
@@ -374,6 +379,10 @@ DatabaseRepository.getInstance()
     const httpServer = http.createServer(app);
     iniciarSalaSocket(httpServer, async (id) => (await userRepository.findById(id))?.profilePicture || null, {
       guiones: guionService,
+      // Los mensajes de la sala, en memoria (como la sala)
+      mensajes: new MemoriaChatRepository(),
+      // Cámaras y micrófonos: el servidor LiveKit, si está configurado (LIVEKIT_*)
+      video: configVideollamada ? new LiveKitProveedor(configVideollamada) : null,
     });
     httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

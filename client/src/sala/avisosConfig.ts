@@ -21,6 +21,10 @@ export type TipoAviso =
   | 'bolsa'
   | 'accesoGrimorio'
   | 'revelacion'
+  | 'mensajes'
+  | 'susurros'
+  | 'comunicaciones'
+  | 'conversaciones'
   | 'nominaciones'
   | 'cuentaAtras'
   | 'votoAVoto'
@@ -69,6 +73,15 @@ export const GRUPOS_AVISOS: { grupo: string; tipos: { tipo: TipoAviso; etiqueta:
       { tipo: 'cuentaAtras', etiqueta: 'Cuenta atrás: cuando empieza y cuando acaba' },
       { tipo: 'votoAVoto', etiqueta: 'Votación, ficha a ficha: el nombre y los votos' },
       { tipo: 'resultadoVotacion', etiqueta: 'Votación: cuando empieza y su resultado' },
+    ],
+  },
+  {
+    grupo: 'Mensajes y comunicaciones',
+    tipos: [
+      { tipo: 'conversaciones', etiqueta: 'Conversaciones privadas: las tuyas (quién entra y sale) y quién conversa con quién' },
+      { tipo: 'comunicaciones', etiqueta: 'Tu micrófono y tu cámara, al cambiarlos con su tecla' },
+      { tipo: 'mensajes', etiqueta: 'Mensajes que te llegan (con quién y qué dicen)' },
+      { tipo: 'susurros', etiqueta: 'Susurros: quién escribe en privado a quién en la mesa' },
     ],
   },
   {

@@ -4,6 +4,9 @@ import { useAriaLive, type TipoAviso } from './avisosConfig';
 import AsaMover from './AsaMover';
 import Asiento from './Asiento';
 import CuentaAtras from './CuentaAtras';
+import Ondas, { type OndaMesa } from './Ondas';
+import type { ContactoParticipante } from './BotonesContacto';
+import type { PistasParticipante } from './useVideollamada';
 import { hacenFalta } from './avisosSala';
 import CuadroAvatar from './CuadroAvatar';
 import FichaAsiento from './FichaAsiento';
@@ -14,7 +17,7 @@ import { ID_AYUDA_MOVER, idNombreAsiento, ID_GANADOR, idRevelarFicha } from './i
 import { tamanoAvatarAuto, tamanoFichaAuto } from './tamanosAutomaticos';
 import { useMoverAsientos } from './useMoverAsientos';
 import { useNominacion } from './useNominacion';
-import type { SalaEstado, SalaResultado } from './useSala';
+import type { SalaEstado, SalaParticipante, SalaResultado } from './useSala';
 
 export interface TamanosMesa {
   avatar: number;
@@ -57,6 +60,12 @@ interface MesaProps {
   onTerminar: () => void;
   /** Reloj del servidor menos el de aquí (ms), para la cuenta atrás. */
   desfaseReloj: number;
+  /** Escribir y conversar con quien se sienta (lo que se pueda). */
+  contacto?: (participante: SalaParticipante) => ContactoParticipante | undefined;
+  /** Lo que se ve y se oye de cada uno en la mesa (cámaras, quién habla). */
+  pistas: Map<string, PistasParticipante>;
+  /** Susurros en curso: ondas de un asiento a otro. */
+  ondas: OndaMesa[];
 }
 
 /**
@@ -120,6 +129,9 @@ const Mesa = ({
   focoAsientoRef,
   onTerminar,
   desfaseReloj,
+  contacto,
+  pistas,
+  ondas,
 }: MesaProps) => {
   const anadirRef = useRef<HTMLButtonElement>(null);
   const [pidiendo, setPidiendo] = useState(false);
@@ -280,6 +292,11 @@ const Mesa = ({
                   // Mitad inferior de la mesa (entre las 3 y las 9, sin contarlas): nombre debajo
                   nombreAbajo={-Math.cos((2 * Math.PI * i) / total) > 0.01}
                   angulo={(2 * Math.PI * i) / total}
+                  contacto={ocupante ? contacto?.(ocupante) : undefined}
+                  video={ocupante ? pistas.get(ocupante.id)?.video : undefined}
+                  espejo={!!ocupante && ocupante.id === estado.yo}
+                  hablando={!!ocupante && !!pistas.get(ocupante.id)?.hablando}
+                  enConversacion={!!ocupante && estado.conversaciones.some((c) => c.miembros.includes(ocupante.id))}
                   asa={editando && real && <AsaMover {...mover.propsAsa(a.id)} nombre={real.nombre} numero={i + 1} />}
                 />
               </li>
@@ -366,6 +383,8 @@ const Mesa = ({
           <CuadroAvatar imagen={participante(asientos.find((a) => a.id === arrastrado.desde)?.ocupante ?? null)?.avatar} />
         </div>
       )}
+
+      <Ondas ondas={ondas} total={total} />
 
       {agujas && (
         <Agujas

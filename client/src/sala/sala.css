@@ -87,3 +87,34 @@
   background: #7d1820;
   border-color: #5a0f14;
 }
+
+/*
+ * Ondas de un susurro (Ondas.tsx): cada arco sale del asiento de quien escribe y
+ * recorre la cuerda hasta el de quien lo recibe, creciendo y apagándose. Con
+ * menos movimiento, se quedan quietas a medio camino.
+ */
+@keyframes sala-onda {
+  from {
+    left: 0%;
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  to {
+    left: 100%;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.3);
+  }
+}
+.sala-onda {
+  left: 0%;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  animation: sala-onda 1.6s ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sala-onda {
+    animation: none;
+    left: 50%;
+    opacity: 0.85;
+  }
+}

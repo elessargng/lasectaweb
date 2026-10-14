@@ -83,6 +83,57 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): Aviso[]
     }
   }
 
+  // Conversaciones privadas: la propia (con quién, quién entra y sale, cuándo acaba)
+  // y las de los demás (quién con quién, al empezar).
+  const nombreDe = (id: string) => ahora.get(id)?.nombre ?? antes.get(id)?.nombre ?? 'Alguien';
+  const lista = (ids: string[]) => {
+    const n = ids.map(nombreDe);
+    return n.length <= 1 ? (n[0] ?? '') : `${n.slice(0, -1).join(', ')} y ${n[n.length - 1]}`;
+  };
+  const suConversacion = (e: SalaEstado, id: string) =>
+    e.conversaciones.find((c) => c.miembros.includes(id) || c.oyentes.includes(id));
+  const miAntes = suConversacion(anterior, yo);
+  const miAhora = suConversacion(nuevo, yo);
+  if (miAhora && miAhora.id !== miAntes?.id) {
+    avisa(
+      'conversaciones',
+      miAhora.oyentes.includes(yo)
+        ? `Escuchas la conversación de ${lista(miAhora.miembros)}.`
+        : `Estás en una conversación privada con ${lista(miAhora.miembros.filter((id) => id !== yo))}.`,
+    );
+  } else if (miAhora && miAntes) {
+    for (const id of miAhora.miembros.filter((m) => !miAntes.miembros.includes(m))) {
+      avisa('conversaciones', `${nombreDe(id)} se suma a la conversación.`);
+    }
+    for (const id of miAntes.miembros.filter((m) => !miAhora.miembros.includes(m))) {
+      avisa('conversaciones', `${nombreDe(id)} sale de la conversación.`);
+    }
+  } else if (miAntes && !miAhora) {
+    avisa('conversaciones', 'Termina tu conversación privada.');
+  }
+  for (const c of nuevo.conversaciones) {
+    if (c.miembros.includes(yo) || anterior.conversaciones.some((a) => a.id === c.id)) continue;
+    avisa('conversaciones', `${lista(c.miembros)} conversan en privado.`);
+  }
+  // Quién entra a escuchar (solo les llega a narradores y visitantes)
+  for (const c of nuevo.conversaciones) {
+    const previos = anterior.conversaciones.find((a) => a.id === c.id)?.oyentes ?? [];
+    for (const id of c.oyentes.filter((o) => o !== yo && !previos.includes(o))) {
+      avisa('conversaciones', `${nombreDe(id)} escucha la conversación de ${lista(c.miembros)}.`);
+    }
+  }
+  // Invitaciones: las que me llegan y las mías que no se aceptan
+  for (const i of nuevo.invitaciones) {
+    if (i.para === yo && !anterior.invitaciones.some((a) => a.id === i.id)) {
+      avisa('conversaciones', `${nombreDe(i.de)} te invita a una conversación privada.`);
+    }
+  }
+  for (const i of anterior.invitaciones) {
+    if (i.de !== yo || nuevo.invitaciones.some((n) => n.id === i.id)) continue;
+    // Si ha entrado en mi conversación, ya se dice que se suma
+    if (!miAhora?.miembros.includes(i.para)) avisa('conversaciones', `${nombreDe(i.para)} no ha aceptado la invitación.`);
+  }
+
   // Asientos: quién se sienta y quién se levanta (o se va y lo deja libre).
   const asientoDe = (e: SalaEstado, id: string) => e.asientos.findIndex((a) => a.ocupante === id) + 1;
   for (const a of anterior.asientos) {

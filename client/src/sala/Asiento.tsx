@@ -1,3 +1,7 @@
+import { AudioLines } from 'lucide-react';
+import type { VideoTrack } from 'livekit-client';
+import BotonesContacto, { type ContactoParticipante } from './BotonesContacto';
+import VideoPista from './VideoPista';
 import CuadroAvatar from './CuadroAvatar';
 import { botonPrincipal } from './estilos';
 import { idNombreAsiento } from './ids';
@@ -25,6 +29,15 @@ interface AsientoProps {
   nombreAbajo?: boolean;
   /** Dónde está en la mesa, en radianes desde las 12 en el sentido del reloj: la silla vacía mira al centro. */
   angulo?: number;
+  /** Escribir y conversar con quien se sienta (lo que se pueda). */
+  contacto?: ContactoParticipante;
+  /** Su cámara, si la tiene encendida en la mesa (la propia, en espejo). */
+  video?: VideoTrack | null;
+  espejo?: boolean;
+  /** Está hablando (un aro alrededor del cuadro). */
+  hablando?: boolean;
+  /** Está en una conversación privada (fuera de la mesa). */
+  enConversacion?: boolean;
 }
 
 /**
@@ -74,18 +87,39 @@ const Asiento = ({
   destino = false,
   nombreAbajo = false,
   angulo = 0,
+  contacto,
+  video,
+  espejo = false,
+  hablando = false,
+  enConversacion = false,
 }: AsientoProps) => {
   const sentarse = !ocupante && puedeSentarse;
   const silla = sillaVacia(angulo);
 
   return (
-    <div className={`group relative rounded ${destino ? 'ring-4 ring-theme-main ring-offset-2 ring-offset-background' : ''}`}>
+    <div
+      className={`group relative rounded ${
+        destino
+          ? 'ring-4 ring-theme-main ring-offset-2 ring-offset-background'
+          : hablando
+            ? 'ring-2 ring-[#b19cd9] ring-offset-2 ring-offset-background'
+            : ''
+      }`}
+    >
       {asa}
+      {enConversacion && (
+        // Conversando en privado: su cámara y su voz no llegan a la mesa
+        <span className="absolute left-1 top-1 z-10 rounded-full bg-background/85 p-1 text-theme-main">
+          <AudioLines size={14} />
+        </span>
+      )}
       <CuadroAvatar
         pieFuera={nombreAbajo ? 'abajo' : 'arriba'}
         imagen={ocupante?.avatar}
         contenido={
-          ocupante ? undefined : (
+          ocupante ? (
+            video ? <VideoPista pista={video} espejo={espejo} /> : undefined
+          ) : (
             // La silla vacía no se lee: lo dice el pie («Asiento 3, libre»)
             <img
               src={`/sillas/${silla.imagen}.webp`}
@@ -95,27 +129,32 @@ const Asiento = ({
           )
         }
         pie={
-          <p
-            id={idNombreAsiento(id)}
-            tabIndex={-1}
-            className={`${nombreAbajo ? 'mt-1' : 'mb-1'} text-center text-sm break-words focus:outline-none`}
-          >
-            {ocupante ? (
-              <>
-                {/* Solo el número: «3, Ana» (la lista ya dice que son asientos) */}
-                <span className="sr-only">{numero}, </span>
-                <span className={ocupante.conectado ? 'font-semibold' : 'text-on-surface-muted'}>{ocupante.nombre}</span>
-                {esYo && ' (tú)'}
-                {!ocupante.conectado && <span className="text-on-surface-muted"> (desconectado)</span>}
-              </>
-            ) : (
-              <>
-                Asiento {numero}
-                {/* La silla vacía no se lee: se dice aquí */}
-                <span className="sr-only">, libre</span>
-              </>
-            )}
-          </p>
+          <div className={`${nombreAbajo ? 'mt-1' : 'mb-1'} flex items-center justify-center gap-1.5`}>
+            <p
+              id={idNombreAsiento(id)}
+              tabIndex={-1}
+              className="min-w-0 text-center text-sm break-words focus:outline-none"
+            >
+              {ocupante ? (
+                <>
+                  {/* Solo el número: «3, Ana» (la lista ya dice que son asientos) */}
+                  <span className="sr-only">{numero}, </span>
+                  <span className={ocupante.conectado ? 'font-semibold' : 'text-on-surface-muted'}>{ocupante.nombre}</span>
+                  {esYo && ' (tú)'}
+                  {!ocupante.conectado && <span className="text-on-surface-muted"> (desconectado)</span>}
+                  {enConversacion && <span className="sr-only"> (en una conversación privada)</span>}
+                </>
+              ) : (
+                <>
+                  Asiento {numero}
+                  {/* La silla vacía no se lee: se dice aquí */}
+                  <span className="sr-only">, libre</span>
+                </>
+              )}
+            </p>
+            {/* Junto al nombre (sobre el retrato las taparían las fichas) */}
+            {ocupante && contacto && <BotonesContacto nombre={ocupante.nombre} {...contacto} />}
+          </div>
         }
       />
       {sentarse && (

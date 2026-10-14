@@ -15,20 +15,26 @@ export interface Atajo {
   meta: boolean;
 }
 
-export type AccionAtajo = 'levantarMano' | 'cambiarFase';
+export type AccionAtajo = 'levantarMano' | 'cambiarFase' | 'microfono' | 'camara';
 
 /** Las acciones con atajo, en el orden en que salen en las preferencias. */
 export const ACCIONES_ATAJO: { accion: AccionAtajo; etiqueta: string }[] = [
   { accion: 'levantarMano', etiqueta: 'Levantar o bajar la mano' },
   { accion: 'cambiarFase', etiqueta: 'Ir a la noche o amanecer (narradores)' },
+  { accion: 'microfono', etiqueta: 'Activar o silenciar el micrófono' },
+  { accion: 'camara', etiqueta: 'Activar o apagar la cámara' },
 ];
 
 const ESPACIO: Atajo = { code: 'Space', key: ' ', ctrl: false, alt: false, shift: false, meta: false };
 const N: Atajo = { code: 'KeyN', key: 'n', ctrl: false, alt: false, shift: false, meta: false };
+const PUNTO: Atajo = { code: 'Period', key: '.', ctrl: false, alt: false, shift: false, meta: false };
+const COMA: Atajo = { code: 'Comma', key: ',', ctrl: false, alt: false, shift: false, meta: false };
 
 export const ATAJOS_INICIALES: Record<AccionAtajo, Atajo> = {
   levantarMano: ESPACIO,
   cambiarFase: N,
+  microfono: PUNTO,
+  camara: COMA,
 };
 
 /** Teclas que no sirven solas: son modificadores. */
@@ -44,6 +50,8 @@ const NOMBRES: Record<string, string> = {
   ArrowDown: 'Flecha abajo',
   ArrowLeft: 'Flecha izquierda',
   ArrowRight: 'Flecha derecha',
+  '.': 'Punto',
+  ',': 'Coma',
 };
 
 /** Cómo se lee y se ve un atajo: «Ctrl + Mayús + M», «Espacio». */

@@ -71,6 +71,14 @@ const PanelGuion = ({ vista, guion, idiomas, enJuego, onCambiarIdiomaDescripcion
   const modo = completo ? 'completo' : 'resumido';
   const maximo = () => Math.max(ANCHO.min, window.innerWidth - 16);
   const ancho = Math.min(anchos[modo], maximo());
+  // Mientras está abierto, su ancho para lo que va abajo a la derecha (el reparto), que se aparta
+  useEffect(() => {
+    const raiz = document.documentElement;
+    raiz.style.setProperty('--sala-panel-guion-ancho', `${ancho}px`);
+    return () => {
+      raiz.style.removeProperty('--sala-panel-guion-ancho');
+    };
+  }, [ancho]);
   const cambiarAncho = (px: number) =>
     setAnchos((a) => ({ ...a, [modo]: Math.round(Math.min(maximo(), Math.max(ANCHO.min, px))) }));
 

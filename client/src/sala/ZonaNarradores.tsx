@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import AccesoGrimorio from './AccesoGrimorio';
+import type { ContactoParticipante } from './BotonesContacto';
+import type { PistasParticipante } from './useVideollamada';
 import CuadroAvatar from './CuadroAvatar';
 import CuadroNarrador from './CuadroNarrador';
 import { botonPrincipal } from './estilos';
 import { ID_SIN_NARRADOR } from './ids';
-import type { SalaEstado, SalaResultado } from './useSala';
+import type { SalaEstado, SalaParticipante, SalaResultado } from './useSala';
 
 interface ZonaNarradoresProps {
   estado: SalaEstado;
@@ -12,6 +14,10 @@ interface ZonaNarradoresProps {
   pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
   /** Para avisar de errores de las acciones. */
   onError: (mensaje: string) => void;
+  /** Escribir y conversar con un narrador (lo que se pueda). */
+  contacto?: (participante: SalaParticipante) => ContactoParticipante | undefined;
+  /** Lo que se ve y se oye de cada uno en la mesa. */
+  pistas?: Map<string, PistasParticipante>;
 }
 
 /**
@@ -22,7 +28,7 @@ interface ZonaNarradoresProps {
  *
  * Debajo, para los narradores, quién pide ver el grimorio.
  */
-const ZonaNarradores = ({ estado, pedir, onError }: ZonaNarradoresProps) => {
+const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas }: ZonaNarradoresProps) => {
   const [pidiendo, setPidiendo] = useState(false);
 
   const narradores = estado.participantes.filter((p) => p.rol === 'narrador');
@@ -52,6 +58,11 @@ const ZonaNarradores = ({ estado, pedir, onError }: ZonaNarradoresProps) => {
               <CuadroNarrador
                 narrador={n}
                 esYo={n.id === estado.yo}
+                contacto={contacto?.(n)}
+                video={pistas?.get(n.id)?.video}
+                espejo={n.id === estado.yo}
+                hablando={pistas?.get(n.id)?.hablando}
+                enConversacion={estado.conversaciones.some((c) => c.miembros.includes(n.id))}
                 grimorio={
                   puede('sala:solicitarGrimorio')
                     ? { onSolicitar: () => void actuar('sala:solicitarGrimorio') }

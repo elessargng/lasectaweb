@@ -2,7 +2,8 @@ import { contarBolsa, TIPOS_REPARTO, useFichas } from './fichas';
 import type { SalaDistribucion } from './useSala';
 
 /**
- * Abajo del todo a la izquierda de la sala (en pantallas estrechas, debajo de
+ * Abajo del todo a la derecha de la sala; con la hoja de personajes o el orden
+ * de noche abiertos, a su izquierda, para que no lo tapen (en pantallas estrechas, debajo de
  * la mesa), para todos: cuántos aldeanos, forasteros,
  * esbirros y demonios tiene la partida (según los asientos, sin los viajeros).
  * El narrador ve además cuántos lleva metidos en la bolsa de cada tipo («2/5»).
@@ -17,7 +18,7 @@ const RepartoPartida = ({ distribucion, bolsa }: { distribucion: SalaDistribucio
   return (
     <section
       aria-labelledby="sala-reparto-titulo"
-      className="self-start rounded border border-outline-ghost bg-surface/85 px-3 py-2 text-sm lg:fixed lg:bottom-4 lg:left-4 lg:z-30"
+      className="self-start rounded border border-outline-ghost bg-surface/85 px-3 py-2 text-sm lg:fixed lg:bottom-4 lg:right-[calc(var(--sala-panel-guion-ancho,0px)+1rem)] lg:z-30"
     >
       <h2 id="sala-reparto-titulo" className="text-xs font-semibold uppercase tracking-wide text-theme-main">
         Reparto de la partida

@@ -1,3 +1,6 @@
+import { ChatRepository } from '../repositories/ChatRepository';
+import { ProveedorVideo } from '../services/videollamada/ProveedorVideo';
+import { MENSAJES_PRIVADOS, SalaMensajesPrivados } from '../types/chat';
 import {
   limpiarAvatarSala,
   limpiarNombreSala,
@@ -29,6 +32,10 @@ export interface ServicioGuiones {
 /** Servicios de fuera de la sala que usan algunas acciones; se inyectan al iniciar la sala. */
 export interface DependenciasSala {
   guiones: ServicioGuiones;
+  /** Dónde se guardan los mensajes de texto de la sala. */
+  mensajes: ChatRepository;
+  /** El servidor de vídeo (cámaras y micrófonos), o null si no está configurado. */
+  video: ProveedorVideo | null;
 }
 
 interface Accion {
@@ -210,14 +217,15 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /**
    * Ajustes de la partida (Preferencias > Partida). datos: cualquiera de
-   * { grimorioJugadores: boolean, segundosPorFicha: número de 0,25 en 0,25 }.
+   * { grimorioJugadores: boolean, segundosPorFicha: número de 0,25 en 0,25,
+   *   mensajes: 'ninguno' | 'vecinos' | 'todos' (mensajes privados entre jugadores) }.
    * (La cuenta atrás no se configura: siempre es de 3 a 0.)
    */
   'narrador:configurarPartida': {
     puede: esNarrador,
     noPuede: 'Solo un narrador puede cambiar los ajustes de la partida.',
     hacer: (sala, _yo, datos) => {
-      const { grimorioJugadores, segundosPorFicha } = (datos as Record<string, unknown>) ?? {};
+      const { grimorioJugadores, segundosPorFicha, mensajes } = (datos as Record<string, unknown>) ?? {};
       const cambios: Parameters<SalaService['configurar']>[0] = {};
       if (grimorioJugadores !== undefined) {
         if (typeof grimorioJugadores !== 'boolean') return { ok: false, error: 'Ajuste desconocido.' };
@@ -234,6 +242,10 @@ export const SALA_ACCIONES: Record<string, Accion> = {
           };
         }
         cambios.segundosPorFicha = segundos;
+      }
+      if (mensajes !== undefined) {
+        if (!MENSAJES_PRIVADOS.includes(mensajes as SalaMensajesPrivados)) return { ok: false, error: 'Ajuste desconocido.' };
+        cambios.mensajes = mensajes as SalaMensajesPrivados;
       }
       if (Object.keys(cambios).length === 0) return { ok: false, error: 'Ajuste desconocido.' };
       sala.configurar(cambios);

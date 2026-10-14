@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { notifySessionExpired } from '../utils/session';
+import type { SalaMensaje, SalaMensajesPrivados, SalaSusurro } from './chat';
 import type { GuionResuelto } from './guiones';
 
 export type SalaRol = 'narrador' | 'jugador' | 'visitante';
@@ -44,6 +45,25 @@ export interface SalaAsiento {
 
 export type SalaAlineamiento = 'bueno' | 'malvado';
 
+/** Una conversación privada (voz y vídeo) entre dos o más jugadores o narradores. */
+export interface SalaConversacion {
+  id: string;
+  /** Los que hablan (jugadores y narradores). */
+  miembros: string[];
+  /** Los visitantes que la escuchan (a los jugadores no les llega: va vacío). */
+  oyentes: string[];
+}
+
+/** Una invitación a conversar pendiente, hecha o recibida. */
+export interface SalaInvitacion {
+  id: string;
+  de: string;
+  para: string;
+}
+
+/** El pase para conectarse al servidor de vídeo. */
+export type PaseVideo = { ok: true; url: string; token: string } | { ok: false; error: string };
+
 /** Revelando el grimorio (final de la partida): el bando ganador y las fichas ya reveladas. */
 export interface SalaRevelacion {
   ganador: SalaAlineamiento;
@@ -67,6 +87,8 @@ export interface SalaConfiguracion {
   grimorioJugadores: boolean;
   /** Lo que tarda la aguja en pasar de una ficha a la siguiente al votar, en segundos. */
   segundosPorFicha: number;
+  /** Mensajes privados entre jugadores: ninguno, solo con los vecinos o con todos. */
+  mensajes: SalaMensajesPrivados;
 }
 
 /** La votación de una nominación (ver el servidor). */
@@ -133,6 +155,12 @@ export interface SalaEstado {
   bolsa: string[];
   /** Revelando el grimorio (final de la partida), o null. */
   revelacion: SalaRevelacion | null;
+  /** Hay videollamada (cámaras y micrófonos) en esta sala. */
+  video: boolean;
+  /** Las conversaciones privadas en curso (quién habla con quién, no qué). */
+  conversaciones: SalaConversacion[];
+  /** Las invitaciones a conversar que he hecho o recibido. */
+  invitaciones: SalaInvitacion[];
   /** Hora del servidor (ms) al mandar el estado. */
   ahora: number;
   /** Registro de votaciones (la más reciente primero); vacío salvo para narradores. */
@@ -186,6 +214,10 @@ export function useSala(
     alNombreOcupado?: () => void;
     /** Ha cambiado el guion de la sala (no al entrar, cuando llega el que ya había). */
     alCambiarGuion?: (guion: GuionResuelto | null) => void;
+    /** Ha llegado un mensaje de texto (también los propios). */
+    alMensaje?: (mensaje: SalaMensaje) => void;
+    /** Dos jugadores se han escrito en privado: las ondas de un asiento al otro. */
+    alSusurro?: (susurro: SalaSusurro) => void;
   } = {},
 ) {
   const [estado, setEstado] = useState<SalaEstado | null>(null);
@@ -194,6 +226,8 @@ export function useSala(
   const [guion, setGuion] = useState<GuionResuelto | null>(null);
   // Diferencia entre el reloj del servidor y el de aquí (ms), para las cuentas atrás.
   const [desfaseReloj, setDesfaseReloj] = useState(0);
+  // Los mensajes de texto que se pueden leer (el historial llega al entrar y se le añaden los nuevos).
+  const [mensajes, setMensajes] = useState<SalaMensaje[]>([]);
   const socketRef = useRef<Socket | null>(null);
   const avisosRef = useRef(avisos);
   const perfilRef = useRef(perfil);
@@ -231,6 +265,12 @@ export function useSala(
       setEstado(nuevo);
       setDesfaseReloj(nuevo.ahora - Date.now());
     });
+    socket.on('chat:historial', (lista: SalaMensaje[]) => setMensajes(lista));
+    socket.on('chat:mensaje', (mensaje: SalaMensaje) => {
+      setMensajes((previos) => (previos.some((m) => m.id === mensaje.id) ? previos : [...previos, mensaje]));
+      avisosRef.current.alMensaje?.(mensaje);
+    });
+    socket.on('sala:susurro', (susurro: SalaSusurro) => avisosRef.current.alSusurro?.(susurro));
     socket.on('connect', () => {
       expulsada = false;
       setConexion('conectada');
@@ -285,11 +325,91 @@ export function useSala(
     [],
   );
 
+  /**
+   * Manda un mensaje de texto: `para` es «general», «visitantes» o el id de un
+   * participante (en privado). El servidor dice si se puede.
+   */
+  const enviarMensaje = useCallback(
+    (para: string, texto: string) =>
+      new Promise<SalaResultado>((resolve) => {
+        const socket = socketRef.current;
+        if (!socket?.connected) {
+          resolve({ ok: false, error: 'No hay conexión con la sala.' });
+          return;
+        }
+        socket
+          .timeout(5000)
+          .emit('chat:enviar', { para, texto }, (err: Error | null, r: SalaResultado) =>
+            resolve(err ? { ok: false, error: 'La sala no ha respondido. Inténtalo de nuevo.' } : r),
+          );
+      }),
+    [],
+  );
+
+  /** Pide al servidor algo con respuesta (ack), con un tiempo máximo; nunca falla. */
+  const pedirAlSocket = useCallback(
+    <T extends SalaResultado>(evento: string, datos?: unknown) =>
+      new Promise<T>((resolve) => {
+        const socket = socketRef.current;
+        if (!socket?.connected) {
+          resolve({ ok: false, error: 'No hay conexión con la sala.' } as T);
+          return;
+        }
+        const responder = (err: Error | null, r: T) =>
+          resolve(err ? ({ ok: false, error: 'La sala no ha respondido. Inténtalo de nuevo.' } as T) : r);
+        if (datos === undefined) socket.timeout(8000).emit(evento, responder);
+        else socket.timeout(8000).emit(evento, datos, responder);
+      }),
+    [],
+  );
+
+  /** El pase para el vídeo de la mesa («principal») o de una conversación (su id). */
+  const pedirPaseVideo = useCallback(
+    (sala: string) => pedirAlSocket<SalaResultado & Partial<{ url: string; token: string }>>('video:pase', { sala }) as Promise<PaseVideo>,
+    [pedirAlSocket],
+  );
+  /** Conversaciones privadas: invitar a alguien, responder, retirar la invitación, escuchar (visitantes) y salir. */
+  const invitarAConversar = useCallback((con: string) => pedirAlSocket<SalaResultado>('conversacion:invitar', { con }), [pedirAlSocket]);
+  const responderInvitacion = useCallback(
+    (invitacion: string, aceptar: boolean) => pedirAlSocket<SalaResultado>('conversacion:responder', { invitacion, aceptar }),
+    [pedirAlSocket],
+  );
+  const cancelarInvitacion = useCallback(
+    (invitacion: string) => pedirAlSocket<SalaResultado>('conversacion:cancelar', { invitacion }),
+    [pedirAlSocket],
+  );
+  const escucharConversacion = useCallback(
+    (conversacion: string) => pedirAlSocket<SalaResultado>('conversacion:escuchar', { conversacion }),
+    [pedirAlSocket],
+  );
+  const salirConversacion = useCallback(() => pedirAlSocket<SalaResultado>('conversacion:salir', {}), [pedirAlSocket]);
+
+  /** Vuelve a pedir los mensajes que se pueden leer (al cambiar de papel cambian). */
+  const pedirHistorial = useCallback(() => {
+    socketRef.current?.emit('chat:historial');
+  }, []);
+
   /** Volver a entrar tras ser expulsada (expulsa a su vez a la otra ventana). */
   const reconectar = useCallback(() => {
     setConexion('conectando');
     socketRef.current?.connect();
   }, []);
 
-  return { estado, guion, conexion, desfaseReloj, pedir, reconectar };
+  return {
+    estado,
+    guion,
+    conexion,
+    desfaseReloj,
+    pedir,
+    reconectar,
+    mensajes,
+    enviarMensaje,
+    pedirHistorial,
+    pedirPaseVideo,
+    invitarAConversar,
+    responderInvitacion,
+    cancelarInvitacion,
+    escucharConversacion,
+    salirConversacion,
+  };
 }

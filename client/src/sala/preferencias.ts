@@ -27,6 +27,9 @@ export interface PreferenciasSala {
   idiomaDescripciones: string;
   /** Género de los textos, en los idiomas que lo distinguen. Pestaña Usuario. */
   genero: 'masculino' | 'femenino';
+  /** Cámara y micrófono elegidos (deviceId); vacío: los del sistema. Pestaña Comunicaciones. */
+  idCamara: string;
+  idMicrofono: string;
 }
 
 type ClaveNumerica = 'tamanoAvatar' | 'tamanoFicha' | 'distanciaFicha';
@@ -79,6 +82,10 @@ function leer(): PreferenciasSala {
     preferencias[clave] = esIdIdioma(valor) ? valor : IDIOMA_DEFECTO;
   }
   preferencias.genero = guardadas.genero === 'femenino' ? 'femenino' : 'masculino';
+  // Los dispositivos: un id del navegador, o vacío (el predeterminado del sistema)
+  const idDispositivo = (v: unknown) => (typeof v === 'string' && v.length <= 200 ? v : '');
+  preferencias.idCamara = idDispositivo(guardadas.idCamara);
+  preferencias.idMicrofono = idDispositivo(guardadas.idMicrofono);
   return preferencias;
 }
 

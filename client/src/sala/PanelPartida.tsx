@@ -1,4 +1,5 @@
 import Deslizador from './Deslizador';
+import type { SalaMensajesPrivados } from './chat';
 import type { SalaConfiguracion } from './useSala';
 
 /** Lo que tarda la aguja de ficha en ficha al votar; el servidor tiene los mismos límites. */
@@ -33,6 +34,26 @@ const PanelPartida = ({ configuracion, onCambiar }: PanelPartidaProps) => (
       <p id="sala-pref-grimorio-ayuda" className="text-xs text-on-surface-muted">
         Activado, cada jugador puede cambiar las fichas en su propio grimorio, como el narrador. Si no, ve su ficha con su
         rol y las demás vacías.
+      </p>
+    </div>
+    <div className="flex flex-col gap-1">
+      <label htmlFor="sala-pref-mensajes" className="text-sm">
+        Mensajes privados entre jugadores
+      </label>
+      <select
+        id="sala-pref-mensajes"
+        value={configuracion.mensajes}
+        onChange={(e) => onCambiar({ mensajes: e.target.value as SalaMensajesPrivados })}
+        aria-describedby="sala-pref-mensajes-ayuda"
+        className="max-w-xs rounded border border-outline-ghost bg-background px-3 py-2 text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
+      >
+        <option value="ninguno">Sin mensajes de texto</option>
+        <option value="vecinos">Solo con los vecinos</option>
+        <option value="todos">Con todos</option>
+      </select>
+      <p id="sala-pref-mensajes-ayuda" className="text-xs text-on-surface-muted">
+        Al narrador se le puede escribir siempre, y él a todos. El chat general (jugadores) y el de visitantes están
+        siempre abiertos.
       </p>
     </div>
     <Deslizador

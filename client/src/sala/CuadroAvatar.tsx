@@ -4,6 +4,8 @@ import { getAvatarUrl } from '../utils/api';
 interface CuadroAvatarProps {
   /** Rótulo encima del cuadro («Narrador»). Solo visual: quien lo use lo dice en el pie para el lector. */
   titulo?: string;
+  /** Algo junto al rótulo (botones); este sí se lee. */
+  junto?: ReactNode;
   /** Ruta del avatar; sin él, el cuadro queda vacío. */
   imagen?: string | null;
   /** Sustituye a la imagen (un aviso, y más adelante la cámara del usuario). */
@@ -27,12 +29,15 @@ interface CuadroAvatarProps {
  *
  * La imagen no se lee (alt vacío): el pie dice de quién es.
  */
-const CuadroAvatar = ({ titulo, imagen, contenido, pie, vacio = false, pieFuera }: CuadroAvatarProps) => (
+const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, pieFuera }: CuadroAvatarProps) => (
   <div className="relative w-[var(--sala-avatar,10rem)]">
     {titulo && (
-      <p aria-hidden="true" className="mb-1 truncate text-center text-xs font-semibold uppercase tracking-wide text-theme-main">
-        {titulo}
-      </p>
+      <div className="mb-1 flex items-center justify-center gap-1.5">
+        <p aria-hidden="true" className="truncate text-center text-xs font-semibold uppercase tracking-wide text-theme-main">
+          {titulo}
+        </p>
+        {junto}
+      </div>
     )}
     <div
       className={`flex aspect-square w-full items-center justify-center overflow-hidden rounded ${

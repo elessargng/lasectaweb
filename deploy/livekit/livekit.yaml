@@ -1,0 +1,25 @@
+# Servidor de vídeo de la sala (LiveKit) para el VPS. Ver docs/videollamada.md.
+# Las claves no van aquí: se pasan con la variable LIVEKIT_KEYS (docker-compose.yml).
+
+port: 7880 # señalización (WebSocket); nginx la publica con TLS en wss://video.<dominio>
+bind_addresses:
+  - "127.0.0.1" # solo nginx habla con este puerto
+
+rtc:
+  # El vídeo y el audio van por UDP (lo normal) o, si una red lo bloquea, por TCP 7881
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 50200
+  use_external_ip: true
+
+turn:
+  # Para quien está tras redes que no dejan pasar nada (oficinas, algunas 4G)
+  enabled: true
+  udp_port: 3478
+
+room:
+  empty_timeout: 300 # una sala vacía se cierra a los 5 minutos
+  max_participants: 40
+
+logging:
+  level: info

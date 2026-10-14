@@ -1,0 +1,14 @@
+# LiveKit (servidor de vídeo de la sala) en el VPS. Ver docs/videollamada.md.
+#   cd deploy/livekit && docker compose up -d
+# Lee LIVEKIT_API_KEY y LIVEKIT_API_SECRET de un .env junto a este archivo (los mismos que el servidor de la web).
+services:
+  livekit:
+    image: livekit/livekit-server:v1.13
+    command: --config /etc/livekit.yaml
+    restart: unless-stopped
+    # Red del propio VPS: los puertos UDP del vídeo se usan directamente
+    network_mode: host
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro

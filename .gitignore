@@ -58,3 +58,5 @@ CLAUDE.md
 
 #Evitamos subir la bbdd
 database.sqlite*
+# --- Servidor de vídeo LiveKit para desarrollo (npm run livekit en server/) ---
+server/tools/livekit/
