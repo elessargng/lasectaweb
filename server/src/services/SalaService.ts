@@ -10,6 +10,7 @@ import {
   SalaNominacion,
   SalaParticipante,
   SalaRegistroVotacion,
+  SalaRevelacion,
   SalaRol,
 } from '../types/sala';
 import { GuionResuelto } from '../types/guiones';
@@ -99,6 +100,11 @@ interface Entrada {
   /** Conexión activa, o null mientras se espera a que vuelva. */
   socketId: string | null;
   expulsion: NodeJS.Timeout | null;
+  /**
+   * Por lo que se le reconoce si sale y vuelve a entrar (para devolverle el
+   * acceso al grimorio): su cuenta o, si es invitado, su navegador.
+   */
+  recuerdo: string;
 }
 
 /**
@@ -139,6 +145,9 @@ export class SalaService {
     segundosPorFicha: SALA_SEGUNDOS_POR_FICHA.defecto,
   };
   private nominacionEnCurso: NominacionInterna | null = null;
+  private revelacionActual: { ganador: SalaAlineamiento; reveladas: string[] } | null = null;
+  /** A quién se ha dejado ver el grimorio (por su `recuerdo`), para devolvérselo si sale y vuelve. */
+  private conGrimorio = new Set<string>();
   /** Los votos de la votación de hoy que más tuvo (de las que llegaron a los necesarios), o null. */
   private maximoDelDia: number | null = null;
   private faseActual: SalaFase = { momento: 'preparacion', numero: 0, reinicios: 0 };
@@ -259,8 +268,9 @@ export class SalaService {
 
   /**
    * Deja la partida como al principio, en la preparación: sin registro de
-   * votaciones, todas las fichas vivas y sin calavera, y sin nominación. Los
-   * jugadores siguen en sus asientos.
+   * votaciones, todas las fichas vivas, sin personaje y sin calavera, la bolsa
+   * vacía, sin nominación y nadie con acceso al grimorio (las peticiones
+   * pendientes siguen). Los jugadores siguen en sus asientos.
    */
   limpiarGrimorio(): void {
     this.cerrarNominacion();
@@ -274,6 +284,13 @@ export class SalaService {
       a.alineamiento = null;
     }
     this.bolsaActual = [];
+    this.revelacionActual = null;
+    // Es otra partida: quien veía el grimorio deja de verlo (y puede volver a sentarse),
+    // también quien había salido de la sala
+    for (const { participante } of this.entradas.values()) {
+      if (participante.accesoGrimorio === 'concedido') participante.accesoGrimorio = 'ninguno';
+    }
+    this.conGrimorio.clear();
     this.faseActual = { momento: 'preparacion', numero: 0, reinicios: this.faseActual.reinicios + 1 };
   }
 
@@ -469,6 +486,32 @@ export class SalaService {
     if (asiento) asiento.alineamiento = alineamiento;
   }
 
+  /** La revelación del grimorio en curso (o acabada), o null. */
+  revelacion(): SalaRevelacion | null {
+    const r = this.revelacionActual;
+    if (!r) return null;
+    // Solo cuentan los asientos que siguen en la mesa
+    const reveladas = r.reveladas.filter((id) => this.mesa.some((a) => a.id === id));
+    return { ganador: r.ganador, reveladas, terminada: this.mesa.every((a) => reveladas.includes(a.id)) };
+  }
+
+  /** Empieza a revelar el grimorio: ha ganado ese bando y todas las fichas se dan la vuelta. */
+  empezarRevelacion(ganador: SalaAlineamiento): void {
+    this.cerrarNominacion();
+    this.revelacionActual = { ganador, reveladas: [] };
+  }
+
+  /** Revela la ficha de un asiento (todos verán su personaje). */
+  revelarFicha(asientoId: string): void {
+    const r = this.revelacionActual;
+    if (r && !r.reveladas.includes(asientoId) && this.mesa.some((a) => a.id === asientoId)) r.reveladas.push(asientoId);
+  }
+
+  /** Revela de una vez las que quedan. */
+  revelarTodas(): void {
+    for (const a of this.mesa) this.revelarFicha(a.id);
+  }
+
   /** Mata o revive la ficha de un asiento; al morir pierde la calavera. No comprueba permisos. */
   cambiarVida(asientoId: string, muerto: boolean): void {
     const asiento = this.mesa.find((a) => a.id === asientoId);
@@ -592,6 +635,7 @@ export class SalaService {
     if (previa && libre && previa.expulsion) clearTimeout(previa.expulsion);
     const clave = clienteId && (!previa || libre) ? clienteId : socketId;
     const id = randomUUID();
+    const recuerdo = llegada.conCuenta ? llegada.identidad : `cliente:${clave}`;
     this.entradas.set(clave, {
       participante: {
         id,
@@ -601,7 +645,8 @@ export class SalaService {
         rol: 'visitante',
         conectado: true,
         manoLevantada: false,
-        accesoGrimorio: 'ninguno',
+        // Si ya lo vio y salió de la sala, lo recupera (vuelve como visitante)
+        accesoGrimorio: this.conGrimorio.has(recuerdo) ? 'concedido' : 'ninguno',
         formaMano: 'palma',
       },
       identidad: llegada.identidad,
@@ -609,6 +654,7 @@ export class SalaService {
       avatarPorDefecto: llegada.avatarPorDefecto,
       socketId,
       expulsion: null,
+      recuerdo,
     });
     return { clave, id, expulsar: null };
   }
@@ -640,6 +686,8 @@ export class SalaService {
     const [clave, entrada] = encontrada;
     if (entrada.expulsion) clearTimeout(entrada.expulsion);
     this.entradas.delete(clave);
+    // Expulsado por un narrador: si vuelve, no recupera el grimorio
+    this.conGrimorio.delete(entrada.recuerdo);
     return entrada.socketId;
   }
 
@@ -713,16 +761,22 @@ export class SalaService {
     const participante = this.buscar(id);
     if (!participante) return;
     // El acceso al grimorio es de los visitantes: al cambiar de papel se pierde (y se vuelve a pedir).
-    if (participante.rol !== rol) participante.accesoGrimorio = 'ninguno';
+    if (participante.rol !== rol && participante.accesoGrimorio !== 'ninguno') this.cambiarAccesoGrimorio(id, 'ninguno');
     participante.rol = rol;
     // La mano solo cuenta en la partida: quien deja de jugar la baja.
     if (rol !== 'jugador') participante.manoLevantada = false;
   }
 
-  /** Cambia el acceso de un participante al grimorio del narrador. No comprueba permisos. */
+  /**
+   * Cambia el acceso de un participante al grimorio del narrador. Concedido, se
+   * recuerda aunque salga de la sala. No comprueba permisos.
+   */
   cambiarAccesoGrimorio(id: string, acceso: SalaAccesoGrimorio): void {
-    const participante = this.buscar(id);
-    if (participante) participante.accesoGrimorio = acceso;
+    const entrada = [...this.entradas.values()].find((e) => e.participante.id === id);
+    if (!entrada) return;
+    entrada.participante.accesoGrimorio = acceso;
+    if (acceso === 'concedido') this.conGrimorio.add(entrada.recuerdo);
+    else this.conGrimorio.delete(entrada.recuerdo);
   }
 
   /** Levanta o baja la mano de un jugador. No comprueba permisos. */

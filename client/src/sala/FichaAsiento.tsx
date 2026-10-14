@@ -6,7 +6,7 @@ import { alineamientoDe, alineamientoDeTipo, iconoDe, useFichas, type ContenidoF
 import { nombreMano } from './formasMano';
 import type { PersonajeMostrado } from './guiones';
 import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
-import { idFichaNominar } from './ids';
+import { idFichaNominar, idRevelarFicha } from './ids';
 import { describirAsiento } from './nombresAsiento';
 import type { SalaAlineamiento, SalaAsiento, SalaParticipante, SalaResultado } from './useSala';
 
@@ -36,6 +36,11 @@ interface FichaAsientoProps {
   eligiendo?: { papel: 'origen' | 'candidata'; onPulsar: () => void };
   /** En una votación: votos acumulados si votó, null si no; sin definir si aún no le ha tocado. */
   voto?: number | null;
+  /**
+   * Revelando el grimorio: si ya se ha revelado (si no, está boca abajo) y, para
+   * el narrador, cómo revelarla (pulsándola; al pasar el ratón la mira antes).
+   */
+  revelando?: { revelada: boolean; onRevelar?: () => void };
 }
 
 const NOMBRE_ALINEAMIENTO: Record<SalaAlineamiento, string> = { bueno: 'bueno', malvado: 'malvado' };
@@ -70,6 +75,7 @@ const FichaAsiento = ({
   onNominar,
   eligiendo,
   voto,
+  revelando,
 }: FichaAsientoProps) => {
   const { hayGuion, personajes, porId, notas, anotar } = useFichas();
   const [eligiendoPersonaje, setEligiendoPersonaje] = useState(false);
@@ -83,11 +89,36 @@ const FichaAsiento = ({
       : (notas[asiento.id] ?? { personaje: null, alineamiento: null });
   const personaje = contenido.personaje ? porId.get(contenido.personaje) : undefined;
 
+  const bocaAbajo = !!revelando && !revelando.revelada;
   const ficha = (
-    <FichaRedonda muerto={asiento.muerto} marcado={asiento.marcado} voto={voto}>
+    <FichaRedonda
+      muerto={asiento.muerto}
+      marcado={asiento.marcado}
+      voto={voto}
+      bocaAbajo={bocaAbajo}
+      asomar={!!revelando?.onRevelar}
+    >
       {personaje && <PersonajeEnFicha personaje={personaje} alineamiento={contenido.alineamiento} />}
     </FichaRedonda>
   );
+
+  // Revelando el grimorio: boca abajo, el narrador la revela pulsándola (al pasar el
+  // ratón o con el foco la mira; el lector oye su personaje en el nombre del botón).
+  // Mientras tanto, nada más: ni menú ni opciones.
+  if (revelando) {
+    if (!bocaAbajo || !revelando.onRevelar) return ficha;
+    return (
+      <button
+        id={idRevelarFicha(asiento.id)}
+        type="button"
+        onClick={revelando.onRevelar}
+        aria-label={`Revelar la ficha del ${describirAsiento(numero, ocupante)}${personaje ? `: ${personaje.nombre.texto}` : ', sin personaje'}`}
+        className="group block cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      >
+        {ficha}
+      </button>
+    );
+  }
 
   if (eligiendo) {
     const origen = eligiendo.papel === 'origen';

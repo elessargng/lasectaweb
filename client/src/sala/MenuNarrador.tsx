@@ -1,6 +1,7 @@
 import { ScrollText } from 'lucide-react';
 import { useState } from 'react';
 import DialogoConfirmar from './DialogoConfirmar';
+import DialogoRevelar from './DialogoRevelar';
 import DialogoElegirParticipante from './DialogoElegirParticipante';
 import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { botonIcono } from './estilos';
@@ -71,6 +72,7 @@ const MenuNarrador = ({ estado, pedir, onAsientos }: MenuNarradorProps) => {
   // Acción de ELEGIR cuyo diálogo está abierto.
   const [eligiendo, setEligiendo] = useState<string | null>(null);
   const [limpiando, setLimpiando] = useState(false);
+  const [revelando, setRevelando] = useState(false);
   const puede = (accion: string) => estado.acciones.includes(accion);
 
   // id = acción del servidor que la respalda.
@@ -79,6 +81,7 @@ const MenuNarrador = ({ estado, pedir, onAsientos }: MenuNarradorProps) => {
     // Noche y día: solo sale el que toca
     { id: 'narrador:irANoche', etiqueta: 'Ir a la noche', elegir: () => void pedir('narrador:irANoche') },
     { id: 'narrador:amanecer', etiqueta: 'Amanece', elegir: () => void pedir('narrador:amanecer') },
+    { id: 'narrador:revelarGrimorio', etiqueta: 'Revelar grimorio', abreDialogo: true, elegir: () => setRevelando(true) },
     { id: 'narrador:limpiarGrimorio', etiqueta: 'Limpiar grimorio', abreDialogo: true, elegir: () => setLimpiando(true) },
     ...Object.entries(ELEGIR).map(([accion, { etiqueta }]) => ({
       id: accion,
@@ -111,6 +114,7 @@ const MenuNarrador = ({ estado, pedir, onAsientos }: MenuNarradorProps) => {
           onCerrar={() => setEligiendo(null)}
         />
       )}
+      {revelando && <DialogoRevelar pedir={pedir} onCerrar={() => setRevelando(false)} />}
       {limpiando && (
         <DialogoConfirmar
           titulo="Limpiar grimorio"

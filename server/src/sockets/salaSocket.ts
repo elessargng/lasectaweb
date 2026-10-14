@@ -59,6 +59,9 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     const nominacion = sala.nominacion();
     const votaciones = sala.votaciones();
     const distribucion = sala.distribucion();
+    const revelacion = sala.revelacion();
+    // Las fichas ya reveladas al final de la partida: todos ven su personaje
+    const reveladas = new Set(revelacion?.reveladas ?? []);
     const bolsa = sala.bolsa();
     const ahora = Date.now();
     for (const { socketId, clave, id } of sala.conexiones()) {
@@ -68,11 +71,12 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
         asientos:
           yo.rol === 'narrador' || (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido')
             ? asientos
-            : asientos.map((a) => (a.ocupante === yo.id ? a : sinPersonaje(a))),
+            : asientos.map((a) => (a.ocupante === yo.id || reveladas.has(a.id) ? a : sinPersonaje(a))),
         configuracion,
         nominacion,
         fase: sala.fase(),
         distribucion,
+        revelacion,
         // La bolsa es solo para los narradores (son los personajes de la partida)
         bolsa: yo.rol === 'narrador' ? bolsa : [],
         ahora,

@@ -44,6 +44,13 @@ export interface SalaAsiento {
 
 export type SalaAlineamiento = 'bueno' | 'malvado';
 
+/** Revelando el grimorio (final de la partida): el bando ganador y las fichas ya reveladas. */
+export interface SalaRevelacion {
+  ganador: SalaAlineamiento;
+  reveladas: string[];
+  terminada: boolean;
+}
+
 /** Cuántos personajes de cada tipo tiene la partida (asientos sin viajero; null con menos de 5). */
 export interface SalaDistribucion {
   jugadores: number;
@@ -124,6 +131,8 @@ export interface SalaEstado {
   distribucion: SalaDistribucion;
   /** Los personajes metidos en la bolsa (ids); vacía salvo para narradores. */
   bolsa: string[];
+  /** Revelando el grimorio (final de la partida), o null. */
+  revelacion: SalaRevelacion | null;
   /** Hora del servidor (ms) al mandar el estado. */
   ahora: number;
   /** Registro de votaciones (la más reciente primero); vacío salvo para narradores. */

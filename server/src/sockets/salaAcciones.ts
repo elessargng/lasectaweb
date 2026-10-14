@@ -467,6 +467,48 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
+  /**
+   * Revelar el grimorio (final de la partida): el narrador dice qué bando ha
+   * ganado y todas las fichas se dan la vuelta. datos: { ganador: 'bueno' | 'malvado' }.
+   */
+  'narrador:revelarGrimorio': {
+    puede: (sala, yo) => yo.rol === 'narrador' && !sala.revelacion() && sala.asientos().length > 0,
+    noPuede: (sala, yo) =>
+      yo.rol !== 'narrador'
+        ? 'Solo un narrador puede revelar el grimorio.'
+        : sala.revelacion()
+          ? 'Ya se está revelando el grimorio.'
+          : 'La mesa no tiene asientos.',
+    hacer: (sala, _yo, datos) => {
+      const ganador = (datos as { ganador?: unknown } | null)?.ganador;
+      if (ganador !== 'bueno' && ganador !== 'malvado') return { ok: false, error: 'Bando desconocido.' };
+      sala.empezarRevelacion(ganador);
+      return { ok: true };
+    },
+  },
+
+  /** Revela la ficha de un asiento, para todos. datos: { asientoId }. */
+  'narrador:revelarFicha': {
+    puede: (sala, yo) => yo.rol === 'narrador' && !!sala.revelacion() && !sala.revelacion()!.terminada,
+    noPuede: 'No se está revelando el grimorio.',
+    hacer: (sala, _yo, datos) => {
+      const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
+      if (typeof asientoId !== 'string' || !sala.hayAsiento(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      sala.revelarFicha(asientoId);
+      return { ok: true };
+    },
+  },
+
+  /** Termina la revelación: revela de una vez las fichas que quedan. */
+  'narrador:terminarRevelacion': {
+    puede: (sala, yo) => yo.rol === 'narrador' && !!sala.revelacion() && !sala.revelacion()!.terminada,
+    noPuede: 'No se está revelando el grimorio.',
+    hacer: (sala) => {
+      sala.revelarTodas();
+      return { ok: true };
+    },
+  },
+
   /** Cambia el alineamiento de la ficha de un asiento. datos: { asientoId, alineamiento: 'bueno' | 'malvado' }. */
   'narrador:cambiarAlineamiento': {
     puede: (sala, yo) => yo.rol === 'narrador' && sala.asientos().length > 0,

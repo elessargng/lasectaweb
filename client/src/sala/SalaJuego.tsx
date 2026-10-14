@@ -122,6 +122,27 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       }
     }
 
+    // Revelar el grimorio: que empieza (a los demás), cada ficha que se revela (a los
+    // demás: el narrador la acaba de pulsar) y, al acabar, el bando ganador (a todos).
+    const revAntes = anterior.revelacion;
+    const revAhora = nuevo.revelacion;
+    if (revAhora && !revAntes && !propia) avisos.push({ tipo: 'revelacion', texto: 'El narrador revela el grimorio.' });
+    if (revAhora && !propia) {
+      for (const asientoId of revAhora.reveladas.filter((id) => !revAntes?.reveladas.includes(id))) {
+        const numero = nuevo.asientos.findIndex((a) => a.id === asientoId) + 1;
+        const asiento = nuevo.asientos[numero - 1];
+        const ocupante = nuevo.participantes.find((p) => p.id === asiento?.ocupante);
+        const personaje = asiento?.personaje ? nombresPersonajesRef.current.get(asiento.personaje) : undefined;
+        avisos.push({
+          tipo: 'revelacion',
+          texto: `${ocupante ? ocupante.nombre : `Asiento ${numero}`}: ${personaje?.nombre.texto ?? 'sin personaje'}.`,
+        });
+      }
+    }
+    if (revAhora?.terminada && !revAntes?.terminada) {
+      avisos.push({ tipo: 'revelacion', texto: revAhora.ganador === 'bueno' ? 'Los buenos ganan.' : 'Los malvados ganan.' });
+    }
+
     // Al limpiar el grimorio, también se borran las notas del grimorio propio.
     if (nuevo.fase.reinicios !== anterior.fase.reinicios) setNotasGrimorio({});
 
@@ -498,6 +519,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                       : null
                   }
                   onAnuncio={anunciar}
+                  // En juego y vivos: las fichas con personaje y sin sudario que ve quien mira
+                  enJuego={estado.asientos.filter((a) => a.personaje && !a.muerto).map((a) => a.personaje!)}
                 />
               </div>
             )

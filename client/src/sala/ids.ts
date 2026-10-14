@@ -5,6 +5,11 @@ export const idNombreNarrador = (participanteId: string) => `sala-narrador-${par
 
 /** El menú del narrador; su botón (MenuDesplegable) lleva `-boton` detrás. */
 export const ID_MENU_NARRADOR = 'sala-menu-narrador';
+/** El botón para revelar la ficha de un asiento (revelando el grimorio). */
+export const idRevelarFicha = (asientoId: string) => `sala-revelar-${asientoId}`;
+/** El mensaje del bando ganador, al acabar de revelar el grimorio. */
+export const ID_GANADOR = 'sala-ganador';
+
 export const ID_BOTON_MENU_NARRADOR = `${ID_MENU_NARRADOR}-boton`;
 
 /** El nombre de un asiento (bajo su cuadro): a él va el foco al sentarse o levantarse. */

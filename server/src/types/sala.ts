@@ -23,7 +23,9 @@ export interface SalaParticipante {
   /**
    * Un visitante puede pedir ver el grimorio del narrador: «solicitado» mientras
    * el narrador responde; «concedido», lo ve como él (todos los personajes) y ya
-   * no lo pierde ni puede sentarse (lo ha visto). Al cambiar de papel vuelve a «ninguno».
+   * no lo pierde (tampoco si sale de la sala y vuelve) ni puede sentarse (lo ha
+   * visto). Al cambiar de papel, al limpiar el grimorio (otra partida) o si un
+   * narrador lo expulsa, vuelve a «ninguno».
    */
   accesoGrimorio: SalaAccesoGrimorio;
 }
@@ -57,6 +59,19 @@ export interface SalaAsiento {
 }
 
 export type SalaAlineamiento = 'bueno' | 'malvado';
+
+/**
+ * El final de la partida: el narrador dice qué bando ha ganado, todas las fichas
+ * se dan la vuelta y él las va revelando una a una (todos ven el personaje de
+ * las reveladas). Con todas reveladas, se anuncia el ganador.
+ */
+export interface SalaRevelacion {
+  ganador: SalaAlineamiento;
+  /** Asientos cuya ficha ya se ha revelado, en orden. */
+  reveladas: string[];
+  /** Están todas reveladas. */
+  terminada: boolean;
+}
 
 /**
  * Cuántos personajes de cada tipo tiene la partida: se cuentan los asientos,
@@ -152,6 +167,8 @@ export interface SalaEstado {
   distribucion: SalaDistribucion;
   /** Los personajes metidos en la bolsa (ids); solo se manda a los narradores. */
   bolsa: string[];
+  /** Revelando el grimorio (final de la partida), o null. */
+  revelacion: SalaRevelacion | null;
   /** Hora del servidor (ms) al mandar el estado: el cliente la usa para la cuenta atrás. */
   ahora: number;
   /** Registro de nominaciones y votaciones (en orden); solo se manda a los narradores. */

@@ -17,6 +17,8 @@ interface TituloGuionProps {
   /** Idiomas (ids) en que se ven los nombres y las descripciones de los personajes. */
   idiomas: { nombres: string; descripciones: string; genero: Genero };
   onCambiarIdiomaDescripciones: (id: string) => void;
+  /** Personajes en juego y vivos (para el orden de noche). */
+  enJuego: string[];
   /** Preparar la bolsa (narradores, con guion): lo que lleva y el reparto; null si no se puede. */
   bolsa: { bolsa: string[]; distribucion: SalaDistribucion } | null;
   /** Avisa al lector (al repartir los personajes de la bolsa). */
@@ -43,6 +45,7 @@ const TituloGuion = ({
   onCambiarIdiomaDescripciones,
   bolsa,
   onAnuncio,
+  enJuego,
 }: TituloGuionProps) => {
   const [preparandoBolsa, setPreparandoBolsa] = useState(false);
   const predeterminados = usePredeterminados();
@@ -155,6 +158,7 @@ const TituloGuion = ({
             vista={vista}
             guion={guion}
             idiomas={idiomas}
+            enJuego={enJuego}
             onCambiarIdiomaDescripciones={onCambiarIdiomaDescripciones}
             onCerrar={cerrar}
           />

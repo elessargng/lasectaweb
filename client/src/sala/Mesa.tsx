@@ -10,7 +10,7 @@ import FichaAsiento from './FichaAsiento';
 import Mano from './Mano';
 import PanelNominacion from './PanelNominacion';
 import { botonPrincipal, botonSecundario } from './estilos';
-import { ID_AYUDA_MOVER, idNombreAsiento } from './ids';
+import { ID_AYUDA_MOVER, idNombreAsiento, ID_GANADOR, idRevelarFicha } from './ids';
 import { tamanoAvatarAuto, tamanoFichaAuto } from './tamanosAutomaticos';
 import { useMoverAsientos } from './useMoverAsientos';
 import { useNominacion } from './useNominacion';
@@ -156,7 +156,28 @@ const Mesa = ({
   });
   const nominar = useNominacion({ estado, pedir, onError, onAnuncio: (m) => onAnuncio('nominaciones', m) });
   // Asientos (desde 0) de quien nomina y del nominado, para las agujas.
-  const { nominacion } = estado;
+  const { nominacion, revelacion } = estado;
+  // Revelando el grimorio (narradores): pulsar una ficha la revela a todos; «Terminar» revela las que quedan
+  const puedeRevelar = acciones.includes('narrador:revelarFicha');
+  // La ficha revelada deja de ser un botón: el foco va a la siguiente boca abajo (en
+  // el sentido del reloj) o, si era la última, al bando ganador.
+  const revelar = async (asientoId: string) => {
+    const r = await pedir('narrador:revelarFicha', { asientoId });
+    if (!r.ok) {
+      onError(r.error);
+      return;
+    }
+    const i = asientos.findIndex((a) => a.id === asientoId);
+    const siguiente = [...asientos.slice(i + 1), ...asientos.slice(0, i)].find(
+      (a) => !revelacion?.reveladas.includes(a.id),
+    );
+    window.setTimeout(() => document.getElementById(siguiente ? idRevelarFicha(siguiente.id) : ID_GANADOR)?.focus(), 0);
+  };
+  const terminarRevelacion = async () => {
+    const r = await pedir('narrador:terminarRevelacion');
+    if (!r.ok) onError(r.error);
+    else window.setTimeout(() => document.getElementById(ID_GANADOR)?.focus(), 0);
+  };
   const posicionDe = (id: string) => asientos.findIndex((a) => a.id === id);
   const agujas =
     nominacion && posicionDe(nominacion.desde) >= 0 && posicionDe(nominacion.hasta) >= 0
@@ -306,6 +327,14 @@ const Mesa = ({
                 onNominar={nominar.onNominar?.(a.id)}
                 eligiendo={eligiendo}
                 voto={nominacion?.votacion?.resultados[a.id]}
+                revelando={
+                  revelacion
+                    ? {
+                        revelada: revelacion.reveladas.includes(a.id),
+                        onRevelar: puedeRevelar ? () => void revelar(a.id) : undefined,
+                      }
+                    : undefined
+                }
               />
               {ocupante?.manoLevantada && (
                 // Mano levantada montada sobre la esquina de arriba a la derecha de su ficha
@@ -365,8 +394,28 @@ const Mesa = ({
 
       {/* El centro de la mesa: la cuenta atrás (todos), el panel de la nominación y
           el de editar asientos (narradores). Por encima de las agujas. */}
-      {(nominacion?.cuentaAtrasFin || nominar.panel || nominar.cancelar || editando) && (
+      {(nominacion?.cuentaAtrasFin || nominar.panel || nominar.cancelar || editando || revelacion) && (
         <div className="absolute left-1/2 top-1/2 z-30 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">
+          {revelacion?.terminada && (
+            // Todas reveladas: el bando ganador, en grande y en su color (se anuncia aparte)
+            <p
+              id={ID_GANADOR}
+              tabIndex={-1}
+              className={`text-center font-teutonic1 text-5xl leading-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] focus:outline-none ${
+                revelacion.ganador === 'bueno' ? 'text-sky-400' : 'text-red-500'
+              }`}
+            >
+              {revelacion.ganador === 'bueno' ? 'Los buenos ganan' : 'Los malvados ganan'}
+            </p>
+          )}
+          {revelacion && !revelacion.terminada && acciones.includes('narrador:terminarRevelacion') && (
+            <div className="flex max-w-56 flex-col items-center gap-2 rounded border border-outline-ghost bg-surface/90 p-4 text-center">
+              <p className="text-sm text-on-surface-muted">Pulsa cada ficha para revelarla a todos.</p>
+              <button type="button" onClick={() => void terminarRevelacion()} className={botonPrincipal}>
+                Terminar revelación
+              </button>
+            </div>
+          )}
           {nominacion?.votacion ? (
             // Votando: los votos que lleva, en grande (se anuncian al terminar)
             <p

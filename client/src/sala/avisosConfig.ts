@@ -20,6 +20,7 @@ export type TipoAviso =
   | 'miPersonaje'
   | 'bolsa'
   | 'accesoGrimorio'
+  | 'revelacion'
   | 'nominaciones'
   | 'cuentaAtras'
   | 'votoAVoto'
@@ -58,6 +59,7 @@ export const GRUPOS_AVISOS: { grupo: string; tipos: { tipo: TipoAviso; etiqueta:
       { tipo: 'guion', etiqueta: 'Cambio de guion' },
       { tipo: 'fase', etiqueta: 'Noche y día (y al limpiar el grimorio)' },
       { tipo: 'miPersonaje', etiqueta: 'Tu personaje y tu alineamiento, cuando te los cambia el narrador' },
+      { tipo: 'revelacion', etiqueta: 'Revelar el grimorio: cada ficha que se revela y el bando ganador' },
     ],
   },
   {

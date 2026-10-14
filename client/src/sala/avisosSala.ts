@@ -71,8 +71,12 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): Aviso[]
     if (!previo || previo.accesoGrimorio === p.accesoGrimorio) continue;
     if (p.id === yo) {
       if (p.accesoGrimorio === 'concedido') avisa('accesoGrimorio', 'El narrador te deja ver su grimorio.');
-      else if (p.accesoGrimorio === 'ninguno' && previo.accesoGrimorio === 'solicitado' && p.rol === 'visitante') {
-        avisa('accesoGrimorio', 'El narrador no te deja ver su grimorio.');
+      else if (p.accesoGrimorio === 'ninguno' && p.rol === 'visitante') {
+        // Concedido y perdido: se ha limpiado el grimorio (otra partida)
+        avisa(
+          'accesoGrimorio',
+          previo.accesoGrimorio === 'concedido' ? 'Ya no ves el grimorio del narrador.' : 'El narrador no te deja ver su grimorio.',
+        );
       }
     } else if (soyNarrador && p.accesoGrimorio === 'solicitado') {
       avisa('accesoGrimorio', `${p.nombre} pide ver el grimorio.`);

@@ -22,6 +22,11 @@ interface PanelGuionProps {
   idiomas: { nombres: string; descripciones: string; genero: Genero };
   /** Cambia el de las descripciones (la preferencia, no solo aquí). */
   onCambiarIdiomaDescripciones: (id: string) => void;
+  /**
+   * Personajes en juego y vivos (de las fichas que ve quien mira): en el orden de
+   * noche llevan la ficha recordatorio de que actúan.
+   */
+  enJuego: string[];
   onCerrar: () => void;
 }
 
@@ -55,7 +60,7 @@ const colorDe = (tipo: string) =>
  *
  * Al abrirse el foco va a su título; Escape (con el foco dentro) lo cierra.
  */
-const PanelGuion = ({ vista, guion, idiomas, onCambiarIdiomaDescripciones, onCerrar }: PanelGuionProps) => {
+const PanelGuion = ({ vista, guion, idiomas, enJuego, onCambiarIdiomaDescripciones, onCerrar }: PanelGuionProps) => {
   const [completo, setCompleto] = useState(false);
   const traduccionesNombres = useTraducciones(idiomas.nombres, idiomas.genero);
   const traduccionesDescripciones = useTraducciones(idiomas.descripciones, idiomas.genero);
@@ -250,7 +255,7 @@ const PanelGuion = ({ vista, guion, idiomas, onCambiarIdiomaDescripciones, onCer
           {vista === 'guion' ? (
             <HojaPersonajes personajes={personajes} completo={completo} />
           ) : (
-            <OrdenNoche guion={guion} personajes={personajes} noche={noche} completo={completo} />
+            <OrdenNoche guion={guion} personajes={personajes} noche={noche} completo={completo} enJuego={enJuego} />
           )}
         </div>
       </div>
@@ -297,19 +302,23 @@ const Fila = ({
   nombre,
   color,
   texto,
+  actua = false,
 }: {
   icono: ReactNode;
   nombre: Texto;
   color: string;
   texto?: Texto | null;
+  /** Orden de noche: el personaje está en juego y vivo (actúa esta noche). */
+  actua?: boolean;
 }) => (
   // Sin texto (resumido), el nombre centrado con el icono; con texto, arriba
   <li className={`flex gap-3 py-1.5 ${texto?.texto ? 'items-start' : 'items-center'}`}>
     {icono}
-    <p className="min-w-0">
+    <p className="min-w-0 flex-1">
       <span className={`font-bold tracking-wide ${color}`} lang={nombre.lang}>
         {nombre.texto}
       </span>
+      {actua && <span className="sr-only"> (en juego)</span>}
       {texto?.texto && (
         <>
           <span className="sr-only">: </span>
@@ -319,6 +328,10 @@ const Fila = ({
         </>
       )}
     </p>
+    {actua && (
+      // La ficha recordatorio de noche de botc.app (public/noche/actua.webp); el lector lo oye en el nombre
+      <img src="/noche/actua.webp" alt="" className="h-9 w-9 shrink-0 self-center drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]" />
+    )}
   </li>
 );
 
@@ -388,11 +401,13 @@ const OrdenNoche = ({
   personajes,
   noche,
   completo,
+  enJuego,
 }: {
   guion: GuionResuelto;
   personajes: PersonajeMostrado[];
   noche: 'primera' | 'otras';
   completo: boolean;
+  enJuego: string[];
 }) => {
   // El orden lo calcula el servidor; aquí solo se pintan
   const lista = personajesDeNoche(guion, personajes, noche);
@@ -420,6 +435,7 @@ const OrdenNoche = ({
           nombre={r.nombre}
           color={colorDe(r.tipo)}
           texto={completo ? (noche === 'primera' ? r.primeraNoche : r.otrasNoches) : null}
+          actua={enJuego.includes(r.id)}
         />
       ))}
       {fija(

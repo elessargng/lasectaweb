@@ -9,6 +9,13 @@ interface FichaRedondaProps {
   marcado?: boolean;
   /** En una votación: los votos acumulados si votó, null (✗) si no; sin definir si aún no le ha tocado. */
   voto?: number | null;
+  /** Boca abajo (revelando el grimorio): se ve el reverso. Al cambiar, gira. */
+  bocaAbajo?: boolean;
+  /**
+   * Boca abajo, se gira al pasar el ratón o con el foco en el botón que la
+   * contiene (con la clase group): el narrador la mira antes de revelarla.
+   */
+  asomar?: boolean;
 }
 
 /**
@@ -21,24 +28,42 @@ interface FichaRedondaProps {
  * nominación), lleva una calavera grande en el centro. En una votación, el
  * número de votos que lleva (si votó) o una ✗.
  *
+ * Tiene dos caras: boca abajo se ve el reverso (el de botc.app) y al darle la
+ * vuelta gira sobre sí misma (sin animación si se pide menos movimiento).
+ *
  * Solo visual: quien la use dice para el lector de quién es y si está muerto.
  */
-const FichaRedonda = ({ children, muerto = false, marcado = false, voto }: FichaRedondaProps) => (
+const FichaRedonda = ({ children, muerto = false, marcado = false, voto, bocaAbajo = false, asomar = false }: FichaRedondaProps) => (
   // span (de bloque) y no div: la ficha puede ir dentro de un botón
-  <span className="relative block aspect-square w-[var(--sala-ficha,4.5rem)]">
+  <span className="relative block aspect-square w-[var(--sala-ficha,4.5rem)] [perspective:40rem]">
     <span
-      className="flex h-full w-full items-center justify-center overflow-hidden rounded-full"
-      style={{
-        // La textura de las fichas de botc.app (copia local, public/ficha.webp),
-        // agrandada al 110% (su círculo no llega al borde de la imagen y así el aro
-        // oscuro queda justo en el borde de la ficha). Debajo, el color del
-        // pergamino por si tarda en cargar.
-        background: "url('/ficha.webp') center / 110% no-repeat, #d8c59c",
-        // Solo la sombra sobre la mesa: el relieve ya lo trae la textura
-        boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
-      }}
+      className={`relative block h-full w-full transition-transform duration-700 ease-in-out [transform-style:preserve-3d] motion-reduce:transition-none ${
+        bocaAbajo ? '[transform:rotateY(180deg)]' : ''
+      } ${bocaAbajo && asomar ? 'group-hover:[transform:rotateY(0deg)] group-focus-visible:[transform:rotateY(0deg)]' : ''}`}
     >
-      {children}
+      {/* Cara: la textura y el personaje */}
+      <span
+        className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-full [backface-visibility:hidden]"
+        style={{
+          // La textura de las fichas de botc.app (copia local, public/ficha.webp),
+          // agrandada al 110% (su círculo no llega al borde de la imagen y así el aro
+          // oscuro queda justo en el borde de la ficha). Debajo, el color del
+          // pergamino por si tarda en cargar.
+          background: "url('/ficha.webp') center / 110% no-repeat, #d8c59c",
+          // Solo la sombra sobre la mesa: el relieve ya lo trae la textura
+          boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
+        }}
+      >
+        {children}
+      </span>
+      {/* Reverso (el de botc.app, copia local en public/ficha-reverso.webp) */}
+      <span
+        className="absolute inset-0 rounded-full [backface-visibility:hidden] [transform:rotateY(180deg)]"
+        style={{
+          background: "url('/ficha-reverso.webp') center / 100% no-repeat, #d9cfb4",
+          boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
+        }}
+      />
     </span>
     {muerto && (
       // Sudario (el de botc.app, copia local en public/sudario.webp): de un poco
@@ -49,7 +74,7 @@ const FichaRedonda = ({ children, muerto = false, marcado = false, voto }: Ficha
         className="absolute left-1/2 top-[-6%] h-[56%] w-auto -translate-x-1/2 drop-shadow-[0_2px_2px_rgba(0,0,0,0.6)]"
       />
     )}
-    {marcado && (
+    {marcado && !bocaAbajo && (
       // Calavera color hueso, centrada y grande
       <svg
         viewBox="0 0 24 24"
@@ -71,7 +96,7 @@ const FichaRedonda = ({ children, muerto = false, marcado = false, voto }: Ficha
         <path d="M10.2 18.3v3M12 18.3v3M13.8 18.3v3" stroke="#3b2f25" strokeWidth=".8" strokeLinecap="round" />
       </svg>
     )}
-    {voto !== undefined && (
+    {voto !== undefined && !bocaAbajo && (
       // El voto, grande en el centro: el número de votos que lleva la votación, o una ✗
       <span
         className={`absolute inset-0 flex items-center justify-center font-teutonic1 leading-none drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)] text-[calc(var(--sala-ficha,4.5rem)*0.55)] ${
