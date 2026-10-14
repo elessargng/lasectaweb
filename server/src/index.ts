@@ -41,6 +41,24 @@ import { seedAdminUser } from './utils/seeder';
 import { VillacuervosRepository } from './repositories/VillacuervosRepository';
 import { VillacuervosService } from './services/VillacuervosService';
 import { VillacuervosController } from './controllers/VillacuervosController';
+import { PersonajeRepository } from './repositories/PersonajeRepository';
+import { AlmacenIconosDisco } from './repositories/AlmacenIconos';
+import { VillacuervosFuentePersonajes } from './services/personajes/VillacuervosFuentePersonajes';
+import { SincronizacionPersonajesService } from './services/personajes/SincronizacionPersonajesService';
+import { GuionService } from './services/guiones/GuionService';
+import { GuionController } from './controllers/GuionController';
+import { IdiomaRepository } from './repositories/IdiomaRepository';
+import { TraduccionRepository } from './repositories/TraduccionRepository';
+import { VillacuervosFuenteTraducciones } from './services/traducciones/VillacuervosFuenteTraducciones';
+import { SincronizacionTraduccionesService } from './services/traducciones/SincronizacionTraduccionesService';
+import { TraduccionService } from './services/traducciones/TraduccionService';
+import { TraduccionController } from './controllers/TraduccionController';
+import { SincronizacionRepository } from './repositories/SincronizacionRepository';
+import { RegistroSincronizacionesService } from './services/sincronizacion/RegistroSincronizacionesService';
+import { SincronizacionController } from './controllers/SincronizacionController';
+import { exigirRol } from './middlewares/roles';
+import { TareaProgramada } from './utils/TareaProgramada';
+import { leerConfigPersonajes } from './config/personajes';
 import { TwitterRepository } from './repositories/TwitterRepository';
 import { InstagramRepository } from './repositories/InstagramRepository';
 import { SocialMediaService } from './services/SocialMediaService';
@@ -95,6 +113,73 @@ const threadController = new ThreadController(threadService);
 
 const villacuervosRepository = new VillacuervosRepository();
 const villacuervosService = new VillacuervosService(villacuervosRepository, userRepository);
+
+// Catálogo de personajes, sus traducciones y guiones: copia local sincronizada
+// una vez por semana con Villacuervos. Cada pieza recibe lo que necesita;
+// ninguna crea sus dependencias.
+const configPersonajes = leerConfigPersonajes();
+const personajeRepository = new PersonajeRepository();
+const idiomaRepository = new IdiomaRepository();
+const traduccionRepository = new TraduccionRepository();
+const sincronizacionPersonajes = new SincronizacionPersonajesService(
+  new VillacuervosFuentePersonajes(villacuervosRepository),
+  personajeRepository,
+  new AlmacenIconosDisco(configPersonajes.carpetaIconos, configPersonajes.rutaPublicaIconos),
+);
+const sincronizacionTraducciones = new SincronizacionTraduccionesService(
+  new VillacuervosFuenteTraducciones(villacuervosRepository),
+  idiomaRepository,
+  traduccionRepository,
+  configPersonajes.pausaEntrePeticionesMs,
+);
+const informarPersonajes = (r: { personajes: number; iconosDescargados: number } | null) =>
+  r && console.log(`[SincronizacionPersonajes] ${r.personajes} personajes, ${r.iconosDescargados} iconos descargados.`);
+const informarTraducciones = (r: { idiomas: number; traducciones: number; fallidos: string[] } | null) =>
+  r &&
+  console.log(
+    `[SincronizacionTraducciones] ${r.idiomas} idiomas, ${r.traducciones} traducciones` +
+      (r.fallidos.length ? `; sin actualizar: ${r.fallidos.join(', ')}.` : '.'),
+  );
+// Cada sincronización apunta cómo ha ido, para avisar en la gestión si falla
+// (la web sigue con la última copia buena).
+const registroSincronizaciones = new RegistroSincronizacionesService(new SincronizacionRepository());
+const fallosTraducciones = (r: { fallidos: string[] }) =>
+  r.fallidos.length ? `No se han podido actualizar: ${r.fallidos.join(', ')}.` : null;
+const sincronizarPersonajes = (soloSiCaducada: boolean) =>
+  registroSincronizaciones
+    .registrar('personajes', () =>
+      soloSiCaducada
+        ? sincronizacionPersonajes.sincronizarSiCaducada(configPersonajes.vigenciaMs)
+        : sincronizacionPersonajes.sincronizar(),
+    )
+    .then(informarPersonajes)
+    .catch((e) => console.error('[SincronizacionPersonajes] Error; se sigue con la copia actual:', e));
+const sincronizarTraducciones = (soloSiCaducada: boolean) =>
+  registroSincronizaciones
+    .registrar(
+      'traducciones',
+      () =>
+        soloSiCaducada
+          ? sincronizacionTraducciones.sincronizarSiCaducada(configPersonajes.vigenciaMs)
+          : sincronizacionTraducciones.sincronizar(),
+      fallosTraducciones,
+    )
+    .then(informarTraducciones)
+    .catch((e) => console.error('[SincronizacionTraducciones] Error; se sigue con la copia actual:', e));
+// Personajes y traducciones juntos, uno detrás de otro (así no se pide a la vez)
+const tareaSincronizacionPersonajes = new TareaProgramada(
+  'SincronizacionPersonajes',
+  configPersonajes.cronSincronizacion,
+  async () => {
+    await sincronizarPersonajes(false);
+    await sincronizarTraducciones(false);
+  },
+);
+const sincronizacionController = new SincronizacionController(registroSincronizaciones);
+const soloAdministracion = exigirRol('admin', async (id) => (await userRepository.findById(id))?.roles ?? null);
+const guionService = new GuionService(personajeRepository);
+const guionController = new GuionController(guionService);
+const traduccionController = new TraduccionController(new TraduccionService(idiomaRepository, traduccionRepository));
 const villacuervosController = new VillacuervosController(villacuervosService);
 
 const ritualRepository = new RitualRepository();
@@ -181,6 +266,18 @@ app.post('/api/threads/:threadId/comments', threadController.addComment);
 
 // Rutas de Villacuervos (Lectura pública)
 app.get('/api/villacuervos/roles', villacuervosController.getRoles);
+
+// Catálogo de personajes (copia local) y guiones
+app.get('/api/personajes', guionController.personajes);
+app.get('/api/guiones/predeterminados', guionController.predeterminados);
+app.get('/api/idiomas', traduccionController.idiomas);
+app.get('/api/idiomas/:id/traducciones', traduccionController.traducciones);
+app.get(
+  '/api/admin/sincronizaciones',
+  authenticateJWT as express.RequestHandler,
+  soloAdministracion as express.RequestHandler,
+  sincronizacionController.estado,
+);
 app.get('/api/villacuervos/roles/:key', villacuervosController.getRoleByKey);
 app.get('/api/villacuervos/jinxes', villacuervosController.getJinxes);
 app.get('/api/villacuervos/translations', villacuervosController.getTranslations);
@@ -266,10 +363,18 @@ DatabaseRepository.getInstance()
     vigilanteService.start();
     await seedCodice(codiceRepository);
     plazaVigilanteService.start();
+    // Sincronización semanal y, al arrancar, de lo que esté caducado o no haya
+    tareaSincronizacionPersonajes.iniciar();
+    (async () => {
+      await sincronizarPersonajes(true);
+      await sincronizarTraducciones(true);
+    })();
     
     // La sala de juego va por WebSocket sobre el mismo servidor HTTP
     const httpServer = http.createServer(app);
-    iniciarSalaSocket(httpServer, async (id) => (await userRepository.findById(id))?.profilePicture || null);
+    iniciarSalaSocket(httpServer, async (id) => (await userRepository.findById(id))?.profilePicture || null, {
+      guiones: guionService,
+    });
     httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });

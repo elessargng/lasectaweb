@@ -1,9 +1,14 @@
+import { useId, useState } from 'react';
+import { urlDelServidor } from '../utils/api';
+import DialogoPersonaje from './DialogoPersonaje';
 import FichaRedonda from './FichaRedonda';
+import { alineamientoDe, alineamientoDeTipo, iconoDe, useFichas, type ContenidoFicha } from './fichas';
 import { nombreMano } from './formasMano';
+import type { PersonajeMostrado } from './guiones';
 import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { idFichaNominar } from './ids';
 import { describirAsiento } from './nombresAsiento';
-import type { SalaAsiento, SalaParticipante, SalaResultado } from './useSala';
+import type { SalaAlineamiento, SalaAsiento, SalaParticipante, SalaResultado } from './useSala';
 
 interface FichaAsientoProps {
   asiento: SalaAsiento;
@@ -11,6 +16,8 @@ interface FichaAsientoProps {
   numero: number;
   /** Quien está sentado (o se ve sentado, si se le está moviendo), o null. */
   ocupante: SalaParticipante | null;
+  /** Es el asiento de quien mira: su personaje se lo da el narrador (no se anota). */
+  propia: boolean;
   /**
    * - narrador: botón con las opciones de la partida (matar o revivir…).
    * - grimorio: jugador con grimorio; botón para cambiar la ficha en su grimorio
@@ -31,23 +38,56 @@ interface FichaAsientoProps {
   voto?: number | null;
 }
 
+const NOMBRE_ALINEAMIENTO: Record<SalaAlineamiento, string> = { bueno: 'bueno', malvado: 'malvado' };
+
 /**
  * La ficha de un asiento. Cada asiento tiene la suya, haya alguien sentado o no:
- * la muerte (sudario) y la calavera son de la ficha. Todos las ven.
+ * la muerte (sudario), la calavera y el personaje son de la ficha.
+ *
+ * El personaje (icono según su alineamiento y su nombre) lo ven el narrador, en
+ * todas, y cada jugador en la suya; con grimorio, un jugador ve además lo que ha
+ * anotado en las demás (solo en su navegador).
  *
  * Para el narrador es un botón (mano al pasar el ratón) con las opciones de la
  * partida: matar o revivir, marcar o desmarcar (la calavera), nominar a otra
- * ficha y (más adelante) cambiarla.
- * Mientras se elige a quién nomina, es un botón para elegirla. Un jugador con
- * grimorio puede cambiar las fichas en el suyo. Si no, solo se ve.
+ * ficha, cambiar su personaje y su alineamiento. Un jugador con grimorio puede
+ * cambiar personaje y alineamiento en el suyo (salvo en su propia ficha, que es
+ * la que le da el narrador). Mientras se elige a quién nomina, es un botón para
+ * elegirla. Si no, solo se ve.
  *
- * Su nombre dice de qué asiento es y quién se sienta; su estado (muerta,
- * calavera, mano, voto) va en la descripción, que se oye al llegar a ella pero
- * no se anuncia al cambiar. Al matar o revivir el foco vuelve a ella, así que el
- * lector oye el estado nuevo.
+ * Su nombre dice de qué asiento es y quién se sienta; su estado (personaje,
+ * muerta, calavera, mano, voto) va en la descripción, que se oye al llegar a
+ * ella pero no se anuncia al cambiar.
  */
-const FichaAsiento = ({ asiento, numero, ocupante, modo, pedir, onError, onNominar, eligiendo, voto }: FichaAsientoProps) => {
-  const ficha = <FichaRedonda muerto={asiento.muerto} marcado={asiento.marcado} voto={voto} />;
+const FichaAsiento = ({
+  asiento,
+  numero,
+  ocupante,
+  propia,
+  modo,
+  pedir,
+  onError,
+  onNominar,
+  eligiendo,
+  voto,
+}: FichaAsientoProps) => {
+  const { hayGuion, personajes, porId, notas, anotar } = useFichas();
+  const [eligiendoPersonaje, setEligiendoPersonaje] = useState(false);
+
+  // Lo que lleva: lo de la partida si se ve (narrador, o la propia); si no, lo anotado en el grimorio propio.
+  // Sin guion no hay personajes que anotar.
+  const anotando = modo === 'grimorio' && hayGuion && !(propia && asiento.personaje);
+  const contenido: ContenidoFicha =
+    asiento.personaje || !anotando
+      ? { personaje: asiento.personaje, alineamiento: asiento.alineamiento }
+      : (notas[asiento.id] ?? { personaje: null, alineamiento: null });
+  const personaje = contenido.personaje ? porId.get(contenido.personaje) : undefined;
+
+  const ficha = (
+    <FichaRedonda muerto={asiento.muerto} marcado={asiento.marcado} voto={voto}>
+      {personaje && <PersonajeEnFicha personaje={personaje} alineamiento={contenido.alineamiento} />}
+    </FichaRedonda>
+  );
 
   if (eligiendo) {
     const origen = eligiendo.papel === 'origen';
@@ -66,7 +106,8 @@ const FichaAsiento = ({ asiento, numero, ocupante, modo, pedir, onError, onNomin
     );
   }
 
-  if (modo === 'ver') return ficha;
+  const editable = modo === 'narrador' || anotando;
+  if (!editable) return ficha;
 
   const cambiarVida = async () => {
     const r = await pedir('narrador:cambiarVida', { asientoId: asiento.id, muerto: !asiento.muerto });
@@ -83,12 +124,42 @@ const FichaAsiento = ({ asiento, numero, ocupante, modo, pedir, onError, onNomin
     return false;
   };
 
-  // Aún sin definir: se ve, pero no hace nada.
+  // El narrador cambia la partida; un jugador, su grimorio.
+  const ponerPersonaje = async (personajeId: string | null) => {
+    if (modo !== 'narrador') {
+      anotar(asiento.id, { personaje: personajeId, alineamiento: null });
+      return;
+    }
+    const r = await pedir('narrador:cambiarPersonaje', { asientoId: asiento.id, personajeId });
+    if (!r.ok) onError(r.error);
+  };
+  const ponerAlineamiento = async (alineamiento: SalaAlineamiento) => {
+    if (modo !== 'narrador') {
+      anotar(asiento.id, { personaje: contenido.personaje, alineamiento });
+      return false;
+    }
+    const r = await pedir('narrador:cambiarAlineamiento', { asientoId: asiento.id, alineamiento });
+    if (!r.ok) onError(r.error);
+    // false: el menú se cierra y el foco vuelve a la ficha, que ya dice su alineamiento.
+    return false;
+  };
+
+  // Cambiar alineamiento: al contrario del que tiene; un viajero sin decidir, a cualquiera de los dos.
+  const actual = personaje ? alineamientoDe(personaje, contenido.alineamiento) : null;
+  const destinos: SalaAlineamiento[] = !personaje ? ['malvado'] : actual === null ? ['bueno', 'malvado'] : [actual === 'bueno' ? 'malvado' : 'bueno'];
+  // Sin guion no salen ni «Cambiar ficha» ni el alineamiento: no hay personajes que poner.
+  const opcionesAlineamiento: OpcionMenu[] = !hayGuion ? [] : destinos.map((a) => ({
+    id: `alineamiento-${a}`,
+    etiqueta: `Cambiar alineamiento a ${NOMBRE_ALINEAMIENTO[a]}`,
+    deshabilitada: !personaje,
+    elegir: () => ponerAlineamiento(a),
+  }));
+
   const cambiarFicha: OpcionMenu = {
     id: 'cambiar',
-    etiqueta: 'Cambiar ficha (próximamente)',
-    deshabilitada: true,
-    elegir: () => {},
+    etiqueta: 'Cambiar ficha',
+    abreDialogo: true,
+    elegir: () => setEligiendoPersonaje(true),
   };
   const quien = ocupante ? 'jugador' : 'ficha';
   const opciones: OpcionMenu[] =
@@ -99,46 +170,97 @@ const FichaAsiento = ({ asiento, numero, ocupante, modo, pedir, onError, onNomin
           onNominar
             ? { id: 'nominar', etiqueta: 'Nominar a…', elegir: onNominar }
             : { id: 'nominar', etiqueta: 'Nominar a…', deshabilitada: true, elegir: () => {} },
-          cambiarFicha,
+          ...(hayGuion ? [cambiarFicha] : []),
+          ...opcionesAlineamiento,
         ]
-      : // En su grimorio, el jugador solo cambia las fichas (lo demás es de la partida).
-        [cambiarFicha];
+      : // En su grimorio, el jugador solo cambia los personajes (lo demás es de la partida).
+        [cambiarFicha, ...opcionesAlineamiento];
 
+  // El alineamiento se dice si no es el de su tipo (o si es un viajero y ya lo tiene)
+  const alineamientoDistinto = personaje && contenido.alineamiento && contenido.alineamiento !== alineamientoDeTipo(personaje.tipo);
   const estado = [
+    personaje && `${personaje.nombre.texto}${alineamientoDistinto ? `, ${NOMBRE_ALINEAMIENTO[contenido.alineamiento!]}` : ''}`,
     asiento.muerto && 'muerta',
-    asiento.marcado &&
-      (asiento.votosMarca !== null && modo === 'narrador'
-        ? `con la calavera (${asiento.votosMarca === 1 ? '1 voto' : `${asiento.votosMarca} votos`})`
-        : 'con la calavera'),
+    asiento.marcado && 'con la calavera',
     ocupante?.manoLevantada && `mano levantada (${nombreMano(ocupante.formaMano).toLocaleLowerCase('es')})`,
     voto === null && 'no vota',
     typeof voto === 'number' && `vota (${voto === 1 ? '1 voto' : `${voto} votos`})`,
   ].filter(Boolean);
 
+  const nombreFicha = `Ficha del ${describirAsiento(numero, ocupante)}`;
   return (
-    <MenuDesplegable
-      id={`sala-ficha-${asiento.id}`}
-      // Nombre fijo y el estado en la descripción: así, con el foco en la ficha, no se
-      // anuncia cada cambio (la mano que baja al votar, los votos…)
-      etiqueta={`Ficha del ${describirAsiento(numero, ocupante)}`}
-      descripcion={estado.length ? estado.join(', ') : undefined}
-      boton={
-        <>
-          {ficha}
-          {/* Para el narrador, con cuántos votos se puso la calavera (para ver empates) */}
-          {modo === 'narrador' && asiento.marcado && asiento.votosMarca !== null && (
-            <span
-              aria-hidden="true"
-              className="absolute -bottom-[12%] -left-[12%] flex h-[42%] min-w-[42%] items-center justify-center rounded-full border border-[#efe6d2] bg-[#2b211a] px-1 text-[calc(var(--sala-ficha,4.5rem)*0.22)] font-semibold text-[#efe6d2] shadow-md"
-            >
-              {asiento.votosMarca}
-            </span>
-          )}
-        </>
-      }
-      botonClassName="relative block cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-      opciones={opciones}
-    />
+    <>
+      <MenuDesplegable
+        id={`sala-ficha-${asiento.id}`}
+        // Nombre fijo y el estado en la descripción: así, con el foco en la ficha, no se
+        // anuncia cada cambio (la mano que baja al votar, los votos…)
+        etiqueta={nombreFicha}
+        descripcion={estado.length ? estado.join(', ') : undefined}
+        boton={ficha}
+        botonClassName="relative block cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        opciones={opciones}
+      />
+      {eligiendoPersonaje && (
+        <DialogoPersonaje
+          ficha={nombreFicha.replace(/^Ficha del /, '')}
+          personajes={personajes}
+          actual={contenido.personaje}
+          onElegir={(id) => void ponerPersonaje(id)}
+          onCerrar={() => setEligiendoPersonaje(false)}
+        />
+      )}
+    </>
+  );
+};
+
+/**
+ * El nombre va en mayúsculas siguiendo el borde de abajo de la ficha (un arco
+ * dentro del aro), como en las fichas impresas. Medidas sobre una ficha de 100
+ * de lado: el arco tiene unas 100 unidades útiles y cada mayúscula ocupa
+ * unas 0,72 veces su tamaño, así que los nombres largos encogen para caber.
+ */
+const RADIO_NOMBRE = 44;
+const TAMANO_NOMBRE = 14;
+const tamanoNombre = (nombre: string) => Math.min(TAMANO_NOMBRE, 100 / (nombre.length * 0.72));
+
+/**
+ * El personaje dentro de la ficha: su icono (el bueno o el malvado, según su
+ * alineamiento) y su nombre curvado abajo. Solo visual: la ficha lo dice en su descripción.
+ */
+const PersonajeEnFicha = ({
+  personaje,
+  alineamiento,
+}: {
+  personaje: PersonajeMostrado;
+  alineamiento: SalaAlineamiento | null;
+}) => {
+  const icono = iconoDe(personaje, alineamiento);
+  // Cada ficha, su arco (los id del SVG son de toda la página)
+  const idArco = `arco-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
+  const nombre = personaje.nombre.texto.toLocaleUpperCase(personaje.nombre.lang);
+  return (
+    <span aria-hidden="true" className="relative flex h-full w-full items-center justify-center">
+      {icono && <img src={urlDelServidor(icono)} alt="" className="h-[83%] w-[83%] -translate-y-[7%] object-contain" />}
+      <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full overflow-visible">
+        {/* De izquierda a derecha por abajo: el texto queda derecho, mirando al centro */}
+        <path id={idArco} d={`M ${50 - RADIO_NOMBRE} 50 A ${RADIO_NOMBRE} ${RADIO_NOMBRE} 0 0 0 ${50 + RADIO_NOMBRE} 50`} fill="none" />
+        <text
+          lang={personaje.nombre.lang}
+          fontFamily="Georgia, serif"
+          fontWeight="bold"
+          fontSize={tamanoNombre(nombre)}
+          letterSpacing="0.5"
+          fill="#2b211a"
+          style={{ paintOrder: 'stroke' }}
+          stroke="rgba(243, 230, 208, 0.7)"
+          strokeWidth="1.5"
+        >
+          <textPath href={`#${idArco}`} startOffset="50%" textAnchor="middle">
+            {nombre}
+          </textPath>
+        </text>
+      </svg>
+    </span>
   );
 };
 

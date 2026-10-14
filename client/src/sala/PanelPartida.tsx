@@ -1,8 +1,6 @@
 import Deslizador from './Deslizador';
 import type { SalaConfiguracion } from './useSala';
 
-/** Duración de la cuenta atrás; el servidor tiene los mismos límites. */
-const CUENTA_ATRAS = { min: 3, max: 120, paso: 1, defecto: 3 };
 /** Lo que tarda la aguja de ficha en ficha al votar; el servidor tiene los mismos límites. */
 const SEGUNDOS_POR_FICHA = { min: 0.25, max: 2, paso: 0.25, defecto: 1 };
 
@@ -37,14 +35,6 @@ const PanelPartida = ({ configuracion, onCambiar }: PanelPartidaProps) => (
         rol y las demás vacías.
       </p>
     </div>
-    <Deslizador
-      id="sala-pref-cuenta-atras"
-      etiqueta="Cuenta atrás de las nominaciones"
-      valor={configuracion.segundosCuentaAtras}
-      rango={CUENTA_ATRAS}
-      unidad="s"
-      onCambiar={(segundosCuentaAtras) => onCambiar({ segundosCuentaAtras })}
-    />
     <Deslizador
       id="sala-pref-velocidad"
       etiqueta="Velocidad de las agujas al votar"

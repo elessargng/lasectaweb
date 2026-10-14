@@ -4,6 +4,7 @@ import { useAriaLive, type TipoAviso } from './avisosConfig';
 import AsaMover from './AsaMover';
 import Asiento from './Asiento';
 import CuentaAtras from './CuentaAtras';
+import { hacenFalta } from './avisosSala';
 import CuadroAvatar from './CuadroAvatar';
 import FichaAsiento from './FichaAsiento';
 import Mano from './Mano';
@@ -257,6 +258,7 @@ const Mesa = ({
                   destino={editando && !!mover.activo && mover.activo.hasta === a.id && mover.activo.hasta !== mover.activo.desde}
                   // Mitad inferior de la mesa (entre las 3 y las 9, sin contarlas): nombre debajo
                   nombreAbajo={-Math.cos((2 * Math.PI * i) / total) > 0.01}
+                  angulo={(2 * Math.PI * i) / total}
                   asa={editando && real && <AsaMover {...mover.propsAsa(a.id)} nombre={real.nombre} numero={i + 1} />}
                 />
               </li>
@@ -297,6 +299,7 @@ const Mesa = ({
                 asiento={a}
                 numero={i + 1}
                 ocupante={ocupante}
+                propia={!!ocupante && ocupante.id === estado.yo}
                 modo={modoFichas}
                 pedir={pedir}
                 onError={onError}
@@ -351,6 +354,13 @@ const Mesa = ({
               : undefined
           }
         />
+      )}
+
+      {nominacion && !nominar.panel && (
+        // Debajo del eje de las agujas: los votos que hacen falta (el narrador lo ve en su panel)
+        <p className="absolute left-1/2 top-[calc(50%+3rem)] z-30 -translate-x-1/2 whitespace-nowrap rounded bg-background/70 px-3 py-1 text-sm font-semibold text-white">
+          {hacenFalta(nominacion.votosNecesarios)}
+        </p>
       )}
 
       {/* El centro de la mesa: la cuenta atrás (todos), el panel de la nominación y

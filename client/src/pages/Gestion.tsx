@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
+import EstadoSincronizaciones from '../components/EstadoSincronizaciones';
 import { Check, X, Shield, BookOpen, User as UserIcon, Loader2 } from 'lucide-react';
 import { parseApiResponse, getAvatarUrl } from '../utils/api';
 
@@ -172,6 +173,9 @@ const Gestion = () => {
 
       <div className="max-w-7xl w-full mx-auto px-0 md:px-6 py-4 md:py-10 relative z-20 -mt-20">
         <div className="bg-transparent md:bg-surface border-0 md:border border-transparent md:border-outline-ghost rounded-none md:rounded shadow-none md:shadow-2xl p-4 md:p-10">
+
+          {/* Solo la administración: si falla la sincronización con Villacuervos, se avisa aquí */}
+          {isAdmin && token && <EstadoSincronizaciones token={token} />}
 
           <h2 className="text-2xl font-display font-medium text-white mb-8 border-b border-outline-ghost pb-4">
             Gestión de Adeptos y Jerarquía

@@ -48,15 +48,21 @@ export async function parseApiResponse<T = any>(response: Response): Promise<T> 
 }
 
 /**
+ * La dirección completa de un archivo servido por el servidor de la API
+ * (/uploads/…), que puede estar en otro origen que la web. Otras rutas (de la
+ * propia web, https, base64) se devuelven tal cual.
+ */
+export function urlDelServidor(ruta: string): string {
+  if (!ruta.startsWith('/uploads/')) return ruta;
+  const rawApiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api';
+  return `${rawApiUrl.replace(/\/api\/?$/, '')}${ruta}`;
+}
+
+/**
  * Helper to get the correct URL for avatar images.
  * Handles server-side uploads (/uploads/...), default frontend assets (/avatars/...), and base64.
  */
 export function getAvatarUrl(avatarPath?: string | null): string {
   if (!avatarPath) return '/avatar.png';
-  if (avatarPath.startsWith('/uploads/')) {
-    const rawApiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api';
-    const serverBase = rawApiUrl.replace(/\/api\/?$/, '');
-    return `${serverBase}${avatarPath}`;
-  }
-  return avatarPath;
+  return urlDelServidor(avatarPath);
 }

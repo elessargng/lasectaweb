@@ -39,15 +39,38 @@ export class VillacuervosRepository {
   }
 
   async getRoles(): Promise<PublicRoleSchema[]> {
-    return this.getCachedOrFetch('roles', async () => {
-      const response = await fetch(`${this.baseUrl}/roles/`, {
-        headers: { accept: 'application/json' }
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to fetch roles from Villacuervos: ${response.statusText}`);
-      }
-      return await response.json() as PublicRoleSchema[];
+    return this.getCachedOrFetch('roles', () => this.fetchRoles());
+  }
+
+  /**
+   * Descarga una imagen de Villacuervos (los iconos de los roles). null si no
+   * existe (p. ej. un rol sin versión alternativa). Solo de su dominio, solo
+   * imágenes y de un tamaño razonable.
+   */
+  async descargarImagen(url: string): Promise<Buffer | null> {
+    if (new URL(url).hostname !== new URL(this.baseUrl).hostname) {
+      throw new Error(`Imagen fuera de Villacuervos: ${url}`);
+    }
+    const response = await fetch(url);
+    if (response.status === 404) return null;
+    const tipo = response.headers.get('content-type') || '';
+    if (!response.ok || !tipo.startsWith('image/')) {
+      throw new Error(`Failed to fetch image from Villacuervos (${response.status} ${tipo}): ${url}`);
+    }
+    const datos = Buffer.from(await response.arrayBuffer());
+    if (datos.length > 2 * 1024 * 1024) throw new Error(`Image too large: ${url}`);
+    return datos;
+  }
+
+  /** La lista de roles directamente de Villacuervos, sin caché (la usa la sincronización). */
+  async fetchRoles(): Promise<PublicRoleSchema[]> {
+    const response = await fetch(`${this.baseUrl}/roles/`, {
+      headers: { accept: 'application/json' }
     });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch roles from Villacuervos: ${response.statusText}`);
+    }
+    return await response.json() as PublicRoleSchema[];
   }
 
   async getRoleByKey(key: string): Promise<PublicRoleSchema> {
@@ -75,15 +98,18 @@ export class VillacuervosRepository {
   }
 
   async getTranslationPacks(): Promise<PublicPackSchema[]> {
-    return this.getCachedOrFetch('translation-packs', async () => {
-      const response = await fetch(`${this.baseUrl}/translations/`, {
-        headers: { accept: 'application/json' }
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to fetch translation packs from Villacuervos: ${response.statusText}`);
-      }
-      return await response.json() as PublicPackSchema[];
+    return this.getCachedOrFetch('translation-packs', () => this.fetchTranslationPacks());
+  }
+
+  /** La lista de paquetes de traducción directamente de Villacuervos, sin caché (la usa la sincronización). */
+  async fetchTranslationPacks(): Promise<PublicPackSchema[]> {
+    const response = await fetch(`${this.baseUrl}/translations/`, {
+      headers: { accept: 'application/json' }
     });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch translation packs from Villacuervos: ${response.statusText}`);
+    }
+    return await response.json() as PublicPackSchema[];
   }
 
   async getTranslationsBySlug(
@@ -92,19 +118,26 @@ export class VillacuervosRepository {
     markedGenres: boolean = true
   ): Promise<PublicTranslationSchema[]> {
     const cacheKey = `translations-${slug}-${genre}-${markedGenres}`;
-    return this.getCachedOrFetch(cacheKey, async () => {
-      const url = new URL(`${this.baseUrl}/translations/${encodeURIComponent(slug)}/`);
-      url.searchParams.append('genre', genre);
-      url.searchParams.append('marked_genres', markedGenres.toString());
+    return this.getCachedOrFetch(cacheKey, () => this.fetchTranslationsBySlug(slug, genre, markedGenres));
+  }
 
-      const response = await fetch(url.toString(), {
-        headers: { accept: 'application/json' }
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to fetch translations for pack '${slug}' from Villacuervos: ${response.statusText}`);
-      }
-      return await response.json() as PublicTranslationSchema[];
+  /** Las traducciones de un paquete directamente de Villacuervos, sin caché (la usa la sincronización). */
+  async fetchTranslationsBySlug(
+    slug: string,
+    genre: string = 'male',
+    markedGenres: boolean = true
+  ): Promise<PublicTranslationSchema[]> {
+    const url = new URL(`${this.baseUrl}/translations/${encodeURIComponent(slug)}/`);
+    url.searchParams.append('genre', genre);
+    url.searchParams.append('marked_genres', markedGenres.toString());
+
+    const response = await fetch(url.toString(), {
+      headers: { accept: 'application/json' }
     });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch translations for pack '${slug}' from Villacuervos: ${response.statusText}`);
+    }
+    return await response.json() as PublicTranslationSchema[];
   }
 
   // --- Endpoints con Token de API ( plays ) ---

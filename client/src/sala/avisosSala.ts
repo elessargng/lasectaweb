@@ -1,7 +1,7 @@
 import { nombreMano } from './formasMano';
 import { datosAsiento } from './nombresAsiento';
 import type { TipoAviso } from './avisosConfig';
-import type { SalaEstado, SalaParticipante } from './useSala';
+import type { SalaEstado, SalaParticipante, SalaFase } from './useSala';
 
 /**
  * Qué decirle al lector cuando cambia la sala por algo que han hecho otros:
@@ -19,6 +19,13 @@ export interface Aviso {
   tipo: TipoAviso;
   texto: string;
 }
+
+/** «Preparación», «Noche 2», «Día 2». */
+export const nombreFase = (f: SalaFase) =>
+  f.momento === 'preparacion' ? 'Preparación' : `${f.momento === 'noche' ? 'Noche' : 'Día'} ${f.numero}`;
+
+/** «Hacen falta 3 votos» (o «1 voto»). */
+export const hacenFalta = (votos: number) => `Hacen falta ${votos === 1 ? '1 voto' : `${votos} votos`}`;
 
 export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): Aviso[] {
   const yo = nuevo.yo;
@@ -56,6 +63,21 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): Aviso[]
     else if (quedanNarradores) avisa('narradores', `${p.nombre} ya no narra.`);
   }
   if (narrabanAntes.length > 0 && !quedanNarradores) avisa('narradores', 'La sala se ha quedado sin narrador.');
+
+  // Ver el grimorio del narrador: a los narradores, quién lo pide; al visitante, la respuesta.
+  const soyNarrador = narra(ahora.get(yo));
+  for (const p of nuevo.participantes) {
+    const previo = antes.get(p.id);
+    if (!previo || previo.accesoGrimorio === p.accesoGrimorio) continue;
+    if (p.id === yo) {
+      if (p.accesoGrimorio === 'concedido') avisa('accesoGrimorio', 'El narrador te deja ver su grimorio.');
+      else if (p.accesoGrimorio === 'ninguno' && previo.accesoGrimorio === 'solicitado' && p.rol === 'visitante') {
+        avisa('accesoGrimorio', 'El narrador no te deja ver su grimorio.');
+      }
+    } else if (soyNarrador && p.accesoGrimorio === 'solicitado') {
+      avisa('accesoGrimorio', `${p.nombre} pide ver el grimorio.`);
+    }
+  }
 
   // Asientos: quién se sienta y quién se levanta (o se va y lo deja libre).
   const asientoDe = (e: SalaEstado, id: string) => e.asientos.findIndex((a) => a.ocupante === id) + 1;
@@ -98,7 +120,15 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): Aviso[]
     avisa('manos', `${p.nombre} cambia la mano a ${forma(p)}.`);
   }
 
-  // Fichas: quién (o qué asiento) muere, revive o lleva la calavera.
+  // Noche y día. Al limpiar el grimorio, un aviso y nada de cada ficha (revive todo el mundo).
+  const limpio = nuevo.fase.reinicios !== anterior.fase.reinicios;
+  const cambioFase =
+    limpio || nuevo.fase.momento !== anterior.fase.momento || nuevo.fase.numero !== anterior.fase.numero;
+  if (limpio) avisa('fase', 'Grimorio limpio: preparación de la partida.');
+  else if (cambioFase) avisa('fase', `${nombreFase(nuevo.fase)}.`);
+
+  // Fichas: quién (o qué asiento) muere, revive o lleva la calavera (al cambiar de
+  // fase se quita la calavera: ya se ha dicho que anochece).
   // «Bea» si hay alguien sentado; si no, «la ficha del asiento 3». A uno mismo, «Has muerto».
   const quien = (e: SalaEstado, asientoId: string) => {
     const { numero, ocupante } = datosAsiento(e, asientoId);
@@ -109,7 +139,7 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): Aviso[]
   const seMarca = nuevo.asientos.some((a) => a.marcado && !antesAsiento.get(a.id)?.marcado);
   for (const a of nuevo.asientos) {
     const previo = antesAsiento.get(a.id);
-    if (!previo) continue;
+    if (!previo || cambioFase) continue;
     const q = quien(nuevo, a.id);
     if (previo.muerto !== a.muerto) {
       if (q === null) avisa('muertes', a.muerto ? 'Has muerto.' : 'Has revivido.');
@@ -132,13 +162,17 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): Aviso[]
   };
   if (nomAhora && (nomAhora.desde !== nomAntes?.desde || nomAhora.hasta !== nomAntes?.hasta)) {
     const sujeto = mayuscula(nominacionDe(nuevo, nomAhora.desde));
+    const necesarios = ` ${hacenFalta(nomAhora.votosNecesarios)}.`;
     if (nomAhora.desde === nomAhora.hasta) {
-      avisa('nominaciones', `${sujeto} se nomina.`);
+      avisa('nominaciones', `${sujeto} se nomina.${necesarios}`);
     } else {
       const objeto = nominacionDe(nuevo, nomAhora.hasta).replace(/^el /, 'al ');
-      avisa('nominaciones', `${sujeto} nomina ${objeto.startsWith('al ') ? objeto : `a ${objeto}`}.`);
+      avisa('nominaciones', `${sujeto} nomina ${objeto.startsWith('al ') ? objeto : `a ${objeto}`}.${necesarios}`);
     }
-  } else if (nomAntes && !nomAhora && !seMarca && !nuevo.asientos.some((a) => antesAsiento.get(a.id)?.marcado && !a.marcado)) {
+  } else if (nomAhora && nomAntes && nomAhora.votosNecesarios !== nomAntes.votosNecesarios) {
+    // La misma nominación, pero ahora hacen falta otros votos (lo cambia el narrador, o muere alguien)
+    avisa('nominaciones', `Ahora ${hacenFalta(nomAhora.votosNecesarios).toLocaleLowerCase('es')}.`);
+  } else if (nomAntes && !nomAhora && !seMarca && !cambioFase && !nuevo.asientos.some((a) => antesAsiento.get(a.id)?.marcado && !a.marcado)) {
     // Si se ha cerrado al poner o quitar la calavera, ya se ha dicho eso.
     avisa('nominaciones', 'Nominación cerrada.');
   }
@@ -159,7 +193,7 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): Aviso[]
     avisa('resultadoVotacion', `Votación terminada: ${votAhora.votos === 1 ? '1 voto' : `${votAhora.votos} votos`}.`);
   }
   if (nomAhora?.cuentaAtrasFin && nomAhora.cuentaAtrasFin !== nomAntes?.cuentaAtrasFin) {
-    avisa('cuentaAtras', `Cuenta atrás: ${nuevo.configuracion.segundosCuentaAtras} segundos.`);
+    avisa('cuentaAtras', 'Cuenta atrás.');
   }
 
   return avisos;

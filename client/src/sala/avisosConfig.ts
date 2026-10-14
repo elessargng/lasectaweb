@@ -15,6 +15,11 @@ export type TipoAviso =
   | 'muertes'
   | 'calavera'
   | 'grimorio'
+  | 'guion'
+  | 'fase'
+  | 'miPersonaje'
+  | 'bolsa'
+  | 'accesoGrimorio'
   | 'nominaciones'
   | 'cuentaAtras'
   | 'votoAVoto'
@@ -32,6 +37,7 @@ export const GRUPOS_AVISOS: { grupo: string; tipos: { tipo: TipoAviso; etiqueta:
     grupo: 'Participantes',
     tipos: [
       { tipo: 'narradores', etiqueta: 'Narradores: quién narra, entra, sale o pierde la conexión' },
+      { tipo: 'accesoGrimorio', etiqueta: 'Ver el grimorio del narrador: quién lo pide y la respuesta' },
       { tipo: 'asientos', etiqueta: 'Quién se sienta o se levanta' },
       { tipo: 'miAsiento', etiqueta: 'Cambios en tu asiento (te levantan, te mueven, lo eliminan)' },
     ],
@@ -49,6 +55,9 @@ export const GRUPOS_AVISOS: { grupo: string; tipos: { tipo: TipoAviso; etiqueta:
       { tipo: 'muertes', etiqueta: 'Muertes y resurrecciones' },
       { tipo: 'calavera', etiqueta: 'Calavera: a quién se le pone o se le quita' },
       { tipo: 'grimorio', etiqueta: 'Grimorio para los jugadores (activado o desactivado)' },
+      { tipo: 'guion', etiqueta: 'Cambio de guion' },
+      { tipo: 'fase', etiqueta: 'Noche y día (y al limpiar el grimorio)' },
+      { tipo: 'miPersonaje', etiqueta: 'Tu personaje y tu alineamiento, cuando te los cambia el narrador' },
     ],
   },
   {
@@ -64,6 +73,7 @@ export const GRUPOS_AVISOS: { grupo: string; tipos: { tipo: TipoAviso; etiqueta:
     grupo: 'Acciones del narrador',
     tipos: [
       { tipo: 'mezclar', etiqueta: 'Mezclar jugadores' },
+      { tipo: 'bolsa', etiqueta: 'Bolsa de personajes: setup modificado y personajes repartidos' },
       { tipo: 'moverJugadores', etiqueta: 'Mover a un jugador de asiento (instrucciones y pasos)' },
       { tipo: 'editarAsientos', etiqueta: 'Número de asientos al añadir o eliminar' },
     ],

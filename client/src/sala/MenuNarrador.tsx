@@ -1,5 +1,6 @@
 import { ScrollText } from 'lucide-react';
 import { useState } from 'react';
+import DialogoConfirmar from './DialogoConfirmar';
 import DialogoElegirParticipante from './DialogoElegirParticipante';
 import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { botonIcono } from './estilos';
@@ -69,11 +70,16 @@ const ELEGIR: Record<
 const MenuNarrador = ({ estado, pedir, onAsientos }: MenuNarradorProps) => {
   // Acción de ELEGIR cuyo diálogo está abierto.
   const [eligiendo, setEligiendo] = useState<string | null>(null);
+  const [limpiando, setLimpiando] = useState(false);
   const puede = (accion: string) => estado.acciones.includes(accion);
 
   // id = acción del servidor que la respalda.
   const opciones: OpcionMenu[] = [
     { id: 'narrador:asientos', etiqueta: 'Asientos', elegir: onAsientos },
+    // Noche y día: solo sale el que toca
+    { id: 'narrador:irANoche', etiqueta: 'Ir a la noche', elegir: () => void pedir('narrador:irANoche') },
+    { id: 'narrador:amanecer', etiqueta: 'Amanece', elegir: () => void pedir('narrador:amanecer') },
+    { id: 'narrador:limpiarGrimorio', etiqueta: 'Limpiar grimorio', abreDialogo: true, elegir: () => setLimpiando(true) },
     ...Object.entries(ELEGIR).map(([accion, { etiqueta }]) => ({
       id: accion,
       etiqueta,
@@ -104,6 +110,17 @@ const MenuNarrador = ({ estado, pedir, onAsientos }: MenuNarradorProps) => {
           onElegir={(participanteId) => pedir(eligiendo, { participanteId })}
           onCerrar={() => setEligiendo(null)}
         />
+      )}
+      {limpiando && (
+        <DialogoConfirmar
+          titulo="Limpiar grimorio"
+          confirmar="Limpiar grimorio"
+          onConfirmar={() => pedir('narrador:limpiarGrimorio')}
+          onCerrar={() => setLimpiando(false)}
+        >
+          Se borra el registro de votaciones, las fichas vuelven a como estaban al principio y la partida vuelve a la
+          preparación. Los jugadores siguen en sus asientos.
+        </DialogoConfirmar>
       )}
     </>
   );

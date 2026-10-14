@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { notifySessionExpired } from '../utils/session';
+import type { GuionResuelto } from './guiones';
 
 export type SalaRol = 'narrador' | 'jugador' | 'visitante';
 
@@ -20,6 +21,8 @@ export interface SalaParticipante {
   manoLevantada: boolean;
   /** La forma de su mano al levantarla. */
   formaMano: FormaMano;
+  /** Visitantes: si ha pedido ver el grimorio del narrador, o si lo ve. */
+  accesoGrimorio: 'ninguno' | 'solicitado' | 'concedido';
 }
 
 /** Un asiento de la mesa, con su ficha (haya alguien sentado o no). */
@@ -33,14 +36,28 @@ export interface SalaAsiento {
   marcado: boolean;
   /** Con cuántos votos se le puso la calavera (desde una nominación ya votada), o null. */
   votosMarca: number | null;
+  /** El personaje de su ficha (id), o null; solo llega al narrador y a quien se sienta ahí. */
+  personaje: string | null;
+  /** Su alineamiento si se ha cambiado; null: el de su tipo. */
+  alineamiento: SalaAlineamiento | null;
+}
+
+export type SalaAlineamiento = 'bueno' | 'malvado';
+
+/** Cuántos personajes de cada tipo tiene la partida (asientos sin viajero; null con menos de 5). */
+export interface SalaDistribucion {
+  jugadores: number;
+  viajeros: number;
+  aldeanos: number | null;
+  forasteros: number | null;
+  esbirros: number | null;
+  demonios: number | null;
 }
 
 /** Ajustes de la partida que fija el narrador y valen para todos. */
 export interface SalaConfiguracion {
   /** Cada jugador puede cambiar las fichas en su propio grimorio (si no, solo las ve). */
   grimorioJugadores: boolean;
-  /** Duración de la cuenta atrás de las nominaciones, en segundos. */
-  segundosCuentaAtras: number;
   /** Lo que tarda la aguja en pasar de una ficha a la siguiente al votar, en segundos. */
   segundosPorFicha: number;
 }
@@ -59,12 +76,27 @@ export interface SalaVotacion {
 
 /** Una votación ya terminada, del registro del narrador. */
 export interface SalaRegistroVotacion {
+  /** Cuándo se nominó (ms). */
   hora: number;
+  /** El día de la partida en que se nominó. */
+  dia: number;
+  /** «asiento 1 (Ana)» o «asiento 1, libre». */
   nomina: string;
   nominado: string;
-  votantes: string[];
-  votos: number;
+  /** Quienes votaron, en orden; null si no se llegó a votar. */
+  votantes: string[] | null;
+  votos: number | null;
 }
+
+/** En qué momento está la partida: preparación, y después noche 1, día 1, noche 2… */
+export interface SalaFase {
+  momento: 'preparacion' | 'noche' | 'dia';
+  /** Número de la noche o del día (0 en la preparación). */
+  numero: number;
+  /** Veces que se ha limpiado el grimorio. */
+  reinicios: number;
+}
+
 
 /** Una nominación en curso: de qué asiento a qué asiento (ids de asiento). */
 export interface SalaNominacion {
@@ -74,6 +106,10 @@ export interface SalaNominacion {
   cuentaAtrasFin: number | null;
   /** La votación, desde que acaba la cuenta atrás. */
   votacion: SalaVotacion | null;
+  /** Votos que hacen falta para el nominado (los del narrador, o los de por defecto). */
+  votosNecesarios: number;
+  /** Los de por defecto: la mitad de los vivos y, si hay calavera con votos, uno más que esos. */
+  votosNecesariosPorDefecto: number;
 }
 
 export interface SalaEstado {
@@ -82,6 +118,12 @@ export interface SalaEstado {
   asientos: SalaAsiento[];
   configuracion: SalaConfiguracion;
   nominacion: SalaNominacion | null;
+  /** En qué momento está la partida (preparación, noche N, día N). */
+  fase: SalaFase;
+  /** El reparto de personajes de la partida. */
+  distribucion: SalaDistribucion;
+  /** Los personajes metidos en la bolsa (ids); vacía salvo para narradores. */
+  bolsa: string[];
   /** Hora del servidor (ms) al mandar el estado. */
   ahora: number;
   /** Registro de votaciones (la más reciente primero); vacío salvo para narradores. */
@@ -97,13 +139,7 @@ export interface SalaEstado {
  * `expulsadaPorNarrador`: un narrador la ha sacado de la sala.
  * En los dos casos no se reintenta la conexión.
  */
-export type SalaConexion =
-  | 'conectando'
-  | 'conectada'
-  | 'reconectando'
-  | 'expulsada'
-  | 'expulsadaPorNarrador'
-  | 'error';
+export type SalaConexion = 'conectando' | 'conectada' | 'reconectando' | 'expulsada' | 'expulsadaPorNarrador' | 'error';
 
 /** `valor`: lo que devuelve la acción a quien la pidió (p. ej. la ruta del avatar subido). */
 export type SalaResultado = { ok: true; valor?: string } | { ok: false; error: string };
@@ -139,10 +175,14 @@ export function useSala(
     alCambiar?: (anterior: SalaEstado | null, nuevo: SalaEstado) => void;
     /** El servidor no deja entrar como invitado con ese nombre: ya lo usa otro. */
     alNombreOcupado?: () => void;
+    /** Ha cambiado el guion de la sala (no al entrar, cuando llega el que ya había). */
+    alCambiarGuion?: (guion: GuionResuelto | null) => void;
   } = {},
 ) {
   const [estado, setEstado] = useState<SalaEstado | null>(null);
   const [conexion, setConexion] = useState<SalaConexion>('conectando');
+  // El guion de la sala: llega aparte del estado (solo al entrar y cuando cambia).
+  const [guion, setGuion] = useState<GuionResuelto | null>(null);
   // Diferencia entre el reloj del servidor y el de aquí (ms), para las cuentas atrás.
   const [desfaseReloj, setDesfaseReloj] = useState(0);
   const socketRef = useRef<Socket | null>(null);
@@ -170,6 +210,12 @@ export function useSala(
 
     let anterior: SalaEstado | null = null;
     let expulsada = false;
+    let guionRecibido = false;
+    socket.on('sala:guion', (nuevo: GuionResuelto | null) => {
+      if (guionRecibido) avisosRef.current.alCambiarGuion?.(nuevo);
+      guionRecibido = true;
+      setGuion(nuevo);
+    });
     socket.on('sala:estado', (nuevo: SalaEstado) => {
       avisosRef.current.alCambiar?.(anterior, nuevo);
       anterior = nuevo;
@@ -236,5 +282,5 @@ export function useSala(
     socketRef.current?.connect();
   }, []);
 
-  return { estado, conexion, desfaseReloj, pedir, reconectar };
+  return { estado, guion, conexion, desfaseReloj, pedir, reconectar };
 }

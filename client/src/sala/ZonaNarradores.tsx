@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import AccesoGrimorio from './AccesoGrimorio';
 import CuadroAvatar from './CuadroAvatar';
 import CuadroNarrador from './CuadroNarrador';
 import { botonPrincipal } from './estilos';
@@ -18,11 +19,14 @@ interface ZonaNarradoresProps {
  * narrador, un cuadro vacío con «Hacerse narrador» dentro si el servidor lo
  * permite (`estado.acciones`); también está en el menú de usuario. Las opciones
  * del narrador van en la cabecera (MenuNarrador).
+ *
+ * Debajo, para los narradores, quién pide ver el grimorio.
  */
 const ZonaNarradores = ({ estado, pedir, onError }: ZonaNarradoresProps) => {
   const [pidiendo, setPidiendo] = useState(false);
 
   const narradores = estado.participantes.filter((p) => p.rol === 'narrador');
+  const yo = estado.participantes.find((p) => p.id === estado.yo);
   const puede = (accion: string) => estado.acciones.includes(accion);
 
   const actuar = async (accion: string, datos?: unknown) => {
@@ -45,7 +49,17 @@ const ZonaNarradores = ({ estado, pedir, onError }: ZonaNarradoresProps) => {
         <ul className="flex flex-wrap gap-4">
           {narradores.map((n) => (
             <li key={n.id}>
-              <CuadroNarrador narrador={n} esYo={n.id === estado.yo} />
+              <CuadroNarrador
+                narrador={n}
+                esYo={n.id === estado.yo}
+                grimorio={
+                  puede('sala:solicitarGrimorio')
+                    ? { onSolicitar: () => void actuar('sala:solicitarGrimorio') }
+                    : yo?.rol === 'visitante' && yo.accesoGrimorio === 'solicitado'
+                      ? 'solicitado'
+                      : undefined
+                }
+              />
             </li>
           ))}
         </ul>
@@ -73,6 +87,7 @@ const ZonaNarradores = ({ estado, pedir, onError }: ZonaNarradoresProps) => {
           }
         />
       )}
+      {yo && <AccesoGrimorio estado={estado} yo={yo} pedir={pedir} onError={onError} />}
     </div>
   );
 };

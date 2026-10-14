@@ -2,8 +2,8 @@ import type { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
 import { limpiarAvatarSala, limpiarNombreSala, SALA_AVATAR_INVITADO, SalaLlegada, SalaService } from '../services/SalaService';
-import { SalaEstado } from '../types/sala';
-import { accionesPermitidas, ejecutarAccion, SalaResultado } from './salaAcciones';
+import { SalaAsiento, SalaEstado } from '../types/sala';
+import { accionesPermitidas, DependenciasSala, ejecutarAccion, SalaResultado } from './salaAcciones';
 
 /** Bajo /api para que pase por el mismo proxy que el resto de la API. */
 export const SALA_SOCKET_PATH = '/api/socket.io';
@@ -33,12 +33,24 @@ function usuarioDelToken(token: string): { id: string; username: string } | null
  * web o, sin cuenta, el nombre con el que entra; el nombre y el avatar que
  * prefiere mostrar, si los cambió; y su id de cliente para recuperar el sitio si se reconecta. Cada cambio se manda entero a todos.
  */
-export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAvatar): void {
+/** Una ficha sin su personaje ni su alineamiento: así la ven quienes no son su jugador ni narran. */
+const sinPersonaje = (a: SalaAsiento): SalaAsiento => ({ ...a, personaje: null, alineamiento: null });
+
+export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAvatar, deps: DependenciasSala): void {
   const io = new Server(httpServer, {
     path: SALA_SOCKET_PATH,
     cors: { origin: '*' },
   });
   const sala = new SalaService();
+
+  // El guion (resuelto, con todos sus personajes) no va en cada estado: se manda
+  // aparte, solo cuando cambia y a quien entra.
+  let versionGuionMandada = sala.versionGuion();
+  const mandarGuionSiCambia = () => {
+    if (sala.versionGuion() === versionGuionMandada) return;
+    versionGuionMandada = sala.versionGuion();
+    io.emit('sala:guion', sala.guion());
+  };
 
   const difundir = () => {
     const participantes = sala.participantes();
@@ -46,14 +58,23 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     const configuracion = sala.configuracion();
     const nominacion = sala.nominacion();
     const votaciones = sala.votaciones();
+    const distribucion = sala.distribucion();
+    const bolsa = sala.bolsa();
     const ahora = Date.now();
     for (const { socketId, clave, id } of sala.conexiones()) {
       const yo = sala.participanteDe(clave)!;
       const estado: SalaEstado = {
         participantes,
-        asientos,
+        asientos:
+          yo.rol === 'narrador' || (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido')
+            ? asientos
+            : asientos.map((a) => (a.ocupante === yo.id ? a : sinPersonaje(a))),
         configuracion,
         nominacion,
+        fase: sala.fase(),
+        distribucion,
+        // La bolsa es solo para los narradores (son los personajes de la partida)
+        bolsa: yo.rol === 'narrador' ? bolsa : [],
         ahora,
         // El registro de votaciones es solo para los narradores.
         votaciones: yo.rol === 'narrador' ? votaciones : [],
@@ -115,6 +136,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
   io.on('connection', (socket) => {
     const { llegada, clienteId } = socket.data as DatosSocket;
     const { clave, expulsar } = sala.conectar(socket.id, clienteId, llegada, conexionViva);
+    socket.emit('sala:guion', sala.guion());
     // Su cuenta ya estaba en la sala desde otra conexión: esa se cierra. El aviso
     // llega antes que el cierre, y el cliente no intenta reconectar.
     if (expulsar) {
@@ -124,16 +146,25 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     difundir();
 
     // Una sola puerta para todas las acciones: { accion, datos } y respuesta por ack.
-    socket.on('sala:accion', (peticion: { accion?: unknown; datos?: unknown } | null, ack?: (r: SalaResultado) => void) => {
+    socket.on('sala:accion', async (peticion: { accion?: unknown; datos?: unknown } | null, ack?: (r: SalaResultado) => void) => {
       const nombre = typeof peticion?.accion === 'string' ? peticion.accion : '';
-      const { expulsar: expulsados = [], ...resultado } = ejecutarAccion(sala, sala.participanteDe(clave), nombre, peticion?.datos);
+      const { expulsar: expulsados = [], ...resultado } = await ejecutarAccion(
+        sala,
+        sala.participanteDe(clave),
+        nombre,
+        peticion?.datos,
+        deps,
+      );
       if (typeof ack === 'function') ack(resultado);
       // Expulsados por un narrador: se les avisa y se cierra su conexión (sin reintento).
       for (const socketId of expulsados) {
         io.to(socketId).emit('sala:expulsado', { motivo: 'narrador' });
         io.sockets.sockets.get(socketId)?.disconnect(true);
       }
-      if (resultado.ok) difundir();
+      if (resultado.ok) {
+        mandarGuionSiCambia();
+        difundir();
+      }
     });
 
     socket.on('disconnect', (reason) => {

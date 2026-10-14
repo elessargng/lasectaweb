@@ -1,4 +1,4 @@
-import { Users } from 'lucide-react';
+import { BookMarked, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { botonIcono } from './estilos';
 import type { SalaParticipante, SalaRol } from './useSala';
@@ -86,6 +86,12 @@ const ListaParticipantes = ({ participantes, yo }: ListaParticipantesProps) => {
                         {p.id === yo && ' (tú)'}
                         {!p.conCuenta && <span className="text-on-surface-muted"> (invitado)</span>}
                         {!p.conectado && ' (desconectado)'}
+                        {p.accesoGrimorio === 'concedido' && (
+                          <>
+                            <BookMarked size={14} className="ml-1 inline-block align-[-2px] text-theme-main" />
+                            <span className="sr-only"> (ve el grimorio)</span>
+                          </>
+                        )}
                       </li>
                     ))}
                   </ul>

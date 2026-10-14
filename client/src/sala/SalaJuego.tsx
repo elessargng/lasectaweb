@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { botonPrincipal } from './estilos';
 import Cabecera from './Cabecera';
 import DialogoPreferencias, { type Pestana } from './DialogoPreferencias';
@@ -13,12 +13,18 @@ import PanelAtajos from './PanelAtajos';
 import PanelInterfaz from './PanelInterfaz';
 import PanelPartida from './PanelPartida';
 import PanelUsuario, { type ResultadoPerfil } from './PanelUsuario';
+import PanelIdiomas from './PanelIdiomas';
 import RegistroVotaciones from './RegistroVotaciones';
+import TituloGuion from './TituloGuion';
+import FasePartida from './FasePartida';
+import RepartoPartida from './RepartoPartida';
+import { FichasContexto, TIPOS_EN_FICHA, type ContenidoFicha, type ContextoFichas } from './fichas';
+import { mostrarPersonajes, tituloDeGuion, useTraducciones, type PersonajeMostrado } from './guiones';
 import ZonaNarradores from './ZonaNarradores';
-import { esAtajo, puedeUsarAtajo, useAtajos } from './atajos';
+import { esAtajo, puedeUsarAtajo, useAtajos, type Atajo } from './atajos';
 import { AvisosContexto, useAvisosActivos, type TipoAviso } from './avisosConfig';
-import { avisosDeCambio } from './avisosSala';
-import { setSonidosActivos, tocarCampanada, tocarTic } from './sonidos';
+import { avisosDeCambio, nombreFase } from './avisosSala';
+import { setSonidosActivos, tocarSinVoto, tocarVoto } from './sonidos';
 import { ID_BOTON_MENU_NARRADOR, ID_SIN_NARRADOR, idNombreNarrador } from './ids';
 import { getPerfil, limpiarNombre, setPerfil } from './invitado';
 import { usePreferencias } from './preferencias';
@@ -94,18 +100,45 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     const propia = accionPropiaRef.current;
     accionPropiaRef.current = false;
 
-    // Votación: cada ficha por la que pasa la aguja suena (campanada si vota, tic si no).
+    // Votación: cada ficha por la que pasa la aguja suena (el voto si vota, un tic si no).
     const votoAntes = anterior.nominacion?.votacion;
     const votoAhora = nuevo.nominacion?.votacion;
     if (votoAhora) {
       for (const id of votoAhora.orden.slice(votoAntes?.paso ?? 0, votoAhora.paso)) {
-        if (typeof votoAhora.resultados[id] === 'number') tocarCampanada();
-        else tocarTic();
+        if (typeof votoAhora.resultados[id] === 'number') tocarVoto();
+        else tocarSinVoto();
       }
     }
 
     // Lo que han hecho otros (ver avisosSala); lo propio no se avisa: ya se sabe.
     const avisos = propia ? [] : avisosDeCambio(anterior, nuevo);
+    // Salvo la noche y el día: el narrador puede cambiarlos con un atajo, sin ver nada.
+    if (propia) {
+      const f = nuevo.fase;
+      if (f.reinicios !== anterior.fase.reinicios) {
+        avisos.push({ tipo: 'fase', texto: 'Grimorio limpio: preparación de la partida.' });
+      } else if (f.momento !== anterior.fase.momento || f.numero !== anterior.fase.numero) {
+        avisos.push({ tipo: 'fase', texto: `${nombreFase(f)}.` });
+      }
+    }
+
+    // Al limpiar el grimorio, también se borran las notas del grimorio propio.
+    if (nuevo.fase.reinicios !== anterior.fase.reinicios) setNotasGrimorio({});
+
+    // Mi personaje: si el narrador me lo cambia (o el alineamiento), se me dice.
+    const miFicha = (e: SalaEstado) => e.asientos.find((a) => a.ocupante === e.yo);
+    const antes = miFicha(anterior);
+    const ahora = miFicha(nuevo);
+    if (ahora && (ahora.personaje !== antes?.personaje || ahora.alineamiento !== antes?.alineamiento)) {
+      const p = ahora.personaje ? nombresPersonajesRef.current.get(ahora.personaje) : undefined;
+      if (!ahora.personaje) {
+        if (antes?.personaje) avisos.push({ tipo: 'miPersonaje', texto: 'Ya no tienes personaje.' });
+      } else if (ahora.personaje !== antes?.personaje) {
+        avisos.push({ tipo: 'miPersonaje', texto: `Tu personaje: ${p?.nombre.texto ?? ahora.personaje}.` });
+      } else if (ahora.alineamiento) {
+        avisos.push({ tipo: 'miPersonaje', texto: `Ahora eres ${ahora.alineamiento}.` });
+      }
+    }
 
     // El narrador cambia el grimorio para los jugadores: se avisa a los jugadores,
     // que son a quienes les cambia lo que ven.
@@ -140,19 +173,42 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // Nombre y avatar elegidos para la sala (vacío: los de siempre); se recuerdan en el navegador.
   const [alias, setAlias] = useState(() => getPerfil('alias', cuentaId));
   const [avatarElegido, setAvatarElegido] = useState(() => getPerfil('avatar', cuentaId));
-  const { estado, conexion, desfaseReloj, pedir, reconectar } = useSala(
+  // Los personajes que pueden ir en las fichas (los del guion, en el idioma elegido) y
+  // el grimorio propio del jugador (sus notas: solo en este navegador, mientras está en la sala).
+  const [notasGrimorio, setNotasGrimorio] = useState<Record<string, ContenidoFicha>>({});
+  const nombresPersonajesRef = useRef<Map<string, PersonajeMostrado>>(new Map());
+
+  const { estado, guion, conexion, desfaseReloj, pedir, reconectar } = useSala(
     cuenta?.token ?? null,
     cuenta ? null : invitado,
     { alias, avatar: avatarElegido },
     {
       alCambiar,
       alNombreOcupado: () => onNombreOcupado(alias || invitado || ''),
+      alCambiarGuion: (g) => g && anunciar('guion', `Guion: ${tituloDeGuion(g)}.`),
     },
   );
   const yo = estado?.participantes.find((p) => p.id === estado.yo);
 
   const { preferencias, cambiar: cambiarPreferencias } = usePreferencias();
   useEffect(() => setSonidosActivos(preferencias.sonidos), [preferencias.sonidos]);
+
+  const traduccionesNombres = useTraducciones(preferencias.idiomaNombres, preferencias.genero);
+  const contextoFichas = useMemo((): ContextoFichas => {
+    const personajes = guion
+      ? mostrarPersonajes(guion.personajes, traduccionesNombres, null).filter((p) => TIPOS_EN_FICHA.includes(p.tipo))
+      : [];
+    return {
+      hayGuion: !!guion,
+      personajes,
+      porId: new Map(personajes.map((p) => [p.id, p])),
+      notas: notasGrimorio,
+      anotar: (asientoId, contenido) => setNotasGrimorio((n) => ({ ...n, [asientoId]: contenido })),
+    };
+  }, [guion, traduccionesNombres, notasGrimorio, setNotasGrimorio]);
+  useEffect(() => {
+    nombresPersonajesRef.current = contextoFichas.porId;
+  }, [contextoFichas]);
   // Tamaños con los que pinta la mesa (automáticos o no), para la vista previa.
   const [tamanosMesa, setTamanosMesa] = useState<TamanosMesa | null>(null);
   // Tamaño de la ventana, para el tamaño automático de los cuadros de narrador.
@@ -209,20 +265,39 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     return false;
   };
   const { atajos, cambiar: cambiarAtajo } = useAtajos();
-  // El atajo tiene prioridad sobre el control con el foco: se escucha en la fase
-  // de captura (antes que él) y no se deja seguir, ni al pulsar ni al soltar
+  // Narradores: ir a la noche (desde la preparación o el día) o amanecer (desde la noche).
+  const accionFase = estado?.acciones.includes('narrador:irANoche')
+    ? 'narrador:irANoche'
+    : estado?.acciones.includes('narrador:amanecer')
+      ? 'narrador:amanecer'
+      : null;
+  const cambiarFase = async () => {
+    if (!accionFase) return;
+    const r = await pedirPropio(accionFase);
+    if (!r.ok) setAviso(r.error);
+  };
+
+  // Los atajos que se pueden usar ahora, con lo que hace cada uno.
+  const atajosActivos: [Atajo, () => void][] = [
+    ...(puedeLevantarMano ? [[atajos.levantarMano, alternarMano] as [Atajo, () => void]] : []),
+    ...(accionFase ? [[atajos.cambiarFase, () => void cambiarFase()] as [Atajo, () => void]] : []),
+  ];
+  // Los atajos tienen prioridad sobre el control con el foco: se escuchan en la fase
+  // de captura (antes que él) y no se dejan seguir, ni al pulsar ni al soltar
   // (con Espacio, algunos navegadores pulsan el botón al soltar).
   useEffect(() => {
-    if (!puedeLevantarMano) return;
-    const esElAtajo = (e: KeyboardEvent) => esAtajo(e, atajos.levantarMano) && puedeUsarAtajo(e);
+    if (atajosActivos.length === 0) return;
+    const delAtajo = (e: KeyboardEvent) =>
+      puedeUsarAtajo(e) ? atajosActivos.find(([atajo]) => esAtajo(e, atajo)) : undefined;
     const alPulsar = (e: KeyboardEvent) => {
-      if (!esElAtajo(e)) return;
+      const encontrado = delAtajo(e);
+      if (!encontrado) return;
       e.preventDefault();
       e.stopPropagation();
-      if (!e.repeat) alternarMano();
+      if (!e.repeat) encontrado[1]();
     };
     const alSoltar = (e: KeyboardEvent) => {
-      if (!esElAtajo(e)) return;
+      if (!delAtajo(e)) return;
       e.preventDefault();
       e.stopPropagation();
     };
@@ -288,12 +363,15 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       etiqueta: 'Usuario',
       conControles: true,
       contenido: (
-        <PanelUsuario
-          nombreActual={yo?.nombre ?? alias}
-          avatarElegido={avatarElegido}
-          cuenta={cuenta && { avatar: cuenta.avatar }}
-          onGuardar={guardarPerfil}
-        />
+        <div className="flex flex-col gap-6">
+          <PanelUsuario
+            nombreActual={yo?.nombre ?? alias}
+            avatarElegido={avatarElegido}
+            cuenta={cuenta && { avatar: cuenta.avatar }}
+            onGuardar={guardarPerfil}
+          />
+          <PanelIdiomas preferencias={preferencias} onCambiar={cambiarPreferencias} />
+        </div>
       ),
     },
     {
@@ -396,18 +474,42 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
   return (
     <AvisosContexto.Provider value={avisosActivos}>
+      <FichasContexto.Provider value={contextoFichas}>
       <div className="contents" style={tamanos}>
         <Cabecera
+          centro={
+            estado && (
+              <div className="flex min-w-0 items-center gap-2">
+                <FasePartida fase={estado.fase} />
+                <TituloGuion
+                  guion={guion}
+                  puedeCambiar={estado.acciones.includes('narrador:cambiarGuion')}
+                  pedir={pedirPropio}
+                  onError={setAviso}
+                  idiomas={{
+                    nombres: preferencias.idiomaNombres,
+                    descripciones: preferencias.idiomaDescripciones,
+                    genero: preferencias.genero,
+                  }}
+                  onCambiarIdiomaDescripciones={(idiomaDescripciones) => cambiarPreferencias({ idiomaDescripciones })}
+                  bolsa={
+                    estado.acciones.includes('narrador:bolsa')
+                      ? { bolsa: estado.bolsa, distribucion: estado.distribucion }
+                      : null
+                  }
+                  onAnuncio={anunciar}
+                />
+              </div>
+            )
+          }
           derecha={
             <div className="flex items-center gap-2">
-              {conexion === 'expulsadaPorNarrador' && (
-                <p ref={expulsadoRef} tabIndex={-1} className="focus:outline-none">
-                  Un narrador te ha expulsado de la sala.
-                </p>
-              )}
-
               {estado && (
-                <MenuNarrador estado={estado} pedir={pedirPropio} onAsientos={() => setEditandoAsientos((v) => !v)} />
+                <MenuNarrador
+                  estado={estado}
+                  pedir={pedirPropio}
+                  onAsientos={() => setEditandoAsientos((v) => !v)}
+                />
               )}
               {puedeLevantarMano && yo && (
                 <MenuMano
@@ -460,6 +562,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             </div>
           </div>
 
+          {conexion === 'expulsadaPorNarrador' && (
+            <p ref={expulsadoRef} tabIndex={-1} className="focus:outline-none">
+              Un narrador te ha expulsado de la sala.
+            </p>
+          )}
+
           {conexion === 'expulsada' && (
             <div className="flex flex-col items-start gap-4">
               <p id="sala-expulsada">
@@ -496,6 +604,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   desfaseReloj={desfaseReloj}
                 />
               </div>
+              {/* Fuera de la mesa, para no tapar sus fichas: en pantallas anchas, abajo
+                  del todo a la izquierda; en estrechas, debajo de la mesa */}
+              <RepartoPartida
+                distribucion={estado.distribucion}
+                bolsa={estado.acciones.includes('narrador:bolsa') ? estado.bolsa : null}
+              />
             </div>
           )}
         </main>
@@ -504,6 +618,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           <DialogoPreferencias pestanas={pestanasPreferencias} onCerrar={() => setPreferenciasAbiertas(false)} />
         )}
       </div>
+      </FichasContexto.Provider>
     </AvisosContexto.Provider>
   );
 };

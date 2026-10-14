@@ -35,3 +35,55 @@
     font-family: var(--font-body);
   }
 }
+
+/* Paneles que salen por la derecha (hoja de personajes, orden de noche) */
+@keyframes entrar-derecha {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/*
+ * Barras de desplazamiento: oscuras, como en la web (index.css), en toda la sala;
+ * en la hoja de personajes y el orden de noche (papel arena), color tostado
+ * (clase scroll-arena). scrollbar-color para Firefox y Chrome modernos;
+ * ::-webkit-scrollbar para Safari y Chrome antiguos.
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3a322c #0a0a0a;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+::-webkit-scrollbar-thumb {
+  background: #2c2c2c;
+  border: 1.5px solid #3a322c;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b19cd9;
+  border-color: #4a3b69;
+}
+
+.scroll-arena {
+  scrollbar-color: #a88a58 transparent;
+}
+.scroll-arena::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-arena::-webkit-scrollbar-thumb {
+  background: #a88a58;
+  border-color: #7a5f36;
+}
+.scroll-arena::-webkit-scrollbar-thumb:hover {
+  background: #7d1820;
+  border-color: #5a0f14;
+}

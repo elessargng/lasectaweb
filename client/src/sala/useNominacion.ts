@@ -113,6 +113,14 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
         ? {
             marcado: !!nominado?.marcado,
             puedeCuentaAtras: acciones.includes('narrador:cuentaAtras'),
+            votos: acciones.includes('narrador:votosNecesarios')
+              ? {
+                  necesarios: nominacion.votosNecesarios,
+                  porDefecto: nominacion.votosNecesariosPorDefecto,
+                  maximo: Math.max(1, asientos.length),
+                  onCambiar: (votos: number | null) => void actuar('narrador:votosNecesarios', { votos }),
+                }
+              : null,
             marcaActual: (() => {
               const marcado = asientos.find((a) => a.marcado);
               if (!marcado) return null;
@@ -120,8 +128,12 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
               const votos = marcado.votosMarca;
               return `${describirAsiento(numero, ocupante)}${votos === null ? '' : `, ${votos === 1 ? '1 voto' : `${votos} votos`}`}`;
             })(),
-            // Desmarcar no cierra la nominación
-            onDesmarcar: acciones.includes('narrador:desmarcar') ? () => void actuar('narrador:desmarcar') : null,
+            // Desmarcar, como marcar, cierra la nominación: el foco vuelve a la ficha de quien nominaba.
+            onDesmarcar: acciones.includes('narrador:desmarcar')
+              ? async () => {
+                  if (await actuar('narrador:desmarcar')) focoRef.current = idMenuFicha(nominacion.desde);
+                }
+              : null,
             onCuentaAtras: () => actuar('narrador:cuentaAtras'),
             // Marcar (o desmarcar) cierra la nominación: el foco vuelve a la ficha de quien nominaba.
             onMarca: async () => {

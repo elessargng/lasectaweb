@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { tocarCampanario } from './sonidos';
+import { tocarCuentaAtras } from './sonidos';
 
 interface CuentaAtrasProps {
   /** Cuándo acaba (ms, reloj del servidor). */
@@ -10,49 +10,57 @@ interface CuentaAtrasProps {
   onTermina: () => void;
 }
 
-const restante = (fin: number, desfase: number) => Math.max(0, Math.ceil((fin - (Date.now() + desfase)) / 1000));
+/** Lo que dura: de 3 a 0, un segundo cada número (como el servidor, SALA_CUENTA_ATRAS_MS). */
+const DURACION_MS = 4000;
+
+/** El número que toca (3, 2, 1, 0), o null si ya ha acabado. */
+const numero = (fin: number, desfase: number) => {
+  const ms = fin - (Date.now() + desfase);
+  return ms > 0 ? Math.ceil(ms / 1000) - 1 : null;
+};
 
 /**
  * La cuenta atrás de una nominación, en grande, igual para todos (se calcula con
- * el reloj del servidor). Al llegar a 0 pone «¡Tiempo!». En los 3 últimos
- * segundos suenan campanadas de campanario.
+ * el reloj del servidor): 3, 2, 1, 0, un segundo cada uno, y al acabar
+ * «¡Tiempo!». Suena entero el sonido de la cuenta atrás de botc.app, que dura lo
+ * mismo.
  *
  * Al lector no se le leen los segundos uno a uno (sería un aviso por segundo):
  * se anuncia al empezar (avisosSala) y al terminar (`onTermina`).
  */
 const CuentaAtras = ({ fin, desfase, onTermina }: CuentaAtrasProps) => {
-  const [segundos, setSegundos] = useState(() => restante(fin, desfase));
+  const [actual, setActual] = useState(() => numero(fin, desfase));
   // Si ya había terminado al aparecer (p. ej. al entrar en la sala), no se avisa.
-  const avisadoRef = useRef(restante(fin, desfase) === 0);
+  const avisadoRef = useRef(numero(fin, desfase) === null);
 
   useEffect(() => {
-    const intervalo = window.setInterval(() => setSegundos(restante(fin, desfase)), 200);
+    const intervalo = window.setInterval(() => setActual(numero(fin, desfase)), 100);
     return () => window.clearInterval(intervalo);
   }, [fin, desfase]);
 
-  // Campanadas de campanario en los 3 últimos segundos (si queda tiempo para oírlas
-  // casi enteras: quien entra a mitad de la cuenta no las oye a destiempo).
+  // El sonido, entero, desde que empieza la cuenta (quien entra a mitad lo oye
+  // desde ese punto; con menos de un segundo por delante, ya no). Si la cuenta
+  // se quita antes, se para.
   useEffect(() => {
-    const ms = fin - (Date.now() + desfase);
-    if (ms < 2500) return;
-    const espera = window.setTimeout(() => tocarCampanario(), Math.max(0, ms - 3000));
-    return () => window.clearTimeout(espera);
+    const terminaEn = fin - desfase;
+    if (terminaEn - Date.now() < 1000) return;
+    return tocarCuentaAtras(terminaEn - DURACION_MS);
   }, [fin, desfase]);
 
   // Avisar una vez al terminar. (Si la cuenta se reinicia, quien la usa la monta
   // de nuevo con otra `key`, así que vuelve a avisar.)
   useEffect(() => {
-    if (segundos > 0 || avisadoRef.current) return;
+    if (actual !== null || avisadoRef.current) return;
     avisadoRef.current = true;
     onTermina();
-  }, [segundos, onTermina]);
+  }, [actual, onTermina]);
 
   return (
     <p
       aria-hidden="true"
       className="font-teutonic1 text-6xl leading-none text-white tabular-nums drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]"
     >
-      {segundos > 0 ? segundos : '¡Tiempo!'}
+      {actual ?? '¡Tiempo!'}
     </p>
   );
 };

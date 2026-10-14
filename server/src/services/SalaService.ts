@@ -1,13 +1,19 @@
 import { randomInt, randomUUID } from 'crypto';
 import {
+  SalaAccesoGrimorio,
+  SalaAlineamiento,
   SalaAsiento,
   SalaConfiguracion,
+  SalaDistribucion,
+  SalaFase,
   SalaFormaMano,
   SalaNominacion,
   SalaParticipante,
   SalaRegistroVotacion,
   SalaRol,
 } from '../types/sala';
+import { GuionResuelto } from '../types/guiones';
+import { repartoPara } from './partida/distribucion';
 import { esAvatarSalaGuardado } from '../utils/salaAvatarStorage';
 
 /** Margen para volver tras una desconexión (recarga, red caída) sin perder el papel. */
@@ -19,7 +25,11 @@ export const SALA_NOMBRE_MAX = 24;
 export const SALA_ASIENTOS = { inicial: 7, min: 0, max: 20 };
 
 /** Duración de la cuenta atrás de las nominaciones, en segundos. */
-export const SALA_CUENTA_ATRAS = { min: 3, max: 120, defecto: 3 };
+/**
+ * La cuenta atrás de las nominaciones: siempre de 3 a 0, un segundo cada número
+ * (4 s, lo que dura su sonido en el cliente).
+ */
+export const SALA_CUENTA_ATRAS_MS = 4000;
 
 /** Lo que tarda la aguja de ficha en ficha al votar, en segundos (de cuarto en cuarto). */
 export const SALA_SEGUNDOS_POR_FICHA = { min: 0.25, max: 2, paso: 0.25, defecto: 1 };
@@ -62,6 +72,8 @@ const asientoNuevo = (): SalaAsiento => ({
   muerto: false,
   marcado: false,
   votosMarca: null,
+  personaje: null,
+  alineamiento: null,
 });
 
 /** Quién se conecta, según el token o el nombre de invitado. */
@@ -98,6 +110,14 @@ interface Entrada {
  * en lugar de entrar de nuevo como visitante. La clave nunca se manda a los demás:
  * en la lista cada uno tiene otro id, público.
  */
+/** La nominación tal como se guarda: los votos que hacen falta se calculan al pedirla. */
+type NominacionInterna = Omit<SalaNominacion, 'votosNecesarios' | 'votosNecesariosPorDefecto'> & {
+  /** Los votos que ha fijado el narrador; null: los de por defecto. */
+  votosElegidos: number | null;
+  /** Su entrada del registro, que se completa al terminar la votación. */
+  registro: SalaRegistroVotacion | null;
+};
+
 export class SalaService {
   private entradas = new Map<string, Entrada>();
   private mesa: SalaAsiento[] = Array.from({ length: SALA_ASIENTOS.inicial }, () => asientoNuevo());
@@ -116,10 +136,90 @@ export class SalaService {
 
   private ajustes: SalaConfiguracion = {
     grimorioJugadores: false,
-    segundosCuentaAtras: SALA_CUENTA_ATRAS.defecto,
     segundosPorFicha: SALA_SEGUNDOS_POR_FICHA.defecto,
   };
-  private nominacionEnCurso: SalaNominacion | null = null;
+  private nominacionEnCurso: NominacionInterna | null = null;
+  /** Los votos de la votación de hoy que más tuvo (de las que llegaron a los necesarios), o null. */
+  private maximoDelDia: number | null = null;
+  private faseActual: SalaFase = { momento: 'preparacion', numero: 0, reinicios: 0 };
+  private guionActual: GuionResuelto | null = null;
+  /** Sube cada vez que cambia el guion, para mandarlo solo entonces. */
+  private versionGuionActual = 0;
+
+  /** El guion de la sala (ya resuelto por GuionService), o null. */
+  guion(): GuionResuelto | null {
+    return this.guionActual;
+  }
+
+  versionGuion(): number {
+    return this.versionGuionActual;
+  }
+
+  /** Cambia el guion de la sala. No comprueba permisos. */
+  cambiarGuion(guion: GuionResuelto): void {
+    this.guionActual = guion;
+    this.versionGuionActual += 1;
+    // La bolsa era de los personajes del otro guion
+    this.bolsaActual = [];
+  }
+
+  /** Los personajes metidos en la bolsa, en el orden en que se metieron. */
+  private bolsaActual: string[] = [];
+
+  bolsa(): string[] {
+    return [...this.bolsaActual];
+  }
+
+  /** Mete un personaje en la bolsa, o lo saca si ya estaba. No comprueba que esté en el guion. */
+  alternarEnBolsa(personajeId: string): void {
+    this.bolsaActual = this.bolsaActual.includes(personajeId)
+      ? this.bolsaActual.filter((id) => id !== personajeId)
+      : [...this.bolsaActual, personajeId];
+  }
+
+  /** Si la ficha de un asiento lleva un viajero (según el guion). */
+  private llevaViajero(asiento: SalaAsiento): boolean {
+    return !!asiento.personaje && this.guionActual?.personajes.find((p) => p.id === asiento.personaje)?.tipo === 'traveller';
+  }
+
+  /** El reparto de la partida: asientos sin viajero y cuántos de cada tipo (ver repartoPara). */
+  distribucion(): SalaDistribucion {
+    const viajeros = this.mesa.filter((a) => this.llevaViajero(a)).length;
+    const jugadores = this.mesa.length - viajeros;
+    const reparto = repartoPara(jugadores);
+    return {
+      jugadores,
+      viajeros,
+      aldeanos: reparto?.aldeanos ?? null,
+      forasteros: reparto?.forasteros ?? null,
+      esbirros: reparto?.esbirros ?? null,
+      demonios: reparto?.demonios ?? null,
+    };
+  }
+
+  /** Cuántos personajes hay que meter en la bolsa: uno por asiento sin viajero. */
+  fichasParaRepartir(): number {
+    return this.mesa.filter((a) => !this.llevaViajero(a)).length;
+  }
+
+  /**
+   * Reparte al azar los personajes de la bolsa entre los asientos que no llevan
+   * viajero (tiene que haber tantos como asientos; no lo comprueba). El
+   * alineamiento vuelve a ser el de su tipo. La bolsa se queda como estaba.
+   */
+  repartirBolsa(): void {
+    const personajes = [...this.bolsaActual];
+    for (let i = personajes.length - 1; i > 0; i--) {
+      const j = randomInt(i + 1);
+      [personajes[i], personajes[j]] = [personajes[j], personajes[i]];
+    }
+    this.mesa
+      .filter((a) => !this.llevaViajero(a))
+      .forEach((a, i) => {
+        a.personaje = personajes[i] ?? null;
+        a.alineamiento = null;
+      });
+  }
   /** Lo siguiente que toca en la nominación: el fin de la cuenta atrás o el próximo paso de la votación. */
   private temporizador: NodeJS.Timeout | null = null;
   private registro: SalaRegistroVotacion[] = [];
@@ -130,9 +230,51 @@ export class SalaService {
    */
   alCambiarSola: () => void = () => {};
 
-  /** El registro de votaciones, la más reciente primero. */
+  /** El registro de nominaciones y votaciones, en el orden en que se nominó. */
   votaciones(): SalaRegistroVotacion[] {
-    return this.registro.map((v) => ({ ...v, votantes: [...v.votantes] }));
+    return this.registro.map((v) => ({ ...v, votantes: v.votantes && [...v.votantes] }));
+  }
+
+  fase(): SalaFase {
+    return { ...this.faseActual };
+  }
+
+  /**
+   * Anochece (desde la preparación, la noche 1; desde un día, la siguiente
+   * noche): se cierra la nominación abierta y se quitan la calavera y el récord
+   * de votos del día.
+   */
+  irANoche(): void {
+    const { momento, numero, reinicios } = this.faseActual;
+    this.faseActual = { momento: 'noche', numero: momento === 'preparacion' ? 1 : numero + 1, reinicios };
+    this.cerrarNominacion();
+    this.desmarcar();
+    this.maximoDelDia = null;
+  }
+
+  /** Amanece: el día de la misma noche. */
+  amanecer(): void {
+    this.faseActual = { ...this.faseActual, momento: 'dia' };
+  }
+
+  /**
+   * Deja la partida como al principio, en la preparación: sin registro de
+   * votaciones, todas las fichas vivas y sin calavera, y sin nominación. Los
+   * jugadores siguen en sus asientos.
+   */
+  limpiarGrimorio(): void {
+    this.cerrarNominacion();
+    this.registro = [];
+    this.maximoDelDia = null;
+    for (const a of this.mesa) {
+      a.muerto = false;
+      a.marcado = false;
+      a.votosMarca = null;
+      a.personaje = null;
+      a.alineamiento = null;
+    }
+    this.bolsaActual = [];
+    this.faseActual = { momento: 'preparacion', numero: 0, reinicios: this.faseActual.reinicios + 1 };
   }
 
   private pararTemporizador(): void {
@@ -153,12 +295,11 @@ export class SalaService {
    * asiento siguiente (en el sentido de las agujas del reloj) y sigue hasta él.
    */
   private empezarVotacion(): void {
-    const n = this.nominacion();
+    const n = this.nominacionVigente();
     if (!n) return;
     const i = this.mesa.findIndex((a) => a.id === n.hasta);
     const orden = this.mesa.map((_, k) => this.mesa[(i + 1 + k) % this.mesa.length].id);
     n.votacion = { orden, paso: 0, resultados: {}, votos: 0, terminada: false };
-    this.nominacionEnCurso = n;
     this.alCambiarSola();
     this.temporizador = setTimeout(() => this.avanzarVotacion(), this.ajustes.segundosPorFicha * 1000);
   }
@@ -168,7 +309,7 @@ export class SalaService {
    * levantada (y entonces se le baja).
    */
   private avanzarVotacion(): void {
-    const n = this.nominacion();
+    const n = this.nominacionVigente();
     const v = n?.votacion;
     if (!n || !v || v.terminada) return;
     const asientoId = v.orden[v.paso];
@@ -185,44 +326,85 @@ export class SalaService {
     if (v.paso >= v.orden.length) {
       v.terminada = true;
       this.temporizador = null;
-      this.registro.unshift({
-        hora: Date.now(),
-        nomina: this.describirAsiento(n.desde),
-        nominado: this.describirAsiento(n.hasta),
-        votantes: v.orden.filter((id) => v.resultados[id] !== null && v.resultados[id] !== undefined).map((id) => {
-          const o = this.mesa.find((a) => a.id === id)?.ocupante;
-          return (o && this.buscar(o)?.nombre) || this.describirAsiento(id);
-        }),
-        votos: v.votos,
-      });
+      // Si llega a los necesarios, la siguiente tendrá que superarla (aunque empate y
+      // nadie se quede con la calavera)
+      if (v.votos >= (n.votosElegidos ?? this.votosNecesariosPorDefecto())) {
+        this.maximoDelDia = Math.max(this.maximoDelDia ?? 0, v.votos);
+      }
+      // Se completa su entrada del registro (la que se hizo al nominar)
+      if (n.registro) {
+        n.registro.votantes = v.orden
+          .filter((id) => v.resultados[id] !== null && v.resultados[id] !== undefined)
+          .map((id) => {
+            const o = this.mesa.find((a) => a.id === id)?.ocupante;
+            return (o && this.buscar(o)?.nombre) || this.describirAsiento(id);
+          });
+        n.registro.votos = v.votos;
+      }
     } else {
       this.temporizador = setTimeout(() => this.avanzarVotacion(), this.ajustes.segundosPorFicha * 1000);
     }
-    this.nominacionEnCurso = n;
     this.alCambiarSola();
   }
 
-  /** La nominación en curso; se anula sola si alguno de los dos asientos ya no existe. */
-  nominacion(): SalaNominacion | null {
+  /** La nominación en curso (la de verdad); se anula sola si alguno de los dos asientos ya no existe. */
+  private nominacionVigente(): NominacionInterna | null {
     const n = this.nominacionEnCurso;
     const existe = (id: string) => this.mesa.some((a) => a.id === id);
     if (n && (!existe(n.desde) || !existe(n.hasta))) {
       this.nominacionEnCurso = null;
+      this.pararTemporizador();
     }
-    if (n && !this.nominacionEnCurso) this.pararTemporizador();
-    const actual = this.nominacionEnCurso;
-    return actual
-      ? {
-          ...actual,
-          votacion: actual.votacion ? { ...actual.votacion, resultados: { ...actual.votacion.resultados } } : null,
-        }
-      : null;
+    return this.nominacionEnCurso;
   }
 
-  /** Empieza una nominación (sustituye a la que hubiera). No comprueba permisos. */
+  /** La nominación en curso (una copia), con los votos que hacen falta. */
+  nominacion(): SalaNominacion | null {
+    const actual = this.nominacionVigente();
+    if (!actual) return null;
+    const { votosElegidos: _, registro: __, ...resto } = actual;
+    const votosElegidos = actual.votosElegidos;
+    const porDefecto = this.votosNecesariosPorDefecto();
+    return {
+      ...resto,
+      votacion: actual.votacion ? { ...actual.votacion, resultados: { ...actual.votacion.resultados } } : null,
+      votosNecesarios: votosElegidos ?? porDefecto,
+      votosNecesariosPorDefecto: porDefecto,
+    };
+  }
+
+  /**
+   * Los votos que hacen falta si el narrador no dice otra cosa: la mitad de las
+   * fichas vivas, redondeando hacia arriba; y si ya ha habido hoy una votación
+   * que llegó a los necesarios, al menos uno más que la que más tuvo. Nunca menos de 1.
+   */
+  private votosNecesariosPorDefecto(): number {
+    const vivos = this.mesa.filter((a) => !a.muerto).length;
+    return Math.max(1, Math.ceil(vivos / 2), this.maximoDelDia === null ? 0 : this.maximoDelDia + 1);
+  }
+
+  /** El narrador fija los votos que hacen falta en la nominación en curso (null: los de por defecto). */
+  elegirVotosNecesarios(votos: number | null): void {
+    const n = this.nominacionVigente();
+    if (n) n.votosElegidos = votos;
+  }
+
+  /**
+   * Empieza una nominación (sustituye a la que hubiera) y la apunta en el
+   * registro, con su día (si no se llega a votar, queda sin votos). No comprueba permisos.
+   */
   nominar(desde: string, hasta: string): void {
     this.pararTemporizador();
-    this.nominacionEnCurso = { desde, hasta, cuentaAtrasFin: null, votacion: null };
+    const registro: SalaRegistroVotacion = {
+      hora: Date.now(),
+      dia: this.faseActual.numero,
+      nomina: this.describirAsiento(desde),
+      nominado: this.describirAsiento(hasta),
+      votantes: null,
+      votos: null,
+    };
+    this.registro.push(registro);
+    this.nominacionEnCurso = { desde, hasta, cuentaAtrasFin: null, votacion: null, votosElegidos: null, registro };
   }
 
   cerrarNominacion(): void {
@@ -239,9 +421,8 @@ export class SalaService {
   iniciarCuentaAtras(ahora: number): void {
     if (!this.nominacionEnCurso) return;
     this.pararTemporizador();
-    const segundos = this.ajustes.segundosCuentaAtras;
-    this.nominacionEnCurso.cuentaAtrasFin = ahora + segundos * 1000;
-    this.temporizador = setTimeout(() => this.empezarVotacion(), segundos * 1000);
+    this.nominacionEnCurso.cuentaAtrasFin = ahora + SALA_CUENTA_ATRAS_MS;
+    this.temporizador = setTimeout(() => this.empezarVotacion(), SALA_CUENTA_ATRAS_MS);
   }
 
   /** Si existe ese asiento. */
@@ -269,6 +450,23 @@ export class SalaService {
   /** Si alguna ficha lleva la calavera. */
   hayMarca(): boolean {
     return this.mesa.some((a) => a.marcado);
+  }
+
+  /**
+   * Pone un personaje en la ficha de un asiento (o se lo quita, con null). El
+   * alineamiento vuelve a ser el de su tipo. No comprueba permisos ni que esté en el guion.
+   */
+  cambiarPersonaje(asientoId: string, personaje: string | null): void {
+    const asiento = this.mesa.find((a) => a.id === asientoId);
+    if (!asiento) return;
+    asiento.personaje = personaje;
+    asiento.alineamiento = null;
+  }
+
+  /** Cambia el alineamiento de la ficha de un asiento. No comprueba permisos. */
+  cambiarAlineamiento(asientoId: string, alineamiento: SalaAlineamiento): void {
+    const asiento = this.mesa.find((a) => a.id === asientoId);
+    if (asiento) asiento.alineamiento = alineamiento;
   }
 
   /** Mata o revive la ficha de un asiento; al morir pierde la calavera. No comprueba permisos. */
@@ -403,6 +601,7 @@ export class SalaService {
         rol: 'visitante',
         conectado: true,
         manoLevantada: false,
+        accesoGrimorio: 'ninguno',
         formaMano: 'palma',
       },
       identidad: llegada.identidad,
@@ -513,9 +712,17 @@ export class SalaService {
   cambiarRol(id: string, rol: SalaRol): void {
     const participante = this.buscar(id);
     if (!participante) return;
+    // El acceso al grimorio es de los visitantes: al cambiar de papel se pierde (y se vuelve a pedir).
+    if (participante.rol !== rol) participante.accesoGrimorio = 'ninguno';
     participante.rol = rol;
     // La mano solo cuenta en la partida: quien deja de jugar la baja.
     if (rol !== 'jugador') participante.manoLevantada = false;
+  }
+
+  /** Cambia el acceso de un participante al grimorio del narrador. No comprueba permisos. */
+  cambiarAccesoGrimorio(id: string, acceso: SalaAccesoGrimorio): void {
+    const participante = this.buscar(id);
+    if (participante) participante.accesoGrimorio = acceso;
   }
 
   /** Levanta o baja la mano de un jugador. No comprueba permisos. */

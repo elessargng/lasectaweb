@@ -53,6 +53,19 @@ const Footer: React.FC<FooterProps> = ({ onOpenChangelog, version: propVersion }
             </Link>
           </nav>
 
+          {/* Logo de contenido creado por la comunidad: lo pide la política de The
+              Pandemonium Institute a quien usa sus recursos (los iconos de los personajes).
+              Copia local de https://release.botc.app/resources/community/ccc-sleeve.png */}
+          <a
+            href="https://bloodontheclocktower.com/pages/community-created-content-policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-full opacity-90 transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
+          >
+            <img src="/ccc-sleeve.png" alt="Community Created Content" lang="en" className="h-10 w-auto" loading="lazy" />
+            <span className="sr-only"> (se abre en una ventana nueva)</span>
+          </a>
+
           {/* Changelog Version Button */}
           <button
             onClick={onOpenChangelog}

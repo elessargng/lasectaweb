@@ -15,17 +15,20 @@ export interface Atajo {
   meta: boolean;
 }
 
-export type AccionAtajo = 'levantarMano';
+export type AccionAtajo = 'levantarMano' | 'cambiarFase';
 
 /** Las acciones con atajo, en el orden en que salen en las preferencias. */
 export const ACCIONES_ATAJO: { accion: AccionAtajo; etiqueta: string }[] = [
   { accion: 'levantarMano', etiqueta: 'Levantar o bajar la mano' },
+  { accion: 'cambiarFase', etiqueta: 'Ir a la noche o amanecer (narradores)' },
 ];
 
 const ESPACIO: Atajo = { code: 'Space', key: ' ', ctrl: false, alt: false, shift: false, meta: false };
+const N: Atajo = { code: 'KeyN', key: 'n', ctrl: false, alt: false, shift: false, meta: false };
 
 export const ATAJOS_INICIALES: Record<AccionAtajo, Atajo> = {
   levantarMano: ESPACIO,
+  cambiarFase: N,
 };
 
 /** Teclas que no sirven solas: son modificadores. */

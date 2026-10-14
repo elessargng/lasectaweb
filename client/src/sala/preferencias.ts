@@ -19,12 +19,23 @@ export interface PreferenciasSala {
   avatarAuto: boolean;
   /** El tamaño de las fichas va en proporción al de los avatares. */
   fichaAuto: boolean;
-  /** Suenan las campanadas y el reloj de la partida. */
+  /** Suenan la cuenta atrás y los votos de la partida. */
   sonidos: boolean;
+  /** Idioma (id del paquete de traducción) de los nombres de los personajes. Pestaña Usuario. */
+  idiomaNombres: string;
+  /** Idioma de las habilidades y los recordatorios de los personajes. Pestaña Usuario. */
+  idiomaDescripciones: string;
+  /** Género de los textos, en los idiomas que lo distinguen. Pestaña Usuario. */
+  genero: 'masculino' | 'femenino';
 }
 
 type ClaveNumerica = 'tamanoAvatar' | 'tamanoFicha' | 'distanciaFicha';
 type ClaveSiNo = 'avatarAuto' | 'fichaAuto' | 'sonidos';
+type ClaveIdioma = 'idiomaNombres' | 'idiomaDescripciones';
+
+/** De entrada, el original (inglés). Si el guardado deja de existir, se ve en el original. */
+const IDIOMA_DEFECTO = 'en';
+const esIdIdioma = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9_-]{1,40}$/i.test(v);
 
 export interface Rango {
   min: number;
@@ -63,6 +74,11 @@ function leer(): PreferenciasSala {
     const valor = guardadas[clave];
     preferencias[clave] = typeof valor === 'boolean' ? valor : defecto;
   }
+  for (const clave of ['idiomaNombres', 'idiomaDescripciones'] as ClaveIdioma[]) {
+    const valor = guardadas[clave];
+    preferencias[clave] = esIdIdioma(valor) ? valor : IDIOMA_DEFECTO;
+  }
+  preferencias.genero = guardadas.genero === 'femenino' ? 'femenino' : 'masculino';
   return preferencias;
 }
 

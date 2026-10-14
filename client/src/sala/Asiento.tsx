@@ -1,4 +1,3 @@
-import { Armchair } from 'lucide-react';
 import CuadroAvatar from './CuadroAvatar';
 import { botonPrincipal } from './estilos';
 import { idNombreAsiento } from './ids';
@@ -24,6 +23,30 @@ interface AsientoProps {
    * donde la ficha queda encima, hacia el centro); si no, encima.
    */
   nombreAbajo?: boolean;
+  /** Dónde está en la mesa, en radianes desde las 12 en el sentido del reloj: la silla vacía mira al centro. */
+  angulo?: number;
+}
+
+/**
+ * Las sillas vacías de botc.app (copias locales en public/sillas), una por
+ * dirección, mirando al centro de la mesa. Las de la derecha son las de la
+ * izquierda en espejo.
+ */
+const SILLAS: { imagen: string; espejo: boolean }[] = [
+  { imagen: 'arriba', espejo: false },
+  { imagen: 'arriba-izquierda', espejo: true }, // arriba a la derecha
+  { imagen: 'izquierda', espejo: true }, // derecha
+  { imagen: 'abajo-izquierda', espejo: true }, // abajo a la derecha
+  { imagen: 'abajo', espejo: false },
+  { imagen: 'abajo-izquierda', espejo: false },
+  { imagen: 'izquierda', espejo: false },
+  { imagen: 'arriba-izquierda', espejo: false },
+];
+
+/** La silla de un asiento según su ángulo: ocho sectores de 45°, el primero centrado en las 12. */
+function sillaVacia(angulo: number) {
+  const sector = ((Math.round(angulo / (Math.PI / 4)) % 8) + 8) % 8;
+  return SILLAS[sector];
 }
 
 /**
@@ -40,8 +63,20 @@ interface AsientoProps {
  * Editando asientos, los ocupados llevan un asa para mover al jugador; el
  * destino provisional del movimiento se resalta.
  */
-const Asiento = ({ id, numero, ocupante, esYo, puedeSentarse, onSentarse, asa, destino = false, nombreAbajo = false }: AsientoProps) => {
+const Asiento = ({
+  id,
+  numero,
+  ocupante,
+  esYo,
+  puedeSentarse,
+  onSentarse,
+  asa,
+  destino = false,
+  nombreAbajo = false,
+  angulo = 0,
+}: AsientoProps) => {
   const sentarse = !ocupante && puedeSentarse;
+  const silla = sillaVacia(angulo);
 
   return (
     <div className={`group relative rounded ${destino ? 'ring-4 ring-theme-main ring-offset-2 ring-offset-background' : ''}`}>
@@ -51,10 +86,12 @@ const Asiento = ({ id, numero, ocupante, esYo, puedeSentarse, onSentarse, asa, d
         imagen={ocupante?.avatar}
         contenido={
           ocupante ? undefined : (
-            // Fondo morado para que la silla se distinga del fondo negro de la sala
-            <span className="flex h-full w-full items-center justify-center bg-theme-container/60">
-              <Armchair className="h-1/2 w-1/2 text-theme-main" strokeWidth={1.5} />
-            </span>
+            // La silla vacía no se lee: lo dice el pie («Asiento 3, libre»)
+            <img
+              src={`/sillas/${silla.imagen}.webp`}
+              alt=""
+              className={`h-full w-full object-cover ${silla.espejo ? '-scale-x-100' : ''}`}
+            />
           )
         }
         pie={

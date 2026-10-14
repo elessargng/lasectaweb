@@ -641,6 +641,198 @@ export class DatabaseRepository {
         CREATE INDEX IF NOT EXISTS idx_ritual_signups_ritual ON ritual_signups(ritualId, occurrence, id);
       `);
     });
+
+    // Migración 018: copia local de los roles de Blood on the Clocktower
+    //
+    // Los roles (nombre, tipo, habilidad, orden de noche, icono…) vienen de la
+    // API de Villacuervos y apenas cambian. Se guarda aquí una copia que se
+    // sincroniza una vez al día (RolesSyncService), para no depender de que
+    // Villacuervos responda. Las columnas siguen los nombres de su API.
+    // imageLocal: la copia del icono en /uploads/roles/…
+    await this.applyMigration('018_add_botc_roles', async (db) => {
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS botc_roles (
+          key TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          type TEXT NOT NULL,
+          edition TEXT NOT NULL,
+          ability TEXT NOT NULL,
+          reminders TEXT,
+          global_reminders TEXT,
+          first_night TEXT,
+          other_nights TEXT,
+          first_night_order INTEGER,
+          other_nights_order INTEGER,
+          setup INTEGER NOT NULL DEFAULT 0,
+          special TEXT,
+          image TEXT,
+          imageLocal TEXT,
+          syncedAt DATETIME NOT NULL
+        );
+      `);
+    });
+
+    // Migración 019: el catálogo de personajes, con nuestro propio modelo
+    //
+    // La 018 guardaba los roles con el formato de la API de Villacuervos (sus
+    // nombres de campo), así que un cambio en su API habría obligado a cambiar
+    // nuestra base de datos. Esta tabla sigue nuestro modelo (types/guiones.ts);
+    // la traducción desde Villacuervos se hace en un solo sitio (PersonajeMapper).
+    //
+    // Se copian los datos de botc_roles y se elimina. Los iconos no se copian:
+    // ahora van en /uploads/personajes y con su versión de alineamiento
+    // contrario; con sincronizadoEn a 1970, al arrancar se sincroniza de nuevo
+    // y se descargan. iconoOrigen e iconoAlternativoOrigen guardan su dirección
+    // en la fuente, para volver a bajarlos solo si cambian.
+    await this.applyMigration('019_add_personajes', async (db) => {
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS personajes (
+          id TEXT PRIMARY KEY,
+          nombre TEXT NOT NULL,
+          tipo TEXT NOT NULL,
+          edicion TEXT NOT NULL,
+          habilidad TEXT NOT NULL,
+          recordatorios TEXT,
+          recordatoriosGlobales TEXT,
+          primeraNocheOrden INTEGER,
+          primeraNocheRecordatorio TEXT,
+          otrasNochesOrden INTEGER,
+          otrasNochesRecordatorio TEXT,
+          preparacion INTEGER NOT NULL DEFAULT 0,
+          especial TEXT,
+          icono TEXT,
+          iconoOrigen TEXT,
+          iconoAlternativo TEXT,
+          iconoAlternativoOrigen TEXT,
+          sincronizadoEn DATETIME NOT NULL
+        );
+
+        INSERT OR IGNORE INTO personajes (
+          id, nombre, tipo, edicion, habilidad, recordatorios, recordatoriosGlobales,
+          primeraNocheOrden, primeraNocheRecordatorio, otrasNochesOrden, otrasNochesRecordatorio,
+          preparacion, especial, icono, iconoOrigen, iconoAlternativo, iconoAlternativoOrigen, sincronizadoEn
+        )
+        SELECT key, name, type, edition, ability, reminders, global_reminders,
+          first_night_order, first_night, other_nights_order, other_nights,
+          setup, special, NULL, NULL, NULL, NULL, '1970-01-01T00:00:00.000Z'
+        FROM botc_roles;
+
+        DROP TABLE IF EXISTS botc_roles;
+      `);
+    });
+
+    // Migración 020: traducciones de los personajes
+    //
+    // Los idiomas (paquetes de traducción) y, por cada uno, lo que cambia de cada
+    // personaje: nombre, habilidad y recordatorios. Se sincronizan con la fuente
+    // a la vez que el catálogo (SincronizacionTraduccionesService). Al borrar un
+    // idioma se borran sus traducciones.
+    await this.applyMigration('020_add_traducciones_personajes', async (db) => {
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS idiomas (
+          id TEXT PRIMARY KEY,
+          nombre TEXT NOT NULL,
+          codigo TEXT NOT NULL,
+          sincronizadoEn DATETIME NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS traducciones_personajes (
+          idiomaId TEXT NOT NULL,
+          personajeId TEXT NOT NULL,
+          nombre TEXT,
+          habilidad TEXT,
+          recordatorios TEXT,
+          recordatoriosGlobales TEXT,
+          primeraNocheRecordatorio TEXT,
+          otrasNochesRecordatorio TEXT,
+          PRIMARY KEY (idiomaId, personajeId),
+          FOREIGN KEY (idiomaId) REFERENCES idiomas(id) ON DELETE CASCADE
+        );
+      `);
+    });
+
+    // Migración 021: géneros en las traducciones y estado de las sincronizaciones
+    //
+    // - Los idiomas que distinguen género guardan una versión de los textos para
+    //   cada uno (genero 'masculino' o 'femenino'); los demás, una sola (genero '').
+    //   Se marca la copia como caducada para que se vuelva a sincronizar al arrancar
+    //   y lleguen las dos versiones.
+    // - sincronizaciones: el último intento, el último que salió bien y el error,
+    //   de cada sincronización (para avisar en la gestión si falla). La de los
+    //   personajes parte de la fecha de los datos que ya hay.
+    await this.applyMigration('021_add_generos_y_estado_sincronizaciones', async (db) => {
+      await db.exec(`
+        ALTER TABLE idiomas ADD COLUMN tieneGeneros INTEGER NOT NULL DEFAULT 0;
+        UPDATE idiomas SET sincronizadoEn = '1970-01-01T00:00:00.000Z';
+
+        CREATE TABLE traducciones_personajes_nueva (
+          idiomaId TEXT NOT NULL,
+          genero TEXT NOT NULL DEFAULT '',
+          personajeId TEXT NOT NULL,
+          nombre TEXT,
+          habilidad TEXT,
+          recordatorios TEXT,
+          recordatoriosGlobales TEXT,
+          primeraNocheRecordatorio TEXT,
+          otrasNochesRecordatorio TEXT,
+          PRIMARY KEY (idiomaId, genero, personajeId),
+          FOREIGN KEY (idiomaId) REFERENCES idiomas(id) ON DELETE CASCADE
+        );
+        INSERT INTO traducciones_personajes_nueva (idiomaId, genero, personajeId, nombre, habilidad, recordatorios,
+          recordatoriosGlobales, primeraNocheRecordatorio, otrasNochesRecordatorio)
+        SELECT idiomaId, '', personajeId, nombre, habilidad, recordatorios,
+          recordatoriosGlobales, primeraNocheRecordatorio, otrasNochesRecordatorio
+        FROM traducciones_personajes;
+        DROP TABLE traducciones_personajes;
+        ALTER TABLE traducciones_personajes_nueva RENAME TO traducciones_personajes;
+
+        CREATE TABLE IF NOT EXISTS sincronizaciones (
+          id TEXT PRIMARY KEY,
+          ultimoIntento DATETIME NOT NULL,
+          ultimoExito DATETIME,
+          error TEXT
+        );
+        INSERT INTO sincronizaciones (id, ultimoIntento, ultimoExito, error)
+        SELECT 'personajes', MAX(sincronizadoEn), MAX(sincronizadoEn), NULL FROM personajes
+        HAVING MAX(sincronizadoEn) > '1971';
+      `);
+    });
+
+    // Migración 022: en los idiomas con géneros, también los nombres siguen el género
+    //
+    // Se piden ahora a Villacuervos sin marked_genres («Pitoniso» en masculino).
+    // Solo se marca su copia como caducada, para que se vuelva a sincronizar al arrancar.
+    await this.applyMigration('022_resincronizar_traducciones_con_generos', async (db) => {
+      await db.exec(`UPDATE idiomas SET sincronizadoEn = '1970-01-01T00:00:00.000Z' WHERE tieneGeneros = 1;`);
+    });
+
+    // Migración 023: iconos por alineamiento (bueno y malvado) en vez de «alternativo»
+    //
+    // El icono «alternativo» era el del alineamiento contrario, pero los viajeros
+    // son neutrales: su alternativo es el bueno, y tienen un tercero, el malvado.
+    // Se guarda explícito cuál es el bueno y cuál el malvado (los de por defecto
+    // se reparten según el tipo) y se marca la copia como caducada para que se
+    // descarguen los malvados de los viajeros (los demás iconos ya están y no se
+    // vuelven a bajar).
+    await this.applyMigration('023_iconos_bueno_y_malvado', async (db) => {
+      await db.exec(`
+        ALTER TABLE personajes ADD COLUMN iconoBueno TEXT;
+        ALTER TABLE personajes ADD COLUMN iconoBuenoOrigen TEXT;
+        ALTER TABLE personajes ADD COLUMN iconoMalvado TEXT;
+        ALTER TABLE personajes ADD COLUMN iconoMalvadoOrigen TEXT;
+        UPDATE personajes SET iconoBueno = icono, iconoBuenoOrigen = iconoOrigen,
+          iconoMalvado = iconoAlternativo, iconoMalvadoOrigen = iconoAlternativoOrigen
+          WHERE tipo IN ('townsfolk', 'outsider');
+        UPDATE personajes SET iconoBueno = iconoAlternativo, iconoBuenoOrigen = iconoAlternativoOrigen,
+          iconoMalvado = icono, iconoMalvadoOrigen = iconoOrigen
+          WHERE tipo IN ('minion', 'demon');
+        UPDATE personajes SET iconoBueno = iconoAlternativo, iconoBuenoOrigen = iconoAlternativoOrigen
+          WHERE tipo = 'traveller';
+        ALTER TABLE personajes DROP COLUMN iconoAlternativo;
+        ALTER TABLE personajes DROP COLUMN iconoAlternativoOrigen;
+        UPDATE personajes SET sincronizadoEn = '1970-01-01T00:00:00.000Z';
+      `);
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

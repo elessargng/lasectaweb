@@ -79,7 +79,7 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, onCambiar }: PanelIn
         </label>
       </div>
       <p id="sala-pref-sonidos-ayuda" className="text-xs text-on-surface-muted">
-        Campanadas al final de la cuenta atrás y al votar, y el tic del reloj cuando alguien no vota.
+        La cuenta atrás de las nominaciones, y al votar, un sonido por cada voto y un tic cuando alguien no vota.
       </p>
     </div>
   </div>

@@ -12,8 +12,8 @@ interface FichaRedondaProps {
 }
 
 /**
- * Una ficha redonda del juego, con la textura de las de Blood on the Clocktower:
- * pergamino claro con el borde oscurecido y relieve. Su diámetro es la variable
+ * Una ficha redonda del juego, con la textura de las de Blood on the Clocktower
+ * (la de botc.app) y relieve. Su diámetro es la variable
  * CSS --sala-ficha (Preferencias > Interfaz).
  *
  * Muerto, lleva el sudario: una banderola negra de dos picos que cae desde las
@@ -29,28 +29,25 @@ const FichaRedonda = ({ children, muerto = false, marcado = false, voto }: Ficha
     <span
       className="flex h-full w-full items-center justify-center overflow-hidden rounded-full"
       style={{
-        // Pergamino: más claro en el centro, tostado hacia el borde, y un fino aro oscuro
-        background:
-          'radial-gradient(circle at 50% 45%, #f4ecd8 0%, #ebdfc2 45%, #dccaa0 72%, #b89c68 88%, #6e5634 97%, #4a3a22 100%)',
-        // Relieve: luz arriba, sombra abajo, y sombra sobre la mesa
-        boxShadow:
-          'inset 0 2px 3px rgba(255,255,255,0.6), inset 0 -3px 6px rgba(74,58,34,0.45), 0 2px 6px rgba(0,0,0,0.6)',
+        // La textura de las fichas de botc.app (copia local, public/ficha.webp),
+        // agrandada al 110% (su círculo no llega al borde de la imagen y así el aro
+        // oscuro queda justo en el borde de la ficha). Debajo, el color del
+        // pergamino por si tarda en cargar.
+        background: "url('/ficha.webp') center / 110% no-repeat, #d8c59c",
+        // Solo la sombra sobre la mesa: el relieve ya lo trae la textura
+        boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
       }}
     >
       {children}
     </span>
     {muerto && (
-      // Sudario: de un poco por encima de la ficha (-6%) hasta su mitad (50%)
-      <svg
-        viewBox="0 0 40 56"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-        className="absolute left-1/2 top-[-6%] h-[56%] w-[36%] -translate-x-1/2 drop-shadow-[0_2px_2px_rgba(0,0,0,0.6)]"
-      >
-        {/* Banderola con dos picos abajo y un pliegue claro en el centro */}
-        <path d="M0 0 H40 V56 L20 44 L0 56 Z" fill="#0d0d0d" />
-        <path d="M18 0 H22 V44 L20 44 L18 44 Z" fill="#262626" />
-      </svg>
+      // Sudario (el de botc.app, copia local en public/sudario.webp): de un poco
+      // por encima de la ficha (-6%) hasta su mitad (50%), con su proporción
+      <img
+        src="/sudario.webp"
+        alt=""
+        className="absolute left-1/2 top-[-6%] h-[56%] w-auto -translate-x-1/2 drop-shadow-[0_2px_2px_rgba(0,0,0,0.6)]"
+      />
     )}
     {marcado && (
       // Calavera color hueso, centrada y grande
