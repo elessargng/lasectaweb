@@ -13,6 +13,7 @@ const Layout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isChangelogModalOpen, setIsChangelogModalOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const { user, isAuthenticated, logout, sessionExpired, dismissSessionExpired } = useAuth();
 
   const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -33,20 +34,35 @@ const Layout = () => {
     return () => document.removeEventListener('keydown', onKey);
   }, [isMobileMenuOpen]);
 
+  // Al bajar por la página la cabecera se compacta; arriba del todo recupera su tamaño.
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 40);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Transición común de la cabecera al compactarse (desactivada con prefers-reduced-motion).
+  const shrink = 'transition-all duration-300 ease-out motion-reduce:transition-none';
+
   return (
     <div className="min-h-screen flex flex-col selection:bg-theme-main selection:text-background overflow-x-clip">
       {/* Dark Textured Header */}
-      <header className="fixed top-0 w-full z-40 bg-theme-container backdrop-blur-sm border-b border-outline-ghost shadow-lg">
-        <div className="max-w-7xl mx-auto flex justify-between items-center py-2 px-6 md:py-3 md:px-10">
+      <header className="fixed top-0 w-full z-40">
+        {/* Fondo morado con el borde inferior rasgado (decorativo); sobresale 16px bajo la cabecera (el resto del rasgado queda dentro) y se aplana al hacer scroll */}
+        <div aria-hidden="true" className="absolute inset-x-0 top-0 -bottom-[16px] -z-10 drop-shadow-[0_6px_8px_rgba(0,0,0,0.6)]">
+          <div className="cabecera-fondo h-full bg-cabecera" data-plana={isScrolled} />
+        </div>
+        <div className={`max-w-7xl mx-auto flex justify-between items-center px-6 md:px-10 ${shrink} ${isScrolled ? 'py-1' : 'py-2'}`}>
           <div className="flex items-center gap-4 md:gap-6">
             <Link to="/" className="flex items-center gap-1.5 md:gap-2" onClick={closeMenu}>
-              <img src="/logo-2.png" alt="Logo de La Secta" className="w-24 h-24 object-contain drop-shadow-[0_0_12px_var(--color-theme-main)]" />
-              <h1 className="text-2xl md:text-4xl font-normal tracking-tight text-white drop-shadow-lg whitespace-nowrap" style={{ fontFamily: "'Teutonic No1', 'Cinzel', serif", transform: 'scaleX(0.9)', transformOrigin: 'left', display: 'inline-block' }}>
+              <img src="/logo-2.png" alt="Logo de La Secta" className={`object-contain ${shrink} ${isScrolled ? 'w-10 h-10 md:w-12 md:h-12' : 'w-16 h-16 md:w-20 md:h-20'} drop-shadow-[0_0_12px_var(--color-theme-main)]`} />
+              <h1 className={`${shrink} ${isScrolled ? 'text-xl md:text-2xl' : 'text-2xl md:text-4xl'} font-normal tracking-tight text-white drop-shadow-lg whitespace-nowrap`} style={{ fontFamily: "'Teutonic No1', 'Cinzel', serif", transform: 'scaleX(0.9)', transformOrigin: 'left', display: 'inline-block' }}>
                 La Secta
               </h1>
             </Link>
 
-            <nav className="hidden lg:flex gap-6 ml-8 mt-2 items-center flex-wrap">
+            <nav className="hidden lg:flex gap-6 ml-8 mt-1 items-center flex-wrap">
               <HeaderLink to="/cronicas">Crónicas</HeaderLink>
               <HeaderLink to="/grimorio">Grimorio</HeaderLink>
               <HeaderLink to="/escrituras">Códice</HeaderLink>
@@ -62,8 +78,8 @@ const Layout = () => {
             {isAuthenticated && user ? (
               <>
                 {/* Desktop Full Profile */}
-                <Link to="/profile" className="hidden lg:flex items-center gap-4 hover:bg-surface-container-low p-2 pr-6 rounded-full ring-1 ring-outline-ghost transition-all cursor-pointer group shadow-md" aria-label="Perfil de usuario">
-                  <div className="w-12 h-12 rounded-full bg-theme-container flex items-center justify-center ring-1 ring-theme-main/50 group-hover:ring-theme-main shadow-[0_0_8px_rgba(var(--color-theme-main),0.2)] transition-all overflow-hidden">
+                <Link to="/profile" className={`hidden lg:flex items-center gap-4 hover:bg-surface-container-low pr-6 rounded-full ${isScrolled ? 'p-1' : 'p-1.5'} ring-1 ring-outline-ghost transition-all cursor-pointer group shadow-md`} aria-label="Perfil de usuario">
+                  <div className={`${isScrolled ? 'w-9 h-9' : 'w-11 h-11'} rounded-full bg-theme-container flex items-center justify-center ring-1 ring-theme-main/50 group-hover:ring-theme-main shadow-[0_0_8px_rgba(var(--color-theme-main),0.2)] transition-all duration-300 motion-reduce:transition-none overflow-hidden`}>
                     <img src={getAvatarUrl(user.profilePicture)} alt="Avatar del usuario" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
                   </div>
                   <div className="flex flex-col items-start leading-tight">
@@ -301,8 +317,8 @@ const Layout = () => {
         </div>
       </div>
 
-      {/* Main Container - Full Width */}
-      <main className="flex-1 w-full pt-[112px] md:pt-[128px] pb-16 relative">
+      {/* El contenido empieza 16px por encima del borde de la cabecera para asomar por las muescas del rasgado */}
+      <main className="flex-1 w-full pt-[64px] md:pt-[80px] pb-16 relative">
         <Outlet />
       </main>
 

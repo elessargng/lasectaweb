@@ -12,7 +12,8 @@ const Footer: React.FC<FooterProps> = ({ onOpenChangelog, version: propVersion }
   const currentVersion = propVersion || changelogData[0]?.version || '0.1.0';
 
   return (
-    <footer className="w-full bg-theme-container border-t border-outline-ghost shadow-2xl relative z-30 font-body">
+    // z-10: por debajo del contenido de las páginas (z-20), para que sus modales y menús se vean por encima del pie
+    <footer className="w-full bg-theme-container border-t border-outline-ghost shadow-2xl relative z-10 font-body">
       <div className="max-w-7xl mx-auto px-6 md:px-10 py-6 md:py-8 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-4">
         {/* Left Section: Brand & Copyright */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-on-surface-muted text-sm">
