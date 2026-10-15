@@ -9,6 +9,7 @@ import RitualAgenda from '../components/rituales/RitualAgenda';
 import RitualExportMenu from '../components/rituales/RitualExportMenu';
 import RitualCard from '../components/rituales/RitualCard';
 import RitualFormModal from '../components/rituales/RitualFormModal';
+import RitualDetailModal from '../components/rituales/RitualDetailModal';
 import type { SignupActions } from '../components/rituales/RitualAttendees';
 import { RITUAL_KINDS, RITUAL_KIND_ORDER, alpha, kindOf, type RitualKind } from '../components/rituales/ritualKinds';
 import {
@@ -76,10 +77,12 @@ const Rituales = () => {
   const [editing, setEditing] = useState<Ritual | null>(null);
   const [formDay, setFormDay] = useState<Date | null>(null);
 
-  // El ritual pulsado, que se resalta en el detalle del día, y una señal para
-  // llevar la vista hasta él (solo tras un clic, no al cargar la página).
-  const [focusedKey, setFocusedKey] = useState<string | null>(null);
+  // El último ritual abierto, que se resalta en el lateral, y una señal para
+  // llevar la vista hasta el detalle del día (solo tras un clic en un día).
+  const [focusedKey, setFocusedKey] = useState<string | null>(searchParams.get('ritual'));
   const [scrollRequest, setScrollRequest] = useState(0);
+  // El ritual con el detalle abierto: va en la URL para poder enlazarlo.
+  const openKey = searchParams.get('ritual');
   const panelRef = useRef<HTMLDivElement>(null);
   // La partida en la que se está apuntando o desapuntando alguien.
   const [signupBusy, setSignupBusy] = useState<string | null>(null);
@@ -150,18 +153,32 @@ const Rituales = () => {
 
   const visible = rituals.filter((r) => !hiddenKinds.has(kindOf(r)));
   const dayRituals = visible.filter((r) => coversDay(r, selectedDay)).sort(compareRituals);
+  // Se busca entre todos, no solo los visibles: un enlace abre el ritual aunque su tipo esté filtrado.
+  const openRitual = openKey ? rituals.find((r) => keyOf(r) === openKey) : undefined;
 
-  // La URL guarda el día y la vista, para poder compartir o recargar sin perderlos.
-  function writeUrl(day: Date, v: View) {
-    setSearchParams(v === DEFAULT_VIEW ? { dia: dayKey(day) } : { dia: dayKey(day), vista: v }, { replace: true });
+  // La URL guarda el día, la vista y el ritual abierto, para poder compartir o recargar sin perderlos.
+  function writeUrl(day: Date, v: View, ritualKey: string | null = null) {
+    const params: Record<string, string> = { dia: dayKey(day) };
+    if (v !== DEFAULT_VIEW) params.vista = v;
+    if (ritualKey) params.ritual = ritualKey;
+    setSearchParams(params, { replace: true });
   }
 
-  const selectDay = (day: Date) => {
+  const selectDay = (day: Date, ritualKey: string | null = null) => {
     setSelectedDay(day);
-    setFocusedKey(null);
+    setFocusedKey(ritualKey);
     if (day.getMonth() !== month.getMonth()) setMonth(new Date(day.getFullYear(), day.getMonth(), 1));
-    writeUrl(day, view);
+    writeUrl(day, view, ritualKey);
   };
+
+  // Un enlace a un ritual que ya no está en la agenda (borrado, o de otra fecha).
+  useEffect(() => {
+    if (loading || !openKey || openRitual) return;
+    setError('No se ha encontrado ese ritual en la agenda.');
+    writeUrl(selectedDay, view);
+    // Solo al terminar de cargar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, rituals]);
 
   /** Clic en un día del calendario: se muestra su detalle. */
   const pickDay = (day: Date) => {
@@ -169,16 +186,20 @@ const Rituales = () => {
     setScrollRequest((n) => n + 1);
   };
 
-  /** Clic en un ritual: se muestra su día con él resaltado. */
-  const pickRitual = (day: Date, ritual: Ritual) => {
-    selectDay(day);
+  /** Clic en un ritual: se abre su detalle, y su día queda elegido debajo. */
+  const pickRitual = (day: Date, ritual: Ritual) => selectDay(day, keyOf(ritual));
+
+  /** Clic en un ritual del lateral: ya está en el día elegido. */
+  const openFromPanel = (ritual: Ritual) => {
     setFocusedKey(keyOf(ritual));
-    setScrollRequest((n) => n + 1);
+    writeUrl(selectedDay, view, keyOf(ritual));
   };
+
+  const closeRitual = () => writeUrl(selectedDay, view);
 
   const changeView = (v: View) => {
     setView(v);
-    writeUrl(selectedDay, v);
+    writeUrl(selectedDay, v, openKey);
   };
 
   const shiftMonth = (delta: number) => setMonth(new Date(month.getFullYear(), month.getMonth() + delta, 1));
@@ -208,6 +229,7 @@ const Rituales = () => {
   }
 
   const openEdit = (ritual: Ritual) => {
+    closeRitual();
     setEditing(ritual);
     setFormDay(null);
     setFormOpen(true);
@@ -222,6 +244,7 @@ const Rituales = () => {
   const handleDelete = async (ritual: Ritual) => {
     const scope = ritual.recurrenceDays || ritual.recurrenceMonths ? 'y todas sus repeticiones ' : '';
     if (!window.confirm(`¿Borrar «${ritual.title}» ${scope}de la agenda? Si solo se suspende, mejor márcalo como cancelado.`)) return;
+    closeRitual();
     try {
       await deleteRitual(token!, ritual.id);
       await fetchRituals();
@@ -240,7 +263,7 @@ const Rituales = () => {
       await fetchRituals();
       setNow(Date.now());
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo cambiar la inscripción.');
+      setError(err instanceof Error ? err.message : 'No se pudo guardar el cambio.');
     } finally {
       setSignupBusy(null);
     }
@@ -269,10 +292,9 @@ const Rituales = () => {
       focusedKey={focusedKey}
       loading={loading && rituals.length === 0}
       canManage={canManage}
-      signup={signup}
+      userId={signup.userId}
       onCreate={() => openCreate(selectedDay)}
-      onEdit={openEdit}
-      onDelete={handleDelete}
+      onOpen={openFromPanel}
     />
   );
 
@@ -381,7 +403,7 @@ const Rituales = () => {
           </div>
 
           {error && (
-            <div className="mb-6 p-3.5 rounded bg-red-500/10 border border-red-500/30 text-red-300 text-sm">{error}</div>
+            <div role="alert" className="mb-6 p-3.5 rounded bg-red-500/10 border border-red-500/30 text-red-300 text-sm">{error}</div>
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem] gap-8">
@@ -444,6 +466,17 @@ const Rituales = () => {
         )}
       </div>
 
+      {openRitual && (
+        <RitualDetailModal
+          ritual={openRitual}
+          canManage={canManage}
+          signup={signup}
+          onClose={closeRitual}
+          onEdit={openEdit}
+          onDelete={handleDelete}
+        />
+      )}
+
       <RitualFormModal
         isOpen={formOpen}
         ritual={editing}
@@ -462,17 +495,16 @@ interface DayPanelProps {
   focusedKey: string | null;
   loading: boolean;
   canManage: boolean;
-  signup: SignupActions;
+  userId?: string;
   onCreate: () => void;
-  onEdit: (ritual: Ritual) => void;
-  onDelete: (ritual: Ritual) => void;
+  onOpen: (ritual: Ritual) => void;
 }
 
-/** El detalle del día elegido, con todos sus rituales. */
-const DayPanel = ({ day, rituals, focusedKey, loading, canManage, signup, onCreate, onEdit, onDelete }: DayPanelProps) => (
+/** El día elegido, con el resumen de sus rituales; cada uno abre su detalle. */
+const DayPanel = ({ day, rituals, focusedKey, loading, canManage, userId, onCreate, onOpen }: DayPanelProps) => (
   <>
     <div className="pb-3 border-b border-outline-ghost/60">
-      <p className="font-display text-lg text-on-surface leading-tight first-letter:uppercase">{formatLongDay(day)}</p>
+      <h3 className="font-display text-lg text-on-surface leading-tight first-letter:uppercase">{formatLongDay(day)}</h3>
       <p className="text-xs text-on-surface-muted italic">
         {rituals.length === 0
           ? 'Ningún ritual convocado'
@@ -499,10 +531,8 @@ const DayPanel = ({ day, rituals, focusedKey, loading, canManage, signup, onCrea
           key={keyOf(r)}
           ritual={r}
           highlighted={focusedKey === keyOf(r)}
-          canManage={canManage}
-          signup={signup}
-          onEdit={onEdit}
-          onDelete={onDelete}
+          userId={userId}
+          onOpen={onOpen}
         />
       ))
     )}

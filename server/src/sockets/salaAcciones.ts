@@ -1,4 +1,5 @@
 import { ChatRepository } from '../repositories/ChatRepository';
+import { datosDeDataUrl, guardarFondoSala } from '../utils/salaFondoStorage';
 import { ProveedorVideo } from '../services/videollamada/ProveedorVideo';
 import { MENSAJES_PRIVADOS, SalaMensajesPrivados } from '../types/chat';
 import {
@@ -36,6 +37,17 @@ export interface DependenciasSala {
   mensajes: ChatRepository;
   /** El servidor de vídeo (cámaras y micrófonos), o null si no está configurado. */
   video: ProveedorVideo | null;
+  /** Las imágenes de la Biblioteca (para elegir un fondo de la sala). */
+  imagenesBiblioteca: ImagenesBiblioteca;
+}
+
+/**
+ * Lee una imagen pública de la Biblioteca (como la vería alguien sin cuenta).
+ * Rechaza si no existe, no es pública o no es una imagen. Es una interfaz: la
+ * implementa LibraryService (se inyecta en index.ts).
+ */
+export interface ImagenesBiblioteca {
+  leerPublica(versionId: string): Promise<Buffer>;
 }
 
 interface Accion {
@@ -518,6 +530,42 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (sala) => {
       sala.revelarTodas();
       return { ok: true };
+    },
+  },
+
+  /**
+   * Cambia el fondo de la sala (para todos). datos: { predeterminado: true }
+   * (el de por defecto), { imagen: data URL } (subida desde el ordenador) o
+   * { biblioteca: id de la versión de una imagen pública de la Biblioteca } (se
+   * copia). De la Biblioteca solo vale lo público, aunque el narrador tenga cuenta:
+   * lo que pide registro no se puede poner a la vista de toda la partida.
+   */
+  'narrador:cambiarFondo': {
+    puede: esNarrador,
+    noPuede: 'Solo un narrador puede cambiar el fondo de la sala.',
+    hacer: async (sala, _yo, datos, deps) => {
+      const { predeterminado, imagen, biblioteca } = (datos as Record<string, unknown>) ?? {};
+      if (predeterminado === true) {
+        sala.configurar({ fondo: null });
+        return { ok: true };
+      }
+      let bytes: Buffer | null = null;
+      if (imagen !== undefined) {
+        bytes = datosDeDataUrl(imagen);
+        if (!bytes) return { ok: false, error: 'La imagen no es válida (JPEG, PNG o WebP).' };
+      } else if (typeof biblioteca === 'string') {
+        try {
+          bytes = await deps.imagenesBiblioteca.leerPublica(biblioteca);
+        } catch (e) {
+          return { ok: false, error: e instanceof Error ? e.message : 'No se ha podido leer la imagen.' };
+        }
+      } else {
+        return { ok: false, error: 'Fondo desconocido.' };
+      }
+      const guardado = guardarFondoSala(bytes);
+      if ('error' in guardado) return { ok: false, error: guardado.error };
+      sala.configurar({ fondo: guardado.ruta });
+      return { ok: true, valor: guardado.ruta };
     },
   },
 

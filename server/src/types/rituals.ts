@@ -6,6 +6,13 @@ export const RITUAL_TYPES: RitualType[] = ['partida_online', 'partida_presencial
 export const RITUAL_MANAGERS: RitualManager[] = ['secta', 'villacuervos'];
 export const RITUAL_STATUSES: RitualStatus[] = ['programado', 'cancelado'];
 
+/**
+ * Qué significa apuntarse: en las partidas online de La Secta, inscribirse
+ * (cuenta el orden, frente a las plazas); en las presenciales y los eventos,
+ * solo avisar de que se piensa ir, sin orden ni prioridad.
+ */
+export type RitualAttendanceMode = 'inscripcion' | 'intencion';
+
 /** Una lista de inscripción de una partida de Villacuervos (narración, jugadores...). */
 export interface RitualSignupList {
   name: string;
@@ -60,8 +67,13 @@ export interface Ritual {
    * partidas y las de las partidas de aquí publicadas también allí.
    */
   signupLists?: RitualSignupList[];
-  /** Si admite que la gente se apunte aquí: solo partidas online de La Secta no publicadas en Villacuervos. */
+  /**
+   * Si admite que la gente se apunte aquí: las partidas online de La Secta no
+   * publicadas en Villacuervos, y las presenciales y los eventos de La Secta.
+   */
   signupsEnabled?: boolean;
+  /** Con signupsEnabled: si es una inscripción o una intención de asistir. */
+  attendanceMode?: RitualAttendanceMode;
   /**
    * Gente apuntada, en el orden en que se apuntó. En una serie periódica van
    * las de todas sus repeticiones, cada una con su occurrence.

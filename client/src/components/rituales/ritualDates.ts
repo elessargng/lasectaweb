@@ -190,6 +190,15 @@ export function startOfWeek(date: Date): Date {
 export const keyOf = (r: Ritual) => r.occurrenceKey ?? r.id;
 
 /**
+ * Dirección que abre la agenda en el día del ritual con su detalle desplegado.
+ * En una serie lleva la repetición concreta.
+ */
+export function ritualPath(ritual: Ritual): string {
+  const params = new URLSearchParams({ dia: dayKey(startOfDay(new Date(ritual.startsAt))), ritual: keyOf(ritual) });
+  return `/rituales?${params}`;
+}
+
+/**
  * Reparte las jornadas de varios días de una semana en carriles: cada una
  * conserva su altura todos los días que dura, y la que empezó antes va arriba.
  * Devuelve, para cada día de la semana, qué jornada ocupa cada carril (o

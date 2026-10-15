@@ -6,6 +6,7 @@ import { VillacuervosService } from './VillacuervosService';
 import { PublicPlayListSchema } from '../types/villacuervos';
 import {
   Ritual,
+  RitualAttendanceMode,
   RitualInput,
   RitualSignupList,
   MAX_RECURRENCE_DAYS,
@@ -47,19 +48,23 @@ export class RitualService {
   ) {}
 
   /**
-   * Admite inscripción aquí: solo las partidas online de La Secta. Las
-   * publicadas también en Villacuervos no, porque allí ya tienen sus listas y
-   * la gente se apunta allí; las presenciales y las jornadas tampoco.
+   * Cómo se apunta la gente aquí, o undefined si no se apunta. Las partidas
+   * online de La Secta tienen inscripción, salvo las publicadas también en
+   * Villacuervos, porque allí ya tienen sus listas. En las presenciales y los
+   * eventos solo se avisa de que se piensa ir.
    */
-  private acceptsSignups(ritual: Ritual): boolean {
-    return ritual.source === 'secta' && ritual.type === 'partida_online' && !ritual.villacuervosPlayId;
+  private attendanceModeOf(ritual: Ritual): RitualAttendanceMode | undefined {
+    if (ritual.source !== 'secta') return undefined;
+    if (ritual.type === 'partida_online') return ritual.villacuervosPlayId ? undefined : 'inscripcion';
+    return 'intencion';
   }
 
   private async withAttendees(rituals: Ritual[]): Promise<Ritual[]> {
-    const open = rituals.filter((r) => this.acceptsSignups(r));
+    const open = rituals.filter((r) => this.attendanceModeOf(r));
     const attendees = await this.signupRepository.listForRituals(open.map((r) => r.id));
     for (const r of open) {
       r.signupsEnabled = true;
+      r.attendanceMode = this.attendanceModeOf(r);
       r.attendees = attendees.get(r.id) ?? [];
     }
     return rituals;
@@ -128,11 +133,12 @@ export class RitualService {
       throw new Error(
         ritual.villacuervosPlayId
           ? 'A esta partida se apunta uno en Villacuervos.'
-          : 'Solo se puede apuntar uno a las partidas online de La Secta.'
+          : 'A este ritual no se puede apuntar uno desde aquí.'
       );
     }
+    const intention = ritual.attendanceMode === 'intencion';
     if (ritual.status === 'cancelado') {
-      throw new Error('La partida está cancelada.');
+      throw new Error(intention ? 'El ritual está cancelado.' : 'La partida está cancelada.');
     }
 
     const series = !!(ritual.recurrenceDays || ritual.recurrenceMonths);
@@ -149,25 +155,36 @@ export class RitualService {
       occurrence = date.toISOString();
       startsAt = date;
     }
-    if (startsAt.getTime() <= Date.now()) {
-      throw new Error('La partida ya ha empezado.');
+    // La inscripción se cierra al empezar; la intención de ir, al terminar, para
+    // que en unas jornadas de varios días se pueda avisar a mitad.
+    const duration = ritual.endsAt ? new Date(ritual.endsAt).getTime() - new Date(ritual.startsAt).getTime() : 0;
+    const closesAt = startsAt.getTime() + (intention ? Math.max(0, duration) : 0);
+    if (closesAt <= Date.now()) {
+      throw new Error(intention ? 'El ritual ya ha terminado.' : 'La partida ya ha empezado.');
     }
     return { ritual, occurrence };
   }
 
-  /** Apunta a alguien a una partida. Las plazas no limitan: se apunta igual. */
+  /**
+   * Apunta a alguien a una partida, o anota que quiere asistir a una presencial
+   * o a un evento. Las plazas no limitan: se apunta igual.
+   */
   async signUp(userId: string, id: string, rawOccurrence: unknown): Promise<Ritual> {
-    const { occurrence } = await this.signupTarget(id, rawOccurrence);
+    const { ritual, occurrence } = await this.signupTarget(id, rawOccurrence);
     if (!(await this.signupRepository.add(id, occurrence, userId))) {
-      throw new Error('Ya estás apuntado a esta partida.');
+      throw new Error(
+        ritual.attendanceMode === 'intencion' ? 'Ya habías dicho que quieres asistir.' : 'Ya estás apuntado a esta partida.'
+      );
     }
     return (await this.getById(id))!;
   }
 
   async leave(userId: string, id: string, rawOccurrence: unknown): Promise<Ritual> {
-    const { occurrence } = await this.signupTarget(id, rawOccurrence);
+    const { ritual, occurrence } = await this.signupTarget(id, rawOccurrence);
     if (!(await this.signupRepository.remove(id, occurrence, userId))) {
-      throw new Error('No estabas apuntado a esta partida.');
+      throw new Error(
+        ritual.attendanceMode === 'intencion' ? 'No habías dicho que quisieras asistir.' : 'No estabas apuntado a esta partida.'
+      );
     }
     return (await this.getById(id))!;
   }

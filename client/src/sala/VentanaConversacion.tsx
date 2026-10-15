@@ -13,6 +13,8 @@ interface VentanaConversacionProps {
   /** Lo que se ve y se oye en la conversación, por participante. */
   pistas: Map<string, PistasParticipante>;
   onSalir: () => void;
+  /** La tecla para salir (Retroceso), para decirla. */
+  teclaSalir: string;
   /** El título: recibe el foco al entrar en la conversación. */
   tituloRef: RefObject<HTMLHeadingElement | null>;
 }
@@ -35,7 +37,15 @@ const PASO = 24;
  *
  * No es modal: la mesa y el chat se siguen usando.
  */
-const VentanaConversacion = ({ conversacion, participantes, yo, pistas, onSalir, tituloRef }: VentanaConversacionProps) => {
+const VentanaConversacion = ({
+  conversacion,
+  participantes,
+  yo,
+  pistas,
+  onSalir,
+  teclaSalir,
+  tituloRef,
+}: VentanaConversacionProps) => {
   const [minimizada, setMinimizada] = useState(false);
   // Dónde está la ventana pequeña (esquina de arriba a la izquierda, en px)
   const [posicion, setPosicion] = useState(() => ({ x: Math.max(8, window.innerWidth - ANCHO_PEQUENA - 24), y: 80 }));
@@ -147,7 +157,13 @@ const VentanaConversacion = ({ conversacion, participantes, yo, pistas, onSalir,
           {minimizada ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
           {minimizada ? 'Ampliar' : 'Minimizar'}
         </button>
-        <button type="button" onClick={onSalir} className={`${boton} text-red-300`}>
+        <button
+          type="button"
+          onClick={onSalir}
+          aria-label={escucho ? 'Dejar de escuchar la conversación' : 'Salir de conversación privada'}
+          aria-keyshortcuts={teclaSalir}
+          className={`${boton} text-red-300`}
+        >
           <PhoneOff size={14} />
           {escucho ? 'Dejar de escuchar' : 'Salir'}
         </button>
@@ -169,16 +185,18 @@ const VentanaConversacion = ({ conversacion, participantes, yo, pistas, onSalir,
                 ) : (
                   p.avatar && <img src={getAvatarUrl(p.avatar)} alt="" className="h-full w-full object-contain" />
                 )}
-                {suyas && !suyas.microfono && (
-                  <span className="absolute bottom-1 right-1 rounded-full bg-background/80 p-0.5 text-red-300">
-                    <MicOff size={minimizada ? 12 : 16} />
-                    <span className="sr-only">(micrófono cerrado)</span>
-                  </span>
-                )}
               </span>
-              <span className={`max-w-full truncate ${minimizada ? 'text-[0.65rem]' : 'text-sm'}`}>
-                {p.nombre}
-                {soyYo && ' (tú)'}
+              <span className={`flex max-w-full items-center gap-1 ${minimizada ? 'text-[0.65rem]' : 'text-sm'}`}>
+                {suyas && !suyas.microfono && (
+                  <>
+                    <MicOff size={minimizada ? 11 : 14} className="shrink-0 text-red-300" />
+                    <span className="sr-only">Silenciado: </span>
+                  </>
+                )}
+                <span className="truncate">
+                  {p.nombre}
+                  {soyYo && ' (tú)'}
+                </span>
               </span>
             </li>
           );

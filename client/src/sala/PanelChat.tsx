@@ -1,4 +1,4 @@
-import { SendHorizontal } from 'lucide-react';
+import { ChevronDown, ChevronUp, SendHorizontal } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type RefObject } from 'react';
 import { useAriaLive } from './avisosConfig';
 import { canalesComunes, esPrivado, LARGO_MAXIMO_MENSAJE, nombreCanal, otroDelPrivado, type SalaMensaje } from './chat';
@@ -18,6 +18,9 @@ interface PanelChatProps {
   onEnviar: (para: string, texto: string) => Promise<SalaResultado>;
   /** El campo de escribir: quien abre una conversación le lleva el foco. */
   entradaRef: RefObject<HTMLInputElement | null>;
+  /** Plegado: solo el título (con los que no se han leído); las conversaciones no se ven. */
+  minimizado: boolean;
+  onMinimizar: (minimizado: boolean) => void;
 }
 
 const hora = (ms: number) => new Date(ms).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
@@ -58,6 +61,8 @@ const PanelChat = ({
   onElegir,
   onEnviar,
   entradaRef,
+  minimizado,
+  onMinimizar,
 }: PanelChatProps) => {
   const [texto, setTexto] = useState('');
   const [error, setError] = useState('');
@@ -71,8 +76,12 @@ const PanelChat = ({
   const actual = activo && canales.includes(activo) ? activo : canales[0];
   const delActual = mensajes.filter((m) => m.canal === actual);
   const nombre = (canal: string) => nombreCanal(canal, yo.id, estado.participantes, mensajes);
+  // La conversación que se ve no tiene pendientes (salvo con el chat plegado)
   const sinLeer = (canal: string) =>
-    canal === actual ? 0 : mensajes.filter((m) => m.canal === canal && m.autor !== yo.id && m.hora > (leidoHasta[canal] ?? 0)).length;
+    canal === actual && !minimizado
+      ? 0
+      : mensajes.filter((m) => m.canal === canal && m.autor !== yo.id && m.hora > (leidoHasta[canal] ?? 0)).length;
+  const totalSinLeer = canales.reduce((n, c) => n + sinLeer(c), 0);
   const idPestana = (canal: string) => `sala-chat-pestana-${canal.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 
   // Al llegar mensajes (o cambiar de conversación), se ve el último
@@ -115,137 +124,155 @@ const PanelChat = ({
   return (
     <section
       aria-labelledby="sala-chat-titulo"
-      className="flex h-[26rem] w-full flex-col rounded border border-outline-ghost bg-surface"
+      className={`flex w-full flex-col rounded border border-outline-ghost bg-surface ${minimizado ? '' : 'h-[26rem]'}`}
     >
-      <h2 id="sala-chat-titulo" className="px-3 pt-2 text-xs font-semibold uppercase tracking-wide text-theme-main">
-        Mensajes
-      </h2>
-      <div role="tablist" aria-label="Conversaciones" className="flex flex-wrap gap-1 border-b border-outline-ghost px-2 py-2">
-        {canales.map((canal) => {
-          const elegida = canal === actual;
-          const pendientes = sinLeer(canal);
-          return (
-            <button
-              key={canal}
-              id={idPestana(canal)}
-              type="button"
-              role="tab"
-              aria-selected={elegida}
-              aria-controls="sala-chat-panel"
-              tabIndex={elegida ? 0 : -1}
-              onClick={() => onElegir(canal)}
-              onKeyDown={alTeclear}
-              className={`max-w-[10rem] truncate rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
-                elegida ? 'bg-theme-container font-semibold text-white' : 'text-on-surface-muted hover:bg-theme-container/40'
-              }`}
-            >
-              {nombre(canal)}
-              {pendientes > 0 && (
-                <span className="ml-1 rounded-full bg-theme-main px-1.5 text-[0.65rem] font-bold text-background">
-                  {pendientes}
-                  <span className="sr-only"> sin leer</span>
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      <div id="sala-chat-panel" role="tabpanel" aria-labelledby={idPestana(actual)} className="flex min-h-0 flex-1 flex-col">
-        {/* Las burbujas, como en un móvil: las propias a la derecha (morado), las de los
-            demás a la izquierda (gris cálido), con un piquito en la primera de cada tanda */}
-        <ol
-          ref={listaRef}
-          className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-[#0f0d12] px-3 py-2 text-sm"
-          style={{
-            backgroundImage: 'radial-gradient(rgba(177,156,217,0.06) 1px, transparent 1px)',
-            backgroundSize: '14px 14px',
-          }}
+      {/* El título pliega y despliega las conversaciones (patrón «desplegable») */}
+      <h2 id="sala-chat-titulo" className="text-xs font-semibold uppercase tracking-wide text-theme-main">
+        <button
+          type="button"
+          aria-expanded={!minimizado}
+          aria-controls="sala-chat-contenido"
+          onClick={() => onMinimizar(!minimizado)}
+          className="flex w-full items-center gap-2 rounded px-3 py-2 text-left uppercase hover:bg-theme-container/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
         >
-          {delActual.length === 0 ? (
-            <li className="m-auto rounded-full bg-surface px-3 py-1 text-xs text-on-surface-muted">Todavía no hay mensajes.</li>
-          ) : (
-            delActual.map((m, i) => {
-              const propio = m.autor === yo.id;
-              const junto = vaJunto(m, delActual[i - 1]);
-              // En los grupos, el nombre (con su color) en la primera de cada tanda; en privado no hace falta
-              const conNombre = !propio && !junto && !esPrivado(actual);
-              return (
-                <li key={m.id} className={`flex ${propio ? 'justify-end' : 'justify-start'} ${junto ? 'mt-0.5' : 'mt-2'}`}>
-                  <div
-                    className={`relative max-w-[85%] rounded-lg px-2.5 pb-1 pt-1.5 shadow-sm ${
-                      propio ? 'bg-[#4a3b69] text-[#f1ecfa]' : 'bg-[#26222b] text-on-surface'
-                    } ${!junto ? (propio ? 'rounded-tr-none' : 'rounded-tl-none') : ''}`}
-                  >
-                    {!junto && (
-                      // Piquito de la burbuja, hacia quien habla
-                      <span
-                        aria-hidden="true"
-                        className={`absolute top-0 h-2.5 w-2.5 ${propio ? '-right-2 bg-[#4a3b69]' : '-left-2 bg-[#26222b]'}`}
-                        style={{ clipPath: propio ? 'polygon(0 0, 100% 0, 0 100%)' : 'polygon(0 0, 100% 0, 100% 100%)' }}
-                      />
-                    )}
-                    {conNombre ? (
-                      <p className="text-xs font-semibold" style={{ color: colorDeAutor(m.autor) }}>
-                        {m.autorNombre}
-                      </p>
-                    ) : (
-                      // Para el lector, siempre quién lo dice (a la vista lo dicen el lado y la tanda)
-                      <span className="sr-only">{propio ? 'Tú' : m.autorNombre}: </span>
-                    )}
-                    <p className="whitespace-pre-wrap break-words leading-snug">
-                      {m.texto}
-                      {/* La hora, abajo a la derecha dentro de la burbuja */}
-                      <time
-                        dateTime={new Date(m.hora).toISOString()}
-                        className={`float-right ml-2 mt-1 translate-y-0.5 text-[0.65rem] ${propio ? 'text-[#c9b6ec]' : 'text-on-surface-muted'}`}
-                      >
-                        <span className="sr-only">, </span>
-                        {hora(m.hora)}
-                      </time>
-                    </p>
-                  </div>
-                </li>
-              );
-            })
+          <span className="flex-1">Mensajes</span>
+          {minimizado && totalSinLeer > 0 && (
+            <span className="rounded-full bg-theme-main px-1.5 text-[0.65rem] font-bold normal-case text-background">
+              {totalSinLeer}
+              <span className="sr-only"> sin leer</span>
+            </span>
           )}
-        </ol>
-        <form onSubmit={enviar} className="flex flex-col gap-1 border-t border-outline-ghost bg-surface p-2">
-          <label htmlFor="sala-chat-texto" className="sr-only">
-            Mensaje para {nombre(actual)}
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              ref={entradaRef}
-              id="sala-chat-texto"
-              type="text"
-              value={texto}
-              maxLength={LARGO_MAXIMO_MENSAJE}
-              autoComplete="off"
-              disabled={sinDestino}
-              placeholder={sinDestino ? 'Ya no está en la sala' : `Mensaje para ${nombre(actual)}`}
-              onChange={(e) => setTexto(e.target.value)}
-              aria-invalid={error ? true : undefined}
-              aria-describedby={error ? 'sala-chat-error' : undefined}
-              className="min-w-0 flex-1 rounded-full border border-outline-ghost bg-[#26222b] px-4 py-2 text-sm text-on-surface placeholder:text-on-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
-            />
-            <button
-              type="submit"
-              aria-label="Enviar"
-              aria-disabled={enviando || sinDestino}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#4a3b69] text-[#f1ecfa] hover:bg-theme-main hover:text-background focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main aria-disabled:opacity-50"
-            >
-              <SendHorizontal size={18} />
-            </button>
-          </div>
-          <div aria-live={ariaLive}>
-            {error && (
-              <p id="sala-chat-error" className="text-xs text-red-400">
-                {error}
-              </p>
+          {minimizado ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+        </button>
+      </h2>
+      <div id="sala-chat-contenido" hidden={minimizado} className="flex min-h-0 flex-1 flex-col">
+        <div role="tablist" aria-label="Conversaciones" className="flex flex-wrap gap-1 border-b border-outline-ghost px-2 py-2">
+          {canales.map((canal) => {
+            const elegida = canal === actual;
+            const pendientes = sinLeer(canal);
+            return (
+              <button
+                key={canal}
+                id={idPestana(canal)}
+                type="button"
+                role="tab"
+                aria-selected={elegida}
+                aria-controls="sala-chat-panel"
+                tabIndex={elegida ? 0 : -1}
+                onClick={() => onElegir(canal)}
+                onKeyDown={alTeclear}
+                className={`max-w-[10rem] truncate rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
+                  elegida ? 'bg-theme-container font-semibold text-white' : 'text-on-surface-muted hover:bg-theme-container/40'
+                }`}
+              >
+                {nombre(canal)}
+                {pendientes > 0 && (
+                  <span className="ml-1 rounded-full bg-theme-main px-1.5 text-[0.65rem] font-bold text-background">
+                    {pendientes}
+                    <span className="sr-only"> sin leer</span>
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <div id="sala-chat-panel" role="tabpanel" aria-labelledby={idPestana(actual)} className="flex min-h-0 flex-1 flex-col">
+          {/* Las burbujas, como en un móvil: las propias a la derecha (morado), las de los
+              demás a la izquierda (gris cálido), con un piquito en la primera de cada tanda */}
+          <ol
+            ref={listaRef}
+            className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-[#0f0d12] px-3 py-2 text-sm"
+            style={{
+              backgroundImage: 'radial-gradient(rgba(177,156,217,0.06) 1px, transparent 1px)',
+              backgroundSize: '14px 14px',
+            }}
+          >
+            {delActual.length === 0 ? (
+              <li className="m-auto rounded-full bg-surface px-3 py-1 text-xs text-on-surface-muted">Todavía no hay mensajes.</li>
+            ) : (
+              delActual.map((m, i) => {
+                const propio = m.autor === yo.id;
+                const junto = vaJunto(m, delActual[i - 1]);
+                // En los grupos, el nombre (con su color) en la primera de cada tanda; en privado no hace falta
+                const conNombre = !propio && !junto && !esPrivado(actual);
+                return (
+                  <li key={m.id} className={`flex ${propio ? 'justify-end' : 'justify-start'} ${junto ? 'mt-0.5' : 'mt-2'}`}>
+                    <div
+                      className={`relative max-w-[85%] rounded-lg px-2.5 pb-1 pt-1.5 shadow-sm ${
+                        propio ? 'bg-[#4a3b69] text-[#f1ecfa]' : 'bg-[#26222b] text-on-surface'
+                      } ${!junto ? (propio ? 'rounded-tr-none' : 'rounded-tl-none') : ''}`}
+                    >
+                      {!junto && (
+                        // Piquito de la burbuja, hacia quien habla
+                        <span
+                          aria-hidden="true"
+                          className={`absolute top-0 h-2.5 w-2.5 ${propio ? '-right-2 bg-[#4a3b69]' : '-left-2 bg-[#26222b]'}`}
+                          style={{ clipPath: propio ? 'polygon(0 0, 100% 0, 0 100%)' : 'polygon(0 0, 100% 0, 100% 100%)' }}
+                        />
+                      )}
+                      {conNombre ? (
+                        <p className="text-xs font-semibold" style={{ color: colorDeAutor(m.autor) }}>
+                          {m.autorNombre}
+                        </p>
+                      ) : (
+                        // Para el lector, siempre quién lo dice (a la vista lo dicen el lado y la tanda)
+                        <span className="sr-only">{propio ? 'Tú' : m.autorNombre}: </span>
+                      )}
+                      <p className="whitespace-pre-wrap break-words leading-snug">
+                        {m.texto}
+                        {/* La hora, abajo a la derecha dentro de la burbuja */}
+                        <time
+                          dateTime={new Date(m.hora).toISOString()}
+                          className={`float-right ml-2 mt-1 translate-y-0.5 text-[0.65rem] ${propio ? 'text-[#c9b6ec]' : 'text-on-surface-muted'}`}
+                        >
+                          <span className="sr-only">, </span>
+                          {hora(m.hora)}
+                        </time>
+                      </p>
+                    </div>
+                  </li>
+                );
+              })
             )}
-          </div>
-        </form>
+          </ol>
+          <form onSubmit={enviar} className="flex flex-col gap-1 border-t border-outline-ghost bg-surface p-2">
+            <label htmlFor="sala-chat-texto" className="sr-only">
+              Mensaje para {nombre(actual)}
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                ref={entradaRef}
+                id="sala-chat-texto"
+                type="text"
+                value={texto}
+                maxLength={LARGO_MAXIMO_MENSAJE}
+                autoComplete="off"
+                disabled={sinDestino}
+                placeholder={sinDestino ? 'Ya no está en la sala' : `Mensaje para ${nombre(actual)}`}
+                onChange={(e) => setTexto(e.target.value)}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? 'sala-chat-error' : undefined}
+                className="min-w-0 flex-1 rounded-full border border-outline-ghost bg-[#26222b] px-4 py-2 text-sm text-on-surface placeholder:text-on-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
+              />
+              <button
+                type="submit"
+                aria-label="Enviar"
+                aria-disabled={enviando || sinDestino}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#4a3b69] text-[#f1ecfa] hover:bg-theme-main hover:text-background focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main aria-disabled:opacity-50"
+              >
+                <SendHorizontal size={18} />
+              </button>
+            </div>
+            <div aria-live={ariaLive}>
+              {error && (
+                <p id="sala-chat-error" className="text-xs text-red-400">
+                  {error}
+                </p>
+              )}
+            </div>
+          </form>
+        </div>
       </div>
     </section>
   );

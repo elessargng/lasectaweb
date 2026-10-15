@@ -297,6 +297,13 @@ const Mesa = ({
                   espejo={!!ocupante && ocupante.id === estado.yo}
                   hablando={!!ocupante && !!pistas.get(ocupante.id)?.hablando}
                   enConversacion={!!ocupante && estado.conversaciones.some((c) => c.miembros.includes(ocupante.id))}
+                  // Micro cerrado en la mesa (quien conversa en privado ya lleva su icono)
+                  silenciado={
+                    !!ocupante &&
+                    !!pistas.get(ocupante.id) &&
+                    !pistas.get(ocupante.id)!.microfono &&
+                    !estado.conversaciones.some((c) => c.miembros.includes(ocupante.id))
+                  }
                   asa={editando && real && <AsaMover {...mover.propsAsa(a.id)} nombre={real.nombre} numero={i + 1} />}
                 />
               </li>

@@ -1,4 +1,4 @@
-import { AudioLines } from 'lucide-react';
+import { AudioLines, MicOff } from 'lucide-react';
 import type { VideoTrack } from 'livekit-client';
 import BotonesContacto, { type ContactoParticipante } from './BotonesContacto';
 import VideoPista from './VideoPista';
@@ -38,6 +38,8 @@ interface AsientoProps {
   hablando?: boolean;
   /** Está en una conversación privada (fuera de la mesa). */
   enConversacion?: boolean;
+  /** Tiene el micrófono cerrado (un micro tachado a la izquierda del nombre). */
+  silenciado?: boolean;
 }
 
 /**
@@ -92,6 +94,7 @@ const Asiento = ({
   espejo = false,
   hablando = false,
   enConversacion = false,
+  silenciado = false,
 }: AsientoProps) => {
   const sentarse = !ocupante && puedeSentarse;
   const silla = sillaVacia(angulo);
@@ -139,6 +142,12 @@ const Asiento = ({
                 <>
                   {/* Solo el número: «3, Ana» (la lista ya dice que son asientos) */}
                   <span className="sr-only">{numero}, </span>
+                  {silenciado && (
+                    <>
+                      <MicOff size={13} className="mr-1 inline-block align-[-2px] text-red-300" />
+                      <span className="sr-only">silenciado, </span>
+                    </>
+                  )}
                   <span className={ocupante.conectado ? 'font-semibold' : 'text-on-surface-muted'}>{ocupante.nombre}</span>
                   {esYo && ' (tú)'}
                   {!ocupante.conectado && <span className="text-on-surface-muted"> (desconectado)</span>}

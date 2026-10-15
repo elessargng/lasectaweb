@@ -96,7 +96,9 @@ function describe(ritual: Ritual): string {
   } else if (ritual.maxPlayers) {
     lines.push(`Plazas: ${ritual.maxPlayers}`);
   }
-  if (ritual.signupsEnabled) lines.push(`Apuntados: ${ritual.attendees?.length ?? 0}`);
+  if (ritual.signupsEnabled) {
+    lines.push(`${ritual.attendanceMode === 'intencion' ? 'Quieren asistir' : 'Apuntados'}: ${ritual.attendees?.length ?? 0}`);
+  }
   if (ritual.link) lines.push(`Enlace: ${ritual.link}`);
   if (ritual.villacuervosUrl) lines.push(`Villacuervos: ${ritual.villacuervosUrl}`);
   if (ritual.description) lines.push('', ritual.description);
@@ -170,6 +172,7 @@ export function buildJson(rituals: Ritual[], month: Date, kinds: string[]): stri
         scriptName: r.scriptName,
         maxPlayers: r.maxPlayers,
         signupLists: r.signupLists,
+        attendanceMode: r.attendanceMode,
         attendees: r.signupsEnabled ? (r.attendees ?? []).map((a) => a.username) : undefined,
         storyteller: r.storytellerUsername,
         recurrenceDays: r.recurrenceDays,

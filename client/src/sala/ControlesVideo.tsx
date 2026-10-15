@@ -1,4 +1,4 @@
-import { Mic, MicOff, Video, VideoOff, Volume2, X } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, Volume2, VolumeX, X } from 'lucide-react';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario } from './estilos';
 import type { ProblemaDispositivo } from './useVideollamada';
@@ -12,6 +12,9 @@ interface ControlesVideoProps {
   sinCamaraDeNoche: boolean;
   onMicrofono: () => void;
   onCamara: () => void;
+  /** Oír a los demás (todos lo tienen, también los visitantes). */
+  sonido: boolean;
+  onSonido: () => void;
   /** Las teclas de los atajos, para decirlas («.» y «,»). */
   teclaMicrofono: string;
   teclaCamara: string;
@@ -64,6 +67,8 @@ const ControlesVideo = ({
   sinCamaraDeNoche,
   onMicrofono,
   onCamara,
+  sonido,
+  onSonido,
   teclaMicrofono,
   teclaCamara,
   problema,
@@ -112,6 +117,10 @@ const ControlesVideo = ({
           )}
         </>
       )}
+      {/* Oír a los demás (o dejar de oírlos): para todos */}
+      <button type="button" aria-label="Sonido" aria-pressed={sonido} onClick={onSonido} className={boton(sonido)}>
+        {sonido ? <Volume2 size={18} /> : <VolumeX size={18} />}
+      </button>
       {/* Si no se puede usar la cámara o el micrófono: por qué y cómo arreglarlo */}
       <div aria-live={ariaLive} className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)]">
         {info && (

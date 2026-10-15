@@ -98,6 +98,8 @@ export interface SalaConfiguracion {
   segundosPorFicha: number;
   /** Mensajes privados entre jugadores: ninguno, solo con los vecinos o con todos. */
   mensajes: SalaMensajesPrivados;
+  /** El fondo de la sala (ruta de una imagen en /uploads/sala/fondos), o null: el de por defecto. */
+  fondo: string | null;
 }
 
 /**

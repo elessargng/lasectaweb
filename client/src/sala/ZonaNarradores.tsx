@@ -63,6 +63,11 @@ const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas }: ZonaNarrad
                 espejo={n.id === estado.yo}
                 hablando={pistas?.get(n.id)?.hablando}
                 enConversacion={estado.conversaciones.some((c) => c.miembros.includes(n.id))}
+                silenciado={
+                  !!pistas?.get(n.id) &&
+                  !pistas.get(n.id)!.microfono &&
+                  !estado.conversaciones.some((c) => c.miembros.includes(n.id))
+                }
                 grimorio={
                   puede('sala:solicitarGrimorio')
                     ? { onSolicitar: () => void actuar('sala:solicitarGrimorio') }

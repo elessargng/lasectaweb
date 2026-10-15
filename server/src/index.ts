@@ -381,6 +381,17 @@ DatabaseRepository.getInstance()
       guiones: guionService,
       // Los mensajes de la sala, en memoria (como la sala)
       mensajes: new MemoriaChatRepository(),
+      // Los fondos de la sala se pueden elegir de las imágenes públicas de la Biblioteca:
+      // se leen sin usuario, como alguien sin cuenta (lo que pide registro no vale)
+      imagenesBiblioteca: {
+        leerPublica: async (versionId) => {
+          const info = await libraryService.getVersionDownloadInfo(versionId, undefined).catch(() => {
+            throw new Error('Esa imagen no está en la parte pública de la Biblioteca.');
+          });
+          if (!info.mimeType.startsWith('image/')) throw new Error('Ese documento no es una imagen.');
+          return fs.promises.readFile(info.absolutePath);
+        },
+      },
       // Cámaras y micrófonos: el servidor LiveKit, si está configurado (LIVEKIT_*)
       video: configVideollamada ? new LiveKitProveedor(configVideollamada) : null,
     });

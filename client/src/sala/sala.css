@@ -29,8 +29,16 @@
 }
 
 @layer base {
+  /*
+   * El fondo de la sala: el que elige el narrador (--sala-fondo, lo pone
+   * SalaJuego) o el de por defecto (el de botc.app), cubriendo la ventana y
+   * quieto al desplazarse, con un velo oscuro para que se lean los textos.
+   */
   body {
-    background-color: var(--color-background);
+    background:
+      linear-gradient(rgba(10, 10, 10, 0.35), rgba(10, 10, 10, 0.35)),
+      var(--sala-fondo, url('/fondos/predeterminado.webp')) center / cover no-repeat fixed,
+      var(--color-background);
     color: var(--color-on-surface);
     font-family: var(--font-body);
   }
@@ -116,5 +124,22 @@
     animation: none;
     left: 50%;
     opacity: 0.85;
+  }
+}
+
+/*
+ * Columna de la mesa (SalaJuego), en pantallas anchas. A su izquierda va la de
+ * los narradores y el chat (20rem + 1.5rem de hueco): un margen derecho igual la
+ * deja centrada en la ventana, menguando si falta sitio para la mesa entera (su
+ * lado máximo es 100vh - 8rem). Con la hoja del guion abierta (fija a la derecha,
+ * --sala-panel-guion-ancho), el margen es al menos su ancho: la mesa se aparta a
+ * la izquierda (y encoge si hace falta) en vez de quedar tapada.
+ */
+@media (width >= 64rem) {
+  .sala-columna-mesa {
+    padding-right: max(
+      clamp(0px, 100% - 21.5rem - (100vh - 8rem), 21.5rem),
+      var(--sala-panel-guion-ancho, 0px)
+    );
   }
 }

@@ -127,9 +127,13 @@ function getAuthHeaders(isFormData = false): HeadersInit {
   return headers;
 }
 
-export async function fetchLibraryTree(): Promise<LibrarySection[]> {
+/**
+ * El árbol de la Biblioteca. Con `soloPublico`, como lo ve alguien sin cuenta
+ * (solo lo marcado para todos), aunque haya sesión iniciada.
+ */
+export async function fetchLibraryTree(soloPublico = false): Promise<LibrarySection[]> {
   const res = await fetch(`${API_URL}/library/tree`, {
-    headers: getAuthHeaders()
+    headers: soloPublico ? { 'Content-Type': 'application/json' } : getAuthHeaders()
   });
   return parseApiResponse<LibrarySection[]>(res);
 }

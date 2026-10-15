@@ -100,6 +100,8 @@ export function useVideollamada({
 }: OpcionesVideollamada) {
   const [camara, setCamara] = useState(false);
   const [microfono, setMicrofono] = useState(false);
+  // Oír a los demás (el botón de sonido de la cabecera)
+  const [sonido, setSonido] = useState(true);
   const [problema, setProblema] = useState<ProblemaDispositivo | null>(null);
   const [sonidoBloqueado, setSonidoBloqueado] = useState(false);
   // Lo que se ve y se oye, por sala (se recalcula con cada novedad de LiveKit)
@@ -213,17 +215,17 @@ export function useVideollamada({
     }
   }, [idCamara, idMicrofono]);
 
-  // En una conversación privada, la mesa no se oye
+  // Lo que se oye: nada con el sonido quitado; en una conversación privada, solo ella (la mesa no)
   useEffect(() => {
-    const room = mesaRef.current;
-    if (!room) return;
-    for (const p of room.remoteParticipants.values()) p.setVolume(conversacion ? 0 : 1);
-  }, [conversacion, mesa]);
+    for (const p of mesaRef.current?.remoteParticipants.values() ?? []) p.setVolume(sonido && !conversacion ? 1 : 0);
+    for (const p of privadaRef.current?.remoteParticipants.values() ?? []) p.setVolume(sonido ? 1 : 0);
+  }, [sonido, conversacion, mesa, privada]);
 
   const alternarCamara = useCallback(() => {
     setProblema(null);
     setCamara((c) => !c);
   }, []);
+  const alternarSonido = useCallback(() => setSonido((s) => !s), []);
   const alternarMicrofono = useCallback(() => {
     setProblema(null);
     setMicrofono((m) => !m);
@@ -239,6 +241,8 @@ export function useVideollamada({
     microfono,
     alternarCamara,
     alternarMicrofono,
+    sonido,
+    alternarSonido,
     problema,
     cerrarProblema: () => setProblema(null),
     sonidoBloqueado,

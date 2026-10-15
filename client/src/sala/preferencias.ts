@@ -21,6 +21,8 @@ export interface PreferenciasSala {
   fichaAuto: boolean;
   /** Suenan la cuenta atrás y los votos de la partida. */
   sonidos: boolean;
+  /** El panel de mensajes de texto, plegado. */
+  chatMinimizado: boolean;
   /** Idioma (id del paquete de traducción) de los nombres de los personajes. Pestaña Usuario. */
   idiomaNombres: string;
   /** Idioma de las habilidades y los recordatorios de los personajes. Pestaña Usuario. */
@@ -33,7 +35,7 @@ export interface PreferenciasSala {
 }
 
 type ClaveNumerica = 'tamanoAvatar' | 'tamanoFicha' | 'distanciaFicha';
-type ClaveSiNo = 'avatarAuto' | 'fichaAuto' | 'sonidos';
+type ClaveSiNo = 'avatarAuto' | 'fichaAuto' | 'sonidos' | 'chatMinimizado';
 type ClaveIdioma = 'idiomaNombres' | 'idiomaDescripciones';
 
 /** De entrada, el original (inglés). Si el guardado deja de existir, se ve en el original. */
@@ -55,7 +57,7 @@ export const RANGOS: Record<ClaveNumerica, Rango> = {
 };
 
 /** Valor inicial de las de sí o no: automático, de entrada. */
-const SI_NO: Record<ClaveSiNo, boolean> = { avatarAuto: true, fichaAuto: true, sonidos: true };
+const SI_NO: Record<ClaveSiNo, boolean> = { avatarAuto: true, fichaAuto: true, sonidos: true, chatMinimizado: false };
 
 const KEY = 'sala:preferencias';
 

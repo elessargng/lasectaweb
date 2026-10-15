@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { urlDelServidor } from '../utils/api';
 import { botonPrincipal } from './estilos';
 import Cabecera from './Cabecera';
 import DialogoPreferencias, { type Pestana } from './DialogoPreferencias';
@@ -230,7 +231,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const alMensaje = (m: SalaMensaje) => {
     if (!estado) return;
     // Leído si llega a la conversación que se está viendo
-    if (m.canal === canalActual) setLeidoHasta((l) => ({ ...l, [m.canal]: m.hora }));
+    if (m.canal === canalActual && !preferencias.chatMinimizado) setLeidoHasta((l) => ({ ...l, [m.canal]: m.hora }));
     if (m.autor === estado.yo) return;
     const donde = m.canal === CANAL_GENERAL ? ' en General' : m.canal === CANAL_VISITANTES ? ' en Visitantes' : ' te escribe';
     anunciar('mensajes', `${m.autorNombre}${donde}: ${m.texto}`);
@@ -310,6 +311,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     if (!estado) return;
     const canal = canalPrivado(estado.yo, otroId);
     setPrivadosAbiertos((a) => (a.includes(canal) ? a : [...a, canal]));
+    if (preferencias.chatMinimizado) cambiarPreferencias({ chatMinimizado: false });
     elegirCanal(canal);
     window.setTimeout(() => entradaChatRef.current?.focus(), 0);
   };
@@ -318,6 +320,14 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
   const { preferencias, cambiar: cambiarPreferencias } = usePreferencias();
   useEffect(() => setSonidosActivos(preferencias.sonidos), [preferencias.sonidos]);
+
+  // El fondo de la sala que ha elegido el narrador (sin elegir: el de por defecto, ver sala.css)
+  const fondoSala = estado?.configuracion.fondo ?? null;
+  useEffect(() => {
+    const raiz = document.documentElement;
+    if (fondoSala) raiz.style.setProperty('--sala-fondo', `url("${urlDelServidor(fondoSala)}")`);
+    else raiz.style.removeProperty('--sala-fondo');
+  }, [fondoSala]);
 
   // Videollamada: cámaras y micrófonos en la mesa y en la conversación privada
   // La conversación en la que estoy: hablando (miembro) o escuchando (visitante)
@@ -509,6 +519,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           [atajos.camara, alternarCamaraConAtajo] as [Atajo, () => void],
         ]
       : []),
+    // Retroceso: salir de la conversación privada (o dejar de escuchar)
+    ...(miConversacion ? [[atajos.salirConversacion, () => void salirDeConversacion()] as [Atajo, () => void]] : []),
   ];
   // Los atajos tienen prioridad sobre el control con el foco: se escuchan en la fase
   // de captura (antes que él) y no se dejan seguir, ni al pulsar ni al soltar
@@ -644,7 +656,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             id: 'partida',
             etiqueta: 'Partida',
             conControles: true,
-            contenido: <PanelPartida configuracion={estado.configuracion} onCambiar={configurarPartida} />,
+            contenido: (
+              <PanelPartida
+                configuracion={estado.configuracion}
+                onCambiar={configurarPartida}
+                onCambiarFondo={(cambio) => pedir('narrador:cambiarFondo', cambio)}
+              />
+            ),
           },
         ]
       : []),
@@ -745,6 +763,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   sinCamaraDeNoche={sinCamaraDeNoche}
                   onMicrofono={video.alternarMicrofono}
                   onCamara={video.alternarCamara}
+                  sonido={video.sonido}
+                  onSonido={video.alternarSonido}
                   teclaMicrofono={atajos.microfono.key}
                   teclaCamara={atajos.camara.key}
                   problema={video.problema}
@@ -874,10 +894,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                     onElegir={elegirCanal}
                     onEnviar={enviarMensaje}
                     entradaRef={entradaChatRef}
+                    minimizado={preferencias.chatMinimizado}
+                    onMinimizar={(chatMinimizado) => cambiarPreferencias({ chatMinimizado })}
                   />
                 )}
               </div>
-              <div className="min-w-0 flex-1">
+              {/* sala-columna-mesa: la mesa centrada en la ventana y apartada de la hoja del guion (sala.css) */}
+              <div className="sala-columna-mesa min-w-0 flex-1">
                 <Mesa
                   estado={estado}
                   manual={{ avatar: preferencias.tamanoAvatar, ficha: preferencias.tamanoFicha }}
@@ -916,6 +939,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             yo={estado.yo}
             pistas={video.privada}
             onSalir={() => void salirDeConversacion()}
+            teclaSalir={atajos.salirConversacion.key}
           />
         )}
 

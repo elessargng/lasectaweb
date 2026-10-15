@@ -43,6 +43,8 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
   const io = new Server(httpServer, {
     path: SALA_SOCKET_PATH,
     cors: { origin: '*' },
+    // Un fondo de la sala subido desde el ordenador (data URL) puede pasar de 1 MB
+    maxHttpBufferSize: 8 * 1024 * 1024,
   });
   const sala = new SalaService();
   const chat = new ChatService(deps.mensajes, sala);

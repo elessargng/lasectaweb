@@ -1,4 +1,5 @@
 import type { VideoTrack } from 'livekit-client';
+import { MicOff } from 'lucide-react';
 import BotonesContacto, { type ContactoParticipante } from './BotonesContacto';
 import VideoPista from './VideoPista';
 import CuadroAvatar from './CuadroAvatar';
@@ -21,6 +22,8 @@ interface CuadroNarradorProps {
   espejo?: boolean;
   hablando?: boolean;
   enConversacion?: boolean;
+  /** Tiene el micrófono cerrado (un micro tachado a la izquierda del nombre). */
+  silenciado?: boolean;
 }
 
 /**
@@ -43,6 +46,7 @@ const CuadroNarrador = ({
   espejo = false,
   hablando = false,
   enConversacion = false,
+  silenciado = false,
 }: CuadroNarradorProps) => (
   <div className={`group relative rounded ${hablando ? 'ring-2 ring-[#b19cd9] ring-offset-2 ring-offset-background' : ''}`}>
     <CuadroAvatar
@@ -54,6 +58,12 @@ const CuadroNarrador = ({
       pie={
         <p id={idNombreNarrador(narrador.id)} tabIndex={-1} className="mt-2 text-center font-semibold break-words focus:outline-none">
           <span className="sr-only">Narrador: </span>
+          {silenciado && (
+            <>
+              <MicOff size={14} className="mr-1 inline-block align-[-2px] text-red-300" />
+              <span className="sr-only">silenciado, </span>
+            </>
+          )}
           {narrador.nombre}
           {esYo && ' (tú)'}
           {!narrador.conectado && <span className="font-normal text-on-surface-muted"> (desconectado)</span>}

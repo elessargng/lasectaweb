@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Modal } from "./Modal";
 import { listRituals, type Ritual } from "../utils/ritualsApi";
 import { RITUAL_KINDS, kindOf, alpha } from "./rituales/ritualKinds";
-import { addDays, coversDay, dayKey, expandOccurrences, formatTime, isSameDay, keyOf, startOfDay } from "./rituales/ritualDates";
+import { addDays, coversDay, dayKey, expandOccurrences, formatTime, isSameDay, keyOf, ritualPath, startOfDay } from "./rituales/ritualDates";
 
 import {
   CirclePlus
@@ -73,7 +73,7 @@ function RitualPill({ ritual, day, onHover }: {
     );
   }
   return (
-    <Link to={`/rituales?dia=${dayKey(day)}`} className={className} style={colors} {...hoverProps}>
+    <Link to={ritualPath(ritual)} className={className} style={colors} {...hoverProps}>
       {content}
     </Link>
   );

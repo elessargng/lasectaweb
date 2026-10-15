@@ -144,6 +144,7 @@ export class SalaService {
     grimorioJugadores: false,
     segundosPorFicha: SALA_SEGUNDOS_POR_FICHA.defecto,
     mensajes: 'todos',
+    fondo: null,
   };
   private nominacionEnCurso: NominacionInterna | null = null;
   private revelacionActual: { ganador: SalaAlineamiento; reveladas: string[] } | null = null;

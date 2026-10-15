@@ -5,6 +5,8 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api';
 export type RitualType = 'partida_online' | 'partida_presencial' | 'jornada';
 export type RitualManager = 'secta' | 'villacuervos';
 export type RitualStatus = 'programado' | 'cancelado';
+/** Inscripción (online de La Secta) o solo intención de asistir (presenciales y eventos). */
+export type RitualAttendanceMode = 'inscripcion' | 'intencion';
 
 /** Una lista de inscripción de Villacuervos (narración, jugadores...). */
 export interface RitualSignupList {
@@ -50,10 +52,15 @@ export interface Ritual {
   villacuervosUrl?: string;
   /** Listas de inscripción, leídas de Villacuervos. */
   signupLists?: RitualSignupList[];
-  /** Admite que la gente se apunte aquí: solo partidas online de La Secta no publicadas en Villacuervos. */
-  signupsEnabled?: boolean;
   /**
-   * Gente apuntada, en el orden en que se apuntó. Al desplegar una serie, cada
+   * Admite que la gente se apunte aquí: partidas online de La Secta no
+   * publicadas en Villacuervos, y presenciales y eventos de La Secta.
+   */
+  signupsEnabled?: boolean;
+  /** Con signupsEnabled: inscripción, o solo intención de asistir, sin orden ni plazas. */
+  attendanceMode?: RitualAttendanceMode;
+  /**
+   * Gente apuntada (o que quiere asistir), en el orden en que lo dijo. Al desplegar una serie, cada
    * repetición se queda solo con la suya.
    */
   attendees?: RitualAttendee[];

@@ -56,7 +56,8 @@ const Sala = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-on-surface">
+    // Sin fondo propio: se ve el de la sala (el del body, ver sala.css)
+    <div className="min-h-screen flex flex-col text-on-surface">
       {dentro ? (
         <SalaJuego
           cuenta={

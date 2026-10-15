@@ -1,6 +1,7 @@
 import Deslizador from './Deslizador';
+import FondoSala, { type CambioFondo } from './FondoSala';
 import type { SalaMensajesPrivados } from './chat';
-import type { SalaConfiguracion } from './useSala';
+import type { SalaConfiguracion, SalaResultado } from './useSala';
 
 /** Lo que tarda la aguja de ficha en ficha al votar; el servidor tiene los mismos límites. */
 const SEGUNDOS_POR_FICHA = { min: 0.25, max: 2, paso: 0.25, defecto: 1 };
@@ -9,13 +10,15 @@ interface PanelPartidaProps {
   configuracion: SalaConfiguracion;
   /** Pide el cambio al servidor: estos ajustes valen para toda la sala. */
   onCambiar: (cambios: Partial<SalaConfiguracion>) => void;
+  /** Cambia el fondo de la sala (subida, Biblioteca o el de por defecto). */
+  onCambiarFondo: (cambio: CambioFondo) => Promise<SalaResultado>;
 }
 
 /**
  * Pestaña Partida (narradores): ajustes de la partida que valen para todos. Se
  * guardan en el servidor; la casilla refleja siempre lo que hay allí.
  */
-const PanelPartida = ({ configuracion, onCambiar }: PanelPartidaProps) => (
+const PanelPartida = ({ configuracion, onCambiar, onCambiarFondo }: PanelPartidaProps) => (
   <div className="flex flex-col gap-6">
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
@@ -65,6 +68,7 @@ const PanelPartida = ({ configuracion, onCambiar }: PanelPartidaProps) => (
       ayuda="Lo que tarda la aguja en pasar de una ficha a la siguiente."
       onCambiar={(segundosPorFicha) => onCambiar({ segundosPorFicha })}
     />
+    <FondoSala fondo={configuracion.fondo} onCambiar={onCambiarFondo} />
   </div>
 );
 

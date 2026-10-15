@@ -19,14 +19,39 @@ export function mainSignupList(ritual: Ritual): RitualSignupList | undefined {
   return [...lists].sort((a, b) => a.order - b.order).at(-1);
 }
 
+/** Si apuntarse es solo avisar de que se piensa ir: presenciales y eventos. */
+export function isIntention(ritual: Ritual): boolean {
+  return ritual.attendanceMode === 'intencion';
+}
+
 /**
  * Lo que se muestra en el resumen de una partida: en las online de La Secta, cuánta
  * gente hay apuntada; en las de Villacuervos, "11/12" de su lista principal; y
- * si no, las plazas.
+ * si no, las plazas. En las presenciales y los eventos siguen las plazas: quien
+ * quiere asistir no las ocupa.
  */
 export function compactPlaces(ritual: Ritual): string | null {
-  if (ritual.signupsEnabled) return String(ritual.attendees?.length ?? 0);
+  if (ritual.signupsEnabled && !isIntention(ritual)) return String(ritual.attendees?.length ?? 0);
   const main = mainSignupList(ritual);
   if (main) return formatCount(main);
   return ritual.maxPlayers ? String(ritual.maxPlayers) : null;
+}
+
+/**
+ * Resumen de quién va, para la tarjeta del lateral: "4 quieren asistir, contigo",
+ * "5 apuntados de 12 plazas" o "11/12 inscritos en Villacuervos". La lista
+ * completa solo está en el detalle.
+ */
+export function attendanceSummary(ritual: Ritual, userId?: string): string | null {
+  if (ritual.signupsEnabled) {
+    const count = ritual.attendees?.length ?? 0;
+    const withYou = !!userId && !!ritual.attendees?.some((a) => a.userId === userId);
+    const text = isIntention(ritual)
+      ? `${count} ${count === 1 ? 'quiere' : 'quieren'} asistir`
+      : `${count} ${count === 1 ? 'apuntado' : 'apuntados'}${ritual.maxPlayers ? ` de ${ritual.maxPlayers} plazas` : ''}`;
+    return withYou ? `${text}, contigo` : text;
+  }
+  const main = mainSignupList(ritual);
+  if (main) return `${formatCount(main)} inscritos en Villacuervos`;
+  return null;
 }
