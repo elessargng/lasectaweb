@@ -2,8 +2,8 @@ export interface Character {
   id: string;
   name: string;
   originalName: string;
-  team: 'townsfolk' | 'outsider' | 'minion' | 'demon' | 'traveller' | 'fabled';
-  edition: 'trouble-brewing' | 'bad-moon-rising' | 'sects-and-violets' | 'experimental' | 'traveller' | 'fabled';
+  team: 'townsfolk' | 'outsider' | 'minion' | 'demon' | 'traveller' | 'fabled' | 'loric';
+  edition: 'trouble-brewing' | 'bad-moon-rising' | 'sects-and-violets' | 'experimental' | 'fabled' | 'loric';
   ability: string;
   summary: string;
   firstNight?: string;
@@ -700,83 +700,257 @@ export const allBotcCharacters: Character[] = [
 
   // ==========================================
   // TRAVELLERS (VIAJEROS)
+  // Cada viajero va con el guion al que pertenece (wiki oficial: /Travellers).
+  // Nombre y habilidad: traducción de Castelgard del catálogo sincronizado con Villacuervos.
   // ==========================================
+
+  // --- Viajeros · Trouble Brewing ---
   {
     id: 'scapegoat',
     name: 'Chivo Expiatorio',
     originalName: 'Scapegoat',
     team: 'traveller',
-    edition: 'traveller',
-    ability: 'Si un jugador de tu bando es ejecutado, puedes decidir morir en su lugar.',
-    summary: 'Mártir que asume el castigo de la soga para salvar a un aliado.'
-  },
-  {
-    id: 'beggar',
-    name: 'Mendigo',
-    originalName: 'Beggar',
-    team: 'traveller',
-    edition: 'traveller',
-    ability: 'No tienes voto. Solo puedes votar si un jugador vivo te concede su ficha de voto.',
-    summary: 'Pide caridad democrática a los conciudadanos para intervenir en las ejecuciones.'
-  },
-  {
-    id: 'bureaucrat',
-    name: 'Burocrata',
-    originalName: 'Bureaucrat',
-    team: 'traveller',
-    edition: 'traveller',
-    ability: 'Cada noche, elige un jugador: su voto mañana vale por 3 votos.',
-    summary: 'Concede un peso político aplastante al voto del ciudadano elegido.'
-  },
-  {
-    id: 'thief',
-    name: 'Ladrón',
-    originalName: 'Thief',
-    team: 'traveller',
-    edition: 'traveller',
-    ability: 'Cada noche, elige un jugador: su voto mañana vale por -1 voto.',
-    summary: 'Resta fuerza democrática al sospechoso o enemigo designado.'
+    edition: 'trouble-brewing',
+    ability: 'Si un jugador de tu alineamiento es ejecutado, podrías ser ejecutado en su lugar.',
+    summary: 'El Narrador puede ejecutarle en lugar de un aliado de su bando: protege a su equipo cargando con la soga.'
   },
   {
     id: 'gunslinger',
     name: 'Pistolero',
     originalName: 'Gunslinger',
     team: 'traveller',
-    edition: 'traveller',
-    ability: 'Cada día, tras la primera votación, elige a un jugador que haya votado: ese jugador muere.',
-    summary: 'Justiciero nocturno que ajusticia de inmediato a quienes alcen la mano en votaciones.'
+    edition: 'trouble-brewing',
+    ability: 'Cada día, después del recuento de la 1ª votación, puedes elegir a un jugador que haya votado: muere.',
+    summary: 'Castiga los votos: tras la primera votación del día puede matar a cualquiera que haya votado.'
+  },
+  {
+    id: 'beggar',
+    name: 'Mendigo',
+    originalName: 'Beggar',
+    team: 'traveller',
+    edition: 'trouble-brewing',
+    ability: 'Debes usar una ficha de voto para votar. Si un jugador muerto te da la suya, descubres su alineamiento. Estás sobrio y sano.',
+    summary: 'Necesita que le cedan fichas de voto para votar, y así descubre el bando de los muertos que le ayudan.'
+  },
+  {
+    id: 'bureaucrat',
+    name: 'Burócrata',
+    originalName: 'Bureaucrat',
+    team: 'traveller',
+    edition: 'trouble-brewing',
+    ability: 'Cada noche elige a un jugador (no a ti mismo): mañana su voto cuenta como 3 votos.',
+    summary: 'Multiplica el peso de un voto: el jugador elegido vota por tres al día siguiente.'
+  },
+  {
+    id: 'thief',
+    name: 'Ladrón',
+    originalName: 'Thief',
+    team: 'traveller',
+    edition: 'trouble-brewing',
+    ability: 'Cada noche, elige a un jugador (no a ti mismo): mañana su voto cuenta negativo.',
+    summary: 'Resta en lugar de sumar: el voto del jugador elegido cuenta en negativo al día siguiente.'
+  },
+
+  // --- Viajeros · Bad Moon Rising ---
+  {
+    id: 'apprentice',
+    name: 'Aprendiz',
+    originalName: 'Apprentice',
+    team: 'traveller',
+    edition: 'bad-moon-rising',
+    ability: 'En tu 1ª noche, obtienes una habilidad de Aldeano (si eres bueno), o una habilidad de Esbirro (si eres malvado).',
+    summary: 'Llega aprendiendo un oficio: gana la habilidad de un Aldeano si es bueno o la de un Esbirro si es malvado.'
+  },
+  {
+    id: 'matron',
+    name: 'Institutriz',
+    originalName: 'Matron',
+    team: 'traveller',
+    edition: 'bad-moon-rising',
+    ability: 'Cada día, puedes elegir hasta 3 grupos de 2 jugadores para intercambiar asientos. Los jugadores no pueden abandonar sus asientos para hablar en privado.',
+    summary: 'Reorganiza el círculo cambiando de sitio a los jugadores y prohíbe las conversaciones privadas fuera de los asientos.'
   },
   {
     id: 'judge',
     name: 'Juez',
     originalName: 'Judge',
     team: 'traveller',
-    edition: 'traveller',
-    ability: 'Una vez por partida, si te parece justa una votación, puedes forzar que la ejecución se cumpla o se anule inmediatamente.',
-    summary: 'Autoridad suprema de la corte con poder de veto de ejecución.'
+    edition: 'bad-moon-rising',
+    ability: 'Una vez por partida, si otro jugador ha nominado, puedes forzar la ejecución actual para que tenga éxito o fracase.',
+    summary: 'Una vez por partida decide el resultado de una votación ajena: la ejecución sale adelante o fracasa, voten lo que voten.'
   },
-
-
-  // ==========================================
-  // FABLED (LEGENDARIOS)
-  // ==========================================
   {
-    id: 'doomsayer',
-    name: 'Agorero',
-    originalName: 'Doomsayer',
-    team: 'fabled',
-    edition: 'fabled',
-    ability: 'Si 4 o más jugadores están vivos, cualquier jugador puede reclamar el poder del Agorero para matar a un sospechoso, pero su propio bando sufre penalización.',
-    summary: 'Habilidad legendaria global que permite sacrificios extremos por justicia.'
+    id: 'bishop',
+    name: 'Obispo',
+    originalName: 'Bishop',
+    team: 'traveller',
+    edition: 'bad-moon-rising',
+    ability: 'Solo el Narrador puede nominar. Al menos 1 jugador contrario debe ser nominado cada día.',
+    summary: 'Quita las nominaciones a los jugadores: solo nomina el Narrador, que cada día debe nominar a alguien del bando contrario.'
   },
+  {
+    id: 'voudon',
+    name: 'Voudon',
+    originalName: 'Voudon',
+    team: 'traveller',
+    edition: 'bad-moon-rising',
+    ability: 'Solo tú y los muertos podéis votar. No necesitan una ficha de votación para hacerlo. No se requiere una mayoría del 50%.',
+    summary: 'Da el poder a los muertos: solo ellos y el Voudon votan, sin gastar fichas y sin necesidad de mayoría.'
+  },
+
+  // --- Viajeros · Sects & Violets ---
+  {
+    id: 'butcher',
+    name: 'Carnicero',
+    originalName: 'Butcher',
+    team: 'traveller',
+    edition: 'sects-and-violets',
+    ability: 'Cada día, después de la 1ª ejecución, puedes nominar otra vez.',
+    summary: 'Alarga el día: tras la primera ejecución puede volver a nominar.'
+  },
+  {
+    id: 'bone-collector',
+    name: 'Coleccionista de Huesos',
+    originalName: 'Bone Collector',
+    team: 'traveller',
+    edition: 'sects-and-violets',
+    ability: 'Una vez por partida, por la noche*, elige a un jugador muerto: recupera su habilidad hasta el anochecer.',
+    summary: 'Una vez por partida devuelve a un muerto su habilidad hasta el anochecer.'
+  },
+  {
+    id: 'harlot',
+    name: 'Meretriz',
+    originalName: 'Harlot',
+    team: 'traveller',
+    edition: 'sects-and-violets',
+    ability: 'Cada noche*, elige a un jugador vivo: si está de acuerdo, descubres su personaje, pero ambos podríais morir.',
+    summary: 'Pide a un jugador que le revele su personaje; si acepta, el Narrador puede matar a ambos.'
+  },
+  {
+    id: 'barista',
+    name: 'Barista',
+    originalName: 'Barista',
+    team: 'traveller',
+    edition: 'sects-and-violets',
+    ability: 'Cada noche, hasta el anochecer, 1) un jugador pasa a estar sobrio, sano y obtiene información verdadera, o, 2) su habilidad funciona dos veces. El jugador descubre cuál.',
+    summary: 'Cada noche sirve a un jugador: o su información es verdadera y está sobrio, o su habilidad actúa dos veces.'
+  },
+  {
+    id: 'deviant',
+    name: 'Pervertido',
+    originalName: 'Deviant',
+    team: 'traveller',
+    edition: 'sects-and-violets',
+    ability: 'Si hoy has sido gracioso, no puedes morir exiliado.',
+    summary: 'Se salva del exilio con humor: si ha sido gracioso ese día, no puede morir exiliado.'
+  },
+
+  // --- Viajeros · Experimentales ---
+  {
+    id: 'cacklejack',
+    name: 'Risistencia',
+    originalName: 'Cacklejack',
+    team: 'traveller',
+    edition: 'experimental',
+    ability: 'Cada día elige 1 jugador: un jugador diferente cambia de personaje esta noche.',
+    summary: 'Siembra el caos de identidades: cada día elige a un jugador y otro distinto cambia de personaje esa noche.'
+  },
+  {
+    id: 'gangster',
+    name: 'Gánster',
+    originalName: 'Gangster',
+    team: 'traveller',
+    edition: 'experimental',
+    ability: 'Una vez por día puedes matar a uno de tus vecinos vivos si el otro vecino vivo lo acepta.',
+    summary: 'Ajusta cuentas en el día: puede matar a un vecino vivo si su otro vecino vivo está de acuerdo.'
+  },
+  {
+    id: 'gnome',
+    name: 'Gnomo',
+    originalName: 'Gnome',
+    team: 'traveller',
+    edition: 'experimental',
+    ability: 'Todos los jugadores empiezan conociendo a un jugador de tu alineamiento. Puedes elegir matar a quien le nomine.',
+    summary: 'Todos conocen a un amigo de su bando, y el Gnomo puede matar a quien lo nomine.'
+  },
+
+
+  // ==========================================
+  // FABLED (FÁBULAS)
+  // Personajes del Narrador, fuera de los bandos (wiki oficial: /Fabled).
+  // Nombre y habilidad: traducción de Castelgard del catálogo sincronizado con Villacuervos.
+  // ==========================================
   {
     id: 'angel',
     name: 'Ángel',
     originalName: 'Angel',
     team: 'fabled',
     edition: 'fabled',
-    ability: 'Protege a los jugadores novatos de ser acosados o eliminados prematuramente por el grupo.',
-    summary: 'Guardia espiritual que vela por la buena convivencia y la curva de aprendizaje de los iniciados.'
+    ability: 'Algo malo podría pasarle a quien sea más responsable de la muerte de un jugador nuevo.',
+    summary: 'Protege a los jugadores nuevos: quien más culpa tenga de su muerte puede sufrir las consecuencias.'
+  },
+  {
+    id: 'buddhist',
+    name: 'Budista',
+    originalName: 'Buddhist',
+    team: 'fabled',
+    edition: 'fabled',
+    ability: 'Durante los primeros 2 minutos de cada día, los jugadores veteranos no pueden hablar.',
+    summary: 'Da voz a los nuevos: los veteranos callan los primeros dos minutos de cada día.'
+  },
+  {
+    id: 'doomsayer',
+    name: 'Agorero',
+    originalName: 'Doomsayer',
+    team: 'fabled',
+    edition: 'fabled',
+    ability: 'Si quedan 4 o más jugadores vivos, cada jugador vivo puede elegir públicamente (una vez por partida) que un jugador de su propio alineamiento muera.',
+    summary: 'Acelera las partidas grandes: con 4 o más vivos, cada jugador puede sacrificar una vez a alguien de su bando.'
+  },
+  {
+    id: 'fiddler',
+    name: 'Violinista',
+    originalName: 'Fiddler',
+    team: 'fabled',
+    edition: 'fabled',
+    ability: 'Una vez por partida, el Demonio elige en secreto a un jugador contrario: todos los jugadores eligen cuál de estos 2 jugadores gana.',
+    summary: 'Resuelve la partida en un duelo: el Demonio reta a un rival y todos votan cuál de los dos gana.'
+  },
+  {
+    id: 'hells-librarian',
+    name: 'Bibliotecario del Infierno',
+    originalName: 'Hell\'s Librarian',
+    team: 'fabled',
+    edition: 'fabled',
+    ability: 'Algo malo podría pasarle a quien hable cuando el Narrador ha pedido silencio.',
+    summary: 'Pone orden en la mesa: quien hable cuando el Narrador pide silencio puede pagarlo.'
+  },
+  {
+    id: 'revolutionary',
+    name: 'Revolucionario',
+    originalName: 'Revolutionary',
+    team: 'fabled',
+    edition: 'fabled',
+    ability: 'Se sabe que 2 jugadores vecinos son del mismo alineamiento. Una vez por partida, uno de ellos es percibido incorrectamente.',
+    summary: 'Pensado para quien juega en pareja: dos vecinos son del mismo bando, aunque uno puede registrarse mal una vez.'
+  },
+  {
+    id: 'toymaker',
+    name: 'Juguetero',
+    originalName: 'Toymaker',
+    team: 'fabled',
+    edition: 'fabled',
+    ability: 'El Demonio puede elegir no atacar y debe hacer esto al menos una vez por partida. Los jugadores malvados reciben información inicial normal.',
+    summary: 'Partidas más suaves para principiantes: el Demonio puede no matar alguna noche y los malvados reciben su información inicial.'
+  },
+  {
+    id: 'djinn',
+    name: 'Djinn',
+    originalName: 'Djinn',
+    team: 'fabled',
+    edition: 'fabled',
+    ability: 'Usa la regla especial del Djinn. Todos los jugadores saben cuál es.',
+    summary: 'Avisa de que el guion tiene combinaciones de personajes con reglas especiales, que todos conocen.'
   },
   {
     id: 'duchess',
@@ -784,8 +958,17 @@ export const allBotcCharacters: Character[] = [
     originalName: 'Duchess',
     team: 'fabled',
     edition: 'fabled',
-    ability: 'Cada día, 3 jugadores pueden visitar a la Duquesa para saber si entre ellos hay alguien del mal.',
-    summary: 'Anfitriona noble que concede oráculos a grupos de visitantes.'
+    ability: 'Cada día, 3 jugadores pueden elegir visitarte. Por la noche*, cada visitante descubre cuántos visitantes son malvados, pero 1 recibe información falsa.',
+    summary: 'Cada día tres jugadores la visitan y por la noche saben cuántos visitantes son malvados, aunque uno recibe información falsa.'
+  },
+  {
+    id: 'fibbin',
+    name: 'Fibbin',
+    originalName: 'Fibbin',
+    team: 'fabled',
+    edition: 'fabled',
+    ability: 'Una vez por partida, 1 jugador bueno podría recibir información incorrecta.',
+    summary: 'Una vez por partida, un jugador bueno puede recibir información incorrecta: útil en guiones con poca desinformación.'
   },
   {
     id: 'sentinel',
@@ -793,8 +976,141 @@ export const allBotcCharacters: Character[] = [
     originalName: 'Sentinel',
     team: 'fabled',
     edition: 'fabled',
-    ability: 'En el setup, puede haber +1 o -1 Forasteros respecto al número estándar.',
-    summary: 'Altera impredeciblemente la cuenta de Forasteros en la partida.'
+    ability: 'Podría haber 1 Forastero adicional o 1 menos en juego.',
+    summary: 'Permite al Narrador poner un Forastero más o uno menos de lo habitual.'
+  },
+  {
+    id: 'spirit-of-ivory',
+    name: 'Espíritu de Marfil',
+    originalName: 'Spirit of Ivory',
+    team: 'fabled',
+    edition: 'fabled',
+    ability: 'No puede haber más de 1 jugador malvado adicional.',
+    summary: 'Pone un límite al mal: no puede haber más de un jugador malvado extra.'
+  },
+  {
+    id: 'deus-ex-fiasco',
+    name: 'Deus Ex Fiasco',
+    originalName: 'Deus ex Fiasco',
+    team: 'fabled',
+    edition: 'fabled',
+    ability: 'Al menos una vez por partida, el Narrador cometerá un error, lo corregirá y lo admitirá públicamente.',
+    summary: 'Reconoce que el Narrador también se equivoca: al menos una vez cometerá un error, lo corregirá y lo admitirá.'
+  },
+  {
+    id: 'ferryman',
+    name: 'Barquero',
+    originalName: 'Ferryman',
+    team: 'fabled',
+    edition: 'fabled',
+    ability: 'En el último día, todos los jugadores muertos recuperan su voto.',
+    summary: 'Da una última oportunidad a los muertos: el día final todos recuperan su ficha de voto.'
+  },
+
+
+  // ==========================================
+  // LORIC
+  // Personajes del Narrador que añaden giros a la partida (wiki oficial: /Loric).
+  // Nombre y habilidad: traducción de Castelgard del catálogo sincronizado con Villacuervos.
+  // ==========================================
+  {
+    id: 'big-wig',
+    name: 'Mandamás',
+    originalName: 'Big Wig',
+    team: 'loric',
+    edition: 'loric',
+    ability: 'Cada nominado elige 1 jugador: hasta la votación, sólo puede hablar el elegido y está loco de que el nominado es bueno o puede morir.',
+    summary: 'Cambia los debates: cada nominado elige a un único portavoz, que debe convencer a la mesa de que el nominado es bueno o arriesgarse a morir.'
+  },
+  {
+    id: 'bootlegger',
+    name: 'Contrabandista',
+    originalName: 'Bootlegger',
+    team: 'loric',
+    edition: 'loric',
+    ability: 'Este guion tiene personajes o reglas caseras.',
+    summary: 'Avisa de que el guion incluye personajes o reglas caseras, que el Narrador explica antes de empezar.'
+  },
+  {
+    id: 'gardener',
+    name: 'Jardinero',
+    originalName: 'Gardener',
+    team: 'loric',
+    edition: 'loric',
+    ability: 'El Narrador puede asignar 1 o más personajes a jugadores específicos.',
+    summary: 'Permite al Narrador elegir qué personaje recibe un jugador concreto, en vez de repartirlos al azar.'
+  },
+  {
+    id: 'god-of-ug',
+    name: 'Dios de Ug',
+    originalName: 'God of Ug',
+    team: 'loric',
+    edition: 'loric',
+    ability: 'Un gorro Ug. Si tú tener gorro ug, tú hablar un sonido cada vez pero votar doble. Si tú fallar, tú perder gorro Ug.',
+    summary: 'Un gorro pasa de mano en mano: quien lo lleva solo puede hablar con sonidos sueltos, pero su voto vale doble.'
+  },
+  {
+    id: 'hindu',
+    name: 'Hindú',
+    originalName: 'Hindu',
+    team: 'loric',
+    edition: 'loric',
+    ability: 'Los primeros 4 jugadores que mueran se reencarnan en Viajeros del mismo alineamiento.',
+    summary: 'Los cuatro primeros muertos se reencarnan al momento como Viajeros de su mismo bando.'
+  },
+  {
+    id: 'knaves',
+    name: 'Truhanes',
+    originalName: 'Knaves',
+    team: 'loric',
+    edition: 'loric',
+    ability: 'Hay 2 Narradores: uno miente y otro dice la verdad. Una vez por partida, en el crepúsculo, pueden cambiar.',
+    summary: 'Dos Narradores dirigen la partida: uno siempre miente y el otro dice la verdad, y pueden intercambiarse una vez.'
+  },
+  {
+    id: 'pope',
+    name: 'Papa',
+    originalName: 'Pope',
+    team: 'loric',
+    edition: 'loric',
+    ability: 'Hay personajes buenos duplicados en juego. Pueden ser faroles.',
+    summary: 'Puede haber personajes buenos repetidos en juego, así que dos jugadores pueden decir la verdad con el mismo personaje.'
+  },
+  {
+    id: 'storm-catcher',
+    name: 'Atrapa tormentas',
+    originalName: 'Storm Catcher',
+    team: 'loric',
+    edition: 'loric',
+    ability: 'Nombra un personaje bueno. Si está en juego sólo puede morir por ejecución, pero los malos saben quién es.',
+    summary: 'Protege a un personaje bueno nombrado: solo puede morir ejecutado, pero el mal sabe quién es.'
+  },
+  {
+    id: 'tor',
+    name: 'Tor',
+    originalName: 'Tor',
+    team: 'loric',
+    edition: 'loric',
+    ability: 'Los jugadores no saben su personaje o alineamiento. Lo descubren cuando mueren.',
+    summary: 'Nadie sabe su personaje ni su bando hasta que muere: la partida se juega a ciegas.'
+  },
+  {
+    id: 'ventriloquist',
+    name: 'Ventrílocuo',
+    originalName: 'Ventriloquist',
+    team: 'loric',
+    edition: 'loric',
+    ability: 'Si un jugador está loco de ser un personaje nuevo durante su nominación, puede no morir si es ejecutado hoy.',
+    summary: 'Premia los faroles: quien finge de forma convincente ser otro personaje durante su nominación puede sobrevivir a la ejecución.'
+  },
+  {
+    id: 'zenomancer',
+    name: 'Zenomante',
+    originalName: 'Zenomancer',
+    team: 'loric',
+    edition: 'loric',
+    ability: 'Uno o más jugadores tienen una misión. Cuando la completan aprenden información verdadera.',
+    summary: 'Da misiones secretas a algunos jugadores; al cumplirlas, reciben información verdadera.'
   },
 
 

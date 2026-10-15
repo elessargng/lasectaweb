@@ -3,7 +3,7 @@
     "version": "1.1.0",
     "date": "2026-10-15",
     "title": "Medianoche y Latón",
-    "description": "La web estrena aspecto, inspirado en el mundo de Blood on the Clocktower: la tinta de la noche, el latón del reloj y las fichas del Grimorio, la sangre del Demonio y el pergamino de las hojas de personajes. Rituales se rehace por completo, con el detalle de cada ritual en su propia ventana y la posibilidad de decir que quieres asistir a partidas presenciales y eventos. Además, la web se puede usar de principio a fin con lector de pantalla.",
+    "description": "La web estrena aspecto, inspirado en el mundo de Blood on the Clocktower: la tinta de la noche, el latón del reloj y las fichas del Grimorio, la sangre del Demonio y el pergamino de las hojas de personajes. Rituales se rehace por completo, con el detalle de cada ritual en su propia ventana y la posibilidad de decir que quieres asistir a partidas presenciales y eventos. El Grimorio estrena los iconos oficiales de los personajes y se completa con todos los viajeros, fábulas y Loric. Además, la web se puede usar de principio a fin con lector de pantalla.",
     "changes": [
       {
         "category": "Nueva Estética",
@@ -22,7 +22,7 @@
         "items": [
           "Nuevo Diseño: La cita de bienvenida, los próximos rituales, las estadísticas y el acceso rápido se presentan en paneles con filo de latón.",
           "Estadísticas como Fichas: Miembros, escrituras y eventos se muestran como fichas redondas con bisel dorado, como las del Grimorio.",
-          "Próximos Rituales: El calendario de la semana marca el día de hoy y cada partida dice su tipo y su título, no solo la hora."
+          "Próximos Rituales: El calendario de la semana marca el día de hoy con un filo dorado, y cada partida lleva el color e icono de su tipo."
         ]
       },
       {
@@ -37,6 +37,18 @@
           "Colores de Metal y Gema: Cada tipo de ritual tiene su color: oro para las partidas online de La Secta, plata para las de Villacuervos, cobre para las presenciales y granate para los eventos y jornadas.",
           "Nuevo Icono para Eventos: Los eventos y jornadas se reconocen por un castillo gótico, dibujado a juego con la web.",
           "En el Móvil: En la vista de mes, al pulsar un día aparece debajo la lista de sus rituales."
+        ]
+      },
+      {
+        "category": "Grimorio",
+        "items": [
+          "Iconos de los Personajes: Cada personaje del compendio muestra su icono oficial en una ficha con bisel dorado, sacado del catálogo que la web sincroniza con Villacuervos.",
+          "Los 18 Viajeros: El compendio incluye todos los viajeros con su habilidad oficial en español, cada uno en su guion: cinco de Trouble Brewing, cinco de Bad Moon Rising, cinco de Sects & Violets y tres experimentales. Al filtrar por edición aparecen junto al resto de personajes de ese guion.",
+          "Las 14 Fábulas: La antigua sección de Legendarios pasa a llamarse Fábulas, su nombre en el juego, y reúne las 14 fábulas oficiales (para cuidar la mesa, para guiones propios y experimentales), con su habilidad oficial en español.",
+          "Los 11 Loric: Nueva categoría con los personajes Loric del Narrador, que añaden giros a la partida (Mandamás, Contrabandista, Tor, Truhanes…), con su habilidad oficial en español.",
+          "Filtros más Claros: Fábulas y Loric se eligen en «Edición»; como no tienen bando, al elegirlas el filtro de bando se oculta. Marcar un filtro ya no cambia su tamaño ni descoloca a los demás.",
+          "Pestañas en una Fila: Compendio, Ediciones, Reglamento y Consejos caben en una sola fila; en el móvil se deslizan en horizontal.",
+          "Tarjetas más Claras: El bando de cada personaje va bajo su nombre, sin taparlo en pantallas medianas."
         ]
       },
       {
@@ -59,8 +71,8 @@
           "Lector de Pantalla: La web se puede usar con NVDA, JAWS, VoiceOver y TalkBack. Los títulos están ordenados para navegar por ellos, y las imágenes y adornos decorativos no se leen.",
           "Ventanas y Menús: Al abrir una ventana el foco entra en ella y al cerrarla vuelve a donde estaba; Escape cierra las ventanas y el menú del móvil.",
           "Formularios: Todos los campos tienen su etiqueta, y los botones de solo icono, un nombre claro.",
-          "Calendario con Teclado: En todas las vistas de Rituales cada ritual es un botón que se puede alcanzar con el tabulador, y el lector anuncia su tipo y su título.",
-          "Estado de los Controles: Las vistas, los filtros y el botón «Quiero asistir» anuncian si están activados. Los enlaces que abren otra ventana lo avisan.",
+          "Calendario con Teclado: En todas las vistas de Rituales y en el calendario del Atrio cada ritual se alcanza con el tabulador, y el lector anuncia su tipo y su título, no solo la hora.",
+          "Estado de los Controles: Las vistas y filtros de Rituales, las pestañas y filtros del Grimorio y el botón «Quiero asistir» anuncian si están activados. Los enlaces que abren otra ventana lo avisan.",
           "Foco Visible: Un contorno dorado indica siempre dónde está el foco del teclado."
         ]
       },

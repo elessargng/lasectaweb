@@ -3,6 +3,7 @@ import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
 import Cita from '../components/Cita';
 import { allBotcCharacters } from '../data/botcRoles';
+import { idCatalogo, useIconosPersonajes } from '../utils/personajesApi';
 import {
   Search,
   BookOpen,
@@ -15,14 +16,60 @@ import {
   ScrollText,
   UserCheck,
   Zap,
+  Dices,
   HelpCircle
 } from 'lucide-react';
+
+/** «Ediciones» cuyos personajes no tienen bando (son del Narrador): con ellas no se filtra por bando. */
+const SIN_BANDO = ['fabled', 'loric'];
+
+/** Personajes del Grimorio cuyo id en el catálogo no sale de quitarle los separadores. */
+const ID_CATALOGO: Record<string, string> = {
+  'witch-sv': 'witch',
+  'al-hadikhah': 'alhadikhia'
+};
+
+/**
+ * Botón de filtro del compendio. Al marcarlo, el texto pasa a seminegrita, que
+ * es más ancha: para que el botón no crezca y empuje al resto a otra línea, el
+ * ancho se reserva siempre con una copia invisible del texto ya en seminegrita
+ * (las dos en la misma celda de una rejilla). El borde también está siempre,
+ * solo cambia de color. La copia está oculta al lector, que oye el texto una vez.
+ */
+const FiltroChip = ({ activo, onClick, lang, children }: { activo: boolean; onClick: () => void; lang?: string; children: React.ReactNode }) => (
+  <button
+    type="button"
+    lang={lang}
+    onClick={onClick}
+    aria-pressed={activo}
+    className={`px-3 py-1.5 rounded-full border text-xs font-display transition-colors motion-reduce:transition-none cursor-pointer ${
+      activo
+        ? 'bg-theme-main border-theme-main text-background shadow'
+        : 'bg-background hover:bg-surface border-outline-ghost text-on-surface-muted hover:text-on-surface'
+    }`}
+  >
+    <span className="grid">
+      <span aria-hidden="true" className="col-start-1 row-start-1 font-semibold invisible">{children}</span>
+      <span className={`col-start-1 row-start-1 text-center ${activo ? 'font-semibold' : ''}`}>{children}</span>
+    </span>
+  </button>
+);
 
 const Grimorio: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEdition, setSelectedEdition] = useState<string>('all');
   const [selectedTeam, setSelectedTeam] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'characters' | 'editions' | 'rules' | 'guides'>('characters');
+
+  // Al pasar a fábulas o Loric, el bando deja de aplicar: se vuelve a «Todos» para no filtrar por uno que no existe.
+  const elegirEdicion = (edicion: string) => {
+    setSelectedEdition(edicion);
+    if (SIN_BANDO.includes(edicion)) setSelectedTeam('all');
+  };
+
+  // Iconos oficiales de los personajes, del catálogo que sincroniza el servidor.
+  const iconos = useIconosPersonajes();
+  const iconoDe = (id: string) => iconos.get(ID_CATALOGO[id] ?? idCatalogo(id));
 
   const filteredCharacters = useMemo(() => {
     return allBotcCharacters.filter(char => {
@@ -48,11 +95,14 @@ const Grimorio: React.FC = () => {
       case 'minion':
         return { label: 'Esbirro', bg: 'bg-rose-950/70 border-rose-600/50 text-rose-300', icon: Skull };
       case 'demon':
-        return { label: 'Demonio', bg: 'bg-red-950 border-red-500 text-red-400 font-bold animate-pulse', icon: Crown };
+        return { label: 'Demonio', bg: 'bg-red-950 border-red-500 text-red-400 font-bold animate-pulse motion-reduce:animate-none', icon: Crown };
       case 'traveller':
         return { label: 'Viajero', bg: 'bg-purple-900/60 border-purple-500/40 text-purple-300', icon: Zap };
+      case 'loric':
+        // Sin traducción asentada: se deja en inglés (lang="en" al pintarla)
+        return { label: 'Loric', lang: 'en', bg: 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300', icon: Dices };
       default:
-        return { label: 'Legendario', bg: 'bg-amber-900/60 border-amber-500/40 text-amber-300', icon: Sparkles };
+        return { label: 'Fábula', bg: 'bg-amber-900/60 border-amber-500/40 text-amber-300', icon: Sparkles };
     }
   };
 
@@ -93,7 +143,8 @@ const Grimorio: React.FC = () => {
           </div>
 
           {/* Pestañas de Navegación Principal */}
-          <div className="bg-surface-low/90 p-2 rounded-2xl border border-outline-ghost/80 shadow-inner flex flex-wrap gap-2">
+          {/* Una sola fila: cada pestaña crece hasta repartir el ancho; si no caben (móvil), la fila se desliza en horizontal */}
+          <div role="group" aria-label="Secciones del Grimorio" className="bg-background/60 p-1.5 rounded-sm border border-theme-main/25 shadow-inner flex gap-1.5 overflow-x-auto">
             {[
               { id: 'characters', label: 'Compendio de Personajes', badge: allBotcCharacters.length, icon: UserCheck },
               { id: 'editions', label: 'Ediciones Oficiales', icon: Crown },
@@ -105,19 +156,21 @@ const Grimorio: React.FC = () => {
               return (
                 <button
                   key={tab.id}
+                  type="button"
                   onClick={() => setActiveTab(tab.id as 'characters' | 'editions' | 'rules' | 'guides')}
-                  className={`px-5 py-3 rounded-xl font-display text-sm md:text-base transition-all duration-200 cursor-pointer flex items-center gap-2.5 ${
+                  aria-pressed={isActive}
+                  className={`flex-1 min-w-max whitespace-nowrap px-2.5 xl:px-3.5 py-2.5 rounded-sm font-ui text-xs font-semibold uppercase tracking-[0.03em] xl:tracking-[0.08em] transition-all duration-200 motion-reduce:transition-none cursor-pointer flex items-center justify-center gap-2 ${
                     isActive
-                      ? 'bg-theme-main text-background font-bold shadow-lg shadow-theme-main/30 ring-1 ring-theme-main/50'
-                      : 'text-on-surface-muted hover:text-on-surface hover:bg-surface-container/70'
+                      ? 'bg-[linear-gradient(180deg,#ebcf91_0%,#d4af6a_50%,#a98039_100%)] text-[#1a1206] shadow-[inset_0_1px_0_rgba(255,248,225,0.55),0_4px_14px_-4px_rgba(0,0,0,0.7)]'
+                      : 'text-on-surface-muted hover:text-gold-bright hover:bg-theme-main/[0.07]'
                   }`}
                 >
-                  <Icon size={18} className={isActive ? 'text-background' : 'text-theme-main/80'} />
+                  <Icon size={16} className={isActive ? 'text-[#1a1206]' : 'text-theme-main/80'} />
                   <span>{tab.label}</span>
                   {tab.badge !== undefined && (
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-sans ${
+                    <span className={`px-1.5 py-px rounded-full text-[0.65rem] tabular-nums tracking-normal ${
                       isActive
-                        ? 'bg-background/25 text-background font-bold'
+                        ? 'bg-[#1a1206]/20 text-[#1a1206] font-bold'
                         : 'bg-surface-container text-on-surface-muted border border-outline-ghost'
                     }`}>
                       {tab.badge}
@@ -153,49 +206,34 @@ const Grimorio: React.FC = () => {
                       { id: 'trouble-brewing', label: 'Trouble Brewing' },
                       { id: 'bad-moon-rising', label: 'Bad Moon Rising' },
                       { id: 'sects-and-violets', label: 'Sects & Violets' },
-                      { id: 'traveller', label: 'Viajeros' },
-                      { id: 'fabled', label: 'Legendarios' },
+                      { id: 'fabled', label: 'Fábulas' },
+                      { id: 'loric', label: 'Loric', lang: 'en' },
                       { id: 'experimental', label: 'Experimental' }
                     ].map(ed => (
-                      <button
-                        key={ed.id}
-                        onClick={() => setSelectedEdition(ed.id)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-display transition-all cursor-pointer ${
-                          selectedEdition === ed.id
-                            ? 'bg-theme-main text-background font-semibold shadow'
-                            : 'bg-background hover:bg-surface border border-outline-ghost text-on-surface-muted'
-                        }`}
-                      >
+                      <FiltroChip key={ed.id} lang={ed.lang} activo={selectedEdition === ed.id} onClick={() => elegirEdicion(ed.id)}>
                         {ed.label}
-                      </button>
+                      </FiltroChip>
                     ))}
                   </div>
 
-                  {/* Filtro de Bando */}
-                  <div className="flex items-center gap-2 flex-wrap text-sm">
-                    <span className="text-on-surface-muted font-display">Bando:</span>
-                    {[
-                      { id: 'all', label: 'Todos' },
-                      { id: 'townsfolk', label: 'Aldeanos' },
-                      { id: 'outsider', label: 'Forasteros' },
-                      { id: 'minion', label: 'Esbirros' },
-                      { id: 'demon', label: 'Demonios' },
-                      { id: 'traveller', label: 'Viajeros' },
-                      { id: 'fabled', label: 'Legendarios' }
-                    ].map(team => (
-                      <button
-                        key={team.id}
-                        onClick={() => setSelectedTeam(team.id)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-display transition-all cursor-pointer ${
-                          selectedTeam === team.id
-                            ? 'bg-theme-main text-background font-semibold shadow'
-                            : 'bg-background hover:bg-surface border border-outline-ghost text-on-surface-muted'
-                        }`}
-                      >
-                        {team.label}
-                      </button>
-                    ))}
-                  </div>
+                  {/* Filtro de Bando: las fábulas y los Loric no tienen bando, así que con ellas no aplica y no se muestra */}
+                  {!SIN_BANDO.includes(selectedEdition) && (
+                    <div className="flex items-center gap-2 flex-wrap text-sm">
+                      <span className="text-on-surface-muted font-display">Bando:</span>
+                      {[
+                        { id: 'all', label: 'Todos' },
+                        { id: 'townsfolk', label: 'Aldeanos' },
+                        { id: 'outsider', label: 'Forasteros' },
+                        { id: 'minion', label: 'Esbirros' },
+                        { id: 'demon', label: 'Demonios' },
+                        { id: 'traveller', label: 'Viajeros' }
+                      ].map(team => (
+                        <FiltroChip key={team.id} activo={selectedTeam === team.id} onClick={() => setSelectedTeam(team.id)}>
+                          {team.label}
+                        </FiltroChip>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="text-xs text-on-surface-muted font-display pt-1">
@@ -218,21 +256,30 @@ const Grimorio: React.FC = () => {
                     return (
                       <div
                         key={char.id}
-                        className="bg-surface-low border border-outline-ghost hover:border-theme-main/60 rounded-xl p-5 shadow-md hover:shadow-xl transition-all flex flex-col justify-between group space-y-4"
+                        className="bg-surface-low border border-outline-ghost hover:border-theme-main/60 rounded-sm p-5 shadow-md hover:shadow-xl transition-all flex flex-col justify-between group space-y-4"
                       >
                         <div>
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <h3 className="text-xl font-display text-theme-main group-hover:text-on-surface-bright transition-colors">
+                          <div className="flex items-start gap-4 mb-2">
+                            {/* Ficha del personaje: su icono oficial en un medallón; si no hay, el del bando.
+                                Decorativo: el nombre va justo al lado */}
+                            <span className="medallon w-16 h-16 group-hover:shadow-[inset_0_0_0_3px_rgba(7,8,13,0.9),inset_0_0_0_4px_rgba(212,175,106,0.4),0_0_18px_rgba(212,175,106,0.25)] transition-shadow">
+                              {iconoDe(char.id) ? (
+                                <img src={iconoDe(char.id)} alt="" loading="lazy" className="w-14 h-14 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" />
+                              ) : (
+                                <BadgeIcon className="w-6 h-6 text-theme-main/70" />
+                              )}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-xl font-display text-theme-main group-hover:text-on-surface-bright transition-colors break-words">
                                 {char.name}
                               </h3>
-                              <span className="text-xs font-body text-on-surface-muted italic">
+                              <span lang="en" className="block text-xs font-body text-on-surface-muted italic">
                                 ({char.originalName})
                               </span>
+                              <span className={`mt-1.5 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs border font-display ${badge.bg}`}>
+                                <BadgeIcon size={12} /> <span lang={badge.lang}>{badge.label}</span>
+                              </span>
                             </div>
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border font-display ${badge.bg}`}>
-                              <BadgeIcon size={12} /> {badge.label}
-                            </span>
                           </div>
 
                           <div className="mt-3 p-3 bg-background/60 rounded-lg border border-outline-ghost/40">
