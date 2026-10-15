@@ -36,29 +36,24 @@ export const RitualCard = ({ ritual, highlighted = false, userId, onOpen }: Ritu
   return (
     <article
       id={`ritual-${ritual.occurrenceKey ?? ritual.id}`}
-      className={`relative flex gap-3 p-3 border bg-surface-container-low/70 transition-all duration-300 scroll-mt-32 hover:bg-surface-container focus-within:ring-1 focus-within:ring-theme-main ${cancelled ? 'opacity-60' : ''}`}
-      style={{
-        borderColor: alpha(style.color, highlighted ? 0.9 : 0.3),
-        boxShadow: highlighted
-          ? `inset 3px 0 0 ${style.color}, 0 0 22px ${alpha(style.color, 0.3)}`
-          : `inset 3px 0 0 ${style.color}`
-      }}
+      className={`group relative flex gap-3 p-3.5 border rounded-sm transition-all duration-300 motion-reduce:transition-none scroll-mt-32 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),transparent)] focus-within:ring-1 focus-within:ring-theme-main ${
+        highlighted
+          ? 'border-theme-main/80 bg-theme-main/[0.06] shadow-[0_0_22px_rgba(212,175,106,0.18)]'
+          : 'border-outline-ghost hover:border-theme-main/50 hover:bg-surface-container/60'
+      } ${cancelled ? 'opacity-60' : ''}`}
     >
-      <div
-        className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
-        style={{
-          background: `radial-gradient(circle at 35% 30%, ${alpha(style.color, 0.45)}, ${alpha(style.color, 0.12)} 70%)`,
-          border: `1px solid ${alpha(style.color, 0.6)}`
-        }}
-      >
+      {/* Filo del color del tipo, a la izquierda */}
+      <span aria-hidden="true" className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full" style={{ backgroundColor: style.color }} />
+
+      <span className="medallon w-10 h-10">
         <Icon className="w-4 h-4" style={{ color: style.color }} />
-      </div>
+      </span>
 
       <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-display uppercase tracking-[0.18em]" style={{ color: style.color }}>
+        <p className="font-ui text-[0.6rem] font-semibold uppercase tracking-[0.2em]" style={{ color: alpha(style.color, 0.95) }}>
           {style.shortLabel}
         </p>
-        <h4 className={`font-body text-base leading-snug text-on-surface ${cancelled ? 'line-through' : ''}`}>
+        <h4 className={`font-body text-[1.05rem] leading-snug text-on-surface group-hover:text-gold-bright transition-colors ${cancelled ? 'line-through' : ''}`}>
           {/* El botón ocupa toda la tarjeta con su ::after; el lector solo lee el título y, luego, el resumen */}
           <button
             type="button"
@@ -71,9 +66,9 @@ export const RitualCard = ({ ritual, highlighted = false, userId, onOpen }: Ritu
           </button>
         </h4>
 
-        <ul id={summaryId} className="mt-1.5 flex flex-col gap-0.5 text-[13px] text-on-surface-muted">
+        <ul id={summaryId} className="mt-2 flex flex-col gap-1 text-[13px] text-on-surface-muted [&_svg]:text-theme-main/70">
           {cancelled && (
-            <li className="inline-flex items-center gap-1.5 text-red-300">
+            <li className="inline-flex items-center gap-1.5 text-blood-bright">
               <Ban className="w-3.5 h-3.5 shrink-0" /> Cancelado
             </li>
           )}

@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Feather, Repeat, Sparkles, X } from 'lucide-react';
 import Button from '../Button';
 import type { Ritual, RitualInput, RitualStatus, RitualType, Storyteller } from '../../utils/ritualsApi';
-import { RITUAL_KINDS, alpha, kindFromParts } from './ritualKinds';
+import { RITUAL_KINDS, kindFromParts } from './ritualKinds';
 import { describeMonthlyPosition, toLocalDateInput, toLocalInput } from './ritualDates';
 import Dialog from '../Dialog';
 
@@ -32,9 +32,9 @@ const RECURRENCE_OPTIONS: Array<[string, string]> = [
   ['otra', 'Otra']
 ];
 
-const inputClass =
-  'w-full bg-surface-container border border-outline-ghost rounded-xl px-4 py-2.5 text-on-surface focus:outline-none focus:border-theme-main transition-colors text-sm';
-const labelClass = 'block text-xs font-display tracking-wider text-on-surface-muted uppercase mb-1';
+// Estilos de campo y etiqueta compartidos con el resto de la web (index.css).
+const inputClass = 'campo';
+const labelClass = 'campo-etiqueta';
 
 /** Sala de La Secta en botc.app: el enlace que se propone al convocar una partida online. */
 const DEFAULT_ONLINE_LINK = 'https://botc.app/join/lasecta';
@@ -111,7 +111,6 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
   const isOnline = type === 'partida_online';
   const isInPerson = type === 'partida_presencial';
   const isGame = type !== 'jornada';
-  const accent = RITUAL_KINDS[kindFromParts(type, 'secta')].color;
   const villacuervosColor = RITUAL_KINDS.online_villacuervos.color;
   const recurrenceDays =
     !isInPerson || !recurrence || recurrence === 'mes' ? null : Number(recurrence === 'otra' ? customDays : recurrence);
@@ -158,20 +157,23 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
 
   return (
     <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
-      <Dialog onClose={onClose} labelledBy="ritual-form-titulo" className="bg-theme-container border border-outline-ghost rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between p-5 border-b border-outline-ghost/50 bg-surface-container/40 shrink-0">
-          <h3 id="ritual-form-titulo" className="text-xl font-display text-on-surface font-semibold flex items-center gap-2">
-            <Sparkles className="w-5 h-5" style={{ color: accent }} />
-            <span>{ritual ? 'Modificar ritual' : 'Convocar un ritual'}</span>
+      <Dialog onClose={onClose} labelledBy="ritual-form-titulo" className="modal-cofre max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden">
+        <div className="flex items-center gap-4 px-5 sm:px-7 pt-6 pb-5 shrink-0">
+          <span className="medallon w-12 h-12">
+            <Sparkles className="w-5 h-5 text-theme-main" />
+          </span>
+          <h3 id="ritual-form-titulo" className="flex-1 font-display text-2xl sm:text-3xl text-gilded leading-tight">
+            {ritual ? 'Modificar ritual' : 'Convocar un ritual'}
           </h3>
-          <button type="button" onClick={onClose} aria-label="Cerrar" className="text-on-surface-muted hover:text-on-surface">
-            <X className="w-5 h-5" />
+          <button type="button" onClick={onClose} aria-label="Cerrar" className="btn-sello btn-sello-icono shrink-0">
+            <X className="w-4 h-4" />
           </button>
         </div>
+        <div aria-hidden="true" className="hairline-gold shrink-0" />
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 flex flex-col gap-5">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-5 sm:px-7 py-6 flex flex-col gap-5">
           {formError && (
-            <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm">{formError}</div>
+            <div role="alert" className="aviso-error">{formError}</div>
           )}
 
           {/* Clase de ritual */}
@@ -187,15 +189,13 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
                     key={opt.type}
                     type="button"
                     onClick={() => changeType(opt.type)}
-                    className="flex sm:flex-col items-center gap-2 sm:gap-1 p-3 rounded-xl border text-left sm:text-center transition-all"
-                    style={{
-                      borderColor: active ? style.color : 'var(--color-outline-ghost)',
-                      backgroundColor: active ? alpha(style.color, 0.12) : 'transparent',
-                      boxShadow: active ? `0 0 16px ${alpha(style.color, 0.2)}` : 'none'
-                    }}
+                    aria-pressed={active}
+                    className="opcion flex sm:flex-col items-center gap-2 sm:gap-1.5 p-3 sm:py-4 text-left sm:text-center"
                   >
-                    <Icon className="w-5 h-5 shrink-0" style={{ color: style.color }} />
-                    <span className="text-sm font-semibold text-on-surface">{opt.label}</span>
+                    <span className="medallon w-9 h-9">
+                      <Icon className="w-4 h-4" style={{ color: style.color }} />
+                    </span>
+                    <span className={`font-ui text-[0.78rem] font-semibold tracking-wide ${active ? 'text-gold-bright' : 'text-on-surface'}`}>{opt.label}</span>
                     <span className="text-xs text-on-surface-muted">{opt.hint}</span>
                   </button>
                 );
@@ -205,17 +205,15 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
 
           {isOnline && !ritual && (
             <label
-              className="flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors"
-              style={{
-                borderColor: alsoInVillacuervos ? villacuervosColor : 'var(--color-outline-ghost)',
-                backgroundColor: alsoInVillacuervos ? alpha(villacuervosColor, 0.08) : 'transparent'
-              }}
+              className={`flex items-start gap-3 p-3.5 rounded-sm border cursor-pointer transition-colors ${
+                alsoInVillacuervos ? 'border-theme-main/70 bg-theme-main/[0.06]' : 'border-outline-ghost hover:border-theme-main/40'
+              }`}
             >
               <input
                 type="checkbox"
                 checked={alsoInVillacuervos}
                 onChange={(e) => setAlsoInVillacuervos(e.target.checked)}
-                className="mt-1 accent-sky-300"
+                className="mt-1 accent-[#d4af6a]"
               />
               <span>
                 <span className="flex items-center gap-1.5 text-sm font-semibold text-on-surface">
@@ -267,11 +265,11 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
           )}
 
           {isInPerson && (
-            <div className="flex flex-col gap-3 p-4 rounded-xl border border-outline-ghost/60 bg-surface-container/30">
-              <span className="flex items-center gap-1.5 text-xs font-display tracking-wider uppercase text-on-surface-muted">
-                <Repeat className="w-3.5 h-3.5" style={{ color: accent }} /> Periodicidad
+            <div className="flex flex-col gap-3 p-4 rounded-sm border border-outline-ghost/70 bg-background/40">
+              <span id="ritual-periodicidad" className="rotulo">
+                <Repeat className="w-3.5 h-3.5" /> Periodicidad
               </span>
-              <div className="flex flex-wrap gap-2">
+              <div role="group" aria-labelledby="ritual-periodicidad" className="flex flex-wrap gap-2">
                 {RECURRENCE_OPTIONS.map(
                   ([value, label]) => {
                     const active = recurrence === value;
@@ -280,12 +278,8 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
                         key={value || 'nunca'}
                         type="button"
                         onClick={() => setRecurrence(value)}
-                        className="px-3 py-1.5 text-sm rounded-full border transition-colors"
-                        style={{
-                          borderColor: active ? accent : 'var(--color-outline-ghost)',
-                          color: active ? accent : undefined,
-                          backgroundColor: active ? alpha(accent, 0.12) : 'transparent'
-                        }}
+                        aria-pressed={active}
+                        className={`opcion !rounded-full px-3.5 py-1.5 text-sm ${active ? 'text-gold-bright' : 'text-on-surface/90'}`}
                       >
                         {label}
                       </button>
@@ -343,10 +337,10 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
           )}
 
           <div>
-            <label className={labelClass}>
+            <label htmlFor="ritual-enlace" className={labelClass}>
               {isOnline ? 'Enlace a la sala de botc.app' : 'Enlace (opcional)'}
             </label>
-            <input
+            <input id="ritual-enlace"
               type="url"
               value={link}
               onChange={(e) => setLink(e.target.value)}
@@ -409,13 +403,13 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
                 type="checkbox"
                 checked={status === 'cancelado'}
                 onChange={(e) => setStatus(e.target.checked ? 'cancelado' : 'programado')}
-                className="accent-red-400"
+                className="accent-[#d4434c]"
               />
               Ritual cancelado (se sigue viendo en la agenda, tachado)
             </label>
           )}
 
-          <div className="flex justify-end gap-3 pt-2 border-t border-outline-ghost/40">
+          <div className="flex justify-end gap-3 pt-5 mt-1 border-t border-outline-ghost/70">
             <Button type="button" variant="outline" onClick={onClose} className="px-5 py-2">
               Cancelar
             </Button>

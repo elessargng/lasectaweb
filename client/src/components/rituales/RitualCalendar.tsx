@@ -2,6 +2,7 @@ import { Plus } from 'lucide-react';
 import type { Ritual } from '../../utils/ritualsApi';
 import { RITUAL_KINDS, alpha, kindOf } from './ritualKinds';
 import { WEEKDAYS, compareRituals, coversDay, formatTime, isMultiDay, isSameDay, keyOf, monthGrid, weekLanes } from './ritualDates';
+import { compactPlaces } from './ritualSignups';
 
 interface RitualCalendarProps {
   month: Date;
@@ -9,16 +10,23 @@ interface RitualCalendarProps {
   selectedDay: Date;
   canCreate: boolean;
   onSelectDay: (day: Date) => void;
-  /** Al pulsar un ritual concreto: se elige su día y se resalta en el detalle. */
+  /** Al pulsar un ritual concreto: se abre su detalle. */
   onSelectRitual: (day: Date, ritual: Ritual) => void;
   onCreateOnDay: (day: Date) => void;
+  /** «+N más»: lleva a la semana de ese día, donde caben todos. */
+  onShowWeek: (day: Date) => void;
 }
 
-const MAX_VISIBLE = 3;
+const MAX_VISIBLE = 4;
+
+const longDay = (day: Date) => day.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 
 /**
- * La cuadrícula del mes. Cada ritual es un sello del color de su clase; las
- * jornadas de varios días se dibujan como una cinta que cruza las casillas.
+ * La cuadrícula del mes, a todo el ancho. Cada ritual es un botón con su hora
+ * y su título que abre el detalle; las jornadas de varios días se dibujan como
+ * una cinta que cruza las casillas (solo el tramo con el título es botón, para
+ * que el lector no la oiga una vez por día). En el móvil las casillas solo
+ * llevan sellos de color y la lista del día va debajo del calendario.
  */
 export const RitualCalendar = ({
   month,
@@ -27,7 +35,8 @@ export const RitualCalendar = ({
   canCreate,
   onSelectDay,
   onSelectRitual,
-  onCreateOnDay
+  onCreateOnDay,
+  onShowWeek
 }: RitualCalendarProps) => {
   const today = new Date();
   const days = monthGrid(month);
@@ -35,18 +44,18 @@ export const RitualCalendar = ({
 
   return (
     <div className="relative">
-      {/* Esquinas rúnicas del marco */}
-      <span className="absolute -top-2.5 -left-1 text-theme-main/40 text-xs select-none pointer-events-none">ᚠ</span>
-      <span className="absolute -top-2.5 -right-1 text-theme-main/40 text-xs select-none pointer-events-none">ᚦ</span>
-      <span className="absolute -bottom-3 -left-1 text-theme-main/40 text-xs select-none pointer-events-none">ᚨ</span>
-      <span className="absolute -bottom-3 -right-1 text-theme-main/40 text-xs select-none pointer-events-none">ᛟ</span>
+      {/* Escuadras doradas en las esquinas del marco (decorativas) */}
+      <span aria-hidden="true" className="corner corner-tl -translate-x-3 -translate-y-3" />
+      <span aria-hidden="true" className="corner corner-tr translate-x-3 -translate-y-3" />
+      <span aria-hidden="true" className="corner corner-bl -translate-x-3 translate-y-3" />
+      <span aria-hidden="true" className="corner corner-br translate-x-3 translate-y-3" />
 
-      <div className="grid grid-cols-7 mb-2">
+      <div aria-hidden="true" className="grid grid-cols-7 mb-2">
         {WEEKDAYS.map((w, i) => (
           <div
             key={w}
-            className={`text-center text-[10px] md:text-xs font-display uppercase tracking-[0.2em] py-1 ${
-              i >= 5 ? 'text-theme-main/80' : 'text-on-surface-muted'
+            className={`text-center font-ui text-[0.65rem] md:text-xs font-semibold uppercase tracking-[0.22em] py-1 ${
+              i >= 5 ? 'text-theme-main/85' : 'text-on-surface-muted'
             }`}
           >
             {w}
@@ -54,7 +63,7 @@ export const RitualCalendar = ({
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-px bg-outline-ghost/60 border border-outline-ghost/60 shadow-[0_0_40px_rgba(74,59,105,0.25)]">
+      <div className="grid grid-cols-7 gap-px bg-outline-ghost/70 border border-theme-main/25 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)]">
         {days.map((day, index) => {
           const inMonth = day.getMonth() === month.getMonth();
           const isToday = isSameDay(day, today);
@@ -68,37 +77,34 @@ export const RitualCalendar = ({
           return (
             <div
               key={day.toISOString()}
-              role="button"
-              tabIndex={0}
-              onClick={() => onSelectDay(day)}
-              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onSelectDay(day))}
-              aria-label={`${day.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}, ${dayRituals.length === 1 ? 'un ritual' : `${dayRituals.length} rituales`}`}
-              className={`group relative min-h-[4.25rem] md:min-h-[7.25rem] p-1 md:p-1.5 flex flex-col text-left cursor-pointer transition-colors duration-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-theme-main ${
+              className={`group relative min-h-[4.5rem] md:min-h-[9rem] p-1 md:p-2 flex flex-col transition-colors duration-200 ${
                 isToday
-                  ? 'bg-gradient-to-b from-theme-container/45 to-surface-container-low hover:from-theme-container/60'
+                  ? 'bg-gradient-to-b from-theme-container to-surface'
                   : inMonth
-                    ? 'bg-gradient-to-b from-surface-container-low to-surface hover:from-surface-container hover:to-surface-container-low'
-                    : 'bg-background/90 hover:bg-surface'
-              } ${isSelected ? 'ring-1 ring-inset ring-theme-main/70' : ''}`}
+                    ? 'bg-gradient-to-b from-surface-container-low/90 to-surface'
+                    : 'bg-background/90'
+              } ${isSelected ? 'ring-1 ring-inset ring-theme-main shadow-[inset_0_0_20px_rgba(212,175,106,0.12)]' : ''}`}
             >
               {isToday && (
-                <span className="absolute inset-x-0 top-0 h-0.5 bg-theme-main shadow-[0_0_10px_rgba(177,156,217,0.9)] pointer-events-none" />
+                <span aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-theme-main shadow-[0_0_10px_rgba(212,175,106,0.9)] pointer-events-none" />
               )}
-              <span
-                className={`font-display leading-none text-sm md:text-lg ${
-                  isToday
-                    ? 'text-theme-main drop-shadow-[0_0_6px_rgba(177,156,217,0.8)]'
-                    : inMonth
-                      ? 'text-on-surface'
-                      : 'text-on-surface-muted/40'
+
+              {/* El número del día elige el día (en el móvil, su lista aparece debajo del calendario) */}
+              <button
+                type="button"
+                onClick={() => onSelectDay(day)}
+                aria-label={`${longDay(day)}, ${dayRituals.length === 0 ? 'sin rituales' : dayRituals.length === 1 ? 'un ritual' : `${dayRituals.length} rituales`}`}
+                aria-current={isToday ? 'date' : undefined}
+                className={`self-start min-w-7 h-7 -m-0.5 px-1 rounded-sm font-display leading-none text-sm md:text-lg text-left cursor-pointer hover:bg-theme-main/10 ${
+                  isToday ? 'text-gilded' : inMonth ? 'text-on-surface' : 'text-on-surface-muted/40'
                 }`}
               >
                 {day.getDate()}
-              </span>
+              </button>
 
-              {/* Móvil: solo los sellos, en fila */}
+              {/* Móvil: solo los sellos, en fila (decorativos: el número del día ya dice cuántos hay) */}
               {dayRituals.length > 0 && (
-                <div className="flex md:hidden flex-wrap gap-0.5 mt-auto pt-1">
+                <div aria-hidden="true" className="flex md:hidden flex-wrap gap-0.5 mt-auto pt-1">
                   {dayRituals.slice(0, 4).map((r) => (
                     <span
                       key={keyOf(r)}
@@ -113,67 +119,94 @@ export const RitualCalendar = ({
               )}
 
               {/* Escritorio: primero las cintas de las jornadas, cada una en su carril; después el resto */}
-              <div className={`hidden md:flex flex-col gap-1 mt-1.5 ${inMonth ? '' : 'opacity-50'}`}>
+              <ul className={`hidden md:flex flex-col gap-1 mt-1.5 ${inMonth ? '' : 'opacity-50'}`}>
                 {bandSlots.map((band, lane) => {
-                  if (!band) return <div key={`hueco-${lane}`} className="h-[1.125rem]" aria-hidden="true" />;
+                  if (!band) return <li key={`hueco-${lane}`} className="h-6" aria-hidden="true" />;
                   const style = RITUAL_KINDS[kindOf(band)];
-                  // La cinta repite el título al empezar y al abrir cada semana.
+                  const cancelled = band.status === 'cancelado';
+                  // La cinta repite el título al empezar y al abrir cada semana; solo ese tramo es botón.
                   const labelHere = isSameDay(new Date(band.startsAt), day) || day.getDay() === 1;
+                  const bandClass = `h-6 flex items-center gap-1.5 text-xs leading-tight px-1.5 truncate cursor-pointer hover:brightness-125 ${
+                    labelHere ? 'rounded-l-sm -mr-2' : '-mx-2'
+                  } ${cancelled ? 'line-through opacity-50' : ''}`;
+                  const bandStyle = {
+                    backgroundColor: alpha(style.color, 0.16),
+                    borderLeft: labelHere ? `2px solid ${style.color}` : 'none'
+                  };
+                  const BandIcon = style.icon;
                   return (
-                    <div
-                      key={keyOf(band)}
-                      title={band.title}
-                      aria-hidden="true"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectRitual(day, band);
-                      }}
-                      className={`h-[1.125rem] flex items-center text-[11px] leading-tight px-1 truncate hover:brightness-125 ${
-                        labelHere ? 'rounded-l-sm -mr-1.5' : '-mx-1.5'
-                      } ${band.status === 'cancelado' ? 'line-through opacity-50' : ''}`}
-                      style={{
-                        backgroundColor: alpha(style.color, 0.22),
-                        borderLeft: labelHere ? `2px solid ${style.color}` : 'none'
-                      }}
-                    >
-                      {labelHere && <span className="truncate text-on-surface/90">{band.title}</span>}
-                    </div>
+                    <li key={keyOf(band)} className="contents">
+                      {labelHere ? (
+                        <button
+                          type="button"
+                          onClick={() => onSelectRitual(day, band)}
+                          aria-haspopup="dialog"
+                          className={`${bandClass} w-[calc(100%+0.5rem)] text-left`}
+                          style={bandStyle}
+                        >
+                          <BandIcon className="w-3.5 h-3.5 shrink-0" style={{ color: style.color }} />
+                          <span className="truncate text-on-surface/90">
+                            <span className="sr-only">{style.label}: </span>
+                            {band.title}
+                            {cancelled && <span className="sr-only"> (cancelado)</span>}
+                          </span>
+                        </button>
+                      ) : (
+                        <div aria-hidden="true" onClick={() => onSelectRitual(day, band)} className={bandClass} style={bandStyle} />
+                      )}
+                    </li>
                   );
                 })}
 
                 {visibleSingles.map((r) => {
                   const style = RITUAL_KINDS[kindOf(r)];
+                  const cancelled = r.status === 'cancelado';
+                  const places = compactPlaces(r);
                   return (
-                    <div
-                      key={keyOf(r)}
-                      title={r.title}
-                      aria-hidden="true"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectRitual(day, r);
-                      }}
-                      className={`h-[1.125rem] flex items-center gap-1 text-[11px] leading-tight px-1 rounded-sm truncate hover:brightness-125 ${
-                        r.status === 'cancelado' ? 'line-through opacity-50' : ''
-                      }`}
-                      style={{ color: style.color, backgroundColor: alpha(style.color, 0.1), borderLeft: `2px solid ${style.color}` }}
-                    >
-                      <span className="font-semibold tabular-nums shrink-0">{formatTime(r.startsAt)}</span>
-                      <span className="truncate text-on-surface/90">{r.title}</span>
-                    </div>
+                    <li key={keyOf(r)}>
+                      <button
+                        type="button"
+                        onClick={() => onSelectRitual(day, r)}
+                        aria-haspopup="dialog"
+                        className={`w-full h-6 flex items-center gap-1.5 text-xs leading-tight px-1.5 rounded-sm text-left cursor-pointer border border-transparent hover:border-theme-main/40 hover:bg-surface-container transition-colors ${
+                          cancelled ? 'line-through opacity-50' : ''
+                        }`}
+                        style={{ backgroundColor: 'rgba(7, 8, 13, 0.6)', borderLeft: `2px solid ${style.color}` }}
+                      >
+                        <span className="font-semibold tabular-nums shrink-0" style={{ color: style.color }}>
+                          {formatTime(r.startsAt)}
+                        </span>
+                        <span className="truncate text-on-surface/90">
+                          <span className="sr-only">{style.label}: </span>
+                          {r.title}
+                          {cancelled && <span className="sr-only"> (cancelado)</span>}
+                        </span>
+                        {places && <span className="ml-auto shrink-0 pl-1 text-[0.65rem] tabular-nums text-on-surface-muted">{places}</span>}
+                      </button>
+                    </li>
                   );
                 })}
-                {hidden > 0 && <span className="text-[10px] text-on-surface-muted pl-1">+{hidden} más</span>}
-              </div>
+                {hidden > 0 && (
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => onShowWeek(day)}
+                      aria-label={`Ver ${hidden} ${hidden === 1 ? 'ritual más' : 'rituales más'} en la semana del ${longDay(day)}`}
+                      className="font-ui text-[0.65rem] font-semibold tracking-[0.12em] uppercase text-theme-main/85 hover:text-gold-bright pl-1.5 cursor-pointer"
+                    >
+                      +{hidden} más
+                    </button>
+                  </li>
+                )}
+              </ul>
 
               {canCreate && (
                 <button
                   type="button"
-                  title="Convocar un ritual este día"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onCreateOnDay(day);
-                  }}
-                  className="hidden md:flex absolute bottom-1 right-1 w-5 h-5 items-center justify-center rounded-full text-theme-main/80 border border-theme-main/40 bg-surface/80 opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-theme-container hover:text-theme-main transition-opacity"
+                  aria-label={`Convocar un ritual el ${longDay(day)}`}
+                  data-tip="Convocar"
+                  onClick={() => onCreateOnDay(day)}
+                  className="hidden md:flex absolute top-1.5 right-1.5 w-5 h-5 items-center justify-center rounded-full text-theme-main border border-theme-main/50 bg-background/80 opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-theme-main hover:text-background transition-opacity cursor-pointer"
                 >
                   <Plus className="w-3 h-3" />
                 </button>

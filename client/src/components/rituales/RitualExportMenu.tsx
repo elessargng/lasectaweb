@@ -56,9 +56,7 @@ export const RitualExportMenu = ({ rituals, month, shownKinds }: RitualExportMen
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 border text-xs font-display uppercase tracking-wider transition-colors ${
-          open ? 'border-theme-main/60 text-theme-main bg-theme-container/40' : 'border-outline-ghost text-on-surface-muted hover:text-on-surface'
-        }`}
+        className={`btn-sello ${open ? '!text-gold-bright !border-theme-main/70 !bg-theme-main/10' : ''}`}
       >
         <Download className="w-3.5 h-3.5" /> Exportar <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -66,10 +64,10 @@ export const RitualExportMenu = ({ rituals, month, shownKinds }: RitualExportMen
       {open && (
         <div
           role="menu"
-          className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 z-40 w-80 max-w-[calc(100vw-2rem)] bg-surface-container border border-outline-ghost shadow-2xl"
+          className="modal-cofre absolute left-0 sm:left-auto sm:right-0 top-full mt-2 z-40 w-80 max-w-[calc(100vw-2rem)] shadow-[0_24px_50px_-12px_rgba(0,0,0,0.9)]"
         >
           <div className="px-4 py-3 border-b border-outline-ghost/60">
-            <p className="text-sm text-on-surface first-letter:uppercase">{monthName}</p>
+            <p className="font-display text-lg text-gilded first-letter:uppercase">{monthName}</p>
             <p className="text-xs text-on-surface-muted">
               {empty ? 'Nada que exportar con los filtros actuales' : `${count} ${count === 1 ? 'ritual' : 'rituales'} con los filtros actuales`}
             </p>
@@ -105,7 +103,7 @@ export const RitualExportMenu = ({ rituals, month, shownKinds }: RitualExportMen
 
           {imageOpen && !empty && (
             <div className="px-4 pb-4 pt-1 flex flex-col gap-2 border-t border-outline-ghost/40 bg-surface-container-low/60">
-              <span className="text-[10px] font-display uppercase tracking-wider text-on-surface-muted mt-2">Plantilla</span>
+              <span className="campo-etiqueta mt-2 mb-0">Plantilla</span>
               {IMAGE_TEMPLATES.map((t) => (
                 <label key={t.id} className="flex items-start gap-2 cursor-pointer text-sm">
                   <input
@@ -113,7 +111,7 @@ export const RitualExportMenu = ({ rituals, month, shownKinds }: RitualExportMen
                     name="plantilla"
                     checked={template === t.id}
                     onChange={() => setTemplate(t.id)}
-                    className="mt-1 accent-violet-300"
+                    className="mt-1 accent-[#d4af6a]"
                   />
                   <span>
                     <span className="block text-on-surface">{t.label}</span>
@@ -124,7 +122,7 @@ export const RitualExportMenu = ({ rituals, month, shownKinds }: RitualExportMen
               <button
                 type="button"
                 onClick={() => run(() => exportImage(rituals, month, template))}
-                className="mt-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 border border-theme-main/40 text-xs font-display uppercase tracking-wider text-theme-main hover:bg-theme-container/40 transition-colors"
+                className="mt-2 btn-runic btn-runic-primary px-3 py-2 text-xs gap-2"
               >
                 <Download className="w-3.5 h-3.5" /> Descargar imagen
               </button>
@@ -155,7 +153,7 @@ const MenuItem = ({ icon: Icon, title, hint, disabled, expanded, onClick }: Menu
     disabled={disabled}
     onClick={onClick}
     aria-expanded={expanded}
-    className="w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors hover:bg-surface-container-high disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+    className="w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors cursor-pointer hover:bg-theme-main/[0.07] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
   >
     <Icon className="w-4 h-4 mt-0.5 text-theme-main shrink-0" />
     <span className="flex-1">

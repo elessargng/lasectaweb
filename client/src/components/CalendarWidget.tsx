@@ -51,11 +51,13 @@ function RitualPill({ ritual, day, onHover }: {
   // Una jornada de varios días muestra la hora solo el día en que empieza.
   const label = isSameDay(new Date(ritual.startsAt), day) ? formatTime(ritual.startsAt) : style.shortLabel;
 
-  const className = `flex items-center justify-center gap-1 w-full py-1 px-1.5 border rounded text-xs md:text-sm font-semibold text-center transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 shadow-sm ${cancelled ? 'line-through opacity-50' : ''}`;
+  const className = `flex items-center justify-center gap-1 w-full py-1 px-1.5 border rounded-sm font-ui text-xs font-semibold tracking-wide text-center transition-all duration-200 hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 active:translate-y-0 shadow-[0_4px_10px_-4px_rgba(0,0,0,0.8)] ${cancelled ? 'line-through opacity-50' : ''}`;
   const colors = { color: style.color, backgroundColor: alpha(style.color, 0.15), borderColor: alpha(style.color, 0.45) };
   const content = (
     <>
       <Icon size={13} className="shrink-0" />
+      {/* La hora sola no dice qué partida es: el lector oye también el tipo y el título */}
+      <span className="sr-only">{style.label}: {ritual.title}{cancelled ? ' (cancelada)' : ''}, </span>
       <span className="truncate">{label}</span>
     </>
   );
@@ -69,6 +71,7 @@ function RitualPill({ ritual, day, onHover }: {
     return (
       <a href={external} target="_blank" rel="noopener noreferrer" className={className} style={colors} {...hoverProps}>
         {content}
+        <span className="sr-only"> (se abre en una ventana nueva)</span>
       </a>
     );
   }
@@ -90,25 +93,27 @@ function MiniCalendar({ rituals, narrador }: { rituals: Ritual[], narrador: bool
   };
 
   return (
-    <div className="w-full overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-thin scrollbar-thumb-theme-main/20 scrollbar-track-transparent">
+    <div className="w-full overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0">
       <div className="flex md:grid md:grid-cols-7 gap-3 min-w-max md:min-w-0 w-full">
         {days.map((day, i) => {
           const todayRituals = rituals.filter((ritual) => coversDay(ritual, day));
           const hasRitual = todayRituals.length > 0;
+          const isToday = i === 0;
 
           return (
             <div
               key={i}
-              className={`rounded-lg p-3 text-center w-[100px] md:w-auto flex flex-col border transition-colors ${hasRitual
-                ? 'bg-theme-container/10 border-theme-main/50'
-                : 'bg-surface-low/30 border-outline-ghost/50 opacity-70'
+              className={`relative rounded-sm p-3 text-center w-[104px] md:w-auto flex flex-col border transition-colors ${hasRitual
+                ? 'bg-[linear-gradient(180deg,rgba(18,26,51,0.75),rgba(13,15,23,0.9))] border-theme-main/35'
+                : 'bg-surface-low/40 border-outline-ghost/60'
                 }`}
             >
-              <div className="flex items-baseline justify-center gap-1.5 border-b border-outline-ghost/30 pb-1.5 mb-1.5 w-full">
-                <span className="text-xs text-on-surface-muted uppercase tracking-wider font-semibold">
+              {isToday && <span aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-theme-main shadow-[0_0_10px_rgba(212,175,106,0.9)]" />}
+              <div className="flex flex-col items-center border-b border-outline-ghost/50 pb-2 mb-1.5 w-full">
+                <span className={`font-ui text-[0.65rem] uppercase tracking-[0.2em] font-semibold ${isToday ? 'text-theme-main' : 'text-on-surface-muted'}`}>
                   {day.toLocaleDateString('es-ES', { weekday: 'short' })}
                 </span>
-                <span className="text-lg font-bold text-on-surface">
+                <span className={`font-display text-2xl leading-none mt-1 ${isToday ? 'text-gilded' : hasRitual ? 'text-on-surface' : 'text-on-surface-muted/70'}`}>
                   {day.getDate()}
                 </span>
               </div>
@@ -124,8 +129,8 @@ function MiniCalendar({ rituals, narrador }: { rituals: Ritual[], narrador: bool
               {narrador && (
                 <Link
                   to={`/rituales?nuevo=${dayKey(day)}`}
-                  title="Añadir nueva partida"
-                  className="mt-auto pt-3 text-theme-main/70 hover:text-theme-main transition-colors flex justify-center"
+                  aria-label={`Añadir partida el ${day.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}`}
+                  className="mt-auto pt-3 text-theme-main/60 hover:text-theme-main transition-colors flex justify-center"
                 >
                   <CirclePlus size={20} />
                 </Link>
@@ -165,8 +170,8 @@ export default function CalendarWidget() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p>Loading calendar…</p>;
-  if (error) return <p>Error: {error}</p>;
+  if (loading) return <p className="text-on-surface-muted italic">Cargando el calendario…</p>;
+  if (error) return <p className="text-blood-bright">Error: {error}</p>;
 
   return <MiniCalendar rituals={rituals} narrador={isNarrador} />;
 }

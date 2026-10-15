@@ -1,10 +1,16 @@
-import { Globe, Feather, Flame, Castle, type LucideIcon } from 'lucide-react';
+import { Globe, Feather, Flame, type LucideIcon } from 'lucide-react';
 import type { Ritual, RitualManager, RitualType } from '../../utils/ritualsApi';
+import IconoCastillo from './IconoCastillo';
 
 /**
  * Cómo se ve cada clase de ritual en la agenda. La partida online se divide en
  * dos según quién la gestione, porque es lo primero que interesa distinguir
  * de un vistazo.
+ *
+ * Los colores son metales y gemas, en la familia del latón de la web: oro
+ * (La Secta), plata (Villacuervos), cobre (presencial) y granate (eventos).
+ * Todos tienen contraste de al menos 4,5:1 sobre el fondo, porque también se
+ * usan como color de texto pequeño (rótulos, horas).
  */
 export type RitualKind = 'online_secta' | 'online_villacuervos' | 'presencial' | 'jornada';
 
@@ -17,10 +23,10 @@ export interface RitualKindStyle {
 }
 
 export const RITUAL_KINDS: Record<RitualKind, RitualKindStyle> = {
-  online_secta: { label: 'Partida online · La Secta', shortLabel: 'Online Secta', icon: Globe, color: '#b19cd9' },
-  online_villacuervos: { label: 'Partida online · Villacuervos', shortLabel: 'Villacuervos', icon: Feather, color: '#8fb8e8' },
-  presencial: { label: 'Partida presencial', shortLabel: 'Presencial', icon: Flame, color: '#d8705f' },
-  jornada: { label: 'Evento / Jornadas', shortLabel: 'Jornadas', icon: Castle, color: '#d4af6a' }
+  online_secta: { label: 'Partida online · La Secta', shortLabel: 'Online Secta', icon: Globe, color: '#dcb86e' },
+  online_villacuervos: { label: 'Partida online · Villacuervos', shortLabel: 'Villacuervos', icon: Feather, color: '#c5ccd6' },
+  presencial: { label: 'Partida presencial', shortLabel: 'Presencial', icon: Flame, color: '#d08a5f' },
+  jornada: { label: 'Evento / Jornadas', shortLabel: 'Jornadas', icon: IconoCastillo, color: '#cf6f7a' }
 };
 
 export const RITUAL_KIND_ORDER: RitualKind[] = ['online_secta', 'online_villacuervos', 'presencial', 'jornada'];

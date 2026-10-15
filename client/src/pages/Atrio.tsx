@@ -1,4 +1,3 @@
-// client/src/pages/Homepage.tsx
 import React from 'react';
 import { Link } from 'react-router-dom';
 
@@ -8,6 +7,7 @@ import {
   MessageSquare,
   Calendar,
   BookOpen,
+  BookMarked,
   MapPin,
   ArrowRight,
   Satellite,
@@ -16,6 +16,8 @@ import Cita from '../components/Cita';
 import StatsWidget from '../components/StatsWidget';
 import PageHeader from '../components/PageHeader';
 
+// Título de cada bloque del Atrio: rótulo en versalitas con su icono y un filo dorado a la derecha.
+const tituloBloque = 'flex items-center gap-3 font-ui text-sm md:text-base font-semibold tracking-[0.22em] text-theme-main';
 
 const Atrio: React.FC = () => {
   /*
@@ -29,40 +31,37 @@ const Atrio: React.FC = () => {
   const quickActions = [
     { label: 'Ir a la Plaza', icon: MessageSquare, path: '/plaza', desc: 'Participa en las discusiones' },
     { label: 'Explorar Crónicas', icon: BookOpen, path: '/cronicas', desc: 'Conoce la historia del culto' },
-    { label: 'Grimorio Wiki', icon: BookOpen, path: '/grimorio', desc: 'Enciclopedia de BotC' },
+    { label: 'Grimorio Wiki', icon: BookMarked, path: '/grimorio', desc: 'Enciclopedia de BotC' },
     { label: 'Ver Rituales', icon: Calendar, path: '/rituales', desc: 'No te pierdas los eventos' },
-  ]; 
+  ];
 
   return (
     <div className="flex flex-col w-full">
       <PageHeader
-              title="Atrio Principal"
-              imageSrc="/profile_banner_wide.jpg"
-              imageAlt="Dark Library"
-              maxWidthClass="max-w-7xl"
-            />
+        title="Atrio Principal"
+        imageSrc="/profile_banner_wide.jpg"
+        maxWidthClass="max-w-7xl"
+      />
 
-      <div className="max-w-7xl w-full mx-auto px-0 md:px-8 py-10 relative z-20 -mt-20">
-        <div className="flex flex-col md:flex-row gap-6 md:items-start">
-          <div className="flex-1 min-w-0 w-full">
-            <div className="bg-transparent md:bg-surface border-0 md:border border-transparent md:border-outline-ghost p-4 md:p-10 rounded-none md:rounded shadow-none md:shadow-2xl relative space-y-8">
-              
-              <Cita texto="Ven, siéntate al borde del abismo. Contaremos historias sobre los condenados, *y uno de nosotros no mentirá al hacerlo*." />
+      <div className="max-w-7xl w-full mx-auto px-4 md:px-8 relative z-20 -mt-12 md:-mt-16">
+        <div className="max-w-3xl mx-auto">
+          <Cita texto="Ven, siéntate al borde del abismo. Contaremos historias sobre los condenados, *y uno de nosotros no mentirá al hacerlo*." />
+        </div>
 
-              {/* Calendario */}
-              <div className="bg-surface-low border border-outline-ghost p-4 rounded shadow-md">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-xl font-display text-theme-main border-b flex items-center border-outline-ghost pb-2 gap-2">
-                    <Calendar size={18} /> Próximos Rituales
-                  </h4>
-
-                  <Link to="/rituales" className="text-theme-main hover:text-theme-main/80 text-sm flex items-center gap-1">
-                    Ver rituales <ArrowRight size={14} />
-                  </Link>
-                </div>
-                <CalendarWidgets />
-
+        <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+          <div className="flex flex-col gap-8 min-w-0">
+            {/* Calendario */}
+            <section aria-labelledby="atrio-rituales" className="panel-premium rounded-sm p-5 md:p-8">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                <h3 id="atrio-rituales" className={tituloBloque}>
+                  <Calendar size={18} /> Próximos Rituales
+                </h3>
+                <Link to="/rituales" className="group inline-flex items-center gap-1.5 font-ui text-xs font-semibold uppercase tracking-[0.18em] text-on-surface-muted hover:text-gold-bright transition-colors">
+                  Ver rituales <ArrowRight size={14} className="text-theme-main transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" />
+                </Link>
               </div>
+              <CalendarWidgets />
+            </section>
 
               {/* Enlace a hilos de la plaza -- No funcional */}
               {/*
@@ -104,41 +103,38 @@ const Atrio: React.FC = () => {
                 </div>
 
               */}
-              <div>
-                <div className="bg-surface border border-outline-ghost p-4 md:p-6 rounded shadow-2xl space-y-4">
-                  <h4 className="text-xl font-display text-theme-main border-b flex items-center border-outline-ghost pb-2 gap-2">
-                    <Satellite size={18}/>Estadísticas
-                  </h4>
-                  <StatsWidget />
-                  
-                </div>
-              </div>
-            </div>
+            <section aria-labelledby="atrio-estadisticas" className="panel-premium rounded-sm p-5 md:p-8">
+              <h3 id="atrio-estadisticas" className={`${tituloBloque} mb-8`}>
+                <Satellite size={18} /> Estadísticas
+              </h3>
+              <StatsWidget />
+            </section>
           </div>
 
-            <div className="md:w-72 flex-shrink-0 md:sticky md:top-34 self-start w-full">
-              <div className="bg-surface border border-outline-ghost p-4 md:p-6 rounded shadow-2xl space-y-4">
-                <h4 className="text-lg font-display text-theme-main flex items-center gap-2 mb-3">
-                  <MapPin size={18} /> Acceso rápido
-                </h4>
-                <div className="flex flex-row flex-wrap gap-3">
-                  {quickActions.map((action) => (
-                    <Link
-                      key={action.path}
-                      to={action.path}
-                      className="flex items-center gap-3 p-3 rounded bg-background hover:bg-surface-low border border-outline-ghost hover:border-theme-main transition group flex-1 min-w-[200px]"
-                    >
-                      <action.icon size={18} className="text-theme-main group-hover:scale-110 transition" />
-                      <div>
-                        <p className="text-on-surface font-medium">{action.label}</p>
-                        <p className="text-sm text-on-surface-muted">{action.desc}</p>
-                      </div>
-                      <ArrowRight size={16} className="ml-auto text-on-surface-variant group-hover:text-theme-main transition" />
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </div>
+          <section aria-labelledby="atrio-acceso" className="panel-premium rounded-sm p-5 md:p-6">
+            <h3 id="atrio-acceso" className={`${tituloBloque} mb-5`}>
+              <MapPin size={18} /> Acceso rápido
+            </h3>
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              {quickActions.map((action) => (
+                <li key={action.path}>
+                  <Link
+                    to={action.path}
+                    className="group flex items-center gap-4 p-3.5 rounded-sm bg-background/60 border border-outline-ghost hover:border-theme-main/60 hover:bg-[linear-gradient(90deg,rgba(212,175,106,0.08),transparent)] transition-colors"
+                  >
+                    <span className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center border border-theme-main/40 bg-[radial-gradient(circle_at_50%_35%,#1f2538,#0d0f17)] text-theme-main group-hover:border-theme-main group-hover:shadow-[0_0_14px_rgba(212,175,106,0.35)] transition-shadow">
+                      <action.icon size={18} />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-ui text-sm font-semibold tracking-wide text-on-surface group-hover:text-gold-bright transition-colors">{action.label}</span>
+                      <span className="block text-sm text-on-surface-muted">{action.desc}</span>
+                    </span>
+                    <ArrowRight size={16} className="ml-auto shrink-0 text-on-surface-muted group-hover:text-theme-main group-hover:translate-x-0.5 transition motion-reduce:transition-none" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
         </div>
       </div>
     </div>

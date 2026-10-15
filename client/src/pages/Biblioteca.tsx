@@ -70,6 +70,11 @@ import PovMatchPlayerModal from '../components/library/PovMatchPlayerModal';
 import PovMatchFormModal from '../components/library/PovMatchFormModal';
 import Dialog from '../components/Dialog';
 
+// Botón de icono de las acciones de administración: pergamino en reposo, latón al pasar.
+// El nombre lo da aria-label; data-tip lo muestra a la vista al pasar el ratón o enfocar.
+const ACCION = 'w-7 h-7 inline-flex items-center justify-center rounded-sm text-on-surface-muted hover:text-gold-bright hover:bg-theme-main/10 transition-colors cursor-pointer';
+const ACCION_BORRAR = 'w-7 h-7 inline-flex items-center justify-center rounded-sm text-on-surface-muted hover:text-blood-bright hover:bg-blood/15 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-on-surface-muted disabled:hover:bg-transparent';
+
 const Youtube = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
     <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
@@ -762,72 +767,40 @@ export default function Biblioteca() {
   };
 
   // ACCIONES DE ADMIN SOBRE UNA CARPETA (reutilizadas en el árbol, las tarjetas y la cabecera)
+  // Primero las de crear y, tras un separador, las de gestionar la carpeta.
   const renderSectionAdminActions = (section: LibrarySection) => {
     const isDeletable = !section.hasSubDocuments;
 
     return (
       <>
-        <button
-          onClick={() => handleOpenCreateSubtitle(section.id)}
-          className="p-1.5 text-xs text-amber-300/80 hover:text-amber-300 hover:bg-amber-500/10 rounded-lg transition-all flex items-center gap-1"
-          title="Añadir subcarpeta"
-        >
+        <button type="button" onClick={() => handleOpenCreateSubtitle(section.id)} className={ACCION} aria-label="Añadir subcarpeta" data-tip="Añadir subcarpeta">
           <FolderPlus className="w-4 h-4" />
         </button>
-
-        <button
-          onClick={() => handleOpenCreateDocument(section.id)}
-          className="p-1.5 text-xs text-emerald-400/80 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-all flex items-center gap-1"
-          title="Añadir documento (archivo)"
-        >
+        <button type="button" onClick={() => handleOpenCreateDocument(section.id)} className={ACCION} aria-label="Añadir documento" data-tip="Añadir documento">
           <FilePlus className="w-4 h-4" />
         </button>
-
-        <button
-          onClick={() => handleOpenCreateLink(section.id)}
-          className="p-1.5 text-xs text-sky-400/80 hover:text-sky-400 hover:bg-sky-500/10 rounded-lg transition-all flex items-center gap-1"
-          title="Añadir enlace (web / youtube)"
-        >
+        <button type="button" onClick={() => handleOpenCreateLink(section.id)} className={ACCION} aria-label="Añadir enlace" data-tip="Añadir enlace">
           <LinkIcon className="w-4 h-4" />
         </button>
-
-        <button
-          onClick={() => handleOpenCreatePovMatch(section.id)}
-          className="p-1.5 text-xs text-purple-400/80 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-all flex items-center gap-1"
-          title="Añadir partida POV (multicámara)"
-        >
+        <button type="button" onClick={() => handleOpenCreatePovMatch(section.id)} className={ACCION} aria-label="Añadir partida POV" data-tip="Añadir partida POV">
           <Sparkles className="w-4 h-4" />
         </button>
 
-        <button
-          onClick={() => handleOpenMoveModal('section', section.id, section.name, section.parentId)}
-          className="p-1.5 text-xs text-sky-400/80 hover:text-sky-400 hover:bg-sky-500/10 rounded-lg transition-all"
-          title="Mover carpeta"
-        >
+        <span aria-hidden="true" className="w-px h-4 mx-1 bg-theme-main/25" />
+
+        <button type="button" onClick={() => handleOpenMoveModal('section', section.id, section.name, section.parentId)} className={ACCION} aria-label="Mover carpeta" data-tip="Mover carpeta">
           <Move className="w-4 h-4" />
         </button>
-
-        <button
-          onClick={() => handleOpenEditSection(section)}
-          className="p-1.5 text-xs text-on-surface-muted hover:text-white hover:bg-surface-container-high rounded-lg transition-all"
-          title="Editar carpeta (nombre, icono y acceso)"
-        >
+        <button type="button" onClick={() => handleOpenEditSection(section)} className={ACCION} aria-label="Editar carpeta" data-tip="Editar carpeta">
           <Pencil className="w-4 h-4" />
         </button>
-
         <button
+          type="button"
           onClick={() => handleDeleteSection(section)}
           disabled={!isDeletable}
-          className={`p-1.5 text-xs rounded-lg transition-all ${
-            isDeletable
-              ? 'text-red-400/80 hover:text-red-400 hover:bg-red-500/10 cursor-pointer'
-              : 'text-on-surface-muted/30 cursor-not-allowed opacity-40'
-          }`}
-          title={
-            isDeletable
-              ? 'Borrar carpeta'
-              : 'No se puede borrar una carpeta que contenga elementos colgados'
-          }
+          className={ACCION_BORRAR}
+          aria-label={isDeletable ? 'Borrar carpeta' : 'Borrar carpeta (no disponible: contiene elementos)'}
+          data-tip={isDeletable ? 'Borrar carpeta' : 'Tiene elementos: no se puede borrar'}
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -952,16 +925,18 @@ export default function Biblioteca() {
               <div className="flex items-center gap-1 shrink-0 self-end md:self-center">
                 <button
                   onClick={() => handleOpenEditLink(link)}
-                  className="p-1.5 text-xs text-on-surface-muted hover:text-white hover:bg-surface-container-high rounded-lg transition-all"
-                  title="Editar enlace"
+                  className={ACCION}
+                  aria-label="Editar enlace"
+                  data-tip="Editar enlace"
                 >
                   <Pencil className="w-4 h-4" />
                 </button>
 
                 <button
                   onClick={() => handleDeleteLink(link)}
-                  className="p-1.5 text-xs text-red-400/80 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                  title="Eliminar enlace"
+                  className={ACCION_BORRAR}
+                  aria-label="Eliminar enlace"
+                  data-tip="Eliminar enlace"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -1089,24 +1064,27 @@ export default function Biblioteca() {
 
               <button
                 onClick={() => handleOpenMoveModal('document', doc.id, doc.title, doc.sectionId)}
-                className="p-1.5 text-xs text-sky-400/80 hover:text-sky-400 hover:bg-sky-500/10 rounded-lg transition-all"
-                title="Mover documento de sección"
+                className={ACCION}
+                aria-label="Mover documento"
+                data-tip="Mover documento"
               >
                 <Move className="w-4 h-4" />
               </button>
 
               <button
                 onClick={() => handleOpenEditDocument(doc)}
-                className="p-1.5 text-xs text-on-surface-muted hover:text-white hover:bg-surface-container-high rounded-lg transition-all"
-                title="Editar título del documento"
+                className={ACCION}
+                aria-label="Editar documento"
+                data-tip="Editar documento"
               >
                 <Pencil className="w-4 h-4" />
               </button>
 
               <button
                 onClick={() => handleDeleteDocument(doc)}
-                className="p-1.5 text-xs text-red-400/80 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                title="Eliminar documento"
+                className={ACCION_BORRAR}
+                aria-label="Eliminar documento"
+                data-tip="Eliminar documento"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -1217,14 +1195,14 @@ export default function Biblioteca() {
     return (
       <div
         key={section.id}
-        className="group relative flex flex-col rounded-2xl bg-surface-container/70 border border-outline-ghost hover:border-theme-main/60 hover:bg-surface-container transition-all shadow-md hover:shadow-xl hover:-translate-y-0.5"
+        className="group relative flex flex-col rounded-sm bg-surface-container/70 border border-outline-ghost hover:border-theme-main/60 hover:bg-surface-container transition-all shadow-md hover:shadow-xl hover:-translate-y-0.5 motion-reduce:hover:translate-y-0"
       >
         <button
           type="button"
           onClick={() => setSelectedRootId(section.id)}
           className="flex flex-col items-center text-center gap-3 p-5 md:p-6 w-full"
         >
-          <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-theme-main/10 border border-theme-main/30 flex items-center justify-center text-theme-main shadow-[0_0_15px_rgba(var(--color-theme-main),0.15)] group-hover:bg-theme-main/20 transition-colors">
+          <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-[radial-gradient(circle_at_50%_35%,#1f2538,#0d0f17)] border border-theme-main/50 flex items-center justify-center text-theme-main shadow-[inset_0_0_0_3px_rgba(7,8,13,0.9),inset_0_0_0_4px_rgba(212,175,106,0.25)] group-hover:border-theme-main group-hover:shadow-[inset_0_0_0_3px_rgba(7,8,13,0.9),inset_0_0_0_4px_rgba(212,175,106,0.4),0_0_18px_rgba(212,175,106,0.25)] transition-shadow">
             <SectionIcon className="w-8 h-8 md:w-10 md:h-10" />
           </div>
 
@@ -1250,7 +1228,7 @@ export default function Biblioteca() {
 
         {/* Acciones de Admin sobre la carpeta raíz */}
         {isAdmin && (
-          <div className="flex items-center justify-center gap-0.5 flex-wrap px-2 pb-3 pt-1 border-t border-outline-ghost/40 mt-auto">
+          <div className="flex items-center justify-center gap-0.5 px-2 py-2.5 border-t border-theme-main/15 bg-background/30 mt-auto">
             {renderSectionAdminActions(section)}
           </div>
         )}

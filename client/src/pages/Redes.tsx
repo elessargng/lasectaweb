@@ -20,7 +20,7 @@ const Redes = () => {
           <div className="space-y-6">
             {/* Telegram - Destacado como la comunidad principal */}
             <div
-              className="group relative flex flex-col md:flex-row items-center gap-6 bg-theme-container/10 hover:bg-theme-container/20 border border-theme-main/30 hover:border-theme-main/60 p-6 md:p-8 rounded transition-all duration-300 shadow-[0_0_15px_rgba(177,156,217,0.02)] hover:shadow-[0_0_25px_rgba(177,156,217,0.1)]"
+              className="group relative flex flex-col md:flex-row items-center gap-6 bg-theme-container/10 hover:bg-theme-container/20 border border-theme-main/30 hover:border-theme-main/60 p-6 md:p-8 rounded transition-all duration-300 shadow-[0_0_15px_rgba(212,175,106,0.02)] hover:shadow-[0_0_25px_rgba(212,175,106,0.1)]"
             >
               <div className="w-16 h-16 bg-theme-container text-theme-main rounded-full flex items-center justify-center border border-theme-main/30 shrink-0 group-hover:scale-105 transition-transform duration-300">
                 <svg className="w-8 h-8 fill-current" viewBox="0 0 24 24">

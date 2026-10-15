@@ -23,23 +23,19 @@ function Widget({ miembros, escrituras, eventos }: WidgetProps) {
         { label: 'Eventos', value: eventos, icon: Calendar },
     ];
 
+    // Cada cifra es una ficha redonda con bisel de latón, como las fichas del Grimorio.
     return (
-        <div className="flex flex-row flex-wrap gap-3">
+        <ul className="grid grid-cols-3 gap-3 md:gap-6">
             {stats.map((stat) => (
-                <div
-                    key={stat.label}
-                    className="flex-1 min-w-[80px] bg-surface-low border border-outline-ghost p-3 rounded shadow-md flex items-center gap-3 hover:border-theme-main transition-colors group"
-                >
-                    <div className="text-theme-main bg-theme-container/20 p-2 rounded group-hover:scale-110 transition">
-                        <stat.icon size={20} />
+                <li key={stat.label} className="flex flex-col items-center text-center group">
+                    <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center bg-[radial-gradient(circle_at_50%_35%,#1f2538_0%,#0d0f17_75%)] border border-theme-main/60 shadow-[inset_0_0_0_4px_rgba(7,8,13,0.9),inset_0_0_0_5px_rgba(212,175,106,0.25),0_10px_25px_-8px_rgba(0,0,0,0.9)] transition-shadow group-hover:shadow-[inset_0_0_0_4px_rgba(7,8,13,0.9),inset_0_0_0_5px_rgba(212,175,106,0.45),0_0_24px_rgba(212,175,106,0.25)]">
+                        <stat.icon size={14} className="absolute top-3 md:top-3.5 text-theme-main/70" />
+                        <span className="font-display text-3xl md:text-4xl text-gilded leading-none mt-2">{stat.value}</span>
                     </div>
-                    <div>
-                        <div className="text-2xl font-display text-on-surface">{stat.value}</div>
-                        <div className="text-sm text-on-surface-muted">{stat.label}</div>
-                    </div>
-                </div>
+                    <span className="mt-3 font-ui text-[0.7rem] md:text-xs font-semibold uppercase tracking-[0.22em] text-on-surface-muted">{stat.label}</span>
+                </li>
             ))}
-        </div>
+        </ul>
     );
 }
 
@@ -56,8 +52,8 @@ export default function StatsWidget() {
     }, []);
 
 
-    if (loading) return <p>Loading calendar…</p>;
-    if (error) return <p>Error: {error}</p>;
+    if (loading) return <p className="text-on-surface-muted italic">Cargando las estadísticas…</p>;
+    if (error) return <p className="text-blood-bright">Error: {error}</p>;
 
     return <Widget miembros={570} escrituras={13} eventos={playsNm} />;
 }

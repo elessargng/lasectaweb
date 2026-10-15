@@ -1,7 +1,6 @@
 import { CalendarCheck, CalendarPlus, Loader2, UserMinus, UserPlus } from 'lucide-react';
 import type { Ritual } from '../../utils/ritualsApi';
 import { getAvatarUrl } from '../../utils/api';
-import { alpha } from './ritualKinds';
 import { isIntention } from './ritualSignups';
 
 /** Lo que necesita la tarjeta para que la persona que mira pueda apuntarse. */
@@ -16,7 +15,8 @@ export interface SignupActions {
 
 interface RitualAttendeesProps {
   ritual: Ritual;
-  color: string;
+  /** Sin uso desde el rediseño: los botones y marcas van en el latón de la web. */
+  color?: string;
   actions?: SignupActions;
 }
 
@@ -32,6 +32,16 @@ function closesAt(ritual: Ritual): number {
   return start + Math.max(0, duration);
 }
 
+const avatarClass = 'w-7 h-7 rounded-full object-cover ring-1 ring-theme-main/40 ring-offset-1 ring-offset-surface';
+const nota = 'text-xs italic text-on-surface-muted';
+
+/** Marca «tú» junto al nombre de quien mira. */
+const Tu = () => (
+  <span className="px-1.5 py-px font-ui text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-theme-main border border-theme-main/40 rounded-sm shrink-0">
+    tú
+  </span>
+);
+
 /**
  * La gente apuntada a una partida de La Secta, en el orden en que se apuntó, y
  * el botón para apuntarse o desapuntarse. Las plazas no limitan: quien se
@@ -40,8 +50,8 @@ function closesAt(ritual: Ritual): number {
  * En las presenciales y los eventos no hay inscripción: solo quien quiere
  * asistir, para que se sepa quién piensa ir, sin orden ni prioridad.
  */
-export const RitualAttendees = ({ ritual, color, actions }: RitualAttendeesProps) => {
-  if (isIntention(ritual)) return <RitualIntentions ritual={ritual} color={color} actions={actions} />;
+export const RitualAttendees = ({ ritual, actions }: RitualAttendeesProps) => {
+  if (isIntention(ritual)) return <RitualIntentions ritual={ritual} actions={actions} />;
 
   const attendees = ritual.attendees ?? [];
   const key = ritual.occurrenceKey ?? ritual.id;
@@ -52,44 +62,35 @@ export const RitualAttendees = ({ ritual, color, actions }: RitualAttendeesProps
   const places = ritual.maxPlayers;
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-xs font-display uppercase tracking-[0.18em] text-on-surface-muted">
+    <div className="flex flex-col gap-3">
+      <div className="flex items-baseline gap-3">
+        <h3 className="rotulo flex-1">
           Apuntados · <span className="tabular-nums">{attendees.length}</span>
         </h3>
-        {places && <span className="text-xs text-on-surface-muted tabular-nums">{places} plazas</span>}
+        {places && <span className="font-ui text-[0.68rem] tracking-[0.14em] uppercase text-on-surface-muted tabular-nums">{places} plazas</span>}
       </div>
 
       {attendees.length === 0 ? (
         <p className="text-sm italic text-on-surface-muted">Nadie se ha apuntado todavía.</p>
       ) : (
-        <ol className="flex flex-col gap-1">
+        <ol className="flex flex-col gap-1.5">
           {attendees.map((a, i) => (
             <li key={a.userId} className="contents">
               {/* Marca donde se acaban las plazas: quien va después se apuntó cuando ya estaban cubiertas */}
               {places && i === places && (
-                <span className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-on-surface-muted/80 my-1">
-                  <span className="flex-1 border-t border-dashed border-outline-ghost" />
+                <span className="flex items-center gap-2 font-ui text-[0.6rem] uppercase tracking-[0.16em] text-blood-bright/90 my-1.5">
+                  <span className="flex-1 border-t border-dashed border-blood-bright/40" />
                   Por encima de las {places} plazas
-                  <span className="flex-1 border-t border-dashed border-outline-ghost" />
+                  <span className="flex-1 border-t border-dashed border-blood-bright/40" />
                 </span>
               )}
-              <span className="flex items-center gap-2 text-sm">
-                <span className="w-5 text-right text-xs tabular-nums text-on-surface-muted">{i + 1}.</span>
-                <img
-                  src={getAvatarUrl(a.profilePicture)}
-                  alt=""
-                  className="w-6 h-6 rounded-full object-cover border border-outline-ghost"
-                  loading="lazy"
-                />
-                <span className={`truncate ${a.userId === actions?.userId ? 'text-on-surface font-semibold' : 'text-on-surface/90'}`}>
+              <span className="flex items-center gap-2.5 text-[0.98rem]">
+                <span className="w-6 text-right font-ui text-xs tabular-nums text-theme-main/70">{i + 1}</span>
+                <img src={getAvatarUrl(a.profilePicture)} alt="" className={avatarClass} loading="lazy" />
+                <span className={`truncate ${a.userId === actions?.userId ? 'text-on-surface-bright font-semibold' : 'text-on-surface/90'}`}>
                   {a.username}
                 </span>
-                {a.userId === actions?.userId && (
-                  <span className="text-[10px] uppercase tracking-wider shrink-0" style={{ color }}>
-                    tú
-                  </span>
-                )}
+                {a.userId === actions?.userId && <Tu />}
               </span>
             </li>
           ))}
@@ -98,27 +99,22 @@ export const RitualAttendees = ({ ritual, color, actions }: RitualAttendeesProps
 
       {!cancelled &&
         (started ? (
-          <p className="text-xs italic text-on-surface-muted">La partida ya ha empezado.</p>
+          <p className={nota}>La partida ya ha empezado.</p>
         ) : !actions?.userId ? (
-          <p className="text-xs italic text-on-surface-muted">Identifícate para apuntarte.</p>
+          <p className={nota}>Identifícate para apuntarte.</p>
         ) : (
           <button
             type="button"
             disabled={busy}
             onClick={() => (mine ? actions.onLeave(ritual) : actions.onSignUp(ritual))}
-            className="self-start inline-flex items-center gap-1.5 px-3 py-1.5 border text-xs font-display uppercase tracking-wider transition-colors disabled:opacity-60"
-            style={
-              mine
-                ? { borderColor: 'var(--color-outline-ghost)' }
-                : { borderColor: alpha(color, 0.6), color, backgroundColor: alpha(color, 0.12) }
-            }
+            className={`self-start gap-2 ${mine ? 'btn-sello btn-sello-peligro' : 'btn-runic btn-runic-primary px-5 py-2 text-xs'}`}
           >
             {busy ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : mine ? (
-              <UserMinus className="w-3.5 h-3.5" />
+              <UserMinus className="w-4 h-4" />
             ) : (
-              <UserPlus className="w-3.5 h-3.5" />
+              <UserPlus className="w-4 h-4" />
             )}
             {mine ? 'Desapuntarme' : 'Apuntarme'}
           </button>
@@ -132,7 +128,7 @@ export const RitualAttendees = ({ ritual, color, actions }: RitualAttendeesProps
  * decirlo o retirarlo. Es un botón de alternar: el lector anuncia si está
  * marcado. La lista va por nombre, sin números, porque no da prioridad.
  */
-const RitualIntentions = ({ ritual, color, actions }: RitualAttendeesProps) => {
+const RitualIntentions = ({ ritual, actions }: RitualAttendeesProps) => {
   const attendees = [...(ritual.attendees ?? [])].sort((a, b) => a.username.localeCompare(b.username, 'es'));
   const key = ritual.occurrenceKey ?? ritual.id;
   const busy = actions?.busyKey === key;
@@ -141,31 +137,25 @@ const RitualIntentions = ({ ritual, color, actions }: RitualAttendeesProps) => {
   const cancelled = ritual.status === 'cancelado';
 
   return (
-    <div className="flex flex-col gap-2">
-      <h3 className="text-xs font-display uppercase tracking-[0.18em] text-on-surface-muted">
+    <div className="flex flex-col gap-3">
+      <h3 className="rotulo">
         Quieren asistir · <span className="tabular-nums">{attendees.length}</span>
       </h3>
 
       {attendees.length === 0 ? (
         <p className="text-sm italic text-on-surface-muted">Nadie ha dicho todavía que vaya a asistir.</p>
       ) : (
-        <ul className="flex flex-wrap gap-x-3 gap-y-1.5">
+        <ul className="flex flex-wrap gap-2">
           {attendees.map((a) => (
-            <li key={a.userId} className="flex items-center gap-1.5 text-sm">
-              <img
-                src={getAvatarUrl(a.profilePicture)}
-                alt=""
-                className="w-6 h-6 rounded-full object-cover border border-outline-ghost"
-                loading="lazy"
-              />
-              <span className={a.userId === actions?.userId ? 'text-on-surface font-semibold' : 'text-on-surface/90'}>
+            <li
+              key={a.userId}
+              className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-background/50 border border-outline-ghost/80 text-[0.95rem]"
+            >
+              <img src={getAvatarUrl(a.profilePicture)} alt="" className={avatarClass} loading="lazy" />
+              <span className={a.userId === actions?.userId ? 'text-on-surface-bright font-semibold' : 'text-on-surface/90'}>
                 {a.username}
               </span>
-              {a.userId === actions?.userId && (
-                <span className="text-[10px] uppercase tracking-wider" style={{ color }}>
-                  tú
-                </span>
-              )}
+              {a.userId === actions?.userId && <Tu />}
             </li>
           ))}
         </ul>
@@ -173,34 +163,34 @@ const RitualIntentions = ({ ritual, color, actions }: RitualAttendeesProps) => {
 
       {!cancelled &&
         (ended ? (
-          <p className="text-xs italic text-on-surface-muted">Ya ha terminado.</p>
+          <p className={nota}>Ya ha terminado.</p>
         ) : !actions?.userId ? (
-          <p className="text-xs italic text-on-surface-muted">Identifícate para decir que quieres asistir.</p>
+          <p className={nota}>Identifícate para decir que quieres asistir.</p>
         ) : (
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {/* Sin marcar es la llamada principal (dorado); marcado queda como un sello con su check */}
             <button
               type="button"
               aria-pressed={mine}
               aria-busy={busy || undefined}
               disabled={busy}
               onClick={() => (mine ? actions.onLeave(ritual) : actions.onSignUp(ritual))}
-              className="self-start inline-flex items-center gap-1.5 px-3 py-1.5 border text-xs font-display uppercase tracking-wider transition-colors disabled:opacity-60 focus:outline-none focus-visible:ring-1 focus-visible:ring-theme-main"
-              style={
+              className={`gap-2 ${
                 mine
-                  ? { borderColor: alpha(color, 0.9), color: 'var(--color-on-surface)', backgroundColor: alpha(color, 0.3) }
-                  : { borderColor: alpha(color, 0.6), color, backgroundColor: alpha(color, 0.12) }
-              }
+                  ? 'btn-sello !text-gold-bright !border-theme-main/70 !bg-theme-main/10'
+                  : 'btn-runic btn-runic-primary px-5 py-2 text-xs'
+              }`}
             >
               {busy ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : mine ? (
-                <CalendarCheck className="w-3.5 h-3.5" />
+                <CalendarCheck className="w-4 h-4" />
               ) : (
-                <CalendarPlus className="w-3.5 h-3.5" />
+                <CalendarPlus className="w-4 h-4" />
               )}
               Quiero asistir
             </button>
-            <p className="text-[11px] text-on-surface-muted">Solo para saber quién piensa ir: no reserva plaza.</p>
+            <p className={nota}>Solo para saber quién piensa ir: no reserva plaza.</p>
           </div>
         ))}
     </div>

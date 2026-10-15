@@ -7,6 +7,7 @@
   src: url('/fonts/teutonic1.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -14,6 +15,7 @@
   src: url('/fonts/teutonic2.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -21,6 +23,7 @@
   src: url('/fonts/teutonic3.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -28,6 +31,7 @@
   src: url('/fonts/teutonic4.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -35,78 +39,129 @@
   src: url('/fonts/dum1.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
-/* Blood on the Clocktower Theme */
+/*
+ * Paleta «Medianoche y latón» (Blood on the Clocktower)
+ * ─────────────────────────────────────────────────────
+ * - Tinta de medianoche: el pueblo de noche, cuando el Narrador despierta a los personajes.
+ * - Latón / oro viejo: la esfera del reloj, el Grimorio y las fichas. Es el acento principal.
+ * - Sangre (lacre): el equipo malvado, el Demonio, las ejecuciones. Peligro y alertas.
+ * - Azul aldeano: el equipo bueno (Aldeanos y Forasteros).
+ * - Pergamino: las hojas de personajes. Es el color del texto.
+ */
 @theme {
   --font-display: "Dum1", "Cinzel", serif;
+  --font-ui: "Cinzel", "Crimson Text", serif;
   --font-body: "Crimson Text", serif;
   --font-teutonic1: "Teutonic No1", "Cinzel", serif;
   --font-teutonic2: "Teutonic No2", "Cinzel", serif;
   --font-teutonic3: "Teutonic No3", "Cinzel", serif;
   --font-teutonic4: "Teutonic No4", "Cinzel", serif;
 
-  /* Core Tones */
+  /* Fondos (tinta de medianoche) */
   --color-background: var(--theme-background);
   --color-surface: var(--theme-surface);
+  --color-surface-low: var(--theme-surface-low);
   --color-surface-container-low: var(--theme-surface-low);
   --color-surface-container: var(--theme-surface-container);
+  --color-surface-high: var(--theme-surface-high);
   --color-surface-container-high: var(--theme-surface-high);
+  --color-surface-highest: var(--theme-surface-highest);
   --color-surface-container-highest: var(--theme-surface-highest);
 
+  /* Texto (pergamino) */
   --color-on-surface: var(--theme-on-surface);
+  --color-on-surface-bright: #fbf5e6;
   --color-on-surface-muted: var(--theme-on-surface-variant);
+  --color-on-surface-variant: var(--theme-on-surface-variant);
 
-  --color-outline-ghost: #3a322c;
-  /* Muted brown/grey border */
+  /* Bordes: latón apagado */
+  --color-outline-ghost: #34302c;
 
-  /* Ritual States Mapping */
+  /* Acento principal (latón) y su fondo (zafiro de medianoche, como la caja del Grimorio) */
   --color-theme-main: var(--theme-ritual-main);
   --color-theme-container: var(--theme-ritual-container);
 
-  /* Fondo de la cabecera: morado más oscuro que theme-container */
-  --color-cabecera: #2a1d42;
+  /* Colores del mundo de Clocktower */
+  --color-gold: #d4af6a;
+  --color-gold-bright: #ecd29a;
+  --color-gold-deep: #9c7536;
+  --color-blood: #9e1b25;
+  --color-blood-bright: #d4434c;
+  --color-blood-deep: #4a0d13;
+  --color-good: #4f8fd1;
+  --color-good-bright: #8dbbec;
+  --color-midnight: #121a33;
+  --color-parchment: #ebe2cc;
+
+  /* Fondo de la cabecera */
+  --color-cabecera: #07080d;
 }
 
 @layer base {
   :root {
-    /* Foundation Colors (Very dark charcoal, almost black) */
-    --theme-background: #0a0a0a;
-    --theme-surface: #121212;
-    --theme-surface-low: #181818;
-    --theme-surface-container: #1e1e1e;
-    --theme-surface-high: #242424;
-    --theme-surface-highest: #2c2c2c;
+    color-scheme: dark;
 
-    /* Text (Parchment/Off-white) */
-    --theme-on-surface: #dfd8c8;
-    --theme-on-surface-variant: #a69f92;
+    /* Tinta de medianoche (negro azulado, nunca negro puro) */
+    --theme-background: #07080d;
+    --theme-surface: #0d0f17;
+    --theme-surface-low: #11131d;
+    --theme-surface-container: #161925;
+    --theme-surface-high: #1c2030;
+    --theme-surface-highest: #252a3c;
 
-    /* Primary (Violet / Light Purple) */
-    --theme-ritual-main: #b19cd9;
-    --theme-ritual-container: #4a3b69;
+    /* Pergamino */
+    --theme-on-surface: #ebe2cc;
+    --theme-on-surface-variant: #a89e88;
+
+    /* Latón (acento) y zafiro de medianoche (contenedor: modales, selección) */
+    --theme-ritual-main: #d4af6a;
+    --theme-ritual-container: #1b2340;
+
+    /* Valores en RGB para sombras y brillos */
+    --gold-rgb: 212, 175, 106;
+    --blood-rgb: 158, 27, 37;
+    --midnight-rgb: 18, 26, 51;
+  }
+
+  html {
+    background-color: var(--theme-background);
   }
 
   body {
-    background-color: var(--theme-background);
+    /* Luna fría arriba, rescoldo de sangre abajo: la plaza del pueblo de noche */
+    background:
+      radial-gradient(ellipse 80% 50% at 75% -10%, rgba(var(--midnight-rgb), 0.9) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 40% at 0% 110%, rgba(var(--blood-rgb), 0.12) 0%, transparent 70%),
+      var(--theme-background);
+    background-attachment: fixed;
     color: var(--theme-on-surface);
     font-family: var(--font-body);
-    transition: background-color 0.5s ease;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
     position: relative;
   }
 
   body::before {
     content: "";
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    inset: 0;
     background-image: url('/bg-pattern.png');
-    background-size: 400px;
+    background-size: 420px;
     background-repeat: repeat;
-    opacity: 0.05;
+    opacity: 0.035;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* Viñeta: oscurece los bordes como la luz de una vela */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
     pointer-events: none;
     z-index: -1;
   }
@@ -118,42 +173,403 @@
   h6 {
     text-transform: uppercase;
   }
+
+  ::selection {
+    background: var(--theme-ritual-main);
+    color: #140e05;
+  }
+
+  /* Foco visible y coherente en toda la web */
+  :focus-visible {
+    outline: 2px solid var(--theme-ritual-main);
+    outline-offset: 3px;
+  }
 }
 
-/* Reusable quote styling */
+/* Dumbledor (la letra de Clocktower) luce en títulos, pero en cuerpos pequeños se lee mal:
+   ahí la sustituye Cinzel, la versalita de la interfaz. */
+.font-display:is(.text-xs, .text-sm, .text-base, .text-\[10px\], .text-\[11px\], .text-\[17px\]) {
+  font-family: var(--font-ui);
+  letter-spacing: 0.04em;
+}
+
+/* ───────────────────────── Ornamentos ───────────────────────── */
+
+/* Rótulo pequeño sobre un título */
+.eyebrow {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgba(var(--gold-rgb), 0.9);
+}
+
+/* Texto dorado con relieve, para títulos principales */
+.text-gilded {
+  background: linear-gradient(180deg, #f6e6bf 0%, #d4af6a 48%, #a07a3a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.75));
+}
+
+@media (forced-colors: active) {
+  .text-gilded {
+    background: none;
+    color: CanvasText;
+    filter: none;
+  }
+}
+
+/* Filo dorado que se desvanece a los lados */
+.hairline-gold {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb), 0.6) 20%, rgba(var(--gold-rgb), 0.6) 80%, transparent);
+}
+
+/* Separador con rombo central (decorativo: usar con aria-hidden) */
+.ornament-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: rgba(var(--gold-rgb), 0.85);
+}
+
+.ornament-divider::before,
+.ornament-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb), 0.55));
+}
+
+.ornament-divider::after {
+  background: linear-gradient(270deg, transparent, rgba(var(--gold-rgb), 0.55));
+}
+
+.ornament-diamond {
+  width: 7px;
+  height: 7px;
+  transform: rotate(45deg);
+  border: 1px solid currentColor;
+  box-shadow: 0 0 8px rgba(var(--gold-rgb), 0.5);
+}
+
+/* Panel noble: superficie con filo de latón y luz superior */
+.panel-premium {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0%, transparent 40%),
+    var(--theme-surface);
+  border: 1px solid rgba(var(--gold-rgb), 0.16);
+  box-shadow:
+    0 1px 0 rgba(var(--gold-rgb), 0.08) inset,
+    0 24px 48px -16px rgba(0, 0, 0, 0.7);
+}
+
+.panel-premium::before {
+  content: "";
+  position: absolute;
+  inset: -1px -1px auto -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb), 0.7), transparent);
+  pointer-events: none;
+}
+
+/* Esquinas de grimorio: cuatro escuadras doradas (decorativas) */
+.corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: rgba(var(--gold-rgb), 0.55);
+  border-style: solid;
+  pointer-events: none;
+}
+
+.corner-tl { top: 6px; left: 6px; border-width: 1px 0 0 1px; }
+.corner-tr { top: 6px; right: 6px; border-width: 1px 1px 0 0; }
+.corner-bl { bottom: 6px; left: 6px; border-width: 0 0 1px 1px; }
+.corner-br { bottom: 6px; right: 6px; border-width: 0 1px 1px 0; }
+
+/* Cita: un fragmento de pergamino entre filos dorados */
 .quote-container {
-  background-color: rgba(74, 59, 105, 0.3); /* bg-theme-container/30 */
-  border: 1px solid rgba(177, 156, 217, 0.3); /* border-theme-main/30 */
-  border-radius: 0.25rem; /* rounded */
-  padding: 1.5rem; /* p-6 */
-  margin-bottom: 1.5rem; /* mb-6 */
-  text-align: center; /* text-center */
-  box-shadow: 0 0 15px rgba(177, 156, 217, 0.1);
+  position: relative;
+  padding: 0.5rem 1.5rem 0;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  background: radial-gradient(ellipse at center, rgba(var(--gold-rgb), 0.07) 0%, transparent 70%);
 }
 
 .quote-text {
-  color: #ffffff; /* text-white */
-  font-size: 1.25rem; /* text-xl */
-  font-family: var(--font-body);
-  font-style: italic; /* italic */
-  line-height: 1.625; /* leading-relaxed */
+  color: var(--color-on-surface-bright);
+  font-size: 1.3rem;
+  font-family: "Cormorant Garamond", var(--font-body);
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.55;
 }
 
 @media (min-width: 768px) {
   .quote-text {
-    font-size: 1.5rem; /* text-2xl */
+    font-size: 1.65rem;
   }
 }
 
-/* Runic Button Styles */
+/* Cajas de diálogo: filo de latón y una sombra honda, como un cofre abierto sobre la mesa */
+[role='dialog'][aria-modal='true'] {
+  box-shadow:
+    0 0 0 1px rgba(var(--gold-rgb), 0.22),
+    0 40px 80px -20px rgba(0, 0, 0, 0.9),
+    0 0 70px rgba(var(--gold-rgb), 0.06);
+}
+
+/* Etiqueta de los botones de icono (data-tip). Es solo visual: el lector usa el aria-label del
+   botón, que siempre dice lo mismo, así que no se anuncia dos veces como pasaría con title. */
+[data-tip] {
+  position: relative;
+}
+
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  white-space: nowrap;
+  padding: 0.3rem 0.6rem;
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--theme-on-surface);
+  background: var(--theme-surface);
+  border: 1px solid rgba(var(--gold-rgb), 0.35);
+  border-radius: 2px;
+  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+}
+
+/* ───────────────────────── Piezas compartidas ───────────────────────── */
+
+/* Caja de modal: un cofre de tinta con filo de latón y luz de luna arriba */
+.modal-cofre {
+  position: relative;
+  background:
+    radial-gradient(ellipse 90% 40% at 50% 0%, rgba(var(--midnight-rgb), 0.85), transparent 70%),
+    var(--theme-surface);
+  border: 1px solid rgba(var(--gold-rgb), 0.25);
+  border-radius: 3px;
+}
+
+.modal-cofre::before {
+  content: "";
+  position: absolute;
+  inset: -1px -1px auto -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb), 0.85), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Medallón: ficha redonda con bisel de latón (el icono va dentro) */
+.medallon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 50% 35%, #1f2538 0%, #0d0f17 75%);
+  border: 1px solid rgba(var(--gold-rgb), 0.55);
+  box-shadow:
+    inset 0 0 0 3px rgba(7, 8, 13, 0.9),
+    inset 0 0 0 4px rgba(var(--gold-rgb), 0.22),
+    0 6px 16px -6px rgba(0, 0, 0, 0.9);
+}
+
+/* Rótulo de sección dentro de un panel o modal */
+.rotulo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(var(--gold-rgb), 0.9);
+}
+
+.rotulo::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(var(--gold-rgb), 0.35), transparent);
+}
+
+/* Botón pequeño de herramienta (Hoy, Copiar enlace, Modificar…) */
+.btn-sello {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--theme-on-surface-variant);
+  background: rgba(7, 8, 13, 0.4);
+  border: 1px solid rgba(var(--gold-rgb), 0.25);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-sello:hover:not(:disabled) {
+  color: var(--color-gold-bright);
+  border-color: rgba(var(--gold-rgb), 0.65);
+  background: rgba(var(--gold-rgb), 0.07);
+  box-shadow: 0 0 14px rgba(var(--gold-rgb), 0.15);
+}
+
+.btn-sello:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-sello-peligro:hover:not(:disabled) {
+  color: #f0a0a5;
+  border-color: rgba(212, 67, 76, 0.6);
+  background: rgba(var(--blood-rgb), 0.15);
+  box-shadow: 0 0 14px rgba(212, 67, 76, 0.2);
+}
+
+.btn-sello-icono {
+  padding: 0.4rem;
+}
+
+/* Selector segmentado (Mes / Semana / Agenda): la opción activa lleva aria-pressed */
+.segmentado {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: rgba(7, 8, 13, 0.55);
+  border: 1px solid rgba(var(--gold-rgb), 0.22);
+  border-radius: 3px;
+}
+
+.segmentado > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--theme-on-surface-variant);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.segmentado > button:hover {
+  color: var(--color-gold-bright);
+}
+
+.segmentado > button[aria-pressed='true'] {
+  color: #1a1206;
+  background: linear-gradient(180deg, #ebcf91 0%, #d4af6a 50%, #a98039 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 225, 0.55);
+}
+
+/* Campos de formulario */
+.campo {
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.95rem;
+  color: var(--theme-on-surface);
+  background: rgba(7, 8, 13, 0.55);
+  border: 1px solid var(--color-outline-ghost);
+  border-radius: 2px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.campo::placeholder {
+  color: rgba(168, 158, 136, 0.55);
+}
+
+.campo:hover {
+  border-color: rgba(var(--gold-rgb), 0.35);
+}
+
+.campo:focus {
+  outline: none;
+  border-color: var(--theme-ritual-main);
+  box-shadow: 0 0 0 3px rgba(var(--gold-rgb), 0.15);
+}
+
+.campo-etiqueta {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--theme-on-surface-variant);
+}
+
+/* Opción elegible (tipo de ritual, periodicidad): la elegida lleva aria-pressed */
+.opcion {
+  border: 1px solid var(--color-outline-ghost);
+  background: rgba(7, 8, 13, 0.4);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.opcion:hover {
+  border-color: rgba(var(--gold-rgb), 0.45);
+}
+
+.opcion[aria-pressed='true'] {
+  border-color: var(--theme-ritual-main);
+  background: linear-gradient(180deg, rgba(var(--gold-rgb), 0.12), rgba(var(--gold-rgb), 0.03));
+  box-shadow: 0 0 18px rgba(var(--gold-rgb), 0.15), inset 0 1px 0 rgba(var(--gold-rgb), 0.25);
+}
+
+/* Aviso de error */
+.aviso-error {
+  padding: 0.85rem 1rem;
+  font-size: 0.9rem;
+  color: #f3c4c7;
+  background: linear-gradient(90deg, rgba(var(--blood-rgb), 0.28), rgba(var(--blood-rgb), 0.08));
+  border: 1px solid rgba(212, 67, 76, 0.4);
+  border-left: 3px solid var(--color-blood-bright);
+  border-radius: 2px;
+}
+
+/* ───────────────────────── Botones ───────────────────────── */
+
 .btn-runic {
   position: relative;
-  border-radius: 0 !important; /* bordes muy afilados */
-  font-family: var(--font-display);
-  font-weight: 500;
+  border-radius: 2px !important;
+  font-family: var(--font-ui);
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.1em;
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.15s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -161,93 +577,110 @@
   user-select: none;
 }
 
-/* Primary Runic Button (Flat purple) */
+.btn-runic:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn-runic:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Principal: latón dorado, como el bisel de la esfera del reloj */
 .btn-runic-primary {
-  background-color: #4a2c75;
-  color: #dfd8c8;
-  border: 1px solid rgba(177, 156, 217, 0.25);
+  background: linear-gradient(180deg, #ebcf91 0%, #d4af6a 45%, #a98039 100%);
+  color: #1a1206;
+  border: 1px solid #f0dcaa;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 225, 0.6),
+    inset 0 -1px 0 rgba(90, 60, 20, 0.5),
+    0 4px 14px -4px rgba(0, 0, 0, 0.7);
 }
 
 .btn-runic-primary:hover:not(:disabled) {
-  background-color: #553385;
-  color: #f2ece0;
-  border-color: rgba(147, 197, 253, 0.4);
-  /* Cold glow shadow: soft pale ice-blue glow */
-  box-shadow: 0 0 15px rgba(186, 215, 255, 0.35);
+  background: linear-gradient(180deg, #f5dfab 0%, #e0bd7a 45%, #b88d44 100%);
+  color: #0d0903;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 225, 0.7),
+    inset 0 -1px 0 rgba(90, 60, 20, 0.5),
+    0 0 22px rgba(var(--gold-rgb), 0.45);
 }
 
-/* Secondary Runic Button (Flat surface high) */
+/* Secundario: tinta con filo de latón */
 .btn-runic-secondary {
-  background-color: #242424;
-  color: #a69f92;
-  border: 1px solid #3a322c;
+  background: linear-gradient(180deg, var(--theme-surface-high), var(--theme-surface-container));
+  color: var(--theme-on-surface);
+  border: 1px solid rgba(var(--gold-rgb), 0.28);
 }
 
 .btn-runic-secondary:hover:not(:disabled) {
-  background-color: #2c2c2c;
-  color: #dfd8c8;
-  border-color: rgba(147, 197, 253, 0.3);
-  box-shadow: 0 0 12px rgba(186, 215, 255, 0.25);
+  background: linear-gradient(180deg, var(--theme-surface-highest), var(--theme-surface-high));
+  color: var(--color-on-surface-bright);
+  border-color: rgba(var(--gold-rgb), 0.65);
+  box-shadow: 0 0 16px rgba(var(--gold-rgb), 0.18);
 }
 
-/* Danger Runic Button (Flat dark red/wine) */
+/* Peligro: lacre de sangre */
 .btn-runic-danger {
-  background-color: #5f1e1e;
-  color: #dfd8c8;
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: linear-gradient(180deg, #b0242f 0%, #8a1720 55%, #5e0f16 100%);
+  color: #fbecea;
+  border: 1px solid rgba(240, 130, 130, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 200, 200, 0.25);
 }
 
 .btn-runic-danger:hover:not(:disabled) {
-  background-color: #6e2222;
+  background: linear-gradient(180deg, #c32e3a 0%, #9a1c26 55%, #6b1119 100%);
   color: #ffffff;
-  border-color: rgba(254, 202, 202, 0.35);
-  box-shadow: 0 0 15px rgba(254, 202, 202, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 200, 200, 0.3),
+    0 0 20px rgba(212, 67, 76, 0.45);
 }
 
-/* Success Runic Button (Flat dark green) */
+/* Éxito: verde de botica */
 .btn-runic-success {
-  background-color: #1b4332;
-  color: #dfd8c8;
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  background: linear-gradient(180deg, #2a6248 0%, #1d4a35 55%, #143425 100%);
+  color: #eef6ee;
+  border: 1px solid rgba(120, 210, 160, 0.4);
+  box-shadow: inset 0 1px 0 rgba(200, 255, 220, 0.2);
 }
 
 .btn-runic-success:hover:not(:disabled) {
-  background-color: #22543d;
+  background: linear-gradient(180deg, #317152 0%, #22573e 55%, #173c2b 100%);
   color: #ffffff;
-  border-color: rgba(167, 243, 208, 0.35);
-  box-shadow: 0 0 15px rgba(167, 243, 208, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(200, 255, 220, 0.25),
+    0 0 18px rgba(120, 210, 160, 0.35);
 }
 
-/* Outline Runic Button (Transparent) */
+/* Contorno: filo dorado sobre la noche */
 .btn-runic-outline {
   background-color: transparent;
-  color: #a69f92;
-  border: 1px solid #3a322c;
+  color: var(--theme-ritual-main);
+  border: 1px solid rgba(var(--gold-rgb), 0.4);
 }
 
 .btn-runic-outline:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.03);
-  color: #dfd8c8;
-  border-color: rgba(147, 197, 253, 0.3);
-  box-shadow: 0 0 12px rgba(186, 215, 255, 0.25);
+  background-color: rgba(var(--gold-rgb), 0.08);
+  color: var(--color-gold-bright);
+  border-color: rgba(var(--gold-rgb), 0.75);
+  box-shadow: 0 0 16px rgba(var(--gold-rgb), 0.2);
 }
 
-/* Rune styling inside the button */
+/* Runas grabadas en las esquinas del botón */
 .btn-rune {
   position: absolute;
-  font-size: 10px;
+  font-size: 9px;
   line-height: 1;
   font-family: inherit;
-  color: rgba(0, 0, 0, 0.55);
-  text-shadow: 0.5px 0.5px 0.5px rgba(255, 255, 255, 0.08);
+  color: currentColor;
   pointer-events: none;
   user-select: none;
-  opacity: 0.65;
+  opacity: 0.28;
   transition: opacity 0.3s ease;
 }
 
 .btn-runic:hover .btn-rune {
-  opacity: 0.85;
+  opacity: 0.5;
 }
 
 .btn-rune-tl { top: 3px; left: 4px; }
@@ -255,344 +688,145 @@
 .btn-rune-bl { bottom: 3px; left: 4px; }
 .btn-rune-br { bottom: 3px; right: 4px; }
 
-/* Custom scrollbar styling matching La Secta aesthetic */
+/* ───────────────────────── Cabecera ───────────────────────── */
+
+/* Arriba del todo, la cabecera se funde con la imagen de la página; al bajar se vuelve un cristal oscuro */
+.cabecera-cristal {
+  background: linear-gradient(180deg, rgba(7, 8, 13, 0.92) 0%, rgba(7, 8, 13, 0.55) 60%, transparent 100%);
+  transition: background 0.35s ease, box-shadow 0.35s ease;
+}
+
+.cabecera-cristal[data-plana='true'] {
+  background: rgba(7, 8, 13, 0.86);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8);
+}
+
+/* Enlace de navegación: versalitas grabadas y un rombo dorado bajo la página actual */
+.nav-link {
+  position: relative;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 0.5rem 0.15rem;
+  color: rgba(235, 226, 204, 0.8);
+  transition: color 0.25s ease;
+}
+
+.nav-link:hover {
+  color: var(--color-gold-bright);
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -2px;
+  width: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--theme-ritual-main), transparent);
+  transform: translateX(-50%);
+  transition: width 0.3s ease;
+}
+
+.nav-link:hover::after,
+.nav-link[aria-current='page']::after {
+  width: 100%;
+}
+
+.nav-link[aria-current='page'] {
+  color: var(--theme-ritual-main);
+}
+
+.nav-link[aria-current='page']::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 6px;
+  height: 6px;
+  background: var(--theme-ritual-main);
+  transform: translateX(-50%) rotate(45deg);
+  box-shadow: 0 0 8px rgba(var(--gold-rgb), 0.7);
+}
+
+/* ───────────────────────── Entradas ───────────────────────── */
+
+@keyframes revelar {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.revelar {
+  animation: revelar 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.revelar-tarde {
+  animation: revelar 0.8s 0.15s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* Lento acercamiento de la imagen de cabecera, como una cámara en la plaza */
+@keyframes acercar {
+  from { transform: scale(1.08); }
+  to { transform: scale(1); }
+}
+
+.acercar {
+  animation: acercar 2.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* ───────────────────────── Barras de desplazamiento ───────────────────────── */
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0a0a; /* Fondo ultra oscuro de la web */
+  background: var(--theme-background);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2c2c2c; /* Color carbón para el scrollbar */
-  border-radius: 4px;
-  border: 1.5px solid #3a322c; /* Borde marrón quemado */
+  background: linear-gradient(180deg, #2a2722, #1c1a17);
+  border-radius: 5px;
+  border: 2px solid var(--theme-background);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #b19cd9; /* Color de ritual (violeta) al pasar el cursor */
-  border-color: #4a3b69;
+  background: linear-gradient(180deg, #d4af6a, #9c7536);
 }
 
-/* Firefox scrollbar support */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2c2c2c #0a0a0a;
-}
-/* Cabecera: borde inferior rasgado que se aplana al hacer scroll.
-   El fondo sobresale 16px por debajo de la cabecera (el plano corta justo en su borde); los dos polígonos
-   tienen los mismos puntos para que clip-path se pueda animar entre ellos. */
-.cabecera-fondo {
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% calc(100% - 9.89px),
-    100% calc(100% - 9.83px),
-    99.78% calc(100% - 5.11px),
-    99.78% calc(100% - 5.11px),
-    97.73% calc(100% - 7.77px),
-    97.73% calc(100% - 7.77px),
-    95.57% calc(100% - 12.66px),
-    95.57% calc(100% - 12.66px),
-    95.25% calc(100% - 22.84px),
-    94.81% calc(100% - 13.46px),
-    94.81% calc(100% - 13.46px),
-    91.2% calc(100% - 15.02px),
-    91.2% calc(100% - 15.02px),
-    90.83% calc(100% - 6.89px),
-    90.3% calc(100% - 16.19px),
-    90.3% calc(100% - 16.19px),
-    89.87% calc(100% - 23.99px),
-    89.11% calc(100% - 17.78px),
-    89.11% calc(100% - 17.78px),
-    86.4% calc(100% - 18.01px),
-    86.4% calc(100% - 18.01px),
-    81.99% calc(100% - 10.28px),
-    81.99% calc(100% - 10.28px),
-    77.19% calc(100% - 10.33px),
-    77.19% calc(100% - 10.33px),
-    76.92% calc(100% - 11.18px),
-    76.92% calc(100% - 11.18px),
-    72.25% calc(100% - 10.7px),
-    72.25% calc(100% - 10.7px),
-    72.03% calc(100% - 20.7px),
-    71.59% calc(100% - 11.24px),
-    71.59% calc(100% - 11.24px),
-    71.21% calc(100% - 19.47px),
-    70.62% calc(100% - 12.02px),
-    70.62% calc(100% - 12.02px),
-    68.24% calc(100% - 10.57px),
-    68.24% calc(100% - 10.57px),
-    64.43% calc(100% - 2.97px),
-    64.43% calc(100% - 2.97px),
-    59.96% calc(100% - 4.67px),
-    59.96% calc(100% - 4.67px),
-    59.83% calc(100% - 10.76px),
-    59.83% calc(100% - 10.76px),
-    56.96% calc(100% - 11.83px),
-    56.96% calc(100% - 11.83px),
-    53.52% calc(100% - 15.22px),
-    53.52% calc(100% - 15.22px),
-    52.75% calc(100% - 12.1px),
-    52.31% calc(100% - 18.15px),
-    52.31% calc(100% - 18.15px),
-    52.08% calc(100% - 25.65px),
-    51.76% calc(100% - 19.29px),
-    51.76% calc(100% - 19.29px),
-    51.48% calc(100% - 26.22px),
-    51.05% calc(100% - 20.38px),
-    51.05% calc(100% - 20.38px),
-    50.4% calc(100% - 14.91px),
-    49.86% calc(100% - 21.07px),
-    49.86% calc(100% - 21.07px),
-    49.56% calc(100% - 29.71px),
-    48.8% calc(100% - 20.54px),
-    48.8% calc(100% - 20.54px),
-    44.41% calc(100% - 15.35px),
-    44.41% calc(100% - 15.35px),
-    44.12% calc(100% - 24.53px),
-    43.55% calc(100% - 15.56px),
-    43.55% calc(100% - 15.56px),
-    40.55% calc(100% - 12.84px),
-    40.55% calc(100% - 12.84px),
-    40.34% calc(100% - 12.65px),
-    40.34% calc(100% - 12.65px),
-    40.13% calc(100% - 18.43px),
-    40.13% calc(100% - 18.43px),
-    40% calc(100% - 18.3px),
-    40% calc(100% - 18.3px),
-    39.8% calc(100% - 23.55px),
-    39.33% calc(100% - 17.58px),
-    39.33% calc(100% - 17.58px),
-    39.01% calc(100% - 10.08px),
-    38.59% calc(100% - 16.87px),
-    38.59% calc(100% - 16.87px),
-    38.45% calc(100% - 10.76px),
-    38.45% calc(100% - 10.76px),
-    35.96% calc(100% - 11.07px),
-    35.96% calc(100% - 11.07px),
-    35.62% calc(100% - 20.07px),
-    35.14% calc(100% - 12.02px),
-    35.14% calc(100% - 12.02px),
-    34.49% calc(100% - 5.38px),
-    34.21% calc(100% - 13.19px),
-    34.21% calc(100% - 13.19px),
-    33.97% calc(100% - 13.46px),
-    33.97% calc(100% - 13.46px),
-    33.27% calc(100% - 6.95px),
-    32.82% calc(100% - 14.2px),
-    32.82% calc(100% - 14.2px),
-    32.56% calc(100% - 20.21px),
-    32.56% calc(100% - 20.21px),
-    31.74% calc(100% - 13.17px),
-    31.48% calc(100% - 19.56px),
-    31.48% calc(100% - 19.56px),
-    27.06% calc(100% - 11.53px),
-    27.06% calc(100% - 11.53px),
-    26.84% calc(100% - 21.02px),
-    26.18% calc(100% - 10.96px),
-    26.18% calc(100% - 10.96px),
-    22.89% calc(100% - 7.15px),
-    22.89% calc(100% - 7.15px),
-    20.31% calc(100% - 3.37px),
-    20.31% calc(100% - 3.37px),
-    20.01% calc(100% - 10.67px),
-    19.65% calc(100% - 3.14px),
-    19.65% calc(100% - 3.14px),
-    16.27% calc(100% - 7.26px),
-    16.27% calc(100% - 7.26px),
-    13.66% calc(100% - 11.2px),
-    13.66% calc(100% - 11.2px),
-    13.1% calc(100% - 3.9px),
-    12.84% calc(100% - 11.72px),
-    12.84% calc(100% - 11.72px),
-    12.21% calc(100% - 4.06px),
-    11.61% calc(100% - 11.78px),
-    11.61% calc(100% - 11.78px),
-    11.09% calc(100% - 17.3px),
-    10.63% calc(100% - 11.67px),
-    10.63% calc(100% - 11.67px),
-    10.11% calc(100% - 4.97px),
-    9.69% calc(100% - 11.78px),
-    9.69% calc(100% - 11.78px),
-    9.09% calc(100% - 3.64px),
-    8.79% calc(100% - 12.22px),
-    8.79% calc(100% - 12.22px),
-    8.54% calc(100% - 18.4px),
-    8.54% calc(100% - 18.4px),
-    8.28% calc(100% - 12.6px),
-    8.28% calc(100% - 12.6px),
-    8.01% calc(100% - 12.81px),
-    8.01% calc(100% - 12.81px),
-    5.63% calc(100% - 15.12px),
-    5.63% calc(100% - 15.12px),
-    1.1% calc(100% - 10.48px),
-    1.1% calc(100% - 10.48px),
-    0.68% calc(100% - 2.93px),
-    0.14% calc(100% - 10.76px),
-    0.14% calc(100% - 10.76px),
-    0% calc(100% - 13.87px)
-  );
-  transition: clip-path 300ms ease-out;
+  scrollbar-color: #3a352d var(--theme-background);
 }
 
-.cabecera-fondo[data-plana='true'] {
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% calc(100% - 16px),
-    100% calc(100% - 16px),
-    99.78% calc(100% - 16px),
-    99.78% calc(100% - 16px),
-    97.73% calc(100% - 16px),
-    97.73% calc(100% - 16px),
-    95.57% calc(100% - 16px),
-    95.57% calc(100% - 16px),
-    95.25% calc(100% - 16px),
-    94.81% calc(100% - 16px),
-    94.81% calc(100% - 16px),
-    91.2% calc(100% - 16px),
-    91.2% calc(100% - 16px),
-    90.83% calc(100% - 16px),
-    90.3% calc(100% - 16px),
-    90.3% calc(100% - 16px),
-    89.87% calc(100% - 16px),
-    89.11% calc(100% - 16px),
-    89.11% calc(100% - 16px),
-    86.4% calc(100% - 16px),
-    86.4% calc(100% - 16px),
-    81.99% calc(100% - 16px),
-    81.99% calc(100% - 16px),
-    77.19% calc(100% - 16px),
-    77.19% calc(100% - 16px),
-    76.92% calc(100% - 16px),
-    76.92% calc(100% - 16px),
-    72.25% calc(100% - 16px),
-    72.25% calc(100% - 16px),
-    72.03% calc(100% - 16px),
-    71.59% calc(100% - 16px),
-    71.59% calc(100% - 16px),
-    71.21% calc(100% - 16px),
-    70.62% calc(100% - 16px),
-    70.62% calc(100% - 16px),
-    68.24% calc(100% - 16px),
-    68.24% calc(100% - 16px),
-    64.43% calc(100% - 16px),
-    64.43% calc(100% - 16px),
-    59.96% calc(100% - 16px),
-    59.96% calc(100% - 16px),
-    59.83% calc(100% - 16px),
-    59.83% calc(100% - 16px),
-    56.96% calc(100% - 16px),
-    56.96% calc(100% - 16px),
-    53.52% calc(100% - 16px),
-    53.52% calc(100% - 16px),
-    52.75% calc(100% - 16px),
-    52.31% calc(100% - 16px),
-    52.31% calc(100% - 16px),
-    52.08% calc(100% - 16px),
-    51.76% calc(100% - 16px),
-    51.76% calc(100% - 16px),
-    51.48% calc(100% - 16px),
-    51.05% calc(100% - 16px),
-    51.05% calc(100% - 16px),
-    50.4% calc(100% - 16px),
-    49.86% calc(100% - 16px),
-    49.86% calc(100% - 16px),
-    49.56% calc(100% - 16px),
-    48.8% calc(100% - 16px),
-    48.8% calc(100% - 16px),
-    44.41% calc(100% - 16px),
-    44.41% calc(100% - 16px),
-    44.12% calc(100% - 16px),
-    43.55% calc(100% - 16px),
-    43.55% calc(100% - 16px),
-    40.55% calc(100% - 16px),
-    40.55% calc(100% - 16px),
-    40.34% calc(100% - 16px),
-    40.34% calc(100% - 16px),
-    40.13% calc(100% - 16px),
-    40.13% calc(100% - 16px),
-    40% calc(100% - 16px),
-    40% calc(100% - 16px),
-    39.8% calc(100% - 16px),
-    39.33% calc(100% - 16px),
-    39.33% calc(100% - 16px),
-    39.01% calc(100% - 16px),
-    38.59% calc(100% - 16px),
-    38.59% calc(100% - 16px),
-    38.45% calc(100% - 16px),
-    38.45% calc(100% - 16px),
-    35.96% calc(100% - 16px),
-    35.96% calc(100% - 16px),
-    35.62% calc(100% - 16px),
-    35.14% calc(100% - 16px),
-    35.14% calc(100% - 16px),
-    34.49% calc(100% - 16px),
-    34.21% calc(100% - 16px),
-    34.21% calc(100% - 16px),
-    33.97% calc(100% - 16px),
-    33.97% calc(100% - 16px),
-    33.27% calc(100% - 16px),
-    32.82% calc(100% - 16px),
-    32.82% calc(100% - 16px),
-    32.56% calc(100% - 16px),
-    32.56% calc(100% - 16px),
-    31.74% calc(100% - 16px),
-    31.48% calc(100% - 16px),
-    31.48% calc(100% - 16px),
-    27.06% calc(100% - 16px),
-    27.06% calc(100% - 16px),
-    26.84% calc(100% - 16px),
-    26.18% calc(100% - 16px),
-    26.18% calc(100% - 16px),
-    22.89% calc(100% - 16px),
-    22.89% calc(100% - 16px),
-    20.31% calc(100% - 16px),
-    20.31% calc(100% - 16px),
-    20.01% calc(100% - 16px),
-    19.65% calc(100% - 16px),
-    19.65% calc(100% - 16px),
-    16.27% calc(100% - 16px),
-    16.27% calc(100% - 16px),
-    13.66% calc(100% - 16px),
-    13.66% calc(100% - 16px),
-    13.1% calc(100% - 16px),
-    12.84% calc(100% - 16px),
-    12.84% calc(100% - 16px),
-    12.21% calc(100% - 16px),
-    11.61% calc(100% - 16px),
-    11.61% calc(100% - 16px),
-    11.09% calc(100% - 16px),
-    10.63% calc(100% - 16px),
-    10.63% calc(100% - 16px),
-    10.11% calc(100% - 16px),
-    9.69% calc(100% - 16px),
-    9.69% calc(100% - 16px),
-    9.09% calc(100% - 16px),
-    8.79% calc(100% - 16px),
-    8.79% calc(100% - 16px),
-    8.54% calc(100% - 16px),
-    8.54% calc(100% - 16px),
-    8.28% calc(100% - 16px),
-    8.28% calc(100% - 16px),
-    8.01% calc(100% - 16px),
-    8.01% calc(100% - 16px),
-    5.63% calc(100% - 16px),
-    5.63% calc(100% - 16px),
-    1.1% calc(100% - 16px),
-    1.1% calc(100% - 16px),
-    0.68% calc(100% - 16px),
-    0.14% calc(100% - 16px),
-    0.14% calc(100% - 16px),
-    0% calc(100% - 16px)
-  );
-}
+/* ───────────────────────── Movimiento reducido ───────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  .cabecera-fondo {
+  .revelar,
+  .revelar-tarde,
+  .acercar {
+    animation: none;
+  }
+
+  .cabecera-cristal,
+  .nav-link,
+  .nav-link::after,
+  .btn-runic,
+  .btn-sello,
+  .segmentado > button,
+  .campo,
+  .opcion {
     transition: none;
   }
 }

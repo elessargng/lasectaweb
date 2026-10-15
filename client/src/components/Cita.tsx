@@ -21,9 +21,11 @@ const Cita: React.FC<CitaProps> = ({ texto }) => {
 
   return (
     <div className="quote-container">
+      <div aria-hidden="true" className="ornament-divider mb-5 text-lg leading-none">❦</div>
       <p className="quote-text">
         «{renderTexto(texto)}»
       </p>
+      <div aria-hidden="true" className="hairline-gold mt-6" />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { History, Sparkles } from 'lucide-react';
+import { History } from 'lucide-react';
 import changelogData from '../data/changelog.json';
 
 interface FooterProps {
@@ -8,78 +8,65 @@ interface FooterProps {
   version?: string;
 }
 
+const enlaceLegal = 'font-ui text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-on-surface-muted hover:text-gold-bright transition-colors';
+
 const Footer: React.FC<FooterProps> = ({ onOpenChangelog, version: propVersion }) => {
   const currentVersion = propVersion || changelogData[0]?.version || '0.1.0';
 
   return (
     // z-10: por debajo del contenido de las páginas (z-20), para que sus modales y menús se vean por encima del pie
-    <footer className="w-full bg-theme-container border-t border-outline-ghost shadow-2xl relative z-10 font-body">
-      <div className="max-w-7xl mx-auto px-6 md:px-10 py-6 md:py-8 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-4">
-        {/* Left Section: Brand & Copyright */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-on-surface-muted text-sm">
-          <div className="flex items-center gap-1.5">
-            <img 
-              src="/logo-2.png" 
-              alt="Logo de La Secta" 
-              className="w-8 h-8 object-contain opacity-80" 
-            />
-            <span className="text-base font-normal tracking-tight text-on-surface" style={{ fontFamily: "'Teutonic No1', 'Cinzel', serif" }}>La Secta</span>
+    <footer className="relative z-10 w-full font-body bg-[linear-gradient(180deg,var(--theme-surface)_0%,var(--theme-background)_100%)]">
+      <div aria-hidden="true" className="hairline-gold" />
+      {/* Brillo dorado tenue bajo el filo */}
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-24 bg-[radial-gradient(ellipse_at_top,rgba(212,175,106,0.08),transparent_70%)] pointer-events-none" />
+
+      <div className="relative max-w-7xl mx-auto px-6 md:px-10 pt-10 pb-8 flex flex-col items-center gap-8">
+        {/* Marca */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex items-center gap-2">
+            <img src="/logo-2.png" alt="" className="w-10 h-10 object-contain drop-shadow-[0_0_10px_rgba(212,175,106,0.3)]" />
+            <span className="text-2xl font-normal tracking-tight text-white" style={{ fontFamily: "'Teutonic No1', 'Cinzel', serif" }}>La Secta</span>
           </div>
-          <span className="hidden sm:inline text-outline-ghost">•</span>
-          <span className="text-xs opacity-75">© {new Date().getFullYear()} Todos los derechos reservados.</span>
+          <div aria-hidden="true" className="ornament-divider w-48"><span className="ornament-diamond" /></div>
         </div>
 
-        {/* Center/Right Section: Legal links & Version badge */}
-        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs text-on-surface-muted">
-          <nav className="flex flex-wrap items-center gap-3 sm:gap-5">
-            <Link 
-              to="/aviso-legal" 
-              className="hover:text-theme-main transition-colors decoration-theme-main/30 hover:underline"
-            >
-              Aviso Legal
-            </Link>
-            <span className="text-outline-ghost/60">•</span>
-            <Link 
-              to="/privacidad" 
-              className="hover:text-theme-main transition-colors decoration-theme-main/30 hover:underline"
-            >
-              Política de Privacidad
-            </Link>
-            <span className="text-outline-ghost/60">•</span>
-            <Link 
-              to="/cookies" 
-              className="hover:text-theme-main transition-colors decoration-theme-main/30 hover:underline"
-            >
-              Política de Cookies
-            </Link>
-          </nav>
+        <nav aria-label="Información legal" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+          <Link to="/aviso-legal" className={enlaceLegal}>Aviso Legal</Link>
+          <span aria-hidden="true" className="w-1 h-1 rotate-45 bg-theme-main/40" />
+          <Link to="/privacidad" className={enlaceLegal}>Política de Privacidad</Link>
+          <span aria-hidden="true" className="w-1 h-1 rotate-45 bg-theme-main/40" />
+          <Link to="/cookies" className={enlaceLegal}>Política de Cookies</Link>
+        </nav>
 
-          {/* Logo de contenido creado por la comunidad: lo pide la política de The
-              Pandemonium Institute a quien usa sus recursos (los iconos de los personajes).
-              Copia local de https://release.botc.app/resources/community/ccc-sleeve.png */}
-          <a
-            href="https://bloodontheclocktower.com/pages/community-created-content-policy"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-full opacity-90 transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
-          >
-            <img src="/ccc-sleeve.png" alt="Community Created Content" lang="en" className="h-10 w-auto" loading="lazy" />
-            <span className="sr-only"> (se abre en una ventana nueva)</span>
-          </a>
+        <div className="w-full flex flex-col-reverse md:flex-row items-center justify-between gap-6 pt-6 border-t border-outline-ghost/60">
+          <span className="text-xs text-on-surface-muted/80 tracking-wide">© {new Date().getFullYear()} Todos los derechos reservados.</span>
 
-          {/* Changelog Version Button */}
-          <button
-            onClick={onOpenChangelog}
-            className="group flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-low/80 border border-outline-ghost hover:border-theme-main/60 hover:bg-theme-main/10 text-on-surface-muted hover:text-theme-main transition-all text-xs font-display cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-theme-main/50 sm:ml-2"
-            title="Ver historial de cambios (Changelog)"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-theme-main group-hover:rotate-12 transition-transform" />
-            <span className="font-semibold tracking-wide">v{currentVersion}</span>
-            <span className="hidden xs:inline text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 bg-theme-main/20 text-theme-main rounded-sm ml-1 group-hover:bg-theme-main group-hover:text-background transition-colors">
-              Changelog
-            </span>
-            <History className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity ml-0.5" />
-          </button>
+          <div className="flex items-center gap-5">
+            {/* Logo de contenido creado por la comunidad: lo pide la política de The
+                Pandemonium Institute a quien usa sus recursos (los iconos de los personajes).
+                Copia local de https://release.botc.app/resources/community/ccc-sleeve.png */}
+            <a
+              href="https://bloodontheclocktower.com/pages/community-created-content-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full opacity-80 transition-opacity hover:opacity-100"
+            >
+              <img src="/ccc-sleeve.png" alt="Community Created Content" lang="en" className="h-10 w-auto" loading="lazy" />
+              <span className="sr-only"> (se abre en una ventana nueva)</span>
+            </a>
+
+            <button
+              type="button"
+              onClick={onOpenChangelog}
+              className="group flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-theme-main/30 hover:border-theme-main/70 bg-background/50 hover:bg-theme-main/10 text-on-surface-muted hover:text-gold-bright transition-all cursor-pointer"
+            >
+              <History className="w-3.5 h-3.5 text-theme-main" />
+              <span className="font-ui text-xs font-semibold tracking-wider">v{currentVersion}</span>
+              <span lang="en" className="font-ui text-[0.6rem] uppercase font-bold tracking-[0.18em] px-1.5 py-0.5 bg-theme-main/15 text-theme-main rounded-sm group-hover:bg-theme-main group-hover:text-background transition-colors">
+                Changelog
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     </footer>

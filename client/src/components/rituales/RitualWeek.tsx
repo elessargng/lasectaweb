@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Plus, ScrollText, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Feather, MapPin, Plus, Repeat, ScrollText, Users } from 'lucide-react';
 import type { Ritual } from '../../utils/ritualsApi';
 import { RITUAL_KINDS, alpha, kindOf } from './ritualKinds';
 import {
@@ -12,7 +12,7 @@ import {
   startOfWeek,
   weekLanes
 } from './ritualDates';
-import { compactPlaces } from './ritualSignups';
+import { attendanceSummary } from './ritualSignups';
 
 interface RitualWeekProps {
   /** Cualquier día de la semana que se muestra. */
@@ -66,13 +66,13 @@ export const RitualWeek = ({
 
   return (
     <div className="relative">
-      {/* Esquinas rúnicas del marco, como en el mes */}
-      <span className="absolute -top-2.5 -left-1 text-theme-main/40 text-xs select-none pointer-events-none">ᚠ</span>
-      <span className="absolute -top-2.5 -right-1 text-theme-main/40 text-xs select-none pointer-events-none">ᚦ</span>
-      <span className="absolute -bottom-3 -left-1 text-theme-main/40 text-xs select-none pointer-events-none">ᚨ</span>
-      <span className="absolute -bottom-3 -right-1 text-theme-main/40 text-xs select-none pointer-events-none">ᛟ</span>
+      {/* Escuadras doradas en las esquinas del marco (decorativas) */}
+      <span aria-hidden="true" className="corner corner-tl -translate-x-3 -translate-y-3" />
+      <span aria-hidden="true" className="corner corner-tr translate-x-3 -translate-y-3" />
+      <span aria-hidden="true" className="corner corner-bl -translate-x-3 translate-y-3" />
+      <span aria-hidden="true" className="corner corner-br translate-x-3 translate-y-3" />
 
-      <div className="border border-outline-ghost/60 bg-outline-ghost/60 shadow-[0_0_40px_rgba(74,59,105,0.25)]">
+      <div className="border border-theme-main/25 bg-outline-ghost/70 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)]">
         {/* Cintas de las jornadas (solo en pantallas anchas: en móvil van dentro de cada día) */}
         {bands.length > 0 && (
           <div className="hidden md:grid grid-cols-7 gap-y-1 py-1.5 bg-surface border-b border-outline-ghost/60">
@@ -93,7 +93,7 @@ export const RitualWeek = ({
                   style={{
                     gridColumn: `${first + 1} / ${last + 2}`,
                     gridRow: lane + 1,
-                    backgroundColor: alpha(style.color, 0.22),
+                    backgroundColor: alpha(style.color, 0.16),
                     borderLeft: startsBefore ? 'none' : `2px solid ${style.color}`
                   }}
                 >
@@ -120,12 +120,12 @@ export const RitualWeek = ({
                 key={day.toISOString()}
                 className={`group relative flex flex-col min-w-0 md:min-h-[20rem] transition-colors ${
                   isToday
-                    ? 'bg-gradient-to-b from-theme-container/40 to-surface-container-low'
-                    : 'bg-gradient-to-b from-surface-container-low to-surface'
-                } ${isSelected ? 'ring-1 ring-inset ring-theme-main/70' : ''}`}
+                    ? 'bg-gradient-to-b from-theme-container to-surface'
+                    : 'bg-gradient-to-b from-surface-container-low/90 to-surface'
+                } ${isSelected ? 'ring-1 ring-inset ring-theme-main shadow-[inset_0_0_24px_rgba(212,175,106,0.12)]' : ''}`}
               >
                 {isToday && (
-                  <span className="absolute inset-x-0 top-0 h-0.5 bg-theme-main shadow-[0_0_10px_rgba(177,156,217,0.9)] pointer-events-none" />
+                  <span className="absolute inset-x-0 top-0 h-0.5 bg-theme-main shadow-[0_0_10px_rgba(212,175,106,0.9)] pointer-events-none" />
                 )}
 
                 {/* Cabecera del día */}
@@ -143,7 +143,7 @@ export const RitualWeek = ({
                   </span>
                   <span
                     className={`font-display text-xl md:text-2xl leading-none ${
-                      isToday ? 'text-theme-main drop-shadow-[0_0_6px_rgba(177,156,217,0.8)]' : 'text-on-surface'
+                      isToday ? 'text-gilded' : 'text-on-surface'
                     }`}
                   >
                     {day.getDate()}
@@ -170,9 +170,10 @@ export const RitualWeek = ({
                 {canCreate && (
                   <button
                     type="button"
-                    title="Convocar un ritual este día"
+                    aria-label={`Convocar un ritual el ${day.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}`}
+                    data-tip="Convocar"
                     onClick={() => onCreateOnDay(day)}
-                    className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full text-theme-main/80 border border-theme-main/40 bg-surface/80 md:opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-theme-container hover:text-theme-main transition-opacity"
+                    className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full text-theme-main border border-theme-main/50 bg-background/80 md:opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-theme-main hover:text-background transition-opacity cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
                   </button>
@@ -197,33 +198,53 @@ const WeekEvent = ({ ritual, className = '', onClick }: WeekEventProps) => {
   const style = RITUAL_KINDS[kindOf(ritual)];
   const Icon = style.icon;
   const cancelled = ritual.status === 'cancelado';
-  const places = compactPlaces(ritual);
+  const attendance = attendanceSummary(ritual);
 
   return (
     <button
       type="button"
       onClick={onClick}
-      title={ritual.title}
-      className={`w-full text-left px-2 py-1.5 rounded-sm transition-colors hover:brightness-125 ${cancelled ? 'opacity-50' : ''} ${className}`}
-      style={{ backgroundColor: alpha(style.color, 0.1), borderLeft: `2px solid ${style.color}` }}
+      aria-haspopup="dialog"
+      className={`group/evento w-full text-left px-2.5 py-2 rounded-sm bg-background/70 border border-outline-ghost/70 hover:border-theme-main/50 hover:bg-surface-container transition-colors cursor-pointer ${cancelled ? 'opacity-50' : ''} ${className}`}
+      style={{ borderLeft: `2px solid ${style.color}` }}
     >
-      <span className="flex items-center gap-1 text-[11px] font-semibold tabular-nums" style={{ color: style.color }}>
-        <Icon className="w-3 h-3 shrink-0" />
-        {isMultiDay(ritual) ? 'Jornadas' : formatTime(ritual.startsAt)}
+      {/* Hora y tipo */}
+      <span className="flex items-center gap-1.5 font-ui text-[0.68rem] font-semibold tracking-wide" style={{ color: style.color }}>
+        <Icon className="w-3.5 h-3.5 shrink-0" />
+        <span className="tabular-nums">{isMultiDay(ritual) ? 'Jornadas' : formatTime(ritual.startsAt)}</span>
+        {!isMultiDay(ritual) && <span className="truncate opacity-80">· {style.shortLabel}</span>}
+        {(ritual.recurrenceDays || ritual.recurrenceMonths) && (
+          <>
+            <Repeat className="w-3 h-3 shrink-0 ml-auto opacity-70" />
+            <span className="sr-only">, se repite</span>
+          </>
+        )}
       </span>
-      <span lang="es" className={`block text-[13px] leading-snug text-on-surface/90 line-clamp-3 hyphens-auto break-words ${cancelled ? 'line-through' : ''}`}>
+      <span lang="es" className={`block mt-1 text-[0.95rem] leading-snug text-on-surface group-hover/evento:text-gold-bright line-clamp-3 hyphens-auto break-words ${cancelled ? 'line-through' : ''}`}>
         {ritual.title}
+        {cancelled && <span className="sr-only"> (cancelado)</span>}
       </span>
-      {(ritual.scriptName || places) && (
-        <span className="flex flex-wrap gap-x-2 text-[10px] text-on-surface-muted mt-0.5">
+      {/* Lo esencial para decidir si interesa; el resto, en el modal */}
+      {(ritual.scriptName || ritual.location || ritual.storytellerUsername || attendance) && (
+        <span className="flex flex-col gap-0.5 mt-1.5 text-xs text-on-surface-muted [&_svg]:text-theme-main/70">
           {ritual.scriptName && (
-            <span className="inline-flex items-center gap-0.5 truncate">
-              <ScrollText className="w-2.5 h-2.5 shrink-0" /> {ritual.scriptName}
+            <span className="flex items-center gap-1 min-w-0">
+              <ScrollText className="w-3 h-3 shrink-0" /> <span className="truncate">{ritual.scriptName}</span>
             </span>
           )}
-          {places && (
-            <span className="inline-flex items-center gap-0.5 tabular-nums">
-              <Users className="w-2.5 h-2.5 shrink-0" /> {places}
+          {ritual.location && (
+            <span className="flex items-center gap-1 min-w-0">
+              <MapPin className="w-3 h-3 shrink-0" /> <span className="truncate">{ritual.location}</span>
+            </span>
+          )}
+          {ritual.storytellerUsername && (
+            <span className="flex items-center gap-1 min-w-0">
+              <Feather className="w-3 h-3 shrink-0" /> <span className="truncate">Narra {ritual.storytellerUsername}</span>
+            </span>
+          )}
+          {attendance && (
+            <span className="flex items-center gap-1 min-w-0">
+              <Users className="w-3 h-3 shrink-0" /> <span className="truncate">{attendance}</span>
             </span>
           )}
         </span>

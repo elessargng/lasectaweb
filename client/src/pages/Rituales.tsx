@@ -83,7 +83,7 @@ const Rituales = () => {
   const [scrollRequest, setScrollRequest] = useState(0);
   // El ritual con el detalle abierto: va en la URL para poder enlazarlo.
   const openKey = searchParams.get('ritual');
-  const panelRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   // La partida en la que se está apuntando o desapuntando alguien.
   const [signupBusy, setSignupBusy] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -141,15 +141,14 @@ const Rituales = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canManage]);
 
-  // Tras un clic: en pantallas estrechas el detalle va debajo, así que se baja
-  // hasta él; y si se pulsó un ritual concreto, hasta su tarjeta.
+  // Tras elegir un día en el mes, en el móvil su lista va debajo del calendario: se baja hasta ella.
   useEffect(() => {
     if (!scrollRequest) return;
-    const card = focusedKey ? document.getElementById(`ritual-${focusedKey}`) : null;
-    const narrow = window.matchMedia('(max-width: 1023px)').matches;
-    if (card) card.scrollIntoView({ behavior: 'smooth', block: narrow ? 'start' : 'nearest' });
-    else if (narrow) panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [scrollRequest, focusedKey]);
+    if (window.matchMedia('(max-width: 767px)').matches) {
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      panelRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    }
+  }, [scrollRequest]);
 
   const visible = rituals.filter((r) => !hiddenKinds.has(kindOf(r)));
   const dayRituals = visible.filter((r) => coversDay(r, selectedDay)).sort(compareRituals);
@@ -186,10 +185,18 @@ const Rituales = () => {
     setScrollRequest((n) => n + 1);
   };
 
-  /** Clic en un ritual: se abre su detalle, y su día queda elegido debajo. */
+  /** Clic en un ritual: se abre su detalle en el modal, y su día queda elegido. */
   const pickRitual = (day: Date, ritual: Ritual) => selectDay(day, keyOf(ritual));
 
-  /** Clic en un ritual del lateral: ya está en el día elegido. */
+  /** «+N más» en el mes: la semana de ese día, donde se ven todos sus rituales. */
+  const showWeek = (day: Date) => {
+    setView('semana');
+    setSelectedDay(day);
+    setFocusedKey(null);
+    writeUrl(day, 'semana');
+  };
+
+  /** Clic en un ritual de la lista del día (móvil): ya está en el día elegido. */
   const openFromPanel = (ritual: Ritual) => {
     setFocusedKey(keyOf(ritual));
     writeUrl(selectedDay, view, keyOf(ritual));
@@ -305,44 +312,30 @@ const Rituales = () => {
         subtitle="La agenda del Culto: partidas online y presenciales, eventos y jornadas."
         imageSrc="/calendar_banner_wide.jpg"
         imageAlt="Calendario de rituales"
-        maxWidthClass="max-w-6xl"
+        maxWidthClass="max-w-7xl"
       />
 
-      <div className="max-w-6xl w-full mx-auto px-0 md:px-8 py-4 md:py-10 relative z-20 -mt-20 flex-1">
-        <div className="bg-transparent md:bg-surface border-0 md:border border-transparent md:border-outline-ghost rounded-none md:rounded shadow-none md:shadow-2xl px-4 py-6 md:p-8 relative">
+      <div className="max-w-7xl w-full mx-auto px-0 md:px-8 py-4 md:py-10 relative z-20 -mt-20 flex-1">
+        <div className="panel-premium rounded-sm mx-3 md:mx-0 px-4 py-6 md:p-8">
           {/* Cabecera: mes, navegación y vista */}
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-6">
-            <div className="flex items-end gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-5 mb-7">
+            <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
               <div>
-                <p className="font-teutonic2 text-theme-main/70 text-lg leading-none">
+                <p className="eyebrow">
                   {view === 'semana' ? weekEnd.getFullYear() : month.getFullYear()}
                 </p>
-                <h2 className={`font-display text-3xl md:text-4xl text-on-surface leading-tight ${view === 'semana' ? '' : 'capitalize'}`}>
+                <h2 className={`mt-1 font-display text-3xl md:text-[2.6rem] text-gilded leading-tight ${view === 'semana' ? '' : 'capitalize'}`}>
                   {view === 'semana' ? weekLabel : monthName}
                 </h2>
               </div>
-              <div className="flex items-center gap-1 pb-1">
-                <button
-                  type="button"
-                  onClick={() => shift(-1)}
-                  aria-label={`${unit} anterior`}
-                  className="p-1.5 border border-outline-ghost text-on-surface-muted hover:text-theme-main hover:border-theme-main/50 transition-colors"
-                >
+              <div className="flex items-center gap-1.5 pb-1.5">
+                <button type="button" onClick={() => shift(-1)} aria-label={`${unit} anterior`} className="btn-sello btn-sello-icono">
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <button
-                  type="button"
-                  onClick={goToday}
-                  className="px-3 py-1 border border-outline-ghost text-xs font-display uppercase tracking-wider text-on-surface-muted hover:text-theme-main hover:border-theme-main/50 transition-colors"
-                >
+                <button type="button" onClick={goToday} className="btn-sello">
                   Hoy
                 </button>
-                <button
-                  type="button"
-                  onClick={() => shift(1)}
-                  aria-label={`${unit} siguiente`}
-                  className="p-1.5 border border-outline-ghost text-on-surface-muted hover:text-theme-main hover:border-theme-main/50 transition-colors"
-                >
+                <button type="button" onClick={() => shift(1)} aria-label={`${unit} siguiente`} className="btn-sello btn-sello-icono">
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -356,16 +349,9 @@ const Rituales = () => {
                   shownKinds={RITUAL_KIND_ORDER.filter((k) => !hiddenKinds.has(k))}
                 />
               )}
-              <div className="inline-flex border border-outline-ghost">
+              <div role="group" aria-label="Vista" className="segmentado">
                 {VIEWS.map(([v, label, Icon]) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => changeView(v)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-display uppercase tracking-wider transition-colors ${
-                      view === v ? 'bg-theme-container/60 text-theme-main' : 'text-on-surface-muted hover:text-on-surface'
-                    }`}
-                  >
+                  <button key={v} type="button" onClick={() => changeView(v)} aria-pressed={view === v}>
                     <Icon className="w-3.5 h-3.5" /> {label}
                   </button>
                 ))}
@@ -381,7 +367,8 @@ const Rituales = () => {
           </div>
 
           {/* Leyenda: también sirve de filtro */}
-          <div className="flex flex-wrap gap-2 mb-6">
+          {/* El color de cada tipo solo vive en su icono; el chip en sí sigue el latón de la web */}
+          <div role="group" aria-label="Mostrar tipos de ritual" className="flex flex-wrap gap-2 mb-7 pb-6 border-b border-outline-ghost/60">
             {RITUAL_KIND_ORDER.map((kind) => {
               const style = RITUAL_KINDS[kind];
               const Icon = style.icon;
@@ -392,21 +379,30 @@ const Rituales = () => {
                   type="button"
                   onClick={() => toggleKind(kind)}
                   aria-pressed={!off}
-                  title={off ? 'Mostrar' : 'Ocultar'}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded-full transition-all ${off ? 'opacity-40 grayscale' : ''}`}
-                  style={{ color: style.color, borderColor: alpha(style.color, 0.4), backgroundColor: alpha(style.color, 0.08) }}
+                  className={`inline-flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full border text-[0.85rem] transition-all motion-reduce:transition-none cursor-pointer ${
+                    off
+                      ? 'border-outline-ghost/60 text-on-surface-muted/60 line-through decoration-on-surface-muted/50'
+                      : 'border-theme-main/30 bg-background/50 text-on-surface hover:border-theme-main/70'
+                  }`}
                 >
-                  <Icon className="w-3.5 h-3.5" /> {style.label}
+                  <span
+                    className={`w-6 h-6 rounded-full flex items-center justify-center border ${off ? 'opacity-40 grayscale' : ''}`}
+                    style={{ borderColor: alpha(style.color, 0.55), backgroundColor: alpha(style.color, 0.12) }}
+                  >
+                    <Icon className="w-3.5 h-3.5" style={{ color: style.color }} />
+                  </span>
+                  {style.label}
                 </button>
               );
             })}
           </div>
 
           {error && (
-            <div role="alert" className="mb-6 p-3.5 rounded bg-red-500/10 border border-red-500/30 text-red-300 text-sm">{error}</div>
+            <div role="alert" className="aviso-error mb-6">{error}</div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem] gap-8">
+          {/* El calendario ocupa todo el ancho; cada ritual abre su detalle en el modal */}
+          <div className="flex flex-col gap-8">
             <div className={`min-w-0 transition-opacity ${loading ? 'opacity-60' : ''}`}>
               {view === 'mes' && (
                 <RitualCalendar
@@ -417,6 +413,7 @@ const Rituales = () => {
                   onSelectDay={pickDay}
                   onSelectRitual={pickRitual}
                   onCreateOnDay={openCreate}
+                  onShowWeek={showWeek}
                 />
               )}
               {view === 'semana' && (
@@ -444,13 +441,13 @@ const Rituales = () => {
                 ))}
             </div>
 
-            {/* El detalle del día elegido, al lado (debajo en pantallas estrechas) */}
-            <aside
-              ref={panelRef}
-              className="flex flex-col gap-3 scroll-mt-32 lg:sticky lg:top-32 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto lg:pr-1"
-            >
-              {dayPanel}
-            </aside>
+            {/* Solo en el móvil y en la vista de mes, donde las casillas no caben más que sellos:
+                la lista del día elegido, debajo del calendario */}
+            {view === 'mes' && (
+              <section ref={panelRef} aria-label="Rituales del día elegido" className="md:hidden flex flex-col gap-3 scroll-mt-32">
+                {dayPanel}
+              </section>
+            )}
           </div>
         </div>
 
@@ -503,9 +500,9 @@ interface DayPanelProps {
 /** El día elegido, con el resumen de sus rituales; cada uno abre su detalle. */
 const DayPanel = ({ day, rituals, focusedKey, loading, canManage, userId, onCreate, onOpen }: DayPanelProps) => (
   <>
-    <div className="pb-3 border-b border-outline-ghost/60">
-      <h3 className="font-display text-lg text-on-surface leading-tight first-letter:uppercase">{formatLongDay(day)}</h3>
-      <p className="text-xs text-on-surface-muted italic">
+    <div className="pb-3 mb-1 border-b border-theme-main/25">
+      <h3 className="font-display text-xl text-gilded leading-tight first-letter:uppercase">{formatLongDay(day)}</h3>
+      <p className="mt-1 text-sm text-on-surface-muted italic">
         {rituals.length === 0
           ? 'Ningún ritual convocado'
           : rituals.length === 1
@@ -517,11 +514,12 @@ const DayPanel = ({ day, rituals, focusedKey, loading, canManage, userId, onCrea
     {loading ? (
       <Loader2 className="w-5 h-5 animate-spin text-theme-main mx-auto my-6" />
     ) : rituals.length === 0 ? (
-      <div className="text-center py-8 px-4 border border-dashed border-outline-ghost/70 text-on-surface-muted">
-        <p className="font-body italic mb-3">La noche está en calma.</p>
+      <div className="text-center py-10 px-4 border border-dashed border-theme-main/25 rounded-sm bg-[radial-gradient(ellipse_at_center,rgba(18,26,51,0.6),transparent_70%)] text-on-surface-muted">
+        <div aria-hidden="true" className="ornament-divider w-24 mx-auto mb-4"><span className="ornament-diamond" /></div>
+        <p className="font-['Cormorant_Garamond',serif] italic text-lg mb-4">La noche está en calma.</p>
         {canManage && (
-          <button type="button" onClick={onCreate} className="inline-flex items-center gap-1.5 text-sm text-theme-main hover:underline">
-            <Plus className="w-4 h-4" /> Convocar un ritual este día
+          <button type="button" onClick={onCreate} className="btn-sello">
+            <Plus className="w-3.5 h-3.5" /> Convocar un ritual este día
           </button>
         )}
       </div>

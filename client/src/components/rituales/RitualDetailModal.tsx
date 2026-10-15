@@ -57,6 +57,9 @@ interface RitualDetailModalProps {
  * Toda la información de un ritual, en un modal con su propia dirección
  * (?dia=…&ritual=…) para poder enlazarlo. Aquí está la lista completa de
  * quién va y el botón para apuntarse o decir que se quiere asistir.
+ *
+ * El color del tipo de ritual solo identifica (medallón y rótulo); el resto
+ * del modal usa el latón de la web.
  */
 export const RitualDetailModal = ({ ritual, canManage, signup, onClose, onEdit, onDelete }: RitualDetailModalProps) => {
   const style = RITUAL_KINDS[kindOf(ritual)];
@@ -96,7 +99,7 @@ export const RitualDetailModal = ({ ritual, canManage, signup, onClose, onEdit, 
                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ritual.location)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline underline-offset-2 decoration-outline-ghost hover:text-theme-main"
+                className="underline underline-offset-4 decoration-theme-main/40 hover:text-gold-bright hover:decoration-theme-main"
               >
                 {ritual.location}
                 <span className="sr-only"> (mapa, se abre en una ventana nueva)</span>
@@ -115,50 +118,47 @@ export const RitualDetailModal = ({ ritual, canManage, signup, onClose, onEdit, 
 
   return (
     <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
-      <Dialog
-        onClose={onClose}
-        labelledBy={titleId}
-        className="bg-theme-container border border-outline-ghost rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden"
-      >
-        <div
-          className="flex items-start gap-3 p-5 border-b border-outline-ghost/50 bg-surface-container/40 shrink-0"
-          style={{ boxShadow: `inset 0 3px 0 ${style.color}` }}
-        >
+      <Dialog onClose={onClose} labelledBy={titleId} className="modal-cofre max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden">
+        {/* Cabecera: medallón con el icono del tipo, rótulo y título */}
+        <div className="relative flex items-start gap-4 px-5 sm:px-7 pt-6 pb-5 shrink-0">
+          {/* Halo tenue del color del tipo detrás del medallón */}
           <div
-            className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center"
-            style={{
-              background: `radial-gradient(circle at 35% 30%, ${alpha(style.color, 0.45)}, ${alpha(style.color, 0.12)} 70%)`,
-              border: `1px solid ${alpha(style.color, 0.6)}`
-            }}
-          >
-            <Icon className="w-5 h-5" style={{ color: style.color }} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-display uppercase tracking-[0.18em]" style={{ color: style.color }}>
+            aria-hidden="true"
+            className="absolute -left-10 -top-16 w-64 h-48 pointer-events-none"
+            style={{ background: `radial-gradient(ellipse at center, ${alpha(style.color, 0.16)}, transparent 70%)` }}
+          />
+          <span className="medallon relative w-14 h-14">
+            <Icon className="w-6 h-6" style={{ color: style.color }} />
+          </span>
+          <div className="relative flex-1 min-w-0 pt-0.5">
+            <p className="flex items-center gap-2 font-ui text-[0.68rem] font-semibold uppercase tracking-[0.22em]" style={{ color: style.color }}>
+              <span aria-hidden="true" className="w-1.5 h-1.5 rotate-45" style={{ backgroundColor: style.color }} />
               {style.label}
             </p>
-            <h2 id={titleId} className={`font-display text-xl sm:text-2xl text-on-surface leading-tight break-words ${cancelled ? 'line-through' : ''}`}>
+            <h2 id={titleId} className={`mt-1 font-display text-2xl sm:text-3xl leading-tight text-gilded break-words ${cancelled ? 'line-through opacity-70' : ''}`}>
               {ritual.title}
             </h2>
             {cancelled && (
-              <p className="inline-flex items-center gap-1 text-sm text-red-300 mt-1">
-                <Ban className="w-4 h-4" /> Cancelado
+              <p className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 font-ui text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-[#f3c4c7] bg-blood/30 border border-blood-bright/50 rounded-sm">
+                <Ban className="w-3.5 h-3.5" /> Cancelado
               </p>
             )}
           </div>
-          <button type="button" onClick={onClose} aria-label="Cerrar" className="shrink-0 p-1 text-on-surface-muted hover:text-on-surface">
-            <X className="w-5 h-5" />
+          <button type="button" onClick={onClose} aria-label="Cerrar" className="relative btn-sello btn-sello-icono shrink-0">
+            <X className="w-4 h-4" />
           </button>
         </div>
+        <div aria-hidden="true" className="hairline-gold shrink-0" />
 
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 flex flex-col gap-6">
-          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2.5 text-sm">
+        <div className="flex-1 overflow-y-auto px-5 sm:px-7 py-6 flex flex-col gap-7">
+          {/* Ficha: cada dato con su icono dorado */}
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-5 gap-y-3 p-4 sm:p-5 bg-background/40 border border-outline-ghost/70 rounded-sm">
             {details.map(({ icon: DetailIcon, term, value }) => (
               <div key={term} className="contents">
-                <dt className="inline-flex items-center gap-2 text-on-surface-muted">
-                  <DetailIcon className="w-4 h-4 shrink-0" style={{ color: style.color }} /> {term}
+                <dt className="inline-flex items-center gap-2 font-ui text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-on-surface-muted pt-1">
+                  <DetailIcon className="w-4 h-4 shrink-0 text-theme-main" /> {term}
                 </dt>
-                <dd className="text-on-surface break-words">{value}</dd>
+                <dd className="text-[1.02rem] text-on-surface break-words">{value}</dd>
               </div>
             ))}
           </dl>
@@ -168,33 +168,23 @@ export const RitualDetailModal = ({ ritual, canManage, signup, onClose, onEdit, 
               <h3 id="ritual-detalle-descripcion" className="sr-only">
                 Descripción
               </h3>
-              <p className="text-[15px] text-on-surface/90 font-body leading-relaxed whitespace-pre-line">{ritual.description}</p>
+              <p className="pl-4 border-l-2 border-theme-main/40 font-['Cormorant_Garamond',serif] italic text-lg text-on-surface/90 leading-relaxed whitespace-pre-line">
+                {ritual.description}
+              </p>
             </section>
           )}
 
           {!cancelled && (ritual.link || ritual.villacuervosUrl) && (
-            <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <div className="flex flex-wrap gap-3">
               {ritual.link && (
-                <a
-                  href={ritual.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold hover:underline"
-                  style={{ color: style.color }}
-                >
+                <a href={ritual.link} target="_blank" rel="noopener noreferrer" className="btn-runic btn-runic-primary px-4 py-2 text-xs gap-2">
                   {linkLabel(ritual)} <ExternalLink className="w-3.5 h-3.5" />
                   <span className="sr-only"> (se abre en una ventana nueva)</span>
                 </a>
               )}
               {ritual.villacuervosUrl && ritual.villacuervosUrl !== ritual.link && (
-                <a
-                  href={ritual.villacuervosUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold hover:underline"
-                  style={{ color: VILLACUERVOS_COLOR }}
-                >
-                  <Feather className="w-3.5 h-3.5" /> Ver en Villacuervos <ExternalLink className="w-3.5 h-3.5" />
+                <a href={ritual.villacuervosUrl} target="_blank" rel="noopener noreferrer" className="btn-sello">
+                  <Feather className="w-3.5 h-3.5" style={{ color: VILLACUERVOS_COLOR }} /> Ver en Villacuervos <ExternalLink className="w-3.5 h-3.5" />
                   <span className="sr-only"> (se abre en una ventana nueva)</span>
                 </a>
               )}
@@ -202,17 +192,17 @@ export const RitualDetailModal = ({ ritual, canManage, signup, onClose, onEdit, 
           )}
 
           {ritual.signupsEnabled && (
-            <section className="pt-4 border-t border-outline-ghost/50">
-              <RitualAttendees ritual={ritual} color={style.color} actions={signup} />
+            <section>
+              <RitualAttendees ritual={ritual} actions={signup} />
             </section>
           )}
 
           {lists.length > 0 && (
-            <section aria-labelledby="ritual-detalle-listas" className="pt-4 border-t border-outline-ghost/50 flex flex-col gap-2.5">
-              <h3 id="ritual-detalle-listas" className="text-xs font-display uppercase tracking-[0.18em] text-on-surface-muted">
+            <section aria-labelledby="ritual-detalle-listas" className="flex flex-col gap-3">
+              <h3 id="ritual-detalle-listas" className="rotulo">
                 Inscripción en Villacuervos
               </h3>
-              <ul className="flex flex-col gap-2.5">
+              <ul className="flex flex-col gap-3">
                 {lists.map((list) => {
                   const full = isFull(list);
                   const ratio = list.maxPlayers ? Math.min(1, list.playerCount / list.maxPlayers) : 0;
@@ -220,16 +210,16 @@ export const RitualDetailModal = ({ ritual, canManage, signup, onClose, onEdit, 
                     <li key={`${list.order}-${list.name}`}>
                       <div className="flex items-baseline justify-between gap-2 text-sm">
                         <span className="text-on-surface/90">{list.name}</span>
-                        <span className={`tabular-nums text-xs shrink-0 ${full ? 'text-red-300' : 'text-on-surface-muted'}`}>
+                        <span className={`tabular-nums text-xs shrink-0 ${full ? 'text-blood-bright' : 'text-on-surface-muted'}`}>
                           {full ? 'Completa · ' : ''}
                           {list.maxPlayers === undefined ? `${list.playerCount} apuntados` : `${list.playerCount} de ${list.maxPlayers}`}
                         </span>
                       </div>
                       {list.maxPlayers !== undefined && (
-                        <div className="mt-1 h-1.5 bg-outline-ghost/60 overflow-hidden" aria-hidden="true">
+                        <div className="mt-1.5 h-1.5 bg-background/70 border border-outline-ghost/60 rounded-full overflow-hidden" aria-hidden="true">
                           <div
-                            className="h-full transition-all"
-                            style={{ width: `${ratio * 100}%`, backgroundColor: full ? '#f87171' : style.color }}
+                            className={`h-full rounded-full transition-all ${full ? 'bg-blood-bright' : 'bg-gradient-to-r from-gold-deep to-gold-bright'}`}
+                            style={{ width: `${ratio * 100}%` }}
                           />
                         </div>
                       )}
@@ -237,39 +227,25 @@ export const RitualDetailModal = ({ ritual, canManage, signup, onClose, onEdit, 
                   );
                 })}
               </ul>
-              {ritual.villacuervosUrl && (
-                <p className="text-xs text-on-surface-muted">Para apuntarte, entra en Villacuervos.</p>
-              )}
+              {ritual.villacuervosUrl && <p className="text-xs italic text-on-surface-muted">Para apuntarte, entra en Villacuervos.</p>}
             </section>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 p-4 sm:px-6 border-t border-outline-ghost/50 bg-surface-container/40 shrink-0">
-          <button
-            type="button"
-            onClick={copyLink}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-outline-ghost text-xs font-display uppercase tracking-wider text-on-surface-muted hover:text-theme-main hover:border-theme-main/50 transition-colors"
-          >
+        <div className="flex flex-wrap items-center gap-3 px-5 sm:px-7 py-4 border-t border-outline-ghost/70 bg-background/50 shrink-0">
+          <button type="button" onClick={copyLink} className="btn-sello">
             <Link2 className="w-3.5 h-3.5" /> Copiar enlace
           </button>
-          <span role="status" className="text-xs text-on-surface-muted">
+          <span role="status" className="text-xs italic text-on-surface-muted">
             {copyStatus}
           </span>
 
           {editable && (
             <div className="ml-auto flex gap-2">
-              <button
-                type="button"
-                onClick={() => onEdit(ritual)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-outline-ghost text-xs font-display uppercase tracking-wider text-on-surface-muted hover:text-theme-main hover:border-theme-main/50 transition-colors"
-              >
+              <button type="button" onClick={() => onEdit(ritual)} className="btn-sello">
                 <Pencil className="w-3.5 h-3.5" /> Modificar
               </button>
-              <button
-                type="button"
-                onClick={() => onDelete(ritual)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-outline-ghost text-xs font-display uppercase tracking-wider text-on-surface-muted hover:text-red-400 hover:border-red-400/50 transition-colors"
-              >
+              <button type="button" onClick={() => onDelete(ritual)} className="btn-sello btn-sello-peligro">
                 <Trash2 className="w-3.5 h-3.5" /> Borrar
               </button>
             </div>

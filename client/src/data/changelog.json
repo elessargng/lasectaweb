@@ -1,5 +1,78 @@
 [
   {
+    "version": "1.1.0",
+    "date": "2026-10-15",
+    "title": "Medianoche y Latón",
+    "description": "La web estrena aspecto, inspirado en el mundo de Blood on the Clocktower: la tinta de la noche, el latón del reloj y las fichas del Grimorio, la sangre del Demonio y el pergamino de las hojas de personajes. Rituales se rehace por completo, con el detalle de cada ritual en su propia ventana y la posibilidad de decir que quieres asistir a partidas presenciales y eventos. Además, la web se puede usar de principio a fin con lector de pantalla.",
+    "changes": [
+      {
+        "category": "Nueva Estética",
+        "items": [
+          "Paleta Medianoche y Latón: Fondos de tinta de medianoche, el latón dorado como acento, el rojo sangre reservado para avisos y peligro, y el pergamino para el texto.",
+          "Nueva Cabecera: Al llegar a una página, la barra se funde con su imagen; al bajar, se vuelve un cristal oscuro con un filo dorado. La sección en la que estás se marca con un rombo dorado.",
+          "Cabeceras de Página: Cada sección se abre con su ilustración a todo lo ancho, un lento acercamiento y el título en la letra de Clocktower, en oro.",
+          "Tipografía: Los títulos usan la letra de Blood on the Clocktower; los rótulos, botones y menús, versalitas grabadas, más fáciles de leer en tamaño pequeño.",
+          "Botones y Ventanas: Botones de latón, ventanas con filo dorado y luz de luna, campos de formulario y avisos con el mismo estilo en toda la web.",
+          "Pie de Página: Nuevo diseño, con el sello de Contenido Creado por la Comunidad que pide The Pandemonium Institute por usar los iconos de los personajes.",
+          "Menos Movimiento: Las animaciones se desactivan si el sistema tiene activada la opción de reducir el movimiento."
+        ]
+      },
+      {
+        "category": "Atrio",
+        "items": [
+          "Nuevo Diseño: La cita de bienvenida, los próximos rituales, las estadísticas y el acceso rápido se presentan en paneles con filo de latón.",
+          "Estadísticas como Fichas: Miembros, escrituras y eventos se muestran como fichas redondas con bisel dorado, como las del Grimorio.",
+          "Próximos Rituales: El calendario de la semana marca el día de hoy y cada partida dice su tipo y su título, no solo la hora."
+        ]
+      },
+      {
+        "category": "Rituales",
+        "items": [
+          "Calendario a Todo lo Ancho: Sin el panel lateral, el calendario ocupa todo el espacio y muestra más de cada ritual; al pulsar uno se abre su detalle completo.",
+          "Más Información a la Vista: En la vista de mes, cada ritual muestra hora, título y plazas, hasta cuatro por día; en la de semana, también el tipo, el guion, el lugar, quién narra y cuánta gente va.",
+          "Ver Todos los del Día: «+N más» en una casilla del mes lleva a la semana de ese día, donde caben todos.",
+          "Detalle del Ritual: Cada ritual se abre en su propia ventana, con la fecha, el lugar, el guion, quién narra, quién convoca, la descripción, el enlace y la lista de asistentes.",
+          "Enlace Directo: Cada ritual tiene su propia dirección: el botón «Copiar enlace» la copia para compartirla, y quien la abre llega directamente a su detalle.",
+          "Quiero Asistir: En las partidas presenciales y en los eventos puedes decir que piensas ir, para que se sepa quién va. No reserva plaza, y se puede marcar hasta que termina el evento.",
+          "Colores de Metal y Gema: Cada tipo de ritual tiene su color: oro para las partidas online de La Secta, plata para las de Villacuervos, cobre para las presenciales y granate para los eventos y jornadas.",
+          "Nuevo Icono para Eventos: Los eventos y jornadas se reconocen por un castillo gótico, dibujado a juego con la web.",
+          "En el Móvil: En la vista de mes, al pulsar un día aparece debajo la lista de sus rituales."
+        ]
+      },
+      {
+        "category": "Biblioteca",
+        "items": [
+          "Acciones de Administración: Los botones para añadir, mover, editar y borrar carpetas, documentos y enlaces tienen un estilo común y caben en una sola fila, con una etiqueta al pasar el ratón o llegar con el teclado.",
+          "Tarjetas de Carpeta: El icono de cada carpeta se muestra en un medallón dorado."
+        ]
+      },
+      {
+        "category": "Cuenta y Sesión",
+        "items": [
+          "Recordarme: Al identificarte puedes elegir si la sesión se recuerda al cerrar el navegador o se cierra con él.",
+          "Aviso de Sesión Caducada: Si la sesión caduca, la web lo avisa y ofrece volver a entrar sin perder la página en la que estabas."
+        ]
+      },
+      {
+        "category": "Accesibilidad",
+        "items": [
+          "Lector de Pantalla: La web se puede usar con NVDA, JAWS, VoiceOver y TalkBack. Los títulos están ordenados para navegar por ellos, y las imágenes y adornos decorativos no se leen.",
+          "Ventanas y Menús: Al abrir una ventana el foco entra en ella y al cerrarla vuelve a donde estaba; Escape cierra las ventanas y el menú del móvil.",
+          "Formularios: Todos los campos tienen su etiqueta, y los botones de solo icono, un nombre claro.",
+          "Calendario con Teclado: En todas las vistas de Rituales cada ritual es un botón que se puede alcanzar con el tabulador, y el lector anuncia su tipo y su título.",
+          "Estado de los Controles: Las vistas, los filtros y el botón «Quiero asistir» anuncian si están activados. Los enlaces que abren otra ventana lo avisan.",
+          "Foco Visible: Un contorno dorado indica siempre dónde está el foco del teclado."
+        ]
+      },
+      {
+        "category": "Gestión",
+        "items": [
+          "Sincronización con Villacuervos: La administración puede ver en el panel de gestión cuándo se sincronizaron por última vez los personajes y las traducciones con Villacuervos y, si algo falla, el motivo."
+        ]
+      }
+    ]
+  },
+  {
     "version": "1.0.0",
     "date": "2026-10-06",
     "title": "Rituales: La Agenda del Culto",

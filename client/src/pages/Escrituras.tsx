@@ -169,7 +169,7 @@ const Escrituras = () => {
                         onClick={(e) => scrollToSection(e, id)}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-sm font-display text-xs lg:text-sm transition-all duration-200 group relative border-l-2 ${
                           isActive
-                            ? 'bg-theme-container/20 text-theme-main border-theme-main pl-4 font-semibold shadow-[inset_1px_0_0_rgba(177,156,217,0.1)]'
+                            ? 'bg-theme-container/20 text-theme-main border-theme-main pl-4 font-semibold shadow-[inset_1px_0_0_rgba(212,175,106,0.1)]'
                             : 'text-on-surface-muted hover:text-on-surface hover:bg-surface-high/40 border-transparent'
                         }`}
                       >
