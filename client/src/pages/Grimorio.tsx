@@ -1,11 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
 import Cita from '../components/Cita';
 import { allBotcCharacters } from '../data/botcRoles';
 import { idCatalogo, useIconosPersonajes } from '../utils/personajesApi';
+import FiltrosGrimorio from '../components/grimorio/FiltrosGrimorio';
+import { EDICIONES, FILTROS_VACIOS, SIN_BANDO, coincide, filtrosAUrl, filtrosDeUrl, type FiltrosPersonajes } from '../components/grimorio/filtrado';
 import {
-  Search,
   BookOpen,
   Shield,
   Skull,
@@ -20,71 +22,40 @@ import {
   HelpCircle
 } from 'lucide-react';
 
-/** «Ediciones» cuyos personajes no tienen bando (son del Narrador): con ellas no se filtra por bando. */
-const SIN_BANDO = ['fabled', 'loric'];
-
 /** Personajes del Grimorio cuyo id en el catálogo no sale de quitarle los separadores. */
 const ID_CATALOGO: Record<string, string> = {
   'witch-sv': 'witch',
   'al-hadikhah': 'alhadikhia'
 };
 
-/**
- * Botón de filtro del compendio. Al marcarlo, el texto pasa a seminegrita, que
- * es más ancha: para que el botón no crezca y empuje al resto a otra línea, el
- * ancho se reserva siempre con una copia invisible del texto ya en seminegrita
- * (las dos en la misma celda de una rejilla). El borde también está siempre,
- * solo cambia de color. La copia está oculta al lector, que oye el texto una vez.
- */
-const FiltroChip = ({ activo, onClick, lang, children }: { activo: boolean; onClick: () => void; lang?: string; children: React.ReactNode }) => (
-  <button
-    type="button"
-    lang={lang}
-    onClick={onClick}
-    aria-pressed={activo}
-    className={`px-3 py-1.5 rounded-full border text-xs font-display transition-colors motion-reduce:transition-none cursor-pointer ${
-      activo
-        ? 'bg-theme-main border-theme-main text-background shadow'
-        : 'bg-background hover:bg-surface border-outline-ghost text-on-surface-muted hover:text-on-surface'
-    }`}
-  >
-    <span className="grid">
-      <span aria-hidden="true" className="col-start-1 row-start-1 font-semibold invisible">{children}</span>
-      <span className={`col-start-1 row-start-1 text-center ${activo ? 'font-semibold' : ''}`}>{children}</span>
-    </span>
-  </button>
-);
-
 const Grimorio: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedEdition, setSelectedEdition] = useState<string>('all');
-  const [selectedTeam, setSelectedTeam] = useState<string>('all');
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Los filtros viven en la dirección (?q=…&edicion=…&bando=…): se pueden compartir y sobreviven a recargar.
+  const [filtros, setFiltros] = useState<FiltrosPersonajes>(() => filtrosDeUrl(searchParams));
   const [activeTab, setActiveTab] = useState<'characters' | 'editions' | 'rules' | 'guides'>('characters');
 
+  useEffect(() => {
+    setSearchParams(filtrosAUrl(filtros), { replace: true });
+  }, [filtros, setSearchParams]);
+
   // Al pasar a fábulas o Loric, el bando deja de aplicar: se vuelve a «Todos» para no filtrar por uno que no existe.
-  const elegirEdicion = (edicion: string) => {
-    setSelectedEdition(edicion);
-    if (SIN_BANDO.includes(edicion)) setSelectedTeam('all');
-  };
+  const cambiarFiltros = (cambio: Partial<FiltrosPersonajes>) =>
+    setFiltros((prev) => {
+      const next = { ...prev, ...cambio };
+      if (SIN_BANDO.includes(next.edicion)) next.bando = 'all';
+      return next;
+    });
 
   // Iconos oficiales de los personajes, del catálogo que sincroniza el servidor.
   const iconos = useIconosPersonajes();
   const iconoDe = (id: string) => iconos.get(ID_CATALOGO[id] ?? idCatalogo(id));
 
-  const filteredCharacters = useMemo(() => {
-    return allBotcCharacters.filter(char => {
-      const matchesSearch =
-        char.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        char.originalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        char.ability.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        char.summary.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredCharacters = useMemo(() => allBotcCharacters.filter((c) => coincide(c, filtros)), [filtros]);
 
-      const matchesEdition = selectedEdition === 'all' || char.edition === selectedEdition;
-      const matchesTeam = selectedTeam === 'all' || char.team === selectedTeam;
-
-      return matchesSearch && matchesEdition && matchesTeam;
-    });
-  }, [searchTerm, selectedEdition, selectedTeam]);
+  // Cuántos saldrían al elegir cada opción, con el resto de filtros como están (fábulas y Loric ignoran el bando).
+  const cuentaEdicion = (edicion: string) =>
+    allBotcCharacters.filter((c) => coincide(c, { ...filtros, edicion, bando: SIN_BANDO.includes(edicion) ? 'all' : filtros.bando })).length;
+  const cuentaBando = (bando: string) => allBotcCharacters.filter((c) => coincide(c, { ...filtros, bando })).length;
 
   const getTeamBadge = (team: string) => {
     switch (team) {
@@ -184,69 +155,29 @@ const Grimorio: React.FC = () => {
           {/* TAB 1: PERSONAJES CON BUSCADOR Y FILTROS */}
           {activeTab === 'characters' && (
             <div className="space-y-6">
-              {/* Barra de Búsqueda y Filtros */}
-              <div className="bg-surface-low border border-outline-ghost p-4 md:p-6 rounded-xl space-y-4 shadow-md">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-muted w-5 h-5" />
-                  <input
-                    type="text"
-                    placeholder="Buscar entre los personajes por nombre (ej: Lavandera, Imp, Poisoner, Monje...)"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-background border border-outline-ghost rounded-lg pl-12 pr-4 py-3 text-on-surface placeholder:text-on-surface-muted focus:outline-none focus:border-theme-main transition-colors font-body"
-                  />
-                </div>
-
-                <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center pt-2">
-                  {/* Filtro de Edición */}
-                  <div className="flex items-center gap-2 flex-wrap text-sm">
-                    <span className="text-on-surface-muted font-display">Edición:</span>
-                    {[
-                      { id: 'all', label: 'Todas' },
-                      { id: 'trouble-brewing', label: 'Trouble Brewing' },
-                      { id: 'bad-moon-rising', label: 'Bad Moon Rising' },
-                      { id: 'sects-and-violets', label: 'Sects & Violets' },
-                      { id: 'fabled', label: 'Fábulas' },
-                      { id: 'loric', label: 'Loric', lang: 'en' },
-                      { id: 'experimental', label: 'Experimental' }
-                    ].map(ed => (
-                      <FiltroChip key={ed.id} lang={ed.lang} activo={selectedEdition === ed.id} onClick={() => elegirEdicion(ed.id)}>
-                        {ed.label}
-                      </FiltroChip>
-                    ))}
-                  </div>
-
-                  {/* Filtro de Bando: las fábulas y los Loric no tienen bando, así que con ellas no aplica y no se muestra */}
-                  {!SIN_BANDO.includes(selectedEdition) && (
-                    <div className="flex items-center gap-2 flex-wrap text-sm">
-                      <span className="text-on-surface-muted font-display">Bando:</span>
-                      {[
-                        { id: 'all', label: 'Todos' },
-                        { id: 'townsfolk', label: 'Aldeanos' },
-                        { id: 'outsider', label: 'Forasteros' },
-                        { id: 'minion', label: 'Esbirros' },
-                        { id: 'demon', label: 'Demonios' },
-                        { id: 'traveller', label: 'Viajeros' }
-                      ].map(team => (
-                        <FiltroChip key={team.id} activo={selectedTeam === team.id} onClick={() => setSelectedTeam(team.id)}>
-                          {team.label}
-                        </FiltroChip>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="text-xs text-on-surface-muted font-display pt-1">
-                  Mostrando {filteredCharacters.length} de {allBotcCharacters.length} personajes.
-                </div>
-              </div>
+              <FiltrosGrimorio
+                filtros={filtros}
+                onCambiar={cambiarFiltros}
+                onLimpiar={() => setFiltros(FILTROS_VACIOS)}
+                total={allBotcCharacters.length}
+                mostrados={filteredCharacters.length}
+                cuentaEdicion={cuentaEdicion}
+                cuentaBando={cuentaBando}
+              />
 
               {/* Grid de Tarjetas de Personajes */}
               {filteredCharacters.length === 0 ? (
-                <div className="text-center py-12 bg-surface-low border border-outline-ghost rounded-xl">
-                  <Ghost className="w-12 h-12 text-on-surface-muted mx-auto mb-3 opacity-60" />
-                  <p className="text-lg font-display text-on-surface">No se encontraron personajes con los filtros seleccionados.</p>
-                  <p className="text-sm text-on-surface-muted font-body mt-1">Prueba a borrar el término de búsqueda o seleccionar "Todas".</p>
+                <div className="text-center py-14 px-6 border border-dashed border-theme-main/25 rounded-sm bg-[radial-gradient(ellipse_at_center,rgba(18,26,51,0.6),transparent_70%)]">
+                  <span className="medallon w-16 h-16 mx-auto mb-5">
+                    <Ghost className="w-7 h-7 text-theme-main/80" />
+                  </span>
+                  <p className="font-display text-2xl text-gilded">Ningún personaje responde a la llamada</p>
+                  <p className="mt-2 font-['Cormorant_Garamond',serif] italic text-lg text-on-surface-muted">
+                    Prueba con otra palabra o quita algún filtro.
+                  </p>
+                  <button type="button" onClick={() => setFiltros(FILTROS_VACIOS)} className="btn-sello mt-6">
+                    Limpiar filtros
+                  </button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -294,7 +225,9 @@ const Grimorio: React.FC = () => {
                         </div>
 
                         <div className="pt-2 border-t border-outline-ghost/40 flex items-center justify-between text-xs text-on-surface-muted font-display">
-                          <span className="capitalize">{char.edition.replace(/-/g, ' ')}</span>
+                          <span lang={EDICIONES.find((e) => e.id === char.edition)?.lang}>
+                            {EDICIONES.find((e) => e.id === char.edition)?.label ?? char.edition}
+                          </span>
                           <a
                             href={`https://wiki.bloodontheclocktower.com/${encodeURIComponent(char.originalName)}`}
                             target="_blank"
@@ -326,7 +259,7 @@ const Grimorio: React.FC = () => {
                   </p>
                 </div>
                 <Button
-                  onClick={() => { setSelectedEdition('trouble-brewing'); setActiveTab('characters'); }}
+                  onClick={() => { setFiltros({ ...FILTROS_VACIOS, edicion: 'trouble-brewing' }); setActiveTab('characters'); }}
                   variant="outline"
                   className="w-full mt-4"
                 >
@@ -345,7 +278,7 @@ const Grimorio: React.FC = () => {
                   </p>
                 </div>
                 <Button
-                  onClick={() => { setSelectedEdition('bad-moon-rising'); setActiveTab('characters'); }}
+                  onClick={() => { setFiltros({ ...FILTROS_VACIOS, edicion: 'bad-moon-rising' }); setActiveTab('characters'); }}
                   variant="outline"
                   className="w-full mt-4"
                 >
@@ -364,7 +297,7 @@ const Grimorio: React.FC = () => {
                   </p>
                 </div>
                 <Button
-                  onClick={() => { setSelectedEdition('sects-and-violets'); setActiveTab('characters'); }}
+                  onClick={() => { setFiltros({ ...FILTROS_VACIOS, edicion: 'sects-and-violets' }); setActiveTab('characters'); }}
                   variant="outline"
                   className="w-full mt-4"
                 >
