@@ -75,6 +75,12 @@ export interface Ritual {
   /** Con signupsEnabled: si es una inscripción o una intención de asistir. */
   attendanceMode?: RitualAttendanceMode;
   /**
+   * Partida online publicada también en Villacuervos pero cuya inscripción se
+   * lleva aquí (en La Secta), no en Villacuervos. Si va a false, la gente se
+   * apunta en Villacuervos (con sus listas).
+   */
+  signupsInLaSecta?: boolean;
+  /**
    * Gente apuntada, en el orden en que se apuntó. En una serie periódica van
    * las de todas sus repeticiones, cada una con su occurrence.
    */
@@ -107,6 +113,8 @@ export interface RitualInput {
   recurrenceMonths?: number | null;
   recurrenceUntil?: string | null;
   status?: RitualStatus;
+  /** Al crear una online publicada también en Villacuervos: llevar aquí la inscripción. */
+  signupsInLaSecta?: boolean;
 }
 
 export const MAX_RECURRENCE_DAYS = 365;

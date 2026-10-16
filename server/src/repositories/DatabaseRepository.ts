@@ -860,6 +860,13 @@ export class DatabaseRepository {
         );
       `);
     });
+
+    // Migración 025: una partida online publicada también en Villacuervos puede
+    // llevar la inscripción aquí (en La Secta) en vez de en Villacuervos. De
+    // entrada, no: las ya existentes siguen apuntándose en Villacuervos.
+    await this.applyMigration('025_add_ritual_signups_in_la_secta', async (db) => {
+      await db.exec('ALTER TABLE rituals ADD COLUMN signupsInLaSecta INTEGER NOT NULL DEFAULT 0;');
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

@@ -59,6 +59,8 @@ export interface Ritual {
   signupsEnabled?: boolean;
   /** Con signupsEnabled: inscripción, o solo intención de asistir, sin orden ni plazas. */
   attendanceMode?: RitualAttendanceMode;
+  /** Partida online publicada también en Villacuervos pero con la inscripción aquí, en La Secta. */
+  signupsInLaSecta?: boolean;
   /**
    * Gente apuntada (o que quiere asistir), en el orden en que lo dijo. Al desplegar una serie, cada
    * repetición se queda solo con la suya.
@@ -96,6 +98,8 @@ export interface RitualInput {
   status?: RitualStatus;
   /** Al convocar una partida online: publicarla también en Villacuervos. */
   alsoInVillacuervos?: boolean;
+  /** Publicada en Villacuervos, pero con la inscripción aquí (en La Secta) en vez de allí. */
+  signupsInLaSecta?: boolean;
 }
 
 export interface Storyteller {

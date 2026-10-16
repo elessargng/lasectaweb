@@ -10,8 +10,6 @@ import {
 import { IconoSilencio } from './IconosJuego';
 import { useAriaLive } from './avisosConfig';
 import { botonIcono, botonPrincipal } from './estilos';
-import TeclaAtajo from './TeclaAtajo';
-import type { Atajo } from './atajos';
 import type { ProblemaDispositivo } from './useVideollamada';
 
 interface ControlesVideoProps {
@@ -29,9 +27,6 @@ interface ControlesVideoProps {
   /** Las teclas de los atajos, para decirlas («.» y «,»). */
   teclaMicrofono: string;
   teclaCamara: string;
-  /** Los atajos completos, para verlos al lado como una tecla. */
-  atajoMicrofono: Atajo;
-  atajoCamara: Atajo;
   problema: ProblemaDispositivo | null;
   onCerrarProblema: () => void;
   sonidoBloqueado: boolean;
@@ -87,8 +82,6 @@ const ControlesVideo = ({
   onSonido,
   teclaMicrofono,
   teclaCamara,
-  atajoMicrofono,
-  atajoCamara,
   problema,
   onCerrarProblema,
   sonidoBloqueado,
@@ -122,7 +115,6 @@ const ControlesVideo = ({
           >
             {microfono && !silenciado ? <Mic size={18} /> : <MicOff size={18} />}
           </button>
-          <TeclaAtajo atajo={atajoMicrofono} ocultoALector className="max-sm:hidden" />
           {silenciado && (
             <span id="sala-microfono-silencio" className="sr-only">
               El narrador ha pedido silencio.
@@ -140,7 +132,6 @@ const ControlesVideo = ({
           >
             {camara && !sinCamaraDeNoche ? <Video size={18} /> : <VideoOff size={18} />}
           </button>
-          <TeclaAtajo atajo={atajoCamara} ocultoALector className="max-sm:hidden" />
           {sinCamaraDeNoche && (
             <span id="sala-camara-noche" className="sr-only">
               De noche no hay cámaras, salvo en las conversaciones privadas.

@@ -55,7 +55,11 @@ export class RitualService {
    */
   private attendanceModeOf(ritual: Ritual): RitualAttendanceMode | undefined {
     if (ritual.source !== 'secta') return undefined;
-    if (ritual.type === 'partida_online') return ritual.villacuervosPlayId ? undefined : 'inscripcion';
+    if (ritual.type === 'partida_online') {
+      // Publicada en Villacuervos: allí tiene sus listas, salvo que se lleve la inscripción aquí.
+      if (ritual.villacuervosPlayId) return ritual.signupsInLaSecta ? 'inscripcion' : undefined;
+      return 'inscripcion';
+    }
     return 'intencion';
   }
 
@@ -215,6 +219,9 @@ export class RitualService {
       villacuervos = { playId: play.id, slug: play.slug };
     }
 
+    // Llevar la inscripción aquí solo tiene sentido si la partida se publica en Villacuervos.
+    input.signupsInLaSecta = !!villacuervos && raw?.signupsInLaSecta === true;
+
     const id = crypto.randomUUID();
     await this.ritualRepository.create(id, userId, input, villacuervos);
     return (await this.getById(id))!;
@@ -344,7 +351,10 @@ export class RitualService {
       recurrenceDays,
       recurrenceMonths,
       recurrenceUntil,
-      status
+      status,
+      // Solo surte efecto en las online publicadas en Villacuervos (ver attendanceModeOf);
+      // al crear, create() lo ajusta según si de verdad se publica allí.
+      signupsInLaSecta: raw.signupsInLaSecta === true
     };
   }
 
@@ -362,7 +372,8 @@ export class RitualService {
     const playsById = new Map(plays.map((play) => [play.id, play]));
     for (const ritual of own) {
       const play = ritual.villacuervosPlayId ? playsById.get(ritual.villacuervosPlayId) : undefined;
-      if (play) ritual.signupLists = toSignupLists(play.lists);
+      // Si la inscripción se lleva aquí, se muestran los apuntados de aquí, no las listas de allí.
+      if (play && !ritual.signupsInLaSecta) ritual.signupLists = toSignupLists(play.lists);
     }
     const linked = new Set(own.map((r) => r.villacuervosPlayId).filter(Boolean));
 

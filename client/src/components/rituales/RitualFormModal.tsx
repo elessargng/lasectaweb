@@ -37,6 +37,13 @@ const RECURRENCE_OPTIONS: Array<[string, string]> = [
 const inputClass = 'campo';
 const labelClass = 'campo-etiqueta';
 
+/**
+ * El cursor de un interruptor (igual que src/sala/Interruptor): el `<input>` va
+ * aparte, como `peer` (sr-only), justo antes de este `<span>`.
+ */
+const switchClass =
+  'relative h-5 w-9 shrink-0 rounded-full border border-outline-ghost bg-background transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-3.5 after:w-3.5 after:rounded-full after:bg-on-surface-muted after:transition-transform peer-checked:border-theme-main peer-checked:bg-theme-container peer-checked:after:translate-x-4 peer-checked:after:bg-theme-main peer-focus-visible:ring-2 peer-focus-visible:ring-theme-main motion-reduce:transition-none motion-reduce:after:transition-none';
+
 /** Sala de La Secta en botc.app: el enlace que se propone al convocar una partida online. */
 const DEFAULT_ONLINE_LINK = 'https://botc.app/join/lasecta';
 
@@ -55,6 +62,8 @@ function defaultStart(day: Date | null, type: RitualType): string {
 export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onClose, onSave }: RitualFormModalProps) => {
   const [type, setType] = useState<RitualType>('partida_online');
   const [alsoInVillacuervos, setAlsoInVillacuervos] = useState(false);
+  /** Publicada en Villacuervos pero con la inscripción aquí, en La Secta (de entrada, no). */
+  const [signupInLaSecta, setSignupInLaSecta] = useState(false);
   /** '' no se repite, un número de días, 'mes', u 'otra' para escribir los días a mano. */
   const [recurrence, setRecurrence] = useState('');
   const [customDays, setCustomDays] = useState('');
@@ -76,6 +85,7 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
     if (!isOpen) return;
     setType(ritual?.type ?? 'partida_online');
     setAlsoInVillacuervos(false);
+    setSignupInLaSecta(ritual?.signupsInLaSecta ?? false);
     const days = ritual?.recurrenceDays;
     setRecurrence(ritual?.recurrenceMonths ? 'mes' : !days ? '' : RECURRENCE_PRESETS.includes(days) ? String(days) : 'otra');
     setCustomDays(days && !RECURRENCE_PRESETS.includes(days) ? String(days) : '');
@@ -110,6 +120,9 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
   };
 
   const isOnline = type === 'partida_online';
+  // Elegir dónde se apunta la gente: al crear una online publicada en Villacuervos,
+  // o al modificar una que ya está publicada allí.
+  const showSignupToggle = isOnline && (ritual ? !!ritual.villacuervosUrl : alsoInVillacuervos);
   // Jugar en la sala de La Secta (en vez de en botc.app): el enlace es el de la sala
   const enLaSecta = isOnline && esSalaLaSecta(link);
   const isInPerson = type === 'partida_presencial';
@@ -148,7 +161,8 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
         recurrenceUntil:
           (recurrenceDays || recurrenceMonths) && recurrenceUntil ? new Date(`${recurrenceUntil}T23:59:59`).toISOString() : null,
         status,
-        alsoInVillacuervos: !ritual && isOnline && alsoInVillacuervos
+        alsoInVillacuervos: !ritual && isOnline && alsoInVillacuervos,
+        signupsInLaSecta: showSignupToggle && signupInLaSecta
       });
       onClose();
     } catch (err) {
@@ -214,10 +228,12 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
             >
               <input
                 type="checkbox"
+                role="switch"
                 checked={alsoInVillacuervos}
                 onChange={(e) => setAlsoInVillacuervos(e.target.checked)}
-                className="mt-1 accent-[#d4af6a]"
+                className="peer sr-only"
               />
+              <span aria-hidden="true" className={`${switchClass} mt-0.5`} />
               <span>
                 <span className="flex items-center gap-1.5 text-sm font-semibold text-on-surface">
                   <Feather className="w-4 h-4" style={{ color: villacuervosColor }} />
@@ -235,6 +251,31 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
               <Feather className="w-3.5 h-3.5" style={{ color: villacuervosColor }} />
               Publicada también en Villacuervos. Los cambios que hagas aquí no se trasladan allí.
             </p>
+          )}
+
+          {showSignupToggle && (
+            <label
+              className={`${ritual ? '' : 'ml-6'} flex items-start gap-3 p-3.5 rounded-sm border cursor-pointer transition-colors ${
+                signupInLaSecta ? 'border-theme-main/70 bg-theme-main/[0.06]' : 'border-outline-ghost hover:border-theme-main/40'
+              }`}
+            >
+              <input
+                type="checkbox"
+                role="switch"
+                checked={signupInLaSecta}
+                onChange={(e) => setSignupInLaSecta(e.target.checked)}
+                className="peer sr-only"
+              />
+              <span aria-hidden="true" className={`${switchClass} mt-0.5`} />
+              <span>
+                <span className="block text-sm font-semibold text-on-surface">Apuntarse en La Secta</span>
+                <span className="block text-xs text-on-surface-muted mt-0.5">
+                  {signupInLaSecta
+                    ? 'La gente se apunta aquí, en La Secta, con su lista de inscripción propia.'
+                    : 'Desactivado, la gente se apunta en Villacuervos (con sus listas).'}
+                </span>
+              </span>
+            </label>
           )}
 
           <div>
@@ -351,10 +392,7 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
                   aria-describedby="ritual-en-la-secta-ayuda"
                   className="peer sr-only"
                 />
-                <span
-                  aria-hidden="true"
-                  className="relative h-5 w-9 shrink-0 rounded-full border border-outline-ghost bg-background transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-3.5 after:w-3.5 after:rounded-full after:bg-on-surface-muted after:transition-transform peer-checked:border-theme-main peer-checked:bg-theme-container peer-checked:after:translate-x-4 peer-checked:after:bg-theme-main peer-focus-visible:ring-2 peer-focus-visible:ring-theme-main motion-reduce:transition-none motion-reduce:after:transition-none"
-                />
+                <span aria-hidden="true" className={switchClass} />
                 <span className="font-ui text-sm text-on-surface">Jugar en La Secta</span>
               </label>
               <p id="ritual-en-la-secta-ayuda" className="text-xs text-on-surface-muted">
@@ -429,13 +467,15 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
           </div>
 
           {ritual && (
-            <label className="inline-flex items-center gap-2 text-sm text-on-surface-muted cursor-pointer">
+            <label className="inline-flex items-center gap-3 text-sm text-on-surface-muted cursor-pointer">
               <input
                 type="checkbox"
+                role="switch"
                 checked={status === 'cancelado'}
                 onChange={(e) => setStatus(e.target.checked ? 'cancelado' : 'programado')}
-                className="accent-[#d4434c]"
+                className="peer sr-only"
               />
+              <span aria-hidden="true" className={switchClass} />
               Ritual cancelado (se sigue viendo en la agenda, tachado)
             </label>
           )}
