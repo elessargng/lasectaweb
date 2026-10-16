@@ -2,6 +2,7 @@ import Mano from './Mano';
 import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { botonIcono } from './estilos';
 import { FORMAS_MANO, nombreMano } from './formasMano';
+import type { Atajo } from './atajos';
 import type { FormaMano } from './useSala';
 
 interface MenuManoProps {
@@ -9,6 +10,8 @@ interface MenuManoProps {
   levantada: boolean;
   /** Muerto y sin voto: no puede levantarla (solo bajarla, si la tenía levantada). */
   sinVoto?: boolean;
+  /** La tecla de levantar o bajar la mano (se ve al lado de la opción). */
+  atajoLevantar?: Atajo;
   /** Levanta o baja la mano; devuelve false para que el menú se cierre. */
   onAlternar: () => Promise<boolean>;
   onElegirForma: (forma: FormaMano) => Promise<boolean>;
@@ -20,13 +23,13 @@ interface MenuManoProps {
  * Levantarla también tiene atajo de teclado (Preferencias > Atajos). Un muerto
  * que ya ha gastado su voto no puede levantarla: la opción sale desactivada.
  */
-const MenuMano = ({ forma, levantada, sinVoto = false, onAlternar, onElegirForma }: MenuManoProps) => {
+const MenuMano = ({ forma, levantada, sinVoto = false, atajoLevantar, onAlternar, onElegirForma }: MenuManoProps) => {
   const opciones: OpcionMenu[] = [
     levantada
-      ? { id: 'alternar', etiqueta: 'Bajar la mano', elegir: onAlternar }
+      ? { id: 'alternar', etiqueta: 'Bajar la mano', atajo: atajoLevantar, elegir: onAlternar }
       : sinVoto
         ? { id: 'alternar', etiqueta: 'Levantar la mano (sin voto)', deshabilitada: true, elegir: onAlternar }
-        : { id: 'alternar', etiqueta: 'Levantar la mano', elegir: onAlternar },
+        : { id: 'alternar', etiqueta: 'Levantar la mano', atajo: atajoLevantar, elegir: onAlternar },
     ...FORMAS_MANO.map(({ forma: f, nombre }) => ({
       id: f,
       etiqueta: nombre,

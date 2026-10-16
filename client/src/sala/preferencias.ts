@@ -42,6 +42,13 @@ export interface PreferenciasSala {
    * pulsar «Salir». Pestaña Comunicaciones; de entrada, no: se sale a mano.
    */
   salirConversacionSinNadie: boolean;
+  /**
+   * Dónde salen las invitaciones y peticiones de llamada entrantes: dentro del
+   * panel de Charlas (de entrada) o fuera, encima de la columna lateral y a la
+   * vista se vea el panel que se vea (como estaba antes de integrarlas dentro).
+   * Pestaña Accesibilidad.
+   */
+  invitacionesFuera: boolean;
   /** Lo que se ve en la columna de la izquierda (ver ColumnaLateral). */
   panelLateral: PanelLateral;
   /** La columna de la izquierda contraída: solo su barra de iconos. */
@@ -68,7 +75,13 @@ export interface PreferenciasSala {
 }
 
 type ClaveNumerica = 'tamanoAvatar' | 'tamanoFicha' | 'distanciaFicha';
-type ClaveSiNo = 'avatarAuto' | 'fichaAuto' | 'salirConversacionSinNadie' | 'panelLateralContraido' | 'farolesFijados';
+type ClaveSiNo =
+  | 'avatarAuto'
+  | 'fichaAuto'
+  | 'salirConversacionSinNadie'
+  | 'invitacionesFuera'
+  | 'panelLateralContraido'
+  | 'farolesFijados';
 
 /** Los paneles de la columna de la izquierda: uno a la vez, elegido en su barra de iconos. */
 export const PANELES_LATERALES = ['mensajes', 'conversaciones', 'npcs', 'faroles'] as const;
@@ -98,6 +111,7 @@ const SI_NO: Record<ClaveSiNo, boolean> = {
   avatarAuto: true,
   fichaAuto: true,
   salirConversacionSinNadie: false,
+  invitacionesFuera: false,
   panelLateralContraido: false,
   farolesFijados: false,
 };

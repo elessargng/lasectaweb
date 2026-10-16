@@ -2,6 +2,8 @@ import { GripHorizontal, LogIn, Maximize2, MicOff, Minimize2, PhoneOff, VolumeX 
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
 import { getAvatarUrl } from '../utils/api';
 import { botonSecundario } from './estilos';
+import TeclaAtajo from './TeclaAtajo';
+import type { Atajo } from './atajos';
 import type { SalaConversacion, SalaParticipante } from './useSala';
 import type { PistasParticipante } from './useVideollamada';
 import VideoPista from './VideoPista';
@@ -20,6 +22,8 @@ interface VentanaConversacionProps {
   onEntrar?: () => void;
   /** La tecla para salir (Retroceso), para decirla. */
   teclaSalir: string;
+  /** El atajo completo de salir, para verlo al lado como una tecla. */
+  atajoSalir: Atajo;
   /** El título: recibe el foco al entrar en la conversación. */
   tituloRef: RefObject<HTMLHeadingElement | null>;
 }
@@ -51,6 +55,7 @@ const VentanaConversacion = ({
   onSalir,
   onEntrar,
   teclaSalir,
+  atajoSalir,
   tituloRef,
 }: VentanaConversacionProps) => {
   const [minimizada, setMinimizada] = useState(false);
@@ -182,6 +187,7 @@ const VentanaConversacion = ({
         >
           <PhoneOff size={14} />
           {escucho ? 'Dejar de escuchar' : 'Salir'}
+          <TeclaAtajo atajo={atajoSalir} ocultoALector />
         </button>
       </div>
 

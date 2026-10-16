@@ -1,4 +1,6 @@
 import { botonPrincipal, botonSecundario } from './estilos';
+import TeclaAtajo from './TeclaAtajo';
+import type { Atajo } from './atajos';
 import type { SalaConversacion, SalaInvitacion, SalaParticipante } from './useSala';
 
 interface PanelInvitacionesProps {
@@ -8,6 +10,10 @@ interface PanelInvitacionesProps {
   yo: string;
   onResponder: (invitacion: SalaInvitacion, aceptar: boolean) => void;
   onCancelar: (invitacion: SalaInvitacion) => void;
+  /** La tecla rápida que coge esa llamada entrante (su slot), si tiene. */
+  teclaLlamada?: (invitacionId: string) => Atajo | undefined;
+  /** Fuera del panel de Charlas, encima de la columna: con borde propio en vez de la línea de separación. */
+  fuera?: boolean;
 }
 
 /** «Ana», «Ana y Luis», «Ana, Luis y Bea». */
@@ -15,12 +21,14 @@ const enumerar = (nombres: string[]) =>
   nombres.length <= 1 ? (nombres[0] ?? '') : `${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}`;
 
 /**
- * En la pestaña Charlas, encima de las conversaciones: las invitaciones a conversar y las peticiones
- * para unirse a una conversación. Las recibidas, con quién se conversaría (o
- * quién pide entrar en la tuya), «Aceptar» y «Rechazar» (hasta aceptar no se
- * entra); las enviadas, «Esperando a…» y «Retirar». Si no hay ninguna, no sale.
+ * Las invitaciones a conversar y las peticiones para unirse a una conversación.
+ * Las recibidas, con quién se conversaría (o quién pide entrar en la tuya),
+ * «Aceptar» y «Rechazar» (hasta aceptar no se entra); las enviadas, «Esperando
+ * a…» y «Retirar». Si no hay ninguna, no sale. Según la preferencia de
+ * accesibilidad, van dentro de la pestaña Charlas (encima de las conversaciones)
+ * o fuera (`fuera`), encima de la columna lateral y a la vista.
  */
-const PanelInvitaciones = ({ invitaciones, conversaciones, participantes, yo, onResponder, onCancelar }: PanelInvitacionesProps) => {
+const PanelInvitaciones = ({ invitaciones, conversaciones, participantes, yo, onResponder, onCancelar, teclaLlamada, fuera = false }: PanelInvitacionesProps) => {
   if (invitaciones.length === 0) return null;
   const nombre = (id: string) => participantes.find((p) => p.id === id)?.nombre ?? 'Alguien';
   // Las peticiones para unirse llegan a todos los miembros de la conversación
@@ -29,19 +37,25 @@ const PanelInvitaciones = ({ invitaciones, conversaciones, participantes, yo, on
   const miembrosDe = (id?: string) => conversaciones.find((c) => c.id === id)?.miembros ?? [];
 
   return (
-    <section aria-labelledby="sala-invitaciones-titulo" className="flex flex-col gap-2 border-b border-outline-ghost bg-theme-container/20 p-3 text-sm">
+    <section
+      aria-labelledby="sala-invitaciones-titulo"
+      className={`flex flex-col gap-2 bg-theme-container/20 p-3 text-sm ${
+        fuera ? 'rounded border border-theme-main/60' : 'border-b border-outline-ghost'
+      }`}
+    >
       <h2 id="sala-invitaciones-titulo" className="rotulo">
         Invitaciones y peticiones
       </h2>
       <ul className="flex flex-col gap-3">
         {recibidas.map((i) => {
+          const tecla = teclaLlamada?.(i.id);
           if (i.conversacion) {
             return (
               <li key={i.id} className="flex flex-col gap-1">
                 <p>
                   <span className="font-semibold">{nombre(i.de)}</span> pide unirse a tu conversación.
                 </p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={() => onResponder(i, true)}
@@ -50,6 +64,7 @@ const PanelInvitaciones = ({ invitaciones, conversaciones, participantes, yo, on
                   >
                     Aceptar
                   </button>
+                  {tecla && <TeclaAtajo atajo={tecla} ocultoALector />}
                   <button
                     type="button"
                     onClick={() => onResponder(i, false)}
@@ -71,7 +86,7 @@ const PanelInvitaciones = ({ invitaciones, conversaciones, participantes, yo, on
                 <span className="font-semibold">{nombre(i.de)}</span> te invita a una conversación privada
                 {suya ? ` (con ${enumerar(con)})` : ''}.
               </p>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => onResponder(i, true)}
@@ -80,6 +95,7 @@ const PanelInvitaciones = ({ invitaciones, conversaciones, participantes, yo, on
                 >
                   Aceptar
                 </button>
+                {tecla && <TeclaAtajo atajo={tecla} ocultoALector />}
                 <button
                   type="button"
                   onClick={() => onResponder(i, false)}

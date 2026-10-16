@@ -10,6 +10,7 @@ import {
 } from './atajos';
 import { useAriaLive } from './avisosConfig';
 import { botonSecundario } from './estilos';
+import TeclaAtajo from './TeclaAtajo';
 
 interface PanelAtajosProps {
   atajos: Record<AccionAtajo, Atajo>;
@@ -62,9 +63,7 @@ const PanelAtajos = ({ atajos, onCambiar }: PanelAtajosProps) => {
             <span id={`sala-atajo-${accion}`} className="min-w-48 text-sm">
               {etiqueta}
             </span>
-            <kbd className="rounded border border-outline-ghost bg-background px-2 py-1 font-mono text-sm">
-              {describirAtajo(atajos[accion])}
-            </kbd>
+            <TeclaAtajo atajo={atajos[accion]} ocultoALector className="px-2 py-1 text-sm" />
             <button
               type="button"
               aria-describedby={`sala-atajo-${accion}`}

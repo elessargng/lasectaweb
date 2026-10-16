@@ -15,7 +15,25 @@ export interface Atajo {
   meta: boolean;
 }
 
-export type AccionAtajo = 'levantarMano' | 'cambiarFase' | 'revelarGrimorio' | 'microfono' | 'camara' | 'salirConversacion';
+export type AccionAtajo =
+  | 'levantarMano'
+  | 'cambiarFase'
+  | 'revelarGrimorio'
+  | 'microfono'
+  | 'camara'
+  | 'salirConversacion'
+  | 'cogerLlamada1'
+  | 'cogerLlamada2'
+  | 'cogerLlamada3'
+  | 'cogerLlamada4';
+
+/** Cuántas teclas hay para coger llamadas entrantes (una por llamada, por orden de llegada). */
+export const NUM_TECLAS_LLAMADA = 4;
+
+/** La acción de coger la llamada del slot dado (0 es la primera). */
+export function accionCogerLlamada(slot: number): AccionAtajo {
+  return `cogerLlamada${slot + 1}` as AccionAtajo;
+}
 
 /** Las acciones con atajo, en el orden en que salen en las preferencias. */
 export const ACCIONES_ATAJO: { accion: AccionAtajo; etiqueta: string }[] = [
@@ -25,6 +43,10 @@ export const ACCIONES_ATAJO: { accion: AccionAtajo; etiqueta: string }[] = [
   { accion: 'microfono', etiqueta: 'Activar o silenciar el micrófono' },
   { accion: 'camara', etiqueta: 'Activar o apagar la cámara' },
   { accion: 'salirConversacion', etiqueta: 'Salir de la conversación privada' },
+  { accion: 'cogerLlamada1', etiqueta: 'Coger la 1.ª llamada entrante' },
+  { accion: 'cogerLlamada2', etiqueta: 'Coger la 2.ª llamada entrante' },
+  { accion: 'cogerLlamada3', etiqueta: 'Coger la 3.ª llamada entrante' },
+  { accion: 'cogerLlamada4', etiqueta: 'Coger la 4.ª llamada entrante' },
 ];
 
 const ESPACIO: Atajo = { code: 'Space', key: ' ', ctrl: false, alt: false, shift: false, meta: false };
@@ -33,6 +55,7 @@ const G: Atajo = { code: 'KeyG', key: 'g', ctrl: false, alt: false, shift: false
 const PUNTO: Atajo = { code: 'Period', key: '.', ctrl: false, alt: false, shift: false, meta: false };
 const COMA: Atajo = { code: 'Comma', key: ',', ctrl: false, alt: false, shift: false, meta: false };
 const RETROCESO: Atajo = { code: 'Backspace', key: 'Backspace', ctrl: false, alt: false, shift: false, meta: false };
+const digito = (n: number): Atajo => ({ code: `Digit${n}`, key: String(n), ctrl: false, alt: false, shift: false, meta: false });
 
 export const ATAJOS_INICIALES: Record<AccionAtajo, Atajo> = {
   levantarMano: ESPACIO,
@@ -41,6 +64,10 @@ export const ATAJOS_INICIALES: Record<AccionAtajo, Atajo> = {
   microfono: PUNTO,
   camara: COMA,
   salirConversacion: RETROCESO,
+  cogerLlamada1: digito(1),
+  cogerLlamada2: digito(2),
+  cogerLlamada3: digito(3),
+  cogerLlamada4: digito(4),
 };
 
 /** Teclas que no sirven solas: son modificadores. */

@@ -56,10 +56,19 @@ import { ESTILOS_CALAVERA, ESTILOS_MANO, ESTILOS_SILLA, estiloDePartida, MarcasC
 import { FichasContexto, identidadDe, TIPOS_EN_FICHA, type ContenidoFicha, type ContextoFichas } from './fichas';
 import { mostrarPersonajes, tituloDeGuion, useTraducciones, type PersonajeMostrado } from './guiones';
 import ZonaNarradores from './ZonaNarradores';
-import { esAtajo, puedeUsarAtajo, useAtajos, type Atajo } from './atajos';
+import {
+  accionCogerLlamada,
+  describirAtajo,
+  esAtajo,
+  NUM_TECLAS_LLAMADA,
+  puedeUsarAtajo,
+  useAtajos,
+  type Atajo,
+} from './atajos';
 import { AvisosContexto, useAvisosActivos, type TipoAviso } from './avisosConfig';
 import { avisosDeCambio, manosVigiladas, nombreFase } from './avisosSala';
-import { setSonidosActivos, tocarPrivado, tocarSinVoto, tocarVoto } from './sonidos';
+import { recibidasDe, reconciliarSlots } from './slotsLlamada';
+import { setSonidosActivos, tocarPrivado, tocarSinVoto, tocarSolicitud, tocarVoto } from './sonidos';
 import { idPestanaLateral, ID_BOTON_MENU_NARRADOR, ID_SIN_NARRADOR, ID_TITULO_DESPERTAR, idLunaFicha, idNombreNarrador } from './ids';
 import { getPerfil, limpiarNombre, setPerfil } from './invitado';
 import { sinComunicaciones, usePreferencias } from './preferencias';
@@ -145,6 +154,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const entendidosPorCerrarRef = useRef<string[]>([]);
   // El foco estaba en un control que puede desaparecer con el cambio.
   const rescatarFocoRef = useRef<string | null>(null);
+  // Llamadas entrantes: a cada una, por orden de llegada, una tecla para cogerla
+  // (ver slotsLlamada). El ref recuerda qué slot tiene cada una; el estado lo pinta.
+  const slotsLlamadaRef = useRef<Map<string, number>>(new Map());
+  const [slotsLlamada, setSlotsLlamada] = useState<Record<string, number>>({});
 
   // Qué avisos quiere el lector (Preferencias > Accesibilidad). Todo aviso pasa por anunciar().
   const {
@@ -178,6 +191,24 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     // Las manos vigiladas: siempre (también tras una acción propia), sin filtros
     const urgentes = manosVigiladas(anterior, nuevo, vigilados);
     if (urgentes.length) anunciarUrgente(urgentes.join(' '));
+
+    // Llamadas entrantes: a las nuevas se les da su tecla (slot), suena un toque
+    // breve y se avisa con quién llama y qué tecla la coge. (El aviso va al mismo
+    // lote que los demás, para que no se pisen.)
+    const nuevasLlamadas = reconciliarSlots(slotsLlamadaRef.current, recibidasDe(nuevo), NUM_TECLAS_LLAMADA);
+    setSlotsLlamada(Object.fromEntries(slotsLlamadaRef.current));
+    if (nuevasLlamadas.length) {
+      tocarSolicitud();
+      const nombreDe = (id: string) => nuevo.participantes.find((p) => p.id === id)?.nombre ?? 'Alguien';
+      for (const { invitacion, slot } of nuevasLlamadas) {
+        const quien = nombreDe(invitacion.de);
+        const base = invitacion.conversacion
+          ? `${quien} pide unirse a tu conversación.`
+          : `${quien} te invita a una conversación privada.`;
+        const tecla = slot === null ? '' : ` Pulsa ${describirAtajo(atajos[accionCogerLlamada(slot)])} para cogerla.`;
+        avisos.push({ tipo: 'conversaciones', texto: base + tecla });
+      }
+    }
     // Salvo la noche y el día: el narrador puede cambiarlos con un atajo, sin ver nada.
     if (propia) {
       const f = nuevo.fase;
@@ -898,6 +929,11 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     return false;
   };
   const { atajos, cambiar: cambiarAtajo, reemplazar: reemplazarAtajos } = useAtajos();
+  // La tecla rápida que coge una llamada entrante (la de su slot), si tiene.
+  const teclaLlamada = (invitacionId: string): Atajo | undefined => {
+    const slot = slotsLlamada[invitacionId];
+    return slot === undefined ? undefined : atajos[accionCogerLlamada(slot)];
+  };
 
   // Con cuenta, la configuración se guarda en el servidor (los invitados no guardan nada).
   const configuracionActual: ConfiguracionSala = {
@@ -947,6 +983,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       : []),
     // Retroceso: salir de la conversación privada (o dejar de escuchar)
     ...(miConversacion ? [[atajos.salirConversacion, () => void salirDeConversacion()] as [Atajo, () => void]] : []),
+    // Teclas de coger llamada: cada llamada entrante, con la tecla de su slot, la acepta
+    ...Object.entries(slotsLlamada).map(
+      ([id, slot]) => [atajos[accionCogerLlamada(slot)], () => void responder(id, true)] as [Atajo, () => void],
+    ),
   ];
   // Los atajos tienen prioridad sobre el control con el foco: se escuchan en la fase
   // de captura (antes que él) y no se dejan seguir, ni al pulsar ni al soltar
@@ -974,6 +1014,16 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       window.removeEventListener('keyup', alSoltar, true);
     };
   });
+
+  // Slots de las llamadas al día también en el primer estado y en los re-renders
+  // (alCambiar ya los lleva en cada cambio; esto es la red de seguridad, idempotente).
+  const idsRecibidas = estado ? recibidasDe(estado).map((i) => i.id).join(',') : '';
+  useEffect(() => {
+    if (!estado) return;
+    reconciliarSlots(slotsLlamadaRef.current, recibidasDe(estado), NUM_TECLAS_LLAMADA);
+    setSlotsLlamada(Object.fromEntries(slotsLlamadaRef.current));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idsRecibidas]);
 
   const enLaSala: OpcionMenu[] = [
     ...(puedeHacermeNarrador
@@ -1086,7 +1136,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       etiqueta: 'Accesibilidad',
       conControles: true,
       contenido: (
-        <PanelAccesibilidad activos={avisosActivos} onCambiar={cambiarAviso} onCambiarTodos={cambiarTodosAvisos} />
+        <PanelAccesibilidad
+          activos={avisosActivos}
+          onCambiar={cambiarAviso}
+          onCambiarTodos={cambiarTodosAvisos}
+          invitacionesFuera={preferencias.invitacionesFuera}
+          onInvitacionesFuera={(invitacionesFuera) => cambiarPreferencias({ invitacionesFuera })}
+        />
       ),
     },
     {
@@ -1225,15 +1281,19 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
               : { valor: estado.conversaciones.length, texto: 'en curso' },
             contenido: (
               <div className="h-full overflow-y-auto">
-                {/* Las invitaciones y peticiones (recibidas y enviadas), arriba */}
-                <PanelInvitaciones
-                  invitaciones={estado.invitaciones}
-                  conversaciones={estado.conversaciones}
-                  participantes={estado.participantes}
-                  yo={estado.yo}
-                  onResponder={(i, aceptar) => void responder(i.id, aceptar)}
-                  onCancelar={(i) => void retirar(i.id)}
-                />
+                {/* Las invitaciones y peticiones (recibidas y enviadas), arriba; salvo que
+                    la accesibilidad las saque fuera del panel (entonces van encima de la columna) */}
+                {!preferencias.invitacionesFuera && (
+                  <PanelInvitaciones
+                    invitaciones={estado.invitaciones}
+                    conversaciones={estado.conversaciones}
+                    participantes={estado.participantes}
+                    yo={estado.yo}
+                    onResponder={(i, aceptar) => void responder(i.id, aceptar)}
+                    onCancelar={(i) => void retirar(i.id)}
+                    teclaLlamada={teclaLlamada}
+                  />
+                )}
                 <PanelConversaciones
                   conversaciones={estado.conversaciones}
                   participantes={estado.participantes}
@@ -1241,7 +1301,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   onEscuchar={(id) => void escuchar(id)}
                   onEntrar={(id) => void entrar(id)}
                   ayuda={ayudaCharlas}
-                  compacto={estado.invitaciones.length > 0}
+                  compacto={!preferencias.invitacionesFuera && estado.invitaciones.length > 0}
                 />
               </div>
             ),
@@ -1416,6 +1476,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   onSonido={video.alternarSonido}
                   teclaMicrofono={atajos.microfono.key}
                   teclaCamara={atajos.camara.key}
+                  atajoMicrofono={atajos.microfono}
+                  atajoCamara={atajos.camara}
                   problema={video.problema}
                   onCerrarProblema={video.cerrarProblema}
                   sonidoBloqueado={video.sonidoBloqueado}
@@ -1443,6 +1505,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   onAsientos={() => setEditandoAsientos((v) => !v)}
                   revelando={revelandoGrimorio}
                   onRevelando={setRevelandoGrimorio}
+                  atajoFase={atajos.cambiarFase}
+                  atajoRevelar={atajos.revelarGrimorio}
                 />
               )}
               {puedeLevantarMano && yo && (
@@ -1450,6 +1514,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   forma={yo.formaMano}
                   levantada={manoLevantada}
                   sinVoto={sinVoto}
+                  atajoLevantar={atajos.levantarMano}
                   onAlternar={alternarMano}
                   onElegirForma={elegirFormaMano}
                 />
@@ -1542,6 +1607,20 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   contacto={contacto}
                   pistas={video.mesa}
                 />
+                {/* Si la accesibilidad lo pide, las invitaciones y peticiones de llamada van aquí fuera,
+                    encima de la columna y a la vista se vea el panel que se vea (si no, dentro de Charlas) */}
+                {preferencias.invitacionesFuera && (
+                  <PanelInvitaciones
+                    invitaciones={estado.invitaciones}
+                    conversaciones={estado.conversaciones}
+                    participantes={estado.participantes}
+                    yo={estado.yo}
+                    onResponder={(i, aceptar) => void responder(i.id, aceptar)}
+                    onCancelar={(i) => void retirar(i.id)}
+                    teclaLlamada={teclaLlamada}
+                    fuera
+                  />
+                )}
                 {/* Mensajes, conversaciones privadas y faroles: uno a la vez, con su barra de iconos */}
                 <ColumnaLateral
                   pestanas={pestanasLaterales}
@@ -1637,6 +1716,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             onSalir={() => void salirDeConversacion()}
             onEntrar={yo?.rol === 'narrador' ? () => void entrar(miConversacion.id) : undefined}
             teclaSalir={atajos.salirConversacion.key}
+            atajoSalir={atajos.salirConversacion}
           />
         )}
 

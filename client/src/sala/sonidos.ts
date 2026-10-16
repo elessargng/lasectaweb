@@ -14,6 +14,7 @@ export const SONIDOS = [
   { id: 'cuentaAtras', nombre: 'Cuenta atrás de las nominaciones', descripcion: 'Los últimos segundos antes de votar.' },
   { id: 'voto', nombre: 'Cada voto', descripcion: 'Al votar, un sonido por cada mano levantada.' },
   { id: 'sinVoto', nombre: 'Quien no vota', descripcion: 'Un tic cuando la aguja pasa por alguien que no vota.' },
+  { id: 'solicitudLlamada', nombre: 'Te solicitan una llamada', descripcion: 'Un toque breve cuando alguien te pide conversar.' },
   { id: 'entrarPrivado', nombre: 'Entras en una conversación privada', descripcion: 'Dos notas que suben.' },
   { id: 'salirPrivado', nombre: 'Sales de una conversación privada', descripcion: 'Dos notas que bajan.' },
   { id: 'saleOtro', nombre: 'Alguien sale de tu conversación privada', descripcion: 'Una nota grave.' },
@@ -32,6 +33,7 @@ type Archivo = keyof typeof ARCHIVOS;
 
 /** Las campanillas: notas (Hz) y cuándo suena cada una (s), con su timbre. */
 const CAMPANILLAS: Record<Exclude<IdSonido, Archivo>, { notas: [number, number][]; onda: OscillatorType; volumen: number; dura: number }> = {
+  solicitudLlamada: { notas: [[880, 0]], onda: 'sine', volumen: 0.15, dura: 0.22 },
   entrarPrivado: { notas: [[784, 0], [1047, 0.13]], onda: 'sine', volumen: 0.16, dura: 0.9 },
   salirPrivado: { notas: [[1047, 0], [784, 0.13]], onda: 'sine', volumen: 0.14, dura: 0.8 },
   saleOtro: { notas: [[392, 0]], onda: 'triangle', volumen: 0.16, dura: 0.9 },
@@ -155,6 +157,11 @@ export function tocarCuentaAtras(empiezaEn: number): () => void {
 /** Las conversaciones privadas: entrar, salir o que salga alguien de la tuya. */
 export function tocarPrivado(id: 'entrarPrivado' | 'salirPrivado' | 'saleOtro'): void {
   campanilla(id);
+}
+
+/** Un toque breve: alguien te pide conversar (una llamada entrante). */
+export function tocarSolicitud(): void {
+  campanilla('solicitudLlamada');
 }
 
 /**

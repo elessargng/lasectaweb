@@ -140,13 +140,8 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado, vigilado
       avisa('conversaciones', `${nombreDe(id)} escucha la conversación de ${lista(c.miembros)}.`);
     }
   }
-  // Invitaciones: las que me llegan y las mías que no se aceptan
-  for (const i of nuevo.invitaciones) {
-    if (i.de === yo || anterior.invitaciones.some((a) => a.id === i.id)) continue;
-    // Las peticiones para unirse llegan a todos los miembros de la conversación
-    if (i.conversacion) avisa('conversaciones', `${nombreDe(i.de)} pide unirse a tu conversación.`);
-    else if (i.para === yo) avisa('conversaciones', `${nombreDe(i.de)} te invita a una conversación privada.`);
-  }
+  // Las invitaciones y peticiones que me llegan se avisan en SalaJuego (con la tecla
+  // para cogerlas). Aquí solo las mías que no se aceptan.
   for (const i of anterior.invitaciones) {
     if (i.de !== yo || nuevo.invitaciones.some((n) => n.id === i.id)) continue;
     if (i.conversacion) {

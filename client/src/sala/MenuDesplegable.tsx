@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { colocarDesplegable } from './colocarDesplegable';
+import TeclaAtajo from './TeclaAtajo';
+import type { Atajo } from './atajos';
 
 export interface OpcionMenu {
   id: string;
@@ -10,6 +12,8 @@ export interface OpcionMenu {
   deshabilitada?: boolean;
   /** Es la elegida de un grupo (p. ej. la forma de la mano): se lee como pulsada y lleva ✓. */
   marcada?: boolean;
+  /** Si la acción tiene atajo de teclado, su tecla (se ve al lado como una tecla). */
+  atajo?: Atajo;
   /** Para las que actúan directamente: devuelve si salió bien. */
   elegir: () => Promise<boolean> | void;
 }
@@ -34,7 +38,7 @@ interface MenuDesplegableProps {
 }
 
 const opcionClass =
-  'sala-opcion w-full text-left px-4 py-2 text-on-surface aria-pressed:text-gold-bright aria-disabled:text-on-surface-muted aria-disabled:hover:bg-none aria-disabled:hover:shadow-none';
+  'sala-opcion flex w-full items-center gap-2 text-left px-4 py-2 text-on-surface aria-pressed:text-gold-bright aria-disabled:text-on-surface-muted aria-disabled:hover:bg-none aria-disabled:hover:shadow-none';
 
 /**
  * Botón que despliega una lista de botones (no un menú ARIA): se recorre con Tab
@@ -140,11 +144,12 @@ const MenuDesplegable = ({
               className={opcionClass}
             >
               {opcion.marcada !== undefined && (
-                <span aria-hidden="true" className="mr-2 inline-block w-3">
+                <span aria-hidden="true" className="inline-block w-3">
                   {opcion.marcada ? '✓' : ''}
                 </span>
               )}
               {opcion.etiqueta}
+              {opcion.atajo && <TeclaAtajo atajo={opcion.atajo} ocultoALector className="ml-auto" />}
             </button>
           </li>
         ))}

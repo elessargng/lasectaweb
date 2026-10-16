@@ -82,6 +82,20 @@ export class ConversacionService {
   invitar(yoId: string, otroId: string): SalaInvitacion {
     this.depurar();
     const { yo, otro } = this.comprobar(yoId, otroId);
+    // Recíproca: si el otro ya me había invitado a mí (invitación directa, no petición),
+    // invitarle es lo mismo que coger su llamada: acepto la suya y conversamos. (Salvo que
+    // yo ya esté en una conversación: entonces vale la invitación normal, para que entre él.)
+    const suyaParaMi = this.invitaciones.find((i) => !i.conversacion && i.de === otro.id && i.para === yo.id);
+    if (suyaParaMi && !this.esMiembro(yo.id)) {
+      const copia = { ...suyaParaMi };
+      try {
+        this.responder(yo.id, suyaParaMi.id, true);
+        return copia;
+      } catch (e) {
+        if (!(e instanceof ConversacionError)) throw e;
+        // Si por alguna regla de borde no se puede conectar ahora, vale la invitación normal.
+      }
+    }
     if (this.invitaciones.some((i) => i.de === yo.id && i.para === otro.id)) {
       throw new ConversacionError(`Ya has invitado a ${otro.nombre}.`);
     }
