@@ -39,8 +39,6 @@ import {
   type Storyteller
 } from '../utils/ritualsApi';
 
-/** Oculto mientras la sala está en desarrollo: se entra a mano en /sala.html. */
-const MOSTRAR_BOTON_SALA = false;
 
 type View = 'mes' | 'semana' | 'agenda';
 
@@ -453,14 +451,12 @@ const Rituales = () => {
 
         {/* La sala de juego se abre siempre en una ventana aparte. rel="opener" para
             que herede la sesión sin «Recordarme», que vive en sessionStorage */}
-        {MOSTRAR_BOTON_SALA && (
-          <div className="flex justify-center mt-10 px-4">
-            <Button variant="primary" href="/sala.html" target="_blank" rel="opener" className="px-8 py-3 text-lg">
-              Entrar en la sala de juegos
-              <span className="sr-only"> (se abre en una ventana nueva)</span>
-            </Button>
-          </div>
-        )}
+        <div className="flex justify-center mt-10 px-4">
+          <Button variant="primary" href="/sala.html" target="_blank" rel="opener" className="px-8 py-3 text-lg">
+            Entrar en la sala de juegos
+            <span className="sr-only"> (se abre en una ventana nueva)</span>
+          </Button>
+        </div>
       </div>
 
       {openRitual && (

@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.2.0",
+    "date": "2026-10-16",
+    "title": "Se Abre la Sala",
+    "description": "La Secta estrena su propia sala de juego: ya se pueden jugar las partidas online de Blood on the Clocktower aquí, en la web, sin salir de La Secta.",
+    "changes": [
+      {
+        "category": "Sala de Juego",
+        "items": [
+          "La Sala Abre sus Puertas: Desde Rituales, «Entrar en la sala de juegos» lleva a la sala de La Secta, donde se juegan las partidas online.",
+          "Jugar en La Secta: Al convocar una partida online se puede elegir jugarla en la sala de La Secta en lugar de en botc.app; entonces «Entrar en la sala» lleva directamente a ella."
+        ]
+      }
+    ]
+  },
+  {
     "version": "1.1.0",
     "date": "2026-10-15",
     "title": "Medianoche y Latón",

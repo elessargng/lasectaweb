@@ -5,6 +5,7 @@ import type { Ritual, RitualInput, RitualStatus, RitualType, Storyteller } from 
 import { RITUAL_KINDS, kindFromParts } from './ritualKinds';
 import { describeMonthlyPosition, toLocalDateInput, toLocalInput } from './ritualDates';
 import Dialog from '../Dialog';
+import { SALA_LA_SECTA, esSalaLaSecta } from './salaLaSecta';
 
 interface RitualFormModalProps {
   isOpen: boolean;
@@ -103,12 +104,14 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
     if (!ritual) {
       if (startsAt.endsWith(`T${defaultTime(type)}`)) setStartsAt(`${startsAt.slice(0, 10)}T${defaultTime(next)}`);
       if (next === 'partida_online' && !link.trim()) setLink(DEFAULT_ONLINE_LINK);
-      if (next !== 'partida_online' && link === DEFAULT_ONLINE_LINK) setLink('');
+      if (next !== 'partida_online' && (link === DEFAULT_ONLINE_LINK || esSalaLaSecta(link))) setLink('');
     }
     setType(next);
   };
 
   const isOnline = type === 'partida_online';
+  // Jugar en la sala de La Secta (en vez de en botc.app): el enlace es el de la sala
+  const enLaSecta = isOnline && esSalaLaSecta(link);
   const isInPerson = type === 'partida_presencial';
   const isGame = type !== 'jornada';
   const villacuervosColor = RITUAL_KINDS.online_villacuervos.color;
@@ -336,18 +339,46 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
             </div>
           )}
 
-          <div>
-            <label htmlFor="ritual-enlace" className={labelClass}>
-              {isOnline ? 'Enlace a la sala de botc.app' : 'Enlace (opcional)'}
-            </label>
-            <input id="ritual-enlace"
-              type="url"
-              value={link}
-              onChange={(e) => setLink(e.target.value)}
-              placeholder={isOnline ? 'https://botc.app/join/...' : 'https://...'}
-              className={inputClass}
-            />
-          </div>
+          {/* Partida online: en la sala de La Secta o en botc.app (con su enlace) */}
+          {isOnline && (
+            <div className="flex flex-col gap-1">
+              <label className="flex cursor-pointer items-center gap-3">
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={enLaSecta}
+                  onChange={(e) => setLink(e.target.checked ? SALA_LA_SECTA : DEFAULT_ONLINE_LINK)}
+                  aria-describedby="ritual-en-la-secta-ayuda"
+                  className="peer sr-only"
+                />
+                <span
+                  aria-hidden="true"
+                  className="relative h-5 w-9 shrink-0 rounded-full border border-outline-ghost bg-background transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-3.5 after:w-3.5 after:rounded-full after:bg-on-surface-muted after:transition-transform peer-checked:border-theme-main peer-checked:bg-theme-container peer-checked:after:translate-x-4 peer-checked:after:bg-theme-main peer-focus-visible:ring-2 peer-focus-visible:ring-theme-main motion-reduce:transition-none motion-reduce:after:transition-none"
+                />
+                <span className="font-ui text-sm text-on-surface">Jugar en La Secta</span>
+              </label>
+              <p id="ritual-en-la-secta-ayuda" className="text-xs text-on-surface-muted">
+                {enLaSecta
+                  ? 'La partida se juega en la sala de La Secta: «Entrar en la sala» llevará a ella.'
+                  : 'Desactivado, la partida se juega en botc.app, con el enlace de abajo.'}
+              </p>
+            </div>
+          )}
+
+          {!enLaSecta && (
+            <div>
+              <label htmlFor="ritual-enlace" className={labelClass}>
+                {isOnline ? 'Enlace a la sala de botc.app' : 'Enlace (opcional)'}
+              </label>
+              <input id="ritual-enlace"
+                type="url"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                placeholder={isOnline ? 'https://botc.app/join/...' : 'https://...'}
+                className={inputClass}
+              />
+            </div>
+          )}
 
           {isGame && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

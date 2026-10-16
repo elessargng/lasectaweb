@@ -20,6 +20,7 @@ import { RITUAL_KINDS, alpha, kindOf } from './ritualKinds';
 import { describeRecurrence, formatLongDay, formatTime, isMultiDay, ritualPath } from './ritualDates';
 import { isFull } from './ritualSignups';
 import RitualAttendees, { type SignupActions } from './RitualAttendees';
+import { RUTA_SALA, esSalaLaSecta } from './salaLaSecta';
 
 const VILLACUERVOS_COLOR = RITUAL_KINDS.online_villacuervos.color;
 
@@ -177,7 +178,14 @@ export const RitualDetailModal = ({ ritual, canManage, signup, onClose, onEdit, 
           {!cancelled && (ritual.link || ritual.villacuervosUrl) && (
             <div className="flex flex-wrap gap-3">
               {ritual.link && (
-                <a href={ritual.link} target="_blank" rel="noopener noreferrer" className="btn-runic btn-runic-primary px-4 py-2 text-xs gap-2">
+                // La sala de La Secta se abre en esta web, con rel="opener" para que herede la
+                // sesión sin «Recordarme» (vive en sessionStorage), como el botón de Rituales
+                <a
+                  href={esSalaLaSecta(ritual.link) ? RUTA_SALA : ritual.link}
+                  target="_blank"
+                  rel={esSalaLaSecta(ritual.link) ? 'opener' : 'noopener noreferrer'}
+                  className="btn-runic btn-runic-primary px-4 py-2 text-xs gap-2"
+                >
                   {linkLabel(ritual)} <ExternalLink className="w-3.5 h-3.5" />
                   <span className="sr-only"> (se abre en una ventana nueva)</span>
                 </a>
