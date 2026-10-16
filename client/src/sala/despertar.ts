@@ -6,22 +6,13 @@ import {
   Dice3,
   Dice4,
   Dice5,
-  Drama,
-  Eye,
-  EyeOff,
-  Fingerprint,
-  Hand,
   MessageCircleMore,
-  Moon,
-  Skull,
   Square,
-  Swords,
   ThumbsDown,
   ThumbsUp,
   User,
-  Users,
-  type LucideIcon,
 } from 'lucide-react';
+import { IconoCalavera, IconoEspadas, IconoGente, IconoHuella, IconoLuna, IconoMascaras, IconoOjo, IconoPalma, type IconoSala, IconoSinVer } from './IconosJuego';
 import type { PersonajeMostrado } from './guiones';
 import { datosAsiento, describirAsiento } from './nombresAsiento';
 import type { MensajeDespertar, SalaAlineamiento, SalaEstado } from './useSala';
@@ -46,7 +37,7 @@ export interface AdjuntoDespertar {
 export interface FichaDespertar {
   id: string;
   etiqueta: string;
-  Icono: LucideIcon;
+  Icono: IconoSala;
   adjunto?: AdjuntoDespertar;
 }
 
@@ -63,28 +54,28 @@ export const FICHAS_DESPERTAR: FichaDespertar[] = [
   { id: 'cuatro', etiqueta: 'Cuatro', Icono: Dice4 },
   { id: 'cinco', etiqueta: 'Cinco', Icono: Dice5 },
   { id: 'jugador', etiqueta: 'Jugador', Icono: User, adjunto: { jugadores: true } },
-  { id: 'personaje', etiqueta: 'Personaje', Icono: Drama, adjunto: { personajes: true } },
+  { id: 'personaje', etiqueta: 'Personaje', Icono: IconoMascaras, adjunto: { personajes: true } },
   { id: 'personalizado', etiqueta: 'Personalizado', Icono: MessageCircleMore, adjunto: { texto: true } },
 ];
 
 export interface TarjetaDespertar {
   id: string;
   texto: string;
-  Icono: LucideIcon;
+  Icono: IconoSala;
   /** Fondo de la tarjeta (tokens de index.css). */
   fondo: string;
   adjunto?: AdjuntoDespertar;
 }
 
 export const TARJETAS_DESPERTAR: TarjetaDespertar[] = [
-  { id: 'habilidad', texto: '¿Quieres usar tu habilidad?', Icono: Moon, fondo: 'from-gold-deep to-blood-deep' },
-  { id: 'eleccion', texto: 'Haz una elección', Icono: Swords, fondo: 'from-gold-deep to-blood-deep' },
-  { id: 'noEnJuego', texto: 'Estos personajes no están en juego', Icono: EyeOff, fondo: 'from-good to-midnight', adjunto: { personajes: true } },
-  { id: 'demonio', texto: 'Este es el demonio', Icono: Skull, fondo: 'from-blood to-blood-deep', adjunto: { jugadores: true } },
-  { id: 'esbirros', texto: 'Estos son tus esbirros', Icono: Users, fondo: 'from-blood to-blood-deep', adjunto: { jugadores: true } },
-  { id: 'tuEres', texto: 'Tú eres', Icono: Fingerprint, fondo: 'from-arcano to-arcano-deep', adjunto: { personajes: true, alineamiento: true } },
-  { id: 'esteJugadorEs', texto: 'Este jugador es', Icono: Eye, fondo: 'from-arcano to-arcano-deep', adjunto: { jugadores: true, personajes: true } },
-  { id: 'teHaElegido', texto: 'Este personaje te ha elegido', Icono: Hand, fondo: 'from-savia to-savia-deep', adjunto: { personajes: true } },
+  { id: 'habilidad', texto: '¿Quieres usar tu habilidad?', Icono: IconoLuna, fondo: 'from-gold-deep to-blood-deep' },
+  { id: 'eleccion', texto: 'Haz una elección', Icono: IconoEspadas, fondo: 'from-gold-deep to-blood-deep' },
+  { id: 'noEnJuego', texto: 'Estos personajes no están en juego', Icono: IconoSinVer, fondo: 'from-good to-midnight', adjunto: { personajes: true } },
+  { id: 'demonio', texto: 'Este es el demonio', Icono: IconoCalavera, fondo: 'from-blood to-blood-deep', adjunto: { jugadores: true } },
+  { id: 'esbirros', texto: 'Estos son tus esbirros', Icono: IconoGente, fondo: 'from-blood to-blood-deep', adjunto: { jugadores: true } },
+  { id: 'tuEres', texto: 'Tú eres', Icono: IconoHuella, fondo: 'from-arcano to-arcano-deep', adjunto: { personajes: true, alineamiento: true } },
+  { id: 'esteJugadorEs', texto: 'Este jugador es', Icono: IconoOjo, fondo: 'from-arcano to-arcano-deep', adjunto: { jugadores: true, personajes: true } },
+  { id: 'teHaElegido', texto: 'Este personaje te ha elegido', Icono: IconoPalma, fondo: 'from-savia to-savia-deep', adjunto: { personajes: true } },
 ];
 
 export const fichaDespertar = (id: string | null) => FICHAS_DESPERTAR.find((f) => f.id === id);

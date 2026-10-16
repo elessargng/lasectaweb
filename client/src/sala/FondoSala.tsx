@@ -97,7 +97,7 @@ const FondoSala = ({ fondo, onCambiar }: FondoSalaProps) => {
       </div>
       <div aria-live={ariaLive}>
         {enviando && <p className="text-sm text-on-surface-muted">Cambiando el fondo…</p>}
-        {resultado && <p className={`text-sm ${resultado.ok ? 'text-on-surface-muted' : 'text-red-400'}`}>{resultado.texto}</p>}
+        {resultado && <p className={`text-sm ${resultado.ok ? 'text-on-surface-muted' : 'text-blood-pale'}`}>{resultado.texto}</p>}
       </div>
       <div id="sala-fondo-biblioteca" hidden={!biblioteca}>
         {biblioteca && (

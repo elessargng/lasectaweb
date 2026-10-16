@@ -30,7 +30,7 @@ const PanelInvitaciones = ({ invitaciones, conversaciones, participantes, yo, on
 
   return (
     <section aria-labelledby="sala-invitaciones-titulo" className="flex flex-col gap-2 border-b border-outline-ghost bg-theme-container/20 p-3 text-sm">
-      <h2 id="sala-invitaciones-titulo" className="font-ui text-xs font-semibold uppercase tracking-wide text-theme-main">
+      <h2 id="sala-invitaciones-titulo" className="rotulo">
         Invitaciones y peticiones
       </h2>
       <ul className="flex flex-col gap-3">

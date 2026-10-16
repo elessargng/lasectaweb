@@ -51,6 +51,8 @@ interface FichaAsientoProps {
    * el narrador, cómo revelarla (pulsándola; al pasar el ratón la mira antes).
    */
   revelando?: { revelada: boolean; onRevelar?: () => void };
+  /** Hay una nominación abierta: la ficha se gira y enseña la esfera del reloj. */
+  reloj?: boolean;
   /** El narrador puede despertar al jugador de esta ficha (de noche) o abrir su despertar si ya lo tiene. */
   despertar?: { abierto: boolean; onAbrir: () => void };
   /**
@@ -96,6 +98,7 @@ const FichaAsiento = ({
   eligiendo,
   voto,
   revelando,
+  reloj = false,
   despertar,
   seguir,
   enJuego,
@@ -131,6 +134,7 @@ const FichaAsiento = ({
         marcado={asiento.marcado}
         voto={voto}
         bocaAbajo={bocaAbajo}
+        reloj={reloj}
         asomar={!!revelando?.onRevelar}
       >
         {personaje && <PersonajeEnFicha personaje={personaje} alineamiento={contenido.alineamiento} />}
@@ -165,7 +169,7 @@ const FichaAsiento = ({
         onClick={eligiendo.onPulsar}
         aria-label={`Nominar al ${describirAsiento(numero, ocupante)}${origen ? ', que es el que nomina' : ''}`}
         className={`block cursor-pointer rounded-full ring-offset-2 ring-offset-background focus:outline-none focus-visible:ring-4 focus-visible:ring-white ${
-          origen ? 'ring-4 ring-white/80' : 'ring-2 ring-[#b3261e]'
+          origen ? 'ring-4 ring-white/80' : 'ring-2 ring-blood-bright'
         }`}
       >
         {ficha}

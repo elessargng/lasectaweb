@@ -37,13 +37,13 @@ const DialogoNpcs = ({ npcs, disponibles, pedir, onCerrar }: DialogoNpcsProps) =
   ].map((g) => ({ ...g, personajes: disponibles.filter((p) => p.tipo === g.tipo) }));
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sala-velo">
       <Dialog
         onClose={onCerrar}
         labelledBy="sala-dialogo-npcs-titulo"
-        className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded border border-outline-ghost bg-surface shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-3xl flex-col sala-cofre sala-cofre-esquinas"
       >
-        <h2 id="sala-dialogo-npcs-titulo" className="border-b border-outline-ghost px-6 py-4 text-xl font-semibold">
+        <h2 id="sala-dialogo-npcs-titulo" className="px-6 py-4 sala-cofre-titulo">
           Añadir NPCs
         </h2>
         <div className="overflow-y-auto px-6 py-4">
@@ -59,9 +59,9 @@ const DialogoNpcs = ({ npcs, disponibles, pedir, onCerrar }: DialogoNpcsProps) =
           )}
         </div>
         <div aria-live={ariaLiveErrores} className="px-6">
-          {error && <p className="pb-3 text-sm text-red-400">{error}</p>}
+          {error && <p className="pb-3 text-sm text-blood-pale">{error}</p>}
         </div>
-        <div className="flex items-center justify-end gap-3 border-t border-outline-ghost px-6 py-3">
+        <div className="flex items-center justify-end gap-3 sala-cofre-pie px-6 py-3">
           <p className="mr-auto text-sm text-on-surface-muted">
             En juego: <span className="tabular-nums">{npcs.length}</span>
           </p>

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
-import { botonPrincipal, botonSecundario } from './estilos';
+import { botonPeligro, botonSecundario } from './estilos';
 import type { SalaResultado } from './useSala';
 
 interface DialogoConfirmarProps {
@@ -39,24 +39,24 @@ const DialogoConfirmar = ({ titulo, confirmar, children, onConfirmar, onCerrar }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sala-velo">
       <Dialog
         onClose={onCerrar}
         labelledBy="sala-confirmar-titulo"
-        className="w-full max-w-sm rounded border border-outline-ghost bg-surface p-6 shadow-2xl"
+        className="w-full max-w-sm sala-cofre sala-cofre-esquinas p-6"
       >
-        <h2 id="sala-confirmar-titulo" className="mb-4 text-xl font-semibold">
+        <h2 id="sala-confirmar-titulo" className="mb-4 sala-cofre-titulo">
           {titulo}
         </h2>
         <p className="mb-4 text-sm text-on-surface-muted">
           {children}
         </p>
-        <div aria-live={ariaLive}>{error && <p className="mb-4 text-sm text-red-400">{error}</p>}</div>
+        <div aria-live={ariaLive}>{error && <p className="mb-4 text-sm text-blood-pale">{error}</p>}</div>
         <div className="flex justify-end gap-3">
           <button type="button" onClick={onCerrar} className={botonSecundario}>
             Cancelar
           </button>
-          <button type="button" onClick={aceptar} aria-disabled={enviando} className={botonPrincipal}>
+          <button type="button" onClick={aceptar} aria-disabled={enviando} className={botonPeligro}>
             {confirmar}
           </button>
         </div>

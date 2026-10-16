@@ -31,13 +31,13 @@ const DialogoRevelar = ({ pedir, onCerrar }: DialogoRevelarProps) => {
 
   const bando = 'flex-1 rounded border-2 px-4 py-6 text-lg font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-white';
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sala-velo">
       <Dialog
         onClose={onCerrar}
         labelledBy="sala-revelar-titulo"
-        className="w-full max-w-md rounded border border-outline-ghost bg-surface p-6 shadow-2xl"
+        className="w-full max-w-md sala-cofre sala-cofre-esquinas p-6"
       >
-        <h2 id="sala-revelar-titulo" className="mb-2 text-xl font-semibold">
+        <h2 id="sala-revelar-titulo" className="mb-2 sala-cofre-titulo">
           Revelar grimorio
         </h2>
         <p className="mb-4 text-sm text-on-surface-muted">
@@ -48,7 +48,7 @@ const DialogoRevelar = ({ pedir, onCerrar }: DialogoRevelarProps) => {
             type="button"
             onClick={() => void elegir('bueno')}
             aria-disabled={enviando}
-            className={`${bando} border-sky-400 bg-sky-900/40 text-sky-200 hover:bg-sky-900/70`}
+            className={`${bando} border-good bg-good/20 text-good-bright hover:bg-good/35`}
           >
             Bando bueno
           </button>
@@ -56,12 +56,12 @@ const DialogoRevelar = ({ pedir, onCerrar }: DialogoRevelarProps) => {
             type="button"
             onClick={() => void elegir('malvado')}
             aria-disabled={enviando}
-            className={`${bando} border-red-500 bg-red-950/50 text-red-200 hover:bg-red-950/80`}
+            className={`${bando} border-blood-bright bg-blood-deep/60 text-blood-pale hover:bg-blood-deep`}
           >
             Bando malvado
           </button>
         </div>
-        <div aria-live={ariaLive}>{error && <p className="mt-4 text-sm text-red-400">{error}</p>}</div>
+        <div aria-live={ariaLive}>{error && <p className="mt-4 text-sm text-blood-pale">{error}</p>}</div>
         <div className="mt-4 flex justify-end">
           <button type="button" onClick={onCerrar} className={botonSecundario}>
             Cancelar

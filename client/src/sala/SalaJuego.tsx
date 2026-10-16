@@ -1,4 +1,5 @@
-import { AudioLines, Drama, MessagesSquare, Sparkles } from 'lucide-react';
+import { MessagesSquare } from 'lucide-react';
+import { IconoConversar, IconoDestellos, IconoMascaras } from './IconosJuego';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { urlDelServidor } from '../utils/api';
 import { botonPrincipal } from './estilos';
@@ -50,6 +51,7 @@ import {
   type SalaSusurro,
 } from './chat';
 import RepartoPartida from './RepartoPartida';
+import { MarcasContexto } from './marcas';
 import { FichasContexto, identidadDe, TIPOS_EN_FICHA, type ContenidoFicha, type ContextoFichas } from './fichas';
 import { mostrarPersonajes, tituloDeGuion, useTraducciones, type PersonajeMostrado } from './guiones';
 import ZonaNarradores from './ZonaNarradores';
@@ -203,7 +205,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       }
     }
     if (revAhora?.terminada && !revAntes?.terminada) {
-      avisos.push({ tipo: 'revelacion', texto: revAhora.ganador === 'bueno' ? 'Los buenos ganan.' : 'Los malvados ganan.' });
+      avisos.push({ tipo: 'revelacion', texto: revAhora.ganador === 'bueno' ? 'Gana el bando bueno.' : 'Gana el bando malo.' });
     }
 
     // El silencio del narrador (Bibliotecario del Infierno): a los jugadores, al momento
@@ -1103,7 +1105,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // El icono del botón de conversar, en el texto; el lector oye su nombre
   const iconoConversar = (
     <>
-      <AudioLines size={12} aria-hidden="true" className="mx-0.5 inline align-[-1px] text-theme-main" />
+      <IconoConversar size={12} aria-hidden="true" className="mx-0.5 inline align-[-1px] text-theme-main" />
       <span className="sr-only">el botón de conversar</span>
     </>
   );
@@ -1162,7 +1164,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           {
             id: 'conversaciones' as const,
             etiqueta: 'Charlas',
-            Icono: AudioLines,
+            Icono: IconoConversar,
             // Lo que espera respuesta, antes que las conversaciones en curso
             contador: invitacionesRecibidas > 0
               ? { valor: invitacionesRecibidas, texto: 'por responder', destacado: true }
@@ -1194,7 +1196,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           {
             id: 'npcs' as const,
             etiqueta: 'NPCs',
-            Icono: Sparkles,
+            Icono: IconoDestellos,
             contador: { valor: estado.npcs.length, texto: 'en juego' },
             contenido: (
               <PanelNpcs
@@ -1215,7 +1217,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                 {
                   id: 'faroles' as const,
                   etiqueta: 'Faroles',
-                  Icono: Drama,
+                  Icono: IconoMascaras,
                   contenido: (
                     <PanelFaroles
                       modo={modoFaroles}
@@ -1290,16 +1292,14 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
   return (
     <AvisosContexto.Provider value={avisosActivos}>
+      <MarcasContexto.Provider value={{ calavera: preferencias.calavera, mano: preferencias.mano }}>
       <FichasContexto.Provider value={contextoFichas}>
       <div className="contents" style={tamanos}>
         <Cabecera
           centro={
             estado && (
               <div className="flex min-w-0 items-center gap-2">
-                <FasePartida
-                  fase={estado.fase}
-                  onVerNoche={miDespertar ? () => setWakeCerradoJugador(false) : undefined}
-                />
+                <FasePartida fase={estado.fase} />
                 <TituloGuion
                   guion={guion}
                   puedeCambiar={estado.acciones.includes('narrador:cambiarGuion')}
@@ -1318,6 +1318,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   }
                   onAnuncio={anunciar}
                   recordatorios={yo?.rol === 'narrador' ? recordatoriosNoche(estado) : null}
+                  partidaEmpezada={
+                    estado.fase.momento !== 'preparacion' ||
+                    estado.bolsa.length > 0 ||
+                    estado.votaciones.length > 0 ||
+                    estado.asientos.some((a) => a.personaje || a.muerto || a.marcado || a.recordatorios.length > 0)
+                  }
                 />
               </div>
             )
@@ -1413,14 +1419,14 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           <div className="pointer-events-none fixed bottom-4 left-1/2 z-40 flex w-[min(90vw,32rem)] -translate-x-1/2 flex-col gap-2">
             <div aria-live={avisosActivos.conexion ? 'polite' : 'off'}>
               {(conexion === 'conectando' || conexion === 'reconectando' || conexion === 'error') && (
-                <p className="rounded border border-outline-ghost bg-surface px-4 py-2 text-center text-on-surface-muted shadow-lg">
+                <p className="sala-aviso px-4 py-2 text-center font-ui text-sm tracking-wide text-on-surface-muted">
                   {MENSAJE_CONEXION[conexion]}
                 </p>
               )}
             </div>
             <div aria-live={avisosActivos.errores ? 'polite' : 'off'}>
               {aviso && (
-                <p className="rounded border border-red-400/60 bg-surface px-4 py-2 text-center shadow-lg">{aviso}</p>
+                <p className="sala-aviso sala-aviso-error px-4 py-2 text-center">{aviso}</p>
               )}
             </div>
           </div>
@@ -1512,7 +1518,11 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                           noLeidos,
                           onAbrir: (id) => void abrirDespertar(id),
                         }
-                      : null
+                      : miDespertar
+                        ? // El jugador despertado: la luna en su ficha le vuelve a abrir su despertar
+                          // (se le abre solo cuando el narrador le escribe: no hay «sin leer»)
+                          { hilos: new Set([miDespertar.asiento]), noLeidos: new Set(), onAbrir: () => setWakeCerradoJugador(false) }
+                        : null
                   }
                   seguimiento={puedeSeguir ? { siguiendo: sigoA?.id ?? null, onAlternar: alternarSeguir } : null}
                 />
@@ -1587,6 +1597,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
         )}
       </div>
       </FichasContexto.Provider>
+      </MarcasContexto.Provider>
     </AvisosContexto.Provider>
   );
 };

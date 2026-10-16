@@ -1,8 +1,10 @@
-import { Sun, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import { IconoSol } from './IconosJuego';
 import { Fragment, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { urlDelServidor } from '../utils/api';
 import SelectorIdioma from './SelectorIdioma';
 import {
+  aspectoDeGuion,
   logoDeGuion,
   mostrarPersonajes,
   personajesDeNoche,
@@ -43,13 +45,13 @@ export interface RecordatoriosNoche {
 const ANCHO = { resumido: 480, completo: 760, min: 260, paso: 24 };
 
 /** Colores de la hoja (como la impresa): arena, tinta oscura, azul los buenos, rojo los malvados. */
-const TINTA = '#2f1d0e';
+const TINTA = 'var(--color-hoja-tinta)';
 const colorDe = (tipo: string) =>
   ['minion', 'demon'].includes(tipo)
-    ? 'text-[#9b1c1c]'
+    ? 'text-hoja-malvado'
     : ['townsfolk', 'outsider'].includes(tipo)
-      ? 'text-[#1d5d96]'
-      : 'text-[#7a5a12]';
+      ? 'text-hoja-bueno'
+      : 'text-hoja-viajero';
 
 /**
  * La hoja de personajes o el orden de noche, como la hoja impresa del guion:
@@ -94,6 +96,8 @@ const PanelGuion = ({ vista, guion, idiomas, recordatorios, onCambiarIdiomaDescr
   const panelRef = useRef<HTMLElement>(null);
   const titulo = vista === 'guion' ? 'Hoja de personajes' : 'Orden de noche';
   const logo = logoDeGuion(guion);
+  const aspecto = aspectoDeGuion(guion);
+  const hoja = aspecto?.hoja ?? '/hoja.webp';
 
   useEffect(() => {
     tituloRef.current?.focus();
@@ -136,7 +140,7 @@ const PanelGuion = ({ vista, guion, idiomas, recordatorios, onCambiarIdiomaDescr
       ref={panelRef}
       aria-labelledby="sala-panel-guion-titulo"
       style={{ width: ancho, color: TINTA }}
-      className="@container fixed bottom-0 right-0 top-[3.6rem] z-40 flex shadow-2xl animate-[entrar-derecha_200ms_ease-out] motion-reduce:animate-none"
+      className="@container fixed bottom-0 right-0 top-[var(--sala-cabecera-alto,3.6rem)] z-10 flex shadow-2xl animate-[entrar-derecha_200ms_ease-out] motion-reduce:animate-none"
     >
       {/* Borde para redimensionar: se arrastra, o con el foco, flechas izquierda (más
           ancho) y derecha (más estrecho), Inicio y Fin. Se dice el ancho en la descripción. */}
@@ -149,7 +153,7 @@ const PanelGuion = ({ vista, guion, idiomas, recordatorios, onCambiarIdiomaDescr
         onPointerUp={alSoltar}
         onPointerCancel={alSoltar}
         onKeyDown={alTeclear}
-        className="absolute -left-1.5 top-0 z-10 h-full w-3 cursor-ew-resize touch-none hover:bg-[#9b1c1c]/30 focus:outline-none focus-visible:bg-theme-main/60"
+        className="absolute -left-1.5 top-0 z-10 h-full w-3 cursor-ew-resize touch-none hover:bg-hoja-malvado/30 focus:outline-none focus-visible:bg-theme-main/60"
       />
       <span id="sala-panel-guion-ancho" className="sr-only">
         {ancho} píxeles. Flecha izquierda para ensanchar, derecha para estrechar.
@@ -161,10 +165,10 @@ const PanelGuion = ({ vista, guion, idiomas, recordatorios, onCambiarIdiomaDescr
       <div
         aria-hidden="true"
         className="flex w-9 shrink-0 items-center justify-center overflow-hidden"
-        style={{ background: `url('/hoja.webp') left top / calc(2.25rem / 0.0775) 100% no-repeat, #7d1820` }}
+        style={{ background: `url('${hoja}') left top / calc(2.25rem / 0.0775) 100% no-repeat, ${aspecto?.lomo ?? 'var(--color-hoja-lomo)'}` }}
       >
         <span
-          className="whitespace-nowrap font-[Georgia,serif] text-sm uppercase tracking-[0.35em] text-[#f3e6d0]"
+          className="whitespace-nowrap font-ui text-sm font-semibold uppercase tracking-[0.35em] text-hoja-crema"
           style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
         >
           {guion.nombre}
@@ -175,7 +179,7 @@ const PanelGuion = ({ vista, guion, idiomas, recordatorios, onCambiarIdiomaDescr
           a lo que mida, con el borde envejecido a la derecha */}
       <div
         className="flex min-w-0 flex-1 flex-col"
-        style={{ background: `url('/hoja.webp') right top / calc(100% / 0.91) 100% no-repeat, #ebe2cf` }}
+        style={{ background: `url('${hoja}') right top / calc(100% / 0.91) 100% no-repeat, var(--color-hoja-papel)` }}
       >
         <div className="flex items-start gap-2 px-5 pt-4">
           <div className="min-w-0 flex-1 text-center">
@@ -186,13 +190,13 @@ const PanelGuion = ({ vista, guion, idiomas, recordatorios, onCambiarIdiomaDescr
               // El logo lleva el nombre escrito: es su texto alternativo
               <img src={logo} alt={guion.nombre} lang="en" className="mx-auto h-28 w-auto object-contain" />
             ) : (
-              <p className="font-[Georgia,serif] text-2xl uppercase tracking-wider text-[#5a1416]" lang="en">
+              <p className="font-guion text-4xl text-hoja-lacre">
                 {guion.nombre}
               </p>
             )}
-            {guion.autor && <p className="font-[Georgia,serif] text-sm text-[#5a1416]">por {guion.autor}</p>}
+            {guion.autor && <p className="text-sm italic text-hoja-lacre">por {guion.autor}</p>}
             {vista === 'noche' && (
-              <p aria-hidden="true" className="mt-1 font-[Georgia,serif] text-base text-[#5a1416] underline">
+              <p aria-hidden="true" className="mt-1 text-base text-hoja-lacre underline">
                 {noche === 'primera' ? 'Primera noche' : 'Otras noches'}
               </p>
             )}
@@ -201,29 +205,29 @@ const PanelGuion = ({ vista, guion, idiomas, recordatorios, onCambiarIdiomaDescr
             type="button"
             aria-label={`Cerrar la ${titulo.toLocaleLowerCase('es')}`}
             onClick={onCerrar}
-            className="rounded-full p-1 text-[#5a1416] hover:bg-[#5a1416]/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5a1416]"
+            className="rounded-full p-1 text-hoja-lacre hover:bg-hoja-lacre/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-hoja-lacre"
           >
             <X size={20} />
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-4 border-b border-[#5a1416]/40 px-5 py-2 text-sm">
+        <div className="flex flex-wrap items-center justify-center gap-4 border-b border-hoja-lacre/40 px-5 py-2 text-sm">
           {/* Interruptor (role=switch): el lector lo anuncia como «activado/desactivado» */}
           <button
             type="button"
             role="switch"
             aria-checked={completo}
             onClick={() => setCompleto((v) => !v)}
-            className="group flex items-center gap-2 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5a1416]"
+            className="group flex items-center gap-2 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-hoja-lacre"
           >
             <span
               aria-hidden="true"
               className={`relative h-5 w-9 rounded-full border transition-colors motion-reduce:transition-none ${
-                completo ? 'border-[#5a1416] bg-[#7d1820]' : 'border-[#5a1416]/50 bg-[#5a1416]/15'
+                completo ? 'border-hoja-lacre bg-hoja-lomo' : 'border-hoja-lacre/50 bg-hoja-lacre/15'
               }`}
             >
               <span
-                className={`absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full bg-[#f3e6d0] shadow transition-[left] motion-reduce:transition-none ${
+                className={`absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full bg-hoja-crema shadow transition-[left] motion-reduce:transition-none ${
                   completo ? 'left-[1.15rem]' : 'left-0.5'
                 }`}
               />
@@ -238,7 +242,7 @@ const PanelGuion = ({ vista, guion, idiomas, recordatorios, onCambiarIdiomaDescr
                 etiqueta="Descripciones"
                 valor={idiomas.descripciones}
                 onCambiar={onCambiarIdiomaDescripciones}
-                className="max-w-[12rem] rounded border border-[#5a1416]/50 bg-[#f6eedb] px-2 py-1 text-[#2f1d0e] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5a1416]"
+                className="max-w-[12rem] rounded border border-hoja-lacre/50 bg-hoja-claro px-2 py-1 text-hoja-tinta focus:outline-none focus-visible:ring-2 focus-visible:ring-hoja-lacre"
               />
             </span>
           )}
@@ -249,8 +253,8 @@ const PanelGuion = ({ vista, guion, idiomas, recordatorios, onCambiarIdiomaDescr
               {(['primera', 'otras'] as const).map((n) => (
                 <label
                   key={n}
-                  className={`cursor-pointer rounded px-2 py-1 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[#5a1416] ${
-                    noche === n ? 'bg-[#7d1820] font-semibold text-[#f3e6d0]' : 'hover:bg-[#5a1416]/10'
+                  className={`cursor-pointer rounded px-2 py-1 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-hoja-lacre ${
+                    noche === n ? 'bg-hoja-lomo font-semibold text-hoja-crema' : 'hover:bg-hoja-lacre/10'
                   }`}
                 >
                   <input
@@ -290,7 +294,7 @@ const IconoRol = ({ imagen }: { imagen: string | null }) =>
   imagen ? (
     <img src={urlDelServidor(imagen)} alt="" className="h-14 w-14 shrink-0 object-contain" loading="lazy" />
   ) : (
-    <span aria-hidden="true" className="h-14 w-14 shrink-0 rounded-full border border-[#5a1416]/40" />
+    <span aria-hidden="true" className="h-14 w-14 shrink-0 rounded-full border border-hoja-lacre/40" />
   );
 
 /**
@@ -304,7 +308,7 @@ const conMarcas = (texto: string): ReactNode =>
         <>
           <span
             aria-hidden="true"
-            className="mx-0.5 inline-block h-3 w-3 rounded-full border border-[#5a1416] bg-[#f6eedb] align-middle"
+            className="mx-0.5 inline-block h-3 w-3 rounded-full border border-hoja-lacre bg-hoja-claro align-middle"
           />
           <span className="sr-only" lang="es">
             (ficha de recordatorio)
@@ -343,7 +347,7 @@ const Fila = ({
         type="button"
         aria-pressed={recordatorio.activo}
         onClick={recordatorio.onAlternar}
-        className="h-9 w-9 shrink-0 self-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5a1416] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f3e6d0]"
+        className="h-9 w-9 shrink-0 self-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-hoja-lacre focus-visible:ring-offset-2 focus-visible:ring-offset-hoja-crema"
       >
         <span className="sr-only">
           Recordatorio de <span lang={nombre.lang}>{nombre.texto}</span>
@@ -351,7 +355,7 @@ const Fila = ({
         {recordatorio.activo ? (
           <img src="/noche/actua.webp" alt="" className="h-9 w-9 drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]" />
         ) : (
-          <span aria-hidden="true" className="block h-9 w-9 rounded-full border-2 border-dashed border-[#5a1416]/35 hover:border-[#5a1416]/70" />
+          <span aria-hidden="true" className="block h-9 w-9 rounded-full border-2 border-dashed border-hoja-lacre/35 hover:border-hoja-lacre/70" />
         )}
       </button>
     )}
@@ -363,7 +367,7 @@ const Fila = ({
       {texto?.texto && (
         <>
           <span className="sr-only">: </span>
-          <span className="block text-sm leading-snug text-[#3a3027]" lang={texto.lang}>
+          <span className="block text-sm leading-snug text-hoja-cuerpo" lang={texto.lang}>
             {conMarcas(texto.texto)}
           </span>
         </>
@@ -379,11 +383,11 @@ const HojaPersonajes = ({ personajes, completo }: { personajes: PersonajeMostrad
       <section
         key={titulo}
         aria-labelledby={`sala-hoja-${titulo}`}
-        className="border-b-2 border-[#5a1416]/70 py-3 last:border-b-0"
+        className="border-b-2 border-hoja-lacre/70 py-3 last:border-b-0"
       >
         <h3
           id={`sala-hoja-${titulo}`}
-          className="mb-1 font-[Georgia,serif] text-xs uppercase tracking-[0.3em] text-[#5a1416]"
+          className="mb-1 font-ui text-xs font-semibold uppercase tracking-[0.3em] text-hoja-lacre"
         >
           {titulo}
         </h3>
@@ -408,8 +412,8 @@ const HojaPersonajes = ({ personajes, completo }: { personajes: PersonajeMostrad
 const IconoFijo = ({ children, claro = false }: { children: ReactNode; claro?: boolean }) => (
   <span
     aria-hidden="true"
-    className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full font-[Georgia,serif] text-2xl ${
-      claro ? 'bg-[#d9932b] text-[#fff3d6]' : 'bg-[#2b2140] text-[#e8e2f4]'
+    className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full font-display text-2xl ${
+      claro ? 'bg-hoja-dia text-hoja-dia-claro' : 'bg-hoja-noche text-hoja-noche-claro'
     }`}
   >
     {children}
@@ -457,7 +461,7 @@ const OrdenNoche = ({
     <Fila
       icono={icono}
       nombre={{ texto: nombre, lang: 'es' }}
-      color="text-[#5a1416]"
+      color="text-hoja-lacre"
       texto={completo ? { texto: t, lang: 'es' } : null}
       recordatorio={recordatorio ? conRecordatorio(recordatorio) : undefined}
     />
@@ -484,7 +488,7 @@ const OrdenNoche = ({
       {fija(
         'Amanecer',
         <IconoFijo claro>
-          <Sun size={20} />
+          <IconoSol size={20} />
         </IconoFijo>,
         TEXTOS_FIJOS.amanecer,
       )}

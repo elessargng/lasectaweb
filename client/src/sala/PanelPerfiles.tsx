@@ -1,7 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { useAriaLive } from './avisosConfig';
 import { NOMBRE_PERFIL_MAX, type PerfilConfiguracion } from './configuracion';
-import { botonPrincipal, botonSecundario } from './estilos';
+import { botonPrincipal, botonSecundario, campo } from './estilos';
 
 interface PanelPerfilesProps {
   /** Sin cuenta no se guarda nada: solo se explica. */
@@ -15,8 +15,6 @@ interface PanelPerfilesProps {
   onAplicar: (perfil: PerfilConfiguracion) => Promise<string | null>;
 }
 
-const inputClass =
-  'rounded border border-outline-ghost bg-background px-3 py-2 text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main aria-[invalid=true]:border-red-400';
 
 /**
  * Pestaña Perfiles: guardar la configuración de ahora con un nombre y volver a
@@ -71,7 +69,7 @@ const PanelPerfiles = ({ conCuenta, carga, perfiles, onGuardar, onBorrar, onApli
   return (
     <div className="flex flex-col gap-6">
       {carga === 'error' && (
-        <p className="text-sm text-red-400">
+        <p className="text-sm text-blood-pale">
           No se pudo cargar tu configuración guardada; los cambios de ahora no se guardarán. Recarga la página para
           volver a intentarlo.
         </p>
@@ -91,7 +89,7 @@ const PanelPerfiles = ({ conCuenta, carga, perfiles, onGuardar, onBorrar, onApli
             onChange={(e) => setNombre(e.target.value)}
             aria-invalid={errorNombre ? true : undefined}
             aria-describedby={['sala-perfil-ayuda', errorNombre ? 'sala-perfil-error' : ''].join(' ').trim()}
-            className={`${inputClass} min-w-0 flex-1`}
+            className={`${campo} min-w-0 flex-1`}
           />
           <button type="submit" aria-disabled={enviando} className={botonPrincipal}>
             Guardar perfil
@@ -105,7 +103,7 @@ const PanelPerfiles = ({ conCuenta, carga, perfiles, onGuardar, onBorrar, onApli
 
       <div aria-live={ariaLive}>
         {error && (
-          <p id="sala-perfil-error" className="text-sm text-red-400">
+          <p id="sala-perfil-error" className="text-sm text-blood-pale">
             {error.texto}
           </p>
         )}

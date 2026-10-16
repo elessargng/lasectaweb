@@ -34,7 +34,7 @@ interface MenuDesplegableProps {
 }
 
 const opcionClass =
-  'w-full text-left px-3 py-2 text-sm text-on-surface hover:bg-theme-container focus:outline-none focus-visible:bg-theme-container aria-disabled:text-on-surface-muted aria-disabled:hover:bg-transparent';
+  'sala-opcion w-full text-left px-4 py-2 text-on-surface aria-pressed:text-gold-bright aria-disabled:text-on-surface-muted aria-disabled:hover:bg-none aria-disabled:hover:shadow-none';
 
 /**
  * Botón que despliega una lista de botones (no un menú ARIA): se recorre con Tab
@@ -127,7 +127,7 @@ const MenuDesplegable = ({
         ref={listaRef}
         id={id}
         hidden={!abierto}
-        className={`absolute ${alinear === 'derecha' ? 'right-0' : 'left-0'} top-full z-20 mt-1 min-w-full w-max rounded border border-outline-ghost bg-surface py-1 shadow-lg data-[arriba=true]:bottom-full data-[arriba=true]:top-auto data-[arriba=true]:mb-1 data-[arriba=true]:mt-0`}
+        className={`absolute ${alinear === 'derecha' ? 'right-0' : 'left-0'} top-full z-20 mt-2 min-w-full w-max sala-cofre py-1.5 data-[arriba=true]:bottom-full data-[arriba=true]:top-auto data-[arriba=true]:mb-2 data-[arriba=true]:mt-0`}
       >
         {opciones.map((opcion) => (
           <li key={opcion.id}>

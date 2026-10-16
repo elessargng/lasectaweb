@@ -81,7 +81,7 @@ const VentanaDespertar = ({
   return (
     <section
       aria-labelledby={ID_TITULO_DESPERTAR}
-      className={`fixed left-1/2 top-16 z-40 flex w-[min(94vw,64rem)] -translate-x-1/2 flex-col gap-3 rounded-lg border border-theme-main/70 bg-surface/95 shadow-2xl backdrop-blur ${
+      className={`fixed left-1/2 top-16 z-40 flex w-[min(94vw,64rem)] -translate-x-1/2 flex-col gap-3 sala-cofre backdrop-blur ${
         minimizada ? 'p-2' : 'max-h-[85vh] overflow-y-auto p-4'
       }`}
     >
@@ -89,10 +89,10 @@ const VentanaDespertar = ({
         <h2
           id={ID_TITULO_DESPERTAR}
           tabIndex={-1}
-          className="min-w-0 flex-1 font-display text-xl text-on-surface-bright focus:outline-none"
+          className="min-w-0 flex-1 font-display text-xl text-gold-bright focus:outline-none"
         >
           {soloLectura ? 'Despertar de ' : 'Despierta a '}
-          <strong className="font-semibold">{nombre}</strong>
+          <strong className="font-normal text-on-surface-bright">{nombre}</strong>
         </h2>
         <button type="button" onClick={() => setMinimizada((m) => !m)} className={boton}>
           {minimizada ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
@@ -120,7 +120,7 @@ const VentanaDespertar = ({
                 onClick={() => onActivar(d.asiento)}
                 onKeyDown={(e) => alTeclear(e, i)}
                 className={`-mb-px flex items-center gap-1 rounded-t border border-b-0 px-3 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
-                  elegida ? 'border-theme-main bg-theme-container text-white' : 'border-outline-ghost text-on-surface-muted hover:text-white'
+                  elegida ? 'border-gold/60 bg-theme-container text-gold-bright' : 'border-outline-ghost text-on-surface-muted hover:text-on-surface-bright'
                 }`}
               >
                 {nombreDeAsiento(estado, d.asiento)}

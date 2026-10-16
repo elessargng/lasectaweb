@@ -45,13 +45,13 @@ const DialogoPreferencias = ({ pestanas, onCerrar }: DialogoPreferenciasProps) =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sala-velo">
       <Dialog
         onClose={onCerrar}
         labelledBy="sala-preferencias-titulo"
-        className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded border border-outline-ghost bg-surface shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-2xl flex-col sala-cofre sala-cofre-esquinas"
       >
-        <h2 id="sala-preferencias-titulo" className="border-b border-outline-ghost px-6 py-4 text-xl font-semibold">
+        <h2 id="sala-preferencias-titulo" className="px-6 py-4 sala-cofre-titulo">
           Preferencias
         </h2>
 
@@ -79,7 +79,7 @@ const DialogoPreferencias = ({ pestanas, onCerrar }: DialogoPreferenciasProps) =
                   onClick={() => setElegida(p.id)}
                   onKeyDown={alPulsarTecla}
                   className={`whitespace-nowrap rounded px-3 py-2 text-left text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
-                    seleccionada ? 'bg-theme-container font-semibold text-white' : 'text-on-surface hover:bg-theme-container/40'
+                    seleccionada ? 'bg-theme-container font-semibold text-gold-bright shadow-[inset_2px_0_0_var(--color-theme-main)]' : 'text-on-surface hover:bg-grimorio/25'
                   }`}
                 >
                   {p.etiqueta}
@@ -103,7 +103,7 @@ const DialogoPreferencias = ({ pestanas, onCerrar }: DialogoPreferenciasProps) =
           ))}
         </div>
 
-        <div className="flex justify-end border-t border-outline-ghost px-6 py-3">
+        <div className="flex justify-end sala-cofre-pie px-6 py-3">
           <button type="button" onClick={onCerrar} className={botonSecundario}>
             Cerrar
           </button>

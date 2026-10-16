@@ -29,12 +29,12 @@ const MenuUsuario = ({ nombre, avatar, conCuenta, onPreferencias, enLaSala, onSa
     <MenuDesplegable
       id="sala-menu-usuario"
       alinear="derecha"
-      botonClassName="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 text-sm text-white hover:bg-theme-main/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
+      botonClassName="flex items-center gap-2 rounded-full border border-gold/25 bg-background/40 py-1 pl-1 pr-1 sm:pr-3 font-ui text-sm text-on-surface-bright transition-colors hover:border-gold/70 aria-expanded:border-gold/70 motion-reduce:transition-none"
       boton={
         <>
           <span
             aria-hidden="true"
-            className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-theme-main bg-surface font-semibold"
+            className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gold bg-surface font-display text-gold-bright shadow-[0_0_0_2px_var(--color-background),0_0_0_3px_rgba(212,175,106,0.35)]"
           >
             {avatar ? (
               <img src={getAvatarUrl(avatar)} alt="" className="h-full w-full object-cover" />
@@ -42,7 +42,8 @@ const MenuUsuario = ({ nombre, avatar, conCuenta, onPreferencias, enLaSala, onSa
               nombre.charAt(0).toLocaleUpperCase('es')
             )}
           </span>
-          <span className="max-w-[12rem] truncate">{nombre}</span>
+          {/* En pantallas estrechas, solo el avatar a la vista */}
+          <span className="max-w-[12rem] truncate max-sm:sr-only">{nombre}</span>
           <span className="sr-only">, tus opciones</span>
         </>
       }

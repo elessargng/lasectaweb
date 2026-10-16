@@ -1,4 +1,5 @@
-import { ChevronDown, ChevronsLeft, ChevronsRight, ChevronUp, type LucideIcon } from 'lucide-react';
+import { ChevronDown, ChevronsLeft, ChevronsRight, ChevronUp } from 'lucide-react';
+import { type IconoSala } from './IconosJuego';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { idPestanaLateral } from './ids';
 import type { PanelLateral } from './preferencias';
@@ -6,7 +7,7 @@ import type { PanelLateral } from './preferencias';
 export interface PestanaLateral {
   id: PanelLateral;
   etiqueta: string;
-  Icono: LucideIcon;
+  Icono: IconoSala;
   /**
    * Lo que se cuenta en su insignia (sin leer, en curso…), si es más de 0.
    * Destacado (algo espera respuesta): la insignia late, salvo con menos movimiento.
@@ -35,10 +36,10 @@ const idPanel = (id: string) => `sala-lateral-panel-${id}`;
 const ID_PANELES = 'sala-lateral-paneles';
 
 const claseBoton = (elegido: boolean) =>
-  `relative flex flex-1 flex-col items-center gap-1 rounded px-1 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main motion-reduce:transition-none ${
+  `relative flex flex-1 flex-col items-center gap-1 rounded-[3px] px-1 py-2 transition-colors motion-reduce:transition-none ${
     elegido
-      ? 'bg-theme-container text-on-surface-bright shadow-[inset_0_-2px_0_var(--color-theme-main)] lg:shadow-[inset_3px_0_0_var(--color-theme-main)]'
-      : 'text-on-surface-muted hover:bg-theme-container/40 hover:text-on-surface'
+      ? 'bg-linear-to-b from-grimorio/55 to-grimorio/20 text-gold-bright shadow-[inset_0_-2px_0_var(--color-theme-main)] lg:bg-linear-to-r lg:shadow-[inset_3px_0_0_var(--color-theme-main),0_0_14px_rgba(212,175,106,0.12)]'
+      : 'text-on-surface-muted hover:bg-grimorio/25 hover:text-on-surface'
   }`;
 
 /**
@@ -97,13 +98,13 @@ const ColumnaLateral = ({ pestanas, activa, onElegir, contraida, onContraer, fij
 
   return (
     <div
-      className={`flex flex-col overflow-hidden rounded border border-outline-ghost bg-surface lg:min-h-[16rem] lg:flex-1 lg:flex-row lg:motion-safe:transition-[width] lg:duration-300 lg:ease-in-out ${
+      className={`sala-panel flex flex-col overflow-hidden lg:min-h-[16rem] lg:flex-1 lg:flex-row lg:motion-safe:transition-[width] lg:duration-300 lg:ease-in-out ${
         // En pantallas anchas ocupa el alto que queda en la columna; contraída, solo el ancho de la barra
         contraida ? 'w-full lg:w-[calc(4rem+2px)]' : 'w-full'
       }`}
     >
       <div
-        className={`flex shrink-0 gap-1 border-outline-ghost bg-background/50 p-1 lg:w-16 lg:flex-col lg:border-r ${
+        className={`flex shrink-0 gap-1 border-gold/15 bg-background/60 p-1 lg:w-16 lg:flex-col lg:border-r ${
           contraida ? '' : 'border-b lg:border-b-0'
         }`}
       >
@@ -118,10 +119,10 @@ const ColumnaLateral = ({ pestanas, activa, onElegir, contraida, onContraer, fij
             const contenido = (
               <>
                 <Icono size={20} strokeWidth={1.5} />
-                <span className="font-ui text-[0.6rem] uppercase leading-none tracking-wide">{etiqueta}</span>
+                <span className="font-ui text-[0.56rem] font-semibold uppercase leading-none tracking-normal">{etiqueta}</span>
                 {contador && contador.valor > 0 && (
                   <span
-                    className={`absolute right-1 top-1 min-w-[1.1rem] rounded-full bg-theme-main px-1 text-center text-[0.6rem] font-bold leading-[1.1rem] text-background ${
+                    className={`sala-contador absolute right-1 top-1 min-w-[1.1rem] rounded-full px-1 text-center font-ui text-[0.6rem] font-bold leading-[1.1rem] ${
                       contador.destacado ? 'ring-2 ring-theme-main/40 motion-safe:animate-pulse' : ''
                     }`}
                   >
@@ -160,7 +161,7 @@ const ColumnaLateral = ({ pestanas, activa, onElegir, contraida, onContraer, fij
           aria-expanded={!contraida}
           aria-controls={ID_PANELES}
           onClick={() => onContraer(!contraida)}
-          className={`${claseBoton(false)} flex-none px-2 lg:mt-auto lg:border-t lg:border-outline-ghost lg:pt-2`}
+          className={`${claseBoton(false)} flex-none px-2 lg:mt-auto lg:border-t lg:border-gold/15 lg:pt-2`}
         >
           {/* La flecha, hacia donde va el panel: a la izquierda (o arriba) al contraerse */}
           {contraida ? (
@@ -174,7 +175,7 @@ const ColumnaLateral = ({ pestanas, activa, onElegir, contraida, onContraer, fij
               <ChevronsLeft size={20} strokeWidth={1.5} className="hidden lg:block" />
             </>
           )}
-          <span className="font-ui text-[0.6rem] uppercase leading-none tracking-wide">Panel</span>
+          <span className="font-ui text-[0.56rem] font-semibold uppercase leading-none tracking-normal">Panel</span>
         </button>
       </div>
       {/* La visibilidad cambia al final de la transición al meterse, y al principio al salir */}

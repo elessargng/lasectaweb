@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { parseApiResponse } from '../utils/api';
-import { botonPrincipal } from './estilos';
+import { botonPrincipal, campo } from './estilos';
 import { NOMBRE_MAX, getUltimoNombre, limpiarNombre } from './invitado';
 
 const API_URL = `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api'}/auth`;
 
-const inputClass =
-  'bg-surface border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main aria-[invalid=true]:border-red-400';
-const labelClass = 'text-sm text-on-surface-muted';
+const labelClass = 'campo-etiqueta mb-0!';
 
 interface EntradaProps {
   /** Hay que mover el foco al título (se vuelve aquí desde la sala). */
@@ -85,20 +83,20 @@ const Entrada = ({ enfocar, aviso, errorInvitado, onInvitado }: EntradaProps) =>
 
   return (
     <>
-      <h1 ref={tituloRef} tabIndex={-1} className="font-semibold text-3xl text-on-surface mb-2 focus:outline-none">
+      <h1 ref={tituloRef} tabIndex={-1} className="mb-2 font-display text-4xl text-gold-bright drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)] focus:outline-none">
         Entrar en la sala de juego
       </h1>
-      <p className="text-on-surface-muted mb-8">
+      <p className="mb-8 text-lg text-on-surface [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
         Entra con tu cuenta de La Secta o, si no tienes, con el nombre que quieras usar en la partida.
       </p>
 
       {aviso && (
-        <p className="mb-8 rounded border border-theme-main/60 bg-theme-container/40 px-4 py-3">{aviso}</p>
+        <p className="sala-aviso mb-8 px-4 py-3">{aviso}</p>
       )}
 
       <div className="grid gap-8 md:grid-cols-2">
-        <section aria-labelledby="entrada-cuenta" className="rounded border border-outline-ghost bg-surface/60 p-6">
-          <h2 id="entrada-cuenta" className="text-xl font-semibold mb-4">Con tu cuenta</h2>
+        <section aria-labelledby="entrada-cuenta" className="sala-cofre sala-cofre-esquinas p-6">
+          <h2 id="entrada-cuenta" className="sala-cofre-titulo mb-4">Con tu cuenta</h2>
           <form onSubmit={iniciarSesion} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
               <label htmlFor="entrada-usuario" className={labelClass}>Nombre de usuario</label>
@@ -110,7 +108,7 @@ const Entrada = ({ enfocar, aviso, errorInvitado, onInvitado }: EntradaProps) =>
                 onChange={(e) => setUsername(e.target.value)}
                 aria-invalid={errorLogin ? true : undefined}
                 aria-describedby={errorLogin ? 'entrada-error-login' : undefined}
-                className={inputClass}
+                className={campo}
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -124,7 +122,7 @@ const Entrada = ({ enfocar, aviso, errorInvitado, onInvitado }: EntradaProps) =>
                 onChange={(e) => setPassword(e.target.value)}
                 aria-invalid={errorLogin ? true : undefined}
                 aria-describedby={errorLogin ? 'entrada-error-login' : undefined}
-                className={inputClass}
+                className={campo}
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -145,7 +143,7 @@ const Entrada = ({ enfocar, aviso, errorInvitado, onInvitado }: EntradaProps) =>
             </div>
             <div aria-live="polite">
               {errorLogin && (
-                <p id="entrada-error-login" className="text-sm text-red-400">{errorLogin}</p>
+                <p id="entrada-error-login" className="text-sm text-blood-pale">{errorLogin}</p>
               )}
             </div>
             <button type="submit" disabled={enviando} className={botonPrincipal}>
@@ -153,7 +151,7 @@ const Entrada = ({ enfocar, aviso, errorInvitado, onInvitado }: EntradaProps) =>
             </button>
             <p className="text-sm text-on-surface-muted">
               ¿Aún no tienes cuenta?{' '}
-              <a href="/" target="_blank" rel="noopener" className="text-theme-main underline hover:text-white">
+              <a href="/" target="_blank" rel="noopener" className="text-theme-main underline hover:text-gold-bright">
                 Regístrate en la web
                 <span className="sr-only"> (se abre en una ventana nueva)</span>
               </a>
@@ -161,8 +159,8 @@ const Entrada = ({ enfocar, aviso, errorInvitado, onInvitado }: EntradaProps) =>
           </form>
         </section>
 
-        <section aria-labelledby="entrada-invitado" className="rounded border border-outline-ghost bg-surface/60 p-6">
-          <h2 id="entrada-invitado" className="text-xl font-semibold mb-4">Sin cuenta</h2>
+        <section aria-labelledby="entrada-invitado" className="sala-cofre sala-cofre-esquinas p-6">
+          <h2 id="entrada-invitado" className="sala-cofre-titulo mb-4">Sin cuenta</h2>
           <form onSubmit={entrarComoInvitado} noValidate className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
               <label htmlFor="entrada-nombre" className={labelClass}>Tu nombre en la sala</label>
@@ -179,10 +177,10 @@ const Entrada = ({ enfocar, aviso, errorInvitado, onInvitado }: EntradaProps) =>
                 }}
                 aria-invalid={errorNombre ? true : undefined}
                 aria-describedby={errorNombre ? 'entrada-error-nombre' : undefined}
-                className={inputClass}
+                className={campo}
               />
               {errorNombre && (
-                <p id="entrada-error-nombre" className="text-sm text-red-400">{errorNombre}</p>
+                <p id="entrada-error-nombre" className="text-sm text-blood-pale">{errorNombre}</p>
               )}
             </div>
             <button type="submit" className={botonPrincipal}>Entrar como invitado</button>

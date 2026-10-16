@@ -1,4 +1,4 @@
-import { AudioLines } from 'lucide-react';
+import { IconoConversar } from './IconosJuego';
 import type { ReactNode } from 'react';
 import { botonSecundario } from './estilos';
 import NombresOyentes from './NombresOyentes';
@@ -35,7 +35,7 @@ const PanelConversaciones = ({ conversaciones, participantes, yo, onEscuchar, on
   if (conversaciones.length === 0) {
     return (
       <section aria-labelledby="sala-conversaciones-titulo" className="flex flex-col gap-2 p-3 text-sm">
-        <h2 id="sala-conversaciones-titulo" className="font-ui text-xs font-semibold uppercase tracking-wide text-theme-main">
+        <h2 id="sala-conversaciones-titulo" className="rotulo">
           Conversaciones privadas
         </h2>
         {compacto ? (
@@ -45,9 +45,9 @@ const PanelConversaciones = ({ conversaciones, participantes, yo, onEscuchar, on
             {/* Un círculo de latón tenue con las ondas de voz, en silencio */}
             <span
               aria-hidden="true"
-              className="flex h-16 w-16 items-center justify-center rounded-full border border-theme-main/30 bg-[radial-gradient(circle,var(--color-theme-container)_0%,transparent_70%)] text-theme-main/50"
+              className="sala-medallon-vacio"
             >
-              <AudioLines size={28} strokeWidth={1.25} />
+              <IconoConversar size={28} strokeWidth={1.25} />
             </span>
             <p className="font-display text-lg text-on-surface-bright">Nadie conversa en privado</p>
             <p className="max-w-[15rem] text-xs leading-relaxed text-on-surface-muted">{ayuda}</p>
@@ -63,7 +63,7 @@ const PanelConversaciones = ({ conversaciones, participantes, yo, onEscuchar, on
 
   return (
     <section aria-labelledby="sala-conversaciones-titulo" className="flex flex-col gap-2 p-3 text-sm">
-      <h2 id="sala-conversaciones-titulo" className="font-ui text-xs font-semibold uppercase tracking-wide text-theme-main">
+      <h2 id="sala-conversaciones-titulo" className="rotulo">
         Conversaciones privadas
       </h2>
       <ul className="flex flex-col gap-2">
@@ -74,7 +74,7 @@ const PanelConversaciones = ({ conversaciones, participantes, yo, onEscuchar, on
           const puedeEntrar = narro && !c.miembros.includes(yo.id);
           return (
             <li key={c.id} className="flex items-center gap-2">
-              <AudioLines size={16} className="shrink-0 text-theme-main" />
+              <IconoConversar size={16} className="shrink-0 text-theme-main" />
               <div className="min-w-0 flex-1">
                 <p className={estoy ? 'font-semibold' : ''}>{enumerar(c.miembros.map(nombre))}</p>
                 {c.oyentes.length > 0 && (

@@ -1,4 +1,5 @@
-import { Pencil, Plus, Sparkles, X } from 'lucide-react';
+import { Pencil, Plus, X } from 'lucide-react';
+import { IconoDestellos } from './IconosJuego';
 import { useState } from 'react';
 import DialogoBootlegger from './DialogoBootlegger';
 import DialogoNpcs from './DialogoNpcs';
@@ -68,8 +69,8 @@ const PanelNpcs = ({ npcs, disponibles, narro, hayGuion, bootlegger, rolStormcat
   return (
     <section aria-labelledby="sala-npcs-titulo" className="flex h-full flex-col gap-3 overflow-y-auto p-4">
       <header className="flex items-center gap-2">
-        <h2 id="sala-npcs-titulo" className="flex flex-1 items-center gap-2 font-ui text-sm font-semibold uppercase tracking-wide text-theme-main">
-          <Sparkles size={16} />
+        <h2 id="sala-npcs-titulo" className="flex flex-1 items-center gap-2 rotulo">
+          <IconoDestellos size={16} />
           NPCs
         </h2>
         {narro && hayGuion && (
@@ -89,9 +90,9 @@ const PanelNpcs = ({ npcs, disponibles, narro, hayGuion, bootlegger, rolStormcat
         <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
           <span
             aria-hidden="true"
-            className="flex h-16 w-16 items-center justify-center rounded-full border border-theme-main/30 bg-[radial-gradient(circle,var(--color-theme-container)_0%,transparent_70%)] text-theme-main/50"
+            className="sala-medallon-vacio"
           >
-            <Sparkles size={28} strokeWidth={1.25} />
+            <IconoDestellos size={28} strokeWidth={1.25} />
           </span>
           <p className="font-display text-lg text-on-surface-bright">Sin NPCs en juego</p>
           <p className="max-w-[15rem] text-xs leading-relaxed text-on-surface-muted">

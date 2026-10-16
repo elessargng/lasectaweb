@@ -64,6 +64,22 @@ const LOGOS_EDICIONES = ['troublebrewing', 'badmoonrising', 'sectsviolets'];
 export const logoDeGuion = (g: { edicion: string | null }) =>
   g.edicion && LOGOS_EDICIONES.includes(g.edicion) ? `/ediciones/${g.edicion}.webp` : null;
 
+/**
+ * El aspecto de cada edición oficial: el color de su título (el de su logo; el de
+ * Bad Moon Rising, rgb(236 152 52), algo más tostado: sobre el pergamino de la
+ * cartela de la cabecera se leía a 1,8:1) y su
+ * hoja (copias locales de las de botc.app, public/hoja*.webp, todas con el lomo en
+ * el mismo sitio) con el color del lomo por si tarda en cargar. Los guiones
+ * importados, la de Trouble Brewing.
+ */
+const EDICIONES: Record<string, { color: string; hoja: string; lomo: string }> = {
+  troublebrewing: { color: 'rgb(171 13 39)', hoja: '/hoja.webp', lomo: '#7d1820' },
+  badmoonrising: { color: 'rgb(176 98 16)', hoja: '/hoja-badmoonrising.webp', lomo: '#9a4f0c' },
+  sectsviolets: { color: 'rgb(141 87 170)', hoja: '/hoja-sectsviolets.webp', lomo: '#3a1a4a' },
+};
+export const aspectoDeGuion = (g: { edicion: string | null }) =>
+  (g.edicion && EDICIONES[g.edicion]) || null;
+
 /** «Trouble Brewing by Steven Medway». */
 export const tituloDeGuion = (g: { nombre: string; autor: string | null }) =>
   g.autor ? `${g.nombre} by ${g.autor}` : g.nombre;

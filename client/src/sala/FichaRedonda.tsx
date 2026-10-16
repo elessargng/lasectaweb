@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Calavera from './Calavera';
 
 interface FichaRedondaProps {
   /** Lo que lleva dentro (más adelante, el rol). */
@@ -11,6 +12,11 @@ interface FichaRedondaProps {
   voto?: number | null;
   /** Boca abajo (revelando el grimorio): se ve el reverso. Al cambiar, gira. */
   bocaAbajo?: boolean;
+  /**
+   * En una nominación: se ve el reverso (la esfera del reloj) como boca abajo,
+   * pero con la calavera y los votos encima.
+   */
+  reloj?: boolean;
   /**
    * Boca abajo, se gira al pasar el ratón o con el foco en el botón que la
    * contiene (con la clase group): el narrador la mira antes de revelarla.
@@ -33,12 +39,12 @@ interface FichaRedondaProps {
  *
  * Solo visual: quien la use dice para el lector de quién es y si está muerto.
  */
-const FichaRedonda = ({ children, muerto = false, marcado = false, voto, bocaAbajo = false, asomar = false }: FichaRedondaProps) => (
+const FichaRedonda = ({ children, muerto = false, marcado = false, voto, bocaAbajo = false, reloj = false, asomar = false }: FichaRedondaProps) => (
   // span (de bloque) y no div: la ficha puede ir dentro de un botón
   <span className="relative block aspect-square w-[var(--sala-ficha,4.5rem)] [perspective:40rem]">
     <span
       className={`relative block h-full w-full transition-transform duration-700 ease-in-out [transform-style:preserve-3d] motion-reduce:transition-none ${
-        bocaAbajo ? '[transform:rotateY(180deg)]' : ''
+        bocaAbajo || reloj ? '[transform:rotateY(180deg)]' : ''
       } ${bocaAbajo && asomar ? 'group-hover:[transform:rotateY(0deg)] group-focus-visible:[transform:rotateY(0deg)]' : ''}`}
     >
       {/* Cara: la textura y el personaje */}
@@ -75,26 +81,9 @@ const FichaRedonda = ({ children, muerto = false, marcado = false, voto, bocaAba
       />
     )}
     {marcado && !bocaAbajo && (
-      // Calavera color hueso, centrada y grande
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-        className="absolute left-1/2 top-1/2 w-[62%] -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_2px_2px_rgba(0,0,0,0.55)]"
-      >
-        <path
-          d="M12 2.2C6.9 2.2 3.4 5.9 3.4 10.4c0 2.8 1.3 5 3.3 6.3v2.6c0 1.2.9 2.1 2.1 2.1h6.4c1.2 0 2.1-.9 2.1-2.1v-2.6c2-1.3 3.3-3.5 3.3-6.3 0-4.5-3.5-8.2-8.6-8.2Z"
-          fill="#efe6d2"
-          stroke="#3b2f25"
-          strokeWidth="1.1"
-          strokeLinejoin="round"
-        />
-        {/* Cuencas, nariz, mandíbula y dientes */}
-        <ellipse cx="8.7" cy="11" rx="2.3" ry="2.5" fill="#2b211a" />
-        <ellipse cx="15.3" cy="11" rx="2.3" ry="2.5" fill="#2b211a" />
-        <path d="M12 13.7l-1.1 2.3h2.2Z" fill="#2b211a" />
-        <path d="M6.9 16.8c1.6.9 3.3 1.3 5.1 1.3s3.5-.4 5.1-1.3" fill="none" stroke="#3b2f25" strokeWidth=".7" />
-        <path d="M10.2 18.3v3M12 18.3v3M13.8 18.3v3" stroke="#3b2f25" strokeWidth=".8" strokeLinecap="round" />
-      </svg>
+      // La calavera, en el estilo que haya elegido cada uno (Preferencias > Interfaz),
+      // centrada y grande: se lee encima del personaje
+      <Calavera className="absolute left-1/2 top-1/2 w-[62%] -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_2px_2px_rgba(0,0,0,0.55)]" />
     )}
     {voto !== undefined && !bocaAbajo && (
       // El voto, grande en el centro: el número de votos que lleva la votación, o una ✗

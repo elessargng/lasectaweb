@@ -1,4 +1,5 @@
-import { Drama, Pin, PinOff } from 'lucide-react';
+import { Pin, PinOff } from 'lucide-react';
+import { IconoMascaras } from './IconosJuego';
 import { useState } from 'react';
 import DialogoFaroles from './DialogoFaroles';
 import DialogoPersonaje from './DialogoPersonaje';
@@ -51,8 +52,8 @@ const PanelFaroles = ({ modo, faroles, estado, pedir, onError, onAnuncio, fijado
     <section aria-labelledby="sala-faroles-titulo" className="flex h-full flex-col gap-4 overflow-y-auto p-4">
       <header className="flex items-start gap-2">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h2 id="sala-faroles-titulo" className="flex items-center gap-2 font-ui text-sm font-semibold uppercase tracking-wide text-theme-main">
-            <Drama size={16} />
+          <h2 id="sala-faroles-titulo" className="flex items-center gap-2 rotulo">
+            <IconoMascaras size={16} />
             Faroles
           </h2>
           <p className="text-xs text-on-surface-muted">{EXPLICACION[modo]}</p>

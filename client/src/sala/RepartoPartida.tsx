@@ -84,15 +84,15 @@ const RepartoPartida = ({ distribucion, bolsa, asientos, npcs, setupAceptado, pr
   return (
     <section
       aria-labelledby="sala-reparto-titulo"
-      className={`self-start rounded border px-3 py-2 text-sm lg:fixed lg:bottom-4 lg:right-[calc(var(--sala-panel-guion-ancho,0px)+1rem)] lg:z-30 ${
-        mal ? 'border-blood-bright bg-blood-deep/85 shadow-[0_0_0_3px_rgba(158,27,37,0.35)]' : 'border-outline-ghost bg-surface/85'
+      className={`sala-aviso self-start px-3 py-2 text-sm lg:fixed lg:bottom-4 lg:right-[calc(var(--sala-panel-guion-ancho,0px)+1rem)] lg:z-30 ${
+        mal ? 'sala-aviso-error' : ''
       }`}
     >
       <h2
         ref={tituloRef}
         id="sala-reparto-titulo"
         tabIndex={-1}
-        className="text-xs font-semibold uppercase tracking-wide text-theme-main focus:outline-none"
+        className="rotulo focus:outline-none"
       >
         Reparto de la partida
       </h2>

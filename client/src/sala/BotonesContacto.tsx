@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { AudioLines, LogIn, MessageSquare } from 'lucide-react';
+import { LogIn, MessageSquare } from 'lucide-react';
+import { IconoConversar } from './IconosJuego';
 
 /** Lo que se puede hacer con alguien desde su nombre: escribirle y conversar (si se puede). */
 export interface ContactoParticipante {
@@ -24,7 +25,7 @@ interface BotonesContactoProps extends ContactoParticipante {
 }
 
 const boton =
-  'flex h-6 w-6 items-center justify-center rounded-full border border-theme-main/70 bg-surface text-theme-main hover:bg-theme-container focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main';
+  'flex h-6 w-6 items-center justify-center rounded-full border border-gold/60 bg-surface text-gold-bright shadow-[0_2px_6px_-2px_rgba(0,0,0,0.9)] hover:border-gold hover:bg-theme-container';
 
 /**
  * Junto al nombre de alguien (no sobre el retrato, que pueden tapar las fichas):
@@ -50,7 +51,7 @@ const BotonesContacto = ({ nombre, onMensaje, conversar, vigilar }: BotonesConta
           aria-disabled={conversar.pendiente}
           className={`${boton} aria-disabled:cursor-default aria-disabled:opacity-50`}
         >
-          {conversar.unirse ? <LogIn size={13} /> : <AudioLines size={13} />}
+          {conversar.unirse ? <LogIn size={13} /> : <IconoConversar size={13} />}
         </button>
       )}
       {vigilar && (

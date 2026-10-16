@@ -1,4 +1,5 @@
-import { Check, Drama, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
+import { IconoMascaras } from './IconosJuego';
 import { useState } from 'react';
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
@@ -65,15 +66,15 @@ const DespertarJugador = ({
     else onError(r.error);
   };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/85 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sala-velo">
       <Dialog
         onClose={onCerrar}
         labelledBy="sala-despierto-titulo"
         describedBy="sala-despierto-ultimo"
-        className="flex max-h-[92vh] w-full max-w-4xl flex-col gap-4 overflow-y-auto rounded-lg border border-theme-main/70 bg-surface p-4 shadow-2xl"
+        className="flex max-h-[92vh] w-full max-w-4xl flex-col gap-4 overflow-y-auto sala-cofre p-4"
       >
         <div className="flex items-start gap-2">
-          <h2 id="sala-despierto-titulo" className="flex-1 text-center font-display text-2xl text-on-surface-bright">
+          <h2 id="sala-despierto-titulo" className="sala-cofre-titulo flex-1 text-center text-3xl">
             Te ha despertado el narrador
           </h2>
           <button type="button" onClick={onCerrar} className={`${botonSecundario} flex items-center gap-1`}>
@@ -82,7 +83,7 @@ const DespertarJugador = ({
           </button>
         </div>
         <div className="flex flex-col items-center gap-2">
-          <h3 className="font-ui text-sm font-semibold text-theme-main">El narrador te muestra</h3>
+          <h3 className="rotulo">El narrador te muestra</h3>
           <div id="sala-despierto-ultimo">
             {ultimo ? (
               <MensajeVisto mensaje={ultimo} estado={estado} personajes={porId} grande />
@@ -98,7 +99,7 @@ const DespertarJugador = ({
               aria-disabled={copiando || yaCopiados}
               className={`${botonPrincipal} flex items-center gap-2 font-ui aria-disabled:cursor-default`}
             >
-              {yaCopiados ? <Check size={18} /> : <Drama size={18} />}
+              {yaCopiados ? <Check size={18} /> : <IconoMascaras size={18} />}
               {yaCopiados ? 'Faroles copiados' : 'Copiar faroles'}
             </button>
           )}
@@ -128,7 +129,7 @@ const DespertarJugador = ({
         <div aria-live="assertive" className="sr-only">
           {anuncioUrgente}
         </div>
-        <div aria-live={ariaLiveErrores}>{error && <p className="text-sm text-red-400">{error}</p>}</div>
+        <div aria-live={ariaLiveErrores}>{error && <p className="text-sm text-blood-pale">{error}</p>}</div>
       </Dialog>
     </div>
   );

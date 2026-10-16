@@ -198,8 +198,12 @@ export class SalaService {
     return this.versionGuionActual;
   }
 
-  /** Cambia el guion de la sala. No comprueba permisos. */
+  /**
+   * Cambia el guion de la sala. Es otra partida: antes se limpia el grimorio
+   * (fichas, bolsa, faroles, registro, fase…, ver limpiarGrimorio). No comprueba permisos.
+   */
   cambiarGuion(guion: GuionResuelto): void {
+    this.limpiarGrimorio();
     this.guionActual = guion;
     this.versionGuionActual += 1;
     // La bolsa, los faroles y los NPCs eran de los personajes del otro guion. Los
@@ -381,6 +385,15 @@ export class SalaService {
     this.bolsaActual = this.bolsaActual.includes(personajeId)
       ? this.bolsaActual.filter((id) => id !== personajeId)
       : [...this.bolsaActual, personajeId];
+  }
+
+  /**
+   * Cambia de una vez los aldeanos, forasteros, esbirros y demonios de la bolsa
+   * (al llenarla al azar); los viajeros que hubiera se quedan. No comprueba que
+   * estén en el guion.
+   */
+  reemplazarBolsa(personajes: string[]): void {
+    this.bolsaActual = [...this.bolsaActual.filter((id) => this.esViajero(id)), ...personajes];
   }
 
   private esViajero(id: string): boolean {

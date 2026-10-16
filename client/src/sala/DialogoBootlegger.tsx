@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import Dialog from '../components/Dialog';
-import { botonPrincipal, botonSecundario } from './estilos';
+import { botonPrincipal, botonSecundario, campo } from './estilos';
 
 interface DialogoBootleggerProps {
   /** Las reglas de ahora (las del guion o las que se escribieron). */
@@ -33,13 +33,13 @@ const DialogoBootlegger = ({ reglas, onGuardar, onCerrar }: DialogoBootleggerPro
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sala-velo">
       <Dialog
         onClose={onCerrar}
         labelledBy="sala-bootlegger-titulo"
-        className="flex w-full max-w-lg flex-col gap-3 rounded border border-outline-ghost bg-surface p-6 shadow-2xl"
+        className="flex w-full max-w-lg flex-col gap-3 sala-cofre sala-cofre-esquinas p-6"
       >
-        <h2 id="sala-bootlegger-titulo" className="text-xl font-semibold">
+        <h2 id="sala-bootlegger-titulo" className="sala-cofre-titulo">
           Reglas del Bootlegger
         </h2>
         <label htmlFor="sala-bootlegger-reglas" className="text-sm text-on-surface-muted">
@@ -51,7 +51,7 @@ const DialogoBootlegger = ({ reglas, onGuardar, onCerrar }: DialogoBootleggerPro
           onChange={(e) => setTexto(e.target.value)}
           rows={6}
           maxLength={6000}
-          className="w-full rounded border border-outline-ghost bg-background p-2 text-sm text-on-surface focus:border-theme-main focus:outline-none"
+          className={`${campo} text-sm`}
         />
         <div className="flex justify-end gap-3">
           <button type="button" onClick={onCerrar} className={botonSecundario}>

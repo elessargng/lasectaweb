@@ -58,7 +58,7 @@ const DialogoPersonaje = ({ ficha, titulo = 'Cambiar ficha', personajes, viajero
       <div className="flex flex-col gap-5">
         {grupos.map(({ titulo: t, personajes: grupo }) => (
           <section key={t} aria-labelledby={`sala-personaje-${t}`}>
-            <h3 id={`sala-personaje-${t}`} className="mb-2 text-sm font-semibold uppercase tracking-wide text-theme-main">
+            <h3 id={`sala-personaje-${t}`} className="rotulo mb-2">
               {t}
             </h3>
             <ul className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-2">
@@ -91,17 +91,17 @@ const DialogoPersonaje = ({ ficha, titulo = 'Cambiar ficha', personajes, viajero
   // En el body: la ficha está en una capa con transform, y dentro de ella «fixed»
   // no sería la pantalla (saldría pequeño y tapado por las fichas).
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sala-velo">
       <Dialog
         onClose={onCerrar}
         labelledBy="sala-personaje-titulo"
-        className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded border border-outline-ghost bg-surface shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-3xl flex-col sala-cofre sala-cofre-esquinas"
       >
         <h2
           id="sala-personaje-titulo"
-          className={`px-6 py-4 text-xl font-semibold ${conPestanas ? '' : 'border-b border-outline-ghost'}`}
+          className="px-6 py-4 sala-cofre-titulo"
         >
-          {titulo} <span className="font-normal text-on-surface-muted">({ficha})</span>
+          {titulo} <span className="font-ui text-base text-on-surface-muted">({ficha})</span>
         </h2>
         {conPestanas ? (
           <PestanasDialogo
@@ -119,7 +119,7 @@ const DialogoPersonaje = ({ ficha, titulo = 'Cambiar ficha', personajes, viajero
         ) : (
           <div className="overflow-y-auto px-6 py-4">{lista}</div>
         )}
-        <div className="flex flex-wrap justify-end gap-3 border-t border-outline-ghost px-6 py-3">
+        <div className="flex flex-wrap justify-end gap-3 sala-cofre-pie px-6 py-3">
           <button
             type="button"
             aria-pressed={actual === null}

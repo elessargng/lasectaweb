@@ -674,6 +674,36 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
+  /**
+   * Llena la bolsa de una vez (el narrador la ha llenado al azar): sustituye sus
+   * aldeanos, forasteros, esbirros y demonios por estos; los viajeros se quedan.
+   * Repetidos, solo buenos y con el Pope. datos: { personajes: string[] }.
+   */
+  'narrador:llenarBolsa': {
+    puede: (sala, yo) => yo.rol === 'narrador' && !!sala.guion(),
+    noPuede: (_sala, yo) => (yo.rol !== 'narrador' ? 'Solo un narrador puede preparar la bolsa.' : 'Antes hay que elegir un guion.'),
+    hacer: (sala, _yo, datos) => {
+      const ids = (datos as { personajes?: unknown } | null)?.personajes;
+      if (!Array.isArray(ids) || ids.length > 100 || ids.some((id) => typeof id !== 'string')) {
+        return { ok: false, error: 'Personajes desconocidos.' };
+      }
+      const vistos = new Set<string>();
+      for (const id of ids as string[]) {
+        const personaje = sala.personaje(id);
+        if (!personaje || personaje.tipo === 'traveller' || !TIPOS_EN_BOLSA.includes(personaje.tipo)) {
+          return { ok: false, error: 'En la bolsa al azar solo van aldeanos, forasteros, esbirros y demonios del guion.' };
+        }
+        const bueno = personaje.tipo === 'townsfolk' || personaje.tipo === 'outsider';
+        if (vistos.has(id) && !(bueno && sala.npcActivo(NPC_POPE))) {
+          return { ok: false, error: 'Solo con el Pope puede haber aldeanos o forasteros repetidos.' };
+        }
+        vistos.add(id);
+      }
+      sala.reemplazarBolsa(ids as string[]);
+      return { ok: true };
+    },
+  },
+
   /** Con el Gardener: entrega a los jugadores los personajes ya repartidos. */
   'narrador:entregarFichas': {
     puede: (sala, yo) => yo.rol === 'narrador' && sala.fichasRetenidas(),

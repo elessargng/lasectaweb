@@ -58,7 +58,7 @@ const CuentaAtras = ({ fin, desfase, onTermina }: CuentaAtrasProps) => {
   return (
     <p
       aria-hidden="true"
-      className="font-teutonic1 text-6xl leading-none text-white tabular-nums drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]"
+      className="font-teutonic1 text-6xl leading-none text-gold-bright tabular-nums drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]"
     >
       {actual ?? '¡Tiempo!'}
     </p>

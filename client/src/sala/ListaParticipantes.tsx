@@ -1,5 +1,7 @@
-import { BookMarked, Ear, Users } from 'lucide-react';
+import { Ear } from 'lucide-react';
+import { IconoGente, IconoLibroSecreto } from './IconosJuego';
 import { useEffect, useRef, useState } from 'react';
+import { getAvatarUrl } from '../utils/api';
 import { botonIcono } from './estilos';
 import type { SalaParticipante, SalaRol } from './useSala';
 
@@ -8,6 +10,22 @@ const GRUPOS: { rol: SalaRol; titulo: string }[] = [
   { rol: 'jugador', titulo: 'Jugadores' },
   { rol: 'visitante', titulo: 'Visitantes' },
 ];
+
+const TONOS = {
+  normal: 'border-grimorio-bright/35 bg-grimorio/30 text-on-surface',
+  apagado: 'border-outline-ghost bg-background/60 text-on-surface-muted',
+};
+
+/** Una pastilla junto al nombre («invitado», «desconectado»). El lector la oye entre paréntesis, como antes. */
+const Distintivo = ({ tono = 'normal', children }: { tono?: keyof typeof TONOS; children: string }) => (
+  <span
+    className={`shrink-0 rounded-full border px-1.5 py-px font-ui text-[0.58rem] font-semibold uppercase leading-tight tracking-[0.12em] ${TONOS[tono]}`}
+  >
+    <span className="sr-only"> (</span>
+    {children}
+    <span className="sr-only">)</span>
+  </span>
+);
 
 interface ListaParticipantesProps {
   participantes: SalaParticipante[];
@@ -53,10 +71,10 @@ const ListaParticipantes = ({ participantes, yo, escuchando }: ListaParticipante
         onClick={() => setAbierta((v) => !v)}
         className={botonIcono}
       >
-        <Users size={22} />
+        <IconoGente size={22} />
         <span
           aria-hidden="true"
-          className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-theme-main px-1 text-[10px] font-semibold leading-none text-background"
+          className="sala-contador absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-ui text-[10px] font-bold leading-none"
         >
           {participantes.length}
         </span>
@@ -66,7 +84,7 @@ const ListaParticipantes = ({ participantes, yo, escuchando }: ListaParticipante
         ref={panelRef}
         id="sala-participantes"
         hidden={!abierta}
-        className="absolute right-0 top-full z-20 mt-2 w-[min(90vw,36rem)] rounded border border-outline-ghost bg-surface p-4 shadow-lg"
+        className="absolute right-0 top-full z-20 mt-2 w-[min(90vw,36rem)] sala-cofre sala-cofre-esquinas p-5"
       >
         <div className="grid gap-4 sm:grid-cols-3">
           {GRUPOS.map(({ rol, titulo }) => {
@@ -74,28 +92,51 @@ const ListaParticipantes = ({ participantes, yo, escuchando }: ListaParticipante
             const idTitulo = `sala-participantes-${rol}`;
             return (
               <div key={rol}>
-                <p id={idTitulo} className="font-semibold text-theme-main mb-2">
+                <p id={idTitulo} className="rotulo mb-2">
                   {titulo} ({grupo.length})
                 </p>
                 {grupo.length === 0 ? (
                   // El «(0)» de la etiqueta ya lo dice: no se lee dos veces.
-                  <p aria-hidden="true" className="text-on-surface-muted">Nadie.</p>
+                  <p aria-hidden="true" className="text-sm italic text-on-surface-muted">Nadie.</p>
                 ) : (
-                  <ul aria-labelledby={idTitulo} className="flex flex-col gap-1">
+                  <ul aria-labelledby={idTitulo} className="flex flex-col gap-1.5">
                     {grupo.map((p) => (
-                      <li key={p.id} className={p.conectado ? '' : 'text-on-surface-muted'}>
-                        {escuchando.has(p.id) && <Ear size={14} className="mr-1 inline-block align-[-2px] text-theme-main" />}
-                        {p.nombre}
-                        {p.id === yo && ' (tú)'}
-                        {!p.conCuenta && <span className="text-on-surface-muted"> (invitado)</span>}
-                        {!p.conectado && ' (desconectado)'}
-                        {escuchando.has(p.id) && <span className="sr-only"> (escuchando una conversación)</span>}
-                        {p.accesoGrimorio === 'concedido' && (
-                          <>
-                            <BookMarked size={14} className="ml-1 inline-block align-[-2px] text-theme-main" />
-                            <span className="sr-only"> (ve el grimorio)</span>
-                          </>
-                        )}
+                      <li key={p.id} className="flex min-w-0 items-center gap-2">
+                        {/* El retrato, con aro de latón (el tuyo, más brillante); desconectado, apagado */}
+                        <span
+                          aria-hidden="true"
+                          className={`flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-surface font-display text-sm text-gold-bright ${
+                            p.id === yo ? 'border-gold shadow-[0_0_8px_rgba(212,175,106,0.45)]' : 'border-gold/40'
+                          } ${p.conectado ? '' : 'opacity-50 grayscale'}`}
+                        >
+                          {p.avatar ? (
+                            <img src={getAvatarUrl(p.avatar)} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            p.nombre.charAt(0).toLocaleUpperCase('es')
+                          )}
+                        </span>
+                        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                          {escuchando.has(p.id) && <Ear size={14} className="shrink-0 text-gold" />}
+                          {/* Tu nombre, en latón (el lector oye «(tú)») */}
+                          <span
+                            className={`min-w-0 truncate ${
+                              !p.conectado ? 'text-on-surface-muted' : p.id === yo ? 'font-semibold text-gold-bright' : 'text-on-surface-bright'
+                            }`}
+                          >
+                            {p.nombre}
+                            {p.id === yo && <span className="sr-only"> (tú)</span>}
+                          </span>
+                          {/* Distintivos: a la vista, una pastilla; para el lector, «(invitado)»… */}
+                          {!p.conCuenta && <Distintivo>invitado</Distintivo>}
+                          {!p.conectado && <Distintivo tono="apagado">desconectado</Distintivo>}
+                          {escuchando.has(p.id) && <span className="sr-only"> (escuchando una conversación)</span>}
+                          {p.accesoGrimorio === 'concedido' && (
+                            <>
+                              <IconoLibroSecreto size={14} className="shrink-0 text-gold" />
+                              <span className="sr-only"> (ve el grimorio)</span>
+                            </>
+                          )}
+                        </span>
                       </li>
                     ))}
                   </ul>

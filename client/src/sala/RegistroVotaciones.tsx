@@ -1,4 +1,4 @@
-import { Vote } from 'lucide-react';
+import { IconoVotar } from './IconosJuego';
 import { useState } from 'react';
 import Dialog from '../components/Dialog';
 import { botonIcono, botonSecundario } from './estilos';
@@ -31,16 +31,16 @@ const RegistroVotaciones = ({ votaciones }: { votaciones: SalaRegistroVotacion[]
         onClick={() => setAbierto(true)}
         className={botonIcono}
       >
-        <Vote size={22} />
+        <IconoVotar size={22} />
       </button>
       {abierto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sala-velo">
           <Dialog
             onClose={() => setAbierto(false)}
             labelledBy="sala-votaciones-titulo"
-            className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded border border-outline-ghost bg-surface shadow-2xl"
+            className="flex max-h-[85vh] w-full max-w-2xl flex-col sala-cofre sala-cofre-esquinas"
           >
-            <h2 id="sala-votaciones-titulo" className="border-b border-outline-ghost px-6 py-4 text-xl font-semibold">
+            <h2 id="sala-votaciones-titulo" className="px-6 py-4 sala-cofre-titulo">
               Registro de votaciones
             </h2>
             <div className="overflow-y-auto px-6 py-4">
@@ -81,7 +81,7 @@ const RegistroVotaciones = ({ votaciones }: { votaciones: SalaRegistroVotacion[]
                 </div>
               )}
             </div>
-            <div className="flex justify-end border-t border-outline-ghost px-6 py-3">
+            <div className="flex justify-end sala-cofre-pie px-6 py-3">
               <button type="button" onClick={() => setAbierto(false)} className={botonSecundario}>
                 Cerrar
               </button>

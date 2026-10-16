@@ -39,7 +39,7 @@ const PestanasDialogo = ({ idBase, etiqueta, pestanas, activa, onElegir, childre
 
   return (
     <>
-      <div role="tablist" aria-label={etiqueta} className="flex gap-1 border-b border-outline-ghost px-6">
+      <div role="tablist" aria-label={etiqueta} className="flex gap-1 border-b border-gold/15 px-6">
         {pestanas.map(({ id, etiqueta: texto, contador }) => {
           const elegida = id === activa;
           return (
@@ -53,13 +53,15 @@ const PestanasDialogo = ({ idBase, etiqueta, pestanas, activa, onElegir, childre
               tabIndex={elegida ? 0 : -1}
               onClick={() => onElegir(id)}
               onKeyDown={alTeclear}
-              className={`-mb-px border-b-2 px-3 py-2 font-ui text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main motion-reduce:transition-none ${
-                elegida ? 'border-theme-main text-on-surface-bright' : 'border-transparent text-on-surface-muted hover:text-on-surface'
+              className={`-mb-px border-b-2 px-3 py-2 font-ui text-sm tracking-wide transition-colors motion-reduce:transition-none ${
+                elegida
+                  ? 'border-theme-main text-gold-bright [text-shadow:0_0_12px_rgba(212,175,106,0.35)]'
+                  : 'border-transparent text-on-surface-muted hover:text-on-surface'
               }`}
             >
               {texto}
               {contador && contador.valor > 0 && (
-                <span className="ml-1.5 rounded-full bg-theme-main px-1.5 text-[0.65rem] font-bold text-background">
+                <span className="sala-contador ml-1.5 rounded-full px-1.5 text-[0.65rem] font-bold">
                   <span className="sr-only">, </span>
                   {contador.valor}
                   <span className="sr-only"> {contador.texto}</span>

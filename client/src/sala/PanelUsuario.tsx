@@ -4,7 +4,7 @@ import { getAvatarUrl } from '../utils/api';
 import { compressImage } from '../utils/image';
 import { AVATAR_INVITADO, AVATARES_SALA } from './avatares';
 import { useAriaLive } from './avisosConfig';
-import { botonPrincipal } from './estilos';
+import { botonPrincipal, campo } from './estilos';
 import { NOMBRE_MAX } from './invitado';
 
 /** Si sale bien, `avatar` es cómo queda guardado (la ruta, si se ha subido una imagen). */
@@ -29,8 +29,6 @@ interface PanelUsuarioProps {
   onGuardar: (nombre: string, avatar: string) => Promise<ResultadoPerfil>;
 }
 
-const inputClass =
-  'rounded border border-outline-ghost bg-background px-3 py-2 text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main aria-[invalid=true]:border-red-400';
 
 /** Pestaña Usuario: el nombre y el avatar con los que se aparece en la sala. */
 const PanelUsuario = ({ nombreActual, avatarElegido, cuenta, onGuardar }: PanelUsuarioProps) => {
@@ -101,7 +99,7 @@ const PanelUsuario = ({ nombreActual, avatarElegido, cuenta, onGuardar }: PanelU
             [cuenta ? 'sala-pref-nombre-ayuda' : '', error?.campo === 'nombre' ? 'sala-pref-error' : ''].join(' ').trim() ||
             undefined
           }
-          className={inputClass}
+          className={campo}
         />
         {cuenta && (
           <p id="sala-pref-nombre-ayuda" className="text-xs text-on-surface-muted">
@@ -148,7 +146,7 @@ const PanelUsuario = ({ nombreActual, avatarElegido, cuenta, onGuardar }: PanelU
 
       <div aria-live={ariaLive}>
         {error && (
-          <p id="sala-pref-error" className="text-sm text-red-400">
+          <p id="sala-pref-error" className="text-sm text-blood-pale">
             {error.error}
           </p>
         )}

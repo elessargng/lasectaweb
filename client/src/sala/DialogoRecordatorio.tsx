@@ -54,13 +54,13 @@ const DialogoRecordatorio = ({ ficha, enJuego, otros, onElegir, onCerrar }: Dial
 
   // En el body: la ficha está en una capa con transform, y dentro de ella «fixed» no sería la pantalla.
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sala-velo">
       <Dialog
         onClose={onCerrar}
         labelledBy="sala-recordatorio-titulo"
-        className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded border border-outline-ghost bg-surface shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-3xl flex-col sala-cofre sala-cofre-esquinas"
       >
-        <h2 id="sala-recordatorio-titulo" className="border-b border-outline-ghost px-6 py-4 text-xl font-semibold">
+        <h2 id="sala-recordatorio-titulo" className="px-6 py-4 sala-cofre-titulo">
           Poner recordatorio <span className="font-normal text-on-surface-muted">({ficha})</span>
         </h2>
         <div role="tablist" aria-label="Personajes" className="flex gap-1 border-b border-outline-ghost px-6 py-2">
@@ -79,7 +79,7 @@ const DialogoRecordatorio = ({ ficha, enJuego, otros, onElegir, onCerrar }: Dial
               onClick={() => setPestana(t.id)}
               onKeyDown={alTeclear}
               className={`rounded px-3 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
-                pestana === t.id ? 'bg-theme-container font-semibold text-white' : 'text-on-surface-muted hover:bg-theme-container/40'
+                pestana === t.id ? 'bg-theme-container font-semibold text-gold-bright shadow-[inset_2px_0_0_var(--color-theme-main)]' : 'text-on-surface-muted hover:bg-grimorio/25'
               }`}
             >
               {t.etiqueta}
@@ -104,7 +104,7 @@ const DialogoRecordatorio = ({ ficha, enJuego, otros, onElegir, onCerrar }: Dial
                 <section key={titulo} aria-labelledby={`sala-recordatorio-${pestana}-${titulo}`}>
                   <h3
                     id={`sala-recordatorio-${pestana}-${titulo}`}
-                    className="mb-2 text-sm font-semibold uppercase tracking-wide text-theme-main"
+                    className="rotulo mb-2"
                   >
                     {titulo}
                   </h3>
@@ -136,7 +136,7 @@ const DialogoRecordatorio = ({ ficha, enJuego, otros, onElegir, onCerrar }: Dial
             </div>
           )}
         </div>
-        <div className="flex justify-end border-t border-outline-ghost px-6 py-3">
+        <div className="flex justify-end sala-cofre-pie px-6 py-3">
           <button type="button" onClick={onCerrar} className={botonSecundario}>
             Cancelar
           </button>

@@ -23,7 +23,7 @@ const AsaMover = ({ nombre, numero, cogido, ...props }: AsaMoverProps) => (
     aria-label={`Mover a ${nombre}, asiento ${numero}`}
     aria-pressed={cogido}
     aria-describedby={ID_AYUDA_MOVER}
-    className={`absolute left-1 top-1 z-10 flex h-8 w-8 touch-none items-center justify-center rounded-full border border-theme-main bg-surface text-white shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
+    className={`absolute left-1 top-1 z-10 flex h-8 w-8 touch-none items-center justify-center rounded-full border border-gold/70 bg-surface text-gold-bright shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
       cogido ? 'cursor-grabbing bg-theme-main text-background' : 'cursor-grab hover:bg-theme-container'
     }`}
   >

@@ -1,9 +1,20 @@
-/** Clases compartidas por las pantallas de la sala (no usa los botones rúnicos de la web). */
-const foco = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main';
+/**
+ * Clases compartidas por las pantallas de la sala. Los botones son los de latón
+ * de la web (btn-runic, de piezas.css); el resto de piezas, de sala.css.
+ */
+const deshabilitado = 'aria-disabled:cursor-not-allowed aria-disabled:opacity-50';
 
-export const botonPrincipal = `rounded bg-theme-container border border-theme-main px-4 py-2 font-semibold text-white hover:bg-theme-main hover:text-background disabled:opacity-60 aria-disabled:opacity-60 ${foco} focus-visible:ring-offset-2 focus-visible:ring-offset-background`;
+/** La acción principal: latón dorado. */
+export const botonPrincipal = `btn-runic btn-runic-primary gap-2 px-4 py-2 text-sm ${deshabilitado}`;
 
-export const botonSecundario = `rounded border border-outline-ghost px-3 py-1 text-sm text-on-surface hover:border-theme-main ${foco}`;
+/** Una acción secundaria (Cancelar, Cerrar…): tinta con filo de latón. */
+export const botonSecundario = `btn-runic btn-runic-secondary gap-2 px-3 py-1.5 text-xs ${deshabilitado}`;
 
-/** Botón redondo de solo icono de la cabecera (participantes, narrador…). */
-export const botonIcono = `relative flex h-10 w-10 items-center justify-center rounded-full text-white hover:bg-theme-main/20 aria-expanded:bg-theme-main/20 ${foco}`;
+/** Una acción que no se puede deshacer (expulsar, limpiar el grimorio…): lacre. */
+export const botonPeligro = `btn-runic btn-runic-danger gap-2 px-4 py-2 text-sm ${deshabilitado}`;
+
+/** Botón redondo de solo icono (cabecera, ventanas): un medallón de latón. */
+export const botonIcono = 'sala-boton-icono';
+
+/** Campo de texto o desplegable. */
+export const campo = 'campo aria-[invalid=true]:border-blood-bright!';

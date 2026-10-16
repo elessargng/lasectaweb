@@ -34,17 +34,17 @@ const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, pi
   <div className="relative w-[var(--sala-avatar,10rem)]">
     {titulo && (
       <div className="mb-1 text-center leading-none">
-        <span aria-hidden="true" className="text-xs font-semibold uppercase tracking-wide text-theme-main">
+        <span aria-hidden="true" className="font-ui text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-gold [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">
           {titulo}
         </span>
         {/* Pegados al rótulo, sin quitarle sitio (si no caben, se salen por la derecha) */}
         {junto && <JuntoAlTexto>{junto}</JuntoAlTexto>}
       </div>
     )}
+    {/* Un marco de retrato con doble filo de latón (sala-retrato); vacío, discontinuo */}
     <div
-      className={`flex aspect-square w-full items-center justify-center overflow-hidden rounded ${
-        vacio ? 'border border-dashed border-outline-ghost p-2' : 'border border-theme-main bg-surface'
-      }`}
+      data-vacio={vacio}
+      className={`sala-retrato flex aspect-square w-full items-center justify-center overflow-hidden rounded-[3px] ${vacio ? 'p-2' : ''}`}
     >
       {contenido ?? (imagen && <img src={getAvatarUrl(imagen)} alt="" className="h-full w-full object-cover" />)}
     </div>

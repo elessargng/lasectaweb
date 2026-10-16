@@ -15,7 +15,7 @@ import {
   type Envio,
   type TarjetaDespertar,
 } from './despertar';
-import { botonPrincipal, botonSecundario } from './estilos';
+import { botonPrincipal, botonSecundario, campo } from './estilos';
 import { alineamientoDe, iconoDe } from './fichas';
 import { porTipos, type PersonajeMostrado } from './guiones';
 import type { MensajeDespertar, SalaAlineamiento, SalaEstado, SalaResultado } from './useSala';
@@ -354,7 +354,7 @@ const EditorAdjunto = ({ pendiente, asientos, personajes, onEnviar, onCancelar }
               <div className="flex flex-col gap-3">
                 {porTipos(personajes).map(({ titulo, personajes: grupo }) => (
                   <div key={titulo}>
-                    <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-theme-main">{titulo}</h4>
+                    <h4 className="rotulo mb-1">{titulo}</h4>
                     <ul className="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-1">
                       {grupo.map((p) => {
                         const icono = iconoDe(p, null);
@@ -396,14 +396,14 @@ const EditorAdjunto = ({ pendiente, asientos, personajes, onEnviar, onCancelar }
               autoComplete="off"
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? `${base}-error` : undefined}
-              className={`rounded border border-outline-ghost bg-background px-3 py-2 text-on-surface ${foco}`}
+              className={campo}
             />
           </div>
         )}
       </div>
       <div aria-live={ariaLive}>
         {error && (
-          <p id={`${base}-error`} className="text-sm text-red-400">
+          <p id={`${base}-error`} className="text-sm text-blood-pale">
             {error}
           </p>
         )}

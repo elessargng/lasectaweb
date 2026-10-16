@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import Agujas from './Agujas';
+import AnuncioGanador from './AnuncioGanador';
 import { useAriaLive, type TipoAviso } from './avisosConfig';
 import AsaMover from './AsaMover';
 import Asiento from './Asiento';
@@ -15,7 +16,8 @@ import PersonajeEnFicha from './PersonajeEnFicha';
 import RecordatoriosFicha from './RecordatoriosFicha';
 import { ESCALA_RECORDATORIO } from './FichaRecordatorio';
 import { describirRecordatorio, recordatoriosDeFicha, useFichas } from './fichas';
-import Mano from './Mano';
+import LunaDespertar from './LunaDespertar';
+import ManoLevantada from './ManoLevantada';
 import PanelNominacion from './PanelNominacion';
 import { botonPrincipal, botonSecundario } from './estilos';
 import { ID_AYUDA_MOVER, idLunaFicha, idNombreAsiento, ID_GANADOR, idRevelarFicha } from './ids';
@@ -136,9 +138,6 @@ function posicionRecordatorios(i: number, total: number): { style: CSSProperties
     hacia: { x: -x, y: -y },
   };
 }
-
-/** Una luna creciente (como la de lucide), centrada en una caja de 24 × 24. */
-const LUNA = 'M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z';
 
 const textoAsientos = (n: number) => (n === 1 ? '1 asiento' : `${n} asientos`);
 
@@ -359,7 +358,7 @@ const Mesa = ({
     <div
       ref={mesaRef}
       // isolate: las capas de la mesa (fichas, agujas, centro) no compiten con la cabecera y sus menús
-      className="relative isolate mx-auto aspect-square w-full max-w-[calc(100vh-8rem)]"
+      className="sala-mesa-halo relative isolate mx-auto aspect-square w-full max-w-[calc(100vh-8rem)]"
       // Los tamaños de la mesa (automáticos o no) para sus asientos y fichas.
       style={{ '--sala-avatar': `${avatar}px`, '--sala-ficha': `${ficha}px` } as CSSProperties}
     >
@@ -456,6 +455,7 @@ const Mesa = ({
                   onNominar={nominar.onNominar?.(a.id)}
                   eligiendo={eligiendo}
                   voto={nominacion?.votacion?.resultados[a.id]}
+                  reloj={!!nominacion && !revelacion}
                   despertar={despertarDe(a.id)}
                   seguir={seguir}
                   enJuego={enJuego}
@@ -469,48 +469,27 @@ const Mesa = ({
                   }
                 />
                 {conLuna && despertares && (
-                  // La luna del despertar, sobre toda la ficha: solo su contorno, en blanco; se
-                  // rellena de amarillo (y lo dice) si el jugador ha mandado algo que el narrador
-                  // no ha visto. Solo la luna recibe el clic (lo vuelve a abrir): el resto de la
-                  // ficha sigue abriendo su menú.
+                  // El despertar: una luna con cara sobre toda la ficha (como la calavera), color
+                  // hueso con contorno de tinta; dorada y con un halo quieto (y lo dice) si el
+                  // jugador ha mandado algo que el narrador no ha visto. Solo la luna recibe el
+                  // clic (lo vuelve a abrir): el resto de la ficha sigue abriendo su menú.
                   <button
                     id={idLunaFicha(a.id)}
                     type="button"
                     onClick={() => despertares.onAbrir(a.id)}
-                    className="pointer-events-none absolute inset-0 z-10 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                    className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
                   >
-                    <svg
-                      aria-hidden="true"
-                      viewBox="0 0 24 24"
-                      className={`h-full w-full drop-shadow-[0_0_2px_rgba(0,0,0,0.9)] ${
-                        despertares.noLeidos.has(a.id) ? 'animate-pulse motion-reduce:animate-none' : ''
-                      }`}
-                    >
-                      <path
-                        d={LUNA}
-                        fill={despertares.noLeidos.has(a.id) ? 'var(--color-gold-bright)' : 'none'}
-                        stroke="white"
-                        strokeWidth={1.2}
-                        strokeLinejoin="round"
-                        className="pointer-events-auto cursor-pointer"
-                      />
-                      {/* Más margen para acertar en el contorno (sin pintar) */}
-                      <path d={LUNA} fill="none" stroke="transparent" strokeWidth={4} className="cursor-pointer [pointer-events:stroke]" />
-                    </svg>
+                    <LunaDespertar nueva={despertares.noLeidos.has(a.id)} className="w-[72%]" />
                     <span className="sr-only">
                       Despertar de {nombreDeAsiento(estado, a.id)}
                       {despertares.noLeidos.has(a.id) ? ', mensajes nuevos' : ''}
                     </span>
                   </button>
                 )}
-                {ocupante?.manoLevantada && (
-                  // Mano levantada montada sobre la esquina de arriba a la derecha de su ficha
-                  // (pegada a ella, para que se sepa de quién es aunque las fichas estén juntas);
-                  // se dice en el nombre de la ficha y en los avisos
-                  <Mano
-                    forma={ocupante.formaMano}
-                    className="pointer-events-none absolute -right-[8%] -top-[12%] z-10 w-[calc(var(--sala-ficha,4.5rem)*0.55)] drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]"
-                  />
+                {ocupante && (
+                  // La mano levantada: en la esquina de la ficha (sube y baja) o, en una
+                  // nominación, grande en el centro; se dice en el nombre de la ficha y en los avisos
+                  <ManoLevantada levantada={ocupante.manoLevantada} forma={ocupante.formaMano} enNominacion={!!nominacion} />
                 )}
               </div>
               {/* Sus recordatorios, después de la ficha (en el orden del tabulador también) */}
@@ -547,6 +526,9 @@ const Mesa = ({
 
       <Ondas ondas={ondas} total={total} />
 
+      {/* Todas reveladas: el bando ganador, en grande (se anuncia aparte) */}
+      {revelacion?.terminada && <AnuncioGanador ganador={revelacion.ganador} />}
+
       {agujas && (
         <Agujas
           total={total}
@@ -567,7 +549,7 @@ const Mesa = ({
 
       {nominacion && !nominar.panel && (
         // Debajo del eje de las agujas: los votos que hacen falta (el narrador lo ve en su panel)
-        <p className="absolute left-1/2 top-[calc(50%+3rem)] z-30 -translate-x-1/2 whitespace-nowrap rounded bg-background/70 px-3 py-1 text-sm font-semibold text-white">
+        <p className="absolute left-1/2 top-[calc(50%+3rem)] z-30 -translate-x-1/2 whitespace-nowrap rounded border border-gold/30 bg-background/80 px-3 py-1 font-ui text-sm font-semibold tracking-wide text-on-surface-bright">
           {hacenFalta(nominacion.votosNecesarios)}
         </p>
       )}
@@ -591,29 +573,17 @@ const Mesa = ({
                     </FichaRedonda>
                   </span>
                 )}
-                <span className="rounded border border-theme-main bg-theme-container px-3 py-1 font-ui text-sm text-white group-hover:bg-theme-main group-hover:text-background">
+                <span className={botonPrincipal}>
                   Entregar los personajes
                 </span>
               </button>
             ) : (
-              <p className="max-w-56 rounded border border-outline-ghost bg-surface/90 p-3 text-center text-sm text-on-surface-muted">
+              <p className="max-w-56 sala-cofre p-3 text-center text-sm text-on-surface-muted">
                 El narrador aún no ha entregado los personajes.
               </p>
             ))}
-          {revelacion?.terminada && (
-            // Todas reveladas: el bando ganador, en grande y en su color (se anuncia aparte)
-            <p
-              id={ID_GANADOR}
-              tabIndex={-1}
-              className={`text-center font-teutonic1 text-5xl leading-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] focus:outline-none ${
-                revelacion.ganador === 'bueno' ? 'text-sky-400' : 'text-red-500'
-              }`}
-            >
-              {revelacion.ganador === 'bueno' ? 'Los buenos ganan' : 'Los malvados ganan'}
-            </p>
-          )}
           {revelacion && !revelacion.terminada && acciones.includes('narrador:terminarRevelacion') && (
-            <div className="flex max-w-56 flex-col items-center gap-2 rounded border border-outline-ghost bg-surface/90 p-4 text-center">
+            <div className="flex max-w-56 flex-col items-center gap-2 sala-cofre p-4 text-center">
               <p className="text-sm text-on-surface-muted">Pulsa cada ficha para revelarla a todos.</p>
               <button type="button" onClick={() => void terminarRevelacion()} className={botonPrincipal}>
                 Terminar revelación
@@ -624,7 +594,7 @@ const Mesa = ({
             // Votando: los votos que lleva, en grande (se anuncian al terminar)
             <p
               aria-hidden="true"
-              className="font-teutonic1 text-5xl leading-none text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]"
+              className="font-teutonic1 text-5xl leading-none text-gold-bright drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]"
             >
               {nominacion.votacion.votos === 1 ? '1 voto' : `${nominacion.votacion.votos} votos`}
             </p>
@@ -637,19 +607,19 @@ const Mesa = ({
             />
           )}
           {nominar.cancelar && (
-            <div className="rounded border border-outline-ghost bg-surface/90 p-4">
+            <div className="sala-cofre p-4">
               <button type="button" onClick={nominar.cancelar} className={botonSecundario}>
                 Cancelar nominación
               </button>
             </div>
           )}
           {nominar.panel && (
-            <div className="rounded border border-outline-ghost bg-surface/90 p-4">
+            <div className="sala-cofre p-4">
               <PanelNominacion {...nominar.panel} />
             </div>
           )}
           {editando && (
-            <div className="flex flex-col items-center gap-3 rounded border border-outline-ghost bg-surface/90 p-4">
+            <div className="flex flex-col items-center gap-3 sala-cofre p-4">
               <p aria-live={ariaLiveAsientos} className="text-sm text-on-surface-muted">
                 {textoAsientos(total)}
               </p>

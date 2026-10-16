@@ -1,37 +1,72 @@
 /* Tailwind solo mira el código de la sala, no el de la web */
 @import "tailwindcss" source(".");
+/* Botones de latón, campos, rótulos, cofres… los mismos que en la web */
+@import "../piezas.css";
 
 /*
- * Estilos propios de la sala de juego. No importa index.css a propósito: la
- * sala no hereda la decoración de la web (patrón de fondo, mayúsculas en los
- * títulos, fuentes góticas). Solo conserva los colores, con el morado de La Secta.
+ * Estilos propios de la sala de juego: «Grimorio de latón». No importa index.css a
+ * propósito (la sala no hereda el patrón de fondo ni las mayúsculas de los títulos
+ * de la web), pero comparte sus piezas (piezas.css) y su paleta: el latón es el
+ * acento y las superficies son de tinta morada, como el tapete del grimorio de las
+ * imágenes del juego.
  */
-/* Solo para el nombre de La Secta en la cabecera; el resto, letra legible */
 @font-face {
   font-family: 'Teutonic No1';
   src: url('/fonts/teutonic1.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
+}
+
+/* Dumbledor, la letra de Clocktower: títulos grandes */
+@font-face {
+  font-family: 'Dum1';
+  src: url('/fonts/dum1.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/*
+ * LHF Unlovable, la de los títulos de los guiones del juego. Es una fuente de pago
+ * (Letterhead Fonts): se usa la instalada en el equipo o la de public/fonts si se
+ * pone ahí con licencia; sin ella, Dumbledor.
+ */
+@font-face {
+  font-family: 'LHF Unlovable';
+  src: local('LHF Unlovable'), local('LHFUnlovable'), url('/fonts/lhf-unlovable.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
 
 @theme {
-  --font-body: system-ui, sans-serif;
+  /* Cinzel y Crimson Text se cargan en sala.html */
+  --font-guion: "LHF Unlovable", "Dum1", serif;
+  --font-display: "Dum1", "Cinzel", serif;
+  --font-ui: "Cinzel", "Crimson Text", serif;
+  --font-body: "Crimson Text", Georgia, serif;
   --font-teutonic1: "Teutonic No1", "Cinzel", serif;
 
-  --color-background: #0a0a0a;
-  --color-surface: #121212;
-  --color-on-surface: #dfd8c8;
-  --color-on-surface-muted: #a69f92;
-  --color-outline-ghost: #3a322c;
+  /* Tinta morada (el tapete del grimorio a oscuras), nunca negro puro */
+  --color-background: #0b0914;
+  --color-surface: #13101f;
+  --color-surface-high: #1c1830;
+  --color-surface-highest: #262040;
+  --color-on-surface: #ebe2cc;
+  --color-on-surface-muted: #aba18c;
+  --color-outline-ghost: #3a3246;
 
-  --color-theme-main: #b19cd9;
-  --color-theme-container: #4a3b69;
+  /* Acento: latón. Contenedor (selección, botones activos): morado de grimorio hondo */
+  --color-theme-main: #d4af6a;
+  --color-theme-container: #2a2150;
 
-  /*
-   * Los colores de la paleta de la web («Medianoche y latón», index.css) que usa
-   * también la sala: sin ellos aquí, sus clases y var() se quedan sin color. Los
-   * mismos valores que allí.
-   */
+  /* El morado del tapete, para lo que es «de la sala» (quien habla, burbujas propias) */
+  --color-grimorio: #4b3c86;
+  --color-grimorio-bright: #a596e6;
+  --color-grimorio-deep: #1d1638;
+
+  /* Los colores de la paleta de la web («Medianoche y latón», index.css) */
   --color-on-surface-bright: #fbf5e6;
   --color-gold: #d4af6a;
   --color-gold-bright: #ecd29a;
@@ -39,6 +74,8 @@
   --color-blood: #9e1b25;
   --color-blood-bright: #d4434c;
   --color-blood-deep: #4a0d13;
+  /* Lacre claro: texto de error o de peligro sobre la tinta (contraste alto) */
+  --color-blood-pale: #f0a0a5;
   --color-good: #4f8fd1;
   --color-good-bright: #8dbbec;
   --color-arcano-bright: #a47cc9;
@@ -48,22 +85,83 @@
   --color-savia-deep: #12331a;
   --color-midnight: #121a33;
   --color-parchment: #ebe2cc;
+
+  /* La hoja de personajes y el orden de noche (PanelGuion): pergamino, tinta parda y lacre */
+  --color-hoja-papel: #ebe2cf;
+  --color-hoja-claro: #f6eedb;
+  --color-hoja-crema: #f3e6d0;
+  --color-hoja-tinta: #2f1d0e;
+  --color-hoja-cuerpo: #3a3027;
+  --color-hoja-lacre: #5a1416;
+  --color-hoja-lomo: #7d1820;
+  --color-hoja-malvado: #9b1c1c;
+  --color-hoja-bueno: #1d5d96;
+  --color-hoja-viajero: #7a5a12;
+  --color-hoja-dia: #d9932b;
+  --color-hoja-dia-claro: #fff3d6;
+  --color-hoja-noche: #2b2140;
+  --color-hoja-noche-claro: #e8e2f4;
 }
 
 @layer base {
+  :root {
+    color-scheme: dark;
+
+    /* Las variables que usan las piezas compartidas (piezas.css), con los tonos de la sala */
+    --theme-background: #0b0914;
+    --theme-surface: #13101f;
+    --theme-surface-low: #100d1b;
+    --theme-surface-container: #171327;
+    --theme-surface-high: #1c1830;
+    --theme-surface-highest: #262040;
+    --theme-on-surface: #ebe2cc;
+    --theme-on-surface-variant: #aba18c;
+    --theme-ritual-main: #d4af6a;
+    --theme-ritual-container: #2a2150;
+
+    --gold-rgb: 212, 175, 106;
+    --blood-rgb: 158, 27, 37;
+    /* La «luz de luna» de los cofres: aquí, el morado del grimorio */
+    --midnight-rgb: 43, 33, 86;
+    --grimorio-rgb: 75, 60, 134;
+    --tinta-rgb: 11, 9, 20;
+  }
+
   /*
    * El fondo de la sala: el que elige el narrador (--sala-fondo, lo pone
-   * SalaJuego) o el de por defecto (el de botc.app), cubriendo la ventana y
-   * quieto al desplazarse, con un velo oscuro para que se lean los textos.
+   * SalaJuego) o el de por defecto (el grimorio), cubriendo la ventana y quieto
+   * al desplazarse, con un velo de tinta (más oscuro en los bordes, como a la luz
+   * de una vela) para que se lean los textos.
    */
   body {
     background:
-      linear-gradient(rgba(10, 10, 10, 0.35), rgba(10, 10, 10, 0.35)),
+      radial-gradient(ellipse at center, rgba(var(--tinta-rgb), 0.15) 40%, rgba(var(--tinta-rgb), 0.7) 100%),
+      linear-gradient(rgba(var(--tinta-rgb), 0.35), rgba(var(--tinta-rgb), 0.35)),
       var(--sala-fondo, url('/fondos/predeterminado.webp')) center / cover no-repeat fixed,
       var(--color-background);
     color: var(--color-on-surface);
     font-family: var(--font-body);
+    font-size: 1.0625rem;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
+
+  ::selection {
+    background: var(--theme-ritual-main);
+    color: #140e05;
+  }
+
+  /* Foco visible y coherente en toda la sala */
+  :focus-visible {
+    outline: 2px solid var(--theme-ritual-main);
+    outline-offset: 2px;
+  }
+}
+
+/* Dumbledor luce en títulos, pero en cuerpos pequeños se lee mal: ahí va Cinzel */
+.font-display:is(.text-xs, .text-sm, .text-base, .text-\[10px\], .text-\[11px\]) {
+  font-family: var(--font-ui);
+  letter-spacing: 0.04em;
 }
 
 /* Paneles que salen por la derecha (hoja de personajes, orden de noche) */
@@ -77,45 +175,347 @@
 }
 
 /*
- * Barras de desplazamiento: oscuras, como en la web (index.css), en toda la sala;
- * en la hoja de personajes y el orden de noche (papel arena), color tostado
- * (clase scroll-arena). scrollbar-color para Firefox y Chrome modernos;
- * ::-webkit-scrollbar para Safari y Chrome antiguos.
+ * Barras de desplazamiento: de tinta con el pulgar de latón apagado; en la hoja de
+ * personajes y el orden de noche (papel arena), color tostado (clase scroll-arena).
+ * scrollbar-color para Firefox y Chrome modernos; ::-webkit-scrollbar para Safari.
  */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #3a322c #0a0a0a;
+  scrollbar-color: #4a3f36 transparent;
 }
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #0a0a0a;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2c2c2c;
-  border: 1.5px solid #3a322c;
+  background: linear-gradient(180deg, #4a3f36, #2e2722);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #b19cd9;
-  border-color: #4a3b69;
+  background: linear-gradient(180deg, #d4af6a, #9c7536);
 }
 
 .scroll-arena {
   scrollbar-color: #a88a58 transparent;
 }
-.scroll-arena::-webkit-scrollbar-track {
-  background: transparent;
-}
 .scroll-arena::-webkit-scrollbar-thumb {
   background: #a88a58;
-  border-color: #7a5f36;
 }
 .scroll-arena::-webkit-scrollbar-thumb:hover {
   background: #7d1820;
-  border-color: #5a0f14;
+}
+
+/* ───────────────────────── Piezas de la sala ───────────────────────── */
+
+/* En la capa de componentes: las utilidades de Tailwind pueden ajustarlas */
+@layer components {
+
+/*
+ * Cabecera: cristal de tinta con un filo de latón abajo. El cristal (backdrop-filter)
+ * va en un pseudo-elemento y no en la cabecera: si no, la cabecera haría de caja de
+ * todo lo fijo que lleva dentro (la hoja del guion, que se abre desde ella) y lo
+ * dejaría encerrado en su alto.
+ */
+.sala-cabecera {
+  isolation: isolate;
+  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.85);
+}
+.sala-cabecera::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(var(--grimorio-rgb), 0.18), transparent),
+    rgba(var(--tinta-rgb), 0.88);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+  pointer-events: none;
+}
+.sala-cabecera::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb), 0.55) 15%, rgba(var(--gold-rgb), 0.55) 85%, transparent);
+  pointer-events: none;
+}
+
+/* El título del guion en la cabecera (LHF Unlovable) */
+.sala-titulo-guion {
+  line-height: 1;
+  font-weight: normal;
+}
+
+/*
+ * Cartela del título del guion: un trozo de pergamino de la hoja con doble filo de
+ * latón y sombra, para que el título vaya en su color sobre fondo claro (sin perfil).
+ */
+.sala-cartela {
+  position: relative;
+  padding: 0.3rem 1rem 0.3rem;
+  border-radius: 3px;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(255, 250, 236, 0.55), transparent 70%),
+    url('/hoja.webp') 55% 35% / 260% auto no-repeat,
+    var(--color-hoja-papel);
+  border: 1px solid rgba(var(--gold-rgb), 0.85);
+  box-shadow:
+    inset 0 0 0 2px rgba(243, 230, 208, 0.9),
+    inset 0 0 0 3px rgba(156, 117, 54, 0.45),
+    inset 0 0 10px rgba(122, 90, 18, 0.25),
+    0 4px 12px -4px rgba(0, 0, 0, 0.9);
+}
+
+/* Velo de los modales: tinta y un poco de desenfoque */
+.sala-velo {
+  background: rgba(var(--tinta-rgb), 0.78);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+/*
+ * Cofre: la caja de un diálogo, un menú o una ventana. Tinta con luz morada arriba,
+ * filo de latón y cuatro escuadras doradas en las esquinas (todo decorativo, en
+ * pseudo-elementos: el lector no lo ve).
+ */
+.sala-cofre {
+  position: relative;
+  background:
+    radial-gradient(ellipse 90% 45% at 50% 0%, rgba(var(--midnight-rgb), 0.85), transparent 70%),
+    var(--theme-surface);
+  border: 1px solid rgba(var(--gold-rgb), 0.3);
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 30px 70px -20px rgba(0, 0, 0, 0.95),
+    0 0 60px rgba(var(--grimorio-rgb), 0.12);
+}
+.sala-cofre::before {
+  content: "";
+  position: absolute;
+  inset: -1px -1px auto -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb), 0.9), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+.sala-cofre-esquinas::after {
+  --esquina: rgba(var(--gold-rgb), 0.55);
+  content: "";
+  position: absolute;
+  inset: 6px;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--esquina), var(--esquina)) top left / 14px 1px no-repeat,
+    linear-gradient(var(--esquina), var(--esquina)) top left / 1px 14px no-repeat,
+    linear-gradient(var(--esquina), var(--esquina)) top right / 14px 1px no-repeat,
+    linear-gradient(var(--esquina), var(--esquina)) top right / 1px 14px no-repeat,
+    linear-gradient(var(--esquina), var(--esquina)) bottom left / 14px 1px no-repeat,
+    linear-gradient(var(--esquina), var(--esquina)) bottom left / 1px 14px no-repeat,
+    linear-gradient(var(--esquina), var(--esquina)) bottom right / 14px 1px no-repeat,
+    linear-gradient(var(--esquina), var(--esquina)) bottom right / 1px 14px no-repeat;
+}
+
+/* Título de un cofre: Dumbledor dorado con un filo que se desvanece debajo */
+.sala-cofre-titulo {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  line-height: 1.15;
+  font-weight: normal;
+  color: var(--color-gold-bright);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+.sala-cofre-titulo::after {
+  content: "";
+  display: block;
+  margin-top: 0.6rem;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(var(--gold-rgb), 0.5), transparent 80%);
+}
+
+/* Pie de un cofre (los botones) */
+.sala-cofre-pie {
+  border-top: 1px solid rgba(var(--gold-rgb), 0.16);
+  background: rgba(var(--tinta-rgb), 0.35);
+}
+
+/* Tarjeta de la columna lateral y los paneles: tinta translúcida con filo de latón */
+.sala-panel {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0%, transparent 35%),
+    rgba(19, 16, 31, 0.92);
+  border: 1px solid rgba(var(--gold-rgb), 0.2);
+  border-radius: 4px;
+  box-shadow:
+    inset 0 1px 0 rgba(var(--gold-rgb), 0.08),
+    0 20px 40px -18px rgba(0, 0, 0, 0.85);
+}
+.sala-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb), 0.6), transparent);
+  pointer-events: none;
+}
+
+/* Botón de icono: un medallón de tinta que se dora al pasar, desplegado o pulsado */
+.sala-boton-icono {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  color: var(--theme-on-surface);
+  background: radial-gradient(circle at 50% 35%, rgba(var(--grimorio-rgb), 0.35), rgba(var(--tinta-rgb), 0.6) 75%);
+  border: 1px solid rgba(var(--gold-rgb), 0.28);
+  box-shadow: inset 0 1px 0 rgba(var(--gold-rgb), 0.12);
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.sala-boton-icono:hover:not(:disabled),
+.sala-boton-icono[aria-expanded='true'],
+.sala-boton-icono[aria-pressed='true'] {
+  color: var(--color-gold-bright);
+  border-color: rgba(var(--gold-rgb), 0.75);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--gold-rgb), 0.25),
+    0 0 14px rgba(var(--gold-rgb), 0.3);
+}
+.sala-boton-icono:disabled,
+.sala-boton-icono[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Botón de icono apagado (micro, cámara o sonido desactivados): lacre */
+.sala-boton-apagado {
+  color: #f3c4c7;
+  background: radial-gradient(circle at 50% 35%, rgba(var(--blood-rgb), 0.5), rgba(74, 13, 19, 0.6) 75%);
+  border-color: rgba(212, 67, 76, 0.65);
+}
+.sala-boton-apagado:hover:not(:disabled) {
+  color: #ffffff;
+  border-color: rgba(212, 67, 76, 0.9);
+  box-shadow: 0 0 14px rgba(212, 67, 76, 0.35);
+}
+
+/* Opción de un menú desplegable */
+.sala-opcion {
+  position: relative;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.sala-opcion:hover,
+.sala-opcion:focus-visible {
+  background: linear-gradient(90deg, rgba(var(--grimorio-rgb), 0.45), rgba(var(--grimorio-rgb), 0.12));
+  color: var(--color-on-surface-bright);
+  box-shadow: inset 2px 0 0 var(--theme-ritual-main);
+  outline: none;
+}
+
+/* Aviso flotante (conexión, errores) */
+.sala-aviso {
+  background: rgba(19, 16, 31, 0.95);
+  border: 1px solid rgba(var(--gold-rgb), 0.3);
+  border-radius: 4px;
+  box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.9);
+}
+.sala-aviso-error {
+  color: #f3c4c7;
+  background: linear-gradient(90deg, rgba(var(--blood-rgb), 0.4), rgba(19, 16, 31, 0.95) 60%);
+  border-color: rgba(212, 67, 76, 0.55);
+  box-shadow:
+    inset 3px 0 0 var(--color-blood-bright),
+    0 16px 36px -12px rgba(0, 0, 0, 0.9);
+}
+
+/*
+ * Retrato (avatar de un asiento o un narrador): doble filo de latón, como un marco.
+ * Con data-vacio, discontinuo.
+ */
+.sala-retrato {
+  border: 1px solid rgba(var(--gold-rgb), 0.7);
+  background: var(--theme-surface);
+  box-shadow:
+    inset 0 0 0 2px rgba(var(--tinta-rgb), 0.9),
+    inset 0 0 0 3px rgba(var(--gold-rgb), 0.25),
+    0 8px 18px -8px rgba(0, 0, 0, 0.95);
+}
+.sala-retrato[data-vacio='true'] {
+  border-style: dashed;
+  border-color: rgba(var(--gold-rgb), 0.45);
+  background: rgba(var(--tinta-rgb), 0.55);
+}
+
+/* Quien habla: un aro morado que respira (quieto con menos movimiento) */
+@keyframes sala-habla {
+  0%, 100% {
+    box-shadow: 0 0 0 2px var(--color-grimorio-bright), 0 0 10px 1px rgba(165, 150, 230, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 2px var(--color-grimorio-bright), 0 0 18px 4px rgba(165, 150, 230, 0.7);
+  }
+}
+.sala-habla {
+  animation: sala-habla 1.6s ease-in-out infinite;
+}
+
+/* A quien se sigue: aro de latón con brillo */
+.sala-siguiendo {
+  box-shadow: 0 0 0 3px var(--theme-ritual-main), 0 0 18px 2px rgba(var(--gold-rgb), 0.55);
+}
+
+/* Medallón del estado vacío de un panel (sin mensajes, sin NPC…): decorativo */
+.sala-medallon-vacio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 9999px;
+  color: rgba(var(--gold-rgb), 0.75);
+  background: radial-gradient(circle at 50% 35%, rgba(var(--grimorio-rgb), 0.55), rgba(var(--tinta-rgb), 0.85) 75%);
+  border: 1px solid rgba(var(--gold-rgb), 0.45);
+  box-shadow:
+    inset 0 0 0 3px rgba(var(--tinta-rgb), 0.9),
+    inset 0 0 0 4px rgba(var(--gold-rgb), 0.2),
+    0 0 24px rgba(var(--grimorio-rgb), 0.35);
+}
+
+/* Contador (mensajes sin leer…): latón sobre tinta */
+.sala-contador {
+  background: linear-gradient(180deg, #ebcf91, #b88d44);
+  color: #1a1206;
+  box-shadow: 0 0 0 2px var(--theme-background), 0 0 8px rgba(var(--gold-rgb), 0.5);
+}
+
+/*
+ * Halo de la mesa: una luz de vela muy suave bajo el círculo de asientos que la
+ * separa del fondo. Decorativo (pseudo-elemento).
+ */
+.sala-mesa-halo::before {
+  content: "";
+  position: absolute;
+  inset: 4%;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle, rgba(var(--gold-rgb), 0.08) 0%, rgba(var(--grimorio-rgb), 0.12) 45%, transparent 70%);
+  pointer-events: none;
 }
 
 /*
@@ -141,11 +541,168 @@
   transform: translate(-50%, -50%);
   animation: sala-onda 1.6s ease-out forwards;
 }
+
+}
+
+/*
+ * La mano que se levanta (ManoLevantada): sube desde detrás de la ficha, se pasa
+ * un poco y se balancea hasta quedarse quieta, girando desde la muñeca; al bajarla,
+ * vuelve abajo y se apaga.
+ */
+@keyframes sala-mano-sube {
+  0% {
+    opacity: 0;
+    transform: translateY(70%) rotate(-18deg) scale(0.55);
+  }
+  45% {
+    opacity: 1;
+    transform: translateY(-14%) rotate(8deg) scale(1.08);
+  }
+  65% {
+    transform: translateY(2%) rotate(-6deg) scale(0.98);
+  }
+  82% {
+    transform: translateY(-2%) rotate(3deg) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sala-mano-baja {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(60%) rotate(-14deg) scale(0.6);
+  }
+}
+.sala-mano-sube {
+  transform-origin: 50% 100%;
+  animation: sala-mano-sube 650ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}
+.sala-mano-baja {
+  transform-origin: 50% 100%;
+  animation: sala-mano-baja 260ms ease-in both;
+}
+
+/*
+ * El anuncio del ganador (AnuncioGanador). El color, del bando: azul aldeano o
+ * sangre, en degradado con brillo. Entra (rótulo, filos, título que se enfoca y
+ * destello) y a los 4,5 s sube y encoge hasta quedar bajo la cabecera.
+ */
+.sala-ganador {
+  --bando-claro: #e6f1ff;
+  --bando: #8dbbec;
+  --bando-hondo: #2f6aa8;
+  --bando-rgb: 79, 143, 209;
+  transform-origin: 50% 0;
+  animation: sala-ganador-asentar 1s 4.5s cubic-bezier(0.6, 0, 0.2, 1) both;
+}
+.sala-ganador[data-bando='malvado'] {
+  --bando-claro: #ffd6d9;
+  --bando: #e0525b;
+  --bando-hondo: #7a1019;
+  --bando-rgb: 212, 67, 76;
+}
+.sala-ganador-franja {
+  background:
+    radial-gradient(ellipse 45% 100% at 50% 50%, rgba(var(--bando-rgb), 0.22), transparent 75%),
+    linear-gradient(90deg, transparent, rgba(var(--tinta-rgb), 0.88) 18%, rgba(var(--tinta-rgb), 0.88) 82%, transparent);
+  animation: sala-ganador-aparecer 0.6s ease-out both;
+}
+.sala-ganador-rotulo {
+  animation: sala-ganador-aparecer 0.6s 0.2s ease-out both;
+}
+.sala-ganador-filo {
+  display: block;
+  width: min(36rem, 80vw);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb), 0.85), transparent);
+  animation: sala-ganador-filo 0.9s 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.sala-ganador-titulo {
+  font-size: clamp(2rem, 8vw, 6.5rem);
+  padding: 0.05em 0.1em 0.12em;
+  /* Encima, el destello que cruza; debajo, el degradado del bando */
+  background:
+    linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.9) 50%, transparent 62%) 160% 0 / 250% 100% no-repeat,
+    linear-gradient(180deg, var(--bando-claro) 0%, var(--bando) 52%, var(--bando-hondo) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 24px rgba(var(--bando-rgb), 0.45));
+  animation:
+    sala-ganador-titulo 1.1s 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both,
+    sala-ganador-destello 1.4s 1.5s ease-in-out both;
+}
+@keyframes sala-ganador-aparecer {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes sala-ganador-filo {
+  from { opacity: 0; transform: scaleX(0); }
+  to { opacity: 1; transform: scaleX(1); }
+}
+@keyframes sala-ganador-titulo {
+  from { opacity: 0; transform: scale(1.18); letter-spacing: 0.18em; filter: blur(10px); }
+  to { opacity: 1; transform: none; letter-spacing: normal; }
+}
+@keyframes sala-ganador-destello {
+  from { background-position: 160% 0, 0 0; }
+  to { background-position: -60% 0, 0 0; }
+}
+@keyframes sala-ganador-asentar {
+  to { transform: translateY(calc(var(--sala-cabecera-alto, 3.6rem) + 0.75rem - 30vh)) scale(0.55); }
+}
+@media (forced-colors: active) {
+  .sala-ganador-titulo {
+    background: none;
+    color: CanvasText;
+    filter: none;
+  }
+}
+
+/* ───────────────────────── Movimiento reducido ───────────────────────── */
+
 @media (prefers-reduced-motion: reduce) {
   .sala-onda {
     animation: none;
     left: 50%;
     opacity: 0.85;
+  }
+
+  /* El ganador, quieto ya en su sitio (bajo la cabecera) */
+  .sala-ganador,
+  .sala-ganador-franja,
+  .sala-ganador-rotulo,
+  .sala-ganador-filo,
+  .sala-ganador-titulo {
+    animation-duration: 1ms;
+    animation-delay: 0s;
+  }
+
+  /* Sin movimiento, pero que acaben (ManoLevantada espera al final de la de bajar) */
+  .sala-mano-sube,
+  .sala-mano-baja {
+    animation-duration: 1ms;
+  }
+
+  .sala-habla {
+    animation: none;
+    box-shadow: 0 0 0 2px var(--color-grimorio-bright), 0 0 12px 2px rgba(165, 150, 230, 0.55);
+  }
+
+  .btn-runic,
+  .btn-sello,
+  .segmentado > button,
+  .campo,
+  .opcion,
+  .sala-boton-icono,
+  .sala-opcion {
+    transition: none;
   }
 }
 

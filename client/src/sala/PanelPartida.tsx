@@ -2,6 +2,7 @@ import Deslizador from './Deslizador';
 import FondoSala, { type CambioFondo } from './FondoSala';
 import type { SalaMensajesPrivados } from './chat';
 import type { SalaConfiguracion, SalaResultado } from './useSala';
+import { campo } from './estilos';
 
 /** Lo que tarda la aguja de ficha en ficha al votar; el servidor tiene los mismos límites. */
 const SEGUNDOS_POR_FICHA = { min: 0.25, max: 2, paso: 0.25, defecto: 1 };
@@ -48,7 +49,7 @@ const PanelPartida = ({ configuracion, onCambiar, onCambiarFondo }: PanelPartida
         value={configuracion.mensajes}
         onChange={(e) => onCambiar({ mensajes: e.target.value as SalaMensajesPrivados })}
         aria-describedby="sala-pref-mensajes-ayuda"
-        className="max-w-xs rounded border border-outline-ghost bg-background px-3 py-2 text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
+        className={`${campo} max-w-xs`}
       >
         <option value="ninguno">Sin mensajes de texto</option>
         <option value="vecinos">Solo con los vecinos</option>

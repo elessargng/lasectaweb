@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAriaLive } from './avisosConfig';
-import { botonPrincipal } from './estilos';
+import { botonPrincipal, campo } from './estilos';
 import type { PreferenciasSala } from './preferencias';
 
 interface PanelComunicacionesProps {
@@ -10,8 +10,6 @@ interface PanelComunicacionesProps {
   hayVideo: boolean;
 }
 
-const selectClass =
-  'max-w-md rounded border border-outline-ghost bg-background px-3 py-2 text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main';
 
 /**
  * Pestaña Comunicaciones: qué cámara y qué micrófono usar (de entrada, los
@@ -89,7 +87,7 @@ const PanelComunicaciones = ({ preferencias, onCambiar, hayVideo }: PanelComunic
       <label htmlFor={id} className="text-sm">
         {etiqueta}
       </label>
-      <select id={id} value={valor} onChange={(e) => cambiar(e.target.value)} className={selectClass}>
+      <select id={id} value={valor} onChange={(e) => cambiar(e.target.value)} className={`${campo} max-w-md`}>
         <option value="">Predeterminado del sistema</option>
         {lista
           .filter((d) => d.deviceId && d.deviceId !== 'default')
@@ -99,14 +97,14 @@ const PanelComunicaciones = ({ preferencias, onCambiar, hayVideo }: PanelComunic
             </option>
           ))}
       </select>
-      {lista.length === 0 && <p className="text-xs text-amber-300">{vacio}</p>}
+      {lista.length === 0 && <p className="text-xs text-gold-bright">{vacio}</p>}
     </div>
   );
 
   return (
     <div className="flex flex-col gap-6">
       {sinPermiso && (
-        <div className="flex flex-col items-start gap-2 rounded border border-amber-500/60 bg-amber-500/10 p-3 text-sm">
+        <div className="flex flex-col items-start gap-2 rounded border border-gold/45 bg-gold/10 p-3 text-sm">
           <p>
             {camaras.length + microfonos.length === 0
               ? 'No se detecta ninguna cámara ni ningún micrófono.'

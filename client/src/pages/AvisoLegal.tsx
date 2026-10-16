@@ -64,6 +64,19 @@ const AvisoLegal: React.FC = () => {
             <p className="text-on-surface-muted text-sm leading-relaxed">
               <em>Blood on the Clocktower</em> es una marca registrada de The Pandemonium Institute. Las herramientas externas referenciadas o integradas (como <a href="https://www.botc.app" target="_blank" rel="noopener noreferrer" className="text-theme-main underline hover:text-white">botc.app</a> o Telegram) pertenecen a sus respectivos propietarios y desarrolladores.
             </p>
+            <p className="text-on-surface-muted text-sm leading-relaxed">
+              Algunos iconos de la sala de juego son de{' '}
+              <a href="https://game-icons.net" target="_blank" rel="noopener noreferrer" className="text-theme-main underline hover:text-white">
+                game-icons.net
+                <span className="sr-only"> (se abre en una ventana nueva)</span>
+              </a>
+              , obra de Delapouite, Lorc, sbed y Skoll, con licencia{' '}
+              <a href="https://creativecommons.org/licenses/by/3.0/deed.es" target="_blank" rel="noopener noreferrer" className="text-theme-main underline hover:text-white">
+                CC BY 3.0
+                <span className="sr-only"> (se abre en una ventana nueva)</span>
+              </a>
+              .
+            </p>
           </section>
 
           {/* Section 4 */}

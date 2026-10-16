@@ -1,6 +1,15 @@
-import { BookLock, Mic, MicOff, Video, VideoOff, Volume2, VolumeX, X } from 'lucide-react';
+import {
+  Mic,
+  MicOff,
+  Video,
+  VideoOff,
+  Volume2,
+  VolumeX,
+  X,
+} from 'lucide-react';
+import { IconoSilencio } from './IconosJuego';
 import { useAriaLive } from './avisosConfig';
-import { botonPrincipal, botonSecundario } from './estilos';
+import { botonIcono, botonPrincipal } from './estilos';
 import type { ProblemaDispositivo } from './useVideollamada';
 
 interface ControlesVideoProps {
@@ -53,10 +62,8 @@ function explicacion({ dispositivo, motivo }: ProblemaDispositivo): { titulo: st
   };
 }
 
-const boton = (activo: boolean) =>
-  `flex h-9 w-9 items-center justify-center rounded-full border focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main aria-disabled:cursor-not-allowed aria-disabled:opacity-40 ${
-    activo ? 'border-theme-main bg-theme-container text-white' : 'border-red-500/70 bg-red-950/40 text-red-300'
-  }`;
+/** Medallón de latón; apagado, de lacre. */
+const boton = (activo: boolean) => `${botonIcono} h-9 w-9 ${activo ? '' : 'sala-boton-apagado'}`;
 
 /**
  * En la cabecera: el micrófono y la cámara (botones que se quedan pulsados), con
@@ -88,8 +95,10 @@ const ControlesVideo = ({
   return (
     <div className="relative flex items-center gap-2">
       {sonidoBloqueado && (
-        <button type="button" onClick={onActivarSonido} className={`${botonPrincipal} flex items-center gap-1 px-2 py-1 text-xs`}>
-          <Volume2 size={16} /> Activar sonido
+        <button type="button" onClick={onActivarSonido} className={`${botonPrincipal} px-3 py-1.5 text-xs`}>
+          <Volume2 size={16} />
+          {/* En pantallas estrechas, solo el icono a la vista (el texto sigue siendo su nombre) */}
+          <span className="max-sm:sr-only">Activar sonido</span>
         </button>
       )}
       {puedeEmitir && (
@@ -138,11 +147,9 @@ const ControlesVideo = ({
           aria-label="Pedir silencio"
           aria-pressed={silencio.activo}
           onClick={silencio.onAlternar}
-          className={`flex h-9 w-9 items-center justify-center rounded-full border focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
-            silencio.activo ? 'border-blood-bright bg-blood-deep text-blood-bright' : 'border-outline-ghost text-on-surface-muted hover:border-theme-main hover:text-on-surface'
-          }`}
+          className={`${botonIcono} h-9 w-9 ${silencio.activo ? 'sala-boton-apagado' : ''}`}
         >
-          <BookLock size={18} />
+          <IconoSilencio size={18} />
         </button>
       )}
       {/* Oír a los demás (o dejar de oírlos): para todos */}
@@ -152,14 +159,14 @@ const ControlesVideo = ({
       {/* Si no se puede usar la cámara o el micrófono: por qué y cómo arreglarlo */}
       <div aria-live={ariaLive} className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)]">
         {info && (
-          <div className="rounded border border-red-500/60 bg-surface p-3 text-sm shadow-2xl">
+          <div className="sala-aviso sala-aviso-error p-3 text-sm">
             <div className="flex items-start justify-between gap-2">
-              <p className="font-semibold text-red-300">{info.titulo}</p>
-              <button type="button" onClick={onCerrarProblema} aria-label="Cerrar el aviso" className={`${botonSecundario} p-1`}>
+              <p className="font-ui font-semibold">{info.titulo}</p>
+              <button type="button" onClick={onCerrarProblema} aria-label="Cerrar el aviso" className={`${botonIcono} h-7 w-7`}>
                 <X size={14} />
               </button>
             </div>
-            <p className="mt-1 text-on-surface-muted">{info.texto}</p>
+            <p className="mt-1 text-on-surface">{info.texto}</p>
           </div>
         )}
       </div>

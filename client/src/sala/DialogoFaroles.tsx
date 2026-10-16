@@ -61,13 +61,13 @@ const DialogoFaroles = ({ faroles, bolsa, asientos, pedir, onCerrar }: DialogoFa
   const vacia = grupos.every((g) => g.personajes.length === 0);
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sala-velo">
       <Dialog
         onClose={onCerrar}
         labelledBy="sala-dialogo-faroles-titulo"
-        className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded border border-outline-ghost bg-surface shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-3xl flex-col sala-cofre sala-cofre-esquinas"
       >
-        <h2 id="sala-dialogo-faroles-titulo" className="border-b border-outline-ghost px-6 py-4 text-xl font-semibold">
+        <h2 id="sala-dialogo-faroles-titulo" className="px-6 py-4 sala-cofre-titulo">
           Asignar faroles
         </h2>
 
@@ -146,9 +146,9 @@ const DialogoFaroles = ({ faroles, bolsa, asientos, pedir, onCerrar }: DialogoFa
         </div>
 
         <div aria-live={ariaLiveErrores} className="px-6">
-          {error && <p className="pb-3 text-sm text-red-400">{error}</p>}
+          {error && <p className="pb-3 text-sm text-blood-pale">{error}</p>}
         </div>
-        <div className="flex justify-end border-t border-outline-ghost px-6 py-3">
+        <div className="flex justify-end sala-cofre-pie px-6 py-3">
           <button type="button" onClick={onCerrar} className={botonSecundario}>
             Cerrar
           </button>

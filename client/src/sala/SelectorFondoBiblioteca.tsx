@@ -75,7 +75,7 @@ const SelectorFondoBiblioteca = ({ onElegir }: SelectorFondoBibliotecaProps) => 
     }
   };
 
-  if (error) return <p className="text-sm text-red-400">{error}</p>;
+  if (error) return <p className="text-sm text-blood-pale">{error}</p>;
   if (!arbol) return <p className="text-sm text-on-surface-muted">Leyendo la Biblioteca…</p>;
 
   // Si la carpeta guardada ya no existe (o no se ve), se empieza por la raíz
@@ -101,7 +101,7 @@ const SelectorFondoBiblioteca = ({ onElegir }: SelectorFondoBibliotecaProps) => 
                     {c.name}
                   </span>
                 ) : (
-                  <button type="button" onClick={() => abrir(c.id)} className="text-theme-main underline hover:text-white">
+                  <button type="button" onClick={() => abrir(c.id)} className="text-theme-main underline hover:text-gold-bright">
                     {c.name}
                   </button>
                 )}

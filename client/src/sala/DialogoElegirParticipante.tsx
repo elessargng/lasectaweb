@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
-import { botonPrincipal, botonSecundario } from './estilos';
+import { botonPrincipal, botonSecundario, campo } from './estilos';
 import type { SalaResultado } from './useSala';
 
 /** A quién se puede elegir: un participante o, p. ej., un asiento (sin `conCuenta`). */
@@ -58,13 +58,13 @@ const DialogoElegirParticipante = <C extends Candidato>({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sala-velo">
       <Dialog
         onClose={onCerrar}
         labelledBy="sala-elegir-titulo"
-        className="w-full max-w-sm rounded border border-outline-ghost bg-surface p-6 shadow-2xl"
+        className="w-full max-w-sm sala-cofre sala-cofre-esquinas p-6"
       >
-        <h2 id="sala-elegir-titulo" className="mb-4 text-xl font-semibold">
+        <h2 id="sala-elegir-titulo" className="mb-4 sala-cofre-titulo">
           {titulo}
         </h2>
         {candidatos.length === 0 ? (
@@ -86,7 +86,7 @@ const DialogoElegirParticipante = <C extends Candidato>({
                 onChange={(e) => setElegido(e.target.value)}
                 aria-invalid={error ? true : undefined}
                 aria-describedby={error ? 'sala-elegir-error' : undefined}
-                className="rounded border border-outline-ghost bg-background px-3 py-2 text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
+                className={campo}
               >
                 {candidatos.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -99,7 +99,7 @@ const DialogoElegirParticipante = <C extends Candidato>({
             </div>
             <div aria-live={ariaLive}>
               {error && (
-                <p id="sala-elegir-error" className="text-sm text-red-400">
+                <p id="sala-elegir-error" className="text-sm text-blood-pale">
                   {error}
                 </p>
               )}

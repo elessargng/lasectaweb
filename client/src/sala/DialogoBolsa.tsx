@@ -1,4 +1,4 @@
-import { TriangleAlert } from 'lucide-react';
+import { Dices, TriangleAlert } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Dialog from '../components/Dialog';
@@ -9,6 +9,7 @@ import type { PersonajeMostrado } from './guiones';
 import PestanasDialogo from './PestanasDialogo';
 import RejillaFichas from './RejillaFichas';
 import { problemasDelReparto, repartoAjustado } from './comprobarReparto';
+import { llenarAlAzar, type BolsaAlAzar } from './bolsaAleatoria';
 import type { SalaDistribucion, SalaResultado } from './useSala';
 
 interface DialogoBolsaProps {
@@ -48,6 +49,10 @@ const ListaNombres = ({ personajes }: { personajes: PersonajeMostrado[] }) => (
  * alguno en la bolsa, abajo sale «¡Setup modificado!». Antes de repartir se pide
  * confirmación: con alguno de esos, para recordar cuáles son (¿se ha ajustado la
  * bolsa?); sin ninguno, si las cuentas no son las de por defecto.
+ *
+ * «Llenar al azar» cambia los aldeanos, forasteros, esbirros y demonios de la
+ * bolsa por unos al azar (ver bolsaAleatoria): si sale el Borracho o la
+ * Marioneta, no van y se dice qué falta, para que el narrador ponga su ficha.
  */
 const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar }: DialogoBolsaProps) => {
   const { personajes, viajeros, porId } = useFichas();
@@ -60,6 +65,8 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar 
   const [enviando, setEnviando] = useState(false);
   // Pidiendo confirmación antes de repartir (en el propio diálogo, en lugar de los botones)
   const [confirmando, setConfirmando] = useState(false);
+  // Lo último que salió al azar (qué falta por el Borracho o la Marioneta): se ve hasta el siguiente
+  const [azar, setAzar] = useState<BolsaAlAzar | null>(null);
   const confirmacionRef = useRef<HTMLParagraphElement>(null);
   const ariaLiveErrores = useAriaLive('errores');
   const ariaLiveBolsa = useAriaLive('bolsa');
@@ -102,6 +109,23 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar 
     if (!r.ok) setError(r.error);
   };
 
+  const sinReparto = distribucion.aldeanos === null;
+  const llenar = async () => {
+    if (sinReparto || enviando) return;
+    const resultado = llenarAlAzar(personajes, distribucion, npcs);
+    if (!resultado) return;
+    setError('');
+    setConfirmando(false);
+    setEnviando(true);
+    const r = await pedir('narrador:llenarBolsa', { personajes: resultado.personajes });
+    setEnviando(false);
+    if (!r.ok) {
+      setError(r.error);
+      return;
+    }
+    setAzar(resultado);
+  };
+
   const repartir = async () => {
     setEnviando(true);
     setError('');
@@ -123,13 +147,13 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar 
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sala-velo">
       <Dialog
         onClose={onCerrar}
         labelledBy="sala-bolsa-titulo"
-        className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded border border-outline-ghost bg-surface shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-3xl flex-col sala-cofre sala-cofre-esquinas"
       >
-        <h2 id="sala-bolsa-titulo" className="px-6 py-4 text-xl font-semibold">
+        <h2 id="sala-bolsa-titulo" className="px-6 py-4 sala-cofre-titulo">
           Preparar la bolsa
         </h2>
         <PestanasDialogo
@@ -186,20 +210,44 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar 
         {/* Setup modificado: se avisa al momento al meter (o sacar) uno de esos personajes */}
         <div aria-live={ariaLiveBolsa} className="px-6">
           {conPreparacion.length > 0 && (
-            <p className="mt-3 flex items-start gap-2 rounded border border-amber-500/60 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
-              <TriangleAlert size={18} className="mt-0.5 shrink-0 text-amber-400" />
+            <p className="mt-3 flex items-start gap-2 rounded border border-gold/45 bg-gold/10 px-3 py-2 text-sm text-gold-bright">
+              <TriangleAlert size={18} className="mt-0.5 shrink-0 text-gold-bright" />
               <span>
                 <strong>¡Setup modificado!</strong> Alteran la preparación: <ListaNombres personajes={conPreparacion} />.
               </span>
             </p>
           )}
         </div>
+        {/* Lo que ha salido al azar y no va en la bolsa: el narrador pone su ficha a mano */}
+        <div aria-live={ariaLiveBolsa} className="px-6">
+          {azar && (
+            <div className="mt-3 flex flex-col gap-1 rounded-[3px] border border-gold/40 bg-gold/10 px-3 py-2 text-sm">
+              <p className="font-ui font-semibold text-gold-bright">Bolsa llenada al azar.</p>
+              {azar.fuera.map(({ personaje, falta }) => (
+                <p key={personaje.id}>
+                  Ha salido <span lang={personaje.nombre.lang} className="font-semibold">{personaje.nombre.texto}</span>: no va
+                  en la bolsa y en su lugar hay un aldeano más. Falta {falta === 'minion' ? 'un esbirro' : 'un forastero'}:
+                  ponle tú su ficha a quien corresponda.
+                </p>
+              ))}
+              {azar.escasos.length > 0 && (
+                <p>
+                  El guion no tiene bastantes{' '}
+                  {TIPOS_REPARTO.filter((t) => azar.escasos.includes(t.tipo))
+                    .map((t) => t.nombre.toLocaleLowerCase('es'))
+                    .join(' ni ')}
+                  : faltan fichas en la bolsa.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
         <div aria-live={ariaLiveErrores} className="px-6">
-          {error && <p className="pt-3 text-sm text-red-400">{error}</p>}
+          {error && <p className="pt-3 text-sm text-blood-pale">{error}</p>}
         </div>
 
         {confirmando ? (
-          <div className="flex flex-col gap-3 border-t border-outline-ghost px-6 py-3">
+          <div className="flex flex-col gap-3 sala-cofre-pie px-6 py-3">
             <p ref={confirmacionRef} tabIndex={-1} className="text-sm focus:outline-none">
               La bolsa no cuadra con el reparto de la partida{conPreparacion.length > 0 && (
                 <> (con <ListaNombres personajes={conPreparacion} />)</>
@@ -221,10 +269,25 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar 
             </div>
           </div>
         ) : (
-          <div className="flex flex-wrap items-center justify-end gap-3 border-t border-outline-ghost px-6 py-3">
+          <div className="flex flex-wrap items-center justify-end gap-3 sala-cofre-pie px-6 py-3">
             <p id="sala-bolsa-cuenta" className="mr-auto text-sm text-on-surface-muted">
               En la bolsa: <span className="tabular-nums">{bolsa.length}</span> de {fichasParaRepartir}
             </p>
+            <button
+              type="button"
+              onClick={() => void llenar()}
+              aria-disabled={sinReparto || enviando}
+              aria-describedby={sinReparto ? 'sala-bolsa-azar-ayuda' : undefined}
+              className={botonSecundario}
+            >
+              <Dices size={16} />
+              Llenar al azar
+            </button>
+            {sinReparto && (
+              <span id="sala-bolsa-azar-ayuda" className="sr-only">
+                Hacen falta al menos 5 jugadores.
+              </span>
+            )}
             <button
               type="button"
               onClick={asignar}

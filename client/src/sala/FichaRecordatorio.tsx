@@ -19,9 +19,10 @@ interface FichaRecordatorioProps {
 }
 
 /**
- * Una ficha recordatorio: redonda, de un morado claro (el arcano de la paleta), con el icono
- * del personaje y el texto del recordatorio curvado por el borde de abajo. Solo visual: quien la usa
- * dice para el lector qué recordatorio es.
+ * Una ficha recordatorio: redonda, de pergamino como las del juego (la misma
+ * textura que las de personaje), con el icono del personaje y el texto del
+ * recordatorio en tinta, curvado por el borde de abajo. Solo visual: quien la
+ * usa dice para el lector qué recordatorio es.
  */
 /**
  * El texto va siguiendo el borde de abajo (un arco dentro del aro), como el
@@ -39,12 +40,10 @@ const FichaRecordatorio = ({ personaje, texto, tamano = TAMANO_RECORDATORIO }: F
   return (
     <span
       aria-hidden="true"
-      className="relative flex aspect-square items-center justify-center overflow-hidden rounded-full border border-gold-deep/70 shadow-[0_2px_5px_rgba(0,0,0,0.6)]"
-      // El fondo, en estilo: la clase arbitraria con el degradado no se generaba
-      style={{
-        width: tamano,
-        background: 'radial-gradient(circle at 50% 35%, var(--color-arcano-bright), var(--color-arcano))',
-      }}
+      className="relative flex aspect-square items-center justify-center overflow-hidden rounded-full shadow-[0_0_0_1px_rgba(43,29,14,0.45),0_2px_5px_rgba(0,0,0,0.6)]"
+      // La textura de las fichas (public/ficha.webp), un poco más grande para que el aro
+      // oscuro quede en el borde; debajo, el pergamino por si tarda en cargar
+      style={{ width: tamano, background: "url('/ficha.webp') center / 112% no-repeat, #e6d8b6" }}
     >
       {personaje?.icono && (
         <img src={urlDelServidor(personaje.icono)} alt="" className="h-[62%] w-[62%] -translate-y-[12%] object-contain" />
@@ -57,10 +56,10 @@ const FichaRecordatorio = ({ personaje, texto, tamano = TAMANO_RECORDATORIO }: F
           fontFamily="Georgia, serif"
           fontWeight="bold"
           fontSize={tamanoTexto(texto.texto)}
-          fill="var(--color-parchment)"
-          // Un borde oscuro: sobre el morado claro el pergamino se lee mejor
-          stroke="rgba(30, 12, 45, 0.85)"
-          strokeWidth="2"
+          fill="#2b211a"
+          // Un halo de pergamino, como el nombre de las fichas de personaje
+          stroke="rgba(243, 230, 208, 0.75)"
+          strokeWidth="1.5"
           style={{ paintOrder: 'stroke' }}
         >
           <textPath href={`#${idArco}`} startOffset="50%" textAnchor="middle">

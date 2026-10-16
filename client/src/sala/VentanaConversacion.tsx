@@ -120,7 +120,7 @@ const VentanaConversacion = ({
       ref={ventanaRef}
       aria-labelledby="sala-conversacion-titulo"
       style={minimizada ? { left: posicion.x, top: posicion.y, width: ANCHO_PEQUENA } : undefined}
-      className={`fixed z-40 flex flex-col gap-2 rounded-lg border border-theme-main/70 bg-surface/95 shadow-2xl backdrop-blur ${
+      className={`fixed z-40 flex flex-col gap-2 sala-cofre backdrop-blur ${
         minimizada
           ? 'p-2'
           : 'left-1/2 top-1/2 max-h-[85vh] w-[min(92vw,60rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto p-4'
@@ -137,7 +137,7 @@ const VentanaConversacion = ({
             onPointerUp={alSoltar}
             onPointerCancel={alSoltar}
             onKeyDown={alTeclear}
-            className="cursor-move touch-none rounded p-0.5 text-on-surface-muted hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
+            className="cursor-move touch-none rounded p-0.5 text-on-surface-muted hover:text-gold-bright focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
           >
             <GripHorizontal size={18} />
           </button>
@@ -149,7 +149,7 @@ const VentanaConversacion = ({
           id="sala-conversacion-titulo"
           ref={tituloRef}
           tabIndex={-1}
-          className={`min-w-0 flex-1 truncate font-semibold text-theme-main focus:outline-none ${minimizada ? 'text-xs' : 'text-lg'}`}
+          className={`min-w-0 flex-1 truncate text-gold-bright focus:outline-none ${minimizada ? 'font-ui text-xs font-semibold' : 'font-display text-xl'}`}
         >
           {escucho ? 'Escuchando una conversación' : 'Conversación privada'}
           {(escucho || otros.length > 0) && (
@@ -175,7 +175,7 @@ const VentanaConversacion = ({
           onClick={onSalir}
           aria-label={escucho ? 'Dejar de escuchar la conversación' : 'Salir de conversación privada'}
           aria-keyshortcuts={teclaSalir}
-          className={`${boton} text-red-300`}
+          className={`${boton} text-blood-pale`}
         >
           <PhoneOff size={14} />
           {escucho ? 'Dejar de escuchar' : 'Salir'}
@@ -197,7 +197,7 @@ const VentanaConversacion = ({
               <span
                 className={`relative block w-full overflow-hidden rounded border bg-background ${
                   minimizada ? 'aspect-square' : 'aspect-video'
-                } ${suyas?.hablando ? 'border-transparent ring-2 ring-[#b19cd9]' : 'border-outline-ghost'}`}
+                } ${suyas?.hablando ? 'border-transparent sala-habla' : 'border-outline-ghost'}`}
               >
                 {suyas?.video ? (
                   <VideoPista pista={suyas.video} espejo={soyYo} />
@@ -208,13 +208,13 @@ const VentanaConversacion = ({
               <span className={`flex max-w-full items-center gap-1 ${minimizada ? 'text-[0.65rem]' : 'text-sm'}`}>
                 {suyas && !suyas.microfono && (
                   <>
-                    <MicOff size={minimizada ? 11 : 14} className="shrink-0 text-red-300" />
+                    <MicOff size={minimizada ? 11 : 14} className="shrink-0 text-blood-pale" />
                     <span className="sr-only">Silenciado: </span>
                   </>
                 )}
-                <span className="truncate">
+                <span className={`truncate ${soyYo ? 'text-gold-bright' : ''}`}>
                   {p.nombre}
-                  {soyYo && ' (tú)'}
+                  {soyYo && <span className="sr-only"> (tú)</span>}
                 </span>
               </span>
             </li>

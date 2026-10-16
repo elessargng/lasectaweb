@@ -95,10 +95,10 @@ export const useFichas = () => useContext(FichasContexto);
 
 /** Los tipos que se reparten, con su nombre y su color (azul los buenos, rojo los malvados). */
 export const TIPOS_REPARTO = [
-  { tipo: 'townsfolk', clave: 'aldeanos', nombre: 'Aldeanos', color: 'text-sky-300' },
-  { tipo: 'outsider', clave: 'forasteros', nombre: 'Forasteros', color: 'text-sky-300' },
-  { tipo: 'minion', clave: 'esbirros', nombre: 'Esbirros', color: 'text-red-400' },
-  { tipo: 'demon', clave: 'demonios', nombre: 'Demonios', color: 'text-red-400' },
+  { tipo: 'townsfolk', clave: 'aldeanos', nombre: 'Aldeanos', color: 'text-good-bright' },
+  { tipo: 'outsider', clave: 'forasteros', nombre: 'Forasteros', color: 'text-good-bright' },
+  { tipo: 'minion', clave: 'esbirros', nombre: 'Esbirros', color: 'text-blood-pale' },
+  { tipo: 'demon', clave: 'demonios', nombre: 'Demonios', color: 'text-blood-pale' },
 ] as const;
 
 /** Cuántos personajes de cada tipo hay en la bolsa. */

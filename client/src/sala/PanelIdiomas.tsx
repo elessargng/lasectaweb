@@ -1,14 +1,13 @@
 import SelectorIdioma from './SelectorIdioma';
 import { GENEROS, useIdiomas } from './guiones';
 import type { PreferenciasSala } from './preferencias';
+import { campo } from './estilos';
 
 interface PanelIdiomasProps {
   preferencias: PreferenciasSala;
   onCambiar: (cambios: Partial<PreferenciasSala>) => void;
 }
 
-const selectClass =
-  'rounded border border-outline-ghost bg-background px-3 py-2 text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main';
 
 /**
  * En la pestaña Usuario: en qué idioma se ven los personajes, los nombres por
@@ -30,7 +29,7 @@ const PanelIdiomas = ({ preferencias, onCambiar }: PanelIdiomasProps) => {
           etiqueta="Nombres"
           valor={preferencias.idiomaNombres}
           onCambiar={(idiomaNombres) => onCambiar({ idiomaNombres })}
-          className={selectClass}
+          className={campo}
           etiquetaClassName="text-sm"
         />
       </div>
@@ -40,7 +39,7 @@ const PanelIdiomas = ({ preferencias, onCambiar }: PanelIdiomasProps) => {
           etiqueta="Descripciones"
           valor={preferencias.idiomaDescripciones}
           onCambiar={(idiomaDescripciones) => onCambiar({ idiomaDescripciones })}
-          className={selectClass}
+          className={campo}
           etiquetaClassName="text-sm"
         />
       </div>
@@ -53,7 +52,7 @@ const PanelIdiomas = ({ preferencias, onCambiar }: PanelIdiomasProps) => {
           value={preferencias.genero}
           onChange={(e) => onCambiar({ genero: e.target.value === 'femenino' ? 'femenino' : 'masculino' })}
           aria-describedby="sala-pref-genero-ayuda"
-          className={selectClass}
+          className={campo}
         >
           {GENEROS.map((g) => (
             <option key={g.id} value={g.id}>

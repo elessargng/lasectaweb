@@ -75,7 +75,7 @@ const RejillaFichas = ({ idBase, grupos, marca, onPulsar, conPreparacion = false
                   >
                     {preparacion && (
                       // Altera la preparación: señal de advertencia (el lector lo oye en el texto de abajo)
-                      <TriangleAlert size={18} className="absolute right-1 top-1 text-amber-400" />
+                      <TriangleAlert size={18} className="absolute right-1 top-1 text-gold-bright" />
                     )}
                     {icono ? (
                       <img

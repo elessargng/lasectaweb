@@ -1,4 +1,5 @@
-import { AudioLines, Link, MicOff } from 'lucide-react';
+import { Link, MicOff } from 'lucide-react';
+import { IconoConversar } from './IconosJuego';
 import type { VideoTrack } from 'livekit-client';
 import BotonesContacto, { JuntoAlTexto, type ContactoParticipante } from './BotonesContacto';
 import VideoPista from './VideoPista';
@@ -126,18 +127,14 @@ const Asiento = ({
   return (
     <div
       className={`group relative rounded ${
-        destino
-          ? 'ring-4 ring-theme-main ring-offset-2 ring-offset-background'
-          : hablando
-            ? 'ring-2 ring-[#b19cd9] ring-offset-2 ring-offset-background'
-            : ''
+        destino ? 'sala-siguiendo' : hablando ? 'sala-habla' : ''
       }`}
     >
       {asa}
       {enConversacion && (
         // Conversando en privado: su cámara y su voz no llegan a la mesa
-        <span className="absolute left-1 top-1 z-10 rounded-full bg-background/85 p-1 text-theme-main">
-          <AudioLines size={14} />
+        <span className="absolute left-1 top-1 z-10 rounded-full border border-gold/40 bg-background/85 p-1 text-gold-bright">
+          <IconoConversar size={14} />
         </span>
       )}
       <CuadroAvatar
@@ -157,7 +154,7 @@ const Asiento = ({
         }
         pie={
           // Los botones van pegados al nombre, sin quitarle ancho (ver JuntoAlTexto)
-          <p className={`${nombreAbajo ? 'mt-1' : 'mb-1'} text-center text-sm break-words`}>
+          <p className={`${nombreAbajo ? 'mt-1' : 'mb-1'} text-center text-sm break-words [text-shadow:0_1px_3px_rgba(0,0,0,0.95)]`}>
             {/* Lo que se lee al llevar el foco al nombre (sentarse, levantarse): sin los botones */}
             <span id={idNombreAsiento(id)} tabIndex={-1} className="focus:outline-none">
               {ocupante ? (
@@ -172,13 +169,21 @@ const Asiento = ({
                   )}
                   {silenciado && (
                     <>
-                      <MicOff size={13} className="mr-1 inline-block align-[-2px] text-red-300" />
+                      <MicOff size={13} className="mr-1 inline-block align-[-2px] text-blood-pale" />
                       <span className="sr-only">silenciado, </span>
                     </>
                   )}
-                  <span className={ocupante.conectado ? 'font-semibold' : 'text-on-surface-muted'}>{ocupante.nombre}</span>
-                  {esYo && ' (tú)'}
-                  {!ocupante.conectado && <span className="text-on-surface-muted"> (desconectado)</span>}
+                  {/* Tu nombre, en latón: así te encuentras en la mesa (el lector oye «(tú)») */}
+                  <span className={!ocupante.conectado ? 'text-on-surface-muted' : esYo ? 'font-semibold text-gold-bright' : 'font-semibold'}>
+                    {ocupante.nombre}
+                  </span>
+                  {esYo && <span className="sr-only"> (tú)</span>}
+                  {!ocupante.conectado && (
+                    // Sin paréntesis a la vista: debajo, en pequeño (el lector oye «(desconectado)»)
+                    <span className="block text-xs italic text-on-surface-muted">
+                      <span className="sr-only"> (</span>desconectado<span className="sr-only">)</span>
+                    </span>
+                  )}
                   {fichaParaLector}
                   {enConversacion && <span className="sr-only"> (en una conversación privada)</span>}
                 </>
@@ -206,7 +211,7 @@ const Asiento = ({
           <button
             type="button"
             onClick={onSentarse}
-            className={`${botonPrincipal} pointer-events-auto px-3 py-1 text-sm opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 motion-reduce:transition-none [@media(hover:none)]:opacity-100`}
+            className={`${botonPrincipal} pointer-events-auto px-2.5 py-1 text-[0.65rem] tracking-wider opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 motion-reduce:transition-none [@media(hover:none)]:opacity-100`}
           >
             Sentarse
             <span className="sr-only"> en el asiento {numero}</span>

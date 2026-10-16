@@ -1,6 +1,7 @@
 import { MessagesSquare, SendHorizontal } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type RefObject } from 'react';
 import { useAriaLive } from './avisosConfig';
+import { botonIcono } from './estilos';
 import {
   CANAL_GENERAL,
   CANAL_SUSURROS,
@@ -38,10 +39,10 @@ const hora = (ms: number) => new Date(ms).toLocaleTimeString('es', { hour: '2-di
 
 /**
  * Colores para el nombre de cada autor en los chats de grupo, de la paleta de La
- * Secta (claros, para leerse sobre las burbujas oscuras): lavanda, oro viejo,
- * salvia, rosa antiguo, azul acero, ámbar, malva y verde agua.
+ * Secta (claros, para leerse sobre las burbujas de tinta): lavanda del grimorio,
+ * latón, salvia, lacre claro, azul aldeano, ámbar, malva y verde agua.
  */
-const COLORES_AUTOR = ['#c9b6ec', '#d9b45a', '#9fc7a4', '#e3a1b4', '#9db8e0', '#e8a96b', '#d79fd8', '#86c9c1'];
+const COLORES_AUTOR = ['#b9acee', '#ecd29a', '#a9cfa9', '#f0a0a5', '#8dbbec', '#eab07a', '#d7a6dc', '#8fd0c6'];
 function colorDeAutor(id: string): string {
   let h = 0;
   for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
@@ -130,11 +131,11 @@ const PanelChat = ({
 
   return (
     <section aria-labelledby="sala-chat-titulo" className="flex h-full w-full flex-col">
-      <h2 id="sala-chat-titulo" className="px-3 pt-3 font-ui text-xs font-semibold uppercase tracking-wide text-theme-main">
+      <h2 id="sala-chat-titulo" className="px-3 pt-3 rotulo">
         Mensajes
       </h2>
       <div className="flex min-h-0 flex-1 flex-col">
-        <div role="tablist" aria-label="Conversaciones" className="flex flex-wrap gap-1 border-b border-outline-ghost px-2 py-2">
+        <div role="tablist" aria-label="Conversaciones" className="flex flex-wrap gap-1 border-b border-gold/15 px-2 py-2">
           {canales.map((canal) => {
             const elegida = canal === actual;
             const pendientes = sinLeer(canal);
@@ -149,13 +150,15 @@ const PanelChat = ({
                 tabIndex={elegida ? 0 : -1}
                 onClick={() => onElegir(canal)}
                 onKeyDown={alTeclear}
-                className={`max-w-[10rem] truncate rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
-                  elegida ? 'bg-theme-container font-semibold text-white' : 'text-on-surface-muted hover:bg-theme-container/40'
+                className={`max-w-[10rem] truncate rounded-full border px-2.5 py-1 font-ui text-xs tracking-wide transition-colors motion-reduce:transition-none ${
+                  elegida
+                    ? 'border-gold/60 bg-theme-container font-semibold text-gold-bright'
+                    : 'border-transparent text-on-surface-muted hover:border-gold/25 hover:text-on-surface'
                 }`}
               >
                 {nombre(canal)}
                 {pendientes > 0 && (
-                  <span className="ml-1 rounded-full bg-theme-main px-1.5 text-[0.65rem] font-bold text-background">
+                  <span className="sala-contador ml-1 rounded-full px-1.5 text-[0.65rem] font-bold">
                     {pendientes}
                     <span className="sr-only"> sin leer</span>
                   </span>
@@ -166,13 +169,14 @@ const PanelChat = ({
         </div>
 
         <div id="sala-chat-panel" role="tabpanel" aria-labelledby={idPestana(actual)} className="flex min-h-0 flex-1 flex-col">
-          {/* Las burbujas, como en un móvil: las propias a la derecha (morado), las de los
-              demás a la izquierda (gris cálido), con un piquito en la primera de cada tanda */}
+          {/* Las burbujas, como en un móvil: las propias a la derecha (morado del grimorio, con
+              filo de latón), las de los demás a la izquierda (tinta), con un piquito en la
+              primera de cada tanda */}
           <ol
             ref={listaRef}
-            className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-[#0f0d12] px-3 py-2 text-sm"
+            className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-background/70 px-3 py-2 text-[0.95rem]"
             style={{
-              backgroundImage: 'radial-gradient(rgba(177,156,217,0.06) 1px, transparent 1px)',
+              backgroundImage: 'radial-gradient(rgba(212,175,106,0.05) 1px, transparent 1px)',
               backgroundSize: '14px 14px',
             }}
           >
@@ -181,7 +185,7 @@ const PanelChat = ({
               <li className="m-auto flex flex-col items-center gap-3 px-4 py-6 text-center">
                 <span
                   aria-hidden="true"
-                  className="flex h-16 w-16 items-center justify-center rounded-full border border-theme-main/30 bg-[radial-gradient(circle,var(--color-theme-container)_0%,transparent_70%)] text-theme-main/50"
+                  className="sala-medallon-vacio"
                 >
                   <MessagesSquare size={28} strokeWidth={1.25} />
                 </span>
@@ -209,20 +213,22 @@ const PanelChat = ({
                 return (
                   <li key={m.id} className={`flex ${propio ? 'justify-end' : 'justify-start'} ${junto ? 'mt-0.5' : 'mt-2'}`}>
                     <div
-                      className={`relative max-w-[85%] rounded-lg px-2.5 pb-1 pt-1.5 shadow-sm ${
-                        propio ? 'bg-[#4a3b69] text-[#f1ecfa]' : 'bg-[#26222b] text-on-surface'
+                      className={`relative max-w-[85%] rounded-lg border px-2.5 pb-1 pt-1.5 shadow-[0_4px_10px_-4px_rgba(0,0,0,0.8)] ${
+                        propio
+                          ? 'border-gold/25 bg-theme-container text-on-surface-bright'
+                          : 'border-outline-ghost bg-surface-high text-on-surface'
                       } ${!junto ? (propio ? 'rounded-tr-none' : 'rounded-tl-none') : ''}`}
                     >
                       {!junto && (
                         // Piquito de la burbuja, hacia quien habla
                         <span
                           aria-hidden="true"
-                          className={`absolute top-0 h-2.5 w-2.5 ${propio ? '-right-2 bg-[#4a3b69]' : '-left-2 bg-[#26222b]'}`}
+                          className={`absolute -top-px h-2.5 w-2.5 ${propio ? '-right-2 bg-theme-container' : '-left-2 bg-surface-high'}`}
                           style={{ clipPath: propio ? 'polygon(0 0, 100% 0, 0 100%)' : 'polygon(0 0, 100% 0, 100% 100%)' }}
                         />
                       )}
                       {conNombre ? (
-                        <p className="text-xs font-semibold" style={{ color: colorDeAutor(m.autor) }}>
+                        <p className="font-ui text-xs font-semibold tracking-wide" style={{ color: colorDeAutor(m.autor) }}>
                           {quien}
                         </p>
                       ) : (
@@ -234,7 +240,7 @@ const PanelChat = ({
                         {/* La hora, abajo a la derecha dentro de la burbuja */}
                         <time
                           dateTime={new Date(m.hora).toISOString()}
-                          className={`float-right ml-2 mt-1 translate-y-0.5 text-[0.65rem] ${propio ? 'text-[#c9b6ec]' : 'text-on-surface-muted'}`}
+                          className={`float-right ml-2 mt-1 translate-y-0.5 text-[0.65rem] ${propio ? 'text-grimorio-bright' : 'text-on-surface-muted'}`}
                         >
                           <span className="sr-only">, </span>
                           {hora(m.hora)}
@@ -247,11 +253,11 @@ const PanelChat = ({
             )}
           </ol>
           {susurros ? (
-            <p className="border-t border-outline-ghost bg-surface p-2 text-xs text-on-surface-muted">
+            <p className="border-t border-gold/15 bg-surface p-2 text-xs text-on-surface-muted">
               Los mensajes privados entre jugadores. Solo para leer: no se puede escribir aquí.
             </p>
           ) : (
-            <form onSubmit={enviar} className="flex flex-col gap-1 border-t border-outline-ghost bg-surface p-2">
+            <form onSubmit={enviar} className="flex flex-col gap-1 border-t border-gold/15 bg-surface p-2">
               <label htmlFor="sala-chat-texto" className="sr-only">
                 Mensaje para {nombre(actual)}
               </label>
@@ -268,20 +274,20 @@ const PanelChat = ({
                   onChange={(e) => setTexto(e.target.value)}
                   aria-invalid={error ? true : undefined}
                   aria-describedby={error ? 'sala-chat-error' : undefined}
-                  className="min-w-0 flex-1 rounded-full border border-outline-ghost bg-[#26222b] px-4 py-2 text-sm text-on-surface placeholder:text-on-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
+                  className="campo min-w-0 flex-1 rounded-full! px-4! py-2!"
                 />
                 <button
                   type="submit"
                   aria-label="Enviar"
                   aria-disabled={enviando || sinDestino}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#4a3b69] text-[#f1ecfa] hover:bg-theme-main hover:text-background focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main aria-disabled:opacity-50"
+                  className={botonIcono}
                 >
                   <SendHorizontal size={18} />
                 </button>
               </div>
               <div aria-live={ariaLive}>
                 {error && (
-                  <p id="sala-chat-error" className="text-xs text-red-400">
+                  <p id="sala-chat-error" className="text-xs text-blood-pale">
                     {error}
                   </p>
                 )}

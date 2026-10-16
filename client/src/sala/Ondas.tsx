@@ -40,7 +40,7 @@ const Ondas = ({ ondas, total }: { ondas: OndaMesa[]; total: number }) => (
             <svg
               key={k}
               viewBox="0 0 20 40"
-              className="sala-onda absolute top-0 text-theme-main drop-shadow-[0_0_6px_rgba(177,156,217,0.9)]"
+              className="sala-onda absolute top-0 text-theme-main drop-shadow-[0_0_6px_rgba(212,175,106,0.85)]"
               style={{ height: lado, width: `calc(${lado} / 2)`, animationDelay: `${k * 0.25}s` }}
             >
               {/* Un arco abierto hacia quien lo recibe: «)» */}

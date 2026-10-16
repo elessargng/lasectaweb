@@ -1,12 +1,13 @@
-import { BookOpen, Feather, Moon } from 'lucide-react';
+import { IconoLibroHechizos, IconoLuna, IconoPluma } from './IconosJuego';
 import IconoBolsa from './IconoBolsa';
 import { useCallback, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import type { TipoAviso } from './avisosConfig';
 import DialogoBolsa from './DialogoBolsa';
+import DialogoConfirmar from './DialogoConfirmar';
 import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import PanelGuion, { type RecordatoriosNoche } from './PanelGuion';
 import { botonIcono } from './estilos';
-import { tituloDeGuion, usePredeterminados, type Genero, type GuionResuelto } from './guiones';
+import { aspectoDeGuion, usePredeterminados, type Genero, type GuionResuelto } from './guiones';
 import type { SalaDistribucion, SalaResultado } from './useSala';
 
 interface TituloGuionProps {
@@ -24,6 +25,11 @@ interface TituloGuionProps {
   bolsa: { bolsa: string[]; distribucion: SalaDistribucion; npcs: string[] } | null;
   /** Avisa al lector (al repartir los personajes de la bolsa). */
   onAnuncio: (tipo: TipoAviso, texto: string) => void;
+  /**
+   * La partida ya ha empezado (fichas, bolsa, votaciones o fase): cambiar de guion
+   * limpia el grimorio, así que antes se pide confirmación.
+   */
+  partidaEmpezada: boolean;
 }
 
 type Vista = 'guion' | 'noche';
@@ -47,11 +53,13 @@ const TituloGuion = ({
   bolsa,
   onAnuncio,
   recordatorios,
+  partidaEmpezada,
 }: TituloGuionProps) => {
   const [preparandoBolsa, setPreparandoBolsa] = useState(false);
   const predeterminados = usePredeterminados();
   const [vista, setVista] = useState<Vista | null>(null);
   const archivoRef = useRef<HTMLInputElement>(null);
+  const aspecto = guion && aspectoDeGuion(guion);
 
   // Al cerrar, el foco vuelve al botón que lo abrió.
   const cerrar = useCallback(() => {
@@ -62,8 +70,15 @@ const TituloGuion = ({
   }, []);
   const alternar = (v: Vista) => setVista((actual) => (actual === v ? null : v));
 
-  // El servidor interpreta y resuelve el guion: aquí solo se dice cuál (o se manda el JSON).
-  const cambiar = async (datos: { predeterminado: string } | { json: string; archivo: string }) => {
+  // El servidor interpreta y resuelve el guion (y limpia el grimorio): aquí solo se dice
+  // cuál (o se manda el JSON). Con la partida empezada, antes se confirma (pendiente).
+  type DatosGuion = { predeterminado: string } | { json: string; archivo: string };
+  const [pendiente, setPendiente] = useState<{ datos: DatosGuion; nombre: string } | null>(null);
+  const cambiar = async (datos: DatosGuion, nombre: string) => {
+    if (partidaEmpezada) {
+      setPendiente({ datos, nombre });
+      return false;
+    }
     const r = await pedir('narrador:cambiarGuion', datos);
     if (!r.ok) onError(r.error);
     return false;
@@ -72,7 +87,7 @@ const TituloGuion = ({
   const cargarArchivo = async (e: ChangeEvent<HTMLInputElement>) => {
     const archivo = e.target.files?.[0];
     e.target.value = '';
-    if (archivo) await cambiar({ json: await archivo.text(), archivo: archivo.name });
+    if (archivo) await cambiar({ json: await archivo.text(), archivo: archivo.name }, archivo.name);
   };
 
   const opciones: OpcionMenu[] = [
@@ -80,7 +95,8 @@ const TituloGuion = ({
       id: p.id,
       etiqueta: p.nombre,
       marcada: guion?.nombre === p.nombre && guion.autor === p.autor,
-      elegir: () => cambiar({ predeterminado: p.id }),
+      abreDialogo: partidaEmpezada,
+      elegir: () => cambiar({ predeterminado: p.id }, p.nombre),
     })),
     { id: 'archivo', etiqueta: 'Cargar desde archivo…', elegir: () => archivoRef.current?.click() },
   ];
@@ -101,13 +117,35 @@ const TituloGuion = ({
 
   return (
     <div className="flex min-w-0 items-center gap-1">
-      <p className="truncate px-2 text-center text-sm font-semibold text-white">
-        {guion ? tituloDeGuion(guion) : <span className="font-normal text-on-surface-muted">Sin guion</span>}
-      </p>
+      {guion ? (
+        // Una cartela de pergamino con filo de latón (sala-cartela, en sala.css): el nombre
+        // y, debajo, el autor en pequeño, en tinta, como en la hoja del guion
+        <div className="mr-1 flex min-w-0 items-center px-1">
+          <p className="sala-cartela flex min-w-0 flex-col items-center gap-0.5 text-center leading-none">
+            {/* En LHF Unlovable, como los títulos del juego: en las ediciones oficiales, del color
+                de su logo; si no, el lacre de la hoja */}
+            <span
+              className={`sala-titulo-guion truncate font-guion text-2xl ${aspecto ? '' : 'text-hoja-lacre'}`}
+              style={aspecto ? { color: aspecto.color } : undefined}
+              lang={guion.edicion ? 'en' : undefined}
+            >
+              {guion.nombre}
+            </span>
+            {guion.autor && (
+              <span className="truncate font-ui text-[0.56rem] font-semibold uppercase tracking-[0.2em] text-hoja-cuerpo">
+                <span className="sr-only">, </span>
+                por {guion.autor}
+              </span>
+            )}
+          </p>
+        </div>
+      ) : (
+        <p className="truncate px-2 font-ui text-sm italic tracking-wide text-on-surface-muted">Sin guion</p>
+      )}
       {guion && (
         <>
-          {botonVista('guion', 'Hoja de personajes', <BookOpen size={20} />)}
-          {botonVista('noche', 'Orden de noche', <Moon size={20} />)}
+          {botonVista('guion', 'Hoja de personajes', <IconoLibroHechizos size={20} />)}
+          {botonVista('noche', 'Orden de noche', <IconoLuna size={20} />)}
         </>
       )}
       {bolsa && (
@@ -127,7 +165,7 @@ const TituloGuion = ({
           <MenuDesplegable
             id="sala-menu-guion"
             etiqueta="Cambiar de guion"
-            boton={<Feather size={20} />}
+            boton={<IconoPluma size={20} />}
             botonClassName={botonIcono}
             opciones={opciones}
           />
@@ -141,6 +179,19 @@ const TituloGuion = ({
             aria-hidden="true"
           />
         </>
+      )}
+
+      {pendiente && (
+        <DialogoConfirmar
+          titulo="Cambiar de guion"
+          confirmar="Cambiar y limpiar"
+          onConfirmar={() => pedir('narrador:cambiarGuion', pendiente.datos)}
+          onCerrar={() => setPendiente(null)}
+        >
+          Para jugar con <span lang="en">{pendiente.nombre}</span> se limpia el grimorio: se borra el registro de
+          votaciones, las fichas vuelven a como estaban al principio, la bolsa se vacía y la partida vuelve a la
+          preparación. Los jugadores siguen en sus asientos.
+        </DialogoConfirmar>
       )}
 
       {preparandoBolsa && bolsa && (

@@ -60,7 +60,7 @@ const CuadroNarrador = ({
   silenciado = false,
   npc,
 }: CuadroNarradorProps) => (
-  <div className={`group relative rounded ${hablando ? 'ring-2 ring-[#b19cd9] ring-offset-2 ring-offset-background' : ''}`}>
+  <div className={`group relative rounded ${hablando ? 'sala-habla' : ''}`}>
     <CuadroAvatar
       titulo="Narrador"
       // Mensaje y conversación junto al rótulo «Narrador», arriba
@@ -69,18 +69,23 @@ const CuadroNarrador = ({
       imagen={narrador.avatar}
       pie={
         <>
-          <p id={idNombreNarrador(narrador.id)} tabIndex={-1} className="mt-2 text-center font-semibold break-words focus:outline-none">
+          <p id={idNombreNarrador(narrador.id)} tabIndex={-1} className="mt-2 text-center font-semibold break-words [text-shadow:0_1px_3px_rgba(0,0,0,0.9)] focus:outline-none">
             <span className="sr-only">Narrador: </span>
             {silenciado && (
               <>
-                <MicOff size={14} className="mr-1 inline-block align-[-2px] text-red-300" />
+                <MicOff size={14} className="mr-1 inline-block align-[-2px] text-blood-pale" />
                 <span className="sr-only">silenciado, </span>
               </>
             )}
             {escuchando && <Ear size={14} className="mr-1 inline-block align-[-2px] text-theme-main" />}
-            {narrador.nombre}
-            {esYo && ' (tú)'}
-            {!narrador.conectado && <span className="font-normal text-on-surface-muted"> (desconectado)</span>}
+            {/* Tu nombre, en latón (el lector oye «(tú)») */}
+            <span className={esYo ? 'text-gold-bright' : undefined}>{narrador.nombre}</span>
+            {esYo && <span className="sr-only"> (tú)</span>}
+            {!narrador.conectado && (
+              <span className="block text-xs font-normal italic text-on-surface-muted">
+                <span className="sr-only"> (</span>desconectado<span className="sr-only">)</span>
+              </span>
+            )}
             {enConversacion && <span className="sr-only"> (en una conversación privada)</span>}
             {escuchando && <span className="sr-only"> (escuchando una conversación)</span>}
           </p>

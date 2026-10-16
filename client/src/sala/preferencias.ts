@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { CALAVERA_DEFECTO, esEstiloCalavera, esEstiloMano, MANO_DEFECTO, type EstiloCalavera, type EstiloMano } from './marcas';
 
 /**
  * Preferencias de la sala que solo cambian cómo la ves tú (tamaños, distancias,
@@ -39,6 +40,10 @@ export interface PreferenciasSala {
   idiomaDescripciones: string;
   /** Género de los textos, en los idiomas que lo distinguen. Pestaña Usuario. */
   genero: 'masculino' | 'femenino';
+  /** Cómo se ve la calavera de las nominaciones. Pestaña Interfaz. */
+  calavera: EstiloCalavera;
+  /** Cómo se ven las manos levantadas. Pestaña Interfaz. */
+  mano: EstiloMano;
   /** Cámara y micrófono elegidos (deviceId); vacío: los del sistema. Pestaña Comunicaciones. */
   idCamara: string;
   idMicrofono: string;
@@ -107,6 +112,8 @@ export function normalizarPreferencias(datos: unknown): PreferenciasSala {
   preferencias.panelLateral = (PANELES_LATERALES as readonly unknown[]).includes(guardadas.panelLateral)
     ? (guardadas.panelLateral as PanelLateral)
     : 'mensajes';
+  preferencias.calavera = esEstiloCalavera(guardadas.calavera) ? guardadas.calavera : CALAVERA_DEFECTO;
+  preferencias.mano = esEstiloMano(guardadas.mano) ? guardadas.mano : MANO_DEFECTO;
   // Los dispositivos: un id del navegador, o vacío (el predeterminado del sistema)
   const idDispositivo = (v: unknown) => (typeof v === 'string' && v.length <= 200 ? v : '');
   preferencias.idCamara = idDispositivo(guardadas.idCamara);
