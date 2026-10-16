@@ -2,7 +2,7 @@ import { useCallback, useState, type KeyboardEvent as ReactKeyboardEvent } from 
 
 /**
  * Atajos de teclado de la sala (Preferencias > Atajos de teclado). Cada uno es
- * una tecla con sus modificadores; se guardan en este navegador.
+ * una tecla con sus modificadores.
  */
 export interface Atajo {
   /** Tecla física (KeyboardEvent.code): no cambia con Mayús ni con la distribución. */
@@ -75,7 +75,8 @@ export function esAtajo(e: KeyboardEvent, a: Atajo): boolean {
   return e.code === a.code && e.ctrlKey === a.ctrl && e.altKey === a.alt && e.shiftKey === a.shift && e.metaKey === a.meta;
 }
 
-const KEY = 'sala:atajos';
+/** Lo que guardaba antes la sala en el navegador (para llevarlo a la cuenta la primera vez). */
+export const KEY_ANTIGUA = 'sala:atajos';
 
 function valido(a: unknown): a is Atajo {
   const x = a as Atajo;
@@ -87,37 +88,31 @@ function valido(a: unknown): a is Atajo {
   );
 }
 
-function leer(): Record<AccionAtajo, Atajo> {
-  let guardados: Record<string, unknown> = {};
-  try {
-    guardados = JSON.parse(localStorage.getItem(KEY) ?? '{}');
-  } catch {
-    // Sin almacenamiento o con algo roto: los iniciales.
-  }
+/** Atajos válidos a partir de lo que sea (guardado, de un perfil…): lo que falte o no valga, el inicial. */
+export function normalizarAtajos(datos: unknown): Record<AccionAtajo, Atajo> {
+  const guardados = (datos && typeof datos === 'object' ? datos : {}) as Record<string, unknown>;
   const atajos = { ...ATAJOS_INICIALES };
   for (const { accion } of ACCIONES_ATAJO) {
     const guardado = guardados[accion];
-    if (valido(guardado)) atajos[accion] = guardado;
+    if (valido(guardado)) {
+      const { code, key, ctrl, alt, shift, meta } = guardado;
+      atajos[accion] = { code, key, ctrl, alt, shift, meta };
+    }
   }
   return atajos;
 }
 
+/** Los atajos viven en memoria: con cuenta se guardan en el servidor (configuracion.ts). */
 export function useAtajos() {
-  const [atajos, setAtajos] = useState(leer);
+  const [atajos, setAtajos] = useState(ATAJOS_INICIALES);
 
   const cambiar = useCallback((accion: AccionAtajo, atajo: Atajo) => {
-    setAtajos((prev) => {
-      const nuevos = { ...prev, [accion]: atajo };
-      try {
-        localStorage.setItem(KEY, JSON.stringify(nuevos));
-      } catch {
-        // Sin almacenamiento: vale mientras la página esté abierta.
-      }
-      return nuevos;
-    });
+    setAtajos((prev) => ({ ...prev, [accion]: atajo }));
   }, []);
+  /** Pone los de una configuración guardada. */
+  const reemplazar = useCallback((datos: unknown) => setAtajos(normalizarAtajos(datos)), []);
 
-  return { atajos, cambiar };
+  return { atajos, cambiar, reemplazar };
 }
 
 /** Marca del botón que está esperando una tecla nueva (Preferencias > Atajos). */

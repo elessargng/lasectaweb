@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
-import type { PersonajeMostrado } from './guiones';
-import type { SalaAlineamiento } from './useSala';
+import type { PersonajeMostrado, Texto } from './guiones';
+import type { SalaAlineamiento, SalaAsiento, SalaRecordatorio } from './useSala';
 
 /**
  * Los personajes en las fichas de la mesa: qué personajes se pueden poner (los
@@ -45,6 +45,12 @@ export interface ContextoFichas {
   /** El grimorio propio del jugador: lo que ha anotado en cada ficha (por asiento). */
   notas: Record<string, ContenidoFicha>;
   anotar: (asientoId: string, contenido: ContenidoFicha) => void;
+  /** Todos los personajes del guion (también legendarios y lóricos): los recordatorios pueden ser de cualquiera. */
+  todos: PersonajeMostrado[];
+  todosPorId: Map<string, PersonajeMostrado>;
+  /** Los recordatorios que ha puesto el jugador en su grimorio propio, por asiento. */
+  notasRecordatorios: Record<string, SalaRecordatorio[]>;
+  anotarRecordatorios: (asientoId: string, recordatorios: SalaRecordatorio[]) => void;
 }
 
 export const FichasContexto = createContext<ContextoFichas>({
@@ -53,7 +59,33 @@ export const FichasContexto = createContext<ContextoFichas>({
   porId: new Map(),
   notas: {},
   anotar: () => {},
+  todos: [],
+  todosPorId: new Map(),
+  notasRecordatorios: {},
+  anotarRecordatorios: () => {},
 });
+
+/**
+ * Los recordatorios que se ven junto a la ficha de un asiento: los de la partida
+ * (solo le llegan a quien ve el grimorio) y, con grimorio propio, los anotados.
+ */
+export function recordatoriosDeFicha(
+  asiento: SalaAsiento,
+  anotados: Record<string, SalaRecordatorio[]> | null,
+): SalaRecordatorio[] {
+  return [...(asiento.recordatorios ?? []), ...(anotados?.[asiento.id] ?? [])];
+}
+
+/** El texto de un recordatorio en el idioma de quien mira (el original si no hay traducción). */
+export function textoRecordatorio(r: SalaRecordatorio, personaje: PersonajeMostrado | undefined): Texto {
+  return personaje?.recordatorios[r.indice] ?? { texto: r.texto, lang: 'en' };
+}
+
+/** Para el lector: «Envenenado (Envenenador)». */
+export function describirRecordatorio(r: SalaRecordatorio, personaje: PersonajeMostrado | undefined): string {
+  const texto = textoRecordatorio(r, personaje).texto;
+  return personaje ? `${texto} (${personaje.nombre.texto})` : texto;
+}
 
 export const useFichas = () => useContext(FichasContexto);
 

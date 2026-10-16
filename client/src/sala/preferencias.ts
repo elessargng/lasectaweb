@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react';
 
 /**
- * Preferencias de la sala que solo cambian cómo la ves tú (tamaños, distancias):
- * se guardan en este navegador y no pasan por el servidor.
+ * Preferencias de la sala que solo cambian cómo la ves tú (tamaños, distancias,
+ * idiomas, dispositivos). Viven en memoria: con cuenta se guardan en el servidor
+ * (configuracion.ts); como invitado no se guarda nada.
  */
 export interface PreferenciasSala {
   /** Lado, en píxeles, de los cuadros de avatar (narradores, asientos). Pestaña Interfaz. */
@@ -21,6 +22,11 @@ export interface PreferenciasSala {
   fichaAuto: boolean;
   /** Suenan la cuenta atrás y los votos de la partida. */
   sonidos: boolean;
+  /**
+   * Al quedarte sin nadie más en una conversación privada, salir de ella sin
+   * pulsar «Salir». Pestaña Comunicaciones; de entrada, no: se sale a mano.
+   */
+  salirConversacionSinNadie: boolean;
   /** El panel de mensajes de texto, plegado. */
   chatMinimizado: boolean;
   /** Idioma (id del paquete de traducción) de los nombres de los personajes. Pestaña Usuario. */
@@ -35,7 +41,7 @@ export interface PreferenciasSala {
 }
 
 type ClaveNumerica = 'tamanoAvatar' | 'tamanoFicha' | 'distanciaFicha';
-type ClaveSiNo = 'avatarAuto' | 'fichaAuto' | 'sonidos' | 'chatMinimizado';
+type ClaveSiNo = 'avatarAuto' | 'fichaAuto' | 'sonidos' | 'salirConversacionSinNadie' | 'chatMinimizado';
 type ClaveIdioma = 'idiomaNombres' | 'idiomaDescripciones';
 
 /** De entrada, el original (inglés). Si el guardado deja de existir, se ve en el original. */
@@ -56,24 +62,29 @@ export const RANGOS: Record<ClaveNumerica, Rango> = {
   distanciaFicha: { min: 0, max: 100, paso: 5, defecto: 75 },
 };
 
-/** Valor inicial de las de sí o no: automático, de entrada. */
-const SI_NO: Record<ClaveSiNo, boolean> = { avatarAuto: true, fichaAuto: true, sonidos: true, chatMinimizado: false };
+/** Valor inicial de las de sí o no. */
+const SI_NO: Record<ClaveSiNo, boolean> = {
+  avatarAuto: true,
+  fichaAuto: true,
+  sonidos: true,
+  salirConversacionSinNadie: false,
+  chatMinimizado: false,
+};
 
-const KEY = 'sala:preferencias';
+/** Lo que guardaba antes la sala en el navegador (para llevarlo a la cuenta la primera vez). */
+export const KEY_ANTIGUA = 'sala:preferencias';
+/** Cámara y micrófono son de este navegador: con cuenta se recuerdan aquí, no en el servidor. */
+const KEY_DISPOSITIVOS = 'sala:dispositivos';
 
 const entre = (n: number, { min, max }: Rango) => Math.min(max, Math.max(min, n));
 
-function leer(): PreferenciasSala {
-  let guardadas: Record<string, unknown> = {};
-  try {
-    guardadas = JSON.parse(localStorage.getItem(KEY) ?? '{}');
-  } catch {
-    // Sin almacenamiento o con algo roto: valores iniciales.
-  }
+/** Preferencias válidas a partir de lo que sea (guardado, de un perfil…): lo que falte o no valga, el valor inicial. */
+export function normalizarPreferencias(datos: unknown): PreferenciasSala {
+  const guardadas = (datos && typeof datos === 'object' ? datos : {}) as Record<string, unknown>;
   const preferencias = {} as PreferenciasSala;
   for (const [clave, rango] of Object.entries(RANGOS) as [ClaveNumerica, Rango][]) {
-    const valor = Number(guardadas[clave]);
-    preferencias[clave] = Number.isFinite(valor) ? entre(valor, rango) : rango.defecto;
+    const valor = guardadas[clave];
+    preferencias[clave] = typeof valor === 'number' && Number.isFinite(valor) ? entre(valor, rango) : rango.defecto;
   }
   for (const [clave, defecto] of Object.entries(SI_NO) as [ClaveSiNo, boolean][]) {
     const valor = guardadas[clave];
@@ -91,20 +102,60 @@ function leer(): PreferenciasSala {
   return preferencias;
 }
 
-export function usePreferencias() {
-  const [preferencias, setPreferencias] = useState(leer);
+/** Lo que va a la cuenta y a los perfiles: todo menos las comunicaciones. */
+export type PreferenciasGuardables = Omit<PreferenciasSala, 'idCamara' | 'idMicrofono'>;
 
-  const cambiar = useCallback((cambios: Partial<PreferenciasSala>) => {
-    setPreferencias((prev) => {
-      const nuevas = { ...prev, ...cambios };
-      try {
-        localStorage.setItem(KEY, JSON.stringify(nuevas));
-      } catch {
-        // Sin almacenamiento: vale mientras la página esté abierta.
-      }
-      return nuevas;
-    });
+export function sinComunicaciones(preferencias: PreferenciasSala): PreferenciasGuardables {
+  const resto: Partial<PreferenciasSala> = { ...preferencias };
+  delete resto.idCamara;
+  delete resto.idMicrofono;
+  return resto as PreferenciasGuardables;
+}
+
+function leerDispositivos(): Pick<PreferenciasSala, 'idCamara' | 'idMicrofono'> {
+  try {
+    const { idCamara, idMicrofono } = normalizarPreferencias(JSON.parse(localStorage.getItem(KEY_DISPOSITIVOS) ?? '{}'));
+    return { idCamara, idMicrofono };
+  } catch {
+    return { idCamara: '', idMicrofono: '' };
+  }
+}
+
+/** `recordarDispositivos`: con cuenta, la cámara y el micrófono se recuerdan en este navegador. */
+export function usePreferencias(recordarDispositivos: boolean) {
+  const [preferencias, setPreferencias] = useState(() => ({
+    ...normalizarPreferencias({}),
+    ...(recordarDispositivos ? leerDispositivos() : {}),
+  }));
+
+  const cambiar = useCallback(
+    (cambios: Partial<PreferenciasSala>) => {
+      setPreferencias((prev) => {
+        const nuevas = { ...prev, ...cambios };
+        if (recordarDispositivos && ('idCamara' in cambios || 'idMicrofono' in cambios)) {
+          try {
+            localStorage.setItem(
+              KEY_DISPOSITIVOS,
+              JSON.stringify({ idCamara: nuevas.idCamara, idMicrofono: nuevas.idMicrofono })
+            );
+          } catch {
+            // Sin almacenamiento: vale mientras la página esté abierta.
+          }
+        }
+        return nuevas;
+      });
+    },
+    [recordarDispositivos]
+  );
+
+  /** Pone las de una configuración guardada, sin tocar las comunicaciones. */
+  const reemplazar = useCallback((datos: unknown) => {
+    setPreferencias((prev) => ({
+      ...normalizarPreferencias(datos),
+      idCamara: prev.idCamara,
+      idMicrofono: prev.idMicrofono,
+    }));
   }, []);
 
-  return { preferencias, cambiar };
+  return { preferencias, cambiar, reemplazar };
 }

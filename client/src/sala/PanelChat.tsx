@@ -1,7 +1,18 @@
 import { ChevronDown, ChevronUp, SendHorizontal } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type RefObject } from 'react';
 import { useAriaLive } from './avisosConfig';
-import { canalesComunes, esPrivado, LARGO_MAXIMO_MENSAJE, nombreCanal, otroDelPrivado, type SalaMensaje } from './chat';
+import {
+  CANAL_SUSURROS,
+  canalesComunes,
+  deQuienAQuien,
+  esPrivado,
+  LARGO_MAXIMO_MENSAJE,
+  mensajesDe,
+  nombreCanal,
+  otroDelPrivado,
+  privadosPropios,
+  type SalaMensaje,
+} from './chat';
 import type { SalaEstado, SalaParticipante, SalaResultado } from './useSala';
 
 interface PanelChatProps {
@@ -37,15 +48,16 @@ function colorDeAutor(id: string): string {
   return COLORES_AUTOR[h % COLORES_AUTOR.length];
 }
 
-/** Dos mensajes seguidos de la misma persona (en menos de 5 minutos) van juntos, sin repetir nombre. */
+/** Dos mensajes seguidos de la misma persona (a quien sea, en menos de 5 minutos) van juntos, sin repetir nombre. */
 const vaJunto = (m: SalaMensaje, anterior: SalaMensaje | undefined) =>
-  !!anterior && anterior.autor === m.autor && m.hora - anterior.hora < 5 * 60 * 1000;
+  !!anterior && anterior.autor === m.autor && anterior.canal === m.canal && m.hora - anterior.hora < 5 * 60 * 1000;
 
 /**
  * A la izquierda de la sala: los mensajes de texto. Una pestaña por conversación
  * (General para jugadores, Visitantes para visitantes, las dos para los
  * narradores, y las privadas), con los que no se han leído; debajo, los
- * mensajes de la elegida y el campo para escribir.
+ * mensajes de la elegida y el campo para escribir. Los narradores tienen además
+ * Susurros: todos los privados entre jugadores, juntos y solo para leer.
  *
  * Pestañas como manda ARIA: las flechas van de una a otra y Tab entra en los
  * mensajes. Los mensajes que llegan se anuncian aparte (avisos de la sala),
@@ -71,16 +83,17 @@ const PanelChat = ({
   const ariaLive = useAriaLive('errores');
 
   // Conversaciones: las comunes de su papel y las privadas (con mensajes o abiertas)
-  const privados = [...new Set([...mensajes.map((m) => m.canal).filter(esPrivado), ...abiertos])];
+  const privados = privadosPropios(mensajes, abiertos, yo.id);
   const canales = [...canalesComunes(yo), ...privados];
   const actual = activo && canales.includes(activo) ? activo : canales[0];
-  const delActual = mensajes.filter((m) => m.canal === actual);
+  const delActual = mensajesDe(mensajes, actual, yo.id);
+  const susurros = actual === CANAL_SUSURROS;
   const nombre = (canal: string) => nombreCanal(canal, yo.id, estado.participantes, mensajes);
   // La conversación que se ve no tiene pendientes (salvo con el chat plegado)
   const sinLeer = (canal: string) =>
     canal === actual && !minimizado
       ? 0
-      : mensajes.filter((m) => m.canal === canal && m.autor !== yo.id && m.hora > (leidoHasta[canal] ?? 0)).length;
+      : mensajesDe(mensajes, canal, yo.id).filter((m) => m.autor !== yo.id && m.hora > (leidoHasta[canal] ?? 0)).length;
   const totalSinLeer = canales.reduce((n, c) => n + sinLeer(c), 0);
   const idPestana = (canal: string) => `sala-chat-pestana-${canal.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 
@@ -194,8 +207,10 @@ const PanelChat = ({
               delActual.map((m, i) => {
                 const propio = m.autor === yo.id;
                 const junto = vaJunto(m, delActual[i - 1]);
-                // En los grupos, el nombre (con su color) en la primera de cada tanda; en privado no hace falta
+                // En los grupos, el nombre (con su color) en la primera de cada tanda; en privado no hace
+                // falta. En Susurros, quién a quién.
                 const conNombre = !propio && !junto && !esPrivado(actual);
+                const quien = susurros ? deQuienAQuien(m, estado.participantes, mensajes) : m.autorNombre;
                 return (
                   <li key={m.id} className={`flex ${propio ? 'justify-end' : 'justify-start'} ${junto ? 'mt-0.5' : 'mt-2'}`}>
                     <div
@@ -213,11 +228,11 @@ const PanelChat = ({
                       )}
                       {conNombre ? (
                         <p className="text-xs font-semibold" style={{ color: colorDeAutor(m.autor) }}>
-                          {m.autorNombre}
+                          {quien}
                         </p>
                       ) : (
                         // Para el lector, siempre quién lo dice (a la vista lo dicen el lado y la tanda)
-                        <span className="sr-only">{propio ? 'Tú' : m.autorNombre}: </span>
+                        <span className="sr-only">{propio ? 'Tú' : quien}: </span>
                       )}
                       <p className="whitespace-pre-wrap break-words leading-snug">
                         {m.texto}
@@ -236,42 +251,48 @@ const PanelChat = ({
               })
             )}
           </ol>
-          <form onSubmit={enviar} className="flex flex-col gap-1 border-t border-outline-ghost bg-surface p-2">
-            <label htmlFor="sala-chat-texto" className="sr-only">
-              Mensaje para {nombre(actual)}
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                ref={entradaRef}
-                id="sala-chat-texto"
-                type="text"
-                value={texto}
-                maxLength={LARGO_MAXIMO_MENSAJE}
-                autoComplete="off"
-                disabled={sinDestino}
-                placeholder={sinDestino ? 'Ya no está en la sala' : `Mensaje para ${nombre(actual)}`}
-                onChange={(e) => setTexto(e.target.value)}
-                aria-invalid={error ? true : undefined}
-                aria-describedby={error ? 'sala-chat-error' : undefined}
-                className="min-w-0 flex-1 rounded-full border border-outline-ghost bg-[#26222b] px-4 py-2 text-sm text-on-surface placeholder:text-on-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
-              />
-              <button
-                type="submit"
-                aria-label="Enviar"
-                aria-disabled={enviando || sinDestino}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#4a3b69] text-[#f1ecfa] hover:bg-theme-main hover:text-background focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main aria-disabled:opacity-50"
-              >
-                <SendHorizontal size={18} />
-              </button>
-            </div>
-            <div aria-live={ariaLive}>
-              {error && (
-                <p id="sala-chat-error" className="text-xs text-red-400">
-                  {error}
-                </p>
-              )}
-            </div>
-          </form>
+          {susurros ? (
+            <p className="border-t border-outline-ghost bg-surface p-2 text-xs text-on-surface-muted">
+              Los mensajes privados entre jugadores. Solo para leer: no se puede escribir aquí.
+            </p>
+          ) : (
+            <form onSubmit={enviar} className="flex flex-col gap-1 border-t border-outline-ghost bg-surface p-2">
+              <label htmlFor="sala-chat-texto" className="sr-only">
+                Mensaje para {nombre(actual)}
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={entradaRef}
+                  id="sala-chat-texto"
+                  type="text"
+                  value={texto}
+                  maxLength={LARGO_MAXIMO_MENSAJE}
+                  autoComplete="off"
+                  disabled={sinDestino}
+                  placeholder={sinDestino ? 'Ya no está en la sala' : `Mensaje para ${nombre(actual)}`}
+                  onChange={(e) => setTexto(e.target.value)}
+                  aria-invalid={error ? true : undefined}
+                  aria-describedby={error ? 'sala-chat-error' : undefined}
+                  className="min-w-0 flex-1 rounded-full border border-outline-ghost bg-[#26222b] px-4 py-2 text-sm text-on-surface placeholder:text-on-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
+                />
+                <button
+                  type="submit"
+                  aria-label="Enviar"
+                  aria-disabled={enviando || sinDestino}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#4a3b69] text-[#f1ecfa] hover:bg-theme-main hover:text-background focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main aria-disabled:opacity-50"
+                >
+                  <SendHorizontal size={18} />
+                </button>
+              </div>
+              <div aria-live={ariaLive}>
+                {error && (
+                  <p id="sala-chat-error" className="text-xs text-red-400">
+                    {error}
+                  </p>
+                )}
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </section>

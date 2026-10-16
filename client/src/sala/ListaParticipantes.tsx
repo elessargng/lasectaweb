@@ -1,4 +1,4 @@
-import { BookMarked, Users } from 'lucide-react';
+import { BookMarked, Ear, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { botonIcono } from './estilos';
 import type { SalaParticipante, SalaRol } from './useSala';
@@ -12,6 +12,8 @@ const GRUPOS: { rol: SalaRol; titulo: string }[] = [
 interface ListaParticipantesProps {
   participantes: SalaParticipante[];
   yo: string;
+  /** Quienes escuchan una conversación (solo llega a narradores y visitantes): una oreja delante. */
+  escuchando: Set<string>;
 }
 
 /**
@@ -21,7 +23,7 @@ interface ListaParticipantesProps {
  * El panel va en la cabecera, antes del h1, así que no usa títulos (romperían
  * su orden): cada grupo es una lista con su etiqueta, y se navega por listas.
  */
-const ListaParticipantes = ({ participantes, yo }: ListaParticipantesProps) => {
+const ListaParticipantes = ({ participantes, yo, escuchando }: ListaParticipantesProps) => {
   const [abierta, setAbierta] = useState(false);
   const botonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -82,10 +84,12 @@ const ListaParticipantes = ({ participantes, yo }: ListaParticipantesProps) => {
                   <ul aria-labelledby={idTitulo} className="flex flex-col gap-1">
                     {grupo.map((p) => (
                       <li key={p.id} className={p.conectado ? '' : 'text-on-surface-muted'}>
+                        {escuchando.has(p.id) && <Ear size={14} className="mr-1 inline-block align-[-2px] text-theme-main" />}
                         {p.nombre}
                         {p.id === yo && ' (tú)'}
                         {!p.conCuenta && <span className="text-on-surface-muted"> (invitado)</span>}
                         {!p.conectado && ' (desconectado)'}
+                        {escuchando.has(p.id) && <span className="sr-only"> (escuchando una conversación)</span>}
                         {p.accesoGrimorio === 'concedido' && (
                           <>
                             <BookMarked size={14} className="ml-1 inline-block align-[-2px] text-theme-main" />

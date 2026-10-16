@@ -26,3 +26,9 @@ export const ID_CUENTA_ATRAS = 'sala-nominacion-cuenta-atras';
 
 /** El botón de la ficha de un jugador cuando se elige a quién nomina (o para cancelarlo). */
 export const idFichaNominar = (participanteId: string) => `sala-ficha-nominar-${participanteId}`;
+
+/** La luna de la ficha de un asiento con despertar (para el narrador: lo vuelve a abrir). */
+export const idLunaFicha = (asientoId: string) => `sala-luna-${asientoId}`;
+
+/** El título de la ventana del narrador al despertar a alguien de noche. */
+export const ID_TITULO_DESPERTAR = 'sala-despertar-titulo';

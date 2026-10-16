@@ -80,6 +80,8 @@ import { RitualRepository } from './repositories/RitualRepository';
 import { RitualSignupRepository } from './repositories/RitualSignupRepository';
 import { RitualService } from './services/RitualService';
 import { RitualController } from './controllers/RitualController';
+import { SalaConfiguracionRepository } from './repositories/SalaConfiguracionRepository';
+import { SalaConfiguracionController } from './controllers/SalaConfiguracionController';
 import { iniciarSalaSocket } from './sockets/salaSocket';
 import { MemoriaChatRepository } from './repositories/ChatRepository';
 import { leerConfigVideollamada } from './config/videollamada';
@@ -192,6 +194,8 @@ const ritualSignupRepository = new RitualSignupRepository();
 const ritualService = new RitualService(ritualRepository, userRepository, villacuervosService, ritualSignupRepository);
 const ritualController = new RitualController(ritualService);
 
+const salaConfiguracionController = new SalaConfiguracionController(new SalaConfiguracionRepository());
+
 const twitterRepository = new TwitterRepository();
 const instagramRepository = new InstagramRepository();
 const socialMediaService = new SocialMediaService(twitterRepository, instagramRepository);
@@ -303,6 +307,12 @@ app.delete('/api/rituals/:id', authenticateJWT as express.RequestHandler, ritual
 // Apuntarse y desapuntarse: cualquier persona registrada.
 app.post('/api/rituals/:id/signups', authenticateJWT as express.RequestHandler, ritualController.signUp as express.RequestHandler);
 app.delete('/api/rituals/:id/signups', authenticateJWT as express.RequestHandler, ritualController.leave as express.RequestHandler);
+
+// Configuración de la sala: la de cada usuario y sus perfiles (los invitados no guardan nada).
+app.get('/api/sala/configuracion', authenticateJWT as express.RequestHandler, salaConfiguracionController.get as express.RequestHandler);
+app.put('/api/sala/configuracion', authenticateJWT as express.RequestHandler, salaConfiguracionController.guardarActual as express.RequestHandler);
+app.post('/api/sala/perfiles', authenticateJWT as express.RequestHandler, salaConfiguracionController.guardarPerfil as express.RequestHandler);
+app.delete('/api/sala/perfiles/:id', authenticateJWT as express.RequestHandler, salaConfiguracionController.borrarPerfil as express.RequestHandler);
 
 // Rutas de La Biblioteca
 app.get('/api/library/tree', optionalAuthenticateJWT as express.RequestHandler, libraryController.getTree as express.RequestHandler);

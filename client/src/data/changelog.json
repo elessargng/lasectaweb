@@ -33,7 +33,7 @@
           "Ver Todos los del Día: «+N más» en una casilla del mes lleva a la semana de ese día, donde caben todos.",
           "Detalle del Ritual: Cada ritual se abre en su propia ventana, con la fecha, el lugar, el guion, quién narra, quién convoca, la descripción, el enlace y la lista de asistentes.",
           "Enlace Directo: Cada ritual tiene su propia dirección: el botón «Copiar enlace» la copia para compartirla, y quien la abre llega directamente a su detalle.",
-          "Quiero Asistir: En las partidas presenciales y en los eventos puedes decir que piensas ir, para que se sepa quién va. No reserva plaza, y se puede marcar hasta que termina el evento.",
+          "Quiero Asistir: En las partidas presenciales y en los eventos puedes decir que piensas ir, para que se sepa quién va, y retirarlo con «Ya no puedo asistir». No reserva plaza, y se puede cambiar hasta que termina el evento.",
           "Colores de Metal y Gema: Cada tipo de ritual tiene su color: oro para las partidas online de La Secta, plata para las de Villacuervos, cobre para las presenciales y granate para los eventos y jornadas.",
           "Nuevo Icono para Eventos: Los eventos y jornadas se reconocen por un castillo gótico, dibujado a juego con la web.",
           "En el Móvil: En la vista de mes, al pulsar un día aparece debajo la lista de sus rituales."
@@ -46,7 +46,9 @@
           "Los 18 Viajeros: El compendio incluye todos los viajeros con su habilidad oficial en español, cada uno en su guion: cinco de Trouble Brewing, cinco de Bad Moon Rising, cinco de Sects & Violets y tres experimentales. Al filtrar por edición aparecen junto al resto de personajes de ese guion.",
           "Las 14 Fábulas: La antigua sección de Legendarios pasa a llamarse Fábulas, su nombre en el juego, y reúne las 14 fábulas oficiales (para cuidar la mesa, para guiones propios y experimentales), con su habilidad oficial en español.",
           "Los 11 Loric: Nueva categoría con los personajes Loric del Narrador, que añaden giros a la partida (Mandamás, Contrabandista, Tor, Truhanes…), con su habilidad oficial en español.",
-          "Filtros más Claros: Fábulas y Loric se eligen en «Edición»; como no tienen bando, al elegirlas el filtro de bando se oculta. Marcar un filtro ya no cambia su tamaño ni descoloca a los demás.",
+          "Nuevos Filtros: Las ediciones se eligen con su logo oficial y los bandos con su icono, y cada opción dice cuántos personajes saldrían al elegirla. Fábulas y Loric se eligen en «Edición»; como no tienen bando, al elegirlas el filtro de bando se oculta.",
+          "Búsqueda más Lista: Busca por nombre, nombre original, habilidad o cualquier palabra, sin importar tildes ni mayúsculas. La tecla «/» lleva al buscador y Escape lo vacía.",
+          "Filtros a la Vista: Los filtros aplicados se muestran debajo y se quitan uno a uno, con un botón para limpiarlos todos. La búsqueda y los filtros quedan en la dirección de la página, para compartirla o volver a ella.",
           "Pestañas en una Fila: Compendio, Ediciones, Reglamento y Consejos caben en una sola fila; en el móvil se deslizan en horizontal.",
           "Tarjetas más Claras: El bando de cada personaje va bajo su nombre, sin taparlo en pantallas medianas."
         ]
@@ -72,7 +74,7 @@
           "Ventanas y Menús: Al abrir una ventana el foco entra en ella y al cerrarla vuelve a donde estaba; Escape cierra las ventanas y el menú del móvil.",
           "Formularios: Todos los campos tienen su etiqueta, y los botones de solo icono, un nombre claro.",
           "Calendario con Teclado: En todas las vistas de Rituales y en el calendario del Atrio cada ritual se alcanza con el tabulador, y el lector anuncia su tipo y su título, no solo la hora.",
-          "Estado de los Controles: Las vistas y filtros de Rituales, las pestañas y filtros del Grimorio y el botón «Quiero asistir» anuncian si están activados. Los enlaces que abren otra ventana lo avisan.",
+          "Estado de los Controles: Las vistas y filtros de Rituales y las pestañas y filtros del Grimorio anuncian si están activados. Los enlaces que abren otra ventana lo avisan.",
           "Foco Visible: Un contorno dorado indica siempre dónde está el foco del teclado."
         ]
       },

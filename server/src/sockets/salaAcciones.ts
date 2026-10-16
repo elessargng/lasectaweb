@@ -9,7 +9,17 @@ import {
   SALA_SEGUNDOS_POR_FICHA,
   SalaService,
 } from '../services/SalaService';
-import { SALA_FORMAS_MANO, SalaFormaMano, SalaParticipante } from '../types/sala';
+import {
+  ADJUNTOS_DESPERTAR,
+  FICHAS_DESPERTAR,
+  FichaDespertar,
+  MensajeDespertar,
+  SALA_FORMAS_MANO,
+  SalaFormaMano,
+  SalaParticipante,
+  TARJETAS_DESPERTAR,
+  TarjetaDespertar,
+} from '../types/sala';
 import { guardarAvatarSala } from '../utils/salaAvatarStorage';
 import { GuionResuelto } from '../types/guiones';
 import { GuionInvalidoError } from '../services/guiones/errores';
@@ -60,6 +70,57 @@ interface Accion {
 }
 
 const cualquiera = () => true;
+
+/** Largo máximo del texto «Personalizado» al despertar. */
+export const SALA_TEXTO_DESPERTAR_MAX = 200;
+
+/**
+ * Comprueba un mensaje para los despiertos: una ficha (o, si lo manda el
+ * narrador, una tarjeta) con justo lo que lleva. Devuelve el mensaje limpio o el error.
+ */
+function leerMensajeDespertar(
+  sala: SalaService,
+  datos: unknown,
+  conTarjetas: boolean,
+): { error: string } | Omit<MensajeDespertar, 'id' | 'hora' | 'autor' | 'fase'> {
+  const { ficha, tarjeta, jugadores, personajes, texto, alineamiento } =
+    (datos as {
+      ficha?: unknown;
+      tarjeta?: unknown;
+      jugadores?: unknown;
+      personajes?: unknown;
+      texto?: unknown;
+      alineamiento?: unknown;
+    } | null) ?? {};
+  const esFicha = typeof ficha === 'string' && (FICHAS_DESPERTAR as readonly string[]).includes(ficha);
+  const esTarjeta = conTarjetas && typeof tarjeta === 'string' && (TARJETAS_DESPERTAR as readonly string[]).includes(tarjeta);
+  if (esFicha === esTarjeta) return { error: 'Mensaje desconocido.' };
+  const clave = (esFicha ? ficha : tarjeta) as FichaDespertar | TarjetaDespertar;
+  const adjunto = ADJUNTOS_DESPERTAR[clave] ?? {};
+
+  const ids = (valor: unknown): string[] | null =>
+    Array.isArray(valor) && valor.every((v) => typeof v === 'string') ? [...new Set(valor as string[])] : null;
+  const asientos = adjunto.jugadores ? ids(jugadores) : [];
+  if (adjunto.jugadores && (!asientos?.length || asientos.some((a) => !sala.hayAsiento(a)))) {
+    return { error: 'Elige al menos un jugador.' };
+  }
+  const guion = sala.guion();
+  const elegidos = adjunto.personajes ? ids(personajes) : [];
+  if (adjunto.personajes && (!elegidos?.length || elegidos.some((id) => !guion?.personajes.some((p) => p.id === id)))) {
+    return { error: 'Elige al menos un personaje del guion.' };
+  }
+  const limpio = adjunto.texto && typeof texto === 'string' ? texto.replace(/\s+/g, ' ').trim().slice(0, SALA_TEXTO_DESPERTAR_MAX) : '';
+  if (adjunto.texto && !limpio) return { error: 'Escribe el mensaje.' };
+  const bando = adjunto.alineamiento && (alineamiento === 'bueno' || alineamiento === 'malvado') ? alineamiento : null;
+  return {
+    ficha: esFicha ? (ficha as FichaDespertar) : null,
+    tarjeta: esTarjeta ? (tarjeta as TarjetaDespertar) : null,
+    jugadores: asientos ?? [],
+    personajes: elegidos ?? [],
+    texto: adjunto.texto ? limpio : null,
+    alineamiento: bando,
+  };
+}
 const esNarrador = (_sala: SalaService, yo: SalaParticipante) => yo.rol === 'narrador';
 
 /**
@@ -73,6 +134,8 @@ const esNarrador = (_sala: SalaService, yo: SalaParticipante) => yo.rol === 'nar
  */
 /** Los tipos de personaje que pueden ir en la ficha de un jugador (no los legendarios ni los lóricos). */
 const TIPOS_EN_FICHA: string[] = ['townsfolk', 'outsider', 'minion', 'demon', 'traveller'];
+/** Recordatorios como mucho en una ficha (de sobra para una partida). */
+const MAX_RECORDATORIOS = 20;
 /** Los que van en la bolsa para repartir (los viajeros se ponen aparte, ficha a ficha). */
 const TIPOS_EN_BOLSA: string[] = ['townsfolk', 'outsider', 'minion', 'demon'];
 
@@ -396,6 +459,62 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
+  /**
+   * Abre de noche el despertar de un asiento (también de uno libre: cuenta como un
+   * jugador más), para mandarle información y que conteste. Se pueden tener
+   * varios a la vez; si ya lo tiene, no hace nada. datos: { asientoId }.
+   */
+  'narrador:despertar': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.fase().momento === 'noche',
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'Solo se despierta a alguien de noche.' : 'Solo un narrador puede despertar a alguien.'),
+    hacer: (sala, _yo, datos) => {
+      const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
+      if (typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
+      const error = sala.despertar(asientoId);
+      return error ? { ok: false, error } : { ok: true };
+    },
+  },
+
+  /**
+   * Un mensaje en un despertar: el narrador manda una ficha o una tarjeta al de un
+   * asiento; el jugador, solo fichas al narrador (en el suyo). datos: { asientoId
+   * (solo el narrador), ficha | tarjeta, jugadores?: asientoId[], personajes?: id[],
+   * texto?, alineamiento? } (según lo que lleve).
+   */
+  'despertar:enviar': {
+    puede: (sala, yo) =>
+      yo.rol === 'narrador' ? sala.despertares().length > 0 : yo.rol === 'jugador' && !!sala.asientoDespiertoDe(yo.id),
+    noPuede: 'No tienes ningún despertar abierto.',
+    hacer: (sala, yo, datos) => {
+      const narra = yo.rol === 'narrador';
+      const pedido = (datos as { asientoId?: unknown } | null)?.asientoId;
+      const asientoId = narra ? (typeof pedido === 'string' ? pedido : null) : sala.asientoDespiertoDe(yo.id);
+      if (!asientoId || !sala.hayDespertar(asientoId)) return { ok: false, error: 'Ese despertar ya no está abierto.' };
+      const mensaje = leerMensajeDespertar(sala, datos, narra);
+      if ('error' in mensaje) return { ok: false, error: mensaje.error };
+      sala.enviarDespertar(asientoId, { ...mensaje, autor: narra ? 'narrador' : asientoId });
+      return { ok: true };
+    },
+  },
+
+  /**
+   * Pone o quita la ficha recordatorio (estrella) de una fila del orden de noche,
+   * para todos los narradores. datos: { id: personaje del guion | 'esbirros' | 'demonios', activo }.
+   */
+  'narrador:recordatorio': {
+    puede: (sala, yo) => yo.rol === 'narrador' && !!sala.guion(),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'Aún no hay guion.' : 'Solo un narrador puede cambiar los recordatorios.'),
+    hacer: (sala, _yo, datos) => {
+      const { id, activo } = (datos as { id?: unknown; activo?: unknown } | null) ?? {};
+      const valido =
+        typeof id === 'string' && (id === 'esbirros' || id === 'demonios' || !!sala.guion()?.personajes.some((p) => p.id === id));
+      if (!valido) return { ok: false, error: 'Ese personaje no está en el guion.' };
+      if (typeof activo !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
+      sala.cambiarRecordatorio(id, activo);
+      return { ok: true };
+    },
+  },
+
   /** Amanece: de la noche N al día N. */
   'narrador:amanecer': {
     puede: (sala, yo) => yo.rol === 'narrador' && sala.fase().momento === 'noche',
@@ -452,6 +571,42 @@ export const SALA_ACCIONES: Record<string, Accion> = {
         if (!TIPOS_EN_FICHA.includes(personaje.tipo)) return { ok: false, error: 'Ese personaje no puede ir en una ficha.' };
       }
       sala.cambiarPersonaje(asientoId, personajeId as string | null);
+      return { ok: true };
+    },
+  },
+
+  /**
+   * Pone una ficha recordatorio junto a la de un asiento: uno de los recordatorios
+   * de un personaje del guion (esté en juego o no). Se pueden poner las que se quiera.
+   * datos: { asientoId, personajeId, indice }.
+   */
+  'narrador:ponerRecordatorio': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.asientos().length > 0,
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador pone recordatorios.'),
+    hacer: (sala, _yo, datos) => {
+      const { asientoId, personajeId, indice } = (datos as { asientoId?: unknown; personajeId?: unknown; indice?: unknown }) ?? {};
+      const asiento = sala.asientos().find((a) => a.id === asientoId);
+      if (!asiento || typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
+      const personaje = typeof personajeId === 'string' ? sala.guion()?.personajes.find((p) => p.id === personajeId) : undefined;
+      if (!personaje) return { ok: false, error: 'Ese personaje no está en el guion.' };
+      const texto = typeof indice === 'number' && Number.isInteger(indice) ? personaje.recordatorios[indice] : undefined;
+      if (texto === undefined) return { ok: false, error: 'Ese recordatorio no existe.' };
+      if (asiento.recordatorios.length >= MAX_RECORDATORIOS) {
+        return { ok: false, error: `Una ficha no puede llevar más de ${MAX_RECORDATORIOS} recordatorios.` };
+      }
+      sala.ponerRecordatorio(asientoId, { personaje: personaje.id, indice: indice as number, texto });
+      return { ok: true };
+    },
+  },
+
+  /** Quita una ficha recordatorio. datos: { asientoId, recordatorioId }. */
+  'narrador:quitarRecordatorio': {
+    puede: esNarrador,
+    noPuede: 'Solo un narrador quita recordatorios.',
+    hacer: (sala, _yo, datos) => {
+      const { asientoId, recordatorioId } = (datos as { asientoId?: unknown; recordatorioId?: unknown }) ?? {};
+      if (typeof asientoId !== 'string' || typeof recordatorioId !== 'string') return { ok: false, error: 'Petición desconocida.' };
+      sala.quitarRecordatorio(asientoId, recordatorioId);
       return { ok: true };
     },
   },

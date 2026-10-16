@@ -1,5 +1,5 @@
 import type { VideoTrack } from 'livekit-client';
-import { MicOff } from 'lucide-react';
+import { Ear, MicOff } from 'lucide-react';
 import BotonesContacto, { type ContactoParticipante } from './BotonesContacto';
 import VideoPista from './VideoPista';
 import CuadroAvatar from './CuadroAvatar';
@@ -22,6 +22,8 @@ interface CuadroNarradorProps {
   espejo?: boolean;
   hablando?: boolean;
   enConversacion?: boolean;
+  /** Escucha una conversación (solo se sabe entre narradores y visitantes): una oreja delante del nombre. */
+  escuchando?: boolean;
   /** Tiene el micrófono cerrado (un micro tachado a la izquierda del nombre). */
   silenciado?: boolean;
 }
@@ -46,6 +48,7 @@ const CuadroNarrador = ({
   espejo = false,
   hablando = false,
   enConversacion = false,
+  escuchando = false,
   silenciado = false,
 }: CuadroNarradorProps) => (
   <div className={`group relative rounded ${hablando ? 'ring-2 ring-[#b19cd9] ring-offset-2 ring-offset-background' : ''}`}>
@@ -64,10 +67,12 @@ const CuadroNarrador = ({
               <span className="sr-only">silenciado, </span>
             </>
           )}
+          {escuchando && <Ear size={14} className="mr-1 inline-block align-[-2px] text-theme-main" />}
           {narrador.nombre}
           {esYo && ' (tú)'}
           {!narrador.conectado && <span className="font-normal text-on-surface-muted"> (desconectado)</span>}
           {enConversacion && <span className="sr-only"> (en una conversación privada)</span>}
+          {escuchando && <span className="sr-only"> (escuchando una conversación)</span>}
         </p>
       }
     />

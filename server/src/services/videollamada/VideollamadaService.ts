@@ -37,6 +37,8 @@ export class VideollamadaService {
   /** Lo último que se le dijo al servidor de vídeo, para no repetirlo. */
   private permisosMesa = new Map<string, string>();
   private miembrosVistos = new Map<string, string[]>();
+  /** Si cada uno habla o escucha en cada conversación («conversación|id»), para cambiar sus permisos. */
+  private papelesVistos = new Map<string, 'habla' | 'escucha'>();
 
   constructor(
     private readonly proveedor: ProveedorVideo,
@@ -101,5 +103,21 @@ export class VideollamadaService {
       for (const m of miembros) if (!ahora.includes(m)) void this.proveedor.expulsar(salaDeConversacion(id), m);
     }
     this.miembrosVistos = actuales;
+
+    // Quien pasa de escuchar a hablar (un narrador que entra) o al revés, sin
+    // salir de la sala de vídeo: se le cambian los permisos ahí dentro.
+    const papeles = new Map<string, 'habla' | 'escucha'>();
+    for (const c of this.conversaciones.lista()) {
+      for (const m of c.miembros) papeles.set(`${c.id}|${m}`, 'habla');
+      for (const o of c.oyentes) papeles.set(`${c.id}|${o}`, 'escucha');
+    }
+    for (const [clave, papel] of papeles) {
+      const antes = this.papelesVistos.get(clave);
+      if (!antes || antes === papel) continue;
+      const [conversacion, id] = clave.split('|');
+      const habla = papel === 'habla';
+      void this.proveedor.cambiarPermisos(salaDeConversacion(conversacion), id, { publicar: habla, camara: habla });
+    }
+    this.papelesVistos = papeles;
   }
 }

@@ -2,18 +2,25 @@ import { useState, type FormEvent } from 'react';
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario } from './estilos';
-import type { SalaParticipante, SalaResultado } from './useSala';
+import type { SalaResultado } from './useSala';
 
-interface DialogoElegirParticipanteProps {
+/** A quién se puede elegir: un participante o, p. ej., un asiento (sin `conCuenta`). */
+interface Candidato {
+  id: string;
+  nombre: string;
+  conCuenta?: boolean;
+}
+
+interface DialogoElegirParticipanteProps<C extends Candidato> {
   /** Título del diálogo («Añadir narrador»). */
   titulo: string;
   /** Texto del botón que confirma («Nombrar narrador»). */
   confirmar: string;
   /** Qué decir si no hay a quién elegir. */
   sinCandidatos: string;
-  candidatos: SalaParticipante[];
+  candidatos: C[];
   /** Algo más que decir de cada candidato («asiento 3»). */
-  detalle?: (p: SalaParticipante) => string;
+  detalle?: (p: C) => string;
   onElegir: (participanteId: string) => Promise<SalaResultado>;
   onCerrar: () => void;
 }
@@ -22,7 +29,7 @@ interface DialogoElegirParticipanteProps {
  * Elegir a un participante para una acción del narrador (nombrar o quitar
  * narradores…). Se cierra al hacerlo; el aviso de la sala confirma el cambio.
  */
-const DialogoElegirParticipante = ({
+const DialogoElegirParticipante = <C extends Candidato>({
   titulo,
   confirmar,
   sinCandidatos,
@@ -30,7 +37,7 @@ const DialogoElegirParticipante = ({
   detalle,
   onElegir,
   onCerrar,
-}: DialogoElegirParticipanteProps) => {
+}: DialogoElegirParticipanteProps<C>) => {
   const [elegido, setElegido] = useState(candidatos[0]?.id ?? '');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
@@ -84,7 +91,7 @@ const DialogoElegirParticipante = ({
                 {candidatos.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.nombre}
-                    {p.conCuenta ? '' : ' (invitado)'}
+                    {p.conCuenta === false ? ' (invitado)' : ''}
                     {detalle ? `, ${detalle(p)}` : ''}
                   </option>
                 ))}

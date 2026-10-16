@@ -1,8 +1,17 @@
 import { useId, useState } from 'react';
 import { urlDelServidor } from '../utils/api';
 import DialogoPersonaje from './DialogoPersonaje';
+import DialogoRecordatorio from './DialogoRecordatorio';
 import FichaRedonda from './FichaRedonda';
-import { alineamientoDe, alineamientoDeTipo, iconoDe, useFichas, type ContenidoFicha } from './fichas';
+import {
+  alineamientoDe,
+  alineamientoDeTipo,
+  describirRecordatorio,
+  iconoDe,
+  recordatoriosDeFicha,
+  useFichas,
+  type ContenidoFicha,
+} from './fichas';
 import { nombreMano } from './formasMano';
 import type { PersonajeMostrado } from './guiones';
 import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
@@ -41,6 +50,16 @@ interface FichaAsientoProps {
    * el narrador, cómo revelarla (pulsándola; al pasar el ratón la mira antes).
    */
   revelando?: { revelada: boolean; onRevelar?: () => void };
+  /** El narrador puede despertar al jugador de esta ficha (de noche) o abrir su despertar si ya lo tiene. */
+  despertar?: { abierto: boolean; onAbrir: () => void };
+  /**
+   * Visitantes y narradores: seguir al jugador de esta ficha (ir con él a las
+   * conversaciones privadas, como oyente). Con el menú de la ficha, una opción
+   * más; si no hay menú (visitantes), la ficha es un botón que lo activa y lo quita.
+   */
+  seguir?: { siguiendo: boolean; onAlternar: () => void };
+  /** Los personajes en juego (en alguna ficha, para quien mira): sus recordatorios salen primero al poner uno. */
+  enJuego: Set<string>;
 }
 
 const NOMBRE_ALINEAMIENTO: Record<SalaAlineamiento, string> = { bueno: 'bueno', malvado: 'malvado' };
@@ -76,9 +95,14 @@ const FichaAsiento = ({
   eligiendo,
   voto,
   revelando,
+  despertar,
+  seguir,
+  enJuego,
 }: FichaAsientoProps) => {
-  const { hayGuion, personajes, porId, notas, anotar } = useFichas();
+  const { hayGuion, personajes, porId, notas, anotar, todos, todosPorId, notasRecordatorios, anotarRecordatorios } = useFichas();
   const [eligiendoPersonaje, setEligiendoPersonaje] = useState(false);
+  const [eligiendoRecordatorio, setEligiendoRecordatorio] = useState(false);
+  const recordatorios = recordatoriosDeFicha(asiento, modo === 'grimorio' ? notasRecordatorios : null);
 
   // Lo que lleva: lo de la partida si se ve (narrador, o la propia); si no, lo anotado en el grimorio propio.
   // Sin guion no hay personajes que anotar.
@@ -91,15 +115,17 @@ const FichaAsiento = ({
 
   const bocaAbajo = !!revelando && !revelando.revelada;
   const ficha = (
-    <FichaRedonda
-      muerto={asiento.muerto}
-      marcado={asiento.marcado}
-      voto={voto}
-      bocaAbajo={bocaAbajo}
-      asomar={!!revelando?.onRevelar}
-    >
-      {personaje && <PersonajeEnFicha personaje={personaje} alineamiento={contenido.alineamiento} />}
-    </FichaRedonda>
+    <span className="relative block">
+      <FichaRedonda
+        muerto={asiento.muerto}
+        marcado={asiento.marcado}
+        voto={voto}
+        bocaAbajo={bocaAbajo}
+        asomar={!!revelando?.onRevelar}
+      >
+        {personaje && <PersonajeEnFicha personaje={personaje} alineamiento={contenido.alineamiento} />}
+      </FichaRedonda>
+    </span>
   );
 
   // Revelando el grimorio: boca abajo, el narrador la revela pulsándola (al pasar el
@@ -137,8 +163,46 @@ const FichaAsiento = ({
     );
   }
 
+  const nombreJugador = ocupante?.nombre ?? '';
+  // El alineamiento se dice si no es el de su tipo (o si es un viajero y ya lo tiene)
+  const alineamientoDistinto = personaje && contenido.alineamiento && contenido.alineamiento !== alineamientoDeTipo(personaje.tipo);
+  const estado = [
+    personaje && `${personaje.nombre.texto}${alineamientoDistinto ? `, ${NOMBRE_ALINEAMIENTO[contenido.alineamiento!]}` : ''}`,
+    asiento.muerto && 'muerta',
+    asiento.marcado && 'con la calavera',
+    ocupante?.manoLevantada && `mano levantada (${nombreMano(ocupante.formaMano).toLocaleLowerCase('es')})`,
+    voto === null && 'no vota',
+    typeof voto === 'number' && `vota (${voto === 1 ? '1 voto' : `${voto} votos`})`,
+    recordatorios.length > 0 &&
+      `recordatorios: ${recordatorios.map((r) => describirRecordatorio(r, todosPorId.get(r.personaje))).join(', ')}`,
+    seguir?.siguiendo && 'siguiendo',
+  ].filter(Boolean);
+  // En el botón de seguir (visitantes) no hace falta: lo dice aria-pressed
+  const estadoSinSeguir = estado.filter((e) => e !== 'siguiendo');
+
   const editable = modo === 'narrador' || anotando;
-  if (!editable) return ficha;
+  if (!editable) {
+    if (!seguir) return ficha;
+    // Sin menú (visitantes): la ficha activa y quita el seguimiento.
+    const idEstado = `sala-ficha-estado-${asiento.id}`;
+    return (
+      <button
+        type="button"
+        onClick={seguir.onAlternar}
+        aria-pressed={seguir.siguiendo}
+        aria-label={`Seguir a ${nombreJugador}`}
+        aria-describedby={estadoSinSeguir.length ? idEstado : undefined}
+        className="relative block cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      >
+        {ficha}
+        {estadoSinSeguir.length > 0 && (
+          <span id={idEstado} className="sr-only">
+            {estadoSinSeguir.join(', ')}
+          </span>
+        )}
+      </button>
+    );
+  }
 
   const cambiarVida = async () => {
     const r = await pedir('narrador:cambiarVida', { asientoId: asiento.id, muerto: !asiento.muerto });
@@ -192,6 +256,22 @@ const FichaAsiento = ({
     abreDialogo: true,
     elegir: () => setEligiendoPersonaje(true),
   };
+  // Recordatorios: el narrador los pone en la partida; un jugador, en su grimorio.
+  const ponerRecordatorio = async (p: PersonajeMostrado, indice: number) => {
+    if (modo !== 'narrador') {
+      const nuevo = { id: crypto.randomUUID(), personaje: p.id, indice, texto: p.recordatorios[indice]?.texto ?? '' };
+      anotarRecordatorios(asiento.id, [...(notasRecordatorios[asiento.id] ?? []), nuevo]);
+      return;
+    }
+    const r = await pedir('narrador:ponerRecordatorio', { asientoId: asiento.id, personajeId: p.id, indice });
+    if (!r.ok) onError(r.error);
+  };
+  const opcionRecordatorio: OpcionMenu = {
+    id: 'recordatorio',
+    etiqueta: 'Poner recordatorio',
+    abreDialogo: true,
+    elegir: () => setEligiendoRecordatorio(true),
+  };
   const quien = ocupante ? 'jugador' : 'ficha';
   const opciones: OpcionMenu[] =
     modo === 'narrador'
@@ -203,20 +283,32 @@ const FichaAsiento = ({
             : { id: 'nominar', etiqueta: 'Nominar a…', deshabilitada: true, elegir: () => {} },
           ...(hayGuion ? [cambiarFicha] : []),
           ...opcionesAlineamiento,
+          ...(hayGuion ? [opcionRecordatorio] : []),
+          ...(despertar
+            ? [
+                {
+                  id: 'despertar',
+                  etiqueta: despertar.abierto ? 'Abrir despertar' : 'Despertar',
+                  // Como un diálogo: el menú se cierra y el foco pasa a la ventana del despertar
+                  abreDialogo: true,
+                  elegir: despertar.onAbrir,
+                },
+              ]
+            : []),
         ]
       : // En su grimorio, el jugador solo cambia los personajes (lo demás es de la partida).
-        [cambiarFicha, ...opcionesAlineamiento];
-
-  // El alineamiento se dice si no es el de su tipo (o si es un viajero y ya lo tiene)
-  const alineamientoDistinto = personaje && contenido.alineamiento && contenido.alineamiento !== alineamientoDeTipo(personaje.tipo);
-  const estado = [
-    personaje && `${personaje.nombre.texto}${alineamientoDistinto ? `, ${NOMBRE_ALINEAMIENTO[contenido.alineamiento!]}` : ''}`,
-    asiento.muerto && 'muerta',
-    asiento.marcado && 'con la calavera',
-    ocupante?.manoLevantada && `mano levantada (${nombreMano(ocupante.formaMano).toLocaleLowerCase('es')})`,
-    voto === null && 'no vota',
-    typeof voto === 'number' && `vota (${voto === 1 ? '1 voto' : `${voto} votos`})`,
-  ].filter(Boolean);
+        [cambiarFicha, ...opcionesAlineamiento, opcionRecordatorio];
+  if (seguir) {
+    opciones.push({
+      id: 'seguir',
+      etiqueta: seguir.siguiendo ? `Dejar de seguir a ${nombreJugador}` : `Seguir a ${nombreJugador}`,
+      elegir: async () => {
+        seguir.onAlternar();
+        // false: el menú se cierra y el foco vuelve a la ficha, que dice si se le sigue.
+        return false;
+      },
+    });
+  }
 
   const nombreFicha = `Ficha del ${describirAsiento(numero, ocupante)}`;
   return (
@@ -231,6 +323,15 @@ const FichaAsiento = ({
         botonClassName="relative block cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         opciones={opciones}
       />
+      {eligiendoRecordatorio && (
+        <DialogoRecordatorio
+          ficha={nombreFicha.replace(/^Ficha del /, '')}
+          enJuego={todos.filter((p) => enJuego.has(p.id))}
+          otros={todos.filter((p) => !enJuego.has(p.id))}
+          onElegir={(p, i) => void ponerRecordatorio(p, i)}
+          onCerrar={() => setEligiendoRecordatorio(false)}
+        />
+      )}
       {eligiendoPersonaje && (
         <DialogoPersonaje
           ficha={nombreFicha.replace(/^Ficha del /, '')}

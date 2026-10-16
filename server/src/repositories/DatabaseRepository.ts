@@ -833,6 +833,33 @@ export class DatabaseRepository {
         UPDATE personajes SET sincronizadoEn = '1970-01-01T00:00:00.000Z';
       `);
     });
+
+    // Migración 024: configuración de la sala por usuario
+    //
+    // La que tiene puesta cada uno (sala_configuracion) y los perfiles que se
+    // guarda con nombre para cambiar de una a otra (sala_perfiles). Los datos van
+    // en JSON tal cual los manda el cliente, que es quien los valida al leerlos.
+    // Sin comunicaciones ni imagen de perfil: eso no se guarda aquí.
+    await this.applyMigration('024_add_sala_configuracion', async (db) => {
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS sala_configuracion (
+          userId TEXT PRIMARY KEY,
+          datos TEXT NOT NULL,
+          actualizadoEn DATETIME NOT NULL,
+          FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS sala_perfiles (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          userId TEXT NOT NULL,
+          nombre TEXT NOT NULL COLLATE NOCASE,
+          datos TEXT NOT NULL,
+          actualizadoEn DATETIME NOT NULL,
+          FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
+          UNIQUE(userId, nombre)
+        );
+      `);
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

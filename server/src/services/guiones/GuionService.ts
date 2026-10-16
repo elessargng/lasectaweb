@@ -82,6 +82,13 @@ function sinDatosDeSincronizacion(p: PersonajeGuardado): Personaje {
   return personaje;
 }
 
+/** El catálogo guarda los recordatorios separados por comas («Townsfolk,Wrong»). */
+export const listaRecordatorios = (texto: string | null): string[] =>
+  (texto ?? '')
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean);
+
 function deCatalogo(id: string, p: Personaje | undefined): ConOrden {
   if (!p) {
     return {
@@ -95,6 +102,7 @@ function deCatalogo(id: string, p: Personaje | undefined): ConOrden {
         iconoMalvado: null,
         recordatorioPrimeraNoche: null,
         recordatorioOtrasNoches: null,
+        recordatorios: [],
         preparacion: false,
         conocido: false,
       },
@@ -112,6 +120,7 @@ function deCatalogo(id: string, p: Personaje | undefined): ConOrden {
       iconoMalvado: p.iconoMalvado,
       recordatorioPrimeraNoche: p.primeraNoche.recordatorio,
       recordatorioOtrasNoches: p.otrasNoches.recordatorio,
+      recordatorios: [...listaRecordatorios(p.recordatorios), ...listaRecordatorios(p.recordatoriosGlobales)],
       preparacion: p.preparacion,
       conocido: true,
     },
@@ -131,6 +140,7 @@ function propio(p: PersonajePropio): ConOrden {
       iconoMalvado: null,
       recordatorioPrimeraNoche: p.primeraNoche.recordatorio,
       recordatorioOtrasNoches: p.otrasNoches.recordatorio,
+      recordatorios: p.recordatorios,
       preparacion: p.preparacion,
       conocido: true,
     },

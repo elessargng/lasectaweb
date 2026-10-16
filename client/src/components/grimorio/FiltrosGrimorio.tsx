@@ -53,7 +53,6 @@ const FiltrosGrimorio = ({ filtros, onCambiar, onLimpiar, total, mostrados, cuen
       fila.scrollLeft = elegida.offsetLeft - fila.offsetLeft - 8;
     }
     // Solo al montar: después es el usuario quien mueve la fila.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Aviso para el lector: el número de resultados, un momento después del último cambio, y se borra al rato.

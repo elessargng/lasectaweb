@@ -2,10 +2,13 @@ import { randomInt, randomUUID } from 'crypto';
 import {
   SalaAccesoGrimorio,
   SalaAlineamiento,
+  SalaRecordatorio,
   SalaAsiento,
   SalaConfiguracion,
   SalaDistribucion,
   SalaFase,
+  MensajeDespertar,
+  SalaDespertar,
   SalaFormaMano,
   SalaNominacion,
   SalaParticipante,
@@ -21,6 +24,9 @@ import { esAvatarSalaGuardado } from '../utils/salaAvatarStorage';
 export const SALA_GRACIA_MS = 20_000;
 
 export const SALA_NOMBRE_MAX = 24;
+
+/** Mensajes que se guardan en cada despertar (los más antiguos se descartan). */
+export const SALA_MENSAJES_DESPERTAR_MAX = 300;
 
 /** Asientos de la mesa: con cuántos empieza la sala y cuántos puede tener. */
 export const SALA_ASIENTOS = { inicial: 7, min: 0, max: 20 };
@@ -75,6 +81,7 @@ const asientoNuevo = (): SalaAsiento => ({
   votosMarca: null,
   personaje: null,
   alineamiento: null,
+  recordatorios: [],
 });
 
 /** Quién se conecta, según el token o el nombre de invitado. */
@@ -263,9 +270,74 @@ export class SalaService {
     this.maximoDelDia = null;
   }
 
-  /** Amanece: el día de la misma noche. */
+  /**
+   * Amanece: el día de la misma noche. Los despertares de la noche se acaban: no
+   * se ven de día y la noche siguiente empieza sin ellos.
+   */
   amanecer(): void {
     this.faseActual = { ...this.faseActual, momento: 'dia' };
+    this.hilos = [];
+  }
+
+  /** Recordatorios del orden de noche cambiados a mano (ver SalaEstado.recordatoriosNoche). */
+  private recordatorios: Record<string, boolean> = {};
+
+  recordatoriosNoche(): Record<string, boolean> {
+    return { ...this.recordatorios };
+  }
+
+  /** Pone (true) o quita (false) a mano la ficha recordatorio de una fila del orden de noche. */
+  cambiarRecordatorio(id: string, activo: boolean): void {
+    this.recordatorios[id] = activo;
+  }
+
+  /**
+   * Los despertares, uno por asiento, con quién estaba sentado al abrirlo (null:
+   * estaba libre; un asiento libre cuenta como un jugador más). Solo los de esta
+   * noche: al amanecer se borran.
+   */
+  private hilos: { asiento: string; ocupante: string | null; mensajes: MensajeDespertar[] }[] = [];
+
+  /**
+   * Se aplica al leer: si el jugador de un asiento se levanta, cambia de asiento,
+   * alguien se sienta en el que estaba libre o el asiento se quita, ese
+   * despertar se cierra (lo dicho era para otro).
+   */
+  private hilosAlDia() {
+    const mesa = this.mesaAlDia();
+    this.hilos = this.hilos.filter((h) => mesa.some((a) => a.id === h.asiento && a.ocupante === h.ocupante));
+    return this.hilos;
+  }
+
+  /** Todos los despertares, en el orden en que se abrieron. */
+  despertares(): SalaDespertar[] {
+    return this.hilosAlDia().map((h) => ({ asiento: h.asiento, mensajes: h.mensajes.map((m) => ({ ...m })) }));
+  }
+
+  hayDespertar(asientoId: string): boolean {
+    return this.hilosAlDia().some((h) => h.asiento === asientoId);
+  }
+
+  /** El asiento con despertar de este participante, o null. */
+  asientoDespiertoDe(participanteId: string): string | null {
+    return this.hilosAlDia().find((h) => h.ocupante === participanteId)?.asiento ?? null;
+  }
+
+  /** Abre el despertar de un asiento (si ya lo tiene, no hace nada). Devuelve el error, si lo hay. */
+  despertar(asientoId: string): string | null {
+    const asiento = this.mesaAlDia().find((a) => a.id === asientoId);
+    if (!asiento) return 'Ese asiento ya no existe.';
+    if (!this.hayDespertar(asientoId)) this.hilos.push({ asiento: asientoId, ocupante: asiento.ocupante, mensajes: [] });
+    return null;
+  }
+
+  /** Guarda un mensaje en el despertar de un asiento. No valida: lo hace quien lo llama. */
+  enviarDespertar(asientoId: string, mensaje: Omit<MensajeDespertar, 'id' | 'hora' | 'fase'>): void {
+    const hilo = this.hilosAlDia().find((h) => h.asiento === asientoId);
+    if (!hilo) return;
+    const { momento, numero } = this.faseActual;
+    hilo.mensajes.push({ ...mensaje, id: randomUUID(), hora: Date.now(), fase: { momento, numero } });
+    if (hilo.mensajes.length > SALA_MENSAJES_DESPERTAR_MAX) hilo.mensajes.shift();
   }
 
   /**
@@ -284,6 +356,7 @@ export class SalaService {
       a.votosMarca = null;
       a.personaje = null;
       a.alineamiento = null;
+      a.recordatorios = [];
     }
     this.bolsaActual = [];
     this.revelacionActual = null;
@@ -293,6 +366,8 @@ export class SalaService {
       if (participante.accesoGrimorio === 'concedido') participante.accesoGrimorio = 'ninguno';
     }
     this.conGrimorio.clear();
+    this.hilos = [];
+    this.recordatorios = {};
     this.faseActual = { momento: 'preparacion', numero: 0, reinicios: this.faseActual.reinicios + 1 };
   }
 
@@ -480,6 +555,18 @@ export class SalaService {
     if (!asiento) return;
     asiento.personaje = personaje;
     asiento.alineamiento = null;
+  }
+
+  /** Pone una ficha recordatorio junto a la de un asiento. No comprueba permisos. */
+  ponerRecordatorio(asientoId: string, recordatorio: Omit<SalaRecordatorio, 'id'>): void {
+    const asiento = this.mesa.find((a) => a.id === asientoId);
+    if (asiento) asiento.recordatorios.push({ id: randomUUID(), ...recordatorio });
+  }
+
+  /** Quita una ficha recordatorio. No comprueba permisos. */
+  quitarRecordatorio(asientoId: string, recordatorioId: string): void {
+    const asiento = this.mesa.find((a) => a.id === asientoId);
+    if (asiento) asiento.recordatorios = asiento.recordatorios.filter((r) => r.id !== recordatorioId);
   }
 
   /** Cambia el alineamiento de la ficha de un asiento. No comprueba permisos. */

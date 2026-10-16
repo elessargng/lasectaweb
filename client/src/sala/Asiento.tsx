@@ -1,4 +1,4 @@
-import { AudioLines, MicOff } from 'lucide-react';
+import { AudioLines, Link, MicOff } from 'lucide-react';
 import type { VideoTrack } from 'livekit-client';
 import BotonesContacto, { type ContactoParticipante } from './BotonesContacto';
 import VideoPista from './VideoPista';
@@ -6,6 +6,7 @@ import CuadroAvatar from './CuadroAvatar';
 import { botonPrincipal } from './estilos';
 import { idNombreAsiento } from './ids';
 import type { ReactNode } from 'react';
+import type { Texto } from './guiones';
 import type { SalaParticipante } from './useSala';
 
 interface AsientoProps {
@@ -40,6 +41,13 @@ interface AsientoProps {
   enConversacion?: boolean;
   /** Tiene el micrófono cerrado (un micro tachado a la izquierda del nombre). */
   silenciado?: boolean;
+  /** Quien mira le sigue (visitantes y narradores): un enlace delante del nombre. */
+  siguiendo?: boolean;
+  /**
+   * Lo que lleva su ficha y ve quien mira (el personaje, si lo ve; la calavera;
+   * el sudario). Se ve en la ficha; aquí es para el lector, en el nombre del asiento.
+   */
+  ficha?: { personaje: Texto | null; marcado: boolean; muerto: boolean; recordatorios?: string[] };
 }
 
 /**
@@ -95,8 +103,24 @@ const Asiento = ({
   hablando = false,
   enConversacion = false,
   silenciado = false,
+  siguiendo = false,
+  ficha,
 }: AsientoProps) => {
   const sentarse = !ocupante && puedeSentarse;
+  // La ficha, para el lector: «1, Paco, Lavandera, marca, muerte, recordatorios: …» (lo visual ya está en la ficha)
+  const conRecordatorios = !!ficha?.recordatorios?.length;
+  const fichaParaLector = ficha && (ficha.personaje || ficha.marcado || ficha.muerto || conRecordatorios) && (
+    <span className="sr-only">
+      {ficha.personaje && (
+        <>
+          , <span lang={ficha.personaje.lang}>{ficha.personaje.texto}</span>
+        </>
+      )}
+      {ficha.marcado && ', marca'}
+      {ficha.muerto && ', muerte'}
+      {conRecordatorios && `, recordatorios: ${ficha.recordatorios!.join(', ')}`}
+    </span>
+  );
   const silla = sillaVacia(angulo);
 
   return (
@@ -142,6 +166,12 @@ const Asiento = ({
                 <>
                   {/* Solo el número: «3, Ana» (la lista ya dice que son asientos) */}
                   <span className="sr-only">{numero}, </span>
+                  {siguiendo && (
+                    <>
+                      <Link size={13} className="mr-1 inline-block align-[-2px] text-theme-main" />
+                      <span className="sr-only">siguiendo, </span>
+                    </>
+                  )}
                   {silenciado && (
                     <>
                       <MicOff size={13} className="mr-1 inline-block align-[-2px] text-red-300" />
@@ -151,6 +181,7 @@ const Asiento = ({
                   <span className={ocupante.conectado ? 'font-semibold' : 'text-on-surface-muted'}>{ocupante.nombre}</span>
                   {esYo && ' (tú)'}
                   {!ocupante.conectado && <span className="text-on-surface-muted"> (desconectado)</span>}
+                  {fichaParaLector}
                   {enConversacion && <span className="sr-only"> (en una conversación privada)</span>}
                 </>
               ) : (
@@ -158,6 +189,7 @@ const Asiento = ({
                   Asiento {numero}
                   {/* La silla vacía no se lee: se dice aquí */}
                   <span className="sr-only">, libre</span>
+                  {fichaParaLector}
                 </>
               )}
             </p>

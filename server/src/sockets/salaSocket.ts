@@ -37,7 +37,9 @@ function usuarioDelToken(token: string): { id: string; username: string } | null
  * prefiere mostrar, si los cambió; y su id de cliente para recuperar el sitio si se reconecta. Cada cambio se manda entero a todos.
  */
 /** Una ficha sin su personaje ni su alineamiento: así la ven quienes no son su jugador ni narran. */
-const sinPersonaje = (a: SalaAsiento): SalaAsiento => ({ ...a, personaje: null, alineamiento: null });
+// Lo que un jugador no ve de una ficha: de las ajenas, el personaje; de ninguna, los recordatorios.
+const sinPersonaje = (a: SalaAsiento): SalaAsiento => ({ ...a, personaje: null, alineamiento: null, recordatorios: [] });
+const sinRecordatorios = (a: SalaAsiento): SalaAsiento => ({ ...a, recordatorios: [] });
 
 export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAvatar, deps: DependenciasSala): void {
   const io = new Server(httpServer, {
@@ -76,6 +78,8 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     // Las fichas ya reveladas al final de la partida: todos ven su personaje
     const reveladas = new Set(revelacion?.reveladas ?? []);
     const bolsa = sala.bolsa();
+    const despertares = sala.despertares();
+    const recordatoriosNoche = sala.recordatoriosNoche();
     const ahora = Date.now();
     for (const { socketId, clave, id } of sala.conexiones()) {
       const yo = sala.participanteDe(clave)!;
@@ -84,7 +88,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
         asientos:
           yo.rol === 'narrador' || (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido')
             ? asientos
-            : asientos.map((a) => (a.ocupante === yo.id || reveladas.has(a.id) ? a : sinPersonaje(a))),
+            : asientos.map((a) => (reveladas.has(a.id) ? a : a.ocupante === yo.id ? sinRecordatorios(a) : sinPersonaje(a))),
         configuracion,
         nominacion,
         fase: sala.fase(),
@@ -100,6 +104,15 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
         ahora,
         // El registro de votaciones es solo para los narradores.
         votaciones: yo.rol === 'narrador' ? votaciones : [],
+        recordatoriosNoche: yo.rol === 'narrador' ? recordatoriosNoche : {},
+        // Los despertares: los narradores y los visitantes que ven el grimorio, todos; un
+        // jugador, solo el de su asiento (nadie más sabe a quién se despierta).
+        despertares:
+          yo.rol === 'narrador' || (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido')
+            ? despertares
+            : yo.rol === 'jugador'
+              ? despertares.filter((d) => d.asiento === sala.asientoDespiertoDe(yo.id))
+              : [],
         yo: id,
         acciones: accionesPermitidas(sala, yo),
       };
@@ -232,8 +245,10 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
       return v;
     };
     enConversaciones('conversacion:invitar', (yoId, d) => void conversaciones.invitar(yoId, texto(d.con)));
+    enConversaciones('conversacion:pedirUnirse', (yoId, d) => void conversaciones.pedirUnirse(yoId, texto(d.con)));
     enConversaciones('conversacion:responder', (yoId, d) => conversaciones.responder(yoId, texto(d.invitacion), d.aceptar === true));
     enConversaciones('conversacion:cancelar', (yoId, d) => conversaciones.cancelar(yoId, texto(d.invitacion)));
+    enConversaciones('conversacion:entrar', (yoId, d) => conversaciones.entrar(yoId, texto(d.conversacion)));
     enConversaciones('conversacion:escuchar', (yoId, d) => conversaciones.escuchar(yoId, texto(d.conversacion)));
     enConversaciones('conversacion:salir', (yoId) => conversaciones.salir(yoId));
 

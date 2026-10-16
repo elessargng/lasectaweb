@@ -9,6 +9,8 @@ interface DialogProps {
   /** id del título visible del diálogo; si no lo hay, `label`. */
   labelledBy?: string;
   label?: string;
+  /** id de lo que lo describe (se lee al abrirlo, tras el título). */
+  describedBy?: string;
   className?: string;
   children: ReactNode;
 }
@@ -19,7 +21,7 @@ interface DialogProps {
  * tabulador no sale de ella, Escape la cierra y, al cerrarse, el foco vuelve
  * a donde estaba. Se monta solo mientras el modal está abierto.
  */
-const Dialog = ({ onClose, labelledBy, label, className = '', children }: DialogProps) => {
+const Dialog = ({ onClose, labelledBy, label, describedBy, className = '', children }: DialogProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   useEffect(() => {
@@ -69,6 +71,7 @@ const Dialog = ({ onClose, labelledBy, label, className = '', children }: Dialog
       aria-modal="true"
       aria-labelledby={labelledBy}
       aria-label={labelledBy ? undefined : label}
+      aria-describedby={describedBy}
       tabIndex={-1}
       className={`focus:outline-none ${className}`}
     >

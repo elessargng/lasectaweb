@@ -9,7 +9,7 @@ interface PanelAccesibilidadProps {
 
 /**
  * Pestaña Accesibilidad: qué avisos dice el lector de pantalla, por grupos. Se
- * aplica al momento y se guarda en este navegador.
+ * aplica al momento; con cuenta se guarda en el servidor.
  */
 const PanelAccesibilidad = ({ activos, onCambiar, onCambiarTodos }: PanelAccesibilidadProps) => (
   <div className="flex flex-col gap-6">

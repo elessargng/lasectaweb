@@ -15,7 +15,7 @@ interface PanelInterfazProps {
 
 /**
  * Pestaña Interfaz: cómo ves la sala (avatares y fichas), con una vista previa
- * arriba. Los cambios se aplican al momento y se guardan en este navegador.
+ * arriba. Los cambios se aplican al momento; con cuenta se guardan en el servidor.
  */
 const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, onCambiar }: PanelInterfazProps) => (
   <div className="flex flex-col gap-6">

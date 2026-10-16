@@ -59,6 +59,8 @@ export interface PersonajePropio {
   otrasNoches: Despertar;
   /** Altera la preparación de la partida («setup» en el JSON). */
   preparacion: boolean;
+  /** Los textos de sus recordatorios («reminders» y, detrás, «remindersGlobal»). */
+  recordatorios: string[];
 }
 
 /** Un guion tal como se importa: nombre, autor y sus entradas (ids del catálogo o personajes propios). */
@@ -81,6 +83,11 @@ export interface PersonajeDeGuion {
   iconoMalvado: string | null;
   recordatorioPrimeraNoche: string | null;
   recordatorioOtrasNoches: string | null;
+  /**
+   * Los textos de sus fichas recordatorio, en el original: los suyos y, detrás,
+   * los globales (los que se ponen aunque no esté en juego, p. ej. «Is The Drunk»).
+   */
+  recordatorios: string[];
   /** Altera la preparación de la partida (p. ej. el Barón: más forasteros). */
   preparacion: boolean;
   /** Está en el catálogo o es propio del guion; si no, solo se sabe su id. */

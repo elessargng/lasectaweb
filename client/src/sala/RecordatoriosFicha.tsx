@@ -1,0 +1,64 @@
+import type { CSSProperties } from 'react';
+import FichaRecordatorio, { TAMANO_RECORDATORIO } from './FichaRecordatorio';
+import { describirRecordatorio, textoRecordatorio, useFichas } from './fichas';
+import type { SalaRecordatorio } from './useSala';
+
+interface RecordatoriosFichaProps {
+  recordatorios: SalaRecordatorio[];
+  /** Dónde empiezan: junto a la ficha, hacia el centro de la mesa (lo calcula la mesa). */
+  style: CSSProperties;
+  /** Hacia el centro de la mesa (vector unitario): por ahí se apilan. */
+  hacia: { x: number; y: number };
+  /** Los que quien mira puede quitar (botón); los demás solo se ven. */
+  puedeQuitar: (r: SalaRecordatorio) => boolean;
+  onQuitar: (r: SalaRecordatorio) => void;
+}
+
+/**
+ * Las fichas recordatorio de una ficha: junto a ella, hacia el centro de la mesa,
+ * una tras otra en esa dirección. Apiladas (solapadas) mientras no se pasa el
+ * ratón ni el foco por ellas; entonces se separan para verlas todas.
+ *
+ * Las que se pueden quitar son botones («Quitar recordatorio…»); las demás solo
+ * se ven (lo que llevan se lee con el nombre del asiento y en la ficha).
+ */
+const RecordatoriosFicha = ({ recordatorios, style, hacia, puedeQuitar, onQuitar }: RecordatoriosFichaProps) => {
+  const { todosPorId } = useFichas();
+  if (recordatorios.length === 0) return null;
+  const n = recordatorios.length;
+  return (
+    <div
+      className="pointer-events-auto absolute z-20 [--paso:0.3] focus-within:z-40 focus-within:[--paso:1.08] hover:z-40 hover:[--paso:1.08]"
+      style={style}
+    >
+      {recordatorios.map((r, k) => {
+        const personaje = todosPorId.get(r.personaje);
+        const colocar: CSSProperties = {
+          // El primero, encima de los demás
+          zIndex: n - k,
+          transform: `translate(-50%, -50%) translate(calc(${hacia.x * k} * var(--paso) * ${TAMANO_RECORDATORIO}), calc(${hacia.y * k} * var(--paso) * ${TAMANO_RECORDATORIO}))`,
+        };
+        const ficha = <FichaRecordatorio personaje={personaje} texto={textoRecordatorio(r, personaje)} />;
+        const clases = 'absolute left-0 top-0 block rounded-full transition-transform duration-150 motion-reduce:transition-none';
+        return puedeQuitar(r) ? (
+          <button
+            key={r.id}
+            type="button"
+            onClick={() => onQuitar(r)}
+            aria-label={`Quitar recordatorio ${describirRecordatorio(r, personaje)}`}
+            className={`${clases} cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main`}
+            style={colocar}
+          >
+            {ficha}
+          </button>
+        ) : (
+          <span key={r.id} aria-hidden="true" className={clases} style={colocar}>
+            {ficha}
+          </span>
+        );
+      })}
+    </div>
+  );
+};
+
+export default RecordatoriosFicha;

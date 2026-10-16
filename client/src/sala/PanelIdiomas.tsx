@@ -14,7 +14,7 @@ const selectClass =
  * En la pestaña Usuario: en qué idioma se ven los personajes, los nombres por
  * un lado y las descripciones (habilidades y recordatorios) por otro, y el
  * género de los textos en las traducciones que lo distinguen. Se aplica al
- * momento y se guarda en este navegador.
+ * momento; con cuenta se guarda en el servidor.
  */
 const PanelIdiomas = ({ preferencias, onCambiar }: PanelIdiomasProps) => {
   // Las traducciones en que cambia algo el género, para decirlo en la ayuda

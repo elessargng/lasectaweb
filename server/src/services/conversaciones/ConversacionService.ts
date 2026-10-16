@@ -11,6 +11,7 @@ export class ConversacionError extends Error {
 }
 
 const conversa = (p: SalaParticipante) => p.rol === 'jugador' || p.rol === 'narrador';
+const escucha = (p: SalaParticipante) => p.rol === 'visitante' || p.rol === 'narrador';
 
 /**
  * Las conversaciones privadas de la sala (por voz y vídeo), aparte de la mesa.
@@ -19,13 +20,20 @@ const conversa = (p: SalaParticipante) => p.rol === 'jugador' || p.rol === 'narr
  *   (también quien invita, si no estaba ya en una). De día invita cualquier
  *   jugador o narrador; de noche, solo el narrador. Si quien invita ya está en
  *   una conversación, quien acepta entra en ella.
- * - Oyentes: los visitantes pueden escuchar cualquier conversación, sin
- *   invitación. No hablan ni se ven, y los jugadores no saben que están (solo los
- *   narradores lo ven).
+ * - Los narradores pueden además entrar en cualquier conversación, sin invitación
+ *   ni petición: entran como miembros (hablan y se les ve).
+ * - Peticiones para unirse: quien podría invitar pide entrar en la conversación
+ *   de alguien; la ven todos sus miembros y cualquiera la acepta o la rechaza.
+ * - Oyentes: los visitantes y los narradores pueden escuchar cualquier
+ *   conversación, sin invitación (p. ej. al seguir a un jugador). No hablan ni se
+ *   ven, y los jugadores no saben que están (solo los narradores y los visitantes
+ *   lo ven).
  * - Cada uno está en una como mucho (para aceptar una invitación hay que salir antes).
  * - Al cambiar de noche a día (o al revés) se terminan todas y caducan las invitaciones.
- * - Quien deja de poder estar (cambia de papel o se va) sale; una conversación
- *   con menos de dos miembros se termina.
+ * - Quien deja de poder estar (cambia de papel o se va) sale. Si queda un solo
+ *   miembro, la conversación sigue hasta que sale él: cada uno decide en sus
+ *   preferencias si sale automáticamente (lo hace su navegador). Sin miembros
+ *   se termina.
  *
  * En memoria, como la sala.
  */
@@ -45,7 +53,14 @@ export class ConversacionService {
 
   /** Las invitaciones pendientes en las que está alguien (las que hace y las que recibe). */
   invitacionesDe(id: string): SalaInvitacion[] {
-    return this.invitaciones.filter((i) => i.de === id || i.para === id).map((i) => ({ ...i }));
+    return this.invitaciones.filter((i) => this.laVe(i, id)).map((i) => ({ ...i }));
+  }
+
+  /** Quien hace la invitación o la petición, y quien la recibe (en una petición, cualquier miembro). */
+  private laVe(i: SalaInvitacion, id: string): boolean {
+    if (i.de === id) return true;
+    if (!i.conversacion) return i.para === id;
+    return !!this.conversaciones.find((c) => c.id === i.conversacion)?.miembros.includes(id);
   }
 
   /** La conversación en la que está alguien (como miembro u oyente), o undefined. */
@@ -70,21 +85,49 @@ export class ConversacionService {
     return { ...invitacion };
   }
 
+  /** Pide unirse a la conversación en la que está otro. Lanza ConversacionError si no se puede. */
+  pedirUnirse(yoId: string, otroId: string): SalaInvitacion {
+    this.depurar();
+    const yo = this.sala.buscar(yoId);
+    const otro = this.sala.buscar(otroId);
+    if (!yo) throw new ConversacionError('Ya no estás en la sala.');
+    if (!otro) throw new ConversacionError('Esa persona ya no está en la sala.');
+    if (!conversa(yo)) throw new ConversacionError('Solo los jugadores y los narradores conversan en privado.');
+    if (this.sala.fase().momento === 'noche' && yo.rol !== 'narrador') {
+      throw new ConversacionError('De noche solo el narrador puede unirse a una conversación.');
+    }
+    const suya = this.conversaciones.find((c) => c.miembros.includes(otro.id));
+    if (!suya) throw new ConversacionError(`${otro.nombre} ya no está en una conversación.`);
+    if (suya.miembros.includes(yo.id)) throw new ConversacionError('Ya estás en esa conversación.');
+    if (this.invitaciones.some((i) => i.de === yo.id && i.conversacion === suya.id)) {
+      throw new ConversacionError('Ya has pedido unirte a esa conversación.');
+    }
+    const peticion: SalaInvitacion = { id: randomUUID(), de: yo.id, para: otro.id, conversacion: suya.id };
+    this.invitaciones.push(peticion);
+    return { ...peticion };
+  }
+
   /**
    * Acepta (o rechaza) una invitación. Al aceptar, entra en la conversación de
    * quien invitó o, si no estaba en ninguna, empiezan una los dos.
    */
   responder(yoId: string, invitacionId: string, aceptar: boolean): void {
     this.depurar();
-    const invitacion = this.invitaciones.find((i) => i.id === invitacionId && i.para === yoId);
+    const invitacion = this.invitaciones.find((i) => i.id === invitacionId && i.de !== yoId && this.laVe(i, yoId));
     if (!invitacion) throw new ConversacionError('Esa invitación ya no está.');
+    if (invitacion.conversacion) {
+      this.invitaciones = this.invitaciones.filter((i) => i.id !== invitacionId);
+      if (aceptar) this.unir(invitacion.de, invitacion.conversacion);
+      return;
+    }
     if (aceptar && this.esMiembro(yoId)) throw new ConversacionError('Sal de tu conversación para aceptar otra.');
     this.invitaciones = this.invitaciones.filter((i) => i.id !== invitacionId);
     if (!aceptar) return;
     // Se vuelve a comprobar: puede haber cambiado algo desde que se invitó
     const { yo: anfitrion, otro: invitado } = this.comprobar(invitacion.de, yoId);
-    // Un visitante que estaba escuchando otra conversación la deja
+    // Quien estaba escuchando otra conversación la deja (también quien invita)
     this.salir(invitado.id);
+    if (!this.esMiembro(anfitrion.id)) this.salir(anfitrion.id);
     const suya = this.conversaciones.find((c) => c.miembros.includes(anfitrion.id));
     if (suya) suya.miembros.push(invitado.id);
     else this.conversaciones.push({ id: randomUUID(), miembros: [anfitrion.id, invitado.id], oyentes: [] });
@@ -92,36 +135,61 @@ export class ConversacionService {
     this.invitaciones = this.invitaciones.filter((i) => i.para !== invitado.id);
   }
 
+  /** Un narrador entra en una conversación como miembro (sin invitación). */
+  entrar(yoId: string, conversacionId: string): void {
+    this.depurar();
+    const yo = this.sala.buscar(yoId);
+    if (!yo) throw new ConversacionError('Ya no estás en la sala.');
+    if (yo.rol !== 'narrador') throw new ConversacionError('Solo los narradores entran sin invitación.');
+    const conversacion = this.conversaciones.find((c) => c.id === conversacionId);
+    if (!conversacion) throw new ConversacionError('Esa conversación ya ha terminado.');
+    if (conversacion.miembros.includes(yoId)) throw new ConversacionError('Ya estás en esa conversación.');
+    this.unir(yoId, conversacionId);
+  }
+
+  /** Alguien entra en una conversación: al aceptarse su petición o, si narra, sin más (si estaba en otra, la deja). */
+  private unir(id: string, conversacionId: string): void {
+    const p = this.sala.buscar(id);
+    if (!p || !conversa(p)) throw new ConversacionError('Quien lo pedía ya no puede conversar.');
+    this.salir(id);
+    const conversacion = this.conversaciones.find((c) => c.id === conversacionId);
+    if (!conversacion) throw new ConversacionError('Esa conversación ya ha terminado.');
+    conversacion.miembros.push(id);
+    // Ya está en una: lo que había recibido caduca, y sus otras peticiones también
+    this.invitaciones = this.invitaciones.filter((i) => i.para !== id && !(i.de === id && i.conversacion));
+  }
+
   /** Quien invitó la retira. */
   cancelar(yoId: string, invitacionId: string): void {
     this.invitaciones = this.invitaciones.filter((i) => !(i.id === invitacionId && i.de === yoId));
   }
 
-  /** Un visitante entra a escuchar una conversación (sin invitación; no le ven los jugadores). */
+  /** Un visitante o un narrador entra a escuchar una conversación (sin invitación; no le ven los jugadores). */
   escuchar(yoId: string, conversacionId: string): void {
     this.depurar();
     const yo = this.sala.buscar(yoId);
     if (!yo) throw new ConversacionError('Ya no estás en la sala.');
-    if (yo.rol !== 'visitante') throw new ConversacionError('Solo los visitantes escuchan las conversaciones.');
+    if (!escucha(yo)) throw new ConversacionError('Solo los visitantes y los narradores escuchan las conversaciones.');
+    if (this.esMiembro(yoId)) throw new ConversacionError('Sal de tu conversación para escuchar otra.');
     const conversacion = this.conversaciones.find((c) => c.id === conversacionId);
     if (!conversacion) throw new ConversacionError('Esa conversación ya ha terminado.');
     this.salir(yoId);
     conversacion.oyentes.push(yoId);
   }
 
-  /** Alguien sale de su conversación (si quedan menos de dos miembros, se termina). */
+  /** Alguien sale de su conversación (si no queda ningún miembro, se termina). */
   salir(id: string): void {
     for (const c of this.conversaciones) {
       c.miembros = c.miembros.filter((m) => m !== id);
       c.oyentes = c.oyentes.filter((o) => o !== id);
     }
-    this.conversaciones = this.conversaciones.filter((c) => c.miembros.length >= 2);
+    this.conversaciones = this.conversaciones.filter((c) => c.miembros.length > 0);
   }
 
   /**
    * Pone las conversaciones al día con la sala: al cambiar de fase se terminan
    * todas (y caducan las invitaciones); quien ya no puede estar sale; las que se
-   * quedan con menos de dos miembros se terminan; las invitaciones de quien se ha
+   * quedan sin miembros se terminan; las invitaciones de quien se ha
    * ido caducan. Devuelve si ha cambiado algo.
    */
   depurar(): boolean {
@@ -138,10 +206,16 @@ export class ConversacionService {
     };
     for (const c of this.conversaciones) {
       c.miembros = c.miembros.filter((id) => sigue(id, conversa));
-      c.oyentes = c.oyentes.filter((id) => sigue(id, (p) => p.rol === 'visitante'));
+      c.oyentes = c.oyentes.filter((id) => sigue(id, escucha));
     }
-    this.conversaciones = this.conversaciones.filter((c) => c.miembros.length >= 2);
-    this.invitaciones = this.invitaciones.filter((i) => sigue(i.de, conversa) && sigue(i.para, conversa));
+    this.conversaciones = this.conversaciones.filter((c) => c.miembros.length > 0);
+    // Las peticiones, mientras siga la conversación y quien la pide no esté ya en ella
+    this.invitaciones = this.invitaciones.filter((i) => {
+      if (!sigue(i.de, conversa)) return false;
+      if (!i.conversacion) return sigue(i.para, conversa);
+      const c = this.conversaciones.find((x) => x.id === i.conversacion);
+      return !!c && !c.miembros.includes(i.de);
+    });
     return JSON.stringify([this.conversaciones, this.invitaciones]) !== antes;
   }
 
@@ -157,7 +231,8 @@ export class ConversacionService {
     if (this.sala.fase().momento === 'noche' && yo.rol !== 'narrador') {
       throw new ConversacionError('De noche solo el narrador puede invitar a conversar.');
     }
-    const mia = this.deParticipante(yo.id);
+    // La mía, si hablo en ella (si solo la escucho, la dejo al empezar otra)
+    const mia = this.conversaciones.find((c) => c.miembros.includes(yo.id));
     const suya = this.deParticipante(otro.id);
     if (mia && suya === mia) throw new ConversacionError(`${otro.nombre} ya está en la conversación.`);
     if (suya?.miembros.includes(otro.id)) throw new ConversacionError(`${otro.nombre} ya está en otra conversación.`);

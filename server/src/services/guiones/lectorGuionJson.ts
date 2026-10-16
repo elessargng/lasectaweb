@@ -10,6 +10,9 @@ const texto = (v: unknown, max: number): string | null =>
   typeof v === 'string' && v.trim().length > 0 && v.trim().length <= max ? v.trim() : null;
 const orden = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) && v > 0 && v < 10000 ? v : null);
 const despertar = (o: unknown, r: unknown): Despertar => ({ orden: orden(o), recordatorio: texto(r, 600) });
+/** Una lista de textos cortos (los recordatorios): lo que no sea texto se ignora. */
+const textos = (v: unknown): string[] =>
+  Array.isArray(v) ? v.map((x) => texto(x, 60)).filter((x): x is string => !!x).slice(0, 20) : [];
 
 /** Un personaje propio del guion (con nombre, equipo y habilidad), o null si le falta algo. */
 function personajePropio(e: Record<string, unknown>): PersonajePropio | null {
@@ -29,6 +32,7 @@ function personajePropio(e: Record<string, unknown>): PersonajePropio | null {
     primeraNoche: despertar(e.firstNight, e.firstNightReminder),
     otrasNoches: despertar(e.otherNight, e.otherNightReminder),
     preparacion: e.setup === true,
+    recordatorios: [...textos(e.reminders), ...textos(e.remindersGlobal)],
   };
 }
 

@@ -23,6 +23,8 @@ export interface PersonajeDeGuion {
   iconoMalvado: string | null;
   recordatorioPrimeraNoche: string | null;
   recordatorioOtrasNoches: string | null;
+  /** Los textos de sus fichas recordatorio (los suyos y, detrás, los globales), en el original. */
+  recordatorios: string[];
   /** Altera la preparación de la partida (p. ej. el Barón). */
   preparacion: boolean;
   conocido: boolean;
@@ -146,6 +148,30 @@ export interface PersonajeMostrado {
   habilidad: Texto;
   primeraNoche: Texto | null;
   otrasNoches: Texto | null;
+  /** Los textos de sus fichas recordatorio, en el idioma de los nombres (en el orden del guion). */
+  recordatorios: Texto[];
+}
+
+/** El catálogo y las traducciones dan los recordatorios separados por comas. */
+const listaRecordatorios = (texto: string | null) =>
+  (texto ?? '')
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean);
+
+/**
+ * Los recordatorios de un personaje en un idioma: los traducidos si los hay y
+ * cuadran con el original (los mismos), uno a uno; si no, el original.
+ */
+function recordatoriosEn(p: PersonajeDeGuion, traducciones: TraduccionesDeIdioma | null): Texto[] {
+  const t = traducciones?.porPersonaje.get(p.id);
+  const traducidos = t ? [...listaRecordatorios(t.recordatorios), ...listaRecordatorios(t.recordatoriosGlobales)] : [];
+  // (?? []: por si el servidor aún no los manda)
+  const originales = p.recordatorios ?? [];
+  const usar = traducciones && traducidos.length === originales.length;
+  return originales.map((original, i) =>
+    usar ? { texto: traducidos[i], lang: traducciones.idioma.codigo } : { texto: original, lang: IDIOMA_ORIGINAL.codigo },
+  );
 }
 
 /**
@@ -179,6 +205,8 @@ export function mostrarPersonajes(
     habilidad: elegir(p.id, p.habilidad, descripciones, 'habilidad') ?? { texto: '', lang: IDIOMA_ORIGINAL.codigo },
     primeraNoche: elegir(p.id, p.recordatorioPrimeraNoche, descripciones, 'recordatorioPrimeraNoche'),
     otrasNoches: elegir(p.id, p.recordatorioOtrasNoches, descripciones, 'recordatorioOtrasNoches'),
+    // Los recordatorios son rótulos, como los nombres: en su idioma
+    recordatorios: recordatoriosEn(p, nombres),
   }));
 }
 

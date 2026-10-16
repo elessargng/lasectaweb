@@ -2,8 +2,8 @@ import { createContext, useCallback, useContext, useState } from 'react';
 
 /**
  * Qué avisos al lector de pantalla (aria-live) quiere cada uno, por tipo
- * (Preferencias > Accesibilidad). Todos empiezan activados; se guarda en este
- * navegador. Lo que también se ve en pantalla (errores, conexión) se sigue
+ * (Preferencias > Accesibilidad). Todos empiezan activados; con cuenta se guarda
+ * en el servidor (configuracion.ts). Lo que también se ve en pantalla (errores, conexión) se sigue
  * viendo: solo deja de leerse.
  */
 export type TipoAviso =
@@ -23,6 +23,7 @@ export type TipoAviso =
   | 'revelacion'
   | 'mensajes'
   | 'susurros'
+  | 'despertar'
   | 'comunicaciones'
   | 'conversaciones'
   | 'nominaciones'
@@ -81,7 +82,11 @@ export const GRUPOS_AVISOS: { grupo: string; tipos: { tipo: TipoAviso; etiqueta:
       { tipo: 'conversaciones', etiqueta: 'Conversaciones privadas: las tuyas (quién entra y sale) y quién conversa con quién' },
       { tipo: 'comunicaciones', etiqueta: 'Tu micrófono y tu cámara, al cambiarlos con su tecla' },
       { tipo: 'mensajes', etiqueta: 'Mensajes que te llegan (con quién y qué dicen)' },
-      { tipo: 'susurros', etiqueta: 'Susurros: quién escribe en privado a quién en la mesa' },
+      {
+        tipo: 'susurros',
+        etiqueta: 'Susurros: quién escribe en privado a quién en la mesa (a los narradores, también lo que dice)',
+      },
+      { tipo: 'despertar', etiqueta: 'De noche: lo que te muestra el narrador al despertarte, o lo que te contesta el jugador despierto' },
     ],
   },
   {
@@ -108,36 +113,31 @@ export type AvisosActivos = Record<TipoAviso, boolean>;
 const TODOS = GRUPOS_AVISOS.flatMap((g) => g.tipos.map((t) => t.tipo));
 const todos = (valor: boolean) => Object.fromEntries(TODOS.map((t) => [t, valor])) as AvisosActivos;
 
-const KEY = 'sala:avisos';
+/** Lo que guardaba antes la sala en el navegador (para llevarlo a la cuenta la primera vez). */
+export const KEY_ANTIGUA = 'sala:avisos';
 
-function leer(): AvisosActivos {
+/** Avisos válidos a partir de lo que sea (guardado, de un perfil…): lo que falte o no valga, activado. */
+export function normalizarAvisos(datos: unknown): AvisosActivos {
   const activos = todos(true);
-  try {
-    const guardados = JSON.parse(localStorage.getItem(KEY) ?? '{}');
-    for (const t of TODOS) if (typeof guardados[t] === 'boolean') activos[t] = guardados[t];
-  } catch {
-    // Sin almacenamiento o con algo roto: todos activados.
+  const guardados = (datos && typeof datos === 'object' ? datos : {}) as Record<string, unknown>;
+  for (const t of TODOS) {
+    const valor = guardados[t];
+    if (typeof valor === 'boolean') activos[t] = valor;
   }
   return activos;
 }
 
 export function useAvisosActivos() {
-  const [activos, setActivos] = useState(leer);
+  const [activos, setActivos] = useState(() => todos(true));
 
-  const guardar = (nuevos: AvisosActivos) => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(nuevos));
-    } catch {
-      // Sin almacenamiento: vale mientras la página esté abierta.
-    }
-    return nuevos;
-  };
   const cambiar = useCallback((tipo: TipoAviso, activo: boolean) => {
-    setActivos((prev) => guardar({ ...prev, [tipo]: activo }));
+    setActivos((prev) => ({ ...prev, [tipo]: activo }));
   }, []);
-  const cambiarTodos = useCallback((activo: boolean) => setActivos(guardar(todos(activo))), []);
+  const cambiarTodos = useCallback((activo: boolean) => setActivos(todos(activo)), []);
+  /** Pone los de una configuración guardada. */
+  const reemplazar = useCallback((datos: unknown) => setActivos(normalizarAvisos(datos)), []);
 
-  return { activos, cambiar, cambiarTodos };
+  return { activos, cambiar, cambiarTodos, reemplazar };
 }
 
 /** Para que cualquier componente sepa si un tipo de aviso está activo (por defecto, sí). */

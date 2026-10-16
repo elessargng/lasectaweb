@@ -37,6 +37,8 @@ export interface EnvioMensaje {
  * - Privados: con un narrador, siempre (en los dos sentidos). Entre jugadores,
  *   según la sala: ninguno, solo con sus vecinos (el más cercano sentado a cada
  *   lado) o con todos. Los visitantes no escriben en privado a los jugadores.
+ * - Los narradores leen también los privados entre jugadores (no los de otro
+ *   narrador con alguien): les llegan como a ellos, pero no escriben en ellos.
  *
  * Lee la sala (papeles, asientos, ajustes) de SalaService y guarda en el repositorio.
  */
@@ -51,7 +53,10 @@ export class ChatService {
   puedeLeer(yo: SalaParticipante, canal: string): boolean {
     if (canal === CANAL_GENERAL) return yo.rol === 'jugador' || yo.rol === 'narrador';
     if (canal === CANAL_VISITANTES) return yo.rol === 'visitante' || yo.rol === 'narrador';
-    return !!participantesDePrivado(canal)?.includes(yo.id);
+    const participantes = participantesDePrivado(canal);
+    if (!participantes) return false;
+    if (participantes.includes(yo.id)) return true;
+    return yo.rol === 'narrador' && participantes.every((id) => this.sala.buscar(id)?.rol !== 'narrador');
   }
 
   /** Si `yo` puede escribir en privado a `otro`. */
@@ -95,7 +100,8 @@ export class ChatService {
 
     const mensaje: SalaMensaje = { id: randomUUID(), canal, autor: yo.id, autorNombre: yo.nombre, texto: limpio, hora: this.ahora() };
     this.repositorio.guardar(mensaje);
-    const lectores = otro ? [yo.id, otro.id] : this.sala.participantes().filter((p) => this.puedeLeer(p, canal)).map((p) => p.id);
+    // En privado, los dos y, si son jugadores, los narradores
+    const lectores = this.sala.participantes().filter((p) => this.puedeLeer(p, canal)).map((p) => p.id);
     return { mensaje, lectores, susurro: otro ? this.susurro(yo, otro, limpio) : null };
   }
 

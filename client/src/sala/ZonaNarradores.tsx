@@ -63,10 +63,12 @@ const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas }: ZonaNarrad
                 espejo={n.id === estado.yo}
                 hablando={pistas?.get(n.id)?.hablando}
                 enConversacion={estado.conversaciones.some((c) => c.miembros.includes(n.id))}
+                escuchando={estado.conversaciones.some((c) => c.oyentes.includes(n.id))}
+                // Micro cerrado en la mesa (quien conversa o escucha ya lleva su icono)
                 silenciado={
                   !!pistas?.get(n.id) &&
                   !pistas.get(n.id)!.microfono &&
-                  !estado.conversaciones.some((c) => c.miembros.includes(n.id))
+                  !estado.conversaciones.some((c) => c.miembros.includes(n.id) || c.oyentes.includes(n.id))
                 }
                 grimorio={
                   puede('sala:solicitarGrimorio')

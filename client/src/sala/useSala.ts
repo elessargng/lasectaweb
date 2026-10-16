@@ -41,6 +41,16 @@ export interface SalaAsiento {
   personaje: string | null;
   /** Su alineamiento si se ha cambiado; null: el de su tipo. */
   alineamiento: SalaAlineamiento | null;
+  /** Las fichas recordatorio junto a la suya; solo llegan a quien ve el grimorio (narradores). */
+  recordatorios: SalaRecordatorio[];
+}
+
+/** Una ficha recordatorio: de qué personaje y cuál de sus recordatorios (su texto original, por si no hay traducción). */
+export interface SalaRecordatorio {
+  id: string;
+  personaje: string;
+  indice: number;
+  texto: string;
 }
 
 export type SalaAlineamiento = 'bueno' | 'malvado';
@@ -59,6 +69,8 @@ export interface SalaInvitacion {
   id: string;
   de: string;
   para: string;
+  /** Petición de `de` para unirse a la conversación de `para` (la ven todos sus miembros). */
+  conversacion?: string;
 }
 
 /** El pase para conectarse al servidor de vídeo. */
@@ -143,6 +155,33 @@ export interface SalaNominacion {
   votosNecesariosPorDefecto: number;
 }
 
+/** Un mensaje de un despertar, entre el narrador y el jugador de un asiento (ver despertar.ts). */
+export interface MensajeDespertar {
+  id: string;
+  /** 'narrador', o el id del asiento del jugador que contesta. */
+  autor: string;
+  ficha: string | null;
+  tarjeta: string | null;
+  /** ids de asiento. */
+  jugadores: string[];
+  personajes: string[];
+  texto: string | null;
+  /** «Tú eres»: el alineamiento, si se dice. */
+  alineamiento: SalaAlineamiento | null;
+  /** En qué momento de la partida se mandó. */
+  fase: { momento: SalaFase['momento']; numero: number };
+  hora: number;
+}
+
+/**
+ * Un despertar: lo que se dicen el narrador y el jugador de un asiento. Se abre
+ * de noche y dura hasta limpiar el grimorio; hay uno por asiento, varios a la vez.
+ */
+export interface SalaDespertar {
+  asiento: string;
+  mensajes: MensajeDespertar[];
+}
+
 export interface SalaEstado {
   participantes: SalaParticipante[];
   /** En orden: el primero a las 12 y siguiendo como las agujas del reloj. */
@@ -167,6 +206,13 @@ export interface SalaEstado {
   ahora: number;
   /** Registro de votaciones (la más reciente primero); vacío salvo para narradores. */
   votaciones: SalaRegistroVotacion[];
+  /**
+   * Recordatorios (estrella) del orden de noche que los narradores han cambiado a
+   * mano: por personaje o 'esbirros' / 'demonios'. Vacío salvo para narradores.
+   */
+  recordatoriosNoche: Record<string, boolean>;
+  /** Los despertares: todos para los narradores; el de su asiento para un jugador; ninguno para los demás. */
+  despertares: SalaDespertar[];
   /** Mi id en la sala. */
   yo: string;
   /** Acciones que puedo usar ahora; el servidor decide cuáles. */
@@ -370,8 +416,13 @@ export function useSala(
     (sala: string) => pedirAlSocket<SalaResultado & Partial<{ url: string; token: string }>>('video:pase', { sala }) as Promise<PaseVideo>,
     [pedirAlSocket],
   );
-  /** Conversaciones privadas: invitar a alguien, responder, retirar la invitación, escuchar (visitantes) y salir. */
+  /**
+   * Conversaciones privadas: invitar a alguien, pedir unirse a la suya, responder,
+   * retirar la invitación o la petición, escuchar (visitantes y narradores), entrar
+   * sin invitación (narradores) y salir.
+   */
   const invitarAConversar = useCallback((con: string) => pedirAlSocket<SalaResultado>('conversacion:invitar', { con }), [pedirAlSocket]);
+  const pedirUnirse = useCallback((con: string) => pedirAlSocket<SalaResultado>('conversacion:pedirUnirse', { con }), [pedirAlSocket]);
   const responderInvitacion = useCallback(
     (invitacion: string, aceptar: boolean) => pedirAlSocket<SalaResultado>('conversacion:responder', { invitacion, aceptar }),
     [pedirAlSocket],
@@ -382,6 +433,10 @@ export function useSala(
   );
   const escucharConversacion = useCallback(
     (conversacion: string) => pedirAlSocket<SalaResultado>('conversacion:escuchar', { conversacion }),
+    [pedirAlSocket],
+  );
+  const entrarConversacion = useCallback(
+    (conversacion: string) => pedirAlSocket<SalaResultado>('conversacion:entrar', { conversacion }),
     [pedirAlSocket],
   );
   const salirConversacion = useCallback(() => pedirAlSocket<SalaResultado>('conversacion:salir', {}), [pedirAlSocket]);
@@ -409,9 +464,11 @@ export function useSala(
     pedirHistorial,
     pedirPaseVideo,
     invitarAConversar,
+    pedirUnirse,
     responderInvitacion,
     cancelarInvitacion,
     escucharConversacion,
+    entrarConversacion,
     salirConversacion,
   };
 }

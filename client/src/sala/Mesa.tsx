@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
+import { Fragment, useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import Agujas from './Agujas';
 import { useAriaLive, type TipoAviso } from './avisosConfig';
 import AsaMover from './AsaMover';
@@ -10,14 +10,18 @@ import type { PistasParticipante } from './useVideollamada';
 import { hacenFalta } from './avisosSala';
 import CuadroAvatar from './CuadroAvatar';
 import FichaAsiento from './FichaAsiento';
+import RecordatoriosFicha from './RecordatoriosFicha';
+import { ESCALA_RECORDATORIO } from './FichaRecordatorio';
+import { describirRecordatorio, recordatoriosDeFicha, useFichas } from './fichas';
 import Mano from './Mano';
 import PanelNominacion from './PanelNominacion';
 import { botonPrincipal, botonSecundario } from './estilos';
-import { ID_AYUDA_MOVER, idNombreAsiento, ID_GANADOR, idRevelarFicha } from './ids';
+import { ID_AYUDA_MOVER, idLunaFicha, idNombreAsiento, ID_GANADOR, idRevelarFicha } from './ids';
+import { nombreDeAsiento } from './despertar';
 import { tamanoAvatarAuto, tamanoFichaAuto } from './tamanosAutomaticos';
 import { useMoverAsientos } from './useMoverAsientos';
 import { useNominacion } from './useNominacion';
-import type { SalaEstado, SalaParticipante, SalaResultado } from './useSala';
+import type { SalaEstado, SalaParticipante, SalaRecordatorio, SalaResultado } from './useSala';
 
 export interface TamanosMesa {
   avatar: number;
@@ -66,6 +70,17 @@ interface MesaProps {
   pistas: Map<string, PistasParticipante>;
   /** Susurros en curso: ondas de un asiento a otro. */
   ondas: OndaMesa[];
+  /**
+   * Narrador (y visitante que ve el grimorio): los asientos con despertar, los que
+   * tienen mensajes sin ver y cómo abrir (o crear, de noche: solo el narrador) el
+   * de un asiento. null para los demás.
+   */
+  despertares: { hilos: Set<string>; noLeidos: Set<string>; onAbrir: (asientoId: string) => void } | null;
+  /**
+   * Visitantes y narradores: a quién siguen (id) y cómo seguir o dejar de seguir
+   * al jugador de una ficha. null si no pueden seguir a nadie.
+   */
+  seguimiento: { siguiendo: string | null; onAlternar: (jugador: SalaParticipante) => void } | null;
 }
 
 /**
@@ -102,6 +117,27 @@ function posicionFicha(i: number, total: number): CSSProperties {
   return { left: `calc(50% + ${x} * ${radio})`, top: `calc(50% + ${y} * ${radio})` };
 }
 
+/**
+ * Dónde empiezan los recordatorios de la ficha `i`: junto a ella, hacia el
+ * centro de la mesa (medio diámetro de la ficha y medio de un recordatorio más
+ * adentro), y hacia dónde se apilan (el centro).
+ */
+function posicionRecordatorios(i: number, total: number): { style: CSSProperties; hacia: { x: number; y: number } } {
+  const angulo = (2 * Math.PI * i) / total;
+  const x = Math.sin(angulo);
+  const y = -Math.cos(angulo);
+  const t = 'var(--sala-ficha-distancia, 0.75)';
+  const ficha = 'var(--sala-ficha, 4.5rem)';
+  const radio = `(50% - var(--sala-avatar, 10rem) / 2 - ${t} * (var(--sala-avatar, 10rem) + ${ficha}) / 2 - ${ficha} * ${(1 + ESCALA_RECORDATORIO) / 2} - 2px)`;
+  return {
+    style: { left: `calc(50% + ${x.toFixed(4)} * ${radio})`, top: `calc(50% + ${y.toFixed(4)} * ${radio})` },
+    hacia: { x: -x, y: -y },
+  };
+}
+
+/** Una luna creciente (como la de lucide), centrada en una caja de 24 × 24. */
+const LUNA = 'M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z';
+
 const textoAsientos = (n: number) => (n === 1 ? '1 asiento' : `${n} asientos`);
 
 /**
@@ -132,6 +168,8 @@ const Mesa = ({
   contacto,
   pistas,
   ondas,
+  despertares,
+  seguimiento,
 }: MesaProps) => {
   const anadirRef = useRef<HTMLButtonElement>(null);
   const [pidiendo, setPidiendo] = useState(false);
@@ -142,7 +180,53 @@ const Mesa = ({
   // jugador con grimorio, para cambiarlas en el suyo; si no, solo se ven.
   const modoFichas = acciones.includes('narrador:cambiarVida') ? 'narrador' : grimorio ? 'grimorio' : 'ver';
   const mesaRef = useRef<HTMLDivElement>(null);
+
+  // El narrador despierta (de noche) al jugador de una ficha, o a la ficha si el
+  // asiento está libre (cuenta como un jugador más), o abre su despertar si ya lo tiene.
+  const despertarDe = (asientoId: string) => {
+    if (modoFichas !== 'narrador' || editando || !despertares) return undefined;
+    const abierto = despertares.hilos.has(asientoId);
+    if (!abierto && !acciones.includes('narrador:despertar')) return undefined;
+    return { abierto, onAbrir: () => despertares.onAbrir(asientoId) };
+  };
   const ariaLiveAsientos = useAriaLive('editarAsientos');
+  // Lo que lleva cada ficha, para leerlo con el nombre del asiento: el personaje que
+  // ve quien mira (el de la partida o, con grimorio, el que ha anotado), la calavera y el sudario.
+  const { porId, notas, todosPorId, notasRecordatorios, anotarRecordatorios } = useFichas();
+  const personajeVisto = (a: (typeof asientos)[number]) =>
+    a.personaje ?? (modoFichas === 'grimorio' ? notas[a.id]?.personaje : null) ?? null;
+  // Los recordatorios que se ven: los de la partida (a quien ve el grimorio) y, con grimorio propio, los anotados
+  const recordatoriosDe = (a: (typeof asientos)[number]) =>
+    recordatoriosDeFicha(a, modoFichas === 'grimorio' ? notasRecordatorios : null);
+  const fichaDe = (a: (typeof asientos)[number]) => {
+    const personajeId = personajeVisto(a);
+    const personaje = personajeId ? porId.get(personajeId) : undefined;
+    return {
+      personaje: personaje?.nombre ?? null,
+      marcado: a.marcado,
+      muerto: a.muerto,
+      recordatorios: recordatoriosDe(a).map((r) => describirRecordatorio(r, todosPorId.get(r.personaje))),
+    };
+  };
+  // Los personajes en juego (para quien mira): sus recordatorios salen primero al poner uno
+  const enJuego = new Set(asientos.map(personajeVisto).filter((id): id is string => !!id));
+  // Quitar un recordatorio: el narrador, de la partida; un jugador, de su grimorio.
+  // El botón desaparece: el foco vuelve a la ficha, que dice los que quedan.
+  const anotadoPorMi = (asientoId: string, r: SalaRecordatorio) => !!notasRecordatorios[asientoId]?.some((x) => x.id === r.id);
+  const quitarRecordatorio = async (asientoId: string, r: SalaRecordatorio) => {
+    if (anotadoPorMi(asientoId, r)) {
+      anotarRecordatorios(asientoId, (notasRecordatorios[asientoId] ?? []).filter((x) => x.id !== r.id));
+    } else {
+      const res = await pedir('narrador:quitarRecordatorio', { asientoId, recordatorioId: r.id });
+      if (!res.ok) return onError(res.error);
+    }
+    window.setTimeout(() => document.getElementById(`sala-ficha-${asientoId}-boton`)?.focus(), 0);
+  };
+  // Seguir al jugador de una ficha (no a uno mismo, ni editando asientos o revelando el grimorio)
+  const seguirA = (ocupante: SalaParticipante | null) => {
+    if (!seguimiento || editando || estado.revelacion || !ocupante || ocupante.id === estado.yo || ocupante.rol !== 'jugador') return undefined;
+    return { siguiendo: seguimiento.siguiendo === ocupante.id, onAlternar: () => seguimiento.onAlternar(ocupante) };
+  };
 
   // Lado de la mesa en pantalla, para los tamaños automáticos.
   const [ladoMesa, setLadoMesa] = useState(0);
@@ -305,6 +389,8 @@ const Mesa = ({
                     !estado.conversaciones.some((c) => c.miembros.includes(ocupante.id))
                   }
                   asa={editando && real && <AsaMover {...mover.propsAsa(a.id)} nombre={real.nombre} numero={i + 1} />}
+                  ficha={fichaDe(a)}
+                  siguiendo={!!ocupante && seguimiento?.siguiendo === ocupante.id}
                 />
               </li>
             );
@@ -324,8 +410,9 @@ const Mesa = ({
           ratón, así que lo que tapa se sigue pudiendo pulsar. Cada ficha es un botón
           para el narrador o un jugador con grimorio; para los demás, solo se ve. */}
       {/* Con el menú de una ficha abierto, la capa sube por encima de las agujas y del centro */}
+      {/* Solo se ve (sin menú): fuera del árbol de accesibilidad, salvo las que se pueden seguir */}
       <div
-        aria-hidden={modoFichas === 'ver' ? true : undefined}
+        aria-hidden={modoFichas === 'ver' && !seguimiento && !despertares ? true : undefined}
         className="pointer-events-none absolute inset-0 z-10 has-[[aria-expanded=true]]:z-40"
       >
         {asientos.map((a, i) => {
@@ -333,43 +420,98 @@ const Mesa = ({
           const visible = editando ? mover.ocupanteVisible(a) : a.ocupante;
           const ocupante = participante(visible);
           const eligiendo = nominar.eligiendo(a.id);
+          const seguir = seguirA(ocupante);
+          // La luna del despertar (narradores, y visitantes que ven el grimorio) también se pulsa
+          const conLuna = !!despertares?.hilos.has(a.id) && !editando;
+          const soloSeVe = modoFichas === 'ver' && !eligiendo && !seguir && !conLuna;
+          const posRecordatorios = posicionRecordatorios(i, total);
           return (
-            <div
-              key={a.id}
-              // La ficha con el menú abierto, por encima de las demás (si no, su menú quedaría debajo)
-              className={`absolute -translate-x-1/2 -translate-y-1/2 has-[[aria-expanded=true]]:z-50 ${modoFichas === 'ver' && !eligiendo ? '' : 'pointer-events-auto'}`}
-              style={posicionFicha(i, total)}
-            >
-              <FichaAsiento
-                asiento={a}
-                numero={i + 1}
-                ocupante={ocupante}
-                propia={!!ocupante && ocupante.id === estado.yo}
-                modo={modoFichas}
-                pedir={pedir}
-                onError={onError}
-                onNominar={nominar.onNominar?.(a.id)}
-                eligiendo={eligiendo}
-                voto={nominacion?.votacion?.resultados[a.id]}
-                revelando={
-                  revelacion
-                    ? {
-                        revelada: revelacion.reveladas.includes(a.id),
-                        onRevelar: puedeRevelar ? () => void revelar(a.id) : undefined,
-                      }
-                    : undefined
-                }
-              />
-              {ocupante?.manoLevantada && (
-                // Mano levantada montada sobre la esquina de arriba a la derecha de su ficha
-                // (pegada a ella, para que se sepa de quién es aunque las fichas estén juntas);
-                // se dice en el nombre de la ficha y en los avisos
-                <Mano
-                  forma={ocupante.formaMano}
-                  className="pointer-events-none absolute -right-[8%] -top-[12%] z-10 w-[calc(var(--sala-ficha,4.5rem)*0.55)] drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]"
+            <Fragment key={a.id}>
+              <div
+                aria-hidden={soloSeVe || undefined}
+                // La ficha con el menú abierto, por encima de las demás (si no, su menú quedaría debajo)
+                className={`absolute -translate-x-1/2 -translate-y-1/2 has-[[aria-expanded=true]]:z-50 ${soloSeVe ? '' : 'pointer-events-auto'}`}
+                style={posicionFicha(i, total)}
+              >
+                <FichaAsiento
+                  asiento={a}
+                  numero={i + 1}
+                  ocupante={ocupante}
+                  propia={!!ocupante && ocupante.id === estado.yo}
+                  modo={modoFichas}
+                  pedir={pedir}
+                  onError={onError}
+                  onNominar={nominar.onNominar?.(a.id)}
+                  eligiendo={eligiendo}
+                  voto={nominacion?.votacion?.resultados[a.id]}
+                  despertar={despertarDe(a.id)}
+                  seguir={seguir}
+                  enJuego={enJuego}
+                  revelando={
+                    revelacion
+                      ? {
+                          revelada: revelacion.reveladas.includes(a.id),
+                          onRevelar: puedeRevelar ? () => void revelar(a.id) : undefined,
+                        }
+                      : undefined
+                  }
+                />
+                {conLuna && despertares && (
+                  // La luna del despertar, sobre toda la ficha: solo su contorno, en blanco; se
+                  // rellena de amarillo (y lo dice) si el jugador ha mandado algo que el narrador
+                  // no ha visto. Solo la luna recibe el clic (lo vuelve a abrir): el resto de la
+                  // ficha sigue abriendo su menú.
+                  <button
+                    id={idLunaFicha(a.id)}
+                    type="button"
+                    onClick={() => despertares.onAbrir(a.id)}
+                    className="pointer-events-none absolute inset-0 z-10 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      className={`h-full w-full drop-shadow-[0_0_2px_rgba(0,0,0,0.9)] ${
+                        despertares.noLeidos.has(a.id) ? 'animate-pulse motion-reduce:animate-none' : ''
+                      }`}
+                    >
+                      <path
+                        d={LUNA}
+                        fill={despertares.noLeidos.has(a.id) ? 'var(--color-gold-bright)' : 'none'}
+                        stroke="white"
+                        strokeWidth={1.2}
+                        strokeLinejoin="round"
+                        className="pointer-events-auto cursor-pointer"
+                      />
+                      {/* Más margen para acertar en el contorno (sin pintar) */}
+                      <path d={LUNA} fill="none" stroke="transparent" strokeWidth={4} className="cursor-pointer [pointer-events:stroke]" />
+                    </svg>
+                    <span className="sr-only">
+                      Despertar de {nombreDeAsiento(estado, a.id)}
+                      {despertares.noLeidos.has(a.id) ? ', mensajes nuevos' : ''}
+                    </span>
+                  </button>
+                )}
+                {ocupante?.manoLevantada && (
+                  // Mano levantada montada sobre la esquina de arriba a la derecha de su ficha
+                  // (pegada a ella, para que se sepa de quién es aunque las fichas estén juntas);
+                  // se dice en el nombre de la ficha y en los avisos
+                  <Mano
+                    forma={ocupante.formaMano}
+                    className="pointer-events-none absolute -right-[8%] -top-[12%] z-10 w-[calc(var(--sala-ficha,4.5rem)*0.55)] drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]"
+                  />
+                )}
+              </div>
+              {/* Sus recordatorios, después de la ficha (en el orden del tabulador también) */}
+              {!revelacion && (
+                <RecordatoriosFicha
+                  recordatorios={recordatoriosDe(a)}
+                  style={posRecordatorios.style}
+                  hacia={posRecordatorios.hacia}
+                  puedeQuitar={(r) => modoFichas === 'narrador' || anotadoPorMi(a.id, r)}
+                  onQuitar={(r) => void quitarRecordatorio(a.id, r)}
                 />
               )}
-            </div>
+            </Fragment>
           );
         })}
       </div>

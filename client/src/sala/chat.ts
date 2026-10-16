@@ -8,6 +8,12 @@ import type { SalaEstado, SalaParticipante } from './useSala';
 
 export const CANAL_GENERAL = 'general';
 export const CANAL_VISITANTES = 'visitantes';
+/**
+ * Pestaña de los narradores con los mensajes privados entre jugadores (todos
+ * juntos, solo para leer). No es un canal del servidor: agrupa los privados
+ * ajenos que le llegan.
+ */
+export const CANAL_SUSURROS = 'susurros';
 const PREFIJO_PRIVADO = 'privado:';
 
 export type SalaMensajesPrivados = 'ninguno' | 'vecinos' | 'todos';
@@ -33,6 +39,23 @@ export const LARGO_MAXIMO_MENSAJE = 500;
 export const canalPrivado = (a: string, b: string) => `${PREFIJO_PRIVADO}${[a, b].sort().join(':')}`;
 export const esPrivado = (canal: string) => canal.startsWith(PREFIJO_PRIVADO);
 
+/** Los dos de un canal privado, o null si no lo es. */
+export function participantesDelPrivado(canal: string): string[] | null {
+  return esPrivado(canal) ? canal.slice(PREFIJO_PRIVADO.length).split(':') : null;
+}
+
+/** Un privado entre otros (los narradores leen los de los jugadores). */
+export const esAjeno = (canal: string, yo: string) => !!participantesDelPrivado(canal) && !participantesDelPrivado(canal)!.includes(yo);
+
+/** Los mensajes de una pestaña: los de su canal o, en Susurros, todos los privados ajenos. */
+export const mensajesDe = (mensajes: SalaMensaje[], canal: string, yo: string) =>
+  canal === CANAL_SUSURROS ? mensajes.filter((m) => esAjeno(m.canal, yo)) : mensajes.filter((m) => m.canal === canal);
+
+/** Las pestañas privadas propias: con mensajes (o abiertas) y en las que está `yo`. */
+export const privadosPropios = (mensajes: SalaMensaje[], abiertos: string[], yo: string) => [
+  ...new Set([...mensajes.map((m) => m.canal).filter((c) => esPrivado(c) && !esAjeno(c, yo)), ...abiertos]),
+];
+
 /** En un canal privado, el otro participante (el que no es `yo`). */
 export function otroDelPrivado(canal: string, yo: string): string | null {
   if (!esPrivado(canal)) return null;
@@ -42,7 +65,7 @@ export function otroDelPrivado(canal: string, yo: string): string | null {
 
 /** Los canales comunes que tiene alguien según su papel. */
 export function canalesComunes(yo: SalaParticipante): string[] {
-  if (yo.rol === 'narrador') return [CANAL_GENERAL, CANAL_VISITANTES];
+  if (yo.rol === 'narrador') return [CANAL_GENERAL, CANAL_VISITANTES, CANAL_SUSURROS];
   return [yo.rol === 'jugador' ? CANAL_GENERAL : CANAL_VISITANTES];
 }
 
@@ -73,10 +96,11 @@ export function puedeEscribirA(estado: SalaEstado, yo: SalaParticipante, otro: S
   return false;
 }
 
-/** Cómo se llama un canal: «General», «Visitantes» o el nombre del otro. */
+/** Cómo se llama un canal: «General», «Visitantes», «Susurros» o el nombre del otro. */
 export function nombreCanal(canal: string, yo: string, participantes: SalaParticipante[], mensajes: SalaMensaje[]): string {
   if (canal === CANAL_GENERAL) return 'General';
   if (canal === CANAL_VISITANTES) return 'Visitantes';
+  if (canal === CANAL_SUSURROS) return 'Susurros';
   const otro = otroDelPrivado(canal, yo);
   return (
     participantes.find((p) => p.id === otro)?.nombre ??
@@ -84,4 +108,14 @@ export function nombreCanal(canal: string, yo: string, participantes: SalaPartic
     mensajes.find((m) => m.canal === canal && m.autor === otro)?.autorNombre ??
     'Alguien que ya no está'
   );
+}
+
+/** Quién es quién en un privado ajeno: «Ana a Luis» (de quien escribe al otro). */
+export function deQuienAQuien(m: SalaMensaje, participantes: SalaParticipante[], mensajes: SalaMensaje[]): string {
+  const otro = participantesDelPrivado(m.canal)?.find((id) => id !== m.autor);
+  const nombreOtro =
+    participantes.find((p) => p.id === otro)?.nombre ??
+    mensajes.find((x) => x.canal === m.canal && x.autor === otro)?.autorNombre ??
+    'alguien que ya no está';
+  return `${m.autorNombre} a ${nombreOtro}`;
 }

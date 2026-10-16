@@ -144,6 +144,11 @@ export function useVideollamada({
         .on(RoomEvent.ParticipantDisconnected, refrescar)
         .on(RoomEvent.LocalTrackPublished, refrescar)
         .on(RoomEvent.LocalTrackUnpublished, refrescar)
+        // Si cambian los permisos propios (p. ej. un narrador que pasa de escuchar a
+        // estar dentro), se vuelve a mirar qué publicar
+        .on(RoomEvent.ParticipantPermissionsChanged, (_antes, p) => {
+          if (!cerrada && p === room.localParticipant) setConectadas((n) => n + 1);
+        })
         .on(RoomEvent.AudioPlaybackStatusChanged, () => !cerrada && setSonidoBloqueado(!room.canPlaybackAudio));
       void pedirPaseRef.current(sala).then(async (pase) => {
         if (cerrada || !pase.ok) return;
@@ -187,6 +192,8 @@ export function useVideollamada({
     const publicar = async (room: Room | null, cam: boolean, micro: boolean) => {
       if (!room) return;
       const p = room.localParticipant;
+      // Aún sin permiso para emitir (llega enseguida): se publica cuando llegue
+      if ((cam || micro) && p.permissions && !p.permissions.canPublish) return;
       try {
         await p.setMicrophoneEnabled(micro, idMicrofono ? { deviceId: idMicrofono } : undefined);
       } catch (e) {

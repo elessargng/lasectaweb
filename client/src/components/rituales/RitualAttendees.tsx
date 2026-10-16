@@ -1,4 +1,4 @@
-import { CalendarCheck, CalendarPlus, Loader2, UserMinus, UserPlus } from 'lucide-react';
+import { CalendarCheck, CalendarPlus, CalendarX, Loader2, UserMinus, UserPlus } from 'lucide-react';
 import type { Ritual } from '../../utils/ritualsApi';
 import { getAvatarUrl } from '../../utils/api';
 import { isIntention } from './ritualSignups';
@@ -125,8 +125,8 @@ export const RitualAttendees = ({ ritual, actions }: RitualAttendeesProps) => {
 
 /**
  * Quién quiere asistir a una partida presencial o a un evento, y el botón para
- * decirlo o retirarlo. Es un botón de alternar: el lector anuncia si está
- * marcado. La lista va por nombre, sin números, porque no da prioridad.
+ * decirlo («Quiero asistir») o retirarlo («Ya no puedo asistir»). La lista va
+ * por nombre, sin números, porque no da prioridad.
  */
 const RitualIntentions = ({ ritual, actions }: RitualAttendeesProps) => {
   const attendees = [...(ritual.attendees ?? [])].sort((a, b) => a.username.localeCompare(b.username, 'es'));
@@ -167,29 +167,32 @@ const RitualIntentions = ({ ritual, actions }: RitualAttendeesProps) => {
         ) : !actions?.userId ? (
           <p className={nota}>Identifícate para decir que quieres asistir.</p>
         ) : (
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            {/* Sin marcar es la llamada principal (dorado); marcado queda como un sello con su check */}
-            <button
-              type="button"
-              aria-pressed={mine}
-              aria-busy={busy || undefined}
-              disabled={busy}
-              onClick={() => (mine ? actions.onLeave(ritual) : actions.onSignUp(ritual))}
-              className={`gap-2 ${
-                mine
-                  ? 'btn-sello !text-gold-bright !border-theme-main/70 !bg-theme-main/10'
-                  : 'btn-runic btn-runic-primary px-5 py-2 text-xs'
-              }`}
-            >
-              {busy ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : mine ? (
-                <CalendarCheck className="w-4 h-4" />
-              ) : (
-                <CalendarPlus className="w-4 h-4" />
+          <div className="flex flex-col gap-2">
+            {/* El texto del botón dice lo que hace: «Quiero asistir» (llamada principal, en dorado) o, si ya vas,
+                «Ya no puedo asistir». Por eso no es un botón de alternar: el estado lo dice el aviso de al lado. */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              {mine && (
+                <p className="inline-flex items-center gap-1.5 font-ui text-xs font-semibold uppercase tracking-[0.14em] text-gold-bright">
+                  <CalendarCheck className="w-4 h-4" /> Vas a asistir
+                </p>
               )}
-              Quiero asistir
-            </button>
+              <button
+                type="button"
+                aria-busy={busy || undefined}
+                disabled={busy}
+                onClick={() => (mine ? actions.onLeave(ritual) : actions.onSignUp(ritual))}
+                className={`gap-2 ${mine ? 'btn-sello btn-sello-peligro' : 'btn-runic btn-runic-primary px-5 py-2 text-xs'}`}
+              >
+                {busy ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : mine ? (
+                  <CalendarX className="w-4 h-4" />
+                ) : (
+                  <CalendarPlus className="w-4 h-4" />
+                )}
+                {mine ? 'Ya no puedo asistir' : 'Quiero asistir'}
+              </button>
+            </div>
             <p className={nota}>Solo para saber quién piensa ir: no reserva plaza.</p>
           </div>
         ))}

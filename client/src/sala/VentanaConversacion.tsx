@@ -1,10 +1,11 @@
-import { GripHorizontal, Maximize2, MicOff, Minimize2, PhoneOff } from 'lucide-react';
+import { GripHorizontal, LogIn, Maximize2, MicOff, Minimize2, PhoneOff } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
 import { getAvatarUrl } from '../utils/api';
 import { botonSecundario } from './estilos';
 import type { SalaConversacion, SalaParticipante } from './useSala';
 import type { PistasParticipante } from './useVideollamada';
 import VideoPista from './VideoPista';
+import NombresOyentes from './NombresOyentes';
 
 interface VentanaConversacionProps {
   conversacion: SalaConversacion;
@@ -13,6 +14,8 @@ interface VentanaConversacionProps {
   /** Lo que se ve y se oye en la conversación, por participante. */
   pistas: Map<string, PistasParticipante>;
   onSalir: () => void;
+  /** Narradores que escuchan: pasar a estar dentro (se les ve y se les oye). */
+  onEntrar?: () => void;
   /** La tecla para salir (Retroceso), para decirla. */
   teclaSalir: string;
   /** El título: recibe el foco al entrar en la conversación. */
@@ -43,6 +46,7 @@ const VentanaConversacion = ({
   yo,
   pistas,
   onSalir,
+  onEntrar,
   teclaSalir,
   tituloRef,
 }: VentanaConversacionProps) => {
@@ -148,15 +152,24 @@ const VentanaConversacion = ({
           className={`min-w-0 flex-1 truncate font-semibold text-theme-main focus:outline-none ${minimizada ? 'text-xs' : 'text-lg'}`}
         >
           {escucho ? 'Escuchando una conversación' : 'Conversación privada'}
-          <span className="sr-only">
-            {escucho ? ' de ' : ' con '}
-            {enumerar(escucho ? miembros.map((p) => p.nombre) : otros)}
-          </span>
+          {(escucho || otros.length > 0) && (
+            <span className="sr-only">
+              {escucho ? ' de ' : ' con '}
+              {enumerar(escucho ? miembros.map((p) => p.nombre) : otros)}
+            </span>
+          )}
         </h2>
         <button type="button" onClick={() => setMinimizada((m) => !m)} className={boton}>
           {minimizada ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
           {minimizada ? 'Ampliar' : 'Minimizar'}
         </button>
+        {escucho && onEntrar && (
+          <button type="button" onClick={onEntrar} className={boton}>
+            <LogIn size={14} />
+            Entrar
+            <span className="sr-only"> en la conversación</span>
+          </button>
+        )}
         <button
           type="button"
           onClick={onSalir}
@@ -168,6 +181,12 @@ const VentanaConversacion = ({
           {escucho ? 'Dejar de escuchar' : 'Salir'}
         </button>
       </div>
+
+      {!escucho && otros.length === 0 && (
+        <p className={`text-on-surface-muted ${minimizada ? 'text-xs' : 'text-sm'}`}>
+          No queda nadie más en la conversación. Pulsa «Salir» para volver a la mesa.
+        </p>
+      )}
 
       <ul className={`grid gap-2 ${columnas}`}>
         {miembros.map((p) => {
@@ -207,7 +226,7 @@ const VentanaConversacion = ({
         // Solo les llega a narradores y visitantes: los jugadores no saben que hay oyentes
         <p className="text-xs text-on-surface-muted">
           {oyentes.length > 1 ? 'Escuchan (no hablan ni se ven' : 'Escucha (no habla ni se ve'}
-          {escucho ? '' : '; los jugadores no lo saben'}): {enumerar(oyentes.map((o) => (o.id === yo ? 'tú' : o.nombre)))}
+          {escucho ? '' : '; los jugadores no lo saben'}): <NombresOyentes nombres={oyentes.map((o) => (o.id === yo ? 'tú' : o.nombre))} />
         </p>
       )}
     </section>

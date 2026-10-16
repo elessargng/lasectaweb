@@ -22,12 +22,20 @@ interface PanelGuionProps {
   idiomas: { nombres: string; descripciones: string; genero: Genero };
   /** Cambia el de las descripciones (la preferencia, no solo aquí). */
   onCambiarIdiomaDescripciones: (id: string) => void;
-  /**
-   * Personajes en juego y vivos (de las fichas que ve quien mira): en el orden de
-   * noche llevan la ficha recordatorio de que actúan.
-   */
-  enJuego: string[];
+  /** Los recordatorios del orden de noche: solo para el narrador (null para los demás). */
+  recordatorios: RecordatoriosNoche | null;
   onCerrar: () => void;
+}
+
+/**
+ * La ficha recordatorio del orden de noche (la estrella blanca): marca lo que
+ * actúa. Sale sola en los personajes en juego y vivos (y en Esbirros y Demonios
+ * si hay alguno vivo); los narradores la quitan o la ponen a mano, para todos.
+ */
+export interface RecordatoriosNoche {
+  /** ids de los personajes que la llevan. */
+  activos: string[];
+  onAlternar: (personajeId: string) => void;
 }
 
 /** Ancho inicial (px) en resumido y en completo; y límites al redimensionar. */
@@ -60,7 +68,7 @@ const colorDe = (tipo: string) =>
  *
  * Al abrirse el foco va a su título; Escape (con el foco dentro) lo cierra.
  */
-const PanelGuion = ({ vista, guion, idiomas, enJuego, onCambiarIdiomaDescripciones, onCerrar }: PanelGuionProps) => {
+const PanelGuion = ({ vista, guion, idiomas, recordatorios, onCambiarIdiomaDescripciones, onCerrar }: PanelGuionProps) => {
   const [completo, setCompleto] = useState(false);
   const traduccionesNombres = useTraducciones(idiomas.nombres, idiomas.genero);
   const traduccionesDescripciones = useTraducciones(idiomas.descripciones, idiomas.genero);
@@ -263,7 +271,13 @@ const PanelGuion = ({ vista, guion, idiomas, enJuego, onCambiarIdiomaDescripcion
           {vista === 'guion' ? (
             <HojaPersonajes personajes={personajes} completo={completo} />
           ) : (
-            <OrdenNoche guion={guion} personajes={personajes} noche={noche} completo={completo} enJuego={enJuego} />
+            <OrdenNoche
+              guion={guion}
+              personajes={personajes}
+              noche={noche}
+              completo={completo}
+              recordatorios={recordatorios}
+            />
           )}
         </div>
       </div>
@@ -310,14 +324,14 @@ const Fila = ({
   nombre,
   color,
   texto,
-  actua = false,
+  recordatorio,
 }: {
   icono: ReactNode;
   nombre: Texto;
   color: string;
   texto?: Texto | null;
-  /** Orden de noche: el personaje está en juego y vivo (actúa esta noche). */
-  actua?: boolean;
+  /** Orden de noche, para el narrador: si lleva la ficha recordatorio y cómo quitarla o ponerla. */
+  recordatorio?: { activo: boolean; onAlternar: () => void };
 }) => (
   // Sin texto (resumido), el nombre centrado con el icono; con texto, arriba
   <li className={`flex gap-3 py-1.5 ${texto?.texto ? 'items-start' : 'items-center'}`}>
@@ -326,7 +340,6 @@ const Fila = ({
       <span className={`font-bold tracking-wide ${color}`} lang={nombre.lang}>
         {nombre.texto}
       </span>
-      {actua && <span className="sr-only"> (en juego)</span>}
       {texto?.texto && (
         <>
           <span className="sr-only">: </span>
@@ -336,9 +349,24 @@ const Fila = ({
         </>
       )}
     </p>
-    {actua && (
-      // La ficha recordatorio de noche de botc.app (public/noche/actua.webp); el lector lo oye en el nombre
-      <img src="/noche/actua.webp" alt="" className="h-9 w-9 shrink-0 self-center drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]" />
+    {recordatorio && (
+      // La ficha recordatorio de noche de botc.app (public/noche/actua.webp). Sin ella, un
+      // hueco punteado donde ponerla. El lector oye «Recordatorio de Imp, presionado» o no.
+      <button
+        type="button"
+        aria-pressed={recordatorio.activo}
+        onClick={recordatorio.onAlternar}
+        className="h-9 w-9 shrink-0 self-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5a1416] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f3e6d0]"
+      >
+        <span className="sr-only">
+          Recordatorio de <span lang={nombre.lang}>{nombre.texto}</span>
+        </span>
+        {recordatorio.activo ? (
+          <img src="/noche/actua.webp" alt="" className="h-9 w-9 drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]" />
+        ) : (
+          <span aria-hidden="true" className="block h-9 w-9 rounded-full border-2 border-dashed border-[#5a1416]/35 hover:border-[#5a1416]/70" />
+        )}
+      </button>
     )}
   </li>
 );
@@ -409,22 +437,28 @@ const OrdenNoche = ({
   personajes,
   noche,
   completo,
-  enJuego,
+  recordatorios,
 }: {
   guion: GuionResuelto;
   personajes: PersonajeMostrado[];
   noche: 'primera' | 'otras';
   completo: boolean;
-  enJuego: string[];
+  recordatorios: RecordatoriosNoche | null;
 }) => {
   // El orden lo calcula el servidor; aquí solo se pintan
   const lista = personajesDeNoche(guion, personajes, noche);
-  const fija = (nombre: string, icono: ReactNode, t: string) => (
+  const conRecordatorio = (id: string) =>
+    recordatorios
+      ? { activo: recordatorios.activos.includes(id), onAlternar: () => recordatorios.onAlternar(id) }
+      : undefined;
+  // Esbirros y Demonios también llevan recordatorio: no siempre se despiertan
+  const fija = (nombre: string, icono: ReactNode, t: string, recordatorio?: string) => (
     <Fila
       icono={icono}
       nombre={{ texto: nombre, lang: 'es' }}
       color="text-[#5a1416]"
       texto={completo ? { texto: t, lang: 'es' } : null}
+      recordatorio={recordatorio ? conRecordatorio(recordatorio) : undefined}
     />
   );
   return (
@@ -432,8 +466,8 @@ const OrdenNoche = ({
       {fija('Crepúsculo', <IconoNoche imagen="/noche/crepusculo.webp" />, TEXTOS_FIJOS.crepusculo)}
       {noche === 'primera' && (
         <>
-          {fija('Esbirros', <IconoFijo>M</IconoFijo>, TEXTOS_FIJOS.esbirros)}
-          {fija('Demonios', <IconoFijo>D</IconoFijo>, TEXTOS_FIJOS.demonios)}
+          {fija('Esbirros', <IconoFijo>M</IconoFijo>, TEXTOS_FIJOS.esbirros, 'esbirros')}
+          {fija('Demonios', <IconoFijo>D</IconoFijo>, TEXTOS_FIJOS.demonios, 'demonios')}
         </>
       )}
       {lista.map((r) => (
@@ -443,7 +477,7 @@ const OrdenNoche = ({
           nombre={r.nombre}
           color={colorDe(r.tipo)}
           texto={completo ? (noche === 'primera' ? r.primeraNoche : r.otrasNoches) : null}
-          actua={enJuego.includes(r.id)}
+          recordatorio={conRecordatorio(r.id)}
         />
       ))}
       {fija(

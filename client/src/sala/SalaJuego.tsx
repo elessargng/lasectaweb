@@ -22,6 +22,9 @@ import PanelChat from './PanelChat';
 import PanelComunicaciones from './PanelComunicaciones';
 import PanelConversaciones from './PanelConversaciones';
 import VentanaConversacion from './VentanaConversacion';
+import VentanaDespertar from './VentanaDespertar';
+import DespertarJugador from './DespertarJugador';
+import { describirMensaje, nombreDeAsiento } from './despertar';
 import PanelInvitaciones from './PanelInvitaciones';
 import ControlesVideo from './ControlesVideo';
 import type { ContactoParticipante } from './BotonesContacto';
@@ -31,8 +34,12 @@ import {
   CANAL_GENERAL,
   CANAL_VISITANTES,
   canalesComunes,
+  CANAL_SUSURROS,
   canalPrivado,
-  esPrivado,
+  deQuienAQuien,
+  esAjeno,
+  mensajesDe,
+  privadosPropios,
   puedeEscribirA,
   type SalaMensaje,
   type SalaSusurro,
@@ -43,14 +50,24 @@ import { mostrarPersonajes, tituloDeGuion, useTraducciones, type PersonajeMostra
 import ZonaNarradores from './ZonaNarradores';
 import { esAtajo, puedeUsarAtajo, useAtajos, type Atajo } from './atajos';
 import { AvisosContexto, useAvisosActivos, type TipoAviso } from './avisosConfig';
-import { avisosDeCambio, nombreFase } from './avisosSala';
+import { avisosDeCambio, manosVigiladas, nombreFase } from './avisosSala';
 import { setSonidosActivos, tocarSinVoto, tocarVoto } from './sonidos';
-import { ID_BOTON_MENU_NARRADOR, ID_SIN_NARRADOR, idNombreNarrador } from './ids';
+import { ID_BOTON_MENU_NARRADOR, ID_SIN_NARRADOR, ID_TITULO_DESPERTAR, idLunaFicha, idNombreNarrador } from './ids';
 import { getPerfil, limpiarNombre, setPerfil } from './invitado';
-import { usePreferencias } from './preferencias';
+import { sinComunicaciones, usePreferencias } from './preferencias';
+import { useConfiguracionCuenta, type ConfiguracionSala, type PerfilConfiguracion } from './configuracion';
+import PanelPerfiles from './PanelPerfiles';
 import { tamanoFichaAuto, tamanoNarradorAuto } from './tamanosAutomaticos';
 import { nombreMano } from './formasMano';
-import { useSala, type FormaMano, type SalaConfiguracion, type SalaEstado, type SalaParticipante } from './useSala';
+import {
+  useSala,
+  type FormaMano,
+  type SalaConfiguracion,
+  type SalaDespertar,
+  type SalaEstado,
+  type SalaParticipante,
+  type SalaRecordatorio,
+} from './useSala';
 
 interface SalaJuegoProps {
   /** Con cuenta: su token, su id de usuario (para recordar su perfil en la sala) y su avatar en la web. */
@@ -101,6 +118,17 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const [aviso, setAviso] = useState('');
   // Cambios que hacen otros, solo para el lector.
   const [anuncio, setAnuncio] = useState('');
+  // Vigilar la mano de alguien (botón solo para el lector junto a su nombre): se
+  // lee al momento, interrumpiendo, siempre que la levanta o la baja.
+  const [vigilados, setVigilados] = useState<Set<string>>(new Set());
+  const [anuncioUrgente, setAnuncioUrgente] = useState('');
+  const urgenteRef = useRef(0);
+  const anunciarUrgente = (texto: string) => {
+    // Se vacía antes, para que se lea aunque sea igual que el anterior
+    setAnuncioUrgente('');
+    const n = ++urgenteRef.current;
+    window.setTimeout(() => n === urgenteRef.current && setAnuncioUrgente(texto), 50);
+  };
   // El próximo cambio de narradores viene de una acción propia.
   const accionPropiaRef = useRef(false);
   // id al que llevar el foco cuando se pinte el nuevo estado.
@@ -109,7 +137,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const rescatarFocoRef = useRef<string | null>(null);
 
   // Qué avisos quiere el lector (Preferencias > Accesibilidad). Todo aviso pasa por anunciar().
-  const { activos: avisosActivos, cambiar: cambiarAviso, cambiarTodos: cambiarTodosAvisos } = useAvisosActivos();
+  const {
+    activos: avisosActivos,
+    cambiar: cambiarAviso,
+    cambiarTodos: cambiarTodosAvisos,
+    reemplazar: reemplazarAvisos,
+  } = useAvisosActivos();
   const anunciar = (tipo: TipoAviso, texto: string) => {
     if (avisosActivos[tipo]) setAnuncio(texto);
   };
@@ -131,7 +164,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     }
 
     // Lo que han hecho otros (ver avisosSala); lo propio no se avisa: ya se sabe.
-    const avisos = propia ? [] : avisosDeCambio(anterior, nuevo);
+    const avisos = propia ? [] : avisosDeCambio(anterior, nuevo, vigilados);
+    // Las manos vigiladas: siempre (también tras una acción propia), sin filtros
+    const urgentes = manosVigiladas(anterior, nuevo, vigilados);
+    if (urgentes.length) anunciarUrgente(urgentes.join(' '));
     // Salvo la noche y el día: el narrador puede cambiarlos con un atajo, sin ver nada.
     if (propia) {
       const f = nuevo.fase;
@@ -164,7 +200,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     }
 
     // Al limpiar el grimorio, también se borran las notas del grimorio propio.
-    if (nuevo.fase.reinicios !== anterior.fase.reinicios) setNotasGrimorio({});
+    if (nuevo.fase.reinicios !== anterior.fase.reinicios) {
+      setNotasGrimorio({});
+      setNotasRecordatorios({});
+    }
 
     // Mi personaje: si el narrador me lo cambia (o el alineamiento), se me dice.
     const miFicha = (e: SalaEstado) => e.asientos.find((a) => a.ocupante === e.yo);
@@ -193,6 +232,45 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           : 'El narrador ha desactivado el grimorio para los jugadores.',
       });
     }
+    // Despertares: lo que manda el narrador (al jugador) o lo que contesta el jugador (a
+    // los narradores); lo propio no, ya se confirma al mandarlo. Si el narrador manda
+    // algo (o abre el despertar) al jugador que tenía su ventana cerrada, se le vuelve a abrir.
+    const soyNarrador = nuevo.participantes.some((p) => p.id === nuevo.yo && p.rol === 'narrador');
+    const hilosAntes = new Map(anterior.despertares.map((d) => [d.asiento, d]));
+    // Al amanecer se acaban los despertares de la noche: se cierran sus ventanas y, si
+    // el foco estaba en una (que desaparece), va al título de la sala.
+    if (nuevo.fase.momento !== 'noche' && anterior.fase.momento === 'noche' && anterior.despertares.length) {
+      setWakesAbiertos([]);
+      setWakeActivo(null);
+      setLeidoWake({});
+      window.setTimeout(() => {
+        if (document.activeElement === document.body || !document.activeElement) tituloRef.current?.focus();
+      }, 0);
+    }
+    const veoTodos = nuevo.participantes.some((p) => p.id === nuevo.yo && p.rol === 'visitante');
+    for (const d of nuevo.despertares) {
+      const antes = hilosAntes.get(d.asiento);
+      const yaDichos = new Set(antes?.mensajes.map((m) => m.id));
+      const nuevos = d.mensajes.filter((m) => !yaDichos.has(m.id));
+      for (const m of nuevos) {
+        const texto = describirMensaje(m, nuevo, personajesGuionRef.current);
+        if (soyNarrador && m.autor !== 'narrador') {
+          avisos.push({ tipo: 'despertar', texto: `${nombreDeAsiento(nuevo, m.autor)}: ${texto}.` });
+        }
+        // Un visitante que ve el grimorio oye los dos lados, con quién es cada uno
+        else if (veoTodos && m.autor === 'narrador') {
+          avisos.push({ tipo: 'despertar', texto: `El narrador a ${nombreDeAsiento(nuevo, d.asiento)}: ${texto}.` });
+        } else if (veoTodos) {
+          avisos.push({ tipo: 'despertar', texto: `${nombreDeAsiento(nuevo, m.autor)}: ${texto}.` });
+        } else if (!soyNarrador && m.autor === 'narrador') avisos.push({ tipo: 'despertar', texto: `El narrador: ${texto}.` });
+      }
+      if (!soyNarrador && (!antes || nuevos.some((m) => m.autor === 'narrador'))) setWakeCerradoJugador(false);
+      if (soyNarrador && !propia && !antes) {
+        avisos.push({ tipo: 'despertar', texto: `Otro narrador despierta a ${nombreDeAsiento(nuevo, d.asiento)}.` });
+      }
+      if (veoTodos && !antes) avisos.push({ tipo: 'despertar', texto: `El narrador despierta a ${nombreDeAsiento(nuevo, d.asiento)}.` });
+    }
+
     // Solo los tipos que se quieren oír.
     const textos = avisos.filter((a) => avisosActivos[a.tipo]).map((a) => a.texto);
     if (textos.length) setAnuncio(textos.join(' '));
@@ -217,7 +295,34 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // Los personajes que pueden ir en las fichas (los del guion, en el idioma elegido) y
   // el grimorio propio del jugador (sus notas: solo en este navegador, mientras está en la sala).
   const [notasGrimorio, setNotasGrimorio] = useState<Record<string, ContenidoFicha>>({});
+  const [notasRecordatorios, setNotasRecordatorios] = useState<Record<string, SalaRecordatorio[]>>({});
   const nombresPersonajesRef = useRef<Map<string, PersonajeMostrado>>(new Map());
+  const [wakesAbiertos, setWakesAbiertos] = useState<string[]>([]);
+  const [wakeActivo, setWakeActivo] = useState<string | null>(null);
+  const [leidoWake, setLeidoWake] = useState<Record<string, number>>({});
+  const [wakeCerradoJugador, setWakeCerradoJugador] = useState(false);
+  // Recordatorios del orden de noche (narradores, compartidos): los automáticos son
+  // los personajes en juego y vivos, y Esbirros y Demonios si hay alguno vivo; lo que
+  // los narradores quitan o ponen a mano lo guarda el servidor hasta limpiar el grimorio.
+  const recordatoriosNoche = (e: SalaEstado) => {
+    const vivos = e.asientos.filter((a) => a.personaje && !a.muerto).map((a) => a.personaje!);
+    const tipoDe = (id: string) => personajesGuionPorId.get(id)?.tipo;
+    const automaticos = new Set(vivos);
+    if (vivos.some((id) => tipoDe(id) === 'minion')) automaticos.add('esbirros');
+    if (vivos.some((id) => tipoDe(id) === 'demon')) automaticos.add('demonios');
+    const cambios = e.recordatoriosNoche;
+    const activo = (id: string) => cambios[id] ?? automaticos.has(id);
+    return {
+      activos: [...new Set([...automaticos, ...Object.keys(cambios)])].filter(activo),
+      onAlternar: (id: string) => {
+        void pedirPropio('narrador:recordatorio', { id, activo: !activo(id) }).then((r) => {
+          if (!r.ok) setAviso(r.error);
+        });
+      },
+    };
+  };
+  // Todos los del guion (también los que no van en fichas), para los mensajes al despertar.
+  const personajesGuionRef = useRef<Map<string, PersonajeMostrado>>(new Map());
 
   // Mensajes de texto: la conversación que se ve, las privadas abiertas (aún sin
   // mensajes), hasta cuándo se ha leído cada una y las ondas de los susurros.
@@ -230,9 +335,16 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
   const alMensaje = (m: SalaMensaje) => {
     if (!estado) return;
+    // Un privado entre jugadores (solo les llega a los narradores): va a Susurros
+    const ajeno = esAjeno(m.canal, estado.yo);
+    const pestana = ajeno ? CANAL_SUSURROS : m.canal;
     // Leído si llega a la conversación que se está viendo
-    if (m.canal === canalActual && !preferencias.chatMinimizado) setLeidoHasta((l) => ({ ...l, [m.canal]: m.hora }));
+    if (pestana === canalActual && !preferencias.chatMinimizado) setLeidoHasta((l) => ({ ...l, [pestana]: m.hora }));
     if (m.autor === estado.yo) return;
+    if (ajeno) {
+      anunciar('susurros', `${deQuienAQuien(m, estado.participantes, mensajes)}: ${m.texto}`);
+      return;
+    }
     const donde = m.canal === CANAL_GENERAL ? ' en General' : m.canal === CANAL_VISITANTES ? ' en Visitantes' : ' te escribe';
     anunciar('mensajes', `${m.autorNombre}${donde}: ${m.texto}`);
   };
@@ -249,7 +361,9 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     const quien = (i: number) => estado.participantes.find((p) => p.id === estado.asientos[i].ocupante);
     const emisor = quien(desde);
     const receptor = quien(hasta);
-    if (emisor && receptor && emisor.id !== estado.yo && receptor.id !== estado.yo) {
+    // Los narradores no: leen el mensaje entero (alMensaje)
+    const narro = estado.participantes.find((p) => p.id === estado.yo)?.rol === 'narrador';
+    if (!narro && emisor && receptor && emisor.id !== estado.yo && receptor.id !== estado.yo) {
       anunciar('susurros', `${emisor.nombre} susurra a ${receptor.nombre}.`);
     }
   };
@@ -266,9 +380,11 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     pedirHistorial,
     pedirPaseVideo,
     invitarAConversar,
+    pedirUnirse,
     responderInvitacion,
     cancelarInvitacion,
     escucharConversacion,
+    entrarConversacion,
     salirConversacion,
   } = useSala(
     cuenta?.token ?? null,
@@ -285,7 +401,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const yo = estado?.participantes.find((p) => p.id === estado.yo);
 
   // La conversación que se ve: la elegida si sigue disponible; si no, la primera
-  const privadosChat = [...new Set([...mensajes.map((m) => m.canal).filter(esPrivado), ...privadosAbiertos])];
+  const privadosChat = yo ? privadosPropios(mensajes, privadosAbiertos, yo.id) : [];
   const canalesChat = yo ? [...canalesComunes(yo), ...privadosChat] : [];
   const canalActual = canalChat && canalesChat.includes(canalChat) ? canalChat : (canalesChat[0] ?? null);
 
@@ -296,7 +412,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   }, [miRol, pedirHistorial]);
 
   // Cambiar de conversación: lo que había en las dos queda leído (hasta su último mensaje)
-  const ultimoDe = (canal: string) => Math.max(0, ...mensajes.filter((m) => m.canal === canal).map((m) => m.hora));
+  const ultimoDe = (canal: string) =>
+    Math.max(0, ...mensajesDe(mensajes, canal, estado?.yo ?? '').map((m) => m.hora));
   const elegirCanal = (canal: string) => {
     setLeidoHasta((l) => ({
       ...l,
@@ -318,7 +435,11 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const mensajePara = (otro: SalaParticipante) =>
     estado && yo && puedeEscribirA(estado, yo, otro) ? () => abrirPrivado(otro.id) : undefined;
 
-  const { preferencias, cambiar: cambiarPreferencias } = usePreferencias();
+  const {
+    preferencias,
+    cambiar: cambiarPreferencias,
+    reemplazar: reemplazarPreferencias,
+  } = usePreferencias(!!cuenta);
   useEffect(() => setSonidosActivos(preferencias.sonidos), [preferencias.sonidos]);
 
   // El fondo de la sala que ha elegido el narrador (sin elegir: el de por defecto, ver sala.css)
@@ -331,6 +452,56 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
   // Videollamada: cámaras y micrófonos en la mesa y en la conversación privada
   // La conversación en la que estoy: hablando (miembro) o escuchando (visitante)
+  // Despertares. El narrador tiene abiertos en su ventana los que quiere (una pestaña
+  // cada uno) y, por asiento, hasta qué mensaje del jugador ha visto (para iluminar
+  // la luna de la ficha). El jugador ve el suyo en una ventana modal que puede cerrar;
+  // mientras está abierta, los avisos se dicen dentro (lo de fuera de un modal no se lee).
+  const despertares = estado?.despertares ?? [];
+  const narro = yo?.rol === 'narrador';
+  // Los visitantes que ven el grimorio también ven los despertares (solo para leer)
+  const veoDespertares = narro || (yo?.rol === 'visitante' && yo.accesoGrimorio === 'concedido');
+  const abiertosNarrador = veoDespertares
+    ? wakesAbiertos.map((id) => despertares.find((d) => d.asiento === id)).filter((d): d is SalaDespertar => !!d)
+    : [];
+  const activoNarrador = abiertosNarrador.some((d) => d.asiento === wakeActivo) ? wakeActivo : (abiertosNarrador[0]?.asiento ?? null);
+  const ultimaDelJugador = (asientoId: string) =>
+    Math.max(0, ...(despertares.find((d) => d.asiento === asientoId)?.mensajes ?? []).filter((m) => m.autor !== 'narrador').map((m) => m.hora));
+  const noLeidos = new Set(
+    despertares
+      .filter((d) => d.asiento !== activoNarrador && ultimaDelJugador(d.asiento) > (leidoWake[d.asiento] ?? 0))
+      .map((d) => d.asiento),
+  );
+  const marcarLeido = (asientoId: string | null) => {
+    if (asientoId) setLeidoWake((l) => ({ ...l, [asientoId]: ultimaDelJugador(asientoId) }));
+  };
+  const activarDespertar = (asientoId: string) => {
+    if (asientoId !== activoNarrador) marcarLeido(activoNarrador);
+    setWakeActivo(asientoId);
+  };
+  // Abre (o crea, de noche) el despertar de un asiento y lleva el foco a su ventana
+  const abrirDespertar = async (asientoId: string) => {
+    if (!estado) return;
+    if (!estado.despertares.some((d) => d.asiento === asientoId)) {
+      const r = await pedirPropio('narrador:despertar', { asientoId });
+      if (!r.ok) {
+        setAviso(r.error);
+        return;
+      }
+    }
+    setWakesAbiertos((a) => (a.includes(asientoId) ? a : [...a, asientoId]));
+    activarDespertar(asientoId);
+    focoPendienteRef.current = ID_TITULO_DESPERTAR;
+  };
+  // Cierra su ventana (el despertar sigue): el foco va al siguiente abierto o a la luna de la ficha
+  const cerrarDespertar = (asientoId: string) => {
+    marcarLeido(asientoId);
+    const quedan = abiertosNarrador.map((d) => d.asiento).filter((id) => id !== asientoId);
+    setWakesAbiertos(quedan);
+    setWakeActivo(quedan[0] ?? null);
+    focoPendienteRef.current = quedan.length ? ID_TITULO_DESPERTAR : idLunaFicha(asientoId);
+  };
+  const miDespertar = yo?.rol === 'jugador' ? despertares[0] : undefined;
+  const despiertoYo = !!miDespertar && !wakeCerradoJugador;
   const miConversacion =
     estado?.conversaciones.find((c) => c.miembros.includes(estado.yo) || c.oyentes.includes(estado.yo)) ?? null;
   const hablaEnConversacion = !!miConversacion?.miembros.includes(estado?.yo ?? '');
@@ -359,6 +530,19 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     if (noche && yo.rol !== 'narrador') return false;
     return !estado.conversaciones.some((c) => c.miembros.includes(otro.id));
   };
+  // Pedir unirse a la conversación de alguien (con las mismas reglas que invitar)
+  const puedePedirUnirseA = (otro: SalaParticipante) => {
+    if (!estado?.video || !yo || yo.id === otro.id) return false;
+    if (!conversa(yo) || !conversa(otro)) return false;
+    if (noche && yo.rol !== 'narrador') return false;
+    const suya = estado.conversaciones.find((c) => c.miembros.includes(otro.id));
+    return !!suya && !suya.miembros.includes(yo.id);
+  };
+  const pedirUnirseA = async (otro: SalaParticipante) => {
+    const r = await pedirUnirse(otro.id);
+    if (!r.ok) setAviso(r.error);
+    else anunciar('conversaciones', `Petición enviada para unirte a la conversación de ${otro.nombre}.`);
+  };
   const invitar = async (otro: SalaParticipante) => {
     const r = await invitarAConversar(otro.id);
     if (!r.ok) setAviso(r.error);
@@ -366,33 +550,118 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   };
   // Aceptar: se entra en la conversación y el foco va a su título; rechazar: nada más
   const responder = async (invitacionId: string, aceptar: boolean) => {
+    if (aceptar) dejarDeSeguir();
     const r = await responderInvitacion(invitacionId, aceptar);
     if (!r.ok) setAviso(r.error);
     else if (aceptar) window.setTimeout(() => tituloConversacionRef.current?.focus(), 0);
     else window.setTimeout(() => tituloRef.current?.focus(), 0);
   };
+  // Retirar es propio: no se avisa de que «no la han aceptado»
   const retirar = async (invitacionId: string) => {
+    accionPropiaRef.current = true;
     const r = await cancelarInvitacion(invitacionId);
-    if (!r.ok) setAviso(r.error);
+    if (!r.ok) {
+      accionPropiaRef.current = false;
+      setAviso(r.error);
+    }
     else window.setTimeout(() => tituloRef.current?.focus(), 0);
   };
+  // Seguir a un jugador (visitantes y narradores, desde su ficha): ir con él a sus
+  // conversaciones privadas, como oyente, y volver a la mesa cuando sale. Mientras
+  // uno habla en una conversación no se mueve; escuchar, salir o aceptar una
+  // invitación a mano deja de seguirle. Si deja de jugar, se deja de seguir.
+  const [siguiendo, setSiguiendo] = useState<string | null>(null);
+  const puedeSeguir = !!estado?.video && (yo?.rol === 'visitante' || yo?.rol === 'narrador');
+  const seguido = siguiendo ? estado?.participantes.find((p) => p.id === siguiendo) : undefined;
+  const sigoA = puedeSeguir && seguido?.rol === 'jugador' ? seguido : null;
+  const alternarSeguir = (jugador: SalaParticipante) => setSiguiendo((s) => (s === jugador.id ? null : jugador.id));
+  const dejarDeSeguir = (salvoConversacion?: string) => {
+    if (!sigoA) return;
+    const suya = estado?.conversaciones.find((c) => c.miembros.includes(sigoA.id));
+    if (salvoConversacion && suya?.id === salvoConversacion) return;
+    setSiguiendo(null);
+    anunciar('conversaciones', `Dejas de seguir a ${sigoA.nombre}.`);
+  };
+  // Adónde hay que ir: la conversación del seguido o la mesa ('mesa')
+  const destinoSeguir =
+    sigoA && !hablaEnConversacion
+      ? (estado?.conversaciones.find((c) => c.miembros.includes(sigoA.id))?.id ?? 'mesa')
+      : null;
+  const dondeEstoy = miConversacion && !hablaEnConversacion ? miConversacion.id : 'mesa';
+  const pidiendoSeguirRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!destinoSeguir || destinoSeguir === dondeEstoy) {
+      pidiendoSeguirRef.current = null;
+      return;
+    }
+    if (pidiendoSeguirRef.current === destinoSeguir) return;
+    pidiendoSeguirRef.current = destinoSeguir;
+    // Volviendo a la mesa, la ventana de la conversación desaparece: si tenía el foco, va al título
+    const focoDentro = !!document.activeElement?.closest('[aria-labelledby="sala-conversacion-titulo"]');
+    const peticion = destinoSeguir === 'mesa' ? salirConversacion() : escucharConversacion(destinoSeguir);
+    void peticion.then((r) => {
+      if (!r.ok) setAviso(r.error);
+      else if (destinoSeguir === 'mesa' && focoDentro) window.setTimeout(() => tituloRef.current?.focus(), 0);
+    });
+  }, [destinoSeguir, dondeEstoy, salirConversacion, escucharConversacion]);
+
   // Visitantes: escuchar la conversación de alguien (sin invitación; los jugadores no lo saben)
   const escuchar = async (conversacionId: string) => {
+    dejarDeSeguir(conversacionId);
     const r = await escucharConversacion(conversacionId);
     if (!r.ok) setAviso(r.error);
     else window.setTimeout(() => tituloConversacionRef.current?.focus(), 0);
   };
+  // Narradores: entrar en una conversación como uno más (también desde escucharla)
+  const entrar = async (conversacionId: string) => {
+    dejarDeSeguir();
+    // Propia: no se avisa (el foco va al título, que ya dice con quién)
+    accionPropiaRef.current = true;
+    const r = await entrarConversacion(conversacionId);
+    if (!r.ok) {
+      accionPropiaRef.current = false;
+      setAviso(r.error);
+    } else window.setTimeout(() => tituloConversacionRef.current?.focus(), 0);
+  };
   const salirDeConversacion = async () => {
+    dejarDeSeguir();
     const r = await salirConversacion();
     if (!r.ok) setAviso(r.error);
     // La conversación desaparece: el foco vuelve al título de la página
     else window.setTimeout(() => tituloRef.current?.focus(), 0);
   };
+  // Si se van los demás, la conversación sigue hasta que uno sale; salvo que haya
+  // elegido salir automáticamente (Preferencias > Comunicaciones). El foco solo se
+  // mueve si estaba en la ventana de la conversación, que desaparece.
+  const sinNadieMas = hablaEnConversacion && miConversacion?.miembros.length === 1;
+  const salidaAutomaticaRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!sinNadieMas || !preferencias.salirConversacionSinNadie || !miConversacion) return;
+    if (salidaAutomaticaRef.current === miConversacion.id) return;
+    salidaAutomaticaRef.current = miConversacion.id;
+    const focoDentro = !!document.activeElement?.closest('[aria-labelledby="sala-conversacion-titulo"]');
+    void salirConversacion().then((r) => {
+      if (!r.ok) setAviso(r.error);
+      else if (focoDentro) window.setTimeout(() => tituloRef.current?.focus(), 0);
+    });
+  }, [sinNadieMas, preferencias.salirConversacionSinNadie, miConversacion, salirConversacion]);
   /**
    * Lo que se puede hacer con alguien desde su nombre: escribirle y conversar
    * (invitarle, o «invitación enviada» mientras no responde) o, si soy visitante
    * y está conversando, escuchar su conversación.
    */
+  // El nombre del botón cambia («Dejar de vigilar a…»), pero no todos los lectores
+  // lo releen: se confirma.
+  const alternarVigilar = (otro: SalaParticipante) => {
+    const vigilaba = vigilados.has(otro.id);
+    setVigilados((v) => {
+      const nuevos = new Set(v);
+      if (vigilaba) nuevos.delete(otro.id);
+      else nuevos.add(otro.id);
+      return nuevos;
+    });
+    anunciar('manos', vigilaba ? `Dejas de vigilar a ${otro.nombre}.` : `Vigilas a ${otro.nombre}.`);
+  };
   const contacto = (otro: SalaParticipante): ContactoParticipante | undefined => {
     const onMensaje = mensajePara(otro);
     let conversar: ContactoParticipante['conversar'];
@@ -401,15 +670,29 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       if (suya && suya.id !== miConversacion?.id) {
         conversar = { etiqueta: `Escuchar la conversación de ${otro.nombre}`, onIniciar: () => void escuchar(suya.id) };
       }
-    } else if (estado?.invitaciones.some((i) => i.de === estado.yo && i.para === otro.id)) {
+    } else if (estado?.invitaciones.some((i) => i.de === estado.yo && i.para === otro.id && !i.conversacion)) {
       conversar = { etiqueta: `Invitación enviada a ${otro.nombre}`, pendiente: true };
     } else if (puedeInvitarA(otro)) {
       conversar = {
         etiqueta: hablaEnConversacion ? `Invitar a ${otro.nombre} a la conversación` : `Invitar a ${otro.nombre} a conversar`,
         onIniciar: () => void invitar(otro),
       };
+    } else if (puedePedirUnirseA(otro)) {
+      // Ya conversa con otros: en vez de invitarle, se pide entrar en su conversación
+      // (los narradores no piden: entran)
+      const suya = estado!.conversaciones.find((c) => c.miembros.includes(otro.id))!;
+      conversar = yo?.rol === 'narrador'
+        ? { etiqueta: `Entrar en la conversación de ${otro.nombre}`, onIniciar: () => void entrar(suya.id), unirse: true }
+        : estado!.invitaciones.some((i) => i.de === estado!.yo && i.conversacion === suya.id)
+        ? { etiqueta: `Petición enviada para unirte a la conversación de ${otro.nombre}`, pendiente: true, unirse: true }
+        : { etiqueta: `Pedir unirte a la conversación de ${otro.nombre}`, onIniciar: () => void pedirUnirseA(otro), unirse: true };
     }
-    return onMensaje || conversar ? { onMensaje, conversar } : undefined;
+    // Vigilar su mano (solo jugadores, que son quienes la levantan; uno mismo no)
+    const vigilar =
+      otro.rol === 'jugador' && otro.id !== estado?.yo
+        ? { activo: vigilados.has(otro.id), onAlternar: () => alternarVigilar(otro) }
+        : undefined;
+    return onMensaje || conversar || vigilar ? { onMensaje, conversar, vigilar } : undefined;
   };
 
   // Micrófono y cámara con atajo (sin el foco en el botón): se dice cómo quedan
@@ -428,18 +711,23 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
   const traduccionesNombres = useTraducciones(preferencias.idiomaNombres, preferencias.genero);
   // (Sin useMemo: el compilador de React ya memoriza lo que no cambia)
-  const personajesFichas = guion
-    ? mostrarPersonajes(guion.personajes, traduccionesNombres, null).filter((p) => TIPOS_EN_FICHA.includes(p.tipo))
-    : [];
+  const personajesGuion = guion ? mostrarPersonajes(guion.personajes, traduccionesNombres, null) : [];
+  const personajesGuionPorId = new Map(personajesGuion.map((p) => [p.id, p]));
+  const personajesFichas = personajesGuion.filter((p) => TIPOS_EN_FICHA.includes(p.tipo));
   const contextoFichas: ContextoFichas = {
     hayGuion: !!guion,
     personajes: personajesFichas,
     porId: new Map(personajesFichas.map((p) => [p.id, p])),
     notas: notasGrimorio,
     anotar: (asientoId, contenido) => setNotasGrimorio((n) => ({ ...n, [asientoId]: contenido })),
+    todos: personajesGuion,
+    todosPorId: personajesGuionPorId,
+    notasRecordatorios,
+    anotarRecordatorios: (asientoId, lista) => setNotasRecordatorios((n) => ({ ...n, [asientoId]: lista })),
   };
   useEffect(() => {
     nombresPersonajesRef.current = contextoFichas.porId;
+    personajesGuionRef.current = personajesGuionPorId;
   });
   // Tamaños con los que pinta la mesa (automáticos o no), para la vista previa.
   const [tamanosMesa, setTamanosMesa] = useState<TamanosMesa | null>(null);
@@ -496,7 +784,25 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     else setAviso(r.error);
     return false;
   };
-  const { atajos, cambiar: cambiarAtajo } = useAtajos();
+  const { atajos, cambiar: cambiarAtajo, reemplazar: reemplazarAtajos } = useAtajos();
+
+  // Con cuenta, la configuración se guarda en el servidor (los invitados no guardan nada).
+  const configuracionActual: ConfiguracionSala = {
+    preferencias: sinComunicaciones(preferencias),
+    avisos: avisosActivos,
+    atajos,
+  };
+  const aplicarConfiguracion = (datos: Partial<Record<keyof ConfiguracionSala, unknown>>) => {
+    reemplazarPreferencias(datos.preferencias);
+    reemplazarAvisos(datos.avisos);
+    reemplazarAtajos(datos.atajos);
+  };
+  const {
+    carga: cargaConfiguracion,
+    perfiles,
+    guardarPerfil: guardarPerfilConfiguracion,
+    borrarPerfil: borrarPerfilConfiguracion,
+  } = useConfiguracionCuenta(cuenta?.token ?? null, configuracionActual, aplicarConfiguracion);
   // Narradores: ir a la noche (desde la preparación o el día) o amanecer (desde la noche).
   const accionFase = estado?.acciones.includes('narrador:irANoche')
     ? 'narrador:irANoche'
@@ -592,6 +898,27 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     return { ok: true, avatar: guardado };
   };
 
+  // Pestaña Perfiles: un perfil lleva la configuración y el nombre en la sala.
+  // Al aplicar uno, la pestaña Usuario se rehace para mostrar el nombre nuevo.
+  const [versionPerfil, setVersionPerfil] = useState(0);
+  const aplicarPerfil = async (perfil: PerfilConfiguracion): Promise<string | null> => {
+    const datos = perfil.datos ?? {};
+    aplicarConfiguracion(datos);
+    let fallo: string | null = null;
+    const nuevoAlias = limpiarNombre(typeof datos.alias === 'string' ? datos.alias : '');
+    if (nuevoAlias !== alias) {
+      const r = await pedir('sala:cambiarNombre', { nombre: nuevoAlias });
+      if (r.ok) {
+        setPerfil('alias', cuentaId, nuevoAlias);
+        setAlias(nuevoAlias);
+      } else {
+        fallo = `Perfil ${perfil.nombre} aplicado, salvo el nombre: ${r.error}`;
+      }
+    }
+    setVersionPerfil((v) => v + 1);
+    return fallo;
+  };
+
   const configurarPartida = async (cambios: Partial<SalaConfiguracion>) => {
     const r = await pedir('narrador:configurarPartida', cambios);
     if (!r.ok) setAviso(r.error);
@@ -605,6 +932,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       contenido: (
         <div className="flex flex-col gap-6">
           <PanelUsuario
+            key={versionPerfil}
             nombreActual={yo?.nombre ?? alias}
             avatarElegido={avatarElegido}
             cuenta={cuenta && { avatar: cuenta.avatar }}
@@ -647,6 +975,21 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       conControles: true,
       contenido: (
         <PanelComunicaciones preferencias={preferencias} onCambiar={cambiarPreferencias} hayVideo={!!estado?.video} />
+      ),
+    },
+    {
+      id: 'perfiles',
+      etiqueta: 'Perfiles',
+      conControles: !!cuenta,
+      contenido: (
+        <PanelPerfiles
+          conCuenta={!!cuenta}
+          carga={cargaConfiguracion}
+          perfiles={perfiles}
+          onGuardar={(nombre) => guardarPerfilConfiguracion(nombre, { ...configuracionActual, alias })}
+          onBorrar={borrarPerfilConfiguracion}
+          onAplicar={aplicarPerfil}
+        />
       ),
     },
     // Solo si el servidor deja configurar la partida (narradores).
@@ -705,7 +1048,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     rescatarFocoRef.current = null;
     const perdido = document.activeElement === document.body || !document.activeElement;
     const destino = pendiente ?? (perdido ? rescate : null);
-    if (destino) document.getElementById(destino)?.focus();
+    const elemento = destino ? document.getElementById(destino) : null;
+    if (elemento) elemento.focus();
+    // La ventana de un despertar recién abierto aparece cuando llega el estado: se espera a ella
+    else if (pendiente === ID_TITULO_DESPERTAR) focoPendienteRef.current = pendiente;
   });
 
   // Los tamaños elegidos llegan a los cuadros (CuadroAvatar) y a las fichas
@@ -729,7 +1075,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           centro={
             estado && (
               <div className="flex min-w-0 items-center gap-2">
-                <FasePartida fase={estado.fase} />
+                <FasePartida
+                  fase={estado.fase}
+                  onVerNoche={miDespertar ? () => setWakeCerradoJugador(false) : undefined}
+                />
                 <TituloGuion
                   guion={guion}
                   puedeCambiar={estado.acciones.includes('narrador:cambiarGuion')}
@@ -747,8 +1096,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                       : null
                   }
                   onAnuncio={anunciar}
-                  // En juego y vivos: las fichas con personaje y sin sudario que ve quien mira
-                  enJuego={estado.asientos.filter((a) => a.personaje && !a.muerto).map((a) => a.personaje!)}
+                  recordatorios={yo?.rol === 'narrador' ? recordatoriosNoche(estado) : null}
                 />
               </div>
             )
@@ -790,7 +1138,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
               )}
               {/* Solo narradores: el servidor solo les manda a ellos el registro */}
               {yo?.rol === 'narrador' && estado && <RegistroVotaciones votaciones={estado.votaciones} />}
-              {estado && <ListaParticipantes participantes={estado.participantes} yo={estado.yo} />}
+              {estado && (
+                <ListaParticipantes
+                  participantes={estado.participantes}
+                  yo={estado.yo}
+                  escuchando={new Set(estado.conversaciones.flatMap((c) => c.oyentes))}
+                />
+              )}
               <MenuUsuario
                 nombre={yo?.nombre ?? (alias || cuenta?.username || invitado || '')}
                 avatar={yo?.avatar ?? null}
@@ -811,7 +1165,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           </h1>
 
           <div aria-live="polite" className="sr-only">
-            {anuncio}
+            {despiertoYo ? '' : anuncio}
+          </div>
+          <div aria-live="assertive" className="sr-only">
+            {despiertoYo ? '' : anuncioUrgente}
           </div>
 
           {/* Flota abajo: no empuja el contenido ni genera scroll. Conexión y errores se
@@ -881,6 +1238,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                     participantes={estado.participantes}
                     yo={yo}
                     onEscuchar={(id) => void escuchar(id)}
+                    onEntrar={(id) => void entrar(id)}
                   />
                 )}
                 {yo && canalActual && (
@@ -917,6 +1275,16 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   contacto={contacto}
                   pistas={video.mesa}
                   ondas={ondas}
+                  despertares={
+                    veoDespertares
+                      ? {
+                          hilos: new Set(despertares.map((d) => d.asiento)),
+                          noLeidos,
+                          onAbrir: (id) => void abrirDespertar(id),
+                        }
+                      : null
+                  }
+                  seguimiento={puedeSeguir ? { siguiendo: sigoA?.id ?? null, onAlternar: alternarSeguir } : null}
                 />
               </div>
               {/* Fuera de la mesa, para no tapar sus fichas: en pantallas anchas, abajo
@@ -939,7 +1307,41 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             yo={estado.yo}
             pistas={video.privada}
             onSalir={() => void salirDeConversacion()}
+            onEntrar={yo?.rol === 'narrador' ? () => void entrar(miConversacion.id) : undefined}
             teclaSalir={atajos.salirConversacion.key}
+          />
+        )}
+
+        {/* Despertares: los que el narrador tiene abiertos (su ventana) y el del jugador (la suya, modal) */}
+        {estado && veoDespertares && activoNarrador && (
+          <VentanaDespertar
+            soloLectura={!narro}
+            estado={estado}
+            abiertos={abiertosNarrador}
+            activo={activoNarrador}
+            noLeidos={noLeidos}
+            onActivar={activarDespertar}
+            onCerrar={cerrarDespertar}
+            personajes={personajesGuion}
+            porId={personajesGuionPorId}
+            pedir={pedirPropio}
+            onError={setAviso}
+            onEnviado={(t) => anunciar('despertar', t)}
+          />
+        )}
+        {estado && miDespertar && despiertoYo && (
+          <DespertarJugador
+            estado={estado}
+            despertar={miDespertar}
+            onCerrar={() => setWakeCerradoJugador(true)}
+            personajes={personajesGuion}
+            porId={personajesGuionPorId}
+            pedir={pedirPropio}
+            onError={setAviso}
+            onEnviado={(t) => anunciar('despertar', t)}
+            anuncio={anuncio}
+            anuncioUrgente={anuncioUrgente}
+            error={aviso}
           />
         )}
 

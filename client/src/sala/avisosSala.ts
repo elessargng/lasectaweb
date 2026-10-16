@@ -27,7 +27,11 @@ export const nombreFase = (f: SalaFase) =>
 /** «Hacen falta 3 votos» (o «1 voto»). */
 export const hacenFalta = (votos: number) => `Hacen falta ${votos === 1 ? '1 voto' : `${votos} votos`}`;
 
-export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): Aviso[] {
+/**
+ * Quien vigila la mano de alguien (`vigilados`) oye al momento cuándo la levanta
+ * o la baja (manosVigiladas); aquí no se repite.
+ */
+export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado, vigilados: Set<string> = new Set()): Aviso[] {
   const yo = nuevo.yo;
   const antes = new Map(anterior.participantes.map((p) => [p.id, p]));
   const ahora = new Map(nuevo.participantes.map((p) => [p.id, p]));
@@ -105,11 +109,25 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): Aviso[]
     for (const id of miAhora.miembros.filter((m) => !miAntes.miembros.includes(m))) {
       avisa('conversaciones', `${nombreDe(id)} se suma a la conversación.`);
     }
-    for (const id of miAntes.miembros.filter((m) => !miAhora.miembros.includes(m))) {
-      avisa('conversaciones', `${nombreDe(id)} sale de la conversación.`);
-    }
+    // Si me quedo sin nadie más, la conversación sigue: se dice, porque hay que salir a mano.
+    const sinNadie = miAhora.miembros.length === 1 && miAhora.miembros[0] === yo && miAntes.miembros.length > 1;
+    const salen = miAntes.miembros.filter((m) => !miAhora.miembros.includes(m));
+    salen.forEach((id, i) => {
+      const ultimo = sinNadie && i === salen.length - 1;
+      avisa('conversaciones', `${nombreDe(id)} sale de la conversación${ultimo ? ' y no queda nadie más' : ''}.`);
+    });
   } else if (miAntes && !miAhora) {
-    avisa('conversaciones', 'Termina tu conversación privada.');
+    // Quien escuchaba (visitante, o siguiendo a un jugador) vuelve a la mesa
+    const escuchaba = miAntes.oyentes.includes(yo);
+    const sigue = nuevo.conversaciones.some((c) => c.id === miAntes.id);
+    avisa(
+      'conversaciones',
+      !escuchaba
+        ? 'Termina tu conversación privada.'
+        : sigue
+          ? 'Dejas de escuchar la conversación.'
+          : 'Termina la conversación que escuchabas.',
+    );
   }
   for (const c of nuevo.conversaciones) {
     if (c.miembros.includes(yo) || anterior.conversaciones.some((a) => a.id === c.id)) continue;
@@ -124,12 +142,24 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): Aviso[]
   }
   // Invitaciones: las que me llegan y las mías que no se aceptan
   for (const i of nuevo.invitaciones) {
-    if (i.para === yo && !anterior.invitaciones.some((a) => a.id === i.id)) {
-      avisa('conversaciones', `${nombreDe(i.de)} te invita a una conversación privada.`);
-    }
+    if (i.de === yo || anterior.invitaciones.some((a) => a.id === i.id)) continue;
+    // Las peticiones para unirse llegan a todos los miembros de la conversación
+    if (i.conversacion) avisa('conversaciones', `${nombreDe(i.de)} pide unirse a tu conversación.`);
+    else if (i.para === yo) avisa('conversaciones', `${nombreDe(i.de)} te invita a una conversación privada.`);
   }
   for (const i of anterior.invitaciones) {
     if (i.de !== yo || nuevo.invitaciones.some((n) => n.id === i.id)) continue;
+    if (i.conversacion) {
+      // Si ya estoy en ella, ya se ha dicho con quién
+      if (miAhora?.id === i.conversacion) continue;
+      avisa(
+        'conversaciones',
+        nuevo.conversaciones.some((c) => c.id === i.conversacion)
+          ? 'No te han aceptado en la conversación.'
+          : 'Ha terminado la conversación a la que pedías unirte.',
+      );
+      continue;
+    }
     // Si ha entrado en mi conversación, ya se dice que se suma
     if (!miAhora?.miembros.includes(i.para)) avisa('conversaciones', `${nombreDe(i.para)} no ha aceptado la invitación.`);
   }
@@ -156,7 +186,7 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): Aviso[]
   // Manos levantadas (las propias las avisa quien la levanta).
   for (const p of nuevo.participantes) {
     const previo = antes.get(p.id);
-    if (!previo || p.id === yo || previo.manoLevantada === p.manoLevantada) continue;
+    if (!previo || p.id === yo || previo.manoLevantada === p.manoLevantada || vigilados.has(p.id)) continue;
     // Bajarla por levantarse del asiento no se dice (ya se dice que se levanta), ni
     // al contarse su voto (se baja sola; ya se dice que vota).
     if (!p.manoLevantada && p.rol !== 'jugador') continue;
@@ -252,4 +282,19 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado): Aviso[]
   }
 
   return avisos;
+}
+
+/** Las manos que se vigilan: siempre que la levantan o la bajan, para leerlo al momento (assertive). */
+export function manosVigiladas(anterior: SalaEstado, nuevo: SalaEstado, vigilados: Set<string>): string[] {
+  const textos: string[] = [];
+  for (const p of nuevo.participantes) {
+    const previo = anterior.participantes.find((x) => x.id === p.id);
+    if (!vigilados.has(p.id) || !previo || previo.manoLevantada === p.manoLevantada) continue;
+    textos.push(
+      p.manoLevantada
+        ? `${p.nombre} levanta la mano (${nombreMano(p.formaMano).toLocaleLowerCase('es')}).`
+        : `${p.nombre} baja la mano.`,
+    );
+  }
+  return textos;
 }

@@ -58,6 +58,22 @@ export interface SalaAsiento {
    * y forasteros, buenos; esbirros y demonios, malvados; viajeros, sin decidir).
    */
   alineamiento: SalaAlineamiento | null;
+  /**
+   * Las fichas recordatorio puestas junto a la suya, en el orden en que se
+   * pusieron. Son del grimorio: las ven los narradores (y quien ve el grimorio),
+   * no los jugadores, ni en su propia ficha.
+   */
+  recordatorios: SalaRecordatorio[];
+}
+
+/** Una ficha recordatorio: de qué personaje es (su icono) y cuál de sus recordatorios. */
+export interface SalaRecordatorio {
+  id: string;
+  personaje: string;
+  /** Cuál de los recordatorios del personaje (su posición en la lista del guion). */
+  indice: number;
+  /** Su texto en el original (el cliente lo traduce si puede). */
+  texto: string;
 }
 
 export type SalaAlineamiento = 'bueno' | 'malvado';
@@ -178,6 +194,81 @@ export interface SalaInvitacion {
   id: string;
   de: string;
   para: string;
+  /**
+   * Si es una petición para unirse a la conversación de `para`: su id. La ven
+   * y la pueden aceptar todos sus miembros. Sin ella, `de` invita a `para`.
+   */
+  conversacion?: string;
+}
+
+/**
+ * Lo que se puede mandar al despertar a alguien de noche. Las fichas las usan
+ * el narrador y el jugador despierto; las tarjetas, solo el narrador. El
+ * cliente tiene el mismo catálogo (client/src/sala/despertar.ts).
+ */
+export const FICHAS_DESPERTAR = [
+  'entendido', 'si', 'no', 'bueno', 'malvado',
+  'cero', 'uno', 'dos', 'tres', 'cuatro', 'cinco',
+  'jugador', 'personaje', 'personalizado',
+] as const;
+export type FichaDespertar = (typeof FICHAS_DESPERTAR)[number];
+
+export const TARJETAS_DESPERTAR = [
+  'habilidad', 'eleccion', 'noEnJuego', 'demonio', 'esbirros', 'tuEres', 'esteJugadorEs', 'teHaElegido',
+] as const;
+export type TarjetaDespertar = (typeof TARJETAS_DESPERTAR)[number];
+
+/** Lo que lleva cada ficha o tarjeta además de sí misma. */
+export interface AdjuntoDespertar {
+  jugadores?: boolean;
+  personajes?: boolean;
+  texto?: boolean;
+  /** Un alineamiento (bueno o malvado), opcional. */
+  alineamiento?: boolean;
+}
+
+export const ADJUNTOS_DESPERTAR: Partial<Record<FichaDespertar | TarjetaDespertar, AdjuntoDespertar>> = {
+  jugador: { jugadores: true },
+  personaje: { personajes: true },
+  personalizado: { texto: true },
+  noEnJuego: { personajes: true },
+  demonio: { jugadores: true },
+  esbirros: { jugadores: true },
+  tuEres: { personajes: true, alineamiento: true },
+  esteJugadorEs: { jugadores: true, personajes: true },
+  teHaElegido: { personajes: true },
+};
+
+/** Lo que se manda mientras alguien está despierto: una ficha o una tarjeta, con lo que lleve. */
+export interface MensajeDespertar {
+  id: string;
+  /** 'narrador', o el id del asiento del jugador que contesta. */
+  autor: string;
+  ficha: FichaDespertar | null;
+  tarjeta: TarjetaDespertar | null;
+  /** ids de asiento. */
+  jugadores: string[];
+  /** ids de personaje. */
+  personajes: string[];
+  texto: string | null;
+  /** «Tú eres»: el alineamiento, si se dice. */
+  alineamiento: SalaAlineamiento | null;
+  /** En qué momento de la partida se mandó («Noche 2»). */
+  fase: { momento: SalaFase['momento']; numero: number };
+  /** ms */
+  hora: number;
+}
+
+/**
+ * Un despertar: lo que se dicen el narrador y el jugador de un asiento (o el
+ * asiento, si está libre). Se abre de noche y dura hasta limpiar el grimorio;
+ * se pueden tener varios a la vez, uno por asiento. Cerrar su ventana es cosa de
+ * cada uno (en su navegador): el despertar sigue. Solo lo reciben los narradores
+ * y el jugador de ese asiento.
+ */
+export interface SalaDespertar {
+  asiento: string;
+  mensajes: MensajeDespertar[];
 }
 
 /** Lo que el servidor manda a cada cliente cada vez que cambia la sala. */
@@ -204,6 +295,14 @@ export interface SalaEstado {
   ahora: number;
   /** Registro de nominaciones y votaciones (en orden); solo se manda a los narradores. */
   votaciones: SalaRegistroVotacion[];
+  /**
+   * Fichas recordatorio (estrella) del orden de noche que los narradores han
+   * quitado (false) o puesto (true) a mano, por id de personaje o 'esbirros' /
+   * 'demonios'; las demás son las automáticas. Solo se manda a los narradores.
+   */
+  recordatoriosNoche: Record<string, boolean>;
+  /** Los despertares: todos, para los narradores; el de su asiento, para un jugador; ninguno, para los demás. */
+  despertares: SalaDespertar[];
   /** id del participante que recibe el mensaje. */
   yo: string;
   /** Acciones que puede usar ahora quien recibe el mensaje (ver `salaAcciones`). */
