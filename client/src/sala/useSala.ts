@@ -37,6 +37,8 @@ export interface SalaAsiento {
   muerto: boolean;
   /** Muerta de noche, por anunciar (el narrador la hace efectiva pulsando el sudario). Solo llega a quien ve el grimorio. */
   muertePendiente: boolean;
+  /** Muerta, ya ha gastado el único voto que le queda (su vela, apagada). Es público. */
+  votoGastado: boolean;
   /** Su ficha lleva la calavera (solo una de la mesa). */
   marcado: boolean;
   /** Con cuántos votos se le puso la calavera (desde una nominación ya votada), o null. */

@@ -6,6 +6,7 @@ import {
   limpiarAvatarSala,
   limpiarNombreSala,
   NPC_BOOTLEGGER,
+  NPC_FERRYMAN,
   NPC_GARDENER,
   NPC_POPE,
   NPC_SILENCIO,
@@ -254,13 +255,14 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
-  /** Un jugador levanta o baja la mano. datos: { levantada: boolean }. */
+  /** Un jugador levanta o baja la mano (un muerto sin voto solo puede bajarla). datos: { levantada: boolean }. */
   'sala:levantarMano': {
     puede: (_sala, yo) => yo.rol === 'jugador',
     noPuede: 'Solo los jugadores sentados pueden levantar la mano.',
     hacer: (sala, yo, datos) => {
       const levantada = (datos as { levantada?: unknown } | null)?.levantada;
       if (typeof levantada !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
+      if (levantada && sala.sinVoto(yo.id)) return { ok: false, error: 'Ya has gastado tu voto: no puedes levantar la mano.' };
       sala.levantarMano(yo.id, levantada);
       return { ok: true };
     },
@@ -1014,6 +1016,32 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
       if (typeof asientoId !== 'string' || !sala.hayAsiento(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (!sala.confirmarMuerte(asientoId)) return { ok: false, error: 'Esa ficha no tiene una muerte por anunciar.' };
+      return { ok: true };
+    },
+  },
+
+  /**
+   * Quita o devuelve a mano el voto de un muerto (el que le queda): se apaga o se
+   * enciende su vela. datos: { asientoId, gastado: boolean }.
+   */
+  'narrador:cambiarVoto': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.asientos().some((a) => a.muerto),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'No hay ningún muerto.' : 'Solo un narrador quita o devuelve votos.'),
+    hacer: (sala, _yo, datos) => {
+      const { asientoId, gastado } = (datos as { asientoId?: unknown; gastado?: unknown }) ?? {};
+      if (typeof asientoId !== 'string' || !sala.hayAsiento(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      if (typeof gastado !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
+      if (!sala.cambiarVoto(asientoId, gastado)) return { ok: false, error: 'Solo los muertos tienen un voto que quitar o devolver.' };
+      return { ok: true };
+    },
+  },
+
+  /** El Barquero (con él en juego): todos los muertos recuperan su voto. */
+  'narrador:barquero': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.npcActivo(NPC_FERRYMAN),
+    noPuede: 'Solo un narrador, con el Barquero en juego, devuelve los votos a los muertos.',
+    hacer: (sala) => {
+      if (sala.devolverVotos() === 0) return { ok: false, error: 'Ningún muerto ha gastado su voto.' };
       return { ok: true };
     },
   },

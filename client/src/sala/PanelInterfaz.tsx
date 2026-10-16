@@ -4,7 +4,7 @@ import Mano from './Mano';
 import VistaPreviaJugador from './VistaPreviaJugador';
 import type { CSSProperties, ReactNode } from 'react';
 import { Dices } from 'lucide-react';
-import { carpetaSilla, ESTILOS_CALAVERA, ESTILOS_MANO, ESTILOS_SILLA, MarcasContexto } from './marcas';
+import { carpetaSilla, ESTILOS_CALAVERA, ESTILOS_MANO, ESTILOS_SILLA, ESTILOS_VOTO, MarcasContexto } from './marcas';
 import type { TamanosMesa } from './Mesa';
 import { RANGOS, type PreferenciasSala } from './preferencias';
 
@@ -137,7 +137,7 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, onCambiar }: PanelIn
           <MuestraAzar />
         ) : (
           // La ficha marcada, con esta calavera
-          <MarcasContexto.Provider value={{ calavera, mano: 'laton', silla: 'clasica' }}>
+          <MarcasContexto.Provider value={{ calavera, mano: 'laton', silla: 'clasica', voto: 'vela' }}>
             <FichaRedonda marcado />
           </MarcasContexto.Provider>
         )
@@ -160,6 +160,19 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, onCambiar }: PanelIn
           </span>
         )
       }
+    />
+    <ElegirEstilo
+      id="sala-pref-voto"
+      leyenda="Voto de los muertos"
+      estilos={ESTILOS_VOTO}
+      valor={preferencias.voto}
+      onCambiar={(voto) => onCambiar({ voto })}
+      muestra={(voto) => (
+        // Un muerto que ya ha gastado su voto, con este estilo (su vela apagada o el círculo)
+        <MarcasContexto.Provider value={{ calavera: 'clasica', mano: 'laton', silla: 'clasica', voto }}>
+          <FichaRedonda muerto votoGastado />
+        </MarcasContexto.Provider>
+      )}
     />
     <ElegirEstilo
       id="sala-pref-silla"

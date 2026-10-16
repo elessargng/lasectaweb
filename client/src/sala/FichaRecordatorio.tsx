@@ -19,9 +19,9 @@ interface FichaRecordatorioProps {
 }
 
 /**
- * Una ficha recordatorio: redonda, de pergamino como las del juego (la misma
- * textura que las de personaje), con el icono del personaje y el texto del
- * recordatorio en tinta, curvado por el borde de abajo. Solo visual: quien la
+ * Una ficha recordatorio: redonda, con el fondo violeta de las del juego (el de
+ * botc.app), el icono del personaje y el texto del recordatorio en claro,
+ * curvado por el borde de abajo. Solo visual: quien la
  * usa dice para el lector qué recordatorio es.
  */
 /**
@@ -40,10 +40,10 @@ const FichaRecordatorio = ({ personaje, texto, tamano = TAMANO_RECORDATORIO }: F
   return (
     <span
       aria-hidden="true"
-      className="relative flex aspect-square items-center justify-center overflow-hidden rounded-full shadow-[0_0_0_1px_rgba(43,29,14,0.45),0_2px_5px_rgba(0,0,0,0.6)]"
-      // La textura de las fichas (public/ficha.webp), un poco más grande para que el aro
-      // oscuro quede en el borde; debajo, el pergamino por si tarda en cargar
-      style={{ width: tamano, background: "url('/ficha.webp') center / 112% no-repeat, #e6d8b6" }}
+      className="relative flex aspect-square items-center justify-center overflow-hidden rounded-full shadow-[0_0_0_1px_rgba(20,12,32,0.6),0_2px_5px_rgba(0,0,0,0.6)]"
+      // El fondo violeta de los recordatorios de botc.app (copia local, public/recordatorio.webp),
+      // de borde a borde; debajo, un violeta parecido por si tarda en cargar
+      style={{ width: tamano, background: "url('/recordatorio.webp') center / cover no-repeat, #3d2a5c" }}
     >
       {personaje?.icono && (
         <img src={urlDelServidor(personaje.icono)} alt="" className="h-[62%] w-[62%] -translate-y-[12%] object-contain" />
@@ -56,9 +56,9 @@ const FichaRecordatorio = ({ personaje, texto, tamano = TAMANO_RECORDATORIO }: F
           fontFamily="Georgia, serif"
           fontWeight="bold"
           fontSize={tamanoTexto(texto.texto)}
-          fill="#2b211a"
-          // Un halo de pergamino, como el nombre de las fichas de personaje
-          stroke="rgba(243, 230, 208, 0.75)"
+          // En claro sobre el violeta, con un halo oscuro para que se lea sobre el icono
+          fill="#f3e6d0"
+          stroke="rgba(18, 10, 28, 0.85)"
           strokeWidth="1.5"
           style={{ paintOrder: 'stroke' }}
         >

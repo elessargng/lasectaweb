@@ -1,4 +1,4 @@
-import { Pencil, Plus, X } from 'lucide-react';
+import { Flame, Pencil, Plus, X } from 'lucide-react';
 import { IconoDestellos } from './IconosJuego';
 import { useState } from 'react';
 import DialogoBootlegger from './DialogoBootlegger';
@@ -179,6 +179,18 @@ const PanelNpcs = ({ npcs, disponibles, narro, hayGuion, bootlegger, rolStormcat
                   <button type="button" onClick={() => setEditandoReglas(true)} className={botonNpc}>
                     <Pencil size={12} />
                     Reglas
+                  </button>
+                )}
+                {narro && p.id === 'ferryman' && (
+                  // El Barquero: todos los muertos recuperan su voto (sus velas se encienden;
+                  // a todos les llega el aviso)
+                  <button
+                    type="button"
+                    onClick={() => void pedir('narrador:barquero').then((r) => !r.ok && onError(r.error))}
+                    className={botonNpc}
+                  >
+                    <Flame size={12} />
+                    Recuperar votos
                   </button>
                 )}
                 {narro && p.id === 'stormcatcher' && (

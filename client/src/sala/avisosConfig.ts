@@ -60,7 +60,7 @@ export const GRUPOS_AVISOS: { grupo: string; tipos: { tipo: TipoAviso; etiqueta:
   {
     grupo: 'Partida',
     tipos: [
-      { tipo: 'muertes', etiqueta: 'Muertes y resurrecciones' },
+      { tipo: 'muertes', etiqueta: 'Muertes, resurrecciones y el voto de los muertos' },
       { tipo: 'calavera', etiqueta: 'Calavera: a quién se le pone o se le quita' },
       { tipo: 'grimorio', etiqueta: 'Grimorio para los jugadores (activado o desactivado)' },
       { tipo: 'guion', etiqueta: 'Cambio de guion' },

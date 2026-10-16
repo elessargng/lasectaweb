@@ -207,6 +207,7 @@ const Mesa = ({
       personaje: personaje?.nombre ?? null,
       marcado: a.marcado,
       muerto: a.muerto,
+      votoGastado: a.votoGastado,
       muertePendiente: a.muertePendiente,
       recordatorios: recordatoriosDe(a).map((r) => describirRecordatorio(r, todosPorId.get(r.personaje))),
     };

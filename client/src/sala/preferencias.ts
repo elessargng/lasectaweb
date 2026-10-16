@@ -4,8 +4,11 @@ import {
   esEstiloCalavera,
   esEstiloMano,
   esEstiloSilla,
+  esEstiloVoto,
   MANO_DEFECTO,
   SILLA_DEFECTO,
+  VOTO_DEFECTO,
+  type EstiloVoto,
   type PreferenciaCalavera,
   type PreferenciaMano,
   type PreferenciaSilla,
@@ -57,6 +60,8 @@ export interface PreferenciasSala {
   mano: PreferenciaMano;
   /** Qué silla se ve en los asientos libres (o al azar en cada partida). Pestaña Interfaz. */
   silla: PreferenciaSilla;
+  /** Cómo se ve si a un muerto le queda el voto: su vela o un círculo en el sudario. Pestaña Interfaz. */
+  voto: EstiloVoto;
   /** Cámara y micrófono elegidos (deviceId); vacío: los del sistema. Pestaña Comunicaciones. */
   idCamara: string;
   idMicrofono: string;
@@ -127,6 +132,7 @@ export function normalizarPreferencias(datos: unknown): PreferenciasSala {
   preferencias.calavera = esEstiloCalavera(guardadas.calavera) ? guardadas.calavera : CALAVERA_DEFECTO;
   preferencias.mano = esEstiloMano(guardadas.mano) ? guardadas.mano : MANO_DEFECTO;
   preferencias.silla = esEstiloSilla(guardadas.silla) ? guardadas.silla : SILLA_DEFECTO;
+  preferencias.voto = esEstiloVoto(guardadas.voto) ? guardadas.voto : VOTO_DEFECTO;
   // Los sonidos: uno a uno. Lo de antes (un sí o no para todos) vale para todos
   const sonidos = guardadas.sonidos;
   const deCada = (sonidos && typeof sonidos === 'object' ? sonidos : {}) as Record<string, unknown>;

@@ -51,6 +51,12 @@ export interface SalaAsiento {
    * sudario): aún no cuenta como muerta. Solo la ven quienes ven el grimorio.
    */
   muertePendiente: boolean;
+  /**
+   * Muerta, ya ha gastado el único voto que le queda (se apaga su vela). Es
+   * público: todos saben qué muertos pueden votar todavía. Al morir o revivir
+   * vuelve a false.
+   */
+  votoGastado: boolean;
   /** Su ficha lleva la calavera (solo una de la mesa). */
   marcado: boolean;
   /** Con cuántos votos se le puso la calavera (desde una nominación ya votada), o null. */

@@ -137,6 +137,7 @@ const FichaAsiento = ({
       <FichaRedonda
         muerto={asiento.muerto}
         muertePendiente={asiento.muertePendiente}
+        votoGastado={asiento.votoGastado}
         marcado={asiento.marcado}
         voto={voto}
         bocaAbajo={bocaAbajo}
@@ -188,7 +189,7 @@ const FichaAsiento = ({
   const alineamientoDistinto = personaje && contenido.alineamiento && contenido.alineamiento !== alineamientoDeTipo(personaje.tipo);
   const estado = [
     personaje && `${personaje.nombre.texto}${alineamientoDistinto ? `, ${NOMBRE_ALINEAMIENTO[contenido.alineamiento!]}` : ''}`,
-    asiento.muerto && 'muerta',
+    asiento.muerto && (asiento.votoGastado ? 'muerta, sin voto' : 'muerta, con voto'),
     asiento.muertePendiente && 'muerta esta noche, sin anunciar',
     asiento.marcado && 'con la calavera',
     ocupante?.manoLevantada && `mano levantada (${nombreMano(ocupante.formaMano).toLocaleLowerCase('es')})`,
@@ -248,6 +249,14 @@ const FichaAsiento = ({
   const confirmarMuerte = async () => {
     const r = await pedir('narrador:confirmarMuerte', { asientoId: asiento.id });
     if (!r.ok) onError(r.error);
+    return false;
+  };
+
+  // El voto que le queda a un muerto: el narrador se lo quita o se lo devuelve a mano.
+  const cambiarVoto = async () => {
+    const r = await pedir('narrador:cambiarVoto', { asientoId: asiento.id, gastado: !asiento.votoGastado });
+    if (!r.ok) onError(r.error);
+    // false: el menú se cierra y el foco vuelve a la ficha, que ya dice si le queda el voto.
     return false;
   };
 
@@ -320,6 +329,9 @@ const FichaAsiento = ({
             ? { id: 'vida', etiqueta: `Matar ${quien}`, abreDialogo: true, elegir: () => setMatando(true) }
             : { id: 'vida', etiqueta: vivo ? `Matar ${quien}` : `Revivir ${quien}`, elegir: cambiarVida },
           ...(asiento.muertePendiente ? [{ id: 'anunciar', etiqueta: 'Anunciar su muerte', elegir: confirmarMuerte }] : []),
+          ...(asiento.muerto
+            ? [{ id: 'voto', etiqueta: asiento.votoGastado ? 'Devolver voto' : 'Quitar voto', elegir: cambiarVoto }]
+            : []),
           { id: 'marca', etiqueta: asiento.marcado ? 'Desmarcar' : 'Marcar', elegir: cambiarMarca },
           onNominar
             ? { id: 'nominar', etiqueta: 'Nominar a…', elegir: onNominar }

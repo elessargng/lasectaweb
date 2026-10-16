@@ -1,8 +1,8 @@
 import { createContext, useContext } from 'react';
 
 /**
- * Cómo ve cada uno la calavera de las nominaciones, las manos levantadas y las
- * sillas de los asientos libres (Preferencias > Interfaz). Solo cambia el dibujo:
+ * Cómo ve cada uno la calavera de las nominaciones, las manos levantadas, las
+ * sillas de los asientos libres y el voto de los muertos (Preferencias > Interfaz). Solo cambia el dibujo:
  * lo que se lee es lo mismo.
  * «Al azar» elige uno distinto en cada partida (ver estiloDePartida).
  */
@@ -41,16 +41,29 @@ export const ESTILOS_SILLA = [
 export type PreferenciaSilla = (typeof ESTILOS_SILLA)[number]['id'];
 export type EstiloSilla = Exclude<PreferenciaSilla, 'azar'>;
 
+/**
+ * Cómo se ve si a un muerto le queda su voto: su vela negra (encendida o
+ * apagada) o, sobre el sudario, un círculo azul cuando lo ha perdido. Sin
+ * «al azar»: es información de la partida y tiene que leerse siempre igual.
+ */
+export const ESTILOS_VOTO = [
+  { id: 'vela', nombre: 'Vela', descripcion: 'Negra: encendida con voto, apagada sin él' },
+  { id: 'sudario', nombre: 'Sudario', descripcion: 'Un círculo azul en el sudario al perder el voto' },
+] as const;
+export type EstiloVoto = (typeof ESTILOS_VOTO)[number]['id'];
+
 /** La carpeta de las imágenes de una silla (con su barra final), en public/. */
 export const carpetaSilla = (silla: EstiloSilla) => (silla === 'clasica' ? '/sillas/' : `/sillas/${silla}/`);
 
 export const CALAVERA_DEFECTO: PreferenciaCalavera = 'clasica';
 export const MANO_DEFECTO: PreferenciaMano = 'laton';
 export const SILLA_DEFECTO: PreferenciaSilla = 'clasica';
+export const VOTO_DEFECTO: EstiloVoto = 'vela';
 
 export const esEstiloCalavera = (v: unknown): v is PreferenciaCalavera => ESTILOS_CALAVERA.some((e) => e.id === v);
 export const esEstiloMano = (v: unknown): v is PreferenciaMano => ESTILOS_MANO.some((e) => e.id === v);
 export const esEstiloSilla = (v: unknown): v is PreferenciaSilla => ESTILOS_SILLA.some((e) => e.id === v);
+export const esEstiloVoto = (v: unknown): v is EstiloVoto => ESTILOS_VOTO.some((e) => e.id === v);
 
 /**
  * El estilo que se pinta en esta partida: el elegido o, «al azar», uno de los
@@ -69,10 +82,11 @@ export function estiloDePartida<T extends string>(
   return concretos[h % concretos.length];
 }
 
-export const MarcasContexto = createContext<{ calavera: EstiloCalavera; mano: EstiloMano; silla: EstiloSilla }>({
+export const MarcasContexto = createContext<{ calavera: EstiloCalavera; mano: EstiloMano; silla: EstiloSilla; voto: EstiloVoto }>({
   calavera: 'clasica',
   mano: 'laton',
   silla: 'clasica',
+  voto: 'vela',
 });
 
 export const useMarcas = () => useContext(MarcasContexto);

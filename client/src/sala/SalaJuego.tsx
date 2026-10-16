@@ -876,8 +876,15 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // está el foco, se confirma al lector.
   const puedeLevantarMano = !!estado?.acciones.includes('sala:levantarMano');
   const manoLevantada = !!yo?.manoLevantada;
+  // Muerto y sin voto: no puede levantar la mano (el atajo lo dice sin preguntar al servidor)
+  const asientoPropio = estado?.asientos.find((a) => a.ocupante === estado.yo);
+  const sinVoto = !!asientoPropio?.muerto && asientoPropio.votoGastado;
   const alternarMano = async () => {
     const levantada = !manoLevantada;
+    if (levantada && sinVoto) {
+      setAviso('Ya has gastado tu voto: no puedes levantar la mano.');
+      return false;
+    }
     const r = await pedir('sala:levantarMano', { levantada });
     if (r.ok) anunciar('miMano', levantada ? 'Has levantado la mano.' : 'Has bajado la mano.');
     else setAviso(r.error);
@@ -1351,12 +1358,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
   return (
     <AvisosContexto.Provider value={avisosActivos}>
-      {/* La calavera, la mano y la silla que se pintan: las elegidas o, al azar, unas por partida (y por persona) */}
+      {/* La calavera, la mano, la silla y el voto de los muertos que se pintan: las elegidas o, al azar, unas por partida (y por persona) */}
       <MarcasContexto.Provider
         value={{
           calavera: estiloDePartida(preferencias.calavera, ESTILOS_CALAVERA, `${semillaPartida}:calavera`),
           mano: estiloDePartida(preferencias.mano, ESTILOS_MANO, `${semillaPartida}:mano`),
           silla: estiloDePartida(preferencias.silla, ESTILOS_SILLA, `${semillaPartida}:silla`),
+          voto: preferencias.voto,
         }}
       >
       <FichasContexto.Provider value={contextoFichas}>
@@ -1441,6 +1449,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                 <MenuMano
                   forma={yo.formaMano}
                   levantada={manoLevantada}
+                  sinVoto={sinVoto}
                   onAlternar={alternarMano}
                   onElegirForma={elegirFormaMano}
                 />

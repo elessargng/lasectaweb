@@ -79,6 +79,7 @@ const asientoNuevo = (): SalaAsiento => ({
   ocupante: null,
   muerto: false,
   muertePendiente: false,
+  votoGastado: false,
   marcado: false,
   votosMarca: null,
   personaje: null,
@@ -106,6 +107,8 @@ export const NPC_BOOTLEGGER = 'bootlegger';
 export const NPC_POPE = 'pope';
 /** Storm Catcher: el narrador nombra un personaje bueno. */
 export const NPC_STORMCATCHER = 'stormcatcher';
+/** El Barquero: el último día, los muertos recuperan su voto (el narrador lo hace con un botón). */
+export const NPC_FERRYMAN = 'ferryman';
 
 /** Las casillas de farol, todas vacías. */
 export const farolesVacios = (): (string | null)[] => Array.from({ length: NUM_FAROLES }, () => null);
@@ -601,6 +604,7 @@ export class SalaService {
     for (const a of this.mesa) {
       a.muerto = false;
       a.muertePendiente = false;
+      a.votoGastado = false;
       a.marcado = false;
       a.votosMarca = null;
       a.personaje = null;
@@ -655,7 +659,8 @@ export class SalaService {
 
   /**
    * La aguja llega a la siguiente ficha: vota si quien se sienta ahí tiene la mano
-   * levantada (y entonces se le baja).
+   * levantada (y entonces se le baja). Un muerto solo vota si le queda el voto, y
+   * al votar lo gasta.
    */
   private avanzarVotacion(): void {
     const n = this.nominacionVigente();
@@ -664,11 +669,13 @@ export class SalaService {
     const asientoId = v.orden[v.paso];
     const asiento = this.mesa.find((a) => a.id === asientoId);
     const ocupante = asiento?.ocupante ? this.buscar(asiento.ocupante) : undefined;
-    const vota = ocupante?.rol === 'jugador' && ocupante.manoLevantada;
+    const sinVoto = !!asiento?.muerto && asiento.votoGastado;
+    const vota = ocupante?.rol === 'jugador' && ocupante.manoLevantada && !sinVoto;
     if (vota) {
       v.votos += 1;
       // Voto contado: la mano baja sola.
       ocupante.manoLevantada = false;
+      if (asiento?.muerto) asiento.votoGastado = true;
     }
     v.resultados[asientoId] = vota ? v.votos : null;
     v.paso += 1;
@@ -740,7 +747,8 @@ export class SalaService {
 
   /**
    * Empieza una nominación (sustituye a la que hubiera) y la apunta en el
-   * registro, con su día (si no se llega a votar, queda sin votos). No comprueba permisos.
+   * registro, con su día (si no se llega a votar, queda sin votos). Baja la mano
+   * a los muertos que ya no tienen voto. No comprueba permisos.
    */
   nominar(desde: string, hasta: string): void {
     this.pararTemporizador();
@@ -754,6 +762,12 @@ export class SalaService {
     };
     this.registro.push(registro);
     this.nominacionEnCurso = { desde, hasta, cuentaAtrasFin: null, votacion: null, votosElegidos: null, registro };
+    // Los muertos sin voto no pueden votar: si tenían la mano levantada, se les baja
+    for (const a of this.mesa) {
+      if (!a.muerto || !a.votoGastado || !a.ocupante) continue;
+      const ocupante = this.buscar(a.ocupante);
+      if (ocupante) ocupante.manoLevantada = false;
+    }
   }
 
   cerrarNominacion(): void {
@@ -870,6 +884,8 @@ export class SalaService {
       asiento.muertePendiente = true;
       return;
     }
+    // Al morir (o revivir) tiene su voto
+    if (asiento.muerto !== muerto) asiento.votoGastado = false;
     asiento.muerto = muerto;
     asiento.muertePendiente = false;
     if (muerto) {
@@ -884,9 +900,25 @@ export class SalaService {
     if (!asiento?.muertePendiente) return false;
     asiento.muertePendiente = false;
     asiento.muerto = true;
+    asiento.votoGastado = false;
     asiento.marcado = false;
     asiento.votosMarca = null;
     return true;
+  }
+
+  /** Quita o devuelve el voto a la ficha de un muerto. Devuelve false si no está muerta. No comprueba permisos. */
+  cambiarVoto(asientoId: string, gastado: boolean): boolean {
+    const asiento = this.mesa.find((a) => a.id === asientoId);
+    if (!asiento?.muerto) return false;
+    asiento.votoGastado = gastado;
+    return true;
+  }
+
+  /** El Barquero: todos los muertos recuperan su voto. Devuelve cuántos lo recuperan. No comprueba permisos. */
+  devolverVotos(): number {
+    const sinVoto = this.mesa.filter((a) => a.muerto && a.votoGastado);
+    for (const a of sinVoto) a.votoGastado = false;
+    return sinVoto.length;
   }
 
   configuracion(): SalaConfiguracion {
@@ -1150,6 +1182,12 @@ export class SalaService {
   cambiarSonido(id: string, sinSonido: boolean): void {
     const participante = this.buscar(id);
     if (participante) participante.sinSonido = sinSonido;
+  }
+
+  /** El jugador está muerto y ya ha gastado su voto: no puede levantar la mano. */
+  sinVoto(participanteId: string): boolean {
+    const asiento = this.asientoDe(participanteId);
+    return !!asiento?.muerto && asiento.votoGastado;
   }
 
   /** Levanta o baja la mano de un jugador. No comprueba permisos. */

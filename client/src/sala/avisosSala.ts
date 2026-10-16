@@ -183,6 +183,14 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado, vigilado
   }
 
   const forma = (p: SalaParticipante) => nombreMano(p.formaMano).toLocaleLowerCase('es');
+  // La propia, bajada sola al empezar una nominación por no tener ya voto
+  const miMano = { antes: antes.get(yo)?.manoLevantada, ahora: ahora.get(yo)?.manoLevantada };
+  const nominacionNueva =
+    !!nuevo.nominacion && (nuevo.nominacion.desde !== anterior.nominacion?.desde || nuevo.nominacion.hasta !== anterior.nominacion?.hasta);
+  if (miMano.antes && !miMano.ahora && nominacionNueva) {
+    const mio = nuevo.asientos.find((a) => a.ocupante === yo);
+    if (mio?.muerto && mio.votoGastado) avisa('miMano', 'Se te baja la mano: ya no te queda voto.');
+  }
   // Manos levantadas (las propias las avisa quien la levanta).
   for (const p of nuevo.participantes) {
     const previo = antes.get(p.id);
@@ -222,6 +230,16 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado, vigilado
   const mayuscula = (t: string) => t.charAt(0).toLocaleUpperCase('es') + t.slice(1);
   const antesAsiento = new Map(anterior.asientos.map((a) => [a.id, a]));
   const seMarca = nuevo.asientos.some((a) => a.marcado && !antesAsiento.get(a.id)?.marcado);
+  // Los muertos que acaban de votar: eso ya lo dice la votación (y que gastan su voto)
+  const votacionAntes = anterior.nominacion?.votacion;
+  const votacionAhora = nuevo.nominacion?.votacion;
+  const recienVotados = new Set(votacionAhora ? votacionAhora.orden.slice(votacionAntes?.paso ?? 0, votacionAhora.paso) : []);
+  // Varios muertos recuperan el voto a la vez (el Barquero): un solo aviso
+  const recuperan = nuevo.asientos.filter((a) => {
+    const previo = antesAsiento.get(a.id);
+    return previo?.muerto && a.muerto && previo.votoGastado && !a.votoGastado;
+  });
+  if (!cambioFase && recuperan.length > 1) avisa('muertes', 'Los muertos recuperan su voto.');
   for (const a of nuevo.asientos) {
     const previo = antesAsiento.get(a.id);
     if (!previo || cambioFase) continue;
@@ -229,6 +247,9 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado, vigilado
     if (previo.muerto !== a.muerto) {
       if (q === null) avisa('muertes', a.muerto ? 'Has muerto.' : 'Has revivido.');
       else avisa('muertes', `${mayuscula(q)} ha ${a.muerto ? 'muerto' : 'revivido'}.`);
+    } else if (a.muerto && previo.votoGastado !== a.votoGastado && !recienVotados.has(a.id) && !(recuperan.length > 1 && !a.votoGastado)) {
+      if (q === null) avisa('muertes', a.votoGastado ? 'Pierdes tu voto.' : 'Recuperas tu voto.');
+      else avisa('muertes', `${mayuscula(q)} ${a.votoGastado ? 'pierde' : 'recupera'} su voto.`);
     }
     if (previo.marcado !== a.marcado) {
       // Al pasar la calavera a otra ficha, basta con decir a cuál.
@@ -271,7 +292,9 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado, vigilado
     for (const id of votAhora.orden.slice(desdePaso, votAhora.paso)) {
       const nombre = mayuscula(nominacionDe(nuevo, id));
       const resultado = votAhora.resultados[id];
-      avisa('votoAVoto', typeof resultado === 'number' ? `${nombre}, ${resultado}.` : `${nombre}.`);
+      // Un muerto que vota gasta su único voto: se dice (su vela se apaga)
+      const gasta = typeof resultado === 'number' && nuevo.asientos.find((a) => a.id === id)?.muerto ? ', gasta su voto' : '';
+      avisa('votoAVoto', typeof resultado === 'number' ? `${nombre}, ${resultado}${gasta}.` : `${nombre}.`);
     }
   }
   if (votAhora?.terminada && !votAntes?.terminada) {
