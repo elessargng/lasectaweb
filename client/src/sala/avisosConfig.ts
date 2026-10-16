@@ -18,6 +18,8 @@ export type TipoAviso =
   | 'guion'
   | 'fase'
   | 'miPersonaje'
+  | 'faroles'
+  | 'npcs'
   | 'bolsa'
   | 'accesoGrimorio'
   | 'revelacion'
@@ -64,6 +66,8 @@ export const GRUPOS_AVISOS: { grupo: string; tipos: { tipo: TipoAviso; etiqueta:
       { tipo: 'guion', etiqueta: 'Cambio de guion' },
       { tipo: 'fase', etiqueta: 'Noche y día (y al limpiar el grimorio)' },
       { tipo: 'miPersonaje', etiqueta: 'Tu personaje y tu alineamiento, cuando te los cambia el narrador' },
+      { tipo: 'faroles', etiqueta: 'Faroles: al cambiarlos o copiarlos' },
+      { tipo: 'npcs', etiqueta: 'NPCs: legendarios y lóricos que el narrador pone o quita' },
       { tipo: 'revelacion', etiqueta: 'Revelar el grimorio: cada ficha que se revela y el bando ganador' },
     ],
   },

@@ -3,6 +3,8 @@ export interface PermisosVideo {
   /** Puede emitir (micrófono y, si `camara`, cámara). Si no, solo ve y oye. */
   publicar: boolean;
   camara: boolean;
+  /** Puede emitir el micrófono (por defecto, sí): no, si el narrador ha pedido silencio. */
+  microfono?: boolean;
 }
 
 /**

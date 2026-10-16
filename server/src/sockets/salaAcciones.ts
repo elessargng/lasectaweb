@@ -5,6 +5,11 @@ import { MENSAJES_PRIVADOS, SalaMensajesPrivados } from '../types/chat';
 import {
   limpiarAvatarSala,
   limpiarNombreSala,
+  NPC_BOOTLEGGER,
+  NPC_GARDENER,
+  NPC_POPE,
+  NPC_SILENCIO,
+  NPC_STORMCATCHER,
   SALA_ASIENTOS,
   SALA_SEGUNDOS_POR_FICHA,
   SalaService,
@@ -14,6 +19,7 @@ import {
   FICHAS_DESPERTAR,
   FichaDespertar,
   MensajeDespertar,
+  NUM_FAROLES,
   SALA_FORMAS_MANO,
   SalaFormaMano,
   SalaParticipante,
@@ -21,7 +27,7 @@ import {
   TarjetaDespertar,
 } from '../types/sala';
 import { guardarAvatarSala } from '../utils/salaAvatarStorage';
-import { GuionResuelto } from '../types/guiones';
+import { GuionResuelto, TIPOS_NPC, TipoPersonaje } from '../types/guiones';
 import { GuionInvalidoError } from '../services/guiones/errores';
 
 /** `valor`: lo que la acción devuelve a quien la pidió (p. ej. la ruta del avatar subido). */
@@ -104,9 +110,8 @@ function leerMensajeDespertar(
   if (adjunto.jugadores && (!asientos?.length || asientos.some((a) => !sala.hayAsiento(a)))) {
     return { error: 'Elige al menos un jugador.' };
   }
-  const guion = sala.guion();
   const elegidos = adjunto.personajes ? ids(personajes) : [];
-  if (adjunto.personajes && (!elegidos?.length || elegidos.some((id) => !guion?.personajes.some((p) => p.id === id)))) {
+  if (adjunto.personajes && (!elegidos?.length || elegidos.some((id) => !sala.personaje(id)))) {
     return { error: 'Elige al menos un personaje del guion.' };
   }
   const limpio = adjunto.texto && typeof texto === 'string' ? texto.replace(/\s+/g, ' ').trim().slice(0, SALA_TEXTO_DESPERTAR_MAX) : '';
@@ -121,6 +126,18 @@ function leerMensajeDespertar(
     alineamiento: bando,
   };
 }
+/** Comprueba una casilla de farol: su posición y un personaje del guion (o null, para vaciarla). */
+function leerFarol(sala: SalaService, datos: unknown): { error: string } | { posicion: number; personajeId: string | null } {
+  const { posicion, personajeId } = (datos as { posicion?: unknown; personajeId?: unknown } | null) ?? {};
+  if (typeof posicion !== 'number' || !Number.isInteger(posicion) || posicion < 0 || posicion >= NUM_FAROLES) {
+    return { error: 'Esa casilla de farol no existe.' };
+  }
+  if (personajeId === null) return { posicion, personajeId: null };
+  if (typeof personajeId !== 'string' || !sala.personaje(personajeId)) {
+    return { error: 'Ese personaje no está en el guion.' };
+  }
+  return { posicion, personajeId };
+}
 const esNarrador = (_sala: SalaService, yo: SalaParticipante) => yo.rol === 'narrador';
 
 /**
@@ -134,10 +151,12 @@ const esNarrador = (_sala: SalaService, yo: SalaParticipante) => yo.rol === 'nar
  */
 /** Los tipos de personaje que pueden ir en la ficha de un jugador (no los legendarios ni los lóricos). */
 const TIPOS_EN_FICHA: string[] = ['townsfolk', 'outsider', 'minion', 'demon', 'traveller'];
+/** Fichas de un mismo personaje como mucho en la bolsa (con el Pope). */
+const MAX_REPETIDOS = 5;
 /** Recordatorios como mucho en una ficha (de sobra para una partida). */
 const MAX_RECORDATORIOS = 20;
-/** Los que van en la bolsa para repartir (los viajeros se ponen aparte, ficha a ficha). */
-const TIPOS_EN_BOLSA: string[] = ['townsfolk', 'outsider', 'minion', 'demon'];
+/** Los que van en la bolsa para repartir (también viajeros, de cualquier guion: no cuentan para el reparto por tipos). */
+const TIPOS_EN_BOLSA: string[] = ['townsfolk', 'outsider', 'minion', 'demon', 'traveller'];
 
 export const SALA_ACCIONES: Record<string, Accion> = {
   /** datos: { nombre }. Vacío: vuelve al nombre de usuario (solo con cuenta). */
@@ -566,7 +585,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       if (typeof asientoId !== 'string' || !sala.hayAsiento(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (personajeId !== null) {
         const personaje =
-          typeof personajeId === 'string' ? sala.guion()?.personajes.find((p) => p.id === personajeId) : undefined;
+          typeof personajeId === 'string' ? sala.personaje(personajeId) : undefined;
         if (!personaje) return { ok: false, error: 'Ese personaje no está en el guion.' };
         if (!TIPOS_EN_FICHA.includes(personaje.tipo)) return { ok: false, error: 'Ese personaje no puede ir en una ficha.' };
       }
@@ -587,7 +606,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       const { asientoId, personajeId, indice } = (datos as { asientoId?: unknown; personajeId?: unknown; indice?: unknown }) ?? {};
       const asiento = sala.asientos().find((a) => a.id === asientoId);
       if (!asiento || typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
-      const personaje = typeof personajeId === 'string' ? sala.guion()?.personajes.find((p) => p.id === personajeId) : undefined;
+      const personaje = typeof personajeId === 'string' ? sala.personaje(personajeId) : undefined;
       if (!personaje) return { ok: false, error: 'Ese personaje no está en el guion.' };
       const texto = typeof indice === 'number' && Number.isInteger(indice) ? personaje.recordatorios[indice] : undefined;
       if (texto === undefined) return { ok: false, error: 'Ese recordatorio no existe.' };
@@ -621,10 +640,194 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     noPuede: (sala, yo) => (yo.rol !== 'narrador' ? 'Solo un narrador puede preparar la bolsa.' : 'Antes hay que elegir un guion.'),
     hacer: (sala, _yo, datos) => {
       const personajeId = (datos as { personajeId?: unknown } | null)?.personajeId;
-      const personaje = typeof personajeId === 'string' ? sala.guion()?.personajes.find((p) => p.id === personajeId) : undefined;
+      const personaje = typeof personajeId === 'string' ? sala.personaje(personajeId) : undefined;
       if (!personaje) return { ok: false, error: 'Ese personaje no está en el guion.' };
-      if (!TIPOS_EN_BOLSA.includes(personaje.tipo)) return { ok: false, error: 'En la bolsa solo van aldeanos, forasteros, esbirros y demonios.' };
+      if (!TIPOS_EN_BOLSA.includes(personaje.tipo)) {
+        return { ok: false, error: 'En la bolsa solo van aldeanos, forasteros, esbirros, demonios y viajeros.' };
+      }
       sala.alternarEnBolsa(personaje.id);
+      return { ok: true };
+    },
+  },
+
+  /**
+   * Cuántas fichas de un personaje hay en la bolsa (0 la saca). Más de una, solo
+   * con el Pope en juego y de personajes buenos (aldeanos y forasteros).
+   * datos: { personajeId, cantidad }.
+   */
+  'narrador:bolsaCantidad': {
+    puede: (sala, yo) => yo.rol === 'narrador' && !!sala.guion(),
+    noPuede: (_sala, yo) => (yo.rol !== 'narrador' ? 'Solo un narrador puede preparar la bolsa.' : 'Antes hay que elegir un guion.'),
+    hacer: (sala, _yo, datos) => {
+      const { personajeId, cantidad } = (datos as { personajeId?: unknown; cantidad?: unknown } | null) ?? {};
+      const personaje = typeof personajeId === 'string' ? sala.personaje(personajeId) : undefined;
+      if (!personaje || !TIPOS_EN_BOLSA.includes(personaje.tipo)) return { ok: false, error: 'Ese personaje no va en la bolsa.' };
+      if (typeof cantidad !== 'number' || !Number.isInteger(cantidad) || cantidad < 0 || cantidad > MAX_REPETIDOS) {
+        return { ok: false, error: 'Cantidad desconocida.' };
+      }
+      const bueno = personaje.tipo === 'townsfolk' || personaje.tipo === 'outsider';
+      if (cantidad > 1 && !(bueno && sala.npcActivo(NPC_POPE))) {
+        return { ok: false, error: 'Solo con el Pope puede haber aldeanos o forasteros repetidos.' };
+      }
+      sala.ponerEnBolsa(personaje.id, cantidad);
+      return { ok: true };
+    },
+  },
+
+  /** Con el Gardener: entrega a los jugadores los personajes ya repartidos. */
+  'narrador:entregarFichas': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.fichasRetenidas(),
+    noPuede: 'No hay personajes por entregar.',
+    hacer: (sala) => {
+      sala.retenerFichas(false);
+      return { ok: true };
+    },
+  },
+
+  /**
+   * Las reglas del Bootlegger (con él en juego): una por elemento; null o vacío
+   * vuelve a las del guion. datos: { reglas: string[] | null }.
+   */
+  'narrador:bootlegger': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.npcActivo(NPC_BOOTLEGGER),
+    noPuede: 'Solo un narrador, con el Bootlegger en juego, escribe sus reglas.',
+    hacer: (sala, _yo, datos) => {
+      const reglas = (datos as { reglas?: unknown } | null)?.reglas;
+      if (reglas !== null && !Array.isArray(reglas)) return { ok: false, error: 'Reglas desconocidas.' };
+      const limpias = (reglas ?? [])
+        .filter((r): r is string => typeof r === 'string')
+        .map((r) => r.replace(/\s+/g, ' ').trim().slice(0, 600))
+        .filter(Boolean)
+        .slice(0, 20);
+      sala.escribirBootlegger(reglas === null ? null : limpias);
+      return { ok: true };
+    },
+  },
+
+  /**
+   * El personaje bueno que nombra el Storm Catcher (con él en juego), o null.
+   * datos: { personajeId: string | null }.
+   */
+  'narrador:stormcatcher': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.npcActivo(NPC_STORMCATCHER),
+    noPuede: 'Solo un narrador, con el Storm Catcher en juego, nombra su personaje.',
+    hacer: (sala, _yo, datos) => {
+      const personajeId = (datos as { personajeId?: unknown } | null)?.personajeId;
+      if (personajeId === null) {
+        sala.nombrarStormcatcher(null);
+        return { ok: true };
+      }
+      const personaje = typeof personajeId === 'string' ? sala.personaje(personajeId) : undefined;
+      if (!personaje || (personaje.tipo !== 'townsfolk' && personaje.tipo !== 'outsider')) {
+        return { ok: false, error: 'El Storm Catcher nombra un personaje bueno (aldeano o forastero).' };
+      }
+      sala.nombrarStormcatcher(personaje.id);
+      return { ok: true };
+    },
+  },
+
+  /**
+   * Pide silencio a todos (o lo levanta): los jugadores no pueden emitir su
+   * micrófono. Solo con el Bibliotecario del Infierno en juego. datos: { activo }.
+   */
+  'narrador:silencio': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.npcs().includes(NPC_SILENCIO),
+    noPuede: (_sala, yo) =>
+      yo.rol !== 'narrador' ? 'Solo un narrador pide silencio.' : 'Solo se pide silencio con el Bibliotecario del Infierno en juego.',
+    hacer: (sala, _yo, datos) => {
+      const activo = (datos as { activo?: unknown } | null)?.activo;
+      if (typeof activo !== 'boolean') return { ok: false, error: 'Petición desconocida.' };
+      sala.pedirSilencio(activo);
+      return { ok: true };
+    },
+  },
+
+  /**
+   * Da por bueno el reparto aunque no cuadre con las reglas (el narrador se sale del
+   * guion a propósito), o deja de darlo (null). datos: { firma: string | null }.
+   */
+  'narrador:aceptarSetup': {
+    puede: esNarrador,
+    noPuede: 'Solo un narrador da por bueno el reparto.',
+    hacer: (sala, _yo, datos) => {
+      const firma = (datos as { firma?: unknown } | null)?.firma;
+      if (firma !== null && (typeof firma !== 'string' || firma.length > 100)) return { ok: false, error: 'Reparto desconocido.' };
+      sala.aceptarSetup(firma);
+      return { ok: true };
+    },
+  },
+
+  /**
+   * Pone en juego un NPC (un legendario o un lórico, del guion o del catálogo), o
+   * lo quita si ya estaba. Lo ven todos. datos: { personajeId }.
+   */
+  'narrador:npc': {
+    puede: (sala, yo) => yo.rol === 'narrador' && !!sala.guion(),
+    noPuede: (_sala, yo) => (yo.rol !== 'narrador' ? 'Solo un narrador pone NPCs en juego.' : 'Antes hay que elegir un guion.'),
+    hacer: (sala, _yo, datos) => {
+      const personajeId = (datos as { personajeId?: unknown } | null)?.personajeId;
+      const personaje = typeof personajeId === 'string' ? sala.personaje(personajeId) : undefined;
+      if (!personaje) return { ok: false, error: 'Ese personaje no existe.' };
+      if (!TIPOS_NPC.includes(personaje.tipo as TipoPersonaje)) {
+        return { ok: false, error: 'Como NPC solo van legendarios y lóricos.' };
+      }
+      sala.alternarNpc(personaje.id);
+      return { ok: true };
+    },
+  },
+
+  /**
+   * Pone un personaje del guion en una casilla de los faroles que el narrador
+   * prepara para el demonio, o la vacía. datos: { posicion: 0..2, personajeId: string | null }.
+   */
+  'narrador:farol': {
+    puede: (sala, yo) => yo.rol === 'narrador' && !!sala.guion(),
+    noPuede: (_sala, yo) => (yo.rol !== 'narrador' ? 'Solo un narrador prepara los faroles.' : 'Antes hay que elegir un guion.'),
+    hacer: (sala, _yo, datos) => {
+      const farol = leerFarol(sala, datos);
+      if ('error' in farol) return { ok: false, error: farol.error };
+      sala.ponerFarol(farol.posicion, farol.personajeId);
+      return { ok: true };
+    },
+  },
+
+  /**
+   * Un jugador se pone (o se quita) un farol en una de sus casillas, tenga grimorio
+   * o no. datos: { posicion: 0..2, personajeId: string | null }.
+   */
+  'jugador:farol': {
+    puede: (sala, yo) => yo.rol === 'jugador' && !!sala.asientoDe(yo.id) && !!sala.guion(),
+    noPuede: 'Solo un jugador sentado se pone faroles.',
+    hacer: (sala, yo, datos) => {
+      const asiento = sala.asientoDe(yo.id);
+      if (!asiento) return { ok: false, error: 'Ya no estás sentado.' };
+      const farol = leerFarol(sala, datos);
+      if ('error' in farol) return { ok: false, error: farol.error };
+      sala.ponerFarolAsiento(asiento.id, farol.posicion, farol.personajeId);
+      return { ok: true };
+    },
+  },
+
+  /**
+   * El jugador despierto copia en sus faroles los personajes que el narrador le
+   * ha enseñado con «Estos personajes no están en juego». datos: { personajes: id[] }
+   * (los de esa tarjeta, que tiene que estar en su despertar).
+   */
+  'jugador:copiarFaroles': {
+    puede: (sala, yo) => yo.rol === 'jugador' && !!sala.asientoDespiertoDe(yo.id),
+    noPuede: 'No tienes ningún despertar abierto.',
+    hacer: (sala, yo, datos) => {
+      const asientoId = sala.asientoDespiertoDe(yo.id);
+      const personajes = (datos as { personajes?: unknown } | null)?.personajes;
+      if (!asientoId || !Array.isArray(personajes)) return { ok: false, error: 'No hay faroles que copiar.' };
+      const mismos = (m: MensajeDespertar) =>
+        m.autor === 'narrador' &&
+        m.tarjeta === 'noEnJuego' &&
+        m.personajes.length === personajes.length &&
+        m.personajes.every((id, i) => id === personajes[i]);
+      const hilo = sala.despertares().find((d) => d.asiento === asientoId);
+      if (!hilo?.mensajes.some(mismos)) return { ok: false, error: 'El narrador no te ha enseñado esos personajes.' };
+      sala.copiarFaroles(asientoId, (personajes as string[]).slice(0, NUM_FAROLES));
       return { ok: true };
     },
   },
@@ -642,6 +845,8 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       if (hacen === 0) return { ok: false, error: 'No hay asientos a los que repartir.' };
       if (hay !== hacen) return { ok: false, error: `En la bolsa tiene que haber ${hacen} personajes y hay ${hay}.` };
       sala.repartirBolsa();
+      // Con el Gardener, los jugadores no los ven hasta que el narrador los entregue
+      if (sala.npcActivo(NPC_GARDENER)) sala.retenerFichas(true);
       return { ok: true };
     },
   },

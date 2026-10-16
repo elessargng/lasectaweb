@@ -1,14 +1,17 @@
-import { ChevronDown, ChevronUp, SendHorizontal } from 'lucide-react';
+import { MessagesSquare, SendHorizontal } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type RefObject } from 'react';
 import { useAriaLive } from './avisosConfig';
 import {
+  CANAL_GENERAL,
   CANAL_SUSURROS,
+  CANAL_VISITANTES,
   canalesComunes,
   deQuienAQuien,
   esPrivado,
   LARGO_MAXIMO_MENSAJE,
   mensajesDe,
   nombreCanal,
+  sinLeerDe,
   otroDelPrivado,
   privadosPropios,
   type SalaMensaje,
@@ -29,9 +32,6 @@ interface PanelChatProps {
   onEnviar: (para: string, texto: string) => Promise<SalaResultado>;
   /** El campo de escribir: quien abre una conversación le lleva el foco. */
   entradaRef: RefObject<HTMLInputElement | null>;
-  /** Plegado: solo el título (con los que no se han leído); las conversaciones no se ven. */
-  minimizado: boolean;
-  onMinimizar: (minimizado: boolean) => void;
 }
 
 const hora = (ms: number) => new Date(ms).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
@@ -73,8 +73,6 @@ const PanelChat = ({
   onElegir,
   onEnviar,
   entradaRef,
-  minimizado,
-  onMinimizar,
 }: PanelChatProps) => {
   const [texto, setTexto] = useState('');
   const [error, setError] = useState('');
@@ -89,12 +87,8 @@ const PanelChat = ({
   const delActual = mensajesDe(mensajes, actual, yo.id);
   const susurros = actual === CANAL_SUSURROS;
   const nombre = (canal: string) => nombreCanal(canal, yo.id, estado.participantes, mensajes);
-  // La conversación que se ve no tiene pendientes (salvo con el chat plegado)
-  const sinLeer = (canal: string) =>
-    canal === actual && !minimizado
-      ? 0
-      : mensajesDe(mensajes, canal, yo.id).filter((m) => m.autor !== yo.id && m.hora > (leidoHasta[canal] ?? 0)).length;
-  const totalSinLeer = canales.reduce((n, c) => n + sinLeer(c), 0);
+  // La conversación que se ve no tiene pendientes
+  const sinLeer = (canal: string) => (canal === actual ? 0 : sinLeerDe(mensajes, canal, yo.id, leidoHasta));
   const idPestana = (canal: string) => `sala-chat-pestana-${canal.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 
   // Al llegar mensajes (o cambiar de conversación), se ve el último
@@ -135,30 +129,11 @@ const PanelChat = ({
   const sinDestino = esPrivado(actual) && !otro;
 
   return (
-    <section
-      aria-labelledby="sala-chat-titulo"
-      className={`flex w-full flex-col rounded border border-outline-ghost bg-surface ${minimizado ? '' : 'h-[26rem]'}`}
-    >
-      {/* El título pliega y despliega las conversaciones (patrón «desplegable») */}
-      <h2 id="sala-chat-titulo" className="text-xs font-semibold uppercase tracking-wide text-theme-main">
-        <button
-          type="button"
-          aria-expanded={!minimizado}
-          aria-controls="sala-chat-contenido"
-          onClick={() => onMinimizar(!minimizado)}
-          className="flex w-full items-center gap-2 rounded px-3 py-2 text-left uppercase hover:bg-theme-container/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
-        >
-          <span className="flex-1">Mensajes</span>
-          {minimizado && totalSinLeer > 0 && (
-            <span className="rounded-full bg-theme-main px-1.5 text-[0.65rem] font-bold normal-case text-background">
-              {totalSinLeer}
-              <span className="sr-only"> sin leer</span>
-            </span>
-          )}
-          {minimizado ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-        </button>
+    <section aria-labelledby="sala-chat-titulo" className="flex h-full w-full flex-col">
+      <h2 id="sala-chat-titulo" className="px-3 pt-3 font-ui text-xs font-semibold uppercase tracking-wide text-theme-main">
+        Mensajes
       </h2>
-      <div id="sala-chat-contenido" hidden={minimizado} className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col">
         <div role="tablist" aria-label="Conversaciones" className="flex flex-wrap gap-1 border-b border-outline-ghost px-2 py-2">
           {canales.map((canal) => {
             const elegida = canal === actual;
@@ -202,7 +177,27 @@ const PanelChat = ({
             }}
           >
             {delActual.length === 0 ? (
-              <li className="m-auto rounded-full bg-surface px-3 py-1 text-xs text-on-surface-muted">Todavía no hay mensajes.</li>
+              // Vacía: como los demás paneles sin nada (el círculo es decoración: no se lee)
+              <li className="m-auto flex flex-col items-center gap-3 px-4 py-6 text-center">
+                <span
+                  aria-hidden="true"
+                  className="flex h-16 w-16 items-center justify-center rounded-full border border-theme-main/30 bg-[radial-gradient(circle,var(--color-theme-container)_0%,transparent_70%)] text-theme-main/50"
+                >
+                  <MessagesSquare size={28} strokeWidth={1.25} />
+                </span>
+                <p className="font-display text-lg text-on-surface-bright">Todavía no hay mensajes</p>
+                <p className="max-w-[15rem] text-xs leading-relaxed text-on-surface-muted">
+                  {susurros
+                    ? 'Aquí aparecerá lo que los jugadores se escriban en privado.'
+                    : actual === CANAL_GENERAL
+                      ? 'Sé el primero en escribir a la mesa.'
+                      : actual === CANAL_VISITANTES
+                        ? 'Sé el primero en escribir a los demás visitantes.'
+                        : otro
+                          ? `Empieza la conversación con ${otro.nombre}.`
+                          : 'Esta conversación está vacía.'}
+                </p>
+              </li>
             ) : (
               delActual.map((m, i) => {
                 const propio = m.autor === yo.id;

@@ -1,7 +1,9 @@
-import { X } from 'lucide-react';
+import { Check, Drama, X } from 'lucide-react';
+import { useState } from 'react';
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
-import { botonSecundario } from './estilos';
+import { botonPrincipal, botonSecundario } from './estilos';
+import { listaFaroles } from './fichas';
 import type { PersonajeMostrado } from './guiones';
 import { BotoneraDespertar, HistorialDespertar, MensajeVisto } from './PiezasDespertar';
 import type { SalaDespertar, SalaEstado, SalaResultado } from './useSala';
@@ -9,6 +11,8 @@ import type { SalaDespertar, SalaEstado, SalaResultado } from './useSala';
 interface DespertarJugadorProps {
   estado: SalaEstado;
   despertar: SalaDespertar;
+  /** Mis faroles, si soy el demonio (para copiar los que me enseña el narrador); si no, null. */
+  faroles: (string | null)[] | null;
   personajes: PersonajeMostrado[];
   porId: Map<string, PersonajeMostrado>;
   pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
@@ -34,6 +38,7 @@ interface DespertarJugadorProps {
 const DespertarJugador = ({
   estado,
   despertar,
+  faroles,
   personajes,
   porId,
   pedir,
@@ -46,6 +51,19 @@ const DespertarJugador = ({
 }: DespertarJugadorProps) => {
   const ariaLiveErrores = useAriaLive('errores');
   const ultimo = [...despertar.mensajes].reverse().find((m) => m.autor === 'narrador');
+  const [copiando, setCopiando] = useState(false);
+
+  // «Estos personajes no están en juego» al demonio: se los puede copiar a sus faroles
+  const aCopiar = faroles && ultimo?.tarjeta === 'noEnJuego' ? ultimo.personajes : null;
+  const yaCopiados = !!aCopiar && aCopiar.slice(0, faroles!.length).every((id, i) => faroles![i] === id);
+  const copiar = async () => {
+    if (!aCopiar || copiando || yaCopiados) return;
+    setCopiando(true);
+    const r = await pedir('jugador:copiarFaroles', { personajes: aCopiar });
+    setCopiando(false);
+    if (r.ok) onEnviado(`Faroles copiados: ${listaFaroles(aCopiar.slice(0, 3), porId)}.`);
+    else onError(r.error);
+  };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/85 p-4">
       <Dialog
@@ -72,6 +90,18 @@ const DespertarJugador = ({
               <p className="text-on-surface-muted">Espera a que el narrador te diga algo.</p>
             )}
           </div>
+          {aCopiar && (
+            // Copiados, el botón se queda (para no perder el foco) y lo dice
+            <button
+              type="button"
+              onClick={() => void copiar()}
+              aria-disabled={copiando || yaCopiados}
+              className={`${botonPrincipal} flex items-center gap-2 font-ui aria-disabled:cursor-default`}
+            >
+              {yaCopiados ? <Check size={18} /> : <Drama size={18} />}
+              {yaCopiados ? 'Faroles copiados' : 'Copiar faroles'}
+            </button>
+          )}
         </div>
         <BotoneraDespertar
           estado={estado}

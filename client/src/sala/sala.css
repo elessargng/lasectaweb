@@ -26,6 +26,28 @@
 
   --color-theme-main: #b19cd9;
   --color-theme-container: #4a3b69;
+
+  /*
+   * Los colores de la paleta de la web («Medianoche y latón», index.css) que usa
+   * también la sala: sin ellos aquí, sus clases y var() se quedan sin color. Los
+   * mismos valores que allí.
+   */
+  --color-on-surface-bright: #fbf5e6;
+  --color-gold: #d4af6a;
+  --color-gold-bright: #ecd29a;
+  --color-gold-deep: #9c7536;
+  --color-blood: #9e1b25;
+  --color-blood-bright: #d4434c;
+  --color-blood-deep: #4a0d13;
+  --color-good: #4f8fd1;
+  --color-good-bright: #8dbbec;
+  --color-arcano-bright: #a47cc9;
+  --color-arcano: #6b3a8c;
+  --color-arcano-deep: #2e1740;
+  --color-savia: #2f7a3a;
+  --color-savia-deep: #12331a;
+  --color-midnight: #121a33;
+  --color-parchment: #ebe2cc;
 }
 
 @layer base {
@@ -129,7 +151,7 @@
 
 /*
  * Columna de la mesa (SalaJuego), en pantallas anchas. A su izquierda va la de
- * los narradores y el chat (20rem + 1.5rem de hueco): un margen derecho igual la
+ * los narradores y la barra lateral (23rem + 1.5rem de hueco): un margen derecho igual la
  * deja centrada en la ventana, menguando si falta sitio para la mesa entera (su
  * lado máximo es 100vh - 8rem). Con la hoja del guion abierta (fija a la derecha,
  * --sala-panel-guion-ancho), el margen es al menos su ancho: la mesa se aparta a
@@ -138,7 +160,7 @@
 @media (width >= 64rem) {
   .sala-columna-mesa {
     padding-right: max(
-      clamp(0px, 100% - 21.5rem - (100vh - 8rem), 21.5rem),
+      clamp(0px, 100% - 24.5rem - (100vh - 8rem), 24.5rem),
       var(--sala-panel-guion-ancho, 0px)
     );
   }

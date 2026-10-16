@@ -15,12 +15,13 @@ export interface Atajo {
   meta: boolean;
 }
 
-export type AccionAtajo = 'levantarMano' | 'cambiarFase' | 'microfono' | 'camara' | 'salirConversacion';
+export type AccionAtajo = 'levantarMano' | 'cambiarFase' | 'revelarGrimorio' | 'microfono' | 'camara' | 'salirConversacion';
 
 /** Las acciones con atajo, en el orden en que salen en las preferencias. */
 export const ACCIONES_ATAJO: { accion: AccionAtajo; etiqueta: string }[] = [
   { accion: 'levantarMano', etiqueta: 'Levantar o bajar la mano' },
   { accion: 'cambiarFase', etiqueta: 'Ir a la noche o amanecer (narradores)' },
+  { accion: 'revelarGrimorio', etiqueta: 'Revelar el grimorio (narradores)' },
   { accion: 'microfono', etiqueta: 'Activar o silenciar el micrófono' },
   { accion: 'camara', etiqueta: 'Activar o apagar la cámara' },
   { accion: 'salirConversacion', etiqueta: 'Salir de la conversación privada' },
@@ -28,6 +29,7 @@ export const ACCIONES_ATAJO: { accion: AccionAtajo; etiqueta: string }[] = [
 
 const ESPACIO: Atajo = { code: 'Space', key: ' ', ctrl: false, alt: false, shift: false, meta: false };
 const N: Atajo = { code: 'KeyN', key: 'n', ctrl: false, alt: false, shift: false, meta: false };
+const G: Atajo = { code: 'KeyG', key: 'g', ctrl: false, alt: false, shift: false, meta: false };
 const PUNTO: Atajo = { code: 'Period', key: '.', ctrl: false, alt: false, shift: false, meta: false };
 const COMA: Atajo = { code: 'Comma', key: ',', ctrl: false, alt: false, shift: false, meta: false };
 const RETROCESO: Atajo = { code: 'Backspace', key: 'Backspace', ctrl: false, alt: false, shift: false, meta: false };
@@ -35,6 +37,7 @@ const RETROCESO: Atajo = { code: 'Backspace', key: 'Backspace', ctrl: false, alt
 export const ATAJOS_INICIALES: Record<AccionAtajo, Atajo> = {
   levantarMano: ESPACIO,
   cambiarFase: N,
+  revelarGrimorio: G,
   microfono: PUNTO,
   camara: COMA,
   salirConversacion: RETROCESO,

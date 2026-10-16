@@ -1,7 +1,7 @@
 import type { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
-import { limpiarAvatarSala, limpiarNombreSala, SALA_AVATAR_INVITADO, SalaLlegada, SalaService } from '../services/SalaService';
+import { farolesVacios, NPC_TOR, limpiarAvatarSala, limpiarNombreSala, SALA_AVATAR_INVITADO, SalaLlegada, SalaService } from '../services/SalaService';
 import { SalaAsiento, SalaEstado } from '../types/sala';
 import { ChatError, ChatService } from '../services/chat/ChatService';
 import { ConversacionError, ConversacionService } from '../services/conversaciones/ConversacionService';
@@ -37,8 +37,14 @@ function usuarioDelToken(token: string): { id: string; username: string } | null
  * prefiere mostrar, si los cambió; y su id de cliente para recuperar el sitio si se reconecta. Cada cambio se manda entero a todos.
  */
 /** Una ficha sin su personaje ni su alineamiento: así la ven quienes no son su jugador ni narran. */
-// Lo que un jugador no ve de una ficha: de las ajenas, el personaje; de ninguna, los recordatorios.
-const sinPersonaje = (a: SalaAsiento): SalaAsiento => ({ ...a, personaje: null, alineamiento: null, recordatorios: [] });
+// Lo que un jugador no ve de una ficha: de las ajenas, el personaje y los faroles; de ninguna, los recordatorios.
+const sinPersonaje = (a: SalaAsiento): SalaAsiento => ({
+  ...a,
+  personaje: null,
+  alineamiento: null,
+  recordatorios: [],
+  faroles: farolesVacios(),
+});
 const sinRecordatorios = (a: SalaAsiento): SalaAsiento => ({ ...a, recordatorios: [] });
 
 export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAvatar, deps: DependenciasSala): void {
@@ -77,10 +83,38 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     const revelacion = sala.revelacion();
     // Las fichas ya reveladas al final de la partida: todos ven su personaje
     const reveladas = new Set(revelacion?.reveladas ?? []);
+    // Las fichas ajenas, como las ve quien no tiene el grimorio: sin personaje, salvo los
+    // viajeros, que son públicos. Se ve quién es de verdad (un Alcalde con «Is The
+    // Apprentice» se ve como Aprendiz); el alineamiento de un viajero, no.
+    const viajeroDe = (a: SalaAsiento) => {
+      const id = sala.identidad(a);
+      return id && sala.personaje(id)?.tipo === 'traveller' ? id : null;
+    };
+    const comoLaVenTodos = (a: SalaAsiento): SalaAsiento => {
+      const viajero = viajeroDe(a);
+      return viajero ? { ...sinPersonaje(a), personaje: viajero } : sinPersonaje(a);
+    };
+    // Su jugador la ve entera (sin recordatorios); si es un viajero de verdad, como ese
+    // viajero (el Aprendiz: la ficha que sacó de la bolsa), como los demás. Con Tor, no
+    // sabe quién es hasta que muere: la ve como los demás; muerto, ve quién es de verdad.
+    const tor = sala.npcActivo(NPC_TOR);
+    const comoLaVeSuJugador = (a: SalaAsiento): SalaAsiento => {
+      if (tor && !a.muerto) return comoLaVenTodos(a);
+      // Con Tor, al morir sabe quién es de verdad (un Borracho con ficha de aldeano: Borracho)
+      if (tor) return { ...sinRecordatorios(a), personaje: sala.identidad(a) };
+      const viajero = viajeroDe(a);
+      return viajero ? { ...sinRecordatorios(a), personaje: viajero } : sinRecordatorios(a);
+    };
+    // Con el Gardener, mientras el narrador no los entregue, nadie ve ningún personaje
+    // (tampoco el suyo ni los viajeros)
+    const retenidas = sala.fichasRetenidas();
     const bolsa = sala.bolsa();
+    const faroles = sala.faroles();
+    const npcs = sala.npcs();
     const despertares = sala.despertares();
     const recordatoriosNoche = sala.recordatoriosNoche();
     const ahora = Date.now();
+    const noche = sala.fase().momento === 'noche';
     for (const { socketId, clave, id } of sala.conexiones()) {
       const yo = sala.participanteDe(clave)!;
       const estado: SalaEstado = {
@@ -88,19 +122,40 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
         asientos:
           yo.rol === 'narrador' || (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido')
             ? asientos
-            : asientos.map((a) => (reveladas.has(a.id) ? a : a.ocupante === yo.id ? sinRecordatorios(a) : sinPersonaje(a))),
+            : asientos.map((a) =>
+                reveladas.has(a.id)
+                  ? a
+                  : retenidas
+                    ? sinPersonaje(a)
+                    : a.ocupante === yo.id
+                      ? comoLaVeSuJugador(a)
+                      : comoLaVenTodos(a),
+              ),
         configuracion,
         nominacion,
         fase: sala.fase(),
         distribucion,
         revelacion,
         video: !!videollamada,
-        // Los jugadores no saben qué visitantes escuchan las conversaciones
+        // Los jugadores no saben qué visitantes escuchan las conversaciones; de noche, ni
+        // siquiera que las hay: solo ven aquella en la que están
         conversaciones:
-          yo.rol === 'jugador' ? listaConversaciones.map((c) => ({ ...c, oyentes: [] })) : listaConversaciones,
+          yo.rol === 'jugador'
+            ? listaConversaciones
+                .filter((c) => !noche || c.miembros.includes(yo.id))
+                .map((c) => ({ ...c, oyentes: [] }))
+            : listaConversaciones,
         invitaciones: conversaciones.invitacionesDe(id),
         // La bolsa es solo para los narradores (son los personajes de la partida)
         bolsa: yo.rol === 'narrador' ? bolsa : [],
+        // Los faroles del narrador: también los ven los visitantes (no juegan)
+        faroles: yo.rol === 'jugador' ? farolesVacios() : faroles,
+        npcs,
+        setupAceptado: yo.rol === 'narrador' ? sala.setupAceptado() : null,
+        silencio: sala.silencio(),
+        bootlegger: sala.bootlegger(),
+        rolStormcatcher: sala.rolStormcatcher(),
+        fichasRetenidas: sala.fichasRetenidas(),
         ahora,
         // El registro de votaciones es solo para los narradores.
         votaciones: yo.rol === 'narrador' ? votaciones : [],

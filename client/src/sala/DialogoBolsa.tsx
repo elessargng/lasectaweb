@@ -2,17 +2,21 @@ import { TriangleAlert } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Dialog from '../components/Dialog';
-import { urlDelServidor } from '../utils/api';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario } from './estilos';
-import { contarBolsa, iconoDe, TIPOS_REPARTO, useFichas } from './fichas';
+import { contarBolsa, gruposViajeros, TIPOS_REPARTO, useFichas } from './fichas';
 import type { PersonajeMostrado } from './guiones';
+import PestanasDialogo from './PestanasDialogo';
+import RejillaFichas from './RejillaFichas';
+import { problemasDelReparto, repartoAjustado } from './comprobarReparto';
 import type { SalaDistribucion, SalaResultado } from './useSala';
 
 interface DialogoBolsaProps {
   bolsa: string[];
   /** El reparto de la partida; sus jugadores son los asientos a los que se reparte (sin viajeros). */
   distribucion: SalaDistribucion;
+  /** Los NPCs en juego (el Centinela altera la preparación). */
+  npcs: string[];
   pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
   /** Se han repartido los personajes. */
   onRepartido: () => void;
@@ -45,9 +49,13 @@ const ListaNombres = ({ personajes }: { personajes: PersonajeMostrado[] }) => (
  * confirmación: con alguno de esos, para recordar cuáles son (¿se ha ajustado la
  * bolsa?); sin ninguno, si las cuentas no son las de por defecto.
  */
-const DialogoBolsa = ({ bolsa, distribucion, pedir, onRepartido, onCerrar }: DialogoBolsaProps) => {
-  const fichasParaRepartir = distribucion.jugadores;
-  const { personajes, porId } = useFichas();
+const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar }: DialogoBolsaProps) => {
+  const { personajes, viajeros, porId } = useFichas();
+  // Guion (aldeanos… demonios) o Viajeros (todos, del guion o no)
+  const [pestana, setPestana] = useState('guion');
+  const viajerosEnBolsa = bolsa.filter((id) => porId.get(id)?.tipo === 'traveller').length;
+  // Una ficha por jugador y otra por cada viajero metido (no cuentan para el reparto por tipos)
+  const fichasParaRepartir = distribucion.jugadores + viajerosEnBolsa;
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
   // Pidiendo confirmación antes de repartir (en el propio diálogo, en lugar de los botones)
@@ -59,16 +67,33 @@ const DialogoBolsa = ({ bolsa, distribucion, pedir, onRepartido, onCerrar }: Dia
   const completa = fichasParaRepartir > 0 && bolsa.length === fichasParaRepartir;
 
   const conPreparacion = bolsa.map((id) => porId.get(id)).filter((p): p is PersonajeMostrado => !!p?.preparacion);
-  // Los tipos cuyas cuentas no son las de por defecto (si hay reparto, con 5 o más jugadores)
-  const distintos = TIPOS_REPARTO.filter(({ tipo, clave }) => {
-    const total = distribucion[clave];
-    return total !== null && (enBolsa[tipo] ?? 0) !== total;
-  });
+  // Lo que no cuadra con el reparto de la partida, con lo que alteran la preparación (el
+  // Barón, el Ermitaño…, y el Centinela si es NPC). Sin reparto (menos de 5), nada.
+  const problemas = problemasDelReparto(enBolsa, distribucion, [...bolsa, ...npcs]);
+  // Lo que toca de cada tipo, con el Barón y compañía ya contados (cambia al meterlos o sacarlos)
+  const ajustado = repartoAjustado(distribucion, [...bolsa, ...npcs]);
 
   // Al pedir confirmación, el foco va a la pregunta (los botones de antes desaparecen)
   useEffect(() => {
     if (confirmando) confirmacionRef.current?.focus();
   }, [confirmando]);
+
+  // Con el Pope: aldeanos y forasteros repetidos (− n + debajo de cada uno que esté dentro)
+  const pope = npcs.includes('pope');
+  const cambiarCantidad = async (personajeId: string, cantidad: number) => {
+    setError('');
+    setConfirmando(false);
+    const r = await pedir('narrador:bolsaCantidad', { personajeId, cantidad });
+    if (!r.ok) setError(r.error);
+  };
+  const cantidadPope = (p: PersonajeMostrado) =>
+    pope && (p.tipo === 'townsfolk' || p.tipo === 'outsider')
+      ? {
+          valor: bolsa.filter((id) => id === p.id).length,
+          max: 5,
+          onCambiar: (n: number) => void cambiarCantidad(p.id, n),
+        }
+      : null;
 
   const alternar = async (personajeId: string) => {
     setError('');
@@ -93,7 +118,7 @@ const DialogoBolsa = ({ bolsa, distribucion, pedir, onRepartido, onCerrar }: Dia
 
   const asignar = () => {
     if (!completa || enviando) return;
-    if (conPreparacion.length > 0 || distintos.length > 0) setConfirmando(true);
+    if (problemas.length > 0) setConfirmando(true);
     else void repartir();
   };
 
@@ -104,57 +129,59 @@ const DialogoBolsa = ({ bolsa, distribucion, pedir, onRepartido, onCerrar }: Dia
         labelledBy="sala-bolsa-titulo"
         className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded border border-outline-ghost bg-surface shadow-2xl"
       >
-        <h2 id="sala-bolsa-titulo" className="border-b border-outline-ghost px-6 py-4 text-xl font-semibold">
+        <h2 id="sala-bolsa-titulo" className="px-6 py-4 text-xl font-semibold">
           Preparar la bolsa
         </h2>
-        <div className="overflow-y-auto px-6 py-4">
-          <div className="flex flex-col gap-5">
-            {TIPOS_REPARTO.map(({ tipo, clave, nombre, color }) => {
-              const grupo = personajes.filter((p) => p.tipo === tipo);
-              if (grupo.length === 0) return null;
-              const total = distribucion[clave];
-              return (
-                <section key={tipo} aria-labelledby={`sala-bolsa-${tipo}`}>
-                  <h3 id={`sala-bolsa-${tipo}`} className={`mb-2 text-sm font-semibold uppercase tracking-wide ${color}`}>
-                    {nombre}{' '}
-                    <span className="font-normal tabular-nums text-on-surface-muted">
-                      {enBolsa[tipo] ?? 0}
-                      {total !== null && `/${total}`}
-                    </span>
-                  </h3>
-                  <ul className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-2">
-                    {grupo.map((p) => {
-                      const icono = iconoDe(p, null);
-                      const dentro = bolsa.includes(p.id);
-                      return (
-                        <li key={p.id}>
-                          <button
-                            type="button"
-                            aria-pressed={dentro}
-                            onClick={() => void alternar(p.id)}
-                            className="relative flex w-full flex-col items-center gap-1 rounded border border-transparent p-2 text-center text-sm opacity-60 hover:border-theme-main/60 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main aria-pressed:border-theme-main aria-pressed:bg-theme-container aria-pressed:opacity-100"
-                          >
-                            {p.preparacion && (
-                              // Altera la preparación: señal de advertencia (el lector lo oye en el texto de abajo)
-                              <TriangleAlert size={18} className="absolute right-1 top-1 text-amber-400" />
-                            )}
-                            {icono ? (
-                              <img src={urlDelServidor(icono)} alt="" className="h-14 w-14 object-contain" loading="lazy" />
-                            ) : (
-                              <span aria-hidden="true" className="h-14 w-14 rounded-full border border-outline-ghost" />
-                            )}
-                            <span lang={p.nombre.lang}>{p.nombre.texto}</span>
-                            {p.preparacion && <span className="sr-only"> (altera la preparación)</span>}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              );
-            })}
+        <PestanasDialogo
+          idBase="sala-bolsa"
+          etiqueta="Personajes"
+          pestanas={[
+            { id: 'guion', etiqueta: 'Guion' },
+            { id: 'viajeros', etiqueta: 'Viajeros', contador: { valor: viajerosEnBolsa, texto: 'en la bolsa' } },
+          ]}
+          activa={pestana}
+          onElegir={setPestana}
+        >
+          <div className="overflow-y-auto px-6 py-4">
+            {pestana === 'viajeros' ? (
+              viajeros.length === 0 ? (
+                <p className="text-on-surface-muted">No hay viajeros en el catálogo todavía.</p>
+              ) : (
+                <RejillaFichas
+                  idBase="sala-bolsa"
+                  grupos={gruposViajeros(viajeros, personajes).map((g) => ({ ...g, color: 'text-theme-main' }))}
+                  marca={(p) => ({ pulsada: bolsa.includes(p.id) })}
+                  onPulsar={(p) => void alternar(p.id)}
+                />
+              )
+            ) : (
+              <RejillaFichas
+                idBase="sala-bolsa"
+                grupos={TIPOS_REPARTO.map(({ tipo, clave, nombre, color }) => {
+                  const total = ajustado[clave];
+                  return {
+                    tipo,
+                    color,
+                    personajes: personajes.filter((p) => p.tipo === tipo),
+                    titulo: (
+                      <>
+                        {nombre}{' '}
+                        <span className="font-normal tabular-nums text-on-surface-muted">
+                          {enBolsa[tipo] ?? 0}
+                          {total !== null && `/${total}`}
+                        </span>
+                      </>
+                    ),
+                  };
+                })}
+                marca={(p) => ({ pulsada: bolsa.includes(p.id) })}
+                cantidad={cantidadPope}
+                onPulsar={(p) => void alternar(p.id)}
+                conPreparacion
+              />
+            )}
           </div>
-        </div>
+        </PestanasDialogo>
 
         {/* Setup modificado: se avisa al momento al meter (o sacar) uno de esos personajes */}
         <div aria-live={ariaLiveBolsa} className="px-6">
@@ -174,20 +201,10 @@ const DialogoBolsa = ({ bolsa, distribucion, pedir, onRepartido, onCerrar }: Dia
         {confirmando ? (
           <div className="flex flex-col gap-3 border-t border-outline-ghost px-6 py-3">
             <p ref={confirmacionRef} tabIndex={-1} className="text-sm focus:outline-none">
-              {conPreparacion.length > 0 ? (
-                <>
-                  Estos personajes alteran la preparación: <ListaNombres personajes={conPreparacion} />. ¿Has ajustado ya
-                  la bolsa?
-                </>
-              ) : (
-                <>
-                  La bolsa no tiene el reparto por defecto (
-                  {distintos
-                    .map(({ tipo, clave, nombre }) => `${nombre.toLocaleLowerCase('es')}: ${enBolsa[tipo] ?? 0} de ${distribucion[clave]}`)
-                    .join('; ')}
-                  ). ¿Seguro que quieres continuar?
-                </>
+              La bolsa no cuadra con el reparto de la partida{conPreparacion.length > 0 && (
+                <> (con <ListaNombres personajes={conPreparacion} />)</>
               )}
+              : {problemas.join('; ')}. ¿Seguro que quieres continuar?
             </p>
             <div className="flex flex-wrap justify-end gap-3">
               <button type="button" onClick={() => setConfirmando(false)} className={botonSecundario}>
@@ -199,7 +216,7 @@ const DialogoBolsa = ({ bolsa, distribucion, pedir, onRepartido, onCerrar }: Dia
                 aria-disabled={enviando}
                 className={botonPrincipal}
               >
-                {conPreparacion.length > 0 ? 'Sí, asignar personajes' : 'Asignar de todos modos'}
+                Asignar de todos modos
               </button>
             </div>
           </div>

@@ -43,6 +43,8 @@ export interface SalaAsiento {
   alineamiento: SalaAlineamiento | null;
   /** Las fichas recordatorio junto a la suya; solo llegan a quien ve el grimorio (narradores). */
   recordatorios: SalaRecordatorio[];
+  /** Los faroles del jugador de este asiento (3 casillas, id de personaje o null); solo los ve él y quien ve el grimorio. */
+  faroles: (string | null)[];
 }
 
 /** Una ficha recordatorio: de qué personaje y cuál de sus recordatorios (su texto original, por si no hay traducción). */
@@ -194,6 +196,20 @@ export interface SalaEstado {
   distribucion: SalaDistribucion;
   /** Los personajes metidos en la bolsa (ids); vacía salvo para narradores. */
   bolsa: string[];
+  /** Los faroles que el narrador prepara para el demonio (3 casillas); para narradores y visitantes. */
+  faroles: (string | null)[];
+  /** Los NPCs de la partida (legendarios y lóricos, ids), en el orden en que se añadieron. */
+  npcs: string[];
+  /** El reparto que un narrador ha dado por bueno aunque no cuadre (su firma, ver firmaDelReparto), o null. */
+  setupAceptado: string | null;
+  /** El narrador ha pedido silencio (Bibliotecario del Infierno): los jugadores no pueden emitir su micrófono. */
+  silencio: boolean;
+  /** Las reglas del Bootlegger (las del guion o las del narrador). */
+  bootlegger: string[];
+  /** El personaje bueno nombrado con el Storm Catcher (id), o null. */
+  rolStormcatcher: string | null;
+  /** Con el Gardener: los personajes repartidos aún no se han entregado (nadie ve el suyo). */
+  fichasRetenidas: boolean;
   /** Revelando el grimorio (final de la partida), o null. */
   revelacion: SalaRevelacion | null;
   /** Hay videollamada (cámaras y micrófonos) en esta sala. */

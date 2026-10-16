@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { colocarDesplegable } from './colocarDesplegable';
 
 export interface OpcionMenu {
   id: string;
@@ -53,6 +54,12 @@ const MenuDesplegable = ({
   const [abierto, setAbierto] = useState(false);
   const botonRef = useRef<HTMLButtonElement>(null);
   const contenedorRef = useRef<HTMLDivElement>(null);
+  const listaRef = useRef<HTMLUListElement>(null);
+
+  // Al abrirse, hacia arriba si abajo no cabe (antes de pintarse: no se ve el salto)
+  useLayoutEffect(() => {
+    if (abierto && botonRef.current && listaRef.current) colocarDesplegable(botonRef.current, listaRef.current);
+  }, [abierto]);
 
   useEffect(() => {
     if (!abierto) return;
@@ -117,9 +124,10 @@ const MenuDesplegable = ({
         </span>
       )}
       <ul
+        ref={listaRef}
         id={id}
         hidden={!abierto}
-        className={`absolute ${alinear === 'derecha' ? 'right-0' : 'left-0'} top-full z-20 mt-1 min-w-full w-max rounded border border-outline-ghost bg-surface py-1 shadow-lg`}
+        className={`absolute ${alinear === 'derecha' ? 'right-0' : 'left-0'} top-full z-20 mt-1 min-w-full w-max rounded border border-outline-ghost bg-surface py-1 shadow-lg data-[arriba=true]:bottom-full data-[arriba=true]:top-auto data-[arriba=true]:mb-1 data-[arriba=true]:mt-0`}
       >
         {opciones.map((opcion) => (
           <li key={opcion.id}>

@@ -15,7 +15,7 @@ const enumerar = (nombres: string[]) =>
   nombres.length <= 1 ? (nombres[0] ?? '') : `${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}`;
 
 /**
- * A la izquierda, encima del chat: las invitaciones a conversar y las peticiones
+ * En la pestaña Charlas, encima de las conversaciones: las invitaciones a conversar y las peticiones
  * para unirse a una conversación. Las recibidas, con quién se conversaría (o
  * quién pide entrar en la tuya), «Aceptar» y «Rechazar» (hasta aceptar no se
  * entra); las enviadas, «Esperando a…» y «Retirar». Si no hay ninguna, no sale.
@@ -29,8 +29,8 @@ const PanelInvitaciones = ({ invitaciones, conversaciones, participantes, yo, on
   const miembrosDe = (id?: string) => conversaciones.find((c) => c.id === id)?.miembros ?? [];
 
   return (
-    <section aria-labelledby="sala-invitaciones-titulo" className="flex flex-col gap-2 rounded border border-theme-main/60 bg-surface p-3 text-sm">
-      <h2 id="sala-invitaciones-titulo" className="text-xs font-semibold uppercase tracking-wide text-theme-main">
+    <section aria-labelledby="sala-invitaciones-titulo" className="flex flex-col gap-2 border-b border-outline-ghost bg-theme-container/20 p-3 text-sm">
+      <h2 id="sala-invitaciones-titulo" className="font-ui text-xs font-semibold uppercase tracking-wide text-theme-main">
         Invitaciones y peticiones
       </h2>
       <ul className="flex flex-col gap-3">

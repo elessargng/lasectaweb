@@ -1,4 +1,5 @@
-import { BookOpen, Feather, Moon, ShoppingBag } from 'lucide-react';
+import { BookOpen, Feather, Moon } from 'lucide-react';
+import IconoBolsa from './IconoBolsa';
 import { useCallback, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import type { TipoAviso } from './avisosConfig';
 import DialogoBolsa from './DialogoBolsa';
@@ -20,7 +21,7 @@ interface TituloGuionProps {
   /** Los recordatorios del orden de noche (solo el narrador); null si no se ven. */
   recordatorios: RecordatoriosNoche | null;
   /** Preparar la bolsa (narradores, con guion): lo que lleva y el reparto; null si no se puede. */
-  bolsa: { bolsa: string[]; distribucion: SalaDistribucion } | null;
+  bolsa: { bolsa: string[]; distribucion: SalaDistribucion; npcs: string[] } | null;
   /** Avisa al lector (al repartir los personajes de la bolsa). */
   onAnuncio: (tipo: TipoAviso, texto: string) => void;
 }
@@ -118,7 +119,7 @@ const TituloGuion = ({
           onClick={() => setPreparandoBolsa(true)}
           className={botonIcono}
         >
-          <ShoppingBag size={20} />
+          <IconoBolsa size={20} />
         </button>
       )}
       {puedeCambiar && (
@@ -146,6 +147,7 @@ const TituloGuion = ({
         <DialogoBolsa
           bolsa={bolsa.bolsa}
           distribucion={bolsa.distribucion}
+          npcs={bolsa.npcs}
           pedir={pedir}
           onRepartido={() => onAnuncio('bolsa', 'Personajes repartidos.')}
           onCerrar={() => setPreparandoBolsa(false)}

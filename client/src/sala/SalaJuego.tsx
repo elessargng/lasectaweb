@@ -1,3 +1,4 @@
+import { AudioLines, Drama, MessagesSquare, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { urlDelServidor } from '../utils/api';
 import { botonPrincipal } from './estilos';
@@ -21,6 +22,9 @@ import FasePartida from './FasePartida';
 import PanelChat from './PanelChat';
 import PanelComunicaciones from './PanelComunicaciones';
 import PanelConversaciones from './PanelConversaciones';
+import PanelFaroles, { FarolesFijados } from './PanelFaroles';
+import PanelNpcs from './PanelNpcs';
+import ColumnaLateral, { type PestanaLateral } from './ColumnaLateral';
 import VentanaConversacion from './VentanaConversacion';
 import VentanaDespertar from './VentanaDespertar';
 import DespertarJugador from './DespertarJugador';
@@ -41,18 +45,19 @@ import {
   mensajesDe,
   privadosPropios,
   puedeEscribirA,
+  sinLeerDe,
   type SalaMensaje,
   type SalaSusurro,
 } from './chat';
 import RepartoPartida from './RepartoPartida';
-import { FichasContexto, TIPOS_EN_FICHA, type ContenidoFicha, type ContextoFichas } from './fichas';
+import { FichasContexto, identidadDe, TIPOS_EN_FICHA, type ContenidoFicha, type ContextoFichas } from './fichas';
 import { mostrarPersonajes, tituloDeGuion, useTraducciones, type PersonajeMostrado } from './guiones';
 import ZonaNarradores from './ZonaNarradores';
 import { esAtajo, puedeUsarAtajo, useAtajos, type Atajo } from './atajos';
 import { AvisosContexto, useAvisosActivos, type TipoAviso } from './avisosConfig';
 import { avisosDeCambio, manosVigiladas, nombreFase } from './avisosSala';
 import { setSonidosActivos, tocarSinVoto, tocarVoto } from './sonidos';
-import { ID_BOTON_MENU_NARRADOR, ID_SIN_NARRADOR, ID_TITULO_DESPERTAR, idLunaFicha, idNombreNarrador } from './ids';
+import { idPestanaLateral, ID_BOTON_MENU_NARRADOR, ID_SIN_NARRADOR, ID_TITULO_DESPERTAR, idLunaFicha, idNombreNarrador } from './ids';
 import { getPerfil, limpiarNombre, setPerfil } from './invitado';
 import { sinComunicaciones, usePreferencias } from './preferencias';
 import { useConfiguracionCuenta, type ConfiguracionSala, type PerfilConfiguracion } from './configuracion';
@@ -188,7 +193,9 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
         const numero = nuevo.asientos.findIndex((a) => a.id === asientoId) + 1;
         const asiento = nuevo.asientos[numero - 1];
         const ocupante = nuevo.participantes.find((p) => p.id === asiento?.ocupante);
-        const personaje = asiento?.personaje ? nombresPersonajesRef.current.get(asiento.personaje) : undefined;
+        // Quién es de verdad (su «Is The …»), no la ficha que llevaba
+        const real = asiento ? identidadDe(asiento).personaje : null;
+        const personaje = real ? personajesGuionRef.current.get(real) : undefined;
         avisos.push({
           tipo: 'revelacion',
           texto: `${ocupante ? ocupante.nombre : `Asiento ${numero}`}: ${personaje?.nombre.texto ?? 'sin personaje'}.`,
@@ -197,6 +204,26 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     }
     if (revAhora?.terminada && !revAntes?.terminada) {
       avisos.push({ tipo: 'revelacion', texto: revAhora.ganador === 'bueno' ? 'Los buenos ganan.' : 'Los malvados ganan.' });
+    }
+
+    // El silencio del narrador (Bibliotecario del Infierno): a los jugadores, al momento
+    // (quien habla puede llevarse algo malo); a los demás, como un aviso más
+    if (nuevo.silencio !== anterior.silencio && !propia) {
+      const juego = nuevo.participantes.some((p) => p.id === nuevo.yo && p.rol === 'jugador');
+      const texto = nuevo.silencio ? 'El narrador pide silencio.' : 'Se acabó el silencio: ya se puede hablar.';
+      if (juego) anunciarUrgente(texto);
+      else avisos.push({ tipo: 'comunicaciones', texto });
+    }
+
+    // NPCs: los que el narrador pone o quita (a los demás; él ya lo ve)
+    if (!propia) {
+      const nombreNpc = (id: string) => npcsPorIdRef.current.get(id)?.nombre.texto ?? id;
+      for (const id of nuevo.npcs.filter((n) => !anterior.npcs.includes(n))) {
+        avisos.push({ tipo: 'npcs', texto: `Nuevo NPC en juego: ${nombreNpc(id)}.` });
+      }
+      for (const id of anterior.npcs.filter((n) => !nuevo.npcs.includes(n))) {
+        avisos.push({ tipo: 'npcs', texto: `${nombreNpc(id)} ya no está en juego.` });
+      }
     }
 
     // Al limpiar el grimorio, también se borran las notas del grimorio propio.
@@ -212,7 +239,9 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     if (ahora && (ahora.personaje !== antes?.personaje || ahora.alineamiento !== antes?.alineamiento)) {
       const p = ahora.personaje ? nombresPersonajesRef.current.get(ahora.personaje) : undefined;
       if (!ahora.personaje) {
-        if (antes?.personaje) avisos.push({ tipo: 'miPersonaje', texto: 'Ya no tienes personaje.' });
+        // Con Tor (no se sabe hasta morir) o el Gardener (aún no entregado) no es que no lo tenga
+        const oculto = nuevo.npcs.includes('tor') || nuevo.fichasRetenidas;
+        if (antes?.personaje && !oculto) avisos.push({ tipo: 'miPersonaje', texto: 'Ya no tienes personaje.' });
       } else if (ahora.personaje !== antes?.personaje) {
         avisos.push({ tipo: 'miPersonaje', texto: `Tu personaje: ${p?.nombre.texto ?? ahora.personaje}.` });
       } else if (ahora.alineamiento) {
@@ -323,6 +352,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   };
   // Todos los del guion (también los que no van en fichas), para los mensajes al despertar.
   const personajesGuionRef = useRef<Map<string, PersonajeMostrado>>(new Map());
+  // Los legendarios y lóricos que pueden ser NPCs (para decir sus nombres al ponerlos o quitarlos)
+  const npcsPorIdRef = useRef<Map<string, PersonajeMostrado>>(new Map());
 
   // Mensajes de texto: la conversación que se ve, las privadas abiertas (aún sin
   // mensajes), hasta cuándo se ha leído cada una y las ondas de los susurros.
@@ -332,6 +363,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const [ondas, setOndas] = useState<OndaMesa[]>([]);
   const ondaIdRef = useRef(0);
   const entradaChatRef = useRef<HTMLInputElement>(null);
+  // Si el panel de mensajes es el que se ve en la columna de la izquierda (lo que llega, queda leído)
+  const chatVisibleRef = useRef(true);
 
   const alMensaje = (m: SalaMensaje) => {
     if (!estado) return;
@@ -339,7 +372,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     const ajeno = esAjeno(m.canal, estado.yo);
     const pestana = ajeno ? CANAL_SUSURROS : m.canal;
     // Leído si llega a la conversación que se está viendo
-    if (pestana === canalActual && !preferencias.chatMinimizado) setLeidoHasta((l) => ({ ...l, [pestana]: m.hora }));
+    if (pestana === canalActual && chatVisibleRef.current) setLeidoHasta((l) => ({ ...l, [pestana]: m.hora }));
     if (m.autor === estado.yo) return;
     if (ajeno) {
       anunciar('susurros', `${deQuienAQuien(m, estado.participantes, mensajes)}: ${m.texto}`);
@@ -428,7 +461,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     if (!estado) return;
     const canal = canalPrivado(estado.yo, otroId);
     setPrivadosAbiertos((a) => (a.includes(canal) ? a : [...a, canal]));
-    if (preferencias.chatMinimizado) cambiarPreferencias({ chatMinimizado: false });
+    cambiarPreferencias({ panelLateral: 'mensajes', panelLateralContraido: false });
     elegirCanal(canal);
     window.setTimeout(() => entradaChatRef.current?.focus(), 0);
   };
@@ -507,12 +540,15 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const hablaEnConversacion = !!miConversacion?.miembros.includes(estado?.yo ?? '');
   const puedeEmitirVideo = yo?.rol === 'jugador' || yo?.rol === 'narrador';
   const noche = estado?.fase.momento === 'noche';
+  // Silencio del narrador (Bibliotecario del Infierno): los jugadores no pueden hablar
+  const callado = !!estado?.silencio && yo?.rol === 'jugador';
   const video = useVideollamada({
     activa: !!estado?.video && conexion === 'conectada',
     puedeEmitir: puedeEmitirVideo,
     noche,
     conversacion: miConversacion?.id ?? null,
     hablaEnConversacion,
+    silenciado: callado,
     idCamara: preferencias.idCamara,
     idMicrofono: preferencias.idMicrofono,
     pedirPase: pedirPaseVideo,
@@ -522,12 +558,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const tituloConversacionRef = useRef<HTMLHeadingElement>(null);
 
   // Invitar a conversar (a una nueva o a la propia). De día, jugadores y narradores;
-  // de noche, solo el narrador. Quien ya está en otra no se puede invitar.
+  // de noche, el narrador a cualquiera y los jugadores solo al narrador (no ven si ya
+  // conversa con otro: su invitación espera). Quien ya está en otra no se puede invitar.
   const conversa = (p: SalaParticipante) => p.rol === 'jugador' || p.rol === 'narrador';
   const puedeInvitarA = (otro: SalaParticipante) => {
     if (!estado?.video || !yo || yo.id === otro.id) return false;
     if (!conversa(yo) || !conversa(otro)) return false;
-    if (noche && yo.rol !== 'narrador') return false;
+    if (noche && yo.rol !== 'narrador' && otro.rol !== 'narrador') return false;
     return !estado.conversaciones.some((c) => c.miembros.includes(otro.id));
   };
   // Pedir unirse a la conversación de alguien (con las mismas reglas que invitar)
@@ -697,6 +734,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
   // Micrófono y cámara con atajo (sin el foco en el botón): se dice cómo quedan
   const alternarMicrofonoConAtajo = () => {
+    if (callado) {
+      anunciar('comunicaciones', 'El narrador ha pedido silencio: no puedes hablar.');
+      return;
+    }
     video.alternarMicrofono();
     anunciar('comunicaciones', video.microfono ? 'Micrófono silenciado.' : 'Micrófono abierto.');
   };
@@ -712,22 +753,44 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const traduccionesNombres = useTraducciones(preferencias.idiomaNombres, preferencias.genero);
   // (Sin useMemo: el compilador de React ya memoriza lo que no cambia)
   const personajesGuion = guion ? mostrarPersonajes(guion.personajes, traduccionesNombres, null) : [];
-  const personajesGuionPorId = new Map(personajesGuion.map((p) => [p.id, p]));
+  // Los viajeros del catálogo que no trae el guion: se pueden poner en una ficha o meter en la bolsa
+  const viajerosCatalogo = guion ? mostrarPersonajes(guion.viajeros ?? [], traduccionesNombres, null) : [];
+  const personajesGuionPorId = new Map([...personajesGuion, ...viajerosCatalogo].map((p) => [p.id, p]));
+  // NPCs: los legendarios y lóricos del guion y los del catálogo, con su habilidad traducida
+  const traduccionesDescripciones = useTraducciones(preferencias.idiomaDescripciones, preferencias.genero);
+  const npcsDisponibles = guion
+    ? mostrarPersonajes(
+        [...guion.personajes.filter((p) => p.tipo === 'fabled' || p.tipo === 'loric'), ...(guion.npcs ?? [])],
+        traduccionesNombres,
+        traduccionesDescripciones,
+      )
+    : [];
   const personajesFichas = personajesGuion.filter((p) => TIPOS_EN_FICHA.includes(p.tipo));
+  // Los del catálogo (no del guion) que están en juego: viajeros en alguna ficha y NPCs
+  const idsEnJuego = new Set([...(estado?.asientos.map((a) => a.personaje) ?? []), ...(estado?.npcs ?? [])]);
+  const enGuion = new Set(personajesGuion.map((p) => p.id));
+  const extrasEnJuego = [...viajerosCatalogo, ...npcsDisponibles].filter((p) => !enGuion.has(p.id) && idsEnJuego.has(p.id));
   const contextoFichas: ContextoFichas = {
     hayGuion: !!guion,
     personajes: personajesFichas,
-    porId: new Map(personajesFichas.map((p) => [p.id, p])),
+    // Los del guion primero (en su orden) y luego los demás
+    viajeros: [...personajesFichas.filter((p) => p.tipo === 'traveller'), ...viajerosCatalogo],
+    porId: new Map([...personajesFichas, ...viajerosCatalogo].map((p) => [p.id, p])),
     notas: notasGrimorio,
     anotar: (asientoId, contenido) => setNotasGrimorio((n) => ({ ...n, [asientoId]: contenido })),
-    todos: personajesGuion,
-    todosPorId: personajesGuionPorId,
+    // Los del guion y los del catálogo que están en juego (viajeros en una ficha, NPCs):
+    // también llevan recordatorios
+    todos: [...personajesGuion, ...extrasEnJuego],
+    todosPorId: new Map([...personajesGuion, ...viajerosCatalogo, ...npcsDisponibles].map((p) => [p.id, p])),
     notasRecordatorios,
     anotarRecordatorios: (asientoId, lista) => setNotasRecordatorios((n) => ({ ...n, [asientoId]: lista })),
   };
+
+
   useEffect(() => {
     nombresPersonajesRef.current = contextoFichas.porId;
     personajesGuionRef.current = personajesGuionPorId;
+    npcsPorIdRef.current = new Map(npcsDisponibles.map((p) => [p.id, p]));
   });
   // Tamaños con los que pinta la mesa (automáticos o no), para la vista previa.
   const [tamanosMesa, setTamanosMesa] = useState<TamanosMesa | null>(null);
@@ -815,10 +878,17 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     if (!r.ok) setAviso(r.error);
   };
 
+  // El diálogo de revelar el grimorio: desde el menú del narrador o con su tecla
+  const [revelandoGrimorio, setRevelandoGrimorio] = useState(false);
+
   // Los atajos que se pueden usar ahora, con lo que hace cada uno.
   const atajosActivos: [Atajo, () => void][] = [
     ...(puedeLevantarMano ? [[atajos.levantarMano, alternarMano] as [Atajo, () => void]] : []),
     ...(accionFase ? [[atajos.cambiarFase, () => void cambiarFase()] as [Atajo, () => void]] : []),
+    // G: revelar el grimorio (abre el diálogo de quién gana; al cerrarse, el foco vuelve donde estaba)
+    ...(estado?.acciones.includes('narrador:revelarGrimorio') && !revelandoGrimorio
+      ? [[atajos.revelarGrimorio, () => setRevelandoGrimorio(true)] as [Atajo, () => void]]
+      : []),
     ...(estado?.video && puedeEmitirVideo
       ? [
           [atajos.microfono, alternarMicrofonoConAtajo] as [Atajo, () => void],
@@ -1019,6 +1089,157 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     return r;
   };
 
+  // Faroles: los del narrador (narradores y visitantes) o, si soy el demonio, los míos.
+  // Soy el demonio si mi ficha lo lleva (o, sin personaje dado, si me lo he anotado).
+  const miAsiento = estado?.asientos.find((a) => a.ocupante === estado.yo);
+  const miPersonaje = miAsiento ? (miAsiento.personaje ?? notasGrimorio[miAsiento.id]?.personaje ?? null) : null;
+  const soyDemonio = yo?.rol === 'jugador' && !!miPersonaje && personajesGuionPorId.get(miPersonaje)?.tipo === 'demon';
+  const modoFaroles = yo?.rol === 'narrador' ? 'narrador' : yo?.rol === 'visitante' ? 'visitante' : soyDemonio ? 'jugador' : null;
+  const farolesVisibles = (modoFaroles === 'jugador' ? miAsiento?.faroles : estado?.faroles) ?? [null, null, null];
+
+  // La columna de la izquierda: Mensajes, Charlas (si hay conversaciones o invitaciones) y Faroles (a quien le tocan)
+  // Invitaciones y peticiones que esperan mi respuesta (las peticiones llegan a todos los miembros)
+  // Sin conversaciones: cómo empezar una, según quién mira y el momento de la partida
+  // El icono del botón de conversar, en el texto; el lector oye su nombre
+  const iconoConversar = (
+    <>
+      <AudioLines size={12} aria-hidden="true" className="mx-0.5 inline align-[-1px] text-theme-main" />
+      <span className="sr-only">el botón de conversar</span>
+    </>
+  );
+  const ayudaCharlas = !estado?.video ? (
+      'Esta sala no tiene llamadas: no se puede conversar en privado.'
+    ) : yo?.rol === 'visitante' ? (
+      'Cuando alguien converse en privado, aparecerá aquí y podrás escucharle.'
+    ) : noche && yo?.rol === 'jugador' ? (
+      <>De noche solo puedes hablar con el narrador: pulsa {iconoConversar} junto a su nombre para pedírselo.</>
+    ) : (
+      <>Para hablar en privado con alguien, pulsa {iconoConversar} junto a su nombre.</>
+    );
+  const invitacionesRecibidas =
+    estado?.invitaciones.filter((i) => (i.conversacion ? i.de !== estado.yo : i.para === estado.yo)).length ?? 0;
+  // Los mensajes se ven si la columna no está contraída y su panel es el elegido (o el
+  // elegido ya no sale: entonces se ve el primero, que es el de los mensajes)
+  const elegidoDisponible =
+    preferencias.panelLateral === 'conversaciones' ||
+    preferencias.panelLateral === 'npcs' ||
+    (preferencias.panelLateral === 'faroles' && !!modoFaroles);
+  const chatVisible = !preferencias.panelLateralContraido && !elegidoDisponible;
+  const pestanasLaterales: PestanaLateral[] =
+    estado && yo
+      ? [
+          ...(canalActual
+            ? [
+                {
+                  id: 'mensajes' as const,
+                  etiqueta: 'Mensajes',
+                  Icono: MessagesSquare,
+                  contador: {
+                    valor: canalesChat.reduce(
+                      (n, c) =>
+                        n + (c === canalActual && chatVisible ? 0 : sinLeerDe(mensajes, c, yo.id, leidoHasta)),
+                      0,
+                    ),
+                    texto: 'sin leer',
+                  },
+                  contenido: (
+                    <PanelChat
+                      estado={estado}
+                      yo={yo}
+                      mensajes={mensajes}
+                      activo={canalActual}
+                      abiertos={privadosAbiertos}
+                      leidoHasta={leidoHasta}
+                      onElegir={elegirCanal}
+                      onEnviar={enviarMensaje}
+                      entradaRef={entradaChatRef}
+                    />
+                  ),
+                },
+              ]
+            : []),
+          // Siempre: sin conversaciones, explica cómo empezar una
+          {
+            id: 'conversaciones' as const,
+            etiqueta: 'Charlas',
+            Icono: AudioLines,
+            // Lo que espera respuesta, antes que las conversaciones en curso
+            contador: invitacionesRecibidas > 0
+              ? { valor: invitacionesRecibidas, texto: 'por responder', destacado: true }
+              : { valor: estado.conversaciones.length, texto: 'en curso' },
+            contenido: (
+              <div className="h-full overflow-y-auto">
+                {/* Las invitaciones y peticiones (recibidas y enviadas), arriba */}
+                <PanelInvitaciones
+                  invitaciones={estado.invitaciones}
+                  conversaciones={estado.conversaciones}
+                  participantes={estado.participantes}
+                  yo={estado.yo}
+                  onResponder={(i, aceptar) => void responder(i.id, aceptar)}
+                  onCancelar={(i) => void retirar(i.id)}
+                />
+                <PanelConversaciones
+                  conversaciones={estado.conversaciones}
+                  participantes={estado.participantes}
+                  yo={yo}
+                  onEscuchar={(id) => void escuchar(id)}
+                  onEntrar={(id) => void entrar(id)}
+                  ayuda={ayudaCharlas}
+                  compacto={estado.invitaciones.length > 0}
+                />
+              </div>
+            ),
+          },
+          // NPCs: siempre (sin ninguno, lo dice)
+          {
+            id: 'npcs' as const,
+            etiqueta: 'NPCs',
+            Icono: Sparkles,
+            contador: { valor: estado.npcs.length, texto: 'en juego' },
+            contenido: (
+              <PanelNpcs
+                npcs={estado.npcs}
+                disponibles={npcsDisponibles}
+                narro={yo.rol === 'narrador'}
+                hayGuion={!!guion}
+                bootlegger={estado.bootlegger}
+                rolStormcatcher={estado.rolStormcatcher ? (personajesGuionPorId.get(estado.rolStormcatcher) ?? null) : null}
+                buenos={personajesGuion.filter((p) => p.tipo === 'townsfolk' || p.tipo === 'outsider')}
+                pedir={pedirPropio}
+                onError={setAviso}
+              />
+            ),
+          },
+          ...(modoFaroles
+            ? [
+                {
+                  id: 'faroles' as const,
+                  etiqueta: 'Faroles',
+                  Icono: Drama,
+                  contenido: (
+                    <PanelFaroles
+                      modo={modoFaroles}
+                      faroles={farolesVisibles}
+                      estado={estado}
+                      pedir={pedirPropio}
+                      onError={setAviso}
+                      onAnuncio={(t) => anunciar('faroles', t)}
+                      fijados={preferencias.farolesFijados}
+                      onFijar={(farolesFijados) => cambiarPreferencias({ farolesFijados })}
+                    />
+                  ),
+                },
+              ]
+            : []),
+        ]
+      : [];
+  const panelLateral = pestanasLaterales.some((p) => p.id === preferencias.panelLateral)
+    ? preferencias.panelLateral
+    : (pestanasLaterales[0]?.id ?? 'mensajes');
+  useEffect(() => {
+    chatVisibleRef.current = chatVisible;
+  });
+
   useEffect(() => {
     if (enfocar) tituloRef.current?.focus();
   }, [enfocar]);
@@ -1092,7 +1313,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   onCambiarIdiomaDescripciones={(idiomaDescripciones) => cambiarPreferencias({ idiomaDescripciones })}
                   bolsa={
                     estado.acciones.includes('narrador:bolsa')
-                      ? { bolsa: estado.bolsa, distribucion: estado.distribucion }
+                      ? { bolsa: estado.bolsa, distribucion: estado.distribucion, npcs: estado.npcs }
                       : null
                   }
                   onAnuncio={anunciar}
@@ -1119,6 +1340,20 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   onCerrarProblema={video.cerrarProblema}
                   sonidoBloqueado={video.sonidoBloqueado}
                   onActivarSonido={video.activarSonido}
+                  silenciado={callado}
+                  silencio={
+                    estado.acciones.includes('narrador:silencio')
+                      ? {
+                          activo: estado.silencio,
+                          onAlternar: () => {
+                            void pedirPropio('narrador:silencio', { activo: !estado.silencio }).then((r) => {
+                              if (!r.ok) setAviso(r.error);
+                              else anunciar('comunicaciones', estado.silencio ? 'Silencio levantado.' : 'Has pedido silencio.');
+                            });
+                          },
+                        }
+                      : null
+                  }
                 />
               )}
               {estado && (
@@ -1126,6 +1361,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   estado={estado}
                   pedir={pedirPropio}
                   onAsientos={() => setEditandoAsientos((v) => !v)}
+                  revelando={revelandoGrimorio}
+                  onRevelando={setRevelandoGrimorio}
                 />
               )}
               {puedeLevantarMano && yo && (
@@ -1213,8 +1450,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
           {estado && (
             <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-              {/* A la izquierda: los narradores y, debajo, los mensajes */}
-              <div className="flex w-full shrink-0 flex-col gap-4 lg:w-80">
+              {/* A la izquierda: los narradores y, debajo, la barra lateral (mensajes, conversaciones, faroles).
+                  En pantallas anchas, del alto de la ventana (como la mesa, ver sala.css): la barra
+                  lateral ocupa lo que dejan los narradores, sin alargar la página */}
+              <div className="flex w-full shrink-0 flex-col gap-4 lg:h-[calc(100vh-8rem)] lg:w-[23rem]">
                 <ZonaNarradores
                   estado={estado}
                   pedir={pedirPropio}
@@ -1222,40 +1461,31 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   contacto={contacto}
                   pistas={video.mesa}
                 />
-                {/* Las invitaciones a conversar (recibidas y enviadas) */}
-                <PanelInvitaciones
-                  invitaciones={estado.invitaciones}
-                  conversaciones={estado.conversaciones}
-                  participantes={estado.participantes}
-                  yo={estado.yo}
-                  onResponder={(i, aceptar) => void responder(i.id, aceptar)}
-                  onCancelar={(i) => void retirar(i.id)}
+                {/* Mensajes, conversaciones privadas y faroles: uno a la vez, con su barra de iconos */}
+                <ColumnaLateral
+                  pestanas={pestanasLaterales}
+                  activa={panelLateral}
+                  onElegir={(panelLateral) => cambiarPreferencias({ panelLateral })}
+                  contraida={preferencias.panelLateralContraido}
+                  fijado={
+                    modoFaroles && preferencias.farolesFijados
+                      ? {
+                          panel: 'faroles',
+                          contenido: (
+                            <FarolesFijados
+                              faroles={farolesVisibles}
+                              onDesfijar={() => {
+                                cambiarPreferencias({ farolesFijados: false });
+                                // El botón desaparece: el foco vuelve a la pestaña del panel que se ve
+                                window.setTimeout(() => document.getElementById(idPestanaLateral(panelLateral))?.focus(), 0);
+                              }}
+                            />
+                          ),
+                        }
+                      : null
+                  }
+                  onContraer={(panelLateralContraido) => cambiarPreferencias({ panelLateralContraido })}
                 />
-                {/* Quién está en una conversación privada (para todos; la llamada, en el centro) */}
-                {yo && (
-                  <PanelConversaciones
-                    conversaciones={estado.conversaciones}
-                    participantes={estado.participantes}
-                    yo={yo}
-                    onEscuchar={(id) => void escuchar(id)}
-                    onEntrar={(id) => void entrar(id)}
-                  />
-                )}
-                {yo && canalActual && (
-                  <PanelChat
-                    estado={estado}
-                    yo={yo}
-                    mensajes={mensajes}
-                    activo={canalActual}
-                    abiertos={privadosAbiertos}
-                    leidoHasta={leidoHasta}
-                    onElegir={elegirCanal}
-                    onEnviar={enviarMensaje}
-                    entradaRef={entradaChatRef}
-                    minimizado={preferencias.chatMinimizado}
-                    onMinimizar={(chatMinimizado) => cambiarPreferencias({ chatMinimizado })}
-                  />
-                )}
               </div>
               {/* sala-columna-mesa: la mesa centrada en la ventana y apartada de la hoja del guion (sala.css) */}
               <div className="sala-columna-mesa min-w-0 flex-1">
@@ -1292,6 +1522,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
               <RepartoPartida
                 distribucion={estado.distribucion}
                 bolsa={estado.acciones.includes('narrador:bolsa') ? estado.bolsa : null}
+                asientos={estado.asientos}
+                npcs={estado.npcs}
+                setupAceptado={estado.setupAceptado}
+                preparacion={estado.fase.momento === 'preparacion'}
+                pedir={pedirPropio}
+                onError={setAviso}
               />
             </div>
           )}
@@ -1333,6 +1569,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           <DespertarJugador
             estado={estado}
             despertar={miDespertar}
+            faroles={soyDemonio ? (miAsiento?.faroles ?? null) : null}
             onCerrar={() => setWakeCerradoJugador(true)}
             personajes={personajesGuion}
             porId={personajesGuionPorId}

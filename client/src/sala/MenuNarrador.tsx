@@ -14,6 +14,9 @@ interface MenuNarradorProps {
   pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
   /** Activa o desactiva la edición de asientos (botones en el centro de la mesa). */
   onAsientos: () => void;
+  /** El diálogo de revelar el grimorio, abierto (también se abre con su tecla, desde fuera del menú). */
+  revelando: boolean;
+  onRevelando: (abierto: boolean) => void;
 }
 
 /** Opciones del menú que abren el diálogo para elegir a alguien; la clave es la acción del servidor. */
@@ -68,11 +71,10 @@ const ELEGIR: Record<
  * Cada opción es una acción del servidor y solo sale si `estado.acciones` la
  * permite; si no queda ninguna (no narras), el botón no sale.
  */
-const MenuNarrador = ({ estado, pedir, onAsientos }: MenuNarradorProps) => {
+const MenuNarrador = ({ estado, pedir, onAsientos, revelando, onRevelando }: MenuNarradorProps) => {
   // Acción de ELEGIR cuyo diálogo está abierto.
   const [eligiendo, setEligiendo] = useState<string | null>(null);
   const [limpiando, setLimpiando] = useState(false);
-  const [revelando, setRevelando] = useState(false);
   const puede = (accion: string) => estado.acciones.includes(accion);
 
   // id = acción del servidor que la respalda.
@@ -81,7 +83,7 @@ const MenuNarrador = ({ estado, pedir, onAsientos }: MenuNarradorProps) => {
     // Noche y día: solo sale el que toca
     { id: 'narrador:irANoche', etiqueta: 'Ir a la noche', elegir: () => void pedir('narrador:irANoche') },
     { id: 'narrador:amanecer', etiqueta: 'Amanece', elegir: () => void pedir('narrador:amanecer') },
-    { id: 'narrador:revelarGrimorio', etiqueta: 'Revelar grimorio', abreDialogo: true, elegir: () => setRevelando(true) },
+    { id: 'narrador:revelarGrimorio', etiqueta: 'Revelar grimorio', abreDialogo: true, elegir: () => onRevelando(true) },
     { id: 'narrador:limpiarGrimorio', etiqueta: 'Limpiar grimorio', abreDialogo: true, elegir: () => setLimpiando(true) },
     ...Object.entries(ELEGIR).map(([accion, { etiqueta }]) => ({
       id: accion,
@@ -114,7 +116,7 @@ const MenuNarrador = ({ estado, pedir, onAsientos }: MenuNarradorProps) => {
           onCerrar={() => setEligiendo(null)}
         />
       )}
-      {revelando && <DialogoRevelar pedir={pedir} onCerrar={() => setRevelando(false)} />}
+      {revelando && <DialogoRevelar pedir={pedir} onCerrar={() => onRevelando(false)} />}
       {limpiando && (
         <DialogoConfirmar
           titulo="Limpiar grimorio"

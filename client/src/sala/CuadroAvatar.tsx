@@ -1,3 +1,4 @@
+import { JuntoAlTexto } from './BotonesContacto';
 import type { ReactNode } from 'react';
 import { getAvatarUrl } from '../utils/api';
 
@@ -32,11 +33,12 @@ interface CuadroAvatarProps {
 const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, pieFuera }: CuadroAvatarProps) => (
   <div className="relative w-[var(--sala-avatar,10rem)]">
     {titulo && (
-      <div className="mb-1 flex items-center justify-center gap-1.5">
-        <p aria-hidden="true" className="truncate text-center text-xs font-semibold uppercase tracking-wide text-theme-main">
+      <div className="mb-1 text-center leading-none">
+        <span aria-hidden="true" className="text-xs font-semibold uppercase tracking-wide text-theme-main">
           {titulo}
-        </p>
-        {junto}
+        </span>
+        {/* Pegados al rótulo, sin quitarle sitio (si no caben, se salen por la derecha) */}
+        {junto && <JuntoAlTexto>{junto}</JuntoAlTexto>}
       </div>
     )}
     <div

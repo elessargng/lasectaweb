@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { AudioLines, LogIn, MessageSquare } from 'lucide-react';
 
 /** Lo que se puede hacer con alguien desde su nombre: escribirle y conversar (si se puede). */
@@ -65,5 +66,18 @@ const BotonesContacto = ({ nombre, onMensaje, conversar, vigilar }: BotonesConta
     </span>
   );
 };
+
+/**
+ * Pegado al final de un texto (detrás de su última palabra), sin ocupar sitio:
+ * un ancla de ancho cero de la que cuelgan los botones. El texto se parte en
+ * líneas como si no estuvieran; si al final de la línea no caben, se salen por
+ * la derecha (por encima de lo que haya, para que se puedan pulsar).
+ */
+export const JuntoAlTexto = ({ children }: { children: ReactNode }) => (
+  <span className="relative inline-block h-[1em] w-0 align-middle">
+    {/* El relleno (y no un margen) hace que el ratón no salga del grupo al ir hacia ellos */}
+    <span className="absolute left-0 top-1/2 z-10 -translate-y-1/2 whitespace-nowrap pl-1">{children}</span>
+  </span>
+);
 
 export default BotonesContacto;

@@ -36,10 +36,11 @@ export class LiveKitProveedor implements ProveedorVideo {
   }
 
   /** Emitir: el micrófono y, si se puede, la cámara (nada de compartir pantalla). */
-  private permisos({ publicar, camara }: PermisosVideo) {
+  private permisos({ publicar, camara, microfono = true }: PermisosVideo) {
+    const fuentes = [...(microfono ? [TrackSource.MICROPHONE] : []), ...(camara ? [TrackSource.CAMERA] : [])];
     return {
-      canPublish: publicar,
-      canPublishSources: publicar ? (camara ? [TrackSource.MICROPHONE, TrackSource.CAMERA] : [TrackSource.MICROPHONE]) : [],
+      canPublish: publicar && fuentes.length > 0,
+      canPublishSources: publicar ? fuentes : [],
     };
   }
 

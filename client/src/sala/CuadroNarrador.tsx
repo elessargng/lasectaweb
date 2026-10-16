@@ -5,6 +5,9 @@ import VideoPista from './VideoPista';
 import CuadroAvatar from './CuadroAvatar';
 import { botonPrincipal } from './estilos';
 import { idNombreNarrador } from './ids';
+import { urlDelServidor } from '../utils/api';
+import { iconoDe } from './fichas';
+import type { PersonajeMostrado } from './guiones';
 import type { SalaParticipante } from './useSala';
 
 interface CuadroNarradorProps {
@@ -26,6 +29,11 @@ interface CuadroNarradorProps {
   escuchando?: boolean;
   /** Tiene el micrófono cerrado (un micro tachado a la izquierda del nombre). */
   silenciado?: boolean;
+  /**
+   * Un NPC que acompaña al narrador (el Deus Ex Fiasco, si está en juego): su imagen,
+   * encima del retrato, apoyada en su borde de abajo. Decorativa: el NPC ya sale en la pestaña NPCs.
+   */
+  npc?: PersonajeMostrado;
 }
 
 /**
@@ -50,6 +58,7 @@ const CuadroNarrador = ({
   enConversacion = false,
   escuchando = false,
   silenciado = false,
+  npc,
 }: CuadroNarradorProps) => (
   <div className={`group relative rounded ${hablando ? 'ring-2 ring-[#b19cd9] ring-offset-2 ring-offset-background' : ''}`}>
     <CuadroAvatar
@@ -59,23 +68,38 @@ const CuadroNarrador = ({
       contenido={video ? <VideoPista pista={video} espejo={espejo} /> : undefined}
       imagen={narrador.avatar}
       pie={
-        <p id={idNombreNarrador(narrador.id)} tabIndex={-1} className="mt-2 text-center font-semibold break-words focus:outline-none">
-          <span className="sr-only">Narrador: </span>
-          {silenciado && (
-            <>
-              <MicOff size={14} className="mr-1 inline-block align-[-2px] text-red-300" />
-              <span className="sr-only">silenciado, </span>
-            </>
-          )}
-          {escuchando && <Ear size={14} className="mr-1 inline-block align-[-2px] text-theme-main" />}
-          {narrador.nombre}
-          {esYo && ' (tú)'}
-          {!narrador.conectado && <span className="font-normal text-on-surface-muted"> (desconectado)</span>}
-          {enConversacion && <span className="sr-only"> (en una conversación privada)</span>}
-          {escuchando && <span className="sr-only"> (escuchando una conversación)</span>}
-        </p>
+        <>
+          <p id={idNombreNarrador(narrador.id)} tabIndex={-1} className="mt-2 text-center font-semibold break-words focus:outline-none">
+            <span className="sr-only">Narrador: </span>
+            {silenciado && (
+              <>
+                <MicOff size={14} className="mr-1 inline-block align-[-2px] text-red-300" />
+                <span className="sr-only">silenciado, </span>
+              </>
+            )}
+            {escuchando && <Ear size={14} className="mr-1 inline-block align-[-2px] text-theme-main" />}
+            {narrador.nombre}
+            {esYo && ' (tú)'}
+            {!narrador.conectado && <span className="font-normal text-on-surface-muted"> (desconectado)</span>}
+            {enConversacion && <span className="sr-only"> (en una conversación privada)</span>}
+            {escuchando && <span className="sr-only"> (escuchando una conversación)</span>}
+          </p>
+        </>
       }
     />
+    {npc && iconoDe(npc, null) && (
+      // Encima del retrato (o la cámara), en su esquina de abajo a la izquierda (para tapar
+      // poco), con tres cuartos de su ancho. La imagen (400×400) tiene márgenes
+      // transparentes (77 px a la izquierda, 107 abajo): se desplaza eso para que el dibujo,
+      // y no su caja, quede pegado a los bordes. La caja tiene el tamaño y el sitio del retrato.
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-5 z-10 aspect-square">
+        <img
+          src={urlDelServidor(iconoDe(npc, null)!)}
+          alt=""
+          className="absolute bottom-0 left-0 w-[75%] -translate-x-[19.25%] translate-y-[26.75%] object-contain drop-shadow-[0_3px_6px_rgba(0,0,0,0.75)]"
+        />
+      </div>
+    )}
     {grimorio && (
       // Sobre el retrato (debajo del rótulo «Narrador»), centrado; solo el botón recibe el ratón
       <div className="pointer-events-none absolute inset-x-0 top-5 flex aspect-square items-center justify-center">

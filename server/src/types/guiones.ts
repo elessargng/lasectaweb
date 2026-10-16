@@ -68,6 +68,8 @@ export interface GuionImportado {
   nombre: string;
   autor: string | null;
   entradas: (string | PersonajePropio)[];
+  /** Las reglas propias del guion (las del Bootlegger: `_meta.bootlegger`), una por línea. */
+  bootlegger: string[];
 }
 
 /** Un personaje de un guion, con lo necesario para mostrarlo. */
@@ -104,7 +106,24 @@ export interface GuionResuelto {
   /** Ids de los personajes que se despiertan, en orden. */
   primeraNoche: string[];
   otrasNoches: string[];
+  /**
+   * Los legendarios y lóricos del catálogo que el guion no trae: los narradores
+   * pueden añadirlos a la partida como NPCs (los que trae el guion, también).
+   * No salen en la hoja del guion ni en el orden de noche.
+   */
+  npcs: PersonajeDeGuion[];
+  /**
+   * Los viajeros del catálogo que el guion no trae: se pueden poner en una ficha
+   * o meter en la bolsa (los viajeros no dependen del guion). Tampoco salen en
+   * la hoja del guion ni en el orden de noche.
+   */
+  viajeros: PersonajeDeGuion[];
+  /** Las reglas propias del guion (las del Bootlegger), una por línea; vacío si no trae. */
+  bootlegger: string[];
 }
+
+/** Los tipos que van como NPCs de la partida (no se sientan en la mesa). */
+export const TIPOS_NPC: readonly TipoPersonaje[] = ['fabled', 'loric'];
 
 /** Un guion por defecto que se puede elegir. */
 export interface GuionPredeterminado {

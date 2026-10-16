@@ -32,3 +32,6 @@ export const idLunaFicha = (asientoId: string) => `sala-luna-${asientoId}`;
 
 /** El título de la ventana del narrador al despertar a alguien de noche. */
 export const ID_TITULO_DESPERTAR = 'sala-despertar-titulo';
+
+/** Una pestaña de la columna de la izquierda (ColumnaLateral): Mensajes, Conversaciones o Faroles. */
+export const idPestanaLateral = (panel: string) => `sala-lateral-pestana-${panel}`;

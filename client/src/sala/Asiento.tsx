@@ -1,6 +1,6 @@
 import { AudioLines, Link, MicOff } from 'lucide-react';
 import type { VideoTrack } from 'livekit-client';
-import BotonesContacto, { type ContactoParticipante } from './BotonesContacto';
+import BotonesContacto, { JuntoAlTexto, type ContactoParticipante } from './BotonesContacto';
 import VideoPista from './VideoPista';
 import CuadroAvatar from './CuadroAvatar';
 import { botonPrincipal } from './estilos';
@@ -156,12 +156,10 @@ const Asiento = ({
           )
         }
         pie={
-          <div className={`${nombreAbajo ? 'mt-1' : 'mb-1'} flex items-center justify-center gap-1.5`}>
-            <p
-              id={idNombreAsiento(id)}
-              tabIndex={-1}
-              className="min-w-0 text-center text-sm break-words focus:outline-none"
-            >
+          // Los botones van pegados al nombre, sin quitarle ancho (ver JuntoAlTexto)
+          <p className={`${nombreAbajo ? 'mt-1' : 'mb-1'} text-center text-sm break-words`}>
+            {/* Lo que se lee al llevar el foco al nombre (sentarse, levantarse): sin los botones */}
+            <span id={idNombreAsiento(id)} tabIndex={-1} className="focus:outline-none">
               {ocupante ? (
                 <>
                   {/* Solo el número: «3, Ana» (la lista ya dice que son asientos) */}
@@ -192,10 +190,14 @@ const Asiento = ({
                   {fichaParaLector}
                 </>
               )}
-            </p>
+            </span>
             {/* Junto al nombre (sobre el retrato las taparían las fichas) */}
-            {ocupante && contacto && <BotonesContacto nombre={ocupante.nombre} {...contacto} />}
-          </div>
+            {ocupante && contacto && (
+              <JuntoAlTexto>
+                <BotonesContacto nombre={ocupante.nombre} {...contacto} />
+              </JuntoAlTexto>
+            )}
+          </p>
         }
       />
       {sentarse && (

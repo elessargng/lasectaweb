@@ -15,8 +15,9 @@ import {
   SalaRegistroVotacion,
   SalaRevelacion,
   SalaRol,
+  NUM_FAROLES,
 } from '../types/sala';
-import { GuionResuelto } from '../types/guiones';
+import { GuionResuelto, PersonajeDeGuion } from '../types/guiones';
 import { repartoPara } from './partida/distribucion';
 import { esAvatarSalaGuardado } from '../utils/salaAvatarStorage';
 
@@ -82,7 +83,31 @@ const asientoNuevo = (): SalaAsiento => ({
   personaje: null,
   alineamiento: null,
   recordatorios: [],
+  faroles: farolesVacios(),
 });
+
+/**
+ * Un recordatorio «Is The …» (el del Borracho, el Alquimista, el Filósofo, la
+ * Marioneta o el Aprendiz): dice quién es de verdad el de esa ficha, aunque
+ * lleve otro personaje (el que cree ser, o la habilidad que tiene).
+ */
+export const esRecordatorioDeIdentidad = (texto: string) => /^is the\b/i.test(texto.trim());
+
+/** El NPC con el que el narrador puede pedir silencio a todos: el Bibliotecario del Infierno. */
+export const NPC_SILENCIO = 'hellslibrarian';
+/** Tor: los jugadores no saben su personaje (lo ven al morir). */
+export const NPC_TOR = 'tor';
+/** Gardener: el narrador entrega los personajes cuando quiere. */
+export const NPC_GARDENER = 'gardener';
+/** Bootlegger: el guion tiene reglas propias. */
+export const NPC_BOOTLEGGER = 'bootlegger';
+/** Pope: puede haber personajes buenos repetidos (en la bolsa). */
+export const NPC_POPE = 'pope';
+/** Storm Catcher: el narrador nombra un personaje bueno. */
+export const NPC_STORMCATCHER = 'stormcatcher';
+
+/** Las casillas de farol, todas vacías. */
+export const farolesVacios = (): (string | null)[] => Array.from({ length: NUM_FAROLES }, () => null);
 
 /** Quién se conecta, según el token o el nombre de invitado. */
 export interface SalaLlegada {
@@ -177,8 +202,171 @@ export class SalaService {
   cambiarGuion(guion: GuionResuelto): void {
     this.guionActual = guion;
     this.versionGuionActual += 1;
-    // La bolsa era de los personajes del otro guion
+    // La bolsa, los faroles y los NPCs eran de los personajes del otro guion. Los
+    // legendarios y lóricos que trae el guion, en juego desde el principio
     this.bolsaActual = [];
+    this.npcsActuales = guion.personajes.filter((p) => p.tipo === 'fabled' || p.tipo === 'loric').map((p) => p.id);
+    this.reglasBootlegger = null;
+    this.rolStormcatcherActual = null;
+    this.retenidas = false;
+    this.farolesNarrador = farolesVacios();
+    this.farolesAsientos.clear();
+  }
+
+  /**
+   * Los NPCs de la partida: legendarios y lóricos que el narrador pone en juego
+   * (ver SalaEstado.npcs). Siguen al limpiar el grimorio: suelen ser los mismos
+   * en la partida siguiente con el mismo guion.
+   */
+  private npcsActuales: string[] = [];
+
+  /** El reparto dado por bueno a mano (ver SalaEstado.setupAceptado). */
+  private setupAceptadoActual: string | null = null;
+
+  setupAceptado(): string | null {
+    return this.setupAceptadoActual;
+  }
+
+  aceptarSetup(firma: string | null): void {
+    this.setupAceptadoActual = firma;
+  }
+
+  npcs(): string[] {
+    return [...this.npcsActuales];
+  }
+
+  /** Pone en juego un NPC, o lo quita si ya estaba. No comprueba que sea del guion. */
+  alternarNpc(personajeId: string): void {
+    this.npcsActuales = this.npcsActuales.includes(personajeId)
+      ? this.npcsActuales.filter((id) => id !== personajeId)
+      : [...this.npcsActuales, personajeId];
+    // Sin el Gardener ya no hay nada que retener: los personajes se entregan
+    if (!this.npcActivo(NPC_GARDENER)) this.retenidas = false;
+  }
+
+  npcActivo(id: string): boolean {
+    return this.npcsActuales.includes(id);
+  }
+
+  /** Las reglas del Bootlegger que ha escrito el narrador; null: las del guion. */
+  private reglasBootlegger: string[] | null = null;
+
+  /** Las reglas del Bootlegger: las del narrador, si las ha escrito, o las del guion. */
+  bootlegger(): string[] {
+    return [...(this.reglasBootlegger ?? this.guionActual?.bootlegger ?? [])];
+  }
+
+  /** Cambia las reglas del Bootlegger (null: vuelven las del guion). No las valida. */
+  escribirBootlegger(reglas: string[] | null): void {
+    this.reglasBootlegger = reglas;
+  }
+
+  /** El personaje bueno nombrado con el Storm Catcher, o null. */
+  private rolStormcatcherActual: string | null = null;
+
+  rolStormcatcher(): string | null {
+    return this.npcActivo(NPC_STORMCATCHER) ? this.rolStormcatcherActual : null;
+  }
+
+  nombrarStormcatcher(personajeId: string | null): void {
+    this.rolStormcatcherActual = personajeId;
+  }
+
+  /** Con el Gardener: los personajes repartidos aún no se han entregado a los jugadores. */
+  private retenidas = false;
+
+  fichasRetenidas(): boolean {
+    return this.retenidas;
+  }
+
+  retenerFichas(retenidas: boolean): void {
+    this.retenidas = retenidas;
+  }
+
+  /**
+   * Cuántas fichas de un personaje hay en la bolsa: quita las de más o añade
+   * las que falten (al final). Con el Pope puede haber más de una; no lo comprueba.
+   */
+  ponerEnBolsa(personajeId: string, cantidad: number): void {
+    const otros = this.bolsaActual.filter((id) => id !== personajeId);
+    const primera = this.bolsaActual.indexOf(personajeId);
+    const suyas = Array.from({ length: cantidad }, () => personajeId);
+    // Se quedan donde estaba la primera (o al final, si no estaba)
+    const donde = primera < 0 ? otros.length : this.bolsaActual.slice(0, primera).filter((id) => id !== personajeId).length;
+    this.bolsaActual = [...otros.slice(0, donde), ...suyas, ...otros.slice(donde)];
+  }
+
+  /**
+   * El silencio que pide el narrador con el Bibliotecario del Infierno en juego
+   * (ver SalaEstado.silencio). Solo vale mientras el NPC siga en juego: si se
+   * quita (o cambia el guion), se acaba solo.
+   */
+  private silencioPedido = false;
+
+  silencio(): boolean {
+    return this.silencioPedido && this.npcsActuales.includes(NPC_SILENCIO);
+  }
+
+  pedirSilencio(activo: boolean): void {
+    this.silencioPedido = activo;
+  }
+
+  /** Los faroles que el narrador prepara para el demonio (ver SalaEstado.faroles). */
+  private farolesNarrador: (string | null)[] = farolesVacios();
+
+  faroles(): (string | null)[] {
+    return [...this.farolesNarrador];
+  }
+
+  /**
+   * Pone un personaje en una casilla de farol del narrador (o la vacía, con
+   * null). Si ya estaba en otra casilla, sale de ella. No comprueba el guion.
+   */
+  ponerFarol(posicion: number, personajeId: string | null): void {
+    this.farolesNarrador = ponerEnCasilla(this.farolesNarrador, posicion, personajeId);
+  }
+
+  /**
+   * Los faroles de cada asiento, con quién estaba sentado al ponerlos: si se
+   * sienta otro (o se levanta), dejan de valer, como los despertares.
+   */
+  private farolesAsientos = new Map<string, { ocupante: string | null; faroles: (string | null)[] }>();
+
+  /** Los faroles del asiento, si siguen siendo de quien se sienta en él. */
+  private farolesDeAsiento(asiento: SalaAsiento): (string | null)[] {
+    const f = this.farolesAsientos.get(asiento.id);
+    return f && f.ocupante === asiento.ocupante ? [...f.faroles] : farolesVacios();
+  }
+
+  /** Pone un farol en una casilla de un asiento (o la vacía). No comprueba permisos ni el guion. */
+  ponerFarolAsiento(asientoId: string, posicion: number, personajeId: string | null): void {
+    const asiento = this.mesaAlDia().find((a) => a.id === asientoId);
+    if (!asiento) return;
+    const faroles = ponerEnCasilla(this.farolesDeAsiento(asiento), posicion, personajeId);
+    this.farolesAsientos.set(asientoId, { ocupante: asiento.ocupante, faroles });
+  }
+
+  /** El asiento en el que se sienta un participante, o null. */
+  asientoDe(participanteId: string): SalaAsiento | null {
+    return this.mesaAlDia().find((a) => a.ocupante === participanteId) ?? null;
+  }
+
+  /** Cambia de una vez los faroles de un asiento (los que le ha enseñado el narrador). */
+  copiarFaroles(asientoId: string, personajes: string[]): void {
+    const asiento = this.mesaAlDia().find((a) => a.id === asientoId);
+    if (!asiento) return;
+    const faroles = farolesVacios().map((_, i) => personajes[i] ?? null);
+    this.farolesAsientos.set(asientoId, { ocupante: asiento.ocupante, faroles });
+  }
+
+  /**
+   * Un personaje de la partida: del guion o, aunque el guion no lo traiga, uno de
+   * los viajeros o de los NPCs (legendarios y lóricos) del catálogo. undefined si no.
+   */
+  personaje(id: string): PersonajeDeGuion | undefined {
+    const g = this.guionActual;
+    if (!g) return undefined;
+    return g.personajes.find((p) => p.id === id) ?? g.viajeros?.find((p) => p.id === id) ?? g.npcs?.find((p) => p.id === id);
   }
 
   /** Los personajes metidos en la bolsa, en el orden en que se metieron. */
@@ -195,15 +383,57 @@ export class SalaService {
       : [...this.bolsaActual, personajeId];
   }
 
-  /** Si la ficha de un asiento lleva un viajero (según el guion). */
-  private llevaViajero(asiento: SalaAsiento): boolean {
-    return !!asiento.personaje && this.guionActual?.personajes.find((p) => p.id === asiento.personaje)?.tipo === 'traveller';
+  private esViajero(id: string): boolean {
+    return this.personaje(id)?.tipo === 'traveller';
   }
 
-  /** El reparto de la partida: asientos sin viajero y cuántos de cada tipo (ver repartoPara). */
+  /**
+   * Quién es de verdad el de un asiento: el personaje de su recordatorio «Is The …»
+   * (el último, si hay varios) o, sin él, el de su ficha. Es lo que cuenta para el
+   * reparto; la ficha, para su habilidad (el orden de noche).
+   */
+  identidad(asiento: SalaAsiento): string | null {
+    const r = [...asiento.recordatorios].reverse().find((x) => esRecordatorioDeIdentidad(x.texto));
+    return r?.personaje ?? asiento.personaje;
+  }
+
+  /**
+   * Si en un asiento hay un viajero puesto a mano (de verdad: un Aprendiz con la
+   * ficha de un aldeano sigue siendo viajero): ese asiento no entra en el
+   * reparto. Uno que esté en la bolsa no cuenta (salió del reparto, y al repartir
+   * otra vez puede tocarle a otro).
+   */
+  private llevaViajero(asiento: SalaAsiento): boolean {
+    const id = this.identidad(asiento);
+    return !!id && this.esViajero(id) && !this.bolsaActual.includes(id);
+  }
+
+  /**
+   * Al poner un viajero que lleva su propio «Is The …» (el Aprendiz), se le pone
+   * solo: luego el narrador le cambia la ficha por la habilidad que gana y sigue
+   * sabiéndose quién es.
+   */
+  private identidadAutomatica(asiento: SalaAsiento): void {
+    const p = asiento.personaje ? this.personaje(asiento.personaje) : undefined;
+    if (!p || p.tipo !== 'traveller') return;
+    const indice = p.recordatorios.findIndex(esRecordatorioDeIdentidad);
+    if (indice < 0) return;
+    if (asiento.recordatorios.some((r) => r.personaje === p.id && r.indice === indice)) return;
+    asiento.recordatorios.push({ id: randomUUID(), personaje: p.id, indice, texto: p.recordatorios[indice] });
+  }
+
+  /** Los viajeros metidos en la bolsa: se reparten con los demás, pero no cuentan para el reparto por tipos. */
+  private viajerosEnBolsa(): number {
+    return this.bolsaActual.filter((id) => this.esViajero(id)).length;
+  }
+
+  /**
+   * El reparto de la partida: los jugadores (asientos, sin los viajeros: los
+   * puestos a mano y los de la bolsa) y cuántos de cada tipo (ver repartoPara).
+   */
   distribucion(): SalaDistribucion {
-    const viajeros = this.mesa.filter((a) => this.llevaViajero(a)).length;
-    const jugadores = this.mesa.length - viajeros;
+    const viajeros = this.mesa.filter((a) => this.llevaViajero(a)).length + this.viajerosEnBolsa();
+    const jugadores = Math.max(0, this.mesa.length - viajeros);
     const reparto = repartoPara(jugadores);
     return {
       jugadores,
@@ -215,14 +445,15 @@ export class SalaService {
     };
   }
 
-  /** Cuántos personajes hay que meter en la bolsa: uno por asiento sin viajero. */
+  /** Cuántos personajes hay que meter en la bolsa: uno por asiento sin viajero puesto a mano (los de la bolsa, también). */
   fichasParaRepartir(): number {
     return this.mesa.filter((a) => !this.llevaViajero(a)).length;
   }
 
   /**
-   * Reparte al azar los personajes de la bolsa entre los asientos que no llevan
-   * viajero (tiene que haber tantos como asientos; no lo comprueba). El
+   * Reparte al azar los personajes de la bolsa (también sus viajeros) entre los
+   * asientos que no llevan un viajero puesto a mano (tiene que haber tantos como
+   * asientos; no lo comprueba). El
    * alineamiento vuelve a ser el de su tipo. La bolsa se queda como estaba.
    */
   repartirBolsa(): void {
@@ -236,6 +467,9 @@ export class SalaService {
       .forEach((a, i) => {
         a.personaje = personajes[i] ?? null;
         a.alineamiento = null;
+        // Un reparto nuevo: quién era cada uno (los «Is The …» del anterior) ya no vale
+        a.recordatorios = a.recordatorios.filter((r) => !esRecordatorioDeIdentidad(r.texto));
+        this.identidadAutomatica(a);
       });
   }
   /** Lo siguiente que toca en la nominación: el fin de la cuenta atrás o el próximo paso de la votación. */
@@ -359,6 +593,12 @@ export class SalaService {
       a.recordatorios = [];
     }
     this.bolsaActual = [];
+    this.farolesNarrador = farolesVacios();
+    this.farolesAsientos.clear();
+    this.setupAceptadoActual = null;
+    this.silencioPedido = false;
+    this.retenidas = false;
+    this.rolStormcatcherActual = null;
     this.revelacionActual = null;
     // Es otra partida: quien veía el grimorio deja de verlo (y puede volver a sentarse),
     // también quien había salido de la sala
@@ -555,6 +795,7 @@ export class SalaService {
     if (!asiento) return;
     asiento.personaje = personaje;
     asiento.alineamiento = null;
+    this.identidadAutomatica(asiento);
   }
 
   /** Pone una ficha recordatorio junto a la de un asiento. No comprueba permisos. */
@@ -623,7 +864,7 @@ export class SalaService {
 
   /** Los asientos, en orden (el primero a las 12, como las agujas del reloj). */
   asientos(): SalaAsiento[] {
-    return this.mesaAlDia().map((a) => ({ ...a }));
+    return this.mesaAlDia().map((a) => ({ ...a, faroles: this.farolesDeAsiento(a) }));
   }
 
   /** Añade un asiento al final del círculo. No comprueba el máximo ni permisos. */
@@ -890,4 +1131,11 @@ export class SalaService {
       .filter(([, e]) => e.socketId !== null)
       .map(([clave, e]) => ({ socketId: e.socketId!, clave, id: e.participante.id }));
   }
+}
+
+/** Las casillas con `personajeId` en `posicion` (fuera de cualquier otra en la que estuviera). */
+function ponerEnCasilla(casillas: (string | null)[], posicion: number, personajeId: string | null): (string | null)[] {
+  const nuevas = casillas.map((id) => (personajeId && id === personajeId ? null : id));
+  nuevas[posicion] = personajeId;
+  return nuevas;
 }

@@ -10,6 +10,8 @@ import type { PistasParticipante } from './useVideollamada';
 import { hacenFalta } from './avisosSala';
 import CuadroAvatar from './CuadroAvatar';
 import FichaAsiento from './FichaAsiento';
+import FichaRedonda from './FichaRedonda';
+import PersonajeEnFicha from './PersonajeEnFicha';
 import RecordatoriosFicha from './RecordatoriosFicha';
 import { ESCALA_RECORDATORIO } from './FichaRecordatorio';
 import { describirRecordatorio, recordatoriosDeFicha, useFichas } from './fichas';
@@ -209,7 +211,8 @@ const Mesa = ({
     };
   };
   // Los personajes en juego (para quien mira): sus recordatorios salen primero al poner uno
-  const enJuego = new Set(asientos.map(personajeVisto).filter((id): id is string => !!id));
+  // En juego: los de las fichas y los NPCs (legendarios y lóricos), que también llevan recordatorios
+  const enJuego = new Set([...asientos.map(personajeVisto).filter((id): id is string => !!id), ...estado.npcs]);
   // Quitar un recordatorio: el narrador, de la partida; un jugador, de su grimorio.
   // El botón desaparece: el foco vuelve a la ficha, que dice los que quedan.
   const anotadoPorMi = (asientoId: string, r: SalaRecordatorio) => !!notasRecordatorios[asientoId]?.some((x) => x.id === r.id);
@@ -268,6 +271,15 @@ const Mesa = ({
       (a) => !revelacion?.reveladas.includes(a.id),
     );
     window.setTimeout(() => document.getElementById(siguiente ? idRevelarFicha(siguiente.id) : ID_GANADOR)?.focus(), 0);
+  };
+  // Gardener: entregar los personajes repartidos. El botón desaparece: el foco va al
+  // nombre del primer asiento, y se confirma
+  const gardener = todosPorId.get('gardener');
+  const entregarFichas = async () => {
+    const r = await pedir('narrador:entregarFichas');
+    if (!r.ok) return onError(r.error);
+    onAnuncio('bolsa', 'Personajes entregados a los jugadores.');
+    if (asientos[0]) window.setTimeout(() => document.getElementById(idNombreAsiento(asientos[0].id))?.focus(), 0);
   };
   const terminarRevelacion = async () => {
     const r = await pedir('narrador:terminarRevelacion');
@@ -562,8 +574,32 @@ const Mesa = ({
 
       {/* El centro de la mesa: la cuenta atrás (todos), el panel de la nominación y
           el de editar asientos (narradores). Por encima de las agujas. */}
-      {(nominacion?.cuentaAtrasFin || nominar.panel || nominar.cancelar || editando || revelacion) && (
+      {(nominacion?.cuentaAtrasFin || nominar.panel || nominar.cancelar || editando || revelacion || estado.fichasRetenidas) && (
         <div className="absolute left-1/2 top-1/2 z-30 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">
+          {/* Gardener: los personajes repartidos esperan a que el narrador los entregue */}
+          {estado.fichasRetenidas &&
+            (acciones.includes('narrador:entregarFichas') ? (
+              <button
+                type="button"
+                onClick={() => void entregarFichas()}
+                className="group flex flex-col items-center gap-2 rounded-lg p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
+              >
+                {gardener && (
+                  <span aria-hidden="true" className="block transition-transform group-hover:scale-105 motion-reduce:transition-none" style={{ '--sala-ficha': '6rem' } as CSSProperties}>
+                    <FichaRedonda>
+                      <PersonajeEnFicha personaje={gardener} alineamiento={null} />
+                    </FichaRedonda>
+                  </span>
+                )}
+                <span className="rounded border border-theme-main bg-theme-container px-3 py-1 font-ui text-sm text-white group-hover:bg-theme-main group-hover:text-background">
+                  Entregar los personajes
+                </span>
+              </button>
+            ) : (
+              <p className="max-w-56 rounded border border-outline-ghost bg-surface/90 p-3 text-center text-sm text-on-surface-muted">
+                El narrador aún no ha entregado los personajes.
+              </p>
+            ))}
           {revelacion?.terminada && (
             // Todas reveladas: el bando ganador, en grande y en su color (se anuncia aparte)
             <p

@@ -4,6 +4,7 @@ import type { ContactoParticipante } from './BotonesContacto';
 import type { PistasParticipante } from './useVideollamada';
 import CuadroAvatar from './CuadroAvatar';
 import CuadroNarrador from './CuadroNarrador';
+import { useFichas } from './fichas';
 import { botonPrincipal } from './estilos';
 import { ID_SIN_NARRADOR } from './ids';
 import type { SalaEstado, SalaParticipante, SalaResultado } from './useSala';
@@ -29,6 +30,9 @@ interface ZonaNarradoresProps {
  * Debajo, para los narradores, quién pide ver el grimorio.
  */
 const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas }: ZonaNarradoresProps) => {
+  // El Deus Ex Fiasco en juego (NPC): su ficha va debajo del retrato del narrador
+  const { todosPorId } = useFichas();
+  const deusExFiasco = estado.npcs.includes('deusexfiasco') ? todosPorId.get('deusexfiasco') : undefined;
   const [pidiendo, setPidiendo] = useState(false);
 
   const narradores = estado.participantes.filter((p) => p.rol === 'narrador');
@@ -58,6 +62,7 @@ const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas }: ZonaNarrad
               <CuadroNarrador
                 narrador={n}
                 esYo={n.id === estado.yo}
+                npc={deusExFiasco}
                 contacto={contacto?.(n)}
                 video={pistas?.get(n.id)?.video}
                 espejo={n.id === estado.yo}

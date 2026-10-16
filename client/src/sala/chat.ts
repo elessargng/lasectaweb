@@ -51,6 +51,10 @@ export const esAjeno = (canal: string, yo: string) => !!participantesDelPrivado(
 export const mensajesDe = (mensajes: SalaMensaje[], canal: string, yo: string) =>
   canal === CANAL_SUSURROS ? mensajes.filter((m) => esAjeno(m.canal, yo)) : mensajes.filter((m) => m.canal === canal);
 
+/** Cuántos mensajes de otros hay en una pestaña después de lo leído (`leidoHasta`, ms por canal). */
+export const sinLeerDe = (mensajes: SalaMensaje[], canal: string, yo: string, leidoHasta: Record<string, number>) =>
+  mensajesDe(mensajes, canal, yo).filter((m) => m.autor !== yo && m.hora > (leidoHasta[canal] ?? 0)).length;
+
 /** Las pestañas privadas propias: con mensajes (o abiertas) y en las que está `yo`. */
 export const privadosPropios = (mensajes: SalaMensaje[], abiertos: string[], yo: string) => [
   ...new Set([...mensajes.map((m) => m.canal).filter((c) => esPrivado(c) && !esAjeno(c, yo)), ...abiertos]),

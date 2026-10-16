@@ -51,6 +51,8 @@ interface OpcionesVideollamada {
   conversacion: string | null;
   /** En ella habla (miembro); si solo escucha (visitante), no emite. */
   hablaEnConversacion: boolean;
+  /** El narrador ha pedido silencio: el micrófono no se emite (el servidor tampoco lo deja). */
+  silenciado: boolean;
   idCamara: string;
   idMicrofono: string;
   pedirPase: (sala: string) => Promise<PaseVideo>;
@@ -94,6 +96,7 @@ export function useVideollamada({
   noche,
   conversacion,
   hablaEnConversacion,
+  silenciado,
   idCamara,
   idMicrofono,
   pedirPase,
@@ -208,10 +211,12 @@ export function useVideollamada({
       }
     };
     const enMesa = puedeEmitir && !enConversacion;
-    void publicar(mesaRef.current, camara && enMesa && !noche, microfono && enMesa);
+    // Con silencio, el micrófono se apaga en todas partes (se queda «encendido» para cuando acabe)
+    const micro = microfono && !silenciado;
+    void publicar(mesaRef.current, camara && enMesa && !noche, micro && enMesa);
     const hablo = enConversacion && hablaEnConversacion;
-    void publicar(privadaRef.current, camara && hablo, microfono && hablo);
-  }, [camara, microfono, noche, puedeEmitir, conversacion, hablaEnConversacion, idCamara, idMicrofono, conectadas]);
+    void publicar(privadaRef.current, camara && hablo, micro && hablo);
+  }, [camara, microfono, silenciado, noche, puedeEmitir, conversacion, hablaEnConversacion, idCamara, idMicrofono, conectadas]);
 
   // Cambiar de cámara o de micrófono en Preferencias: se cambia en caliente
   useEffect(() => {

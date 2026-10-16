@@ -41,6 +41,12 @@ export interface GuionResuelto {
   /** Ids de los que se despiertan cada noche, en orden. */
   primeraNoche: string[];
   otrasNoches: string[];
+  /** Los legendarios y lóricos del catálogo que no trae el guion (para ponerlos como NPCs). */
+  npcs?: PersonajeDeGuion[];
+  /** Los viajeros del catálogo que no trae el guion (se ponen en fichas o en la bolsa). */
+  viajeros?: PersonajeDeGuion[];
+  /** Las reglas propias del guion (las del Bootlegger), una por línea. */
+  bootlegger?: string[];
 }
 
 /** Un guion por defecto que se puede elegir. */

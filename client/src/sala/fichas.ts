@@ -41,6 +41,9 @@ export interface ContextoFichas {
   hayGuion: boolean;
   /** Los personajes del guion que pueden ir en una ficha, en su orden. */
   personajes: PersonajeMostrado[];
+  /** Todos los viajeros: los del guion (en su orden) y luego los demás del catálogo. */
+  viajeros: PersonajeMostrado[];
+  /** Los de `personajes` y los de `viajeros`. */
   porId: Map<string, PersonajeMostrado>;
   /** El grimorio propio del jugador: lo que ha anotado en cada ficha (por asiento). */
   notas: Record<string, ContenidoFicha>;
@@ -56,6 +59,7 @@ export interface ContextoFichas {
 export const FichasContexto = createContext<ContextoFichas>({
   hayGuion: false,
   personajes: [],
+  viajeros: [],
   porId: new Map(),
   notas: {},
   anotar: () => {},
@@ -107,3 +111,57 @@ export function contarBolsa(bolsa: string[], tipoDe: (id: string) => string | un
   return cuenta;
 }
 
+/** «Monje, Soldado y Ermitaño» (o «ninguno»). */
+export function listaFaroles(faroles: (string | null)[], porId: Map<string, PersonajeMostrado>): string {
+  const nombres = faroles.flatMap((id) => (id && porId.get(id) ? [porId.get(id)!.nombre.texto] : []));
+  if (nombres.length === 0) return 'ninguno';
+  return nombres.length === 1 ? nombres[0] : `${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}`;
+}
+
+/**
+ * Los viajeros en dos grupos: los del guion (en su orden) y los demás del
+ * catálogo. Los grupos vacíos no salen.
+ */
+export function gruposViajeros(viajeros: PersonajeMostrado[], delGuion: PersonajeMostrado[]) {
+  const enGuion = new Set(delGuion.filter((p) => p.tipo === 'traveller').map((p) => p.id));
+  return [
+    { tipo: 'viajeros-guion', titulo: 'Del guion', personajes: viajeros.filter((p) => enGuion.has(p.id)) },
+    { tipo: 'viajeros-otros', titulo: enGuion.size > 0 ? 'Otros viajeros' : 'Viajeros', personajes: viajeros.filter((p) => !enGuion.has(p.id)) },
+  ].filter((g) => g.personajes.length > 0);
+}
+
+/**
+ * Un recordatorio «Is The …» (el del Borracho, el Alquimista, el Filósofo, la
+ * Marioneta o el Aprendiz): dice quién es de verdad el de esa ficha, aunque lleve
+ * otro personaje (el que cree ser, o la habilidad que ha ganado). Se mira su
+ * texto original, que es el mismo en cualquier idioma.
+ */
+export const esRecordatorioDeIdentidad = (r: SalaRecordatorio) => /^is the\b/i.test(r.texto.trim());
+
+/**
+ * Quién es de verdad el de un asiento: el personaje de su «Is The …» (el último)
+ * o, sin él, el de su ficha. Solo lo sabe quien ve los recordatorios (el
+ * grimorio): a los jugadores no les llegan.
+ */
+export function identidadDe(asiento: SalaAsiento): { personaje: string | null; porRecordatorio: boolean } {
+  const r = [...(asiento.recordatorios ?? [])].reverse().find(esRecordatorioDeIdentidad);
+  return r ? { personaje: r.personaje, porRecordatorio: true } : { personaje: asiento.personaje, porRecordatorio: false };
+}
+
+/**
+ * El alineamiento del asiento: el que haya puesto el narrador o, si no, el de
+ * quien es de verdad (un Alquimista con la ficha de un esbirro es bueno; una
+ * Marioneta con la de un aldeano, malvada). Un viajero de verdad (el Aprendiz)
+ * es del bando de la habilidad que gana: el de su ficha. null: el de su ficha.
+ */
+export function alineamientoReal(asiento: SalaAsiento, porId: Map<string, PersonajeMostrado>): SalaAlineamiento | null {
+  if (asiento.alineamiento) return asiento.alineamiento;
+  const { personaje, porRecordatorio } = identidadDe(asiento);
+  const real = porRecordatorio && personaje ? porId.get(personaje) : undefined;
+  if (!real) return null;
+  if (real.tipo === 'traveller') {
+    const ficha = asiento.personaje ? porId.get(asiento.personaje) : undefined;
+    return ficha ? alineamientoDeTipo(ficha.tipo) : null;
+  }
+  return alineamientoDeTipo(real.tipo);
+}

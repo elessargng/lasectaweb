@@ -37,8 +37,8 @@ export class VideollamadaService {
   /** Lo último que se le dijo al servidor de vídeo, para no repetirlo. */
   private permisosMesa = new Map<string, string>();
   private miembrosVistos = new Map<string, string[]>();
-  /** Si cada uno habla o escucha en cada conversación («conversación|id»), para cambiar sus permisos. */
-  private papelesVistos = new Map<string, 'habla' | 'escucha'>();
+  /** Los permisos de cada uno en cada conversación («conversación|id»), para cambiarlos cuando cambien. */
+  private permisosVistos = new Map<string, string>();
 
   constructor(
     private readonly proveedor: ProveedorVideo,
@@ -46,12 +46,22 @@ export class VideollamadaService {
     private readonly conversaciones: ConversacionService,
   ) {}
 
-  /** Los permisos en la mesa de alguien, según su papel, la fase y si conversa en privado. */
+  /** Si alguien tiene que callar: un jugador, con el silencio pedido (los narradores siguen hablando). */
+  private callado(id: string): boolean {
+    return this.sala.silencio() && this.sala.buscar(id)?.rol === 'jugador';
+  }
+
+  /** Los permisos en la mesa de alguien, según su papel, la fase, si conversa en privado y el silencio. */
   private permisosEnMesa(id: string): PermisosVideo {
     const p = this.sala.buscar(id);
     // Quien está en una conversación (hablando o escuchando) no emite en la mesa
     const emite = !!p && (p.rol === 'jugador' || p.rol === 'narrador') && !this.conversaciones.deParticipante(id);
-    return { publicar: emite, camara: this.sala.fase().momento !== 'noche' };
+    return { publicar: emite, camara: this.sala.fase().momento !== 'noche', microfono: !this.callado(id) };
+  }
+
+  /** Los permisos en una conversación: los miembros hablan y se ven (salvo el silencio); los oyentes, no. */
+  private permisosEnConversacion(id: string, habla: boolean): PermisosVideo {
+    return { publicar: habla, camara: habla, microfono: habla && !this.callado(id) };
   }
 
   /**
@@ -69,7 +79,7 @@ export class VideollamadaService {
     if (!conversacion || conversacion.id !== cual) throw new VideollamadaError('No estás en esa conversación.');
     // Los miembros hablan y se ven; los oyentes (visitantes) solo escuchan y miran
     const habla = conversacion.miembros.includes(p.id);
-    const token = await this.proveedor.token(salaDeConversacion(cual), p.id, p.nombre, { publicar: habla, camara: habla });
+    const token = await this.proveedor.token(salaDeConversacion(cual), p.id, p.nombre, this.permisosEnConversacion(p.id, habla));
     return { url: this.proveedor.urlPublica, token };
   }
 
@@ -104,20 +114,21 @@ export class VideollamadaService {
     }
     this.miembrosVistos = actuales;
 
-    // Quien pasa de escuchar a hablar (un narrador que entra) o al revés, sin
-    // salir de la sala de vídeo: se le cambian los permisos ahí dentro.
-    const papeles = new Map<string, 'habla' | 'escucha'>();
+    // Quien pasa de escuchar a hablar (un narrador que entra) o al revés, o calla
+    // por el silencio, sin salir de la sala de vídeo: se le cambian los permisos ahí
+    // dentro. (Quien acaba de entrar ya los tiene en su pase.)
+    const permisos = new Map<string, { conversacion: string; id: string; permisos: PermisosVideo }>();
     for (const c of this.conversaciones.lista()) {
-      for (const m of c.miembros) papeles.set(`${c.id}|${m}`, 'habla');
-      for (const o of c.oyentes) papeles.set(`${c.id}|${o}`, 'escucha');
+      for (const m of c.miembros) permisos.set(`${c.id}|${m}`, { conversacion: c.id, id: m, permisos: this.permisosEnConversacion(m, true) });
+      for (const o of c.oyentes) permisos.set(`${c.id}|${o}`, { conversacion: c.id, id: o, permisos: this.permisosEnConversacion(o, false) });
     }
-    for (const [clave, papel] of papeles) {
-      const antes = this.papelesVistos.get(clave);
-      if (!antes || antes === papel) continue;
-      const [conversacion, id] = clave.split('|');
-      const habla = papel === 'habla';
-      void this.proveedor.cambiarPermisos(salaDeConversacion(conversacion), id, { publicar: habla, camara: habla });
+    const vistos = new Map<string, string>();
+    for (const [clave, { conversacion, id, permisos: p }] of permisos) {
+      const ahora = JSON.stringify(p);
+      vistos.set(clave, ahora);
+      const antes = this.permisosVistos.get(clave);
+      if (antes && antes !== ahora) void this.proveedor.cambiarPermisos(salaDeConversacion(conversacion), id, p);
     }
-    this.papelesVistos = papeles;
+    this.permisosVistos = vistos;
   }
 }

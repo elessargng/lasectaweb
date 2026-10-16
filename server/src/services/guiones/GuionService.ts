@@ -6,6 +6,7 @@ import {
   Personaje,
   PersonajeDeGuion,
   PersonajePropio,
+  TIPOS_NPC,
 } from '../../types/guiones';
 import { GuionInvalidoError } from './errores';
 import { leerGuionJson } from './lectorGuionJson';
@@ -41,7 +42,7 @@ export class GuionService {
     const personajes = await this.personajes.listarPorEdicion(guion.id, TIPOS_BASE);
     if (personajes.length === 0) throw new GuionInvalidoError('Todavía no se han cargado los personajes. Prueba en un rato.');
     return this.resolver(
-      { nombre: guion.nombre, autor: guion.autor, entradas: personajes.map((p) => p.id) },
+      { nombre: guion.nombre, autor: guion.autor, entradas: personajes.map((p) => p.id), bootlegger: [] },
       guion.id,
     );
   }
@@ -64,13 +65,29 @@ export class GuionService {
         .filter((p) => p.orden[cual] !== null)
         .sort((a, b) => a.orden[cual]! - b.orden[cual]!)
         .map((p) => p.personaje.id);
+    const personajes = conOrden.map((p) => p.personaje);
+    // Los legendarios y lóricos del catálogo que no trae el guion (por tipo y nombre)
+    const enGuion = new Set(personajes.map((p) => p.id));
+    const catalogo = (await this.personajes.listar()).filter((p) => !enGuion.has(p.id));
+    const npcs = catalogo
+      .filter((p) => TIPOS_NPC.includes(p.tipo))
+      .sort((a, b) => TIPOS_NPC.indexOf(a.tipo) - TIPOS_NPC.indexOf(b.tipo) || a.nombre.localeCompare(b.nombre))
+      .map((p) => deCatalogo(p.id, p).personaje);
+    // Y los viajeros que no trae (por nombre)
+    const viajeros = catalogo
+      .filter((p) => p.tipo === 'traveller')
+      .sort((a, b) => a.nombre.localeCompare(b.nombre))
+      .map((p) => deCatalogo(p.id, p).personaje);
     return {
       nombre: guion.nombre,
       autor: guion.autor,
       edicion,
-      personajes: conOrden.map((p) => p.personaje),
+      personajes,
       primeraNoche: noche('primera'),
       otrasNoches: noche('otras'),
+      npcs,
+      viajeros,
+      bootlegger: guion.bootlegger,
     };
   }
 }

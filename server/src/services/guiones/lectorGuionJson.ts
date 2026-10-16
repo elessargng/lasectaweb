@@ -57,6 +57,7 @@ export function leerGuionJson(contenido: unknown, nombrePorDefecto = 'Guion'): G
 
   let nombre = texto(nombrePorDefecto, 100) ?? 'Guion';
   let autor: string | null = null;
+  let bootlegger: string[] = [];
   const entradas: GuionImportado['entradas'] = [];
   for (const elemento of datos) {
     if (typeof elemento === 'string') {
@@ -69,6 +70,9 @@ export function leerGuionJson(contenido: unknown, nombrePorDefecto = 'Guion'): G
     if (e.id === '_meta') {
       nombre = texto(e.name, 100) ?? nombre;
       autor = texto(e.author, 100);
+      // Las reglas del Bootlegger: una lista de textos (o uno solo)
+      const reglas = Array.isArray(e.bootlegger) ? e.bootlegger : [e.bootlegger];
+      bootlegger = reglas.map((r) => texto(r, 600)).filter((r): r is string => !!r).slice(0, 20);
       continue;
     }
     if (e.name !== undefined || e.ability !== undefined) {
@@ -82,5 +86,5 @@ export function leerGuionJson(contenido: unknown, nombrePorDefecto = 'Guion'): G
   }
   if (entradas.length === 0) throw new GuionInvalidoError('El guion no tiene personajes.');
   if (entradas.length > MAX_ENTRADAS) throw new GuionInvalidoError(`Un guion no puede tener más de ${MAX_ENTRADAS} personajes.`);
-  return { nombre, autor, entradas };
+  return { nombre, autor, entradas, bootlegger };
 }

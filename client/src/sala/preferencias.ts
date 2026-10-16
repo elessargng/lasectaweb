@@ -27,8 +27,12 @@ export interface PreferenciasSala {
    * pulsar «Salir». Pestaña Comunicaciones; de entrada, no: se sale a mano.
    */
   salirConversacionSinNadie: boolean;
-  /** El panel de mensajes de texto, plegado. */
-  chatMinimizado: boolean;
+  /** Lo que se ve en la columna de la izquierda (ver ColumnaLateral). */
+  panelLateral: PanelLateral;
+  /** La columna de la izquierda contraída: solo su barra de iconos. */
+  panelLateralContraido: boolean;
+  /** Los faroles fijados arriba de la columna, se vea el panel que se vea. */
+  farolesFijados: boolean;
   /** Idioma (id del paquete de traducción) de los nombres de los personajes. Pestaña Usuario. */
   idiomaNombres: string;
   /** Idioma de las habilidades y los recordatorios de los personajes. Pestaña Usuario. */
@@ -41,7 +45,11 @@ export interface PreferenciasSala {
 }
 
 type ClaveNumerica = 'tamanoAvatar' | 'tamanoFicha' | 'distanciaFicha';
-type ClaveSiNo = 'avatarAuto' | 'fichaAuto' | 'sonidos' | 'salirConversacionSinNadie' | 'chatMinimizado';
+type ClaveSiNo = 'avatarAuto' | 'fichaAuto' | 'sonidos' | 'salirConversacionSinNadie' | 'panelLateralContraido' | 'farolesFijados';
+
+/** Los paneles de la columna de la izquierda: uno a la vez, elegido en su barra de iconos. */
+export const PANELES_LATERALES = ['mensajes', 'conversaciones', 'npcs', 'faroles'] as const;
+export type PanelLateral = (typeof PANELES_LATERALES)[number];
 type ClaveIdioma = 'idiomaNombres' | 'idiomaDescripciones';
 
 /** De entrada, el original (inglés). Si el guardado deja de existir, se ve en el original. */
@@ -68,7 +76,8 @@ const SI_NO: Record<ClaveSiNo, boolean> = {
   fichaAuto: true,
   sonidos: true,
   salirConversacionSinNadie: false,
-  chatMinimizado: false,
+  panelLateralContraido: false,
+  farolesFijados: false,
 };
 
 /** Lo que guardaba antes la sala en el navegador (para llevarlo a la cuenta la primera vez). */
@@ -95,6 +104,9 @@ export function normalizarPreferencias(datos: unknown): PreferenciasSala {
     preferencias[clave] = esIdIdioma(valor) ? valor : IDIOMA_DEFECTO;
   }
   preferencias.genero = guardadas.genero === 'femenino' ? 'femenino' : 'masculino';
+  preferencias.panelLateral = (PANELES_LATERALES as readonly unknown[]).includes(guardadas.panelLateral)
+    ? (guardadas.panelLateral as PanelLateral)
+    : 'mensajes';
   // Los dispositivos: un id del navegador, o vacío (el predeterminado del sistema)
   const idDispositivo = (v: unknown) => (typeof v === 'string' && v.length <= 200 ? v : '');
   preferencias.idCamara = idDispositivo(guardadas.idCamara);

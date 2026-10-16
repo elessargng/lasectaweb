@@ -1,4 +1,4 @@
-import { Mic, MicOff, Video, VideoOff, Volume2, VolumeX, X } from 'lucide-react';
+import { BookLock, Mic, MicOff, Video, VideoOff, Volume2, VolumeX, X } from 'lucide-react';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario } from './estilos';
 import type { ProblemaDispositivo } from './useVideollamada';
@@ -22,6 +22,10 @@ interface ControlesVideoProps {
   onCerrarProblema: () => void;
   sonidoBloqueado: boolean;
   onActivarSonido: () => void;
+  /** El narrador ha pedido silencio: el micrófono no se puede usar (y dice por qué). */
+  silenciado: boolean;
+  /** Narradores, con el Bibliotecario del Infierno en juego: pedir silencio a todos o levantarlo; null si no. */
+  silencio: { activo: boolean; onAlternar: () => void } | null;
 }
 
 const NOMBRES = { camara: 'la cámara', microfono: 'el micrófono' };
@@ -75,6 +79,8 @@ const ControlesVideo = ({
   onCerrarProblema,
   sonidoBloqueado,
   onActivarSonido,
+  silenciado,
+  silencio,
 }: ControlesVideoProps) => {
   const ariaLive = useAriaLive('errores');
   const info = problema && explicacion(problema);
@@ -91,13 +97,20 @@ const ControlesVideo = ({
           <button
             type="button"
             aria-label="Micrófono"
-            aria-pressed={microfono}
+            aria-pressed={microfono && !silenciado}
             aria-keyshortcuts={teclaMicrofono}
-            onClick={onMicrofono}
-            className={boton(microfono)}
+            aria-disabled={silenciado}
+            aria-describedby={silenciado ? 'sala-microfono-silencio' : undefined}
+            onClick={silenciado ? undefined : onMicrofono}
+            className={boton(microfono && !silenciado)}
           >
-            {microfono ? <Mic size={18} /> : <MicOff size={18} />}
+            {microfono && !silenciado ? <Mic size={18} /> : <MicOff size={18} />}
           </button>
+          {silenciado && (
+            <span id="sala-microfono-silencio" className="sr-only">
+              El narrador ha pedido silencio.
+            </span>
+          )}
           <button
             type="button"
             aria-label="Cámara"
@@ -116,6 +129,21 @@ const ControlesVideo = ({
             </span>
           )}
         </>
+      )}
+      {/* Pedir silencio a todos (narradores, con el Bibliotecario del Infierno): un interruptor;
+          pulsado, en sangre (los jugadores no pueden hablar) */}
+      {silencio && (
+        <button
+          type="button"
+          aria-label="Pedir silencio"
+          aria-pressed={silencio.activo}
+          onClick={silencio.onAlternar}
+          className={`flex h-9 w-9 items-center justify-center rounded-full border focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
+            silencio.activo ? 'border-blood-bright bg-blood-deep text-blood-bright' : 'border-outline-ghost text-on-surface-muted hover:border-theme-main hover:text-on-surface'
+          }`}
+        >
+          <BookLock size={18} />
+        </button>
       )}
       {/* Oír a los demás (o dejar de oírlos): para todos */}
       <button type="button" aria-label="Sonido" aria-pressed={sonido} onClick={onSonido} className={boton(sonido)}>

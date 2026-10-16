@@ -467,6 +467,11 @@ export const BotoneraDespertar = ({
   const iniciales = (tarjeta?: string): Pendiente['iniciales'] => {
     if (tarjeta === 'demonio') return { jugadores: asientosDeTipo('demon') };
     if (tarjeta === 'esbirros') return { jugadores: asientosDeTipo('minion') };
+    // «No están en juego»: los faroles que el narrador ha preparado para el demonio
+    if (tarjeta === 'noEnJuego') {
+      const faroles = estado.faroles.filter((id): id is string => !!id && porId.has(id));
+      return faroles.length > 0 ? { personajes: faroles } : undefined;
+    }
     if (tarjeta === 'tuEres') {
       const asiento = estado.asientos.find((a) => a.id === asientoId);
       const personaje = asiento?.personaje ? porId.get(asiento.personaje) : undefined;

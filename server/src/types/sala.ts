@@ -64,7 +64,16 @@ export interface SalaAsiento {
    * no los jugadores, ni en su propia ficha.
    */
   recordatorios: SalaRecordatorio[];
+  /**
+   * Los faroles que el jugador de este asiento se ha puesto (o ha copiado de
+   * los del narrador): siempre 3 casillas, cada una un id de personaje o null.
+   * Los ven quien se sienta ahí y quien ve el personaje del asiento.
+   */
+  faroles: (string | null)[];
 }
+
+/** Cuántos faroles hay: los del narrador y los de cada asiento. */
+export const NUM_FAROLES = 3;
 
 /** Una ficha recordatorio: de qué personaje es (su icono) y cuál de sus recordatorios. */
 export interface SalaRecordatorio {
@@ -283,6 +292,34 @@ export interface SalaEstado {
   distribucion: SalaDistribucion;
   /** Los personajes metidos en la bolsa (ids); solo se manda a los narradores. */
   bolsa: string[];
+  /**
+   * Los faroles que el narrador ha preparado para el demonio (3 casillas, id de
+   * personaje o null). Se mandan a los narradores y a los visitantes.
+   */
+  faroles: (string | null)[];
+  /** Los NPCs de la partida (legendarios y lóricos, ids), en el orden en que se añadieron. Para todos. */
+  npcs: string[];
+  /**
+   * El reparto que un narrador ha dado por bueno aunque no cuadre con las reglas
+   * (su firma, la calcula el cliente: «7:5/0/1/1»), o null. Si el reparto cambia,
+   * deja de valer solo. Solo se manda a los narradores.
+   */
+  setupAceptado: string | null;
+  /**
+   * El narrador ha pedido silencio (con el Bibliotecario del Infierno en juego):
+   * los jugadores no pueden emitir su micrófono, ni en la mesa ni en las
+   * conversaciones. Para todos.
+   */
+  silencio: boolean;
+  /** Las reglas del Bootlegger: las del guion o las que ha escrito el narrador. Para todos. */
+  bootlegger: string[];
+  /** El personaje bueno que el narrador ha nombrado con el Storm Catcher (id), o null. Para todos. */
+  rolStormcatcher: string | null;
+  /**
+   * Con el Gardener: los personajes ya repartidos aún no se entregan (los jugadores
+   * no ven ni el suyo) hasta que el narrador pulsa el Gardener. Para todos.
+   */
+  fichasRetenidas: boolean;
   /** Revelando el grimorio (final de la partida), o null. */
   revelacion: SalaRevelacion | null;
   /** Hay videollamada (cámaras y micrófonos) en esta sala. */

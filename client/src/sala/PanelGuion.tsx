@@ -316,7 +316,8 @@ const conMarcas = (texto: string): ReactNode =>
   ));
 
 /**
- * Una fila: icono, nombre (con su color) y, en completo, el texto. Cada uno con
+ * Una fila: en el orden de noche, primero la ficha recordatorio (para el narrador);
+ * luego icono, nombre (con su color) y, en completo, el texto. Cada uno con
  * su `lang`, que pueden ir en idiomas distintos (las entradas fijas, en castellano).
  */
 const Fila = ({
@@ -335,22 +336,8 @@ const Fila = ({
 }) => (
   // Sin texto (resumido), el nombre centrado con el icono; con texto, arriba
   <li className={`flex gap-3 py-1.5 ${texto?.texto ? 'items-start' : 'items-center'}`}>
-    {icono}
-    <p className="min-w-0 flex-1">
-      <span className={`font-bold tracking-wide ${color}`} lang={nombre.lang}>
-        {nombre.texto}
-      </span>
-      {texto?.texto && (
-        <>
-          <span className="sr-only">: </span>
-          <span className="block text-sm leading-snug text-[#3a3027]" lang={texto.lang}>
-            {conMarcas(texto.texto)}
-          </span>
-        </>
-      )}
-    </p>
     {recordatorio && (
-      // La ficha recordatorio de noche de botc.app (public/noche/actua.webp). Sin ella, un
+      // A la izquierda del rol. La ficha recordatorio de noche de botc.app (public/noche/actua.webp). Sin ella, un
       // hueco punteado donde ponerla. El lector oye «Recordatorio de Imp, presionado» o no.
       <button
         type="button"
@@ -368,6 +355,20 @@ const Fila = ({
         )}
       </button>
     )}
+    {icono}
+    <p className="min-w-0 flex-1">
+      <span className={`font-bold tracking-wide ${color}`} lang={nombre.lang}>
+        {nombre.texto}
+      </span>
+      {texto?.texto && (
+        <>
+          <span className="sr-only">: </span>
+          <span className="block text-sm leading-snug text-[#3a3027]" lang={texto.lang}>
+            {conMarcas(texto.texto)}
+          </span>
+        </>
+      )}
+    </p>
   </li>
 );
 
