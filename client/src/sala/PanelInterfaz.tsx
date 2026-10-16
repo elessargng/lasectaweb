@@ -3,7 +3,8 @@ import FichaRedonda from './FichaRedonda';
 import Mano from './Mano';
 import VistaPreviaJugador from './VistaPreviaJugador';
 import type { CSSProperties, ReactNode } from 'react';
-import { ESTILOS_CALAVERA, ESTILOS_MANO, MarcasContexto } from './marcas';
+import { Dices } from 'lucide-react';
+import { carpetaSilla, ESTILOS_CALAVERA, ESTILOS_MANO, ESTILOS_SILLA, MarcasContexto } from './marcas';
 import type { TamanosMesa } from './Mesa';
 import { RANGOS, type PreferenciasSala } from './preferencias';
 
@@ -25,7 +26,7 @@ function ElegirEstilo<T extends string>({ id, leyenda, estilos, valor, onCambiar
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="campo-etiqueta">{leyenda}</legend>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(6.25rem,1fr))] gap-2">
         {estilos.map((e) => (
           <div key={e.id}>
             <input
@@ -56,6 +57,14 @@ function ElegirEstilo<T extends string>({ id, leyenda, estilos, valor, onCambiar
     </fieldset>
   );
 }
+
+/** La muestra de «Al azar»: una ficha con unos dados de latón. */
+const MuestraAzar = () => (
+  <span className="relative block">
+    <FichaRedonda />
+    <Dices size="55%" strokeWidth={1.5} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-hoja-tinta" />
+  </span>
+);
 
 interface PanelInterfazProps {
   /** Para la vista previa: el nombre con el que apareces en la sala. */
@@ -123,12 +132,16 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, onCambiar }: PanelIn
       estilos={ESTILOS_CALAVERA}
       valor={preferencias.calavera}
       onCambiar={(calavera) => onCambiar({ calavera })}
-      muestra={(calavera) => (
-        // La ficha marcada, con esta calavera
-        <MarcasContexto.Provider value={{ calavera, mano: preferencias.mano }}>
-          <FichaRedonda marcado />
-        </MarcasContexto.Provider>
-      )}
+      muestra={(calavera) =>
+        calavera === 'azar' ? (
+          <MuestraAzar />
+        ) : (
+          // La ficha marcada, con esta calavera
+          <MarcasContexto.Provider value={{ calavera, mano: 'laton', silla: 'clasica' }}>
+            <FichaRedonda marcado />
+          </MarcasContexto.Provider>
+        )
+      }
     />
     <ElegirEstilo
       id="sala-pref-mano"
@@ -136,32 +149,37 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, onCambiar }: PanelIn
       estilos={ESTILOS_MANO}
       valor={preferencias.mano}
       onCambiar={(mano) => onCambiar({ mano })}
-      muestra={(mano) => (
-        // Como en la mesa: sobre la esquina de arriba a la derecha de la ficha
-        <span className="relative block">
-          <FichaRedonda />
-          <Mano forma="palma" estilo={mano} className="absolute -right-[8%] -top-[12%] w-[55%] drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]" />
-        </span>
-      )}
+      muestra={(mano) =>
+        mano === 'azar' ? (
+          <MuestraAzar />
+        ) : (
+          // Como en la mesa: sobre la esquina de arriba a la derecha de la ficha
+          <span className="relative block">
+            <FichaRedonda />
+            <Mano forma="palma" estilo={mano} className="absolute -right-[8%] -top-[12%] w-[55%] drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]" />
+          </span>
+        )
+      }
     />
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2">
-        <input
-          id="sala-pref-sonidos"
-          type="checkbox"
-          checked={preferencias.sonidos}
-          onChange={(e) => onCambiar({ sonidos: e.target.checked })}
-          aria-describedby="sala-pref-sonidos-ayuda"
-          className="h-4 w-4 accent-theme-main"
-        />
-        <label htmlFor="sala-pref-sonidos" className="text-sm">
-          Sonidos de la partida
-        </label>
-      </div>
-      <p id="sala-pref-sonidos-ayuda" className="text-xs text-on-surface-muted">
-        La cuenta atrás de las nominaciones, y al votar, un sonido por cada voto y un tic cuando alguien no vota.
-      </p>
-    </div>
+    <ElegirEstilo
+      id="sala-pref-silla"
+      leyenda="Silla de los asientos libres"
+      estilos={ESTILOS_SILLA}
+      valor={preferencias.silla}
+      onCambiar={(silla) => onCambiar({ silla })}
+      muestra={(silla) =>
+        silla === 'azar' ? (
+          <MuestraAzar />
+        ) : (
+          // Como en el asiento de arriba a la derecha de la mesa (en espejo), en su marco de retrato
+          <img
+            src={`${carpetaSilla(silla)}arriba-izquierda.webp`}
+            alt=""
+            className="sala-retrato block h-[var(--sala-ficha)] w-[var(--sala-ficha)] -scale-x-100 rounded-[3px] object-cover"
+          />
+        )
+      }
+    />
   </div>
 );
 

@@ -53,6 +53,8 @@ interface FichaAsientoProps {
   revelando?: { revelada: boolean; onRevelar?: () => void };
   /** Hay una nominación abierta: la ficha se gira y enseña la esfera del reloj. */
   reloj?: boolean;
+  /** Es de noche: matar deja la muerte pendiente y antes se elige quién mata (un recordatorio). */
+  deNoche?: boolean;
   /** El narrador puede despertar al jugador de esta ficha (de noche) o abrir su despertar si ya lo tiene. */
   despertar?: { abierto: boolean; onAbrir: () => void };
   /**
@@ -98,6 +100,7 @@ const FichaAsiento = ({
   eligiendo,
   voto,
   revelando,
+  deNoche = false,
   reloj = false,
   despertar,
   seguir,
@@ -106,6 +109,8 @@ const FichaAsiento = ({
   const { hayGuion, personajes, viajeros, porId, notas, anotar, todos, todosPorId, notasRecordatorios, anotarRecordatorios } = useFichas();
   const [eligiendoPersonaje, setEligiendoPersonaje] = useState(false);
   const [eligiendoRecordatorio, setEligiendoRecordatorio] = useState(false);
+  // Matando de noche: se elige el recordatorio de quien lo mata (o ninguno)
+  const [matando, setMatando] = useState(false);
   const recordatorios = recordatoriosDeFicha(asiento, modo === 'grimorio' ? notasRecordatorios : null);
 
   // Lo que lleva: lo de la partida si se ve (narrador, o la propia); si no, lo anotado en el grimorio propio.
@@ -131,6 +136,7 @@ const FichaAsiento = ({
     <span className="relative block">
       <FichaRedonda
         muerto={asiento.muerto}
+        muertePendiente={asiento.muertePendiente}
         marcado={asiento.marcado}
         voto={voto}
         bocaAbajo={bocaAbajo}
@@ -183,6 +189,7 @@ const FichaAsiento = ({
   const estado = [
     personaje && `${personaje.nombre.texto}${alineamientoDistinto ? `, ${NOMBRE_ALINEAMIENTO[contenido.alineamiento!]}` : ''}`,
     asiento.muerto && 'muerta',
+    asiento.muertePendiente && 'muerta esta noche, sin anunciar',
     asiento.marcado && 'con la calavera',
     ocupante?.manoLevantada && `mano levantada (${nombreMano(ocupante.formaMano).toLocaleLowerCase('es')})`,
     voto === null && 'no vota',
@@ -218,10 +225,29 @@ const FichaAsiento = ({
     );
   }
 
+  // Revivir quita también una muerte pendiente
+  const vivo = !asiento.muerto && !asiento.muertePendiente;
   const cambiarVida = async () => {
-    const r = await pedir('narrador:cambiarVida', { asientoId: asiento.id, muerto: !asiento.muerto });
+    const r = await pedir('narrador:cambiarVida', { asientoId: asiento.id, muerto: vivo });
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha, que ya dice su estado.
+    return false;
+  };
+  // De noche: primero el recordatorio de quien lo mata; la muerte queda pendiente
+  const matarDeNoche = async (recordatorio: { personaje: PersonajeMostrado; indice: number } | null) => {
+    if (recordatorio) {
+      const r = await pedir('narrador:ponerRecordatorio', { asientoId: asiento.id, personajeId: recordatorio.personaje.id, indice: recordatorio.indice });
+      if (!r.ok) {
+        onError(r.error);
+        return;
+      }
+    }
+    const r = await pedir('narrador:cambiarVida', { asientoId: asiento.id, muerto: true });
+    if (!r.ok) onError(r.error);
+  };
+  const confirmarMuerte = async () => {
+    const r = await pedir('narrador:confirmarMuerte', { asientoId: asiento.id });
+    if (!r.ok) onError(r.error);
     return false;
   };
 
@@ -290,7 +316,10 @@ const FichaAsiento = ({
   const opciones: OpcionMenu[] =
     modo === 'narrador'
       ? [
-          { id: 'vida', etiqueta: asiento.muerto ? `Revivir ${quien}` : `Matar ${quien}`, elegir: cambiarVida },
+          vivo && deNoche
+            ? { id: 'vida', etiqueta: `Matar ${quien}`, abreDialogo: true, elegir: () => setMatando(true) }
+            : { id: 'vida', etiqueta: vivo ? `Matar ${quien}` : `Revivir ${quien}`, elegir: cambiarVida },
+          ...(asiento.muertePendiente ? [{ id: 'anunciar', etiqueta: 'Anunciar su muerte', elegir: confirmarMuerte }] : []),
           { id: 'marca', etiqueta: asiento.marcado ? 'Desmarcar' : 'Marcar', elegir: cambiarMarca },
           onNominar
             ? { id: 'nominar', etiqueta: 'Nominar a…', elegir: onNominar }
@@ -344,6 +373,18 @@ const FichaAsiento = ({
           otros={todos.filter((p) => !enJuego.has(p.id))}
           onElegir={(p, i) => void ponerRecordatorio(p, i)}
           onCerrar={() => setEligiendoRecordatorio(false)}
+        />
+      )}
+      {matando && (
+        <DialogoRecordatorio
+          ficha={nombreFicha.replace(/^Ficha del /, '')}
+          titulo="Matar de noche"
+          explicacion="Elige el recordatorio de quien lo mata. Su muerte no se verá hasta que la anuncies de día, pulsando su sudario."
+          enJuego={todos.filter((p) => enJuego.has(p.id))}
+          otros={todos.filter((p) => !enJuego.has(p.id))}
+          onElegir={(p, i) => void matarDeNoche({ personaje: p, indice: i })}
+          sinRecordatorio={{ etiqueta: 'Matar sin recordatorio', onElegir: () => void matarDeNoche(null) }}
+          onCerrar={() => setMatando(false)}
         />
       )}
       {eligiendoPersonaje && (

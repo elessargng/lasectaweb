@@ -15,6 +15,8 @@ interface CuadroAvatarProps {
   pie?: ReactNode;
   /** Cuadro sin nadie: borde discontinuo. */
   vacio?: boolean;
+  /** Jugador muerto: su avatar o su cámara, en escala de grises. */
+  apagado?: boolean;
   /**
    * El pie va fuera de la caja del componente, que mide solo el cuadro, para
    * colocarlo por su centro (asientos de la mesa): encima (jugadores, porque
@@ -30,7 +32,7 @@ interface CuadroAvatarProps {
  *
  * La imagen no se lee (alt vacío): el pie dice de quién es.
  */
-const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, pieFuera }: CuadroAvatarProps) => (
+const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, apagado = false, pieFuera }: CuadroAvatarProps) => (
   <div className="relative w-[var(--sala-avatar,10rem)]">
     {titulo && (
       <div className="mb-1 text-center leading-none">
@@ -44,7 +46,9 @@ const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, pi
     {/* Un marco de retrato con doble filo de latón (sala-retrato); vacío, discontinuo */}
     <div
       data-vacio={vacio}
-      className={`sala-retrato flex aspect-square w-full items-center justify-center overflow-hidden rounded-[3px] ${vacio ? 'p-2' : ''}`}
+      className={`sala-retrato flex aspect-square w-full items-center justify-center overflow-hidden rounded-[3px] [&_img]:transition-[filter] [&_img]:duration-700 [&_video]:transition-[filter] [&_video]:duration-700 motion-reduce:[&_img]:transition-none motion-reduce:[&_video]:transition-none ${
+        vacio ? 'p-2' : ''
+      } ${apagado ? '[&_img]:grayscale [&_video]:grayscale' : ''}`}
     >
       {contenido ?? (imagen && <img src={getAvatarUrl(imagen)} alt="" className="h-full w-full object-cover" />)}
     </div>

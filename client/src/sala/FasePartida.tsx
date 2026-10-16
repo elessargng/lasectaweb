@@ -18,13 +18,12 @@ const FasePartida = ({ fase }: { fase: SalaFase }) => {
         ? 'border-grimorio-bright/50 bg-grimorio/35'
         : 'border-gold/35 bg-background/50'
   }`;
-  const contenido = (
-    <>
+  return (
+    <p className={clases}>
       <Icono size={16} className={fase.momento === 'noche' ? 'text-grimorio-bright' : 'text-gold-bright'} />
       {nombreFase(fase)}
-    </>
+    </p>
   );
-  return <p className={clases}>{contenido}</p>;
 };
 
 export default FasePartida;

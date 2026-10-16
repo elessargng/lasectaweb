@@ -242,6 +242,18 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
+  /** Cualquiera dice si ha quitado el sonido (no oye a los demás). datos: { sinSonido: boolean }. */
+  'sala:sonido': {
+    puede: cualquiera,
+    noPuede: '',
+    hacer: (sala, yo, datos) => {
+      const sinSonido = (datos as { sinSonido?: unknown } | null)?.sinSonido;
+      if (typeof sinSonido !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
+      sala.cambiarSonido(yo.id, sinSonido);
+      return { ok: true };
+    },
+  },
+
   /** Un jugador levanta o baja la mano. datos: { levantada: boolean }. */
   'sala:levantarMano': {
     puede: (_sala, yo) => yo.rol === 'jugador',
@@ -975,7 +987,10 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
-  /** Mata o revive la ficha de un asiento (haya alguien sentado o no). datos: { asientoId, muerto: boolean }. */
+  /**
+   * Mata o revive la ficha de un asiento (haya alguien sentado o no). De noche, matar
+   * deja la muerte pendiente (ver SalaService.cambiarVida). datos: { asientoId, muerto: boolean }.
+   */
   'narrador:cambiarVida': {
     puede: (sala, yo) => yo.rol === 'narrador' && sala.asientos().length > 0,
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador puede matar o revivir.'),
@@ -984,6 +999,21 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       if (typeof asientoId !== 'string' || !sala.hayAsiento(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (typeof muerto !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
       sala.cambiarVida(asientoId, muerto);
+      return { ok: true };
+    },
+  },
+
+  /**
+   * Hace efectiva la muerte pendiente de un asiento (la de la noche): el narrador la
+   * anuncia y ya la ven todos. datos: { asientoId }.
+   */
+  'narrador:confirmarMuerte': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.asientos().some((a) => a.muertePendiente),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'No hay ninguna muerte por anunciar.' : 'Solo un narrador puede anunciar una muerte.'),
+    hacer: (sala, _yo, datos) => {
+      const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
+      if (typeof asientoId !== 'string' || !sala.hayAsiento(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      if (!sala.confirmarMuerte(asientoId)) return { ok: false, error: 'Esa ficha no tiene una muerte por anunciar.' };
       return { ok: true };
     },
   },

@@ -9,6 +9,7 @@ import type { PersonajeMostrado } from './guiones';
 import CasillaFarol from './CasillaFarol';
 import RejillaFichas from './RejillaFichas';
 import type { SalaAsiento, SalaResultado } from './useSala';
+import Interruptor from './Interruptor';
 
 interface DialogoFarolesProps {
   /** Los faroles del narrador (3 casillas). */
@@ -108,20 +109,9 @@ const DialogoFaroles = ({ faroles, bolsa, asientos, pedir, onCerrar }: DialogoFa
         </div>
 
         <div className="flex items-center justify-between gap-3 px-6 pt-4">
-          <label className="flex cursor-pointer items-center gap-3">
-            <input
-              type="checkbox"
-              role="switch"
-              checked={soloSinAsignar}
-              onChange={(e) => setSoloSinAsignar(e.target.checked)}
-              className="peer sr-only"
-            />
-            <span
-              aria-hidden="true"
-              className="relative h-5 w-9 shrink-0 rounded-full border border-outline-ghost bg-background transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-3.5 after:w-3.5 after:rounded-full after:bg-on-surface-muted after:transition-transform peer-checked:border-theme-main peer-checked:bg-theme-container peer-checked:after:translate-x-4 peer-checked:after:bg-theme-main peer-focus-visible:ring-2 peer-focus-visible:ring-theme-main motion-reduce:transition-none motion-reduce:after:transition-none"
-            />
-            <span className="font-ui text-sm">Solo roles sin asignar</span>
-          </label>
+          <Interruptor activo={soloSinAsignar} onCambiar={setSoloSinAsignar}>
+            Solo roles sin asignar
+          </Interruptor>
           <p className="text-sm text-on-surface-muted">
             <span className="tabular-nums">{faroles.filter(Boolean).length}</span> de 3
           </p>

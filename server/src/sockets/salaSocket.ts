@@ -122,15 +122,17 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
         asientos:
           yo.rol === 'narrador' || (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido')
             ? asientos
-            : asientos.map((a) =>
-                reveladas.has(a.id)
+            : asientos.map((a) => ({
+                // La muerte pendiente (de la noche, por anunciar) es del grimorio: los demás no la ven
+                ...(reveladas.has(a.id)
                   ? a
                   : retenidas
                     ? sinPersonaje(a)
                     : a.ocupante === yo.id
                       ? comoLaVeSuJugador(a)
-                      : comoLaVenTodos(a),
-              ),
+                      : comoLaVenTodos(a)),
+                muertePendiente: false,
+              })),
         configuracion,
         nominacion,
         fase: sala.fase(),

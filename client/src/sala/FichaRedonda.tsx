@@ -6,6 +6,8 @@ interface FichaRedondaProps {
   children?: ReactNode;
   /** Jugador muerto: lleva el sudario. */
   muerto?: boolean;
+  /** Muerto de noche, por anunciar: el sudario, semitransparente (solo lo ve quien ve el grimorio). */
+  muertePendiente?: boolean;
   /** Lleva la marca de la calavera (nominación). */
   marcado?: boolean;
   /** En una votación: los votos acumulados si votó, null (✗) si no; sin definir si aún no le ha tocado. */
@@ -39,7 +41,7 @@ interface FichaRedondaProps {
  *
  * Solo visual: quien la use dice para el lector de quién es y si está muerto.
  */
-const FichaRedonda = ({ children, muerto = false, marcado = false, voto, bocaAbajo = false, reloj = false, asomar = false }: FichaRedondaProps) => (
+const FichaRedonda = ({ children, muerto = false, muertePendiente = false, marcado = false, voto, bocaAbajo = false, reloj = false, asomar = false }: FichaRedondaProps) => (
   // span (de bloque) y no div: la ficha puede ir dentro de un botón
   <span className="relative block aspect-square w-[var(--sala-ficha,4.5rem)] [perspective:40rem]">
     <span
@@ -71,13 +73,16 @@ const FichaRedonda = ({ children, muerto = false, marcado = false, voto, bocaAba
         }}
       />
     </span>
-    {muerto && (
+    {(muerto || muertePendiente) && (
       // Sudario (el de botc.app, copia local en public/sudario.webp): de un poco
-      // por encima de la ficha (-6%) hasta su mitad (50%), con su proporción
+      // por encima de la ficha (-6%) hasta su mitad (50%), con su proporción.
+      // Semitransparente si la muerte (de la noche) aún no se ha anunciado
       <img
         src="/sudario.webp"
         alt=""
-        className="absolute left-1/2 top-[-6%] h-[56%] w-auto -translate-x-1/2 drop-shadow-[0_2px_2px_rgba(0,0,0,0.6)]"
+        className={`absolute left-1/2 top-[-6%] h-[56%] w-auto -translate-x-1/2 drop-shadow-[0_2px_2px_rgba(0,0,0,0.6)] ${
+          muerto ? '' : 'opacity-45'
+        }`}
       />
     )}
     {marcado && !bocaAbajo && (

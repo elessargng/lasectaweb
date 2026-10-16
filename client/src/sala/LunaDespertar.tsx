@@ -1,14 +1,16 @@
 import { useId } from 'react';
-import { LUNA_CARA, LUNA_CARA_DETALLES } from './trazos';
+import { LUNA_CARA, LUNA_CARA_DETALLES, PULGAR_ARRIBA } from './trazos';
 
 /**
  * La luna del despertar sobre la ficha: creciente con cara, color hueso con
  * contorno de tinta; `nueva` (mensajes sin ver), dorada y con un halo quieto.
+ * `entendido` (el jugador ha contestado «Entendido» y el narrador no le ha vuelto
+ * a escribir): un pulgar arriba en lugar de la luna, igual de grande.
  * Solo el dibujo recibe el ratón (y un margen alrededor del contorno): el resto
  * de la ficha sigue siendo de la ficha. Solo visual: el botón que la lleva dice
  * qué es.
  */
-const LunaDespertar = ({ nueva, className = '' }: { nueva: boolean; className?: string }) => {
+const LunaDespertar = ({ nueva, entendido = false, className = '' }: { nueva: boolean; entendido?: boolean; className?: string }) => {
   const id = useId();
   return (
     <svg
@@ -26,25 +28,43 @@ const LunaDespertar = ({ nueva, className = '' }: { nueva: boolean; className?: 
           <stop offset="1" stopColor="#9c7536" />
         </linearGradient>
       </defs>
-      {/* Centrada en la ficha (el dibujo va de x = 13 a 90) */}
-      <g transform="translate(2 0)">
-        <path
-          d={LUNA_CARA}
-          fill={nueva ? `url(#${id}-oro)` : '#efe6d2'}
-          stroke="#2b1d0e"
-          strokeWidth="3.2"
-          strokeLinejoin="round"
-          paintOrder="stroke"
-          className="pointer-events-auto cursor-pointer"
-        />
-        <g fill="none" stroke="#2b1d0e" strokeLinecap="round" className="pointer-events-none">
-          <path d={LUNA_CARA_DETALLES.ojo} strokeWidth="1.7" />
-          <path d={LUNA_CARA_DETALLES.ceja} strokeWidth="1.4" />
-          <path d={LUNA_CARA_DETALLES.boca} strokeWidth="1.5" />
+      {entendido ? (
+        // El pulgar de la ficha «Entendido» (24 de lado), relleno de hueso y con su contorno de tinta
+        <g transform="translate(14 13) scale(3)">
+          <path
+            d={PULGAR_ARRIBA.mano}
+            fill={nueva ? `url(#${id}-oro)` : '#efe6d2'}
+            stroke="#2b1d0e"
+            strokeWidth="1.15"
+            strokeLinejoin="round"
+            className="pointer-events-auto cursor-pointer"
+          />
+          <path d={PULGAR_ARRIBA.puno} fill="none" stroke="#2b1d0e" strokeWidth="1.15" strokeLinecap="round" className="pointer-events-none" />
+          <path d={PULGAR_ARRIBA.mano} fill="none" stroke="transparent" strokeWidth="3" className="cursor-pointer [pointer-events:stroke]" />
         </g>
-        {/* Más margen para acertar en el contorno (sin pintar) */}
-        <path d={LUNA_CARA} fill="none" stroke="transparent" strokeWidth="8" className="cursor-pointer [pointer-events:stroke]" />
-      </g>
+      ) : (
+        <>
+          {/* Centrada en la ficha (el dibujo va de x = 13 a 90) */}
+          <g transform="translate(2 0)">
+            <path
+              d={LUNA_CARA}
+              fill={nueva ? `url(#${id}-oro)` : '#efe6d2'}
+              stroke="#2b1d0e"
+              strokeWidth="3.2"
+              strokeLinejoin="round"
+              paintOrder="stroke"
+              className="pointer-events-auto cursor-pointer"
+            />
+            <g fill="none" stroke="#2b1d0e" strokeLinecap="round" className="pointer-events-none">
+              <path d={LUNA_CARA_DETALLES.ojo} strokeWidth="1.7" />
+              <path d={LUNA_CARA_DETALLES.ceja} strokeWidth="1.4" />
+              <path d={LUNA_CARA_DETALLES.boca} strokeWidth="1.5" />
+            </g>
+            {/* Más margen para acertar en el contorno (sin pintar) */}
+            <path d={LUNA_CARA} fill="none" stroke="transparent" strokeWidth="8" className="cursor-pointer [pointer-events:stroke]" />
+          </g>
+        </>
+      )}
     </svg>
   );
 };

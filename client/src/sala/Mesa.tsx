@@ -79,7 +79,8 @@ interface MesaProps {
    * tienen mensajes sin ver y cómo abrir (o crear, de noche: solo el narrador) el
    * de un asiento. null para los demás.
    */
-  despertares: { hilos: Set<string>; noLeidos: Set<string>; onAbrir: (asientoId: string) => void } | null;
+  /** `entendidos`: los asientos cuyo jugador ha contestado «Entendido» (la luna pasa a pulgar arriba). */
+  despertares: { hilos: Set<string>; noLeidos: Set<string>; entendidos: Set<string>; onAbrir: (asientoId: string) => void } | null;
   /**
    * Visitantes y narradores: a quién siguen (id) y cómo seguir o dejar de seguir
    * al jugador de una ficha. null si no pueden seguir a nadie.
@@ -206,6 +207,7 @@ const Mesa = ({
       personaje: personaje?.nombre ?? null,
       marcado: a.marcado,
       muerto: a.muerto,
+      muertePendiente: a.muertePendiente,
       recordatorios: recordatoriosDe(a).map((r) => describirRecordatorio(r, todosPorId.get(r.personaje))),
     };
   };
@@ -274,6 +276,12 @@ const Mesa = ({
   // Gardener: entregar los personajes repartidos. El botón desaparece: el foco va al
   // nombre del primer asiento, y se confirma
   const gardener = todosPorId.get('gardener');
+  // Hace efectiva una muerte de la noche (el sudario semitransparente): ya la ven todos
+  const anunciarMuerte = async (asientoId: string) => {
+    const r = await pedir('narrador:confirmarMuerte', { asientoId });
+    if (!r.ok) onError(r.error);
+    else onAnuncio('muertes', `Muerte anunciada: ${nombreDeAsiento(estado, asientoId)}.`);
+  };
   const entregarFichas = async () => {
     const r = await pedir('narrador:entregarFichas');
     if (!r.ok) return onError(r.error);
@@ -456,6 +464,7 @@ const Mesa = ({
                   eligiendo={eligiendo}
                   voto={nominacion?.votacion?.resultados[a.id]}
                   reloj={!!nominacion && !revelacion}
+                  deNoche={estado.fase.momento === 'noche'}
                   despertar={despertarDe(a.id)}
                   seguir={seguir}
                   enJuego={enJuego}
@@ -468,6 +477,22 @@ const Mesa = ({
                       : undefined
                   }
                 />
+                {a.muertePendiente && acciones.includes('narrador:confirmarMuerte') && !editando && (
+                  // La muerte de la noche, por anunciar: el sudario semitransparente es un botón que
+                  // la hace efectiva (la ven todos). Al pasar el ratón o con el foco se ve ya entero.
+                  <button
+                    type="button"
+                    onClick={() => void anunciarMuerte(a.id)}
+                    className="group/sudario absolute left-1/2 top-[-6%] z-10 h-[56%] w-[42%] -translate-x-1/2 cursor-pointer rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+                  >
+                    <img
+                      src="/sudario.webp"
+                      alt=""
+                      className="mx-auto h-full w-auto opacity-0 drop-shadow-[0_0_6px_rgba(212,175,106,0.6)] transition-opacity group-hover/sudario:opacity-100 group-focus-visible/sudario:opacity-100 motion-reduce:transition-none"
+                    />
+                    <span className="sr-only">Anunciar la muerte de {nombreDeAsiento(estado, a.id)}</span>
+                  </button>
+                )}
                 {conLuna && despertares && (
                   // El despertar: una luna con cara sobre toda la ficha (como la calavera), color
                   // hueso con contorno de tinta; dorada y con un halo quieto (y lo dice) si el
@@ -479,9 +504,10 @@ const Mesa = ({
                     onClick={() => despertares.onAbrir(a.id)}
                     className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
                   >
-                    <LunaDespertar nueva={despertares.noLeidos.has(a.id)} className="w-[72%]" />
+                    <LunaDespertar nueva={despertares.noLeidos.has(a.id)} entendido={despertares.entendidos.has(a.id)} className="w-[72%]" />
                     <span className="sr-only">
-                      Despertar de {nombreDeAsiento(estado, a.id)}
+                      {a.ocupante === estado.yo ? 'Tu despertar' : `Despertar de ${nombreDeAsiento(estado, a.id)}`}
+                      {despertares.entendidos.has(a.id) ? ', entendido' : ''}
                       {despertares.noLeidos.has(a.id) ? ', mensajes nuevos' : ''}
                     </span>
                   </button>

@@ -1,4 +1,4 @@
-import { Link, MicOff } from 'lucide-react';
+import { Link, MicOff, VolumeX } from 'lucide-react';
 import { IconoConversar } from './IconosJuego';
 import type { VideoTrack } from 'livekit-client';
 import BotonesContacto, { JuntoAlTexto, type ContactoParticipante } from './BotonesContacto';
@@ -6,6 +6,7 @@ import VideoPista from './VideoPista';
 import CuadroAvatar from './CuadroAvatar';
 import { botonPrincipal } from './estilos';
 import { idNombreAsiento } from './ids';
+import { carpetaSilla, useMarcas } from './marcas';
 import type { ReactNode } from 'react';
 import type { Texto } from './guiones';
 import type { SalaParticipante } from './useSala';
@@ -48,12 +49,13 @@ interface AsientoProps {
    * Lo que lleva su ficha y ve quien mira (el personaje, si lo ve; la calavera;
    * el sudario). Se ve en la ficha; aquí es para el lector, en el nombre del asiento.
    */
-  ficha?: { personaje: Texto | null; marcado: boolean; muerto: boolean; recordatorios?: string[] };
+  ficha?: { personaje: Texto | null; marcado: boolean; muerto: boolean; muertePendiente?: boolean; recordatorios?: string[] };
 }
 
 /**
- * Las sillas vacías de botc.app (copias locales en public/sillas), una por
- * dirección, mirando al centro de la mesa. Las de la derecha son las de la
+ * Las sillas vacías, una por dirección, mirando al centro de la mesa: las de
+ * botc.app (copias locales en public/sillas) o las propias (public/sillas/<estilo>,
+ * con los mismos nombres; ver marcas.ts). Las de la derecha son las de la
  * izquierda en espejo.
  */
 const SILLAS: { imagen: string; espejo: boolean }[] = [
@@ -110,7 +112,7 @@ const Asiento = ({
   const sentarse = !ocupante && puedeSentarse;
   // La ficha, para el lector: «1, Paco, Lavandera, marca, muerte, recordatorios: …» (lo visual ya está en la ficha)
   const conRecordatorios = !!ficha?.recordatorios?.length;
-  const fichaParaLector = ficha && (ficha.personaje || ficha.marcado || ficha.muerto || conRecordatorios) && (
+  const fichaParaLector = ficha && (ficha.personaje || ficha.marcado || ficha.muerto || ficha.muertePendiente || conRecordatorios) && (
     <span className="sr-only">
       {ficha.personaje && (
         <>
@@ -119,10 +121,13 @@ const Asiento = ({
       )}
       {ficha.marcado && ', marca'}
       {ficha.muerto && ', muerte'}
+      {ficha.muertePendiente && ', muerte por anunciar'}
       {conRecordatorios && `, recordatorios: ${ficha.recordatorios!.join(', ')}`}
     </span>
   );
   const silla = sillaVacia(angulo);
+  // La silla que ha elegido cada uno (Preferencias > Interfaz): la clásica o una propia
+  const estiloSilla = useMarcas().silla;
 
   return (
     <div
@@ -139,6 +144,8 @@ const Asiento = ({
       )}
       <CuadroAvatar
         pieFuera={nombreAbajo ? 'abajo' : 'arriba'}
+        // Muerto: su avatar o su cámara, en gris (lo dice su ficha)
+        apagado={!!ocupante && !!ficha?.muerto}
         imagen={ocupante?.avatar}
         contenido={
           ocupante ? (
@@ -146,7 +153,7 @@ const Asiento = ({
           ) : (
             // La silla vacía no se lee: lo dice el pie («Asiento 3, libre»)
             <img
-              src={`/sillas/${silla.imagen}.webp`}
+              src={`${carpetaSilla(estiloSilla)}${silla.imagen}.webp`}
               alt=""
               className={`h-full w-full object-cover ${silla.espejo ? '-scale-x-100' : ''}`}
             />
@@ -178,6 +185,13 @@ const Asiento = ({
                     {ocupante.nombre}
                   </span>
                   {esYo && <span className="sr-only"> (tú)</span>}
+                  {ocupante.sinSonido && (
+                    // Ha quitado el sonido: no oye a la mesa
+                    <>
+                      <VolumeX size={13} className="ml-1 inline-block align-[-2px] text-blood-pale" />
+                      <span className="sr-only"> (sin sonido)</span>
+                    </>
+                  )}
                   {!ocupante.conectado && (
                     // Sin paréntesis a la vista: debajo, en pequeño (el lector oye «(desconectado)»)
                     <span className="block text-xs italic text-on-surface-muted">

@@ -1,4 +1,4 @@
-import { GripHorizontal, LogIn, Maximize2, MicOff, Minimize2, PhoneOff } from 'lucide-react';
+import { GripHorizontal, LogIn, Maximize2, MicOff, Minimize2, PhoneOff, VolumeX } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
 import { getAvatarUrl } from '../utils/api';
 import { botonSecundario } from './estilos';
@@ -13,6 +13,8 @@ interface VentanaConversacionProps {
   yo: string;
   /** Lo que se ve y se oye en la conversación, por participante. */
   pistas: Map<string, PistasParticipante>;
+  /** Los participantes cuyo jugador está muerto: su cámara o su avatar, en gris. */
+  muertos: Set<string>;
   onSalir: () => void;
   /** Narradores que escuchan: pasar a estar dentro (se les ve y se les oye). */
   onEntrar?: () => void;
@@ -45,6 +47,7 @@ const VentanaConversacion = ({
   participantes,
   yo,
   pistas,
+  muertos,
   onSalir,
   onEntrar,
   teclaSalir,
@@ -197,7 +200,7 @@ const VentanaConversacion = ({
               <span
                 className={`relative block w-full overflow-hidden rounded border bg-background ${
                   minimizada ? 'aspect-square' : 'aspect-video'
-                } ${suyas?.hablando ? 'border-transparent sala-habla' : 'border-outline-ghost'}`}
+                } ${suyas?.hablando ? 'border-transparent sala-habla' : 'border-outline-ghost'} ${muertos.has(p.id) ? '[&_img]:grayscale [&_video]:grayscale' : ''}`}
               >
                 {suyas?.video ? (
                   <VideoPista pista={suyas.video} espejo={soyYo} />
@@ -216,6 +219,12 @@ const VentanaConversacion = ({
                   {p.nombre}
                   {soyYo && <span className="sr-only"> (tú)</span>}
                 </span>
+                {p.sinSonido && (
+                  <>
+                    <VolumeX size={minimizada ? 11 : 14} className="shrink-0 text-blood-pale" />
+                    <span className="sr-only"> (sin sonido)</span>
+                  </>
+                )}
               </span>
             </li>
           );

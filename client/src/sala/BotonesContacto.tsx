@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
-import { LogIn, MessageSquare } from 'lucide-react';
-import { IconoConversar } from './IconosJuego';
+import { LogIn, MessageSquare, Phone } from 'lucide-react';
 
 /** Lo que se puede hacer con alguien desde su nombre: escribirle y conversar (si se puede). */
 export interface ContactoParticipante {
@@ -25,7 +24,7 @@ interface BotonesContactoProps extends ContactoParticipante {
 }
 
 const boton =
-  'flex h-6 w-6 items-center justify-center rounded-full border border-gold/60 bg-surface text-gold-bright shadow-[0_2px_6px_-2px_rgba(0,0,0,0.9)] hover:border-gold hover:bg-theme-container';
+  'flex h-8 w-8 items-center justify-center rounded-full border border-gold/60 bg-surface text-gold-bright shadow-[0_2px_6px_-2px_rgba(0,0,0,0.9)] hover:border-gold hover:bg-theme-container';
 
 /**
  * Junto al nombre de alguien (no sobre el retrato, que pueden tapar las fichas):
@@ -40,7 +39,7 @@ const BotonesContacto = ({ nombre, onMensaje, conversar, vigilar }: BotonesConta
     <span className="inline-flex shrink-0 gap-1 align-middle opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 motion-reduce:transition-none [@media(hover:none)]:opacity-100">
       {onMensaje && (
         <button type="button" onClick={onMensaje} aria-label={`Mandar un mensaje a ${nombre}`} className={boton}>
-          <MessageSquare size={13} />
+          <MessageSquare size={16} />
         </button>
       )}
       {conversar && (
@@ -51,7 +50,8 @@ const BotonesContacto = ({ nombre, onMensaje, conversar, vigilar }: BotonesConta
           aria-disabled={conversar.pendiente}
           className={`${boton} aria-disabled:cursor-default aria-disabled:opacity-50`}
         >
-          {conversar.unirse ? <LogIn size={13} /> : <IconoConversar size={13} />}
+          {/* Un teléfono: llamar (voz y vídeo en privado); unirse a la que ya tiene, entrar */}
+          {conversar.unirse ? <LogIn size={16} /> : <Phone size={16} />}
         </button>
       )}
       {vigilar && (

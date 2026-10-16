@@ -15,7 +15,7 @@ import {
 import { IconoCalavera, IconoEspadas, IconoGente, IconoHuella, IconoLuna, IconoMascaras, IconoOjo, IconoPalma, type IconoSala, IconoSinVer } from './IconosJuego';
 import type { PersonajeMostrado } from './guiones';
 import { datosAsiento, describirAsiento } from './nombresAsiento';
-import type { MensajeDespertar, SalaAlineamiento, SalaEstado } from './useSala';
+import type { MensajeDespertar, SalaAlineamiento, SalaDespertar, SalaEstado } from './useSala';
 
 export const NOMBRE_BANDO: Record<SalaAlineamiento, string> = { bueno: 'Bueno', malvado: 'Malvado' };
 
@@ -130,3 +130,9 @@ export const autorDe = (m: MensajeDespertar, estado: SalaEstado) =>
     : estado.asientos.find((a) => a.id === m.autor)?.ocupante === estado.yo
       ? 'Tú'
       : nombreDeAsiento(estado, m.autor);
+
+/**
+ * Lo último del despertar es un «Entendido» (del jugador o del narrador): ya está
+ * hablado. En la mesa, la luna de su ficha es un pulgar arriba.
+ */
+export const esEntendido = (d: SalaDespertar) => d.mensajes[d.mensajes.length - 1]?.ficha === 'entendido';

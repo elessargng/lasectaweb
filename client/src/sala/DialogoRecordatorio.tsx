@@ -1,7 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import Dialog from '../components/Dialog';
-import { botonSecundario } from './estilos';
+import { botonPeligro, botonSecundario } from './estilos';
 import FichaRecordatorio from './FichaRecordatorio';
 import { porTipos, type PersonajeMostrado } from './guiones';
 
@@ -13,6 +13,12 @@ interface DialogoRecordatorioProps {
   otros: PersonajeMostrado[];
   onElegir: (personaje: PersonajeMostrado, indice: number) => void;
   onCerrar: () => void;
+  /** Otro título (sin la ficha): «Matar de noche». */
+  titulo?: string;
+  /** Explicación bajo el título (qué hace elegir uno). */
+  explicacion?: string;
+  /** Un botón más en el pie, para seguir sin elegir ninguno («Matar sin recordatorio»). */
+  sinRecordatorio?: { etiqueta: string; onElegir: () => void };
 }
 
 type Pestana = 'enJuego' | 'otros';
@@ -32,7 +38,7 @@ const TAMANO = '4.5rem';
  *
  * Pestañas como manda ARIA: las flechas van de una a otra y Tab entra en la lista.
  */
-const DialogoRecordatorio = ({ ficha, enJuego, otros, onElegir, onCerrar }: DialogoRecordatorioProps) => {
+const DialogoRecordatorio = ({ ficha, enJuego, otros, onElegir, onCerrar, titulo, explicacion, sinRecordatorio }: DialogoRecordatorioProps) => {
   const [pestana, setPestana] = useState<Pestana>('enJuego');
   const refs = useRef<Record<Pestana, HTMLButtonElement | null>>({ enJuego: null, otros: null });
 
@@ -58,11 +64,17 @@ const DialogoRecordatorio = ({ ficha, enJuego, otros, onElegir, onCerrar }: Dial
       <Dialog
         onClose={onCerrar}
         labelledBy="sala-recordatorio-titulo"
+        describedBy={explicacion ? 'sala-recordatorio-explicacion' : undefined}
         className="flex max-h-[90vh] w-full max-w-3xl flex-col sala-cofre sala-cofre-esquinas"
       >
         <h2 id="sala-recordatorio-titulo" className="px-6 py-4 sala-cofre-titulo">
-          Poner recordatorio <span className="font-normal text-on-surface-muted">({ficha})</span>
+          {titulo ?? 'Poner recordatorio'} <span className="font-ui text-base font-normal text-on-surface-muted">({ficha})</span>
         </h2>
+        {explicacion && (
+          <p id="sala-recordatorio-explicacion" className="-mt-2 px-6 pb-3 text-sm text-on-surface-muted">
+            {explicacion}
+          </p>
+        )}
         <div role="tablist" aria-label="Personajes" className="flex gap-1 border-b border-outline-ghost px-6 py-2">
           {PESTANAS.map((t) => (
             <button
@@ -136,10 +148,22 @@ const DialogoRecordatorio = ({ ficha, enJuego, otros, onElegir, onCerrar }: Dial
             </div>
           )}
         </div>
-        <div className="flex justify-end sala-cofre-pie px-6 py-3">
+        <div className="flex justify-end gap-3 sala-cofre-pie px-6 py-3">
           <button type="button" onClick={onCerrar} className={botonSecundario}>
             Cancelar
           </button>
+          {sinRecordatorio && (
+            <button
+              type="button"
+              onClick={() => {
+                sinRecordatorio.onElegir();
+                onCerrar();
+              }}
+              className={botonPeligro}
+            >
+              {sinRecordatorio.etiqueta}
+            </button>
+          )}
         </div>
       </Dialog>
     </div>,

@@ -78,6 +78,7 @@ const asientoNuevo = (): SalaAsiento => ({
   id: randomUUID(),
   ocupante: null,
   muerto: false,
+  muertePendiente: false,
   marcado: false,
   votosMarca: null,
   personaje: null,
@@ -599,6 +600,7 @@ export class SalaService {
     this.maximoDelDia = null;
     for (const a of this.mesa) {
       a.muerto = false;
+      a.muertePendiente = false;
       a.marcado = false;
       a.votosMarca = null;
       a.personaje = null;
@@ -855,15 +857,36 @@ export class SalaService {
     for (const a of this.mesa) this.revelarFicha(a.id);
   }
 
-  /** Mata o revive la ficha de un asiento; al morir pierde la calavera. No comprueba permisos. */
+  /**
+   * Mata o revive la ficha de un asiento; al morir pierde la calavera. De noche,
+   * la muerte queda pendiente (solo la ven quienes ven el grimorio) hasta que el
+   * narrador la hace efectiva (confirmarMuerte). Revivir quita también la pendiente.
+   * No comprueba permisos.
+   */
   cambiarVida(asientoId: string, muerto: boolean): void {
     const asiento = this.mesa.find((a) => a.id === asientoId);
     if (!asiento) return;
+    if (muerto && this.faseActual.momento === 'noche' && !asiento.muerto) {
+      asiento.muertePendiente = true;
+      return;
+    }
     asiento.muerto = muerto;
+    asiento.muertePendiente = false;
     if (muerto) {
       asiento.marcado = false;
       asiento.votosMarca = null;
     }
+  }
+
+  /** Hace efectiva una muerte pendiente (el narrador la anuncia): ya la ven todos. No comprueba permisos. */
+  confirmarMuerte(asientoId: string): boolean {
+    const asiento = this.mesa.find((a) => a.id === asientoId);
+    if (!asiento?.muertePendiente) return false;
+    asiento.muertePendiente = false;
+    asiento.muerto = true;
+    asiento.marcado = false;
+    asiento.votosMarca = null;
+    return true;
   }
 
   configuracion(): SalaConfiguracion {
@@ -991,6 +1014,7 @@ export class SalaService {
         // Si ya lo vio y salió de la sala, lo recupera (vuelve como visitante)
         accesoGrimorio: this.conGrimorio.has(recuerdo) ? 'concedido' : 'ninguno',
         formaMano: 'palma',
+        sinSonido: false,
       },
       identidad: llegada.identidad,
       nombreBase: llegada.nombreBase,
@@ -1120,6 +1144,12 @@ export class SalaService {
     entrada.participante.accesoGrimorio = acceso;
     if (acceso === 'concedido') this.conGrimorio.add(entrada.recuerdo);
     else this.conGrimorio.delete(entrada.recuerdo);
+  }
+
+  /** Quita o pone el sonido de un participante (si oye a los demás). */
+  cambiarSonido(id: string, sinSonido: boolean): void {
+    const participante = this.buscar(id);
+    if (participante) participante.sinSonido = sinSonido;
   }
 
   /** Levanta o baja la mano de un jugador. No comprueba permisos. */

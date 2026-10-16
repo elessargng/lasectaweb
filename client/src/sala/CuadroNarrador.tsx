@@ -1,5 +1,5 @@
 import type { VideoTrack } from 'livekit-client';
-import { Ear, MicOff } from 'lucide-react';
+import { Ear, MicOff, VolumeX } from 'lucide-react';
 import BotonesContacto, { type ContactoParticipante } from './BotonesContacto';
 import VideoPista from './VideoPista';
 import CuadroAvatar from './CuadroAvatar';
@@ -81,6 +81,12 @@ const CuadroNarrador = ({
             {/* Tu nombre, en latón (el lector oye «(tú)») */}
             <span className={esYo ? 'text-gold-bright' : undefined}>{narrador.nombre}</span>
             {esYo && <span className="sr-only"> (tú)</span>}
+            {narrador.sinSonido && (
+              <>
+                <VolumeX size={14} className="ml-1 inline-block align-[-2px] text-blood-pale" />
+                <span className="sr-only"> (sin sonido)</span>
+              </>
+            )}
             {!narrador.conectado && (
               <span className="block text-xs font-normal italic text-on-surface-muted">
                 <span className="sr-only"> (</span>desconectado<span className="sr-only">)</span>

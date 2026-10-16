@@ -1,5 +1,16 @@
 import { useCallback, useState } from 'react';
-import { CALAVERA_DEFECTO, esEstiloCalavera, esEstiloMano, MANO_DEFECTO, type EstiloCalavera, type EstiloMano } from './marcas';
+import {
+  CALAVERA_DEFECTO,
+  esEstiloCalavera,
+  esEstiloMano,
+  esEstiloSilla,
+  MANO_DEFECTO,
+  SILLA_DEFECTO,
+  type PreferenciaCalavera,
+  type PreferenciaMano,
+  type PreferenciaSilla,
+} from './marcas';
+import { SONIDOS, type SonidosActivos } from './sonidos';
 
 /**
  * Preferencias de la sala que solo cambian cómo la ves tú (tamaños, distancias,
@@ -21,8 +32,8 @@ export interface PreferenciasSala {
   avatarAuto: boolean;
   /** El tamaño de las fichas va en proporción al de los avatares. */
   fichaAuto: boolean;
-  /** Suenan la cuenta atrás y los votos de la partida. */
-  sonidos: boolean;
+  /** Qué sonidos suenan, uno a uno (la cuenta atrás, los votos, los de las conversaciones…). Pestaña Sonido. */
+  sonidos: SonidosActivos;
   /**
    * Al quedarte sin nadie más en una conversación privada, salir de ella sin
    * pulsar «Salir». Pestaña Comunicaciones; de entrada, no: se sale a mano.
@@ -40,17 +51,19 @@ export interface PreferenciasSala {
   idiomaDescripciones: string;
   /** Género de los textos, en los idiomas que lo distinguen. Pestaña Usuario. */
   genero: 'masculino' | 'femenino';
-  /** Cómo se ve la calavera de las nominaciones. Pestaña Interfaz. */
-  calavera: EstiloCalavera;
-  /** Cómo se ven las manos levantadas. Pestaña Interfaz. */
-  mano: EstiloMano;
+  /** Cómo se ve la calavera de las nominaciones (o al azar en cada partida). Pestaña Interfaz. */
+  calavera: PreferenciaCalavera;
+  /** Cómo se ven las manos levantadas (o al azar en cada partida). Pestaña Interfaz. */
+  mano: PreferenciaMano;
+  /** Qué silla se ve en los asientos libres (o al azar en cada partida). Pestaña Interfaz. */
+  silla: PreferenciaSilla;
   /** Cámara y micrófono elegidos (deviceId); vacío: los del sistema. Pestaña Comunicaciones. */
   idCamara: string;
   idMicrofono: string;
 }
 
 type ClaveNumerica = 'tamanoAvatar' | 'tamanoFicha' | 'distanciaFicha';
-type ClaveSiNo = 'avatarAuto' | 'fichaAuto' | 'sonidos' | 'salirConversacionSinNadie' | 'panelLateralContraido' | 'farolesFijados';
+type ClaveSiNo = 'avatarAuto' | 'fichaAuto' | 'salirConversacionSinNadie' | 'panelLateralContraido' | 'farolesFijados';
 
 /** Los paneles de la columna de la izquierda: uno a la vez, elegido en su barra de iconos. */
 export const PANELES_LATERALES = ['mensajes', 'conversaciones', 'npcs', 'faroles'] as const;
@@ -79,7 +92,6 @@ export const RANGOS: Record<ClaveNumerica, Rango> = {
 const SI_NO: Record<ClaveSiNo, boolean> = {
   avatarAuto: true,
   fichaAuto: true,
-  sonidos: true,
   salirConversacionSinNadie: false,
   panelLateralContraido: false,
   farolesFijados: false,
@@ -114,6 +126,16 @@ export function normalizarPreferencias(datos: unknown): PreferenciasSala {
     : 'mensajes';
   preferencias.calavera = esEstiloCalavera(guardadas.calavera) ? guardadas.calavera : CALAVERA_DEFECTO;
   preferencias.mano = esEstiloMano(guardadas.mano) ? guardadas.mano : MANO_DEFECTO;
+  preferencias.silla = esEstiloSilla(guardadas.silla) ? guardadas.silla : SILLA_DEFECTO;
+  // Los sonidos: uno a uno. Lo de antes (un sí o no para todos) vale para todos
+  const sonidos = guardadas.sonidos;
+  const deCada = (sonidos && typeof sonidos === 'object' ? sonidos : {}) as Record<string, unknown>;
+  preferencias.sonidos = Object.fromEntries(
+    SONIDOS.map(({ id }) => {
+      const guardado = typeof sonidos === 'boolean' ? sonidos : deCada[id];
+      return [id, typeof guardado === 'boolean' ? guardado : true];
+    }),
+  ) as SonidosActivos;
   // Los dispositivos: un id del navegador, o vacío (el predeterminado del sistema)
   const idDispositivo = (v: unknown) => (typeof v === 'string' && v.length <= 200 ? v : '');
   preferencias.idCamara = idDispositivo(guardadas.idCamara);

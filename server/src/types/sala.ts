@@ -22,6 +22,8 @@ export interface SalaParticipante {
   manoLevantada: boolean;
   /** La forma de su mano al levantarla; se conserva aunque la baje. */
   formaMano: SalaFormaMano;
+  /** Ha quitado el sonido: no oye a los demás (los demás lo ven junto a su nombre). */
+  sinSonido: boolean;
   /**
    * Un visitante puede pedir ver el grimorio del narrador: «solicitado» mientras
    * el narrador responde; «concedido», lo ve como él (todos los personajes) y ya
@@ -44,6 +46,11 @@ export interface SalaAsiento {
   ocupante: string | null;
   /** Su ficha está muerta (lleva sudario). */
   muerto: boolean;
+  /**
+   * Muerta de noche, a falta de que el narrador lo anuncie (de día, al pulsar el
+   * sudario): aún no cuenta como muerta. Solo la ven quienes ven el grimorio.
+   */
+  muertePendiente: boolean;
   /** Su ficha lleva la calavera (solo una de la mesa). */
   marcado: boolean;
   /** Con cuántos votos se le puso la calavera (desde una nominación ya votada), o null. */

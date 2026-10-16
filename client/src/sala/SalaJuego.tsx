@@ -1,4 +1,4 @@
-import { MessagesSquare } from 'lucide-react';
+import { MessagesSquare, Phone } from 'lucide-react';
 import { IconoConversar, IconoDestellos, IconoMascaras } from './IconosJuego';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { urlDelServidor } from '../utils/api';
@@ -14,6 +14,7 @@ import MenuUsuario from './MenuUsuario';
 import PanelAccesibilidad from './PanelAccesibilidad';
 import PanelAtajos from './PanelAtajos';
 import PanelInterfaz from './PanelInterfaz';
+import PanelSonido from './PanelSonido';
 import PanelPartida from './PanelPartida';
 import PanelUsuario, { type ResultadoPerfil } from './PanelUsuario';
 import PanelIdiomas from './PanelIdiomas';
@@ -29,7 +30,7 @@ import ColumnaLateral, { type PestanaLateral } from './ColumnaLateral';
 import VentanaConversacion from './VentanaConversacion';
 import VentanaDespertar from './VentanaDespertar';
 import DespertarJugador from './DespertarJugador';
-import { describirMensaje, nombreDeAsiento } from './despertar';
+import { describirMensaje, esEntendido, nombreDeAsiento } from './despertar';
 import PanelInvitaciones from './PanelInvitaciones';
 import ControlesVideo from './ControlesVideo';
 import type { ContactoParticipante } from './BotonesContacto';
@@ -51,14 +52,14 @@ import {
   type SalaSusurro,
 } from './chat';
 import RepartoPartida from './RepartoPartida';
-import { MarcasContexto } from './marcas';
+import { ESTILOS_CALAVERA, ESTILOS_MANO, ESTILOS_SILLA, estiloDePartida, MarcasContexto } from './marcas';
 import { FichasContexto, identidadDe, TIPOS_EN_FICHA, type ContenidoFicha, type ContextoFichas } from './fichas';
 import { mostrarPersonajes, tituloDeGuion, useTraducciones, type PersonajeMostrado } from './guiones';
 import ZonaNarradores from './ZonaNarradores';
 import { esAtajo, puedeUsarAtajo, useAtajos, type Atajo } from './atajos';
 import { AvisosContexto, useAvisosActivos, type TipoAviso } from './avisosConfig';
 import { avisosDeCambio, manosVigiladas, nombreFase } from './avisosSala';
-import { setSonidosActivos, tocarSinVoto, tocarVoto } from './sonidos';
+import { setSonidosActivos, tocarPrivado, tocarSinVoto, tocarVoto } from './sonidos';
 import { idPestanaLateral, ID_BOTON_MENU_NARRADOR, ID_SIN_NARRADOR, ID_TITULO_DESPERTAR, idLunaFicha, idNombreNarrador } from './ids';
 import { getPerfil, limpiarNombre, setPerfil } from './invitado';
 import { sinComunicaciones, usePreferencias } from './preferencias';
@@ -140,6 +141,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const accionPropiaRef = useRef(false);
   // id al que llevar el foco cuando se pinte el nuevo estado.
   const focoPendienteRef = useRef<string | null>(null);
+  // Despertares a los que el narrador acaba de mandar «Entendido»: se cierra su ventana
+  const entendidosPorCerrarRef = useRef<string[]>([]);
   // El foco estaba en un control que puede desaparecer con el cambio.
   const rescatarFocoRef = useRef<string | null>(null);
 
@@ -295,7 +298,21 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           avisos.push({ tipo: 'despertar', texto: `${nombreDeAsiento(nuevo, m.autor)}: ${texto}.` });
         } else if (!soyNarrador && m.autor === 'narrador') avisos.push({ tipo: 'despertar', texto: `El narrador: ${texto}.` });
       }
-      if (!soyNarrador && (!antes || nuevos.some((m) => m.autor === 'narrador'))) setWakeCerradoJugador(false);
+      // (Un «Entendido» del narrador no se la vuelve a abrir: ya está hablado.)
+      if (!soyNarrador && (!antes || nuevos.some((m) => m.autor === 'narrador' && m.ficha !== 'entendido'))) {
+        setWakeCerradoJugador(false);
+      }
+      // «Entendido» cierra el despertar de quien lo manda, y el foco va a la ficha (con el
+      // pulgar arriba). El jugador: también al volver a entrar en la sala, si fue lo último
+      // suyo. El narrador: su ventana de ese despertar (tras pintar, ver más abajo).
+      const ultimo = d.mensajes[d.mensajes.length - 1];
+      if (!soyNarrador && !veoTodos && nuevos.length > 0 && esEntendido(d) && ultimo.autor !== 'narrador') {
+        setWakeCerradoJugador(true);
+        if (antes) focoPendienteRef.current = idLunaFicha(d.asiento);
+      }
+      if (soyNarrador && propia && esEntendido(d) && ultimo.autor === 'narrador' && nuevos.includes(ultimo)) {
+        entendidosPorCerrarRef.current.push(d.asiento);
+      }
       if (soyNarrador && !propia && !antes) {
         avisos.push({ tipo: 'despertar', texto: `Otro narrador despierta a ${nombreDeAsiento(nuevo, d.asiento)}.` });
       }
@@ -669,6 +686,30 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     // La conversación desaparece: el foco vuelve al título de la página
     else window.setTimeout(() => tituloRef.current?.focus(), 0);
   };
+  // Quitar el sonido (no oír a los demás) se ve junto al nombre: se le dice al servidor
+  // cuando cambia, y también si al volver a entrar no coincide con lo que tiene
+  const sinSonidoAqui = !video.sonido;
+  const sinSonidoServidor = yo?.sinSonido;
+  useEffect(() => {
+    if (sinSonidoServidor === undefined || sinSonidoServidor === sinSonidoAqui) return;
+    void pedir('sala:sonido', { sinSonido: sinSonidoAqui });
+  }, [sinSonidoAqui, sinSonidoServidor, pedir]);
+
+  // Los sonidos de las conversaciones privadas: al entrar (o cambiar de una a otra), al
+  // salir y cuando sale alguien con quien se hablaba. Al cargar la página, ninguno.
+  const miembrosConversacion = miConversacion?.miembros.filter((id) => id !== estado?.yo).join(',') ?? '';
+  const conversacionAntesRef = useRef<{ id: string; otros: string[] } | null | undefined>(undefined);
+  useEffect(() => {
+    if (!estado) return;
+    const antes = conversacionAntesRef.current;
+    const ahora = miConversacion ? { id: miConversacion.id, otros: miembrosConversacion ? miembrosConversacion.split(',') : [] } : null;
+    conversacionAntesRef.current = ahora;
+    if (antes === undefined) return;
+    if (ahora && (!antes || antes.id !== ahora.id)) tocarPrivado('entrarPrivado');
+    else if (antes && !ahora) tocarPrivado('salirPrivado');
+    else if (antes && ahora && antes.otros.some((id) => !ahora.otros.includes(id))) tocarPrivado('saleOtro');
+    // Compara con lo de antes: solo suena si cambian la conversación o quienes hablan en ella
+  }, [estado, miConversacion, miembrosConversacion]);
   // Si se van los demás, la conversación sigue hasta que uno sale; salvo que haya
   // elegido salir automáticamente (Preferencias > Comunicaciones). El foco solo se
   // mueve si estaba en la ventana de la conversación, que desaparece.
@@ -1028,6 +1069,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       ),
     },
     {
+      id: 'sonido',
+      etiqueta: 'Sonido',
+      conControles: true,
+      contenido: <PanelSonido preferencias={preferencias} onCambiar={cambiarPreferencias} />,
+    },
+    {
       id: 'accesibilidad',
       etiqueta: 'Accesibilidad',
       conControles: true,
@@ -1102,11 +1149,11 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // La columna de la izquierda: Mensajes, Charlas (si hay conversaciones o invitaciones) y Faroles (a quien le tocan)
   // Invitaciones y peticiones que esperan mi respuesta (las peticiones llegan a todos los miembros)
   // Sin conversaciones: cómo empezar una, según quién mira y el momento de la partida
-  // El icono del botón de conversar, en el texto; el lector oye su nombre
+  // El icono del botón de llamar (un teléfono), en el texto; el lector oye su nombre
   const iconoConversar = (
     <>
-      <IconoConversar size={12} aria-hidden="true" className="mx-0.5 inline align-[-1px] text-theme-main" />
-      <span className="sr-only">el botón de conversar</span>
+      <Phone size={13} aria-hidden="true" className="mx-0.5 inline align-[-2px] text-theme-main" />
+      <span className="sr-only">el botón de llamar</span>
     </>
   );
   const ayudaCharlas = !estado?.video ? (
@@ -1262,6 +1309,15 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     if (conexion === 'expulsadaPorNarrador') expulsadoRef.current?.focus();
   }, [conexion]);
 
+  // El narrador ha mandado «Entendido»: se cierra la ventana de ese despertar (y el foco va a
+  // la ficha). Antes que el foco pendiente, para que lo recoja.
+  useEffect(() => {
+    const asientos = entendidosPorCerrarRef.current;
+    if (!asientos.length) return;
+    entendidosPorCerrarRef.current = [];
+    for (const id of asientos) if (abiertosNarrador.some((d) => d.asiento === id)) cerrarDespertar(id);
+  });
+
   // Tras pintar un cambio de narradores: llevar el foco a donde toca, o
   // recuperarlo si el control que lo tenía ha desaparecido.
   useEffect(() => {
@@ -1284,6 +1340,9 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const avatarFuera = preferencias.avatarAuto
     ? tamanoNarradorAuto(ventana.ancho, ventana.alto)
     : preferencias.tamanoAvatar;
+  // La semilla de los estilos «al azar»: quién mira (su nombre, que no cambia al recargar)
+  // y la partida (sube al limpiar el grimorio o cambiar de guion)
+  const semillaPartida = `${yo?.nombre ?? ''}:${estado?.fase.reinicios ?? 0}`;
   const tamanos = {
     '--sala-avatar': `${avatarFuera}px`,
     '--sala-ficha': `${preferencias.fichaAuto ? tamanoFichaAuto(avatarFuera) : preferencias.tamanoFicha}px`,
@@ -1292,7 +1351,14 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
   return (
     <AvisosContexto.Provider value={avisosActivos}>
-      <MarcasContexto.Provider value={{ calavera: preferencias.calavera, mano: preferencias.mano }}>
+      {/* La calavera, la mano y la silla que se pintan: las elegidas o, al azar, unas por partida (y por persona) */}
+      <MarcasContexto.Provider
+        value={{
+          calavera: estiloDePartida(preferencias.calavera, ESTILOS_CALAVERA, `${semillaPartida}:calavera`),
+          mano: estiloDePartida(preferencias.mano, ESTILOS_MANO, `${semillaPartida}:mano`),
+          silla: estiloDePartida(preferencias.silla, ESTILOS_SILLA, `${semillaPartida}:silla`),
+        }}
+      >
       <FichasContexto.Provider value={contextoFichas}>
       <div className="contents" style={tamanos}>
         <Cabecera
@@ -1516,12 +1582,18 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                       ? {
                           hilos: new Set(despertares.map((d) => d.asiento)),
                           noLeidos,
+                          entendidos: new Set(despertares.filter(esEntendido).map((d) => d.asiento)),
                           onAbrir: (id) => void abrirDespertar(id),
                         }
                       : miDespertar
                         ? // El jugador despertado: la luna en su ficha le vuelve a abrir su despertar
                           // (se le abre solo cuando el narrador le escribe: no hay «sin leer»)
-                          { hilos: new Set([miDespertar.asiento]), noLeidos: new Set(), onAbrir: () => setWakeCerradoJugador(false) }
+                          {
+                            hilos: new Set([miDespertar.asiento]),
+                            noLeidos: new Set(),
+                            entendidos: esEntendido(miDespertar) ? new Set([miDespertar.asiento]) : new Set(),
+                            onAbrir: () => setWakeCerradoJugador(false),
+                          }
                         : null
                   }
                   seguimiento={puedeSeguir ? { siguiendo: sigoA?.id ?? null, onAlternar: alternarSeguir } : null}
@@ -1552,6 +1624,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             participantes={estado.participantes}
             yo={estado.yo}
             pistas={video.privada}
+            muertos={new Set(estado.asientos.filter((a) => a.muerto && a.ocupante).map((a) => a.ocupante!))}
             onSalir={() => void salirDeConversacion()}
             onEntrar={yo?.rol === 'narrador' ? () => void entrar(miConversacion.id) : undefined}
             teclaSalir={atajos.salirConversacion.key}
