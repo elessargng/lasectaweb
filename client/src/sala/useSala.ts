@@ -20,6 +20,8 @@ export interface SalaParticipante {
   conectado: boolean;
   /** Jugador con la mano levantada. */
   manoLevantada: boolean;
+  /** Con la mano levantada, las dos (la Banshee con su habilidad): su voto cuenta doble. */
+  dosManos: boolean;
   /** La forma de su mano al levantarla. */
   formaMano: FormaMano;
   /** Ha quitado el sonido: no oye a los demás (se ve junto a su nombre). */

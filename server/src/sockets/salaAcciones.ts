@@ -277,6 +277,20 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
+  /**
+   * Levanta las dos manos (dos votos): solo la Banshee muerta con «Has Ability».
+   * Para bajarlas o dejar una, 'sala:levantarMano'.
+   */
+  'sala:levantarDosManos': {
+    puede: (sala, yo) => yo.rol === 'jugador' && sala.puedeVotarDoble(yo.id),
+    noPuede: 'Solo la Banshee con su habilidad puede levantar las dos manos.',
+    hacer: (sala, yo) => {
+      if (sala.sinVoto(yo.id)) return { ok: false, error: 'Ya has gastado tu voto: no puedes levantar la mano.' };
+      sala.levantarMano(yo.id, true, true);
+      return { ok: true };
+    },
+  },
+
   /** Un jugador elige la forma de su mano (palma, puño o tijera). datos: { forma }. */
   'sala:elegirMano': {
     puede: (_sala, yo) => yo.rol === 'jugador',

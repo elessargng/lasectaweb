@@ -195,7 +195,8 @@ const FichaAsiento = ({
     asiento.muerto && (asiento.votoGastado ? 'muerta, sin voto' : 'muerta, con voto'),
     asiento.muertePendiente && 'muerta esta noche, sin anunciar',
     asiento.marcado && 'con la calavera',
-    ocupante?.manoLevantada && `mano levantada (${nombreMano(ocupante.formaMano).toLocaleLowerCase('es')})`,
+    ocupante?.manoLevantada &&
+      (ocupante.dosManos ? 'las dos manos levantadas' : `mano levantada (${nombreMano(ocupante.formaMano).toLocaleLowerCase('es')})`),
     voto === null && 'no vota',
     typeof voto === 'number' && `vota (${voto === 1 ? '1 voto' : `${voto} votos`})`,
     recordatorios.length > 0 &&

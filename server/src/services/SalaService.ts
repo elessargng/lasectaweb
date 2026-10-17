@@ -737,9 +737,13 @@ export class SalaService {
     const sinVoto = !!asiento?.muerto && asiento.votoGastado;
     const vota = ocupante?.rol === 'jugador' && ocupante.manoLevantada && !sinVoto;
     if (vota) {
-      v.votos += 1;
+      // Con las dos manos (la Banshee), dos votos
+      const doble = ocupante.dosManos && this.puedeVotarDoble(ocupante.id);
+      v.votos += doble ? 2 : 1;
+      if (doble) v.dobles = [...(v.dobles ?? []), asientoId];
       // Voto contado: la mano baja sola.
       ocupante.manoLevantada = false;
+      ocupante.dosManos = false;
       if (asiento?.muerto) asiento.votoGastado = true;
     }
     v.resultados[asientoId] = vota ? v.votos : null;
@@ -758,7 +762,8 @@ export class SalaService {
           .filter((id) => v.resultados[id] !== null && v.resultados[id] !== undefined)
           .map((id) => {
             const o = this.mesa.find((a) => a.id === id)?.ocupante;
-            return (o && this.buscar(o)?.nombre) || this.describirAsiento(id);
+            const nombre = (o && this.buscar(o)?.nombre) || this.describirAsiento(id);
+            return v.dobles?.includes(id) ? `${nombre} (2 votos)` : nombre;
           });
         n.registro.votos = v.votos;
       }
@@ -831,7 +836,10 @@ export class SalaService {
     for (const a of this.mesa) {
       if (!a.muerto || !a.votoGastado || !a.ocupante) continue;
       const ocupante = this.buscar(a.ocupante);
-      if (ocupante) ocupante.manoLevantada = false;
+      if (ocupante) {
+        ocupante.manoLevantada = false;
+        ocupante.dosManos = false;
+      }
     }
   }
 
@@ -1143,6 +1151,7 @@ export class SalaService {
         rol: 'visitante',
         conectado: true,
         manoLevantada: false,
+        dosManos: false,
         // Si ya lo vio y salió de la sala, lo recupera (vuelve como visitante)
         accesoGrimorio: this.conGrimorio.has(recuerdo) ? 'concedido' : 'ninguno',
         formaMano: 'palma',
@@ -1263,7 +1272,10 @@ export class SalaService {
     if (participante.rol !== rol && participante.accesoGrimorio !== 'ninguno') this.cambiarAccesoGrimorio(id, 'ninguno');
     participante.rol = rol;
     // La mano solo cuenta en la partida: quien deja de jugar la baja.
-    if (rol !== 'jugador') participante.manoLevantada = false;
+    if (rol !== 'jugador') {
+      participante.manoLevantada = false;
+      participante.dosManos = false;
+    }
   }
 
   /**
@@ -1290,10 +1302,21 @@ export class SalaService {
     return !!asiento?.muerto && asiento.votoGastado;
   }
 
-  /** Levanta o baja la mano de un jugador. No comprueba permisos. */
-  levantarMano(id: string, levantada: boolean): void {
+  /** Levanta (una o, con `dos`, las dos) o baja la mano de un jugador. No comprueba permisos. */
+  levantarMano(id: string, levantada: boolean, dos = false): void {
     const participante = this.buscar(id);
-    if (participante) participante.manoLevantada = levantada;
+    if (!participante) return;
+    participante.manoLevantada = levantada;
+    participante.dosManos = levantada && dos;
+  }
+
+  /**
+   * Puede votar con las dos manos (dos votos): la Banshee muerta con su
+   * recordatorio «Has Ability» en la ficha.
+   */
+  puedeVotarDoble(participanteId: string): boolean {
+    const asiento = this.mesa.find((a) => a.ocupante === participanteId);
+    return !!asiento?.muerto && asiento.recordatorios.some((r) => r.personaje === 'banshee' && /has ability/i.test(r.texto));
   }
 
   elegirFormaMano(id: string, forma: SalaFormaMano): void {

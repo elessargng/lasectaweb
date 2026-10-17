@@ -199,7 +199,13 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado, vigilado
       return !!v && v.orden.slice(pasoAntes, v.paso).some((id) => nuevo.asientos.find((a) => a.id === id)?.ocupante === p.id);
     })();
     if (!p.manoLevantada && votoContado) continue;
-    avisa('manos', p.manoLevantada ? `${p.nombre} levanta la mano (${forma(p)}).` : `${p.nombre} baja la mano.`);
+    avisa('manos', p.manoLevantada ? (p.dosManos ? `${p.nombre} levanta las dos manos.` : `${p.nombre} levanta la mano (${forma(p)}).`) : `${p.nombre} baja la mano.`);
+  }
+  // De una mano a dos, o de dos a una (sigue con la mano levantada)
+  for (const p of nuevo.participantes) {
+    const previo = antes.get(p.id);
+    if (!previo || p.id === yo || !p.manoLevantada || !previo.manoLevantada || !!previo.dosManos === !!p.dosManos || vigilados.has(p.id)) continue;
+    avisa('manos', p.dosManos ? `${p.nombre} levanta las dos manos.` : `${p.nombre} baja una mano.`);
   }
   // Cambio de forma con la mano levantada (con ella bajada no se ve).
   for (const p of nuevo.participantes) {
@@ -307,10 +313,14 @@ export function manosVigiladas(anterior: SalaEstado, nuevo: SalaEstado, vigilado
   const textos: string[] = [];
   for (const p of nuevo.participantes) {
     const previo = anterior.participantes.find((x) => x.id === p.id);
-    if (!vigilados.has(p.id) || !previo || previo.manoLevantada === p.manoLevantada) continue;
+    if (!vigilados.has(p.id) || !previo || (previo.manoLevantada === p.manoLevantada && !!previo.dosManos === !!p.dosManos)) continue;
     textos.push(
       p.manoLevantada
-        ? `${p.nombre} levanta la mano (${nombreMano(p.formaMano).toLocaleLowerCase('es')}).`
+        ? p.dosManos
+          ? `${p.nombre} levanta las dos manos.`
+          : previo.manoLevantada
+            ? `${p.nombre} baja una mano.`
+            : `${p.nombre} levanta la mano (${nombreMano(p.formaMano).toLocaleLowerCase('es')}).`
         : `${p.nombre} baja la mano.`,
     );
   }

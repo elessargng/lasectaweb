@@ -927,18 +927,23 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // Muerto y sin voto: no puede levantar la mano (el atajo lo dice sin preguntar al servidor)
   const asientoPropio = estado?.asientos.find((a) => a.ocupante === estado.yo);
   const sinVoto = !!asientoPropio?.muerto && asientoPropio.votoGastado;
-  const alternarMano = async () => {
-    const levantada = !manoLevantada;
-    if (levantada && sinVoto) {
+  // La Banshee muerta con su habilidad puede levantar las dos manos (vota doble): 0, 1 o 2
+  const puedeDosManos = !!estado?.acciones.includes('sala:levantarDosManos');
+  const manos: 0 | 1 | 2 = !manoLevantada ? 0 : yo?.dosManos ? 2 : 1;
+  const ponerManos = async (n: 0 | 1 | 2) => {
+    if (n > 0 && sinVoto) {
       setAviso('Ya has gastado tu voto: no puedes levantar la mano.');
       return false;
     }
-    const r = await pedir('sala:levantarMano', { levantada });
-    if (r.ok) anunciar('miMano', levantada ? 'Has levantado la mano.' : 'Has bajado la mano.');
+    const r = await (n === 2 ? pedir('sala:levantarDosManos') : pedir('sala:levantarMano', { levantada: n === 1 }));
+    if (r.ok) anunciar('miMano', n === 2 ? 'Has levantado las dos manos.' : n === 1 ? 'Has levantado la mano.' : manos === 2 ? 'Has bajado las manos.' : 'Has bajado la mano.');
     else setAviso(r.error);
     // false: el menú (si se ha usado) se cierra y el foco vuelve a su botón.
     return false;
   };
+  // La tecla: levantar y bajar o, con dos manos, una, dos y bajarlas
+  const siguientesManos: 0 | 1 | 2 = manos === 0 ? 1 : manos === 1 && puedeDosManos ? 2 : 0;
+  const alternarMano = () => ponerManos(siguientesManos);
   const elegirFormaMano = async (forma: FormaMano) => {
     const r = await pedir('sala:elegirMano', { forma });
     if (r.ok) anunciar('miMano', `Tu mano: ${nombreMano(forma).toLocaleLowerCase('es')}.`);
@@ -1550,6 +1555,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                 <MenuMano
                   forma={yo.formaMano}
                   levantada={manoLevantada}
+                  manos={manos}
+                  puedeDosManos={puedeDosManos}
+                  siguientes={siguientesManos}
+                  onManos={ponerManos}
                   sinVoto={sinVoto}
                   atajoLevantar={atajos.levantarMano}
                   onAlternar={alternarMano}

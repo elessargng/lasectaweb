@@ -603,7 +603,7 @@ const Mesa = ({
                 {ocupante && (
                   // La mano levantada: en la esquina de la ficha (sube y baja) o, en una
                   // nominación, grande en el centro; se dice en el nombre de la ficha y en los avisos
-                  <ManoLevantada levantada={ocupante.manoLevantada} forma={ocupante.formaMano} enNominacion={!!nominacion} />
+                  <ManoLevantada levantada={ocupante.manoLevantada} dos={ocupante.dosManos} forma={ocupante.formaMano} enNominacion={!!nominacion} />
                 )}
               </div>
               {/* Sus recordatorios, después de la ficha (en el orden del tabulador también) */}

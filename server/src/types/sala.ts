@@ -20,6 +20,11 @@ export interface SalaParticipante {
   conectado: boolean;
   /** Jugador con la mano levantada. Al dejar de ser jugador, vuelve a false. */
   manoLevantada: boolean;
+  /**
+   * Con la mano levantada, levanta las dos (la Banshee muerta con su «Has Ability»):
+   * su voto cuenta doble. Siempre false con la mano bajada.
+   */
+  dosManos: boolean;
   /** La forma de su mano al levantarla; se conserva aunque la baje. */
   formaMano: SalaFormaMano;
   /** Ha quitado el sonido: no oye a los demás (los demás lo ven junto a su nombre). */
@@ -197,6 +202,8 @@ export interface SalaVotacion {
   resultados: Record<string, number | null>;
   votos: number;
   terminada: boolean;
+  /** Los asientos que votaron con las dos manos (dos votos). */
+  dobles?: string[];
 }
 
 /** Una nominación en curso: de qué asiento a qué asiento (ids de asiento). */
