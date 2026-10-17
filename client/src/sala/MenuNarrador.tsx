@@ -21,6 +21,8 @@ interface MenuNarradorProps {
   /** Teclas de cambiar de fase (noche/amanecer) y de revelar el grimorio (se ven al lado). */
   atajoFase?: Atajo;
   atajoRevelar?: Atajo;
+  /** Tecla de sonar el gong (se ve al lado). */
+  atajoGong?: Atajo;
 }
 
 /** Opciones del menú que abren el diálogo para elegir a alguien; la clave es la acción del servidor. */
@@ -75,7 +77,7 @@ const ELEGIR: Record<
  * Cada opción es una acción del servidor y solo sale si `estado.acciones` la
  * permite; si no queda ninguna (no narras), el botón no sale.
  */
-const MenuNarrador = ({ estado, pedir, onAsientos, revelando, onRevelando, atajoFase, atajoRevelar }: MenuNarradorProps) => {
+const MenuNarrador = ({ estado, pedir, onAsientos, revelando, onRevelando, atajoFase, atajoRevelar, atajoGong }: MenuNarradorProps) => {
   // Acción de ELEGIR cuyo diálogo está abierto.
   const [eligiendo, setEligiendo] = useState<string | null>(null);
   const [limpiando, setLimpiando] = useState(false);
@@ -87,6 +89,7 @@ const MenuNarrador = ({ estado, pedir, onAsientos, revelando, onRevelando, atajo
     // Noche y día: solo sale el que toca
     { id: 'narrador:irANoche', etiqueta: 'Ir a la noche', atajo: atajoFase, elegir: () => void pedir('narrador:irANoche') },
     { id: 'narrador:amanecer', etiqueta: 'Amanece', atajo: atajoFase, elegir: () => void pedir('narrador:amanecer') },
+    { id: 'narrador:sonarGong', etiqueta: 'Sonar gong', atajo: atajoGong, elegir: () => void pedir('narrador:sonarGong') },
     { id: 'narrador:revelarGrimorio', etiqueta: 'Revelar grimorio', atajo: atajoRevelar, abreDialogo: true, elegir: () => onRevelando(true) },
     { id: 'narrador:limpiarGrimorio', etiqueta: 'Limpiar grimorio', abreDialogo: true, elegir: () => setLimpiando(true) },
     ...Object.entries(ELEGIR).map(([accion, { etiqueta }]) => ({

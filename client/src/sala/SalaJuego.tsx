@@ -967,6 +967,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // El diálogo de revelar el grimorio: desde el menú del narrador o con su tecla
   const [revelandoGrimorio, setRevelandoGrimorio] = useState(false);
 
+  // El gong del narrador: desde el menú o con su tecla
+  const sonarGong = async () => {
+    const r = await pedirPropio('narrador:sonarGong');
+    if (!r.ok) setAviso(r.error);
+  };
+
   // Los atajos que se pueden usar ahora, con lo que hace cada uno.
   const atajosActivos: [Atajo, () => void][] = [
     ...(puedeLevantarMano ? [[atajos.levantarMano, alternarMano] as [Atajo, () => void]] : []),
@@ -975,6 +981,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     ...(estado?.acciones.includes('narrador:revelarGrimorio') && !revelandoGrimorio
       ? [[atajos.revelarGrimorio, () => setRevelandoGrimorio(true)] as [Atajo, () => void]]
       : []),
+    // R: sonar el gong (todos a la plaza)
+    ...(estado?.acciones.includes('narrador:sonarGong') ? [[atajos.sonarGong, () => void sonarGong()] as [Atajo, () => void]] : []),
     ...(estado?.video && puedeEmitirVideo
       ? [
           [atajos.microfono, alternarMicrofonoConAtajo] as [Atajo, () => void],
@@ -1505,6 +1513,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   onRevelando={setRevelandoGrimorio}
                   atajoFase={atajos.cambiarFase}
                   atajoRevelar={atajos.revelarGrimorio}
+                  atajoGong={atajos.sonarGong}
                 />
               )}
               {puedeLevantarMano && yo && (

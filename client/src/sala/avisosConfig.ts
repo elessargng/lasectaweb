@@ -33,6 +33,7 @@ export type TipoAviso =
   | 'votoAVoto'
   | 'resultadoVotacion'
   | 'mezclar'
+  | 'gong'
   | 'moverJugadores'
   | 'editarAsientos'
   | 'errores'
@@ -96,6 +97,7 @@ export const GRUPOS_AVISOS: { grupo: string; tipos: { tipo: TipoAviso; etiqueta:
   {
     grupo: 'Acciones del narrador',
     tipos: [
+      { tipo: 'gong', etiqueta: 'Gong: el narrador llama a todos a la plaza' },
       { tipo: 'mezclar', etiqueta: 'Mezclar jugadores' },
       { tipo: 'bolsa', etiqueta: 'Bolsa de personajes: setup modificado y personajes repartidos' },
       { tipo: 'moverJugadores', etiqueta: 'Mover a un jugador de asiento (instrucciones y pasos)' },

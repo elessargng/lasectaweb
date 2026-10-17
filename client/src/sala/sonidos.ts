@@ -11,6 +11,7 @@
 
 /** Los sonidos, en el orden en que salen en las preferencias. */
 export const SONIDOS = [
+  { id: 'gong', nombre: 'Gong del narrador', descripcion: 'Cuando el narrador llama a todos a la plaza.' },
   { id: 'cuentaAtras', nombre: 'Cuenta atrás de las nominaciones', descripcion: 'Los últimos segundos antes de votar.' },
   { id: 'voto', nombre: 'Cada voto', descripcion: 'Al votar, un sonido por cada mano levantada.' },
   { id: 'sinVoto', nombre: 'Quien no vota', descripcion: 'Un tic cuando la aguja pasa por alguien que no vota.' },
@@ -28,6 +29,7 @@ const ARCHIVOS = {
   voto: '/sonidos/voto.mp3',
   sinVoto: '/sonidos/sin-voto.mp3',
   cuentaAtras: '/sonidos/cuenta-atras.mp3',
+  gong: '/sonidos/gong.mp3',
 };
 type Archivo = keyof typeof ARCHIVOS;
 
@@ -154,6 +156,11 @@ export function tocarCuentaAtras(empiezaEn: number): () => void {
   return sonar('cuentaAtras', empiezaEn);
 }
 
+/** El gong del narrador: todos a la plaza. */
+export function tocarGong(): void {
+  sonar('gong');
+}
+
 /** Las conversaciones privadas: entrar, salir o que salga alguien de la tuya. */
 export function tocarPrivado(id: 'entrarPrivado' | 'salirPrivado' | 'saleOtro'): void {
   campanilla(id);
@@ -174,7 +181,7 @@ export function probarSonido(id: IdSonido): void {
   const ctx = contexto;
   if (!ctx) return;
   void (ctx.state === 'running' ? Promise.resolve() : ctx.resume()).then(() => {
-    if (id === 'voto' || id === 'sinVoto') sonar(id, undefined, true);
+    if (id === 'voto' || id === 'sinVoto' || id === 'gong') sonar(id, undefined, true);
     else if (id === 'cuentaAtras') {
       const parar = sonar(id, undefined, true);
       window.setTimeout(parar, 3000);

@@ -78,6 +78,9 @@ interface Accion {
 
 const cualquiera = () => true;
 
+/** Tiempo mínimo (ms) entre dos gongs. */
+const SALA_PAUSA_GONG_MS = 5000;
+
 /** Largo máximo del texto «Personalizado» al despertar. */
 export const SALA_TEXTO_DESPERTAR_MAX = 200;
 
@@ -567,6 +570,19 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     noPuede: 'Solo un narrador puede limpiar el grimorio.',
     hacer: (sala) => {
       sala.limpiarGrimorio();
+      return { ok: true };
+    },
+  },
+
+  /** Suena el gong: todos oyen y ven el aviso de volver a la plaza del pueblo. */
+  'narrador:sonarGong': {
+    puede: (_sala, yo) => yo.rol === 'narrador',
+    noPuede: 'Solo un narrador puede sonar el gong.',
+    hacer: (sala) => {
+      // Uno cada pocos segundos, para que no se pisen
+      const ultimo = sala.gong();
+      if (ultimo && Date.now() - ultimo < SALA_PAUSA_GONG_MS) return { ok: false, error: 'El gong aún está sonando.' };
+      sala.sonarGong();
       return { ok: true };
     },
   },

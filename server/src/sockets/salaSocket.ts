@@ -138,6 +138,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
         fase: sala.fase(),
         distribucion,
         revelacion,
+        gong: sala.gong(),
         video: !!videollamada,
         // Los jugadores no saben qué visitantes escuchan las conversaciones; de noche, ni
         // siquiera que las hay: solo ven aquella en la que están

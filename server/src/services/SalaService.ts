@@ -184,6 +184,8 @@ export class SalaService {
   };
   private nominacionEnCurso: NominacionInterna | null = null;
   private revelacionActual: { ganador: SalaAlineamiento; reveladas: string[] } | null = null;
+  /** Hora (ms) del último gong del narrador, o null. */
+  private ultimoGong: number | null = null;
   /** A quién se ha dejado ver el grimorio (por su `recuerdo`), para devolvérselo si sale y vuelve. */
   private conGrimorio = new Set<string>();
   /** Los votos de la votación de hoy que más tuvo (de las que llegaron a los necesarios), o null. */
@@ -843,6 +845,16 @@ export class SalaService {
   cambiarAlineamiento(asientoId: string, alineamiento: SalaAlineamiento): void {
     const asiento = this.mesa.find((a) => a.id === asientoId);
     if (asiento) asiento.alineamiento = alineamiento;
+  }
+
+  /** Hora (ms) del último gong (ver SalaEstado.gong), o null. */
+  gong(): number | null {
+    return this.ultimoGong;
+  }
+
+  /** Suena el gong: todos vuelven a la plaza. No comprueba permisos. */
+  sonarGong(): void {
+    this.ultimoGong = Date.now();
   }
 
   /** La revelación del grimorio en curso (o acabada), o null. */

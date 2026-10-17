@@ -218,6 +218,8 @@ export interface SalaEstado {
   fichasRetenidas: boolean;
   /** Revelando el grimorio (final de la partida), o null. */
   revelacion: SalaRevelacion | null;
+  /** Hora del servidor (ms) del último gong del narrador (todos a la plaza), o null. */
+  gong: number | null;
   /** Hay videollamada (cámaras y micrófonos) en esta sala. */
   video: boolean;
   /** Las conversaciones privadas en curso (quién habla con quién, no qué). */

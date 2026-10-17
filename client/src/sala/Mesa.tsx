@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import Agujas from './Agujas';
 import AnuncioGanador from './AnuncioGanador';
+import AvisoGong from './AvisoGong';
 import { useAriaLive, type TipoAviso } from './avisosConfig';
 import AsaMover from './AsaMover';
 import Asiento from './Asiento';
@@ -555,6 +556,9 @@ const Mesa = ({
 
       {/* Todas reveladas: el bando ganador, en grande (se anuncia aparte) */}
       {revelacion?.terminada && <AnuncioGanador ganador={revelacion.ganador} />}
+
+      {/* El gong del narrador: el aviso de volver a la plaza, alrededor de la mesa */}
+      <AvisoGong gong={estado.gong} ahora={estado.ahora} onAnuncio={(m) => onAnuncio('gong', m)} />
 
       {agujas && (
         <Agujas
