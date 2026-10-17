@@ -406,6 +406,11 @@ export class SalaService {
     this.bolsaActual = [...this.bolsaActual.filter((id) => this.esViajero(id)), ...personajes];
   }
 
+  /** Vacía la bolsa entera (también los viajeros). No comprueba permisos. */
+  vaciarBolsa(): void {
+    this.bolsaActual = [];
+  }
+
   private esViajero(id: string): boolean {
     return this.personaje(id)?.tipo === 'traveller';
   }

@@ -394,10 +394,20 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     const automaticos = new Set(vivos);
     if (vivos.some((id) => tipoDe(id) === 'minion')) automaticos.add('esbirros');
     if (vivos.some((id) => tipoDe(id) === 'demon')) automaticos.add('demonios');
+    // El Caníbal (vivo) tiene la habilidad del muerto que lleva su recordatorio «Lunch»:
+    // ese personaje también se despierta (en su sitio del orden de noche)
+    const canibalVivo = e.asientos.some((a) => !a.muerto && (a.personaje === 'cannibal' || identidadDe(a).personaje === 'cannibal'));
+    const porCanibal = canibalVivo
+      ? e.asientos
+          .filter((a) => a.muerto && a.recordatorios.some((r) => r.personaje === 'cannibal' && /\blunch\b/i.test(r.texto)))
+          .flatMap((a) => (identidadDe(a).personaje ? [identidadDe(a).personaje!] : []))
+      : [];
+    for (const id of porCanibal) automaticos.add(id);
     const cambios = e.recordatoriosNoche;
     const activo = (id: string) => cambios[id] ?? automaticos.has(id);
     return {
       activos: [...new Set([...automaticos, ...Object.keys(cambios)])].filter(activo),
+      porCanibal,
       onAlternar: (id: string) => {
         void pedirPropio('narrador:recordatorio', { id, activo: !activo(id) }).then((r) => {
           if (!r.ok) setAviso(r.error);
@@ -1478,6 +1488,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   }
                   onAnuncio={anunciar}
                   recordatorios={yo?.rol === 'narrador' ? recordatoriosNoche(estado) : null}
+                  // En la preparación y la primera noche, la primera; desde el primer día, las demás
+                  nochePorDefecto={estado.fase.momento === 'preparacion' || (estado.fase.momento === 'noche' && estado.fase.numero <= 1) ? 'primera' : 'otras'}
                   partidaEmpezada={
                     estado.fase.momento !== 'preparacion' ||
                     estado.bolsa.length > 0 ||

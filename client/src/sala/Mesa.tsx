@@ -18,7 +18,8 @@ import FichaRedonda from './FichaRedonda';
 import PersonajeEnFicha from './PersonajeEnFicha';
 import RecordatoriosFicha from './RecordatoriosFicha';
 import { ESCALA_RECORDATORIO } from './FichaRecordatorio';
-import { describirRecordatorio, NOTAS_MAX, recordatoriosDeFicha, useFichas } from './fichas';
+import { contarBolsa, describirRecordatorio, identidadDe, NOTAS_MAX, recordatoriosDeFicha, TIPOS_REPARTO, useFichas } from './fichas';
+import { descuadres } from './comprobarReparto';
 import LunaDespertar from './LunaDespertar';
 import ManoLevantada from './ManoLevantada';
 import PanelNominacion from './PanelNominacion';
@@ -217,7 +218,22 @@ const Mesa = ({
   };
   // Los personajes en juego (para quien mira): sus recordatorios salen primero al poner uno
   // En juego: los de las fichas y los NPCs (legendarios y lóricos), que también llevan recordatorios
-  const enJuego = new Set([...asientos.map(personajeVisto).filter((id): id is string => !!id), ...estado.npcs]);
+  // (también quién es de verdad, por su «Is The …»)
+  const identidades = asientos.flatMap((a) => (identidadDe(a).personaje ? [identidadDe(a).personaje!] : []));
+  const enJuego = new Set([...asientos.map(personajeVisto).filter((id): id is string => !!id), ...identidades, ...estado.npcs]);
+  // Con todos los personajes ya puestos (quien ve el grimorio), si el reparto no cuadra
+  // lo más seguro es que alguien no sea lo que cree: faltan forasteros (el Borracho)
+  // o esbirros (la Marioneta). Sus recordatorios salen con los de los que están en juego.
+  const cuentas = contarBolsa(identidades, (id) => todosPorId.get(id)?.tipo);
+  const repartidos = TIPOS_REPARTO.reduce((n, { tipo }) => n + (cuentas[tipo] ?? 0), 0);
+  const descuadre =
+    repartidos > 0 && repartidos === estado.distribucion.jugadores
+      ? descuadres(cuentas, estado.distribucion, [...identidades, ...estado.npcs])
+      : { forasteros: false, esbirros: false };
+  const probables = new Set<string>();
+  if (descuadre.forasteros && todosPorId.has('drunk')) probables.add('drunk');
+  if ((descuadre.forasteros || descuadre.esbirros) && todosPorId.has('marionette')) probables.add('marionette');
+  for (const id of probables) enJuego.add(id);
   // Quitar un recordatorio: el narrador, de la partida; un jugador, de su grimorio.
   // El botón desaparece: el foco vuelve a la ficha, que dice los que quedan.
   const anotadoPorMi = (asientoId: string, r: SalaRecordatorio) => !!notasRecordatorios[asientoId]?.some((x) => x.id === r.id);
@@ -513,6 +529,7 @@ const Mesa = ({
                   despertar={despertarDe(a.id)}
                   seguir={seguir}
                   enJuego={enJuego}
+                  probables={probables}
                   onEscribirNota={escriboNotas && !editando ? () => setNotasAbiertas({ asientoId: a.id, nueva: true }) : undefined}
                   revelando={
                     revelacion

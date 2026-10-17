@@ -66,6 +66,8 @@ interface FichaAsientoProps {
   seguir?: { siguiendo: boolean; onAlternar: () => void };
   /** Los personajes en juego (en alguna ficha, para quien mira): sus recordatorios salen primero al poner uno. */
   enJuego: Set<string>;
+  /** Los de `enJuego` que solo lo están probablemente (el Borracho si no cuadran los forasteros…). */
+  probables?: Set<string>;
   /** Abre las notas del asiento con una nueva («Escribir nota»); sin esto, no sale. */
   onEscribirNota?: () => void;
 }
@@ -108,6 +110,7 @@ const FichaAsiento = ({
   despertar,
   seguir,
   enJuego,
+  probables,
   onEscribirNota,
 }: FichaAsientoProps) => {
   const { hayGuion, personajes, viajeros, porId, notas, anotar, todos, todosPorId, notasRecordatorios, anotarRecordatorios } = useFichas();
@@ -402,6 +405,7 @@ const FichaAsiento = ({
         <DialogoRecordatorio
           ficha={nombreFicha.replace(/^Ficha del /, '')}
           enJuego={todos.filter((p) => enJuego.has(p.id))}
+          probables={probables}
           otros={todos.filter((p) => !enJuego.has(p.id))}
           onElegir={(p, i) => void ponerRecordatorio(p, i)}
           onTexto={(texto) => void ponerRecordatorioTexto(texto)}
@@ -414,6 +418,7 @@ const FichaAsiento = ({
           titulo="Matar de noche"
           explicacion="Elige el recordatorio de quien lo mata. Su muerte no se verá hasta que la anuncies de día, pulsando su sudario."
           enJuego={todos.filter((p) => enJuego.has(p.id))}
+          probables={probables}
           otros={todos.filter((p) => !enJuego.has(p.id))}
           onElegir={(p, i) => void matarDeNoche({ personaje: p, indice: i })}
           sinRecordatorio={{ etiqueta: 'Matar sin recordatorio', onElegir: () => void matarDeNoche(null) }}

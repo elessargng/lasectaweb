@@ -12,6 +12,8 @@ interface DialogoRecordatorioProps {
   /** Los personajes en juego (en alguna ficha) y los demás del guion. */
   enJuego: PersonajeMostrado[];
   otros: PersonajeMostrado[];
+  /** De los en juego, los que solo lo están probablemente (salen marcados como «posible»). */
+  probables?: Set<string>;
   onElegir: (personaje: PersonajeMostrado, indice: number) => void;
   onCerrar: () => void;
   /** Otro título (sin la ficha): «Matar de noche». */
@@ -46,7 +48,7 @@ const TAMANO = '4.5rem';
  *
  * Pestañas como manda ARIA: las flechas van de una a otra y Tab entra en la lista.
  */
-const DialogoRecordatorio = ({ ficha, enJuego, otros, onElegir, onCerrar, titulo, explicacion, sinRecordatorio, onTexto }: DialogoRecordatorioProps) => {
+const DialogoRecordatorio = ({ ficha, enJuego, otros, probables, onElegir, onCerrar, titulo, explicacion, sinRecordatorio, onTexto }: DialogoRecordatorioProps) => {
   const pestanas = PESTANAS.filter((t) => t.id !== 'texto' || onTexto);
   const sinPersonajes = enJuego.length === 0 && otros.length === 0;
   const [pestana, setPestana] = useState<Pestana>(onTexto && sinPersonajes ? 'texto' : 'enJuego');
@@ -184,8 +186,13 @@ const DialogoRecordatorio = ({ ficha, enJuego, otros, onElegir, onCerrar, titulo
                   <ul className="flex flex-col gap-3">
                     {personajes.map((p) => (
                       <li key={p.id}>
-                        <h4 lang={p.nombre.lang} className="mb-1 text-sm">
-                          {p.nombre.texto}
+                        <h4 className="mb-1 text-sm">
+                          <span lang={p.nombre.lang}>{p.nombre.texto}</span>
+                          {pestana === 'enJuego' && probables?.has(p.id) && (
+                            <span className="ml-2 font-ui text-xs text-on-surface-muted">
+                              posible: el reparto no cuadra
+                            </span>
+                          )}
                         </h4>
                         <ul className="flex flex-wrap gap-2">
                           {p.recordatorios.map((r, i) => (

@@ -27,6 +27,8 @@ interface PanelGuionProps {
   /** Los recordatorios del orden de noche: solo para el narrador (null para los demás). */
   recordatorios: RecordatoriosNoche | null;
   onCerrar: () => void;
+  /** La noche que se ve al abrir el orden de noche: la primera hasta que acaba, luego las demás. */
+  nochePorDefecto: 'primera' | 'otras';
 }
 
 /**
@@ -37,6 +39,11 @@ interface PanelGuionProps {
 export interface RecordatoriosNoche {
   /** ids de los personajes que la llevan. */
   activos: string[];
+  /**
+   * Los que la llevan porque el Caníbal tiene su habilidad (el muerto con su
+   * recordatorio «Lunch»): salen con una nota.
+   */
+  porCanibal: string[];
   onAlternar: (personajeId: string) => void;
 }
 
@@ -70,12 +77,15 @@ const colorDe = (tipo: string) =>
  *
  * Al abrirse el foco va a su título; Escape (con el foco dentro) lo cierra.
  */
-const PanelGuion = ({ vista, guion, idiomas, recordatorios, onCambiarIdiomaDescripciones, onCerrar }: PanelGuionProps) => {
+const PanelGuion = ({ vista, guion, idiomas, recordatorios, nochePorDefecto, onCambiarIdiomaDescripciones, onCerrar }: PanelGuionProps) => {
   const [completo, setCompleto] = useState(false);
   const traduccionesNombres = useTraducciones(idiomas.nombres, idiomas.genero);
   const traduccionesDescripciones = useTraducciones(idiomas.descripciones, idiomas.genero);
   const personajes = mostrarPersonajes(guion.personajes, traduccionesNombres, traduccionesDescripciones);
-  const [noche, setNoche] = useState<'primera' | 'otras'>('primera');
+  // La noche que toca: la primera hasta que acaba; luego, las demás. Cambia sola con la
+  // partida (se puede mirar la otra a mano mientras tanto)
+  const [noche, setNoche] = useState<'primera' | 'otras'>(nochePorDefecto);
+  useEffect(() => setNoche(nochePorDefecto), [nochePorDefecto]);
   // Cada modo recuerda su ancho
   const [anchos, setAnchos] = useState({ resumido: ANCHO.resumido, completo: ANCHO.completo });
   const modo = completo ? 'completo' : 'resumido';
@@ -332,11 +342,14 @@ const Fila = ({
   color,
   texto,
   recordatorio,
+  nota,
 }: {
   icono: ReactNode;
   nombre: Texto;
   color: string;
   texto?: Texto | null;
+  /** Junto al nombre, en pequeño («lo usa el Caníbal»). */
+  nota?: string;
   /** Orden de noche, para el narrador: si lleva la ficha recordatorio y cómo quitarla o ponerla. */
   recordatorio?: { activo: boolean; onAlternar: () => void };
 }) => (
@@ -366,6 +379,7 @@ const Fila = ({
       <span className={`font-bold tracking-wide ${color}`} lang={nombre.lang}>
         {nombre.texto}
       </span>
+      {nota && <span className="ml-2 text-xs italic text-hoja-cuerpo">({nota})</span>}
       {texto?.texto && (
         <>
           <span className="sr-only">: </span>
@@ -497,6 +511,7 @@ const OrdenNoche = ({
           color={colorDe(r.tipo)}
           texto={completo ? (noche === 'primera' ? r.primeraNoche : r.otrasNoches) : null}
           recordatorio={conRecordatorio(r.id)}
+          nota={recordatorios?.porCanibal.includes(r.id) ? 'lo usa el Caníbal' : undefined}
         />
       ))}
       {fija(

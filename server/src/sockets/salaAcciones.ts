@@ -769,6 +769,16 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
+  /** Vacía la bolsa: saca todos los personajes (también los viajeros). */
+  'narrador:vaciarBolsa': {
+    puede: esNarrador,
+    noPuede: 'Solo un narrador puede preparar la bolsa.',
+    hacer: (sala) => {
+      sala.vaciarBolsa();
+      return { ok: true };
+    },
+  },
+
   /**
    * Llena la bolsa de una vez (el narrador la ha llenado al azar): sustituye sus
    * aldeanos, forasteros, esbirros y demonios por estos; los viajeros se quedan.

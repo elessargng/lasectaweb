@@ -1,4 +1,4 @@
-import { Dices, TriangleAlert } from 'lucide-react';
+import { Dices, Eraser, TriangleAlert } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Dialog from '../components/Dialog';
@@ -124,6 +124,21 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar 
       return;
     }
     setAzar(resultado);
+  };
+
+  // Vaciar: desmarca todos los personajes de una vez (también los viajeros)
+  const vaciar = async () => {
+    if (bolsa.length === 0 || enviando) return;
+    setError('');
+    setConfirmando(false);
+    setEnviando(true);
+    const r = await pedir('narrador:vaciarBolsa');
+    setEnviando(false);
+    if (!r.ok) {
+      setError(r.error);
+      return;
+    }
+    setAzar(null);
   };
 
   const repartir = async () => {
@@ -273,6 +288,15 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar 
             <p id="sala-bolsa-cuenta" className="mr-auto text-sm text-on-surface-muted">
               En la bolsa: <span className="tabular-nums">{bolsa.length}</span> de {fichasParaRepartir}
             </p>
+            <button
+              type="button"
+              onClick={() => void vaciar()}
+              aria-disabled={bolsa.length === 0 || enviando}
+              className={botonSecundario}
+            >
+              <Eraser size={16} />
+              Vaciar bolsa
+            </button>
             <button
               type="button"
               onClick={() => void llenar()}

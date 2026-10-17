@@ -21,6 +21,8 @@ interface TituloGuionProps {
   onCambiarIdiomaDescripciones: (id: string) => void;
   /** Los recordatorios del orden de noche (solo el narrador); null si no se ven. */
   recordatorios: RecordatoriosNoche | null;
+  /** La noche que se ve al abrir el orden de noche (ver PanelGuion). */
+  nochePorDefecto: 'primera' | 'otras';
   /** Preparar la bolsa (narradores, con guion): lo que lleva y el reparto; null si no se puede. */
   bolsa: { bolsa: string[]; distribucion: SalaDistribucion; npcs: string[] } | null;
   /** Avisa al lector (al repartir los personajes de la bolsa). */
@@ -53,6 +55,7 @@ const TituloGuion = ({
   bolsa,
   onAnuncio,
   recordatorios,
+  nochePorDefecto,
   partidaEmpezada,
 }: TituloGuionProps) => {
   const [preparandoBolsa, setPreparandoBolsa] = useState(false);
@@ -212,6 +215,7 @@ const TituloGuion = ({
             guion={guion}
             idiomas={idiomas}
             recordatorios={recordatorios}
+            nochePorDefecto={nochePorDefecto}
             onCambiarIdiomaDescripciones={onCambiarIdiomaDescripciones}
             onCerrar={cerrar}
           />
