@@ -1,0 +1,223 @@
+import { Send, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import Dialog from '../components/Dialog';
+import DialogoPersonaje from './DialogoPersonaje';
+import DialogoRecordatorio from './DialogoRecordatorio';
+import Interruptor from './Interruptor';
+import MiniGrimorio from './MiniGrimorio';
+import { botonIcono, botonPrincipal, botonSecundario } from './estilos';
+import { alineamientoDe, describirRecordatorio, RECORDATORIO_TEXTO, useFichas } from './fichas';
+import type { SalaAlineamiento, SalaFichaEnviada, SalaRecordatorio, SalaResultado } from './useSala';
+
+interface EnviarGrimorioProps {
+  /** A quién se envía: «asiento 3 (Ana)», y su asiento. */
+  destino: { asientoId: string; nombre: string };
+  /** La copia del grimorio de ahora (de la que se parte, y a la que se puede volver). */
+  copia: SalaFichaEnviada[];
+  /** El nombre corto de cada asiento, para el minigrimorio. */
+  nombres: Record<string, string>;
+  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  onEnviado: () => void;
+  onCerrar: () => void;
+}
+
+/**
+ * Enviar el grimorio al Espía o a la Viuda: un minigrimorio con la copia del de
+ * ahora que el narrador puede cambiar antes de enviarlo (solo cambia lo que se
+ * envía, no la partida). Se elige una ficha y, al lado, se le cambia el
+ * personaje, el alineamiento, si está muerto y sus recordatorios (pulsar uno lo
+ * quita). «Enviar» se lo manda a quien se sienta en ese asiento.
+ *
+ * Elegir personaje o recordatorio abre su diálogo en lugar de este (un diálogo
+ * modal cada vez); al cerrarlo se vuelve aquí, al mismo sitio.
+ */
+const EnviarGrimorio = ({ destino, copia, nombres, pedir, onEnviado, onCerrar }: EnviarGrimorioProps) => {
+  const { personajes, viajeros, todos, todosPorId } = useFichas();
+  const [fichas, setFichas] = useState(copia);
+  const [elegida, setElegida] = useState<string | null>(copia[0]?.asientoId ?? null);
+  const [eligiendo, setEligiendo] = useState<'personaje' | 'recordatorio' | null>(null);
+  const [error, setError] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const volverRef = useRef<HTMLButtonElement>(null);
+  const venimosDe = useRef<'personaje' | 'recordatorio' | null>(null);
+
+  // Al volver de elegir, el foco al botón de lo que se estaba cambiando
+  useEffect(() => {
+    if (eligiendo === null && venimosDe.current) {
+      volverRef.current?.focus();
+      venimosDe.current = null;
+    }
+  }, [eligiendo]);
+
+  const ficha = fichas.find((f) => f.asientoId === elegida) ?? null;
+  const numero = ficha ? fichas.indexOf(ficha) + 1 : 0;
+  const nombreFicha = ficha ? `asiento ${numero} (${nombres[ficha.asientoId] ?? ''})` : '';
+  const personaje = ficha?.personaje ? todosPorId.get(ficha.personaje) : undefined;
+  const cambiar = (cambio: Partial<SalaFichaEnviada>) =>
+    setFichas((fs) => fs.map((f) => (f.asientoId === elegida ? { ...f, ...cambio } : f)));
+  const ponerRecordatorio = (r: Omit<SalaRecordatorio, 'id'>) =>
+    setFichas((fs) =>
+      fs.map((f) => (f.asientoId === elegida ? { ...f, recordatorios: [...f.recordatorios, { id: crypto.randomUUID(), ...r }] } : f)),
+    );
+  const quitarRecordatorio = (asientoId: string, r: SalaRecordatorio) =>
+    setFichas((fs) => fs.map((f) => (f.asientoId === asientoId ? { ...f, recordatorios: f.recordatorios.filter((x) => x.id !== r.id) } : f)));
+  const elegir = (que: 'personaje' | 'recordatorio') => {
+    venimosDe.current = que;
+    setEligiendo(que);
+  };
+
+  const enviar = async () => {
+    if (enviando) return;
+    setEnviando(true);
+    setError('');
+    const r = await pedir('narrador:enviarGrimorio', { asientoId: destino.asientoId, fichas });
+    setEnviando(false);
+    if (!r.ok) {
+      setError(r.error);
+      return;
+    }
+    onEnviado();
+    onCerrar();
+  };
+
+  if (eligiendo === 'personaje' && ficha) {
+    return (
+      <DialogoPersonaje
+        ficha={nombreFicha}
+        personajes={personajes}
+        viajeros={viajeros}
+        actual={ficha.personaje}
+        onElegir={(id) => cambiar({ personaje: id, alineamiento: null })}
+        onCerrar={() => setEligiendo(null)}
+      />
+    );
+  }
+  if (eligiendo === 'recordatorio' && ficha) {
+    const enCopia = new Set(fichas.map((f) => f.personaje).filter(Boolean));
+    return (
+      <DialogoRecordatorio
+        ficha={nombreFicha}
+        enJuego={todos.filter((p) => enCopia.has(p.id))}
+        otros={todos.filter((p) => !enCopia.has(p.id))}
+        onElegir={(p, indice) => ponerRecordatorio({ personaje: p.id, indice, texto: p.recordatorios[indice]?.texto ?? '' })}
+        onTexto={(texto) => ponerRecordatorio({ personaje: RECORDATORIO_TEXTO, indice: -1, texto })}
+        onCerrar={() => setEligiendo(null)}
+      />
+    );
+  }
+
+  const alineamiento: SalaAlineamiento | null = personaje ? alineamientoDe(personaje, ficha!.alineamiento) : (ficha?.alineamiento ?? null);
+  const boton = (que: 'personaje' | 'recordatorio') => (venimosDe.current === que ? volverRef : undefined);
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sala-velo">
+      <Dialog
+        onClose={onCerrar}
+        labelledBy="sala-enviar-grimorio-titulo"
+        describedBy="sala-enviar-grimorio-ayuda"
+        className="flex max-h-[94vh] w-full max-w-5xl flex-col sala-cofre sala-cofre-esquinas"
+      >
+        <div className="flex items-center gap-3 px-6 pt-4">
+          <h2 id="sala-enviar-grimorio-titulo" className="flex-1 sala-cofre-titulo">
+            Enviar grimorio <span className="font-ui text-base font-normal text-on-surface-muted">a {destino.nombre}</span>
+          </h2>
+          <button type="button" onClick={onCerrar} aria-label="Cerrar" className={`${botonIcono} h-8 w-8 shrink-0`}>
+            <X size={16} />
+          </button>
+        </div>
+        <p id="sala-enviar-grimorio-ayuda" className="px-6 pb-2 pt-1 text-sm text-on-surface-muted">
+          Es una copia del grimorio de ahora. Lo que cambies aquí solo cambia lo que verá; la partida sigue igual.
+        </p>
+        <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-6 py-2 md:grid-cols-[1fr_17rem]">
+          <MiniGrimorio
+            fichas={fichas}
+            nombres={nombres}
+            elegida={elegida}
+            onElegir={setElegida}
+            onQuitarRecordatorio={quitarRecordatorio}
+          />
+          {/* Lo que se cambia de la ficha elegida */}
+          <section aria-labelledby="sala-enviar-grimorio-ficha" className="flex flex-col gap-3 self-start rounded border border-outline-ghost bg-background/40 p-4">
+            {ficha ? (
+              <>
+                <h3 id="sala-enviar-grimorio-ficha" className="rotulo">
+                  Asiento {numero} · {nombres[ficha.asientoId]}
+                </h3>
+                <p className="text-sm">
+                  {personaje ? <span lang={personaje.nombre.lang}>{personaje.nombre.texto}</span> : <span className="text-on-surface-muted">Sin personaje</span>}
+                </p>
+                <button type="button" ref={boton('personaje')} onClick={() => elegir('personaje')} className={botonSecundario}>
+                  Cambiar personaje
+                </button>
+                <fieldset className="flex gap-2">
+                  <legend className="mb-1 text-xs text-on-surface-muted">Alineamiento</legend>
+                  {(['bueno', 'malvado'] as const).map((a) => (
+                    <button
+                      key={a}
+                      type="button"
+                      aria-pressed={alineamiento === a}
+                      onClick={() => cambiar({ alineamiento: a })}
+                      className={`${botonSecundario} flex-1 aria-pressed:border-gold aria-pressed:text-gold-bright`}
+                    >
+                      {a === 'bueno' ? 'Bueno' : 'Malvado'}
+                    </button>
+                  ))}
+                </fieldset>
+                <Interruptor activo={ficha.muerto} onCambiar={(muerto) => cambiar({ muerto })}>
+                  Muerto
+                </Interruptor>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs text-on-surface-muted">Recordatorios</span>
+                  {ficha.recordatorios.length === 0 ? (
+                    <span className="text-sm text-on-surface-muted">Ninguno</span>
+                  ) : (
+                    <ul className="flex flex-col gap-1">
+                      {ficha.recordatorios.map((r) => (
+                        <li key={r.id} className="flex items-center justify-between gap-2 text-sm">
+                          <span className="min-w-0 truncate">{describirRecordatorio(r, todosPorId.get(r.personaje))}</span>
+                          <button
+                            type="button"
+                            onClick={() => quitarRecordatorio(ficha.asientoId, r)}
+                            aria-label={`Quitar ${describirRecordatorio(r, todosPorId.get(r.personaje))}`}
+                            className="rounded p-0.5 text-on-surface-muted hover:text-blood-pale focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
+                          >
+                            <X size={14} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <button type="button" ref={boton('recordatorio')} onClick={() => elegir('recordatorio')} className={`${botonSecundario} mt-1`}>
+                    Poner recordatorio
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p id="sala-enviar-grimorio-ficha" className="text-sm text-on-surface-muted">
+                Elige una ficha para cambiarla.
+              </p>
+            )}
+          </section>
+        </div>
+        {error && (
+          <p role="alert" className="px-6 pt-2 text-sm text-blood-pale">
+            {error}
+          </p>
+        )}
+        <div className="flex flex-wrap items-center justify-end gap-3 sala-cofre-pie px-6 py-3">
+          <button type="button" onClick={() => setFichas(copia)} className={`${botonSecundario} mr-auto`}>
+            Volver a la copia
+          </button>
+          <button type="button" onClick={() => void enviar()} aria-disabled={enviando || undefined} className={botonPrincipal}>
+            <Send size={16} />
+            Enviar
+          </button>
+        </div>
+      </Dialog>
+    </div>,
+    document.body,
+  );
+};
+
+export default EnviarGrimorio;

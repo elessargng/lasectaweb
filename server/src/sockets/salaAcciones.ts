@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { ChatRepository } from '../repositories/ChatRepository';
 import { datosDeDataUrl, guardarFondoSala } from '../utils/salaFondoStorage';
 import { ProveedorVideo } from '../services/videollamada/ProveedorVideo';
@@ -26,6 +27,7 @@ import {
   SALA_NOTA_LARGO_MAX,
   SALA_NOTAS_MAX,
   SALA_RECORDATORIO_TEXTO_MAX,
+  SalaFichaEnviada,
   SalaFormaMano,
   SalaParticipante,
   TARJETAS_DESPERTAR,
@@ -698,6 +700,51 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       }
       const id = sala.escribirNota(asientoId, (notaId as string | undefined) ?? null, limpio);
       return id ? { ok: true, valor: id } : { ok: false, error: 'Esa nota ya no existe.' };
+    },
+  },
+
+  /**
+   * Envía un grimorio (el Espía, la Viuda) a quien se sienta en un asiento: una
+   * copia del de la partida que el narrador puede haber cambiado. Se comprueba que
+   * cada ficha sea de un asiento de la mesa y lleve personajes del guion.
+   * datos: { asientoId, fichas: SalaFichaEnviada[] }.
+   */
+  'narrador:enviarGrimorio': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.asientos().some((a) => a.ocupante),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'No hay nadie sentado.' : 'Solo un narrador envía el grimorio.'),
+    hacer: (sala, _yo, datos) => {
+      const { asientoId, fichas } = (datos as { asientoId?: unknown; fichas?: unknown }) ?? {};
+      const destino = sala.asientos().find((a) => a.id === asientoId);
+      if (!destino || typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
+      if (!destino.ocupante) return { ok: false, error: 'En ese asiento no hay nadie a quien enviárselo.' };
+      if (!Array.isArray(fichas) || fichas.length > SALA_ASIENTOS.max) return { ok: false, error: 'El grimorio no es válido.' };
+      const mesa = new Set(sala.asientos().map((a) => a.id));
+      const limpias: SalaFichaEnviada[] = [];
+      for (const f of fichas as Record<string, unknown>[]) {
+        if (!f || typeof f.asientoId !== 'string' || !mesa.has(f.asientoId)) return { ok: false, error: 'El grimorio no es válido.' };
+        const personaje = f.personaje === null ? null : typeof f.personaje === 'string' && sala.personaje(f.personaje) ? f.personaje : undefined;
+        if (personaje === undefined) return { ok: false, error: 'Hay un personaje que no está en el guion.' };
+        const alineamiento = f.alineamiento === 'bueno' || f.alineamiento === 'malvado' ? f.alineamiento : null;
+        const recordatorios = Array.isArray(f.recordatorios) ? (f.recordatorios as Record<string, unknown>[]) : [];
+        if (recordatorios.length > MAX_RECORDATORIOS) return { ok: false, error: 'Hay una ficha con demasiados recordatorios.' };
+        const limpios = [];
+        for (const r of recordatorios) {
+          const texto = typeof r?.texto === 'string' ? r.texto.replace(/\s+/g, ' ').trim() : '';
+          if (r?.personaje === RECORDATORIO_TEXTO) {
+            if (!texto || [...texto].length > SALA_RECORDATORIO_TEXTO_MAX) return { ok: false, error: 'Hay un recordatorio con un texto no válido.' };
+            limpios.push({ id: randomUUID(), personaje: RECORDATORIO_TEXTO, indice: -1, texto });
+            continue;
+          }
+          const del = typeof r?.personaje === 'string' ? sala.personaje(r.personaje) : undefined;
+          const indice = typeof r?.indice === 'number' && Number.isInteger(r.indice) ? r.indice : -1;
+          const original = del?.recordatorios[indice];
+          if (!del || original === undefined) return { ok: false, error: 'Hay un recordatorio que no está en el guion.' };
+          limpios.push({ id: randomUUID(), personaje: del.id, indice, texto: original });
+        }
+        limpias.push({ asientoId: f.asientoId, personaje, alineamiento, muerto: f.muerto === true, recordatorios: limpios });
+      }
+      sala.enviarGrimorio(asientoId, limpias);
+      return { ok: true };
     },
   },
 

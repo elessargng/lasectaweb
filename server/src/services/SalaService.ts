@@ -17,6 +17,8 @@ import {
   SalaRol,
   NUM_FAROLES,
   RECORDATORIO_TEXTO,
+  SalaFichaEnviada,
+  SalaGrimorioEnviado,
 } from '../types/sala';
 import { GuionResuelto, PersonajeDeGuion } from '../types/guiones';
 import { repartoPara } from './partida/distribucion';
@@ -219,7 +221,7 @@ export class SalaService {
     // La bolsa, los faroles y los NPCs eran de los personajes del otro guion. Los
     // legendarios y lóricos que trae el guion, en juego desde el principio
     this.bolsaActual = [];
-    this.npcsActuales = guion.personajes.filter((p) => p.tipo === 'fabled' || p.tipo === 'loric').map((p) => p.id);
+    this.npcsActuales = this.npcsDelGuion();
     this.reglasBootlegger = null;
     this.rolStormcatcherActual = null;
     this.retenidas = false;
@@ -230,9 +232,14 @@ export class SalaService {
   /**
    * Los NPCs de la partida: legendarios y lóricos que el narrador pone en juego
    * (ver SalaEstado.npcs). Siguen al limpiar el grimorio: suelen ser los mismos
-   * en la partida siguiente con el mismo guion.
+   * en la partida siguiente con el mismo guion (y los del guion vuelven si se habían quitado).
    */
   private npcsActuales: string[] = [];
+
+  /** Los legendarios y lóricos que trae el guion: en juego desde el principio de cada partida. */
+  private npcsDelGuion(): string[] {
+    return (this.guionActual?.personajes ?? []).filter((p) => p.tipo === 'fabled' || p.tipo === 'loric').map((p) => p.id);
+  }
 
   /** El reparto dado por bueno a mano (ver SalaEstado.setupAceptado). */
   private setupAceptadoActual: string | null = null;
@@ -284,6 +291,37 @@ export class SalaService {
 
   nombrarStormcatcher(personajeId: string | null): void {
     this.rolStormcatcherActual = personajeId;
+  }
+
+  /**
+   * Lo que se entregó a cada asiento (por su id) al repartir la bolsa: su personaje
+   * y su alineamiento. Es lo único que ve de su ficha quien se sienta ahí; lo que el
+   * narrador cambie después es del grimorio, privado, hasta el próximo reparto.
+   */
+  private entregadas = new Map<string, { personaje: string | null; alineamiento: SalaAlineamiento | null }>();
+
+  /** La ficha que se entregó a un asiento en el último reparto (sin reparto, vacía). */
+  fichaEntregada(asientoId: string): { personaje: string | null; alineamiento: SalaAlineamiento | null } {
+    return this.entregadas.get(asientoId) ?? { personaje: null, alineamiento: null };
+  }
+
+  /**
+   * Los grimorios enviados (al Espía, a la Viuda), por asiento: el último, y a
+   * quién estaba sentado entonces (si se sienta otro, no lo ve).
+   */
+  private grimoriosEnviados = new Map<string, { ocupante: string; grimorio: SalaGrimorioEnviado }>();
+
+  /** Envía un grimorio a quien se sienta en un asiento. No comprueba permisos ni las fichas. */
+  enviarGrimorio(asientoId: string, fichas: SalaFichaEnviada[]): void {
+    const ocupante = this.mesa.find((a) => a.id === asientoId)?.ocupante;
+    if (ocupante) this.grimoriosEnviados.set(asientoId, { ocupante, grimorio: { hora: Date.now(), fichas } });
+  }
+
+  /** El último grimorio enviado a un participante (si sigue en el asiento al que se envió), o null. */
+  grimorioRecibidoPor(participanteId: string): SalaGrimorioEnviado | null {
+    const asiento = this.mesa.find((a) => a.ocupante === participanteId);
+    const enviado = asiento ? this.grimoriosEnviados.get(asiento.id) : undefined;
+    return enviado && enviado.ocupante === participanteId ? enviado.grimorio : null;
   }
 
   /** Con el Gardener: los personajes repartidos aún no se han entregado a los jugadores. */
@@ -499,6 +537,8 @@ export class SalaService {
         a.recordatorios = a.recordatorios.filter((r) => !esIdentidad(r));
         this.identidadAutomatica(a);
       });
+    // Lo que se entrega a cada jugador: su ficha tal como queda ahora
+    this.entregadas = new Map(this.mesa.map((a) => [a.id, { personaje: a.personaje, alineamiento: a.alineamiento }]));
   }
   /** Lo siguiente que toca en la nominación: el fin de la cuenta atrás o el próximo paso de la votación. */
   private temporizador: NodeJS.Timeout | null = null;
@@ -610,6 +650,9 @@ export class SalaService {
    */
   limpiarGrimorio(): void {
     this.cerrarNominacion();
+    // Otra partida: los NPCs del guion, en juego (si alguno se quitó, vuelve); los
+    // demás que se pusieron a mano, siguen
+    this.npcsActuales = [...this.npcsActuales, ...this.npcsDelGuion().filter((id) => !this.npcsActuales.includes(id))];
     this.registro = [];
     this.maximoDelDia = null;
     for (const a of this.mesa) {
@@ -624,6 +667,8 @@ export class SalaService {
       a.notas = [];
     }
     this.bolsaActual = [];
+    this.entregadas.clear();
+    this.grimoriosEnviados.clear();
     this.farolesNarrador = farolesVacios();
     this.farolesAsientos.clear();
     this.setupAceptadoActual = null;

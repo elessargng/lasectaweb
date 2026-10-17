@@ -1,9 +1,9 @@
-import { Dices, Eraser, TriangleAlert } from 'lucide-react';
+import { Dices, Eraser, TriangleAlert, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
-import { botonPrincipal, botonSecundario } from './estilos';
+import { botonIcono, botonPrincipal, botonSecundario } from './estilos';
 import { contarBolsa, gruposViajeros, TIPOS_REPARTO, useFichas } from './fichas';
 import type { PersonajeMostrado } from './guiones';
 import PestanasDialogo from './PestanasDialogo';
@@ -168,9 +168,15 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar 
         labelledBy="sala-bolsa-titulo"
         className="flex max-h-[90vh] w-full max-w-3xl flex-col sala-cofre sala-cofre-esquinas"
       >
-        <h2 id="sala-bolsa-titulo" className="px-6 py-4 sala-cofre-titulo">
-          Preparar la bolsa
-        </h2>
+        <div className="flex items-center gap-3 px-6 py-4">
+          <h2 id="sala-bolsa-titulo" className="flex-1 sala-cofre-titulo">
+            Preparar la bolsa
+          </h2>
+          {/* Cerrar, como en cualquier ventana: la X arriba a la derecha (y Escape) */}
+          <button type="button" onClick={onCerrar} aria-label="Cerrar" className={`${botonIcono} h-8 w-8 shrink-0`}>
+            <X size={16} />
+          </button>
+        </div>
         <PestanasDialogo
           idBase="sala-bolsa"
           etiqueta="Personajes"
@@ -285,7 +291,7 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar 
           </div>
         ) : (
           <div className="flex flex-wrap items-center justify-end gap-3 sala-cofre-pie px-6 py-3">
-            <p id="sala-bolsa-cuenta" className="mr-auto text-sm text-on-surface-muted">
+            <p id="sala-bolsa-cuenta" className="mr-auto whitespace-nowrap text-sm text-on-surface-muted">
               En la bolsa: <span className="tabular-nums">{bolsa.length}</span> de {fichasParaRepartir}
             </p>
             <button
@@ -320,9 +326,6 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar 
               className={`${botonPrincipal} aria-disabled:cursor-not-allowed aria-disabled:opacity-50`}
             >
               Asignar personajes
-            </button>
-            <button type="button" onClick={onCerrar} className={botonSecundario}>
-              Cerrar
             </button>
           </div>
         )}

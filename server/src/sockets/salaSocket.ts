@@ -95,16 +95,18 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
       const viajero = viajeroDe(a);
       return viajero ? { ...sinPersonaje(a), personaje: viajero } : sinPersonaje(a);
     };
-    // Su jugador la ve entera (sin recordatorios); si es un viajero de verdad, como ese
-    // viajero (el Aprendiz: la ficha que sacó de la bolsa), como los demás. Con Tor, no
-    // sabe quién es hasta que muere: la ve como los demás; muerto, ve quién es de verdad.
+    // Su jugador ve el personaje y el alineamiento que se le entregaron al repartir la
+    // bolsa (lo que el narrador cambie luego es del grimorio: no lo ve), sin recordatorios.
+    // Si es un viajero de verdad, como ese viajero (el Aprendiz: la ficha que sacó de la
+    // bolsa), como los demás. Con Tor, no sabe quién es hasta que muere: la ve como los
+    // demás; muerto, ve quién es de verdad.
     const tor = sala.npcActivo(NPC_TOR);
     const comoLaVeSuJugador = (a: SalaAsiento): SalaAsiento => {
       if (tor && !a.muerto) return comoLaVenTodos(a);
       // Con Tor, al morir sabe quién es de verdad (un Borracho con ficha de aldeano: Borracho)
       if (tor) return { ...sinRecordatorios(a), personaje: sala.identidad(a) };
       const viajero = viajeroDe(a);
-      return viajero ? { ...sinRecordatorios(a), personaje: viajero } : sinRecordatorios(a);
+      return viajero ? { ...sinRecordatorios(a), personaje: viajero } : { ...sinRecordatorios(a), ...sala.fichaEntregada(a.id) };
     };
     // Con el Gardener, mientras el narrador no los entregue, nadie ve ningún personaje
     // (tampoco el suyo ni los viajeros)
@@ -172,6 +174,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
             : yo.rol === 'jugador'
               ? despertares.filter((d) => d.asiento === sala.asientoDespiertoDe(yo.id))
               : [],
+        grimorioRecibido: yo.rol === 'jugador' ? sala.grimorioRecibidoPor(yo.id) : null,
         yo: id,
         acciones: accionesPermitidas(sala, yo),
       };

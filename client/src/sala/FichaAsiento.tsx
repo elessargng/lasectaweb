@@ -70,6 +70,8 @@ interface FichaAsientoProps {
   probables?: Set<string>;
   /** Abre las notas del asiento con una nueva («Escribir nota»); sin esto, no sale. */
   onEscribirNota?: () => void;
+  /** El Espía o la Viuda: enviarle el grimorio; sin esto, no sale. */
+  onEnviarGrimorio?: () => void;
 }
 
 const NOMBRE_ALINEAMIENTO: Record<SalaAlineamiento, string> = { bueno: 'bueno', malvado: 'malvado' };
@@ -112,6 +114,7 @@ const FichaAsiento = ({
   enJuego,
   probables,
   onEscribirNota,
+  onEnviarGrimorio,
 }: FichaAsientoProps) => {
   const { hayGuion, personajes, viajeros, porId, notas, anotar, todos, todosPorId, notasRecordatorios, anotarRecordatorios } = useFichas();
   const [eligiendoPersonaje, setEligiendoPersonaje] = useState(false);
@@ -362,6 +365,7 @@ const FichaAsiento = ({
           // Sin guion, el recordatorio solo puede ser de texto propio
           opcionRecordatorio,
           ...opcionNota,
+          ...(onEnviarGrimorio ? [{ id: 'enviarGrimorio', etiqueta: 'Enviar grimorio', abreDialogo: true, elegir: onEnviarGrimorio }] : []),
           ...(despertar
             ? [
                 {

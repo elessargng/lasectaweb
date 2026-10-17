@@ -94,6 +94,24 @@ export interface SalaAsiento {
 /** Cuántos faroles hay: los del narrador y los de cada asiento. */
 export const NUM_FAROLES = 3;
 
+/**
+ * Una ficha del grimorio que el narrador envía al Espía o a la Viuda: lo que se
+ * ve de ella (el narrador puede cambiarlo antes de enviarlo).
+ */
+export interface SalaFichaEnviada {
+  asientoId: string;
+  personaje: string | null;
+  alineamiento: SalaAlineamiento | null;
+  muerto: boolean;
+  recordatorios: SalaRecordatorio[];
+}
+
+/** Un grimorio enviado (el último) a un asiento: cuándo y sus fichas, en el orden de la mesa. */
+export interface SalaGrimorioEnviado {
+  hora: number;
+  fichas: SalaFichaEnviada[];
+}
+
 /** Una nota del narrador sobre un asiento: texto libre. */
 export interface SalaNota {
   id: string;
@@ -384,6 +402,11 @@ export interface SalaEstado {
   recordatoriosNoche: Record<string, boolean>;
   /** Los despertares: todos, para los narradores; el de su asiento, para un jugador; ninguno, para los demás. */
   despertares: SalaDespertar[];
+  /**
+   * El grimorio que el narrador ha enviado (el último) a quien recibe el mensaje,
+   * si está sentado en el asiento al que se envió (el Espía, la Viuda); si no, null.
+   */
+  grimorioRecibido: SalaGrimorioEnviado | null;
   /** id del participante que recibe el mensaje. */
   yo: string;
   /** Acciones que puede usar ahora quien recibe el mensaje (ver `salaAcciones`). */

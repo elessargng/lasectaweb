@@ -55,6 +55,21 @@ export interface SalaAsiento {
   faroles: (string | null)[];
 }
 
+/** Una ficha del grimorio enviado al Espía o a la Viuda (ver EnviarGrimorio). */
+export interface SalaFichaEnviada {
+  asientoId: string;
+  personaje: string | null;
+  alineamiento: SalaAlineamiento | null;
+  muerto: boolean;
+  recordatorios: SalaRecordatorio[];
+}
+
+/** Un grimorio enviado: cuándo (hora del servidor) y sus fichas, en el orden de la mesa. */
+export interface SalaGrimorioEnviado {
+  hora: number;
+  fichas: SalaFichaEnviada[];
+}
+
 /** Una nota sobre un asiento: texto libre (ver NotasAsiento). */
 export interface SalaNota {
   id: string;
@@ -249,6 +264,8 @@ export interface SalaEstado {
   recordatoriosNoche: Record<string, boolean>;
   /** Los despertares: todos para los narradores; el de su asiento para un jugador; ninguno para los demás. */
   despertares: SalaDespertar[];
+  /** El último grimorio que el narrador me ha enviado (si soy el Espía o la Viuda), o null. */
+  grimorioRecibido: SalaGrimorioEnviado | null;
   /** Mi id en la sala. */
   yo: string;
   /** Acciones que puedo usar ahora; el servidor decide cuáles. */

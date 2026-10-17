@@ -272,7 +272,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       setNotasEscritas({});
     }
 
-    // Mi personaje: si el narrador me lo cambia (o el alineamiento), se me dice.
+    // Mi personaje: al repartir la bolsa (lo único que me llega de mi ficha), se me dice.
     const miFicha = (e: SalaEstado) => e.asientos.find((a) => a.ocupante === e.yo);
     const antes = miFicha(anterior);
     const ahora = miFicha(nuevo);
