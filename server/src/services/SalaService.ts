@@ -261,8 +261,8 @@ export class SalaService {
     this.npcsActuales = this.npcsActuales.includes(personajeId)
       ? this.npcsActuales.filter((id) => id !== personajeId)
       : [...this.npcsActuales, personajeId];
-    // Sin el Gardener ya no hay nada que retener: los personajes se entregan
-    if (!this.npcActivo(NPC_GARDENER)) this.retenidas = false;
+    // Sin el Gardener ya no hay nada que retener: los personajes se entregan (como estén ahora)
+    if (this.retenidas && !this.npcActivo(NPC_GARDENER)) this.entregarFichas();
   }
 
   npcActivo(id: string): boolean {
@@ -299,6 +299,16 @@ export class SalaService {
    * narrador cambie después es del grimorio, privado, hasta el próximo reparto.
    */
   private entregadas = new Map<string, { personaje: string | null; alineamiento: SalaAlineamiento | null }>();
+
+  /**
+   * Entrega a cada jugador su ficha tal como está ahora: al repartir la bolsa o,
+   * con el Gardener, cuando el narrador la entrega (con lo que haya cambiado
+   * mientras tanto). No comprueba permisos.
+   */
+  entregarFichas(): void {
+    this.entregadas = new Map(this.mesa.map((a) => [a.id, { personaje: a.personaje, alineamiento: a.alineamiento }]));
+    this.retenidas = false;
+  }
 
   /** La ficha que se entregó a un asiento en el último reparto (sin reparto, vacía). */
   fichaEntregada(asientoId: string): { personaje: string | null; alineamiento: SalaAlineamiento | null } {
@@ -537,8 +547,6 @@ export class SalaService {
         a.recordatorios = a.recordatorios.filter((r) => !esIdentidad(r));
         this.identidadAutomatica(a);
       });
-    // Lo que se entrega a cada jugador: su ficha tal como queda ahora
-    this.entregadas = new Map(this.mesa.map((a) => [a.id, { personaje: a.personaje, alineamiento: a.alineamiento }]));
   }
   /** Lo siguiente que toca en la nominación: el fin de la cuenta atrás o el próximo paso de la votación. */
   private temporizador: NodeJS.Timeout | null = null;

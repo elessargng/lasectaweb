@@ -861,7 +861,8 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     puede: (sala, yo) => yo.rol === 'narrador' && sala.fichasRetenidas(),
     noPuede: 'No hay personajes por entregar.',
     hacer: (sala) => {
-      sala.retenerFichas(false);
+      // Lo que hay ahora en las fichas (el narrador puede haberlas cambiado tras repartir)
+      sala.entregarFichas();
       return { ok: true };
     },
   },
@@ -1029,6 +1030,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       sala.repartirBolsa();
       // Con el Gardener, los jugadores no los ven hasta que el narrador los entregue
       if (sala.npcActivo(NPC_GARDENER)) sala.retenerFichas(true);
+      else sala.entregarFichas();
       return { ok: true };
     },
   },

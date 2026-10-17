@@ -27,8 +27,6 @@ interface FichaAsientoProps {
   numero: number;
   /** Quien está sentado (o se ve sentado, si se le está moviendo), o null. */
   ocupante: SalaParticipante | null;
-  /** Es el asiento de quien mira: su personaje se lo da el narrador (no se anota). */
-  propia: boolean;
   /**
    * - narrador: botón con las opciones de la partida (matar o revivir…).
    * - grimorio: jugador con grimorio; botón para cambiar la ficha en su grimorio
@@ -85,8 +83,8 @@ const NOMBRE_ALINEAMIENTO: Record<SalaAlineamiento, string> = { bueno: 'bueno', 
  * Para el narrador es un botón (mano al pasar el ratón) con las opciones de la
  * partida: matar o revivir, marcar o desmarcar (la calavera), nominar a otra
  * ficha, cambiar su personaje y su alineamiento. Un jugador con grimorio puede
- * cambiar personaje y alineamiento en el suyo (salvo en su propia ficha, que es
- * la que le da el narrador). Mientras se elige a quién nomina, es un botón para
+ * cambiar personaje y alineamiento en el suyo, también en su propia ficha (lo
+ * anotado tapa lo que le dio el narrador, solo para él). Mientras se elige a quién nomina, es un botón para
  * elegirla. Si no, solo se ve.
  *
  * Su nombre dice de qué asiento es y quién se sienta; su estado (personaje,
@@ -97,7 +95,6 @@ const FichaAsiento = ({
   asiento,
   numero,
   ocupante,
-  propia,
   modo,
   pedir,
   onError,
@@ -120,15 +117,14 @@ const FichaAsiento = ({
   const [matando, setMatando] = useState(false);
   const recordatorios = recordatoriosDeFicha(asiento, modo === 'grimorio' ? notasRecordatorios : null);
 
-  // Lo que lleva: lo de la partida si se ve (narrador, o la propia); si no, lo anotado en el grimorio propio.
-  // Sin guion no hay personajes que anotar.
-  const anotando = modo === 'grimorio' && hayGuion && !(propia && asiento.personaje);
+  // Lo que lleva: con grimorio propio, lo anotado en él (en cualquier ficha, también la
+  // suya); si no hay nada anotado, o sin grimorio, lo de la partida que se ve (narrador,
+  // la propia, los viajeros). Sin guion no hay personajes que anotar.
+  const anotando = modo === 'grimorio' && hayGuion;
+  const anotado = anotando ? notas[asiento.id] : undefined;
   // El alineamiento, el de quien es de verdad (su «Is The …»): un Alquimista con la
   // ficha de un esbirro sale bueno
-  const contenido: ContenidoFicha =
-    asiento.personaje || !anotando
-      ? { personaje: asiento.personaje, alineamiento: alineamientoReal(asiento, todosPorId) }
-      : (notas[asiento.id] ?? { personaje: null, alineamiento: null });
+  const contenido: ContenidoFicha = anotado ?? { personaje: asiento.personaje, alineamiento: alineamientoReal(asiento, todosPorId) };
   const identidad = identidadDe(asiento);
   // Al revelar el grimorio se ve quién es de verdad (el Filósofo, no el Alcalde que hacía)
   const personaje =

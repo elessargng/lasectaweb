@@ -202,8 +202,9 @@ const Mesa = ({
   // Lo que lleva cada ficha, para leerlo con el nombre del asiento: el personaje que
   // ve quien mira (el de la partida o, con grimorio, el que ha anotado), la calavera y el sudario.
   const { porId, notas, anotar, todosPorId, notasRecordatorios, anotarRecordatorios, notasEscritas, escribirNotas } = useFichas();
+  // Con grimorio propio, lo anotado tapa lo que se ve de la partida (también en la propia)
   const personajeVisto = (a: (typeof asientos)[number]) =>
-    a.personaje ?? (modoFichas === 'grimorio' ? notas[a.id]?.personaje : null) ?? null;
+    modoFichas === 'grimorio' && notas[a.id] ? notas[a.id].personaje : a.personaje;
   // Los recordatorios que se ven: los de la partida (a quien ve el grimorio) y, con grimorio propio, los anotados
   const recordatoriosDe = (a: (typeof asientos)[number]) =>
     recordatoriosDeFicha(a, modoFichas === 'grimorio' ? notasRecordatorios : null);
@@ -542,7 +543,6 @@ const Mesa = ({
                   asiento={a}
                   numero={i + 1}
                   ocupante={ocupante}
-                  propia={!!ocupante && ocupante.id === estado.yo}
                   modo={modoFichas}
                   pedir={pedir}
                   onError={onError}
