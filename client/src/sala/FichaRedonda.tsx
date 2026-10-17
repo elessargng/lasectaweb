@@ -12,6 +12,8 @@ interface FichaRedondaProps {
   muertePendiente?: boolean;
   /** Muerto, ya ha gastado su voto: su vela, apagada, o el círculo azul en el sudario (Preferencias > Interfaz). */
   votoGastado?: boolean;
+  /** De qué lado de la ficha va la vela del muerto: del lado de la mesa en el que está el jugador. */
+  ladoVela?: 'izquierda' | 'derecha';
   /** Lleva la marca de la calavera (nominación). */
   marcado?: boolean;
   /** En una votación: los votos acumulados si votó, null (✗) si no; sin definir si aún no le ha tocado. */
@@ -50,7 +52,7 @@ interface FichaRedondaProps {
  *
  * Solo visual: quien la use dice para el lector de quién es y si está muerto.
  */
-const FichaRedonda = ({ children, muerto = false, muertePendiente = false, votoGastado = false, marcado = false, voto, bocaAbajo = false, reloj = false, asomar = false }: FichaRedondaProps) => {
+const FichaRedonda = ({ children, ladoVela = 'izquierda', muerto = false, muertePendiente = false, votoGastado = false, marcado = false, voto, bocaAbajo = false, reloj = false, asomar = false }: FichaRedondaProps) => {
   const estiloVoto = useMarcas().voto;
   return (
   // span (de bloque) y no div: la ficha puede ir dentro de un botón
@@ -102,8 +104,11 @@ const FichaRedonda = ({ children, muerto = false, muertePendiente = false, votoG
       </span>
     )}
     {muerto && estiloVoto === 'vela' && (
-      // La vela del muerto, de pie junto a la ficha (la mano va en la esquina contraria)
-      <VelaVoto encendida={!votoGastado} className="absolute -left-[24%] bottom-[-13%] z-[1] h-[54%] w-[50%] drop-shadow-[0_2px_2px_rgba(0,0,0,0.7)]" />
+      // La vela del muerto, de pie junto a la ficha, abajo y del lado del jugador (por fuera de la mesa)
+      <VelaVoto
+        encendida={!votoGastado}
+        className={`absolute bottom-[-13%] z-[1] h-[54%] w-[50%] drop-shadow-[0_2px_2px_rgba(0,0,0,0.7)] ${ladoVela === 'derecha' ? '-right-[24%]' : '-left-[24%]'}`}
+      />
     )}
     {marcado && !bocaAbajo && (
       // La calavera, en el estilo que haya elegido cada uno (Preferencias > Interfaz),

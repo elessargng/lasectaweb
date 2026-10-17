@@ -202,8 +202,11 @@ export interface SalaVotacion {
   resultados: Record<string, number | null>;
   votos: number;
   terminada: boolean;
-  /** Los asientos que votaron con las dos manos (dos votos). */
-  dobles?: string[];
+  /**
+   * Lo que valió el voto de cada asiento que votó, si no fue 1: las dos manos de la
+   * Banshee (×2), el Burócrata (×3), el Ladrón (en negativo), y combinados.
+   */
+  valores?: Record<string, number>;
 }
 
 /** Una nominación en curso: de qué asiento a qué asiento (ids de asiento). */

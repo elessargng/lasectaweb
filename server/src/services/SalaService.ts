@@ -734,17 +734,18 @@ export class SalaService {
     const asientoId = v.orden[v.paso];
     const asiento = this.mesa.find((a) => a.id === asientoId);
     const ocupante = asiento?.ocupante ? this.buscar(asiento.ocupante) : undefined;
-    const sinVoto = !!asiento?.muerto && asiento.votoGastado;
+    // La Banshee con su habilidad vota aunque esté muerta y sin voto, y no lo gasta
+    const banshee = !!ocupante && this.puedeVotarDoble(ocupante.id);
+    const sinVoto = !!asiento?.muerto && asiento.votoGastado && !banshee;
     const vota = ocupante?.rol === 'jugador' && ocupante.manoLevantada && !sinVoto;
     if (vota) {
-      // Con las dos manos (la Banshee), dos votos
-      const doble = ocupante.dosManos && this.puedeVotarDoble(ocupante.id);
-      v.votos += doble ? 2 : 1;
-      if (doble) v.dobles = [...(v.dobles ?? []), asientoId];
+      const valor = this.valorDelVoto(asiento!, ocupante);
+      v.votos += valor;
+      if (valor !== 1) v.valores = { ...v.valores, [asientoId]: valor };
       // Voto contado: la mano baja sola.
       ocupante.manoLevantada = false;
       ocupante.dosManos = false;
-      if (asiento?.muerto) asiento.votoGastado = true;
+      if (asiento?.muerto && !banshee) asiento.votoGastado = true;
     }
     v.resultados[asientoId] = vota ? v.votos : null;
     v.paso += 1;
@@ -763,7 +764,8 @@ export class SalaService {
           .map((id) => {
             const o = this.mesa.find((a) => a.id === id)?.ocupante;
             const nombre = (o && this.buscar(o)?.nombre) || this.describirAsiento(id);
-            return v.dobles?.includes(id) ? `${nombre} (2 votos)` : nombre;
+            const valor = v.valores?.[id];
+            return valor !== undefined ? `${nombre} (${valor} votos)` : nombre;
           });
         n.registro.votos = v.votos;
       }
@@ -834,7 +836,7 @@ export class SalaService {
     this.nominacionEnCurso = { desde, hasta, cuentaAtrasFin: null, votacion: null, votosElegidos: null, registro };
     // Los muertos sin voto no pueden votar: si tenían la mano levantada, se les baja
     for (const a of this.mesa) {
-      if (!a.muerto || !a.votoGastado || !a.ocupante) continue;
+      if (!a.muerto || !a.votoGastado || !a.ocupante || this.puedeVotarDoble(a.ocupante)) continue;
       const ocupante = this.buscar(a.ocupante);
       if (ocupante) {
         ocupante.manoLevantada = false;
@@ -1299,7 +1301,8 @@ export class SalaService {
   /** El jugador está muerto y ya ha gastado su voto: no puede levantar la mano. */
   sinVoto(participanteId: string): boolean {
     const asiento = this.asientoDe(participanteId);
-    return !!asiento?.muerto && asiento.votoGastado;
+    // La Banshee con su habilidad vota sin gastar el voto de muerto
+    return !!asiento?.muerto && asiento.votoGastado && !this.puedeVotarDoble(participanteId);
   }
 
   /** Levanta (una o, con `dos`, las dos) o baja la mano de un jugador. No comprueba permisos. */
@@ -1308,6 +1311,17 @@ export class SalaService {
     if (!participante) return;
     participante.manoLevantada = levantada;
     participante.dosManos = levantada && dos;
+  }
+
+  /**
+   * Lo que vale el voto de quien se sienta en un asiento: las dos manos de la Banshee
+   * con su habilidad, ×2; con el recordatorio del Burócrata, ×3; con el del Ladrón, en
+   * negativo. Se combinan (la Banshee con los dos: −6).
+   */
+  private valorDelVoto(asiento: SalaAsiento, ocupante: SalaParticipante): number {
+    const manos = ocupante.dosManos && this.puedeVotarDoble(ocupante.id) ? 2 : 1;
+    const lleva = (personaje: string) => asiento.recordatorios.some((r) => r.personaje === personaje);
+    return manos * (lleva('bureaucrat') ? 3 : 1) * (lleva('thief') ? -1 : 1);
   }
 
   /**

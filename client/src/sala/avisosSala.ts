@@ -295,7 +295,10 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado, vigilado
       const resultado = votAhora.resultados[id];
       // Un muerto que vota gasta su único voto: se dice (su vela se apaga)
       const gasta = typeof resultado === 'number' && nuevo.asientos.find((a) => a.id === id)?.muerto ? ', gasta su voto' : '';
-      avisa('votoAVoto', typeof resultado === 'number' ? `${nombre}, ${resultado}${gasta}.` : `${nombre}.`);
+      // Si su voto no vale 1 (Banshee, Burócrata, Ladrón), se dice cuánto
+      const valor = votAhora.valores?.[id];
+      const cuanto = valor !== undefined ? ` (su voto vale ${valor})` : '';
+      avisa('votoAVoto', typeof resultado === 'number' ? `${nombre}, ${resultado}${cuanto}${gasta}.` : `${nombre}.`);
     }
   }
   if (votAhora?.terminada && !votAntes?.terminada) {

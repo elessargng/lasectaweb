@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import DialogoPersonaje from './DialogoPersonaje';
 import DialogoRecordatorio from './DialogoRecordatorio';
 import FichaRedonda from './FichaRedonda';
 import PersonajeEnFicha from './PersonajeEnFicha';
+import PistaPersonaje from './PistaPersonaje';
 import {
   alineamientoDe,
   alineamientoDeTipo,
@@ -64,6 +65,8 @@ interface FichaAsientoProps {
   seguir?: { siguiendo: boolean; onAlternar: () => void };
   /** Los personajes en juego (en alguna ficha, para quien mira): sus recordatorios salen primero al poner uno. */
   enJuego: Set<string>;
+  /** De qué lado de la ficha va la vela del muerto (el del jugador en la mesa). */
+  ladoVela?: 'izquierda' | 'derecha';
   /** Los de `enJuego` que solo lo están probablemente (el Borracho si no cuadran los forasteros…). */
   probables?: Set<string>;
   /** Abre las notas del asiento con una nueva («Escribir nota»); sin esto, no sale. */
@@ -107,6 +110,7 @@ const FichaAsiento = ({
   despertar,
   seguir,
   enJuego,
+  ladoVela,
   probables,
   onEscribirNota,
 }: FichaAsientoProps) => {
@@ -135,9 +139,55 @@ const FichaAsiento = ({
         : undefined;
 
   const bocaAbajo = !!revelando && !revelando.revelada;
+  // Resaltada (ratón encima, foco con el teclado o un toque): el nombre en blanco y la
+  // pista del personaje. Solo si se ve el personaje (no boca abajo ni en el reloj).
+  const fichaRef = useRef<HTMLSpanElement>(null);
+  const [resaltada, setResaltada] = useState(false);
+  const conPista = !!personaje && !bocaAbajo && !reloj;
+  useEffect(() => {
+    const el = fichaRef.current;
+    if (!el || !conPista) {
+      setResaltada(false);
+      return;
+    }
+    // Lo que recibe el ratón y el foco: el botón que la contiene, si lo hay
+    const ancla = el.closest('button') ?? el;
+    let temporizador: number | undefined;
+    const encender = (e: PointerEvent) => e.pointerType === 'mouse' && setResaltada(true);
+    const apagar = (e: PointerEvent) => e.pointerType === 'mouse' && setResaltada(false);
+    const conFoco = () => ancla.matches(':focus-visible') && setResaltada(true);
+    const sinFoco = () => setResaltada(false);
+    // En pantallas táctiles: al tocarla, unos segundos (o hasta tocar en otro sitio)
+    const tocar = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') return;
+      setResaltada(true);
+      window.clearTimeout(temporizador);
+      temporizador = window.setTimeout(() => setResaltada(false), 4000);
+    };
+    const fuera = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse' && !ancla.contains(e.target as Node)) setResaltada(false);
+    };
+    ancla.addEventListener('pointerenter', encender);
+    ancla.addEventListener('pointerleave', apagar);
+    ancla.addEventListener('focus', conFoco);
+    ancla.addEventListener('blur', sinFoco);
+    ancla.addEventListener('pointerup', tocar);
+    document.addEventListener('pointerdown', fuera, true);
+    return () => {
+      window.clearTimeout(temporizador);
+      ancla.removeEventListener('pointerenter', encender);
+      ancla.removeEventListener('pointerleave', apagar);
+      ancla.removeEventListener('focus', conFoco);
+      ancla.removeEventListener('blur', sinFoco);
+      ancla.removeEventListener('pointerup', tocar);
+      document.removeEventListener('pointerdown', fuera, true);
+    };
+    // El botón que la contiene cambia con lo que se hace con ella (menú, nominar, revelar)
+  }, [conPista, modo, !!eligiendo, !!revelando, !!seguir]);
   const ficha = (
-    <span className="relative block">
+    <span ref={fichaRef} data-resaltada={(resaltada && conPista) || undefined} className="relative block">
       <FichaRedonda
+        ladoVela={ladoVela}
         muerto={asiento.muerto}
         muertePendiente={asiento.muertePendiente}
         votoGastado={asiento.votoGastado}
@@ -149,6 +199,9 @@ const FichaAsiento = ({
       >
         {personaje && <PersonajeEnFicha personaje={personaje} alineamiento={contenido.alineamiento} />}
       </FichaRedonda>
+      {resaltada && conPista && fichaRef.current && (
+        <PistaPersonaje personaje={personaje!} alineamiento={contenido.alineamiento} ancla={fichaRef.current} />
+      )}
     </span>
   );
 

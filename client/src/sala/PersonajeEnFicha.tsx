@@ -36,6 +36,7 @@ const PersonajeEnFicha = ({
         {/* De izquierda a derecha por abajo: el texto queda derecho, mirando al centro */}
         <path id={idArco} d={`M ${50 - RADIO_NOMBRE} 50 A ${RADIO_NOMBRE} ${RADIO_NOMBRE} 0 0 0 ${50 + RADIO_NOMBRE} 50`} fill="none" />
         <text
+          className="sala-ficha-nombre"
           lang={personaje.nombre.lang}
           fontFamily="Georgia, serif"
           fontWeight="bold"

@@ -926,7 +926,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const manoLevantada = !!yo?.manoLevantada;
   // Muerto y sin voto: no puede levantar la mano (el atajo lo dice sin preguntar al servidor)
   const asientoPropio = estado?.asientos.find((a) => a.ocupante === estado.yo);
-  const sinVoto = !!asientoPropio?.muerto && asientoPropio.votoGastado;
+  // (la Banshee con su habilidad, que puede levantar las dos, vota sin gastarlo)
+  const sinVoto = !!asientoPropio?.muerto && asientoPropio.votoGastado && !estado?.acciones.includes('sala:levantarDosManos');
   // La Banshee muerta con su habilidad puede levantar las dos manos (vota doble): 0, 1 o 2
   const puedeDosManos = !!estado?.acciones.includes('sala:levantarDosManos');
   const manos: 0 | 1 | 2 = !manoLevantada ? 0 : yo?.dosManos ? 2 : 1;

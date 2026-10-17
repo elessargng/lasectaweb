@@ -748,6 +748,24 @@
 }
 
 /*
+ * La ficha resaltada (ratón encima, foco o un toque): el nombre del personaje pasa
+ * de tinta a blanco con un halo oscuro. Su pista (PistaPersonaje) entra con un
+ * leve fundido, como el panel de notas.
+ */
+.sala-ficha-nombre {
+  transition:
+    fill 150ms ease,
+    stroke 150ms ease;
+}
+[data-resaltada] .sala-ficha-nombre {
+  fill: #fff;
+  stroke: rgba(18, 10, 28, 0.9);
+}
+.sala-pista {
+  animation: sala-notas-entrar 140ms ease-out both;
+}
+
+/*
  * Las notas de un asiento (NotasAsiento): una pestaña de marcapáginas de papel
  * que asoma por el lado de fuera del cuadro (sin filo por el lado pegado a él) y
  * que se adelanta un poco al pasar el ratón o con el panel abierto; el panel,
@@ -916,7 +934,9 @@
   }
 
   .sala-nota-pestana,
-  .sala-notas-panel {
+  .sala-notas-panel,
+  .sala-pista,
+  .sala-ficha-nombre {
     transition: none;
     animation: none;
   }

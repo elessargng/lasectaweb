@@ -555,6 +555,8 @@ const Mesa = ({
                   seguir={seguir}
                   enJuego={enJuego}
                   probables={probables}
+                  // Los de la mitad derecha de la mesa, a la derecha; los demás, a la izquierda
+                  ladoVela={Math.sin((2 * Math.PI * i) / total) > 0.01 ? 'derecha' : 'izquierda'}
                   onEscribirNota={escriboNotas && !editando ? () => setNotasAbiertas({ asientoId: a.id, nueva: true }) : undefined}
                   revelando={
                     revelacion

@@ -152,6 +152,8 @@ export interface SalaVotacion {
   resultados: Record<string, number | null>;
   votos: number;
   terminada: boolean;
+  /** Lo que valió el voto de cada asiento, si no fue 1 (Banshee ×2, Burócrata ×3, Ladrón en negativo). */
+  valores?: Record<string, number>;
 }
 
 /** Una votación ya terminada, del registro del narrador. */

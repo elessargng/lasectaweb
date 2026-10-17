@@ -96,6 +96,18 @@ const TIPOS: { tipo: string; titulo: string }[] = [
 ];
 
 /** Los personajes agrupados por tipo para pintarlos (aldeanos, forasteros…); los desconocidos al final. */
+/** El tipo de un personaje, en singular: «Aldeano», «Esbirro»… */
+const TIPO_SINGULAR: Record<string, string> = {
+  townsfolk: 'Aldeano',
+  outsider: 'Forastero',
+  minion: 'Esbirro',
+  demon: 'Demonio',
+  traveller: 'Viajero',
+  fabled: 'Legendario',
+  loric: 'Lórico',
+};
+export const nombreDeTipo = (tipo: string) => TIPO_SINGULAR[tipo] ?? tipo;
+
 export function porTipos<P extends { tipo: string }>(personajes: P[]): { titulo: string; personajes: P[] }[] {
   const grupos = TIPOS.map(({ tipo, titulo }) => ({ titulo, personajes: personajes.filter((p) => p.tipo === tipo) }));
   const otros = personajes.filter((p) => !TIPOS.some((t) => t.tipo === p.tipo));
