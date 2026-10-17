@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import FichaRecordatorio, { TAMANO_RECORDATORIO } from './FichaRecordatorio';
-import { describirRecordatorio, textoRecordatorio, useFichas } from './fichas';
+import { describirRecordatorio, esRecordatorioTexto, textoRecordatorio, useFichas } from './fichas';
 import type { SalaRecordatorio } from './useSala';
 
 interface RecordatoriosFichaProps {
@@ -38,7 +38,7 @@ const RecordatoriosFicha = ({ recordatorios, style, hacia, puedeQuitar, onQuitar
           zIndex: n - k,
           transform: `translate(-50%, -50%) translate(calc(${hacia.x * k} * var(--paso) * ${TAMANO_RECORDATORIO}), calc(${hacia.y * k} * var(--paso) * ${TAMANO_RECORDATORIO}))`,
         };
-        const ficha = <FichaRecordatorio personaje={personaje} texto={textoRecordatorio(r, personaje)} />;
+        const ficha = <FichaRecordatorio personaje={personaje} texto={textoRecordatorio(r, personaje)} libre={esRecordatorioTexto(r)} />;
         const clases = 'absolute left-0 top-0 block rounded-full transition-transform duration-150 motion-reduce:transition-none';
         return puedeQuitar(r) ? (
           <button

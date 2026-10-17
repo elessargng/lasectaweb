@@ -1,4 +1,5 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useState, type CSSProperties, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import { tocarGong } from './sonidos';
 
 /** Lo que dura el aviso en pantalla (ms); sala.css lo reparte entre entrar, girar y salir. */
@@ -19,10 +20,53 @@ const VUELTA = 2 * Math.PI * RADIO;
  * desde el centro y el texto en dorado alrededor de la mesa, girando despacio,
  * hasta que se desvanece (sala.css; con menos movimiento, quieto). No recibe el
  * ratón. Solo cuenta si es reciente: al entrar en la sala no suena uno de hace rato.
+ *
+ * Va encima de todo (también de las ventanas de las conversaciones privadas): se
+ * pinta en el body, fuera de la capa de la mesa, justo encima de ella (`mesaRef`),
+ * siguiéndola si cambia de tamaño o se desplaza la página.
  */
-const AvisoGong = ({ gong, ahora, onAnuncio }: { gong: number | null; ahora: number; onAnuncio: (mensaje: string) => void }) => {
+const AvisoGong = ({
+  gong,
+  ahora,
+  mesaRef,
+  onAnuncio,
+}: {
+  gong: number | null;
+  ahora: number;
+  mesaRef: RefObject<HTMLDivElement | null>;
+  onAnuncio: (mensaje: string) => void;
+}) => {
   const [visible, setVisible] = useState<number | null>(null);
+  const [sitio, setSitio] = useState<CSSProperties | null>(null);
   const id = useId();
+
+  // Dónde está la mesa en la ventana, con sus tamaños de asiento y ficha (los usa sala.css)
+  useLayoutEffect(() => {
+    const mesa = mesaRef.current;
+    if (visible === null || !mesa) return;
+    const medir = () => {
+      const r = mesa.getBoundingClientRect();
+      const estilo = getComputedStyle(mesa);
+      setSitio({
+        left: r.left,
+        top: r.top,
+        width: r.width,
+        height: r.height,
+        '--sala-avatar': estilo.getPropertyValue('--sala-avatar'),
+        '--sala-ficha': estilo.getPropertyValue('--sala-ficha'),
+      } as CSSProperties);
+    };
+    medir();
+    const observador = new ResizeObserver(medir);
+    observador.observe(mesa);
+    window.addEventListener('resize', medir);
+    window.addEventListener('scroll', medir, true);
+    return () => {
+      observador.disconnect();
+      window.removeEventListener('resize', medir);
+      window.removeEventListener('scroll', medir, true);
+    };
+  }, [visible, mesaRef]);
 
   useEffect(() => {
     if (gong === null || ahora - gong > DURACION_MS / 2) return;
@@ -35,12 +79,12 @@ const AvisoGong = ({ gong, ahora, onAnuncio }: { gong: number | null; ahora: num
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gong]);
 
-  if (visible === null) return null;
+  if (visible === null || !sitio) return null;
   const relleno = `${id}-relleno`;
   const brillo = `${id}-brillo`;
   const camino = `${id}-camino`;
-  return (
-    <div key={visible} aria-hidden="true" className="sala-gong pointer-events-none absolute inset-0 z-30">
+  return createPortal(
+    <div key={visible} aria-hidden="true" className="sala-gong pointer-events-none fixed z-[100]" style={sitio}>
       <div className="sala-gong-velo absolute inset-0 rounded-full" />
       {[0, 1, 2].map((k) => (
         <span key={k} className="sala-gong-onda absolute left-1/2 top-1/2 rounded-full" style={{ animationDelay: `${k * 0.35}s` }} />
@@ -75,7 +119,8 @@ const AvisoGong = ({ gong, ahora, onAnuncio }: { gong: number | null; ahora: num
           ))}
         </svg>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 

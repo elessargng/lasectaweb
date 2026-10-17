@@ -672,6 +672,10 @@
  * recorre y, a los 8 s, se desvanece. Los filetes giran al revés que el texto.
  */
 .sala-gong {
+  /* Las ondas y la entrada del texto crecen más que la mesa: se recortan en ella, que
+     si no la página crece (sale la barra de desplazamiento) y todo salta al empezar y al acabar */
+  overflow: hidden;
+  contain: paint;
   animation: sala-gong-vida 8s linear both;
 }
 .sala-gong-velo {
@@ -741,6 +745,50 @@
   .sala-gong-destello {
     display: none;
   }
+}
+
+/*
+ * Las notas de un asiento (NotasAsiento): una pestaña de marcapáginas de papel
+ * que asoma por el lado de fuera del cuadro (sin filo por el lado pegado a él) y
+ * que se adelanta un poco al pasar el ratón o con el panel abierto; el panel,
+ * un cofre con cada nota en su recuadro, entra con un leve fundido.
+ */
+.sala-nota-pestana {
+  color: #2a1a3a;
+  background: linear-gradient(180deg, #f6ead0, #d8c296);
+  border: 1px solid rgba(var(--gold-rgb), 0.95);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition:
+    transform 150ms ease,
+    filter 150ms ease;
+}
+.sala-nota-pestana[data-lado='derecha'] {
+  border-left: none;
+}
+.sala-nota-pestana[data-lado='izquierda'] {
+  border-right: none;
+}
+.sala-nota-pestana:hover,
+.sala-nota-pestana[aria-expanded='true'] {
+  filter: brightness(1.08);
+  transform: translateX(3px);
+}
+.sala-nota-pestana[data-lado='izquierda']:hover,
+.sala-nota-pestana[data-lado='izquierda'][aria-expanded='true'] {
+  transform: translateX(-3px);
+}
+.sala-nota {
+  background: rgba(var(--grimorio-rgb), 0.16);
+  border: 1px solid rgba(var(--gold-rgb), 0.16);
+}
+.sala-notas-panel {
+  animation: sala-notas-entrar 160ms ease-out both;
+}
+@keyframes sala-notas-entrar {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
 }
 
 /*
@@ -865,6 +913,12 @@
     animation: none;
     left: 50%;
     opacity: 0.85;
+  }
+
+  .sala-nota-pestana,
+  .sala-notas-panel {
+    transition: none;
+    animation: none;
   }
 
   /* El gong: el texto quieto, sin ondas ni destello; solo aparece y se va */

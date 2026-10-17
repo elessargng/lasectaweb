@@ -78,6 +78,12 @@ export interface SalaAsiento {
    */
   recordatorios: SalaRecordatorio[];
   /**
+   * Las notas del narrador sobre este asiento (hasta SALA_NOTAS_MAX), en el orden
+   * en que se escribieron. Son del grimorio, como los recordatorios: las ven los
+   * narradores y quien ve el grimorio.
+   */
+  notas: SalaNota[];
+  /**
    * Los faroles que el jugador de este asiento se ha puesto (o ha copiado de
    * los del narrador): siempre 3 casillas, cada una un id de personaje o null.
    * Los ven quien se sienta ahí y quien ve el personaje del asiento.
@@ -88,7 +94,27 @@ export interface SalaAsiento {
 /** Cuántos faroles hay: los del narrador y los de cada asiento. */
 export const NUM_FAROLES = 3;
 
-/** Una ficha recordatorio: de qué personaje es (su icono) y cuál de sus recordatorios. */
+/** Una nota del narrador sobre un asiento: texto libre. */
+export interface SalaNota {
+  id: string;
+  texto: string;
+}
+
+/** Notas como mucho por asiento, y su largo máximo. */
+export const SALA_NOTAS_MAX = 4;
+export const SALA_NOTA_LARGO_MAX = 500;
+
+/**
+ * El «personaje» de un recordatorio con texto propio (escrito por el narrador, sin
+ * personaje ni icono): su texto es el que se escribió, de hasta SALA_RECORDATORIO_TEXTO_MAX.
+ */
+export const RECORDATORIO_TEXTO = '_texto';
+export const SALA_RECORDATORIO_TEXTO_MAX = 14;
+
+/**
+ * Una ficha recordatorio: de qué personaje es (su icono) y cuál de sus recordatorios.
+ * Con texto propio, `personaje` es RECORDATORIO_TEXTO e `indice`, -1.
+ */
 export interface SalaRecordatorio {
   id: string;
   personaje: string;

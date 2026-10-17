@@ -308,7 +308,9 @@ const conMarcas = (texto: string): ReactNode =>
         <>
           <span
             aria-hidden="true"
-            className="mx-0.5 inline-block h-3 w-3 rounded-full border border-hoja-lacre bg-hoja-claro align-middle"
+            // Como las fichas recordatorio de la mesa (FichaRecordatorio): el fondo de las de botc.app
+            className="mx-0.5 inline-block h-3.5 w-3.5 rounded-full align-middle shadow-[0_0_0_1px_rgba(20,12,32,0.6),0_1px_2px_rgba(0,0,0,0.5)]"
+            style={{ background: "url('/recordatorio.webp') center / cover no-repeat, #3d2a5c" }}
           />
           <span className="sr-only" lang="es">
             (ficha de recordatorio)
@@ -405,6 +407,18 @@ const HojaPersonajes = ({ personajes, completo }: { personajes: PersonajeMostrad
         </ul>
       </section>
     ))}
+    {/* Al pie, como en la hoja impresa: la nota del asterisco dentro del medallón de la
+        ilustración de botc.app (copia local, public/hoja-pie.webp, 800×117). La imagen va a
+        una altura fija (los lados están vacíos); el medallón queda 34/117 de su alto a la
+        derecha del centro y su centro, al 72 % de la altura. */}
+    <footer
+      className="relative mt-2 h-[var(--alto)] [--alto:8.5rem]"
+      style={{ background: "url('/hoja-pie.webp') center bottom / auto 100% no-repeat" }}
+    >
+      <p className="absolute left-[calc(50%+var(--alto)*34/117)] top-[72%] w-[calc(var(--alto)*0.62)] -translate-x-1/2 -translate-y-1/2 text-center font-body text-[0.8rem] italic leading-tight text-hoja-tinta">
+        * No la primera noche
+      </p>
+    </footer>
   </div>
 );
 

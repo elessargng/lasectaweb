@@ -9,21 +9,42 @@ import {
   type Atajo,
 } from './atajos';
 import { useAriaLive } from './avisosConfig';
-import { botonSecundario } from './estilos';
+import { botonSecundario, campo } from './estilos';
+import { describirGesto, GESTOS, type Gesto, type GestosAsignados } from './gestos';
 import TeclaAtajo from './TeclaAtajo';
 
 interface PanelAtajosProps {
   atajos: Record<AccionAtajo, Atajo>;
   onCambiar: (accion: AccionAtajo, atajo: Atajo) => void;
+  /** Los gestos táctiles de cada acción (los que tienen). */
+  gestos: GestosAsignados;
+  /** Asigna o quita (null) el gesto de una acción; si lo tenía otra, se le quita. */
+  onCambiarGesto: (accion: AccionAtajo, gesto: Gesto | null) => void;
 }
 
 /**
- * Pestaña Atajos de teclado: cada acción con su tecla. «Cambiar» se queda
+ * Pestaña Atajos: cada acción con su tecla. «Cambiar» se queda
  * escuchando y la siguiente tecla (o combinación) que se pulse pasa a ser el
  * atajo; Escape cancela. Mientras escucha, los atajos no actúan (lleva la marca
  * ATRIBUTO_CAPTURANDO), para poder asignar también la tecla de uno de ellos.
+ *
+ * Para móviles y tabletas, cada acción puede tener además un gesto con varios
+ * dedos, elegido de una lista (gestos.ts). Un gesto es de una sola acción: si se
+ * elige uno que ya tenía otra, se le quita a esa.
  */
-const PanelAtajos = ({ atajos, onCambiar }: PanelAtajosProps) => {
+const PanelAtajos = ({ atajos, onCambiar, gestos, onCambiarGesto }: PanelAtajosProps) => {
+  const etiquetaDe = (accion: AccionAtajo) => ACCIONES_ATAJO.find((a) => a.accion === accion)?.etiqueta ?? accion;
+  const quienTiene = (gesto: Gesto) => (Object.keys(gestos) as AccionAtajo[]).find((a) => gestos[a] === gesto);
+  const elegirGesto = (accion: AccionAtajo, etiqueta: string, valor: string) => {
+    const gesto = (GESTOS.find((g) => g.id === valor)?.id ?? null) as Gesto | null;
+    const otra = gesto ? quienTiene(gesto) : undefined;
+    onCambiarGesto(accion, gesto);
+    setAviso(
+      gesto
+        ? `${etiqueta}: ${describirGesto(gesto).toLocaleLowerCase('es')}.${otra && otra !== accion ? ` Se le quita a «${etiquetaDe(otra)}».` : ''}`
+        : `${etiqueta}: sin gesto.`,
+    );
+  };
   const [escuchando, setEscuchando] = useState<AccionAtajo | null>(null);
   const [aviso, setAviso] = useState('');
   const ariaLive = useAriaLive('preferencias');
@@ -56,6 +77,10 @@ const PanelAtajos = ({ atajos, onCambiar }: PanelAtajosProps) => {
       <p className="text-sm text-on-surface-muted">
         Los atajos funcionan estés donde estés, también con el foco en un botón; solo no mientras escribes en un campo
         de texto.
+      </p>
+      <p className="text-sm text-on-surface-muted">
+        En el móvil o la tableta puedes darle además a cada acción un gesto con dos o tres dedos (tocar o deslizar
+        sobre la sala). Si un gesto no responde, puede que lo use tu sistema: elige otro.
       </p>
       <ul className="flex flex-col gap-4">
         {ACCIONES_ATAJO.map(({ accion, etiqueta }) => (
@@ -97,6 +122,26 @@ const PanelAtajos = ({ atajos, onCambiar }: PanelAtajosProps) => {
             >
               Volver a {describirAtajo(ATAJOS_INICIALES[accion])}
             </button>
+            <label className="flex items-center gap-2 text-sm">
+              <span className="sr-only">Gesto para {etiqueta}</span>
+              <span aria-hidden="true">Gesto</span>
+              <select
+                value={gestos[accion] ?? ''}
+                onChange={(e) => elegirGesto(accion, etiqueta, e.target.value)}
+                className={`${campo} py-1 text-sm`}
+              >
+                <option value="">Sin gesto</option>
+                {GESTOS.map((g) => {
+                  const otra = quienTiene(g.id);
+                  return (
+                    <option key={g.id} value={g.id}>
+                      {g.nombre}
+                      {otra && otra !== accion ? ` (ahora: ${etiquetaDe(otra)})` : ''}
+                    </option>
+                  );
+                })}
+              </select>
+            </label>
           </li>
         ))}
       </ul>

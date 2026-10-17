@@ -37,15 +37,16 @@ function usuarioDelToken(token: string): { id: string; username: string } | null
  * prefiere mostrar, si los cambió; y su id de cliente para recuperar el sitio si se reconecta. Cada cambio se manda entero a todos.
  */
 /** Una ficha sin su personaje ni su alineamiento: así la ven quienes no son su jugador ni narran. */
-// Lo que un jugador no ve de una ficha: de las ajenas, el personaje y los faroles; de ninguna, los recordatorios.
+// Lo que un jugador no ve de una ficha: de las ajenas, el personaje y los faroles; de ninguna, los recordatorios ni las notas.
 const sinPersonaje = (a: SalaAsiento): SalaAsiento => ({
   ...a,
   personaje: null,
   alineamiento: null,
   recordatorios: [],
+  notas: [],
   faroles: farolesVacios(),
 });
-const sinRecordatorios = (a: SalaAsiento): SalaAsiento => ({ ...a, recordatorios: [] });
+const sinRecordatorios = (a: SalaAsiento): SalaAsiento => ({ ...a, recordatorios: [], notas: [] });
 
 export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAvatar, deps: DependenciasSala): void {
   const io = new Server(httpServer, {

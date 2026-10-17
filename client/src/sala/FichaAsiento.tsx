@@ -9,6 +9,7 @@ import {
   alineamientoReal,
   describirRecordatorio,
   identidadDe,
+  RECORDATORIO_TEXTO,
   recordatoriosDeFicha,
   useFichas,
   type ContenidoFicha,
@@ -65,6 +66,8 @@ interface FichaAsientoProps {
   seguir?: { siguiendo: boolean; onAlternar: () => void };
   /** Los personajes en juego (en alguna ficha, para quien mira): sus recordatorios salen primero al poner uno. */
   enJuego: Set<string>;
+  /** Abre las notas del asiento con una nueva («Escribir nota»); sin esto, no sale. */
+  onEscribirNota?: () => void;
 }
 
 const NOMBRE_ALINEAMIENTO: Record<SalaAlineamiento, string> = { bueno: 'bueno', malvado: 'malvado' };
@@ -105,6 +108,7 @@ const FichaAsiento = ({
   despertar,
   seguir,
   enJuego,
+  onEscribirNota,
 }: FichaAsientoProps) => {
   const { hayGuion, personajes, viajeros, porId, notas, anotar, todos, todosPorId, notasRecordatorios, anotarRecordatorios } = useFichas();
   const [eligiendoPersonaje, setEligiendoPersonaje] = useState(false);
@@ -315,12 +319,26 @@ const FichaAsiento = ({
     const r = await pedir('narrador:ponerRecordatorio', { asientoId: asiento.id, personajeId: p.id, indice });
     if (!r.ok) onError(r.error);
   };
+  // Con texto propio: igual, pero sin personaje (va en redondo en la ficha)
+  const ponerRecordatorioTexto = async (texto: string) => {
+    if (modo !== 'narrador') {
+      const nuevo = { id: crypto.randomUUID(), personaje: RECORDATORIO_TEXTO, indice: -1, texto };
+      anotarRecordatorios(asiento.id, [...(notasRecordatorios[asiento.id] ?? []), nuevo]);
+      return;
+    }
+    const r = await pedir('narrador:ponerRecordatorioTexto', { asientoId: asiento.id, texto });
+    if (!r.ok) onError(r.error);
+  };
   const opcionRecordatorio: OpcionMenu = {
     id: 'recordatorio',
     etiqueta: 'Poner recordatorio',
     abreDialogo: true,
     elegir: () => setEligiendoRecordatorio(true),
   };
+  // Las notas: el panel va junto al cuadro del asiento (lo abre la mesa)
+  const opcionNota: OpcionMenu[] = onEscribirNota
+    ? [{ id: 'nota', etiqueta: 'Escribir nota', abreDialogo: true, elegir: onEscribirNota }]
+    : [];
   const quien = ocupante ? 'jugador' : 'ficha';
   const opciones: OpcionMenu[] =
     modo === 'narrador'
@@ -338,7 +356,9 @@ const FichaAsiento = ({
             : { id: 'nominar', etiqueta: 'Nominar a…', deshabilitada: true, elegir: () => {} },
           ...(hayGuion ? [cambiarFicha] : []),
           ...opcionesAlineamiento,
-          ...(hayGuion ? [opcionRecordatorio] : []),
+          // Sin guion, el recordatorio solo puede ser de texto propio
+          opcionRecordatorio,
+          ...opcionNota,
           ...(despertar
             ? [
                 {
@@ -352,7 +372,7 @@ const FichaAsiento = ({
             : []),
         ]
       : // En su grimorio, el jugador solo cambia los personajes (lo demás es de la partida).
-        [cambiarFicha, ...opcionesAlineamiento, opcionRecordatorio];
+        [cambiarFicha, ...opcionesAlineamiento, opcionRecordatorio, ...opcionNota];
   if (seguir) {
     opciones.push({
       id: 'seguir',
@@ -384,6 +404,7 @@ const FichaAsiento = ({
           enJuego={todos.filter((p) => enJuego.has(p.id))}
           otros={todos.filter((p) => !enJuego.has(p.id))}
           onElegir={(p, i) => void ponerRecordatorio(p, i)}
+          onTexto={(texto) => void ponerRecordatorioTexto(texto)}
           onCerrar={() => setEligiendoRecordatorio(false)}
         />
       )}

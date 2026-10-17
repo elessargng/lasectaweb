@@ -49,11 +49,23 @@ export interface SalaAsiento {
   alineamiento: SalaAlineamiento | null;
   /** Las fichas recordatorio junto a la suya; solo llegan a quien ve el grimorio (narradores). */
   recordatorios: SalaRecordatorio[];
+  /** Las notas del narrador sobre el asiento (hasta 4); solo llegan a quien ve el grimorio. */
+  notas: SalaNota[];
   /** Los faroles del jugador de este asiento (3 casillas, id de personaje o null); solo los ve él y quien ve el grimorio. */
   faroles: (string | null)[];
 }
 
-/** Una ficha recordatorio: de qué personaje y cuál de sus recordatorios (su texto original, por si no hay traducción). */
+/** Una nota sobre un asiento: texto libre (ver NotasAsiento). */
+export interface SalaNota {
+  id: string;
+  texto: string;
+}
+
+/**
+ * Una ficha recordatorio: de qué personaje y cuál de sus recordatorios (su texto
+ * original, por si no hay traducción). Con texto propio, el personaje es
+ * RECORDATORIO_TEXTO (fichas.ts) y el índice, -1.
+ */
 export interface SalaRecordatorio {
   id: string;
   personaje: string;

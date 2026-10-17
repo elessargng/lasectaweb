@@ -1,12 +1,25 @@
 import { createContext, useContext } from 'react';
 import type { PersonajeMostrado, Texto } from './guiones';
-import type { SalaAlineamiento, SalaAsiento, SalaRecordatorio } from './useSala';
+import type { SalaAlineamiento, SalaAsiento, SalaNota, SalaRecordatorio } from './useSala';
 
 /**
  * Los personajes en las fichas de la mesa: qué personajes se pueden poner (los
  * del guion, en el idioma de cada uno), cómo se ve cada uno según su
  * alineamiento y el grimorio propio de un jugador (sus notas, solo en su navegador).
  */
+
+/**
+ * Recordatorios con texto propio (sin personaje): su «personaje» es este y su
+ * texto, el que se escribió, de hasta RECORDATORIO_TEXTO_MAX (van en redondo en
+ * una ficha pequeña). Lo mismo en el servidor (types/sala.ts).
+ */
+export const RECORDATORIO_TEXTO = '_texto';
+export const RECORDATORIO_TEXTO_MAX = 14;
+export const esRecordatorioTexto = (r: SalaRecordatorio) => r.personaje === RECORDATORIO_TEXTO;
+
+/** Notas como mucho por asiento, y su largo máximo (como en el servidor). */
+export const NOTAS_MAX = 4;
+export const NOTA_LARGO_MAX = 500;
 
 /** Los tipos que pueden ir en la ficha de un jugador (no los legendarios ni los lóricos). */
 export const TIPOS_EN_FICHA = ['townsfolk', 'outsider', 'minion', 'demon', 'traveller'];
@@ -54,6 +67,9 @@ export interface ContextoFichas {
   /** Los recordatorios que ha puesto el jugador en su grimorio propio, por asiento. */
   notasRecordatorios: Record<string, SalaRecordatorio[]>;
   anotarRecordatorios: (asientoId: string, recordatorios: SalaRecordatorio[]) => void;
+  /** Las notas que ha escrito el jugador en su grimorio propio, por asiento. */
+  notasEscritas: Record<string, SalaNota[]>;
+  escribirNotas: (asientoId: string, notas: SalaNota[]) => void;
 }
 
 export const FichasContexto = createContext<ContextoFichas>({
@@ -67,6 +83,8 @@ export const FichasContexto = createContext<ContextoFichas>({
   todosPorId: new Map(),
   notasRecordatorios: {},
   anotarRecordatorios: () => {},
+  notasEscritas: {},
+  escribirNotas: () => {},
 });
 
 /**
@@ -82,6 +100,8 @@ export function recordatoriosDeFicha(
 
 /** El texto de un recordatorio en el idioma de quien mira (el original si no hay traducción). */
 export function textoRecordatorio(r: SalaRecordatorio, personaje: PersonajeMostrado | undefined): Texto {
+  // El texto propio está escrito aquí, en español
+  if (esRecordatorioTexto(r)) return { texto: r.texto, lang: 'es' };
   return personaje?.recordatorios[r.indice] ?? { texto: r.texto, lang: 'en' };
 }
 
@@ -134,9 +154,9 @@ export function gruposViajeros(viajeros: PersonajeMostrado[], delGuion: Personaj
  * Un recordatorio «Is The …» (el del Borracho, el Alquimista, el Filósofo, la
  * Marioneta o el Aprendiz): dice quién es de verdad el de esa ficha, aunque lleve
  * otro personaje (el que cree ser, o la habilidad que ha ganado). Se mira su
- * texto original, que es el mismo en cualquier idioma.
+ * texto original, que es el mismo en cualquier idioma. Uno con texto propio nunca lo es.
  */
-export const esRecordatorioDeIdentidad = (r: SalaRecordatorio) => /^is the\b/i.test(r.texto.trim());
+export const esRecordatorioDeIdentidad = (r: SalaRecordatorio) => !esRecordatorioTexto(r) && /^is the\b/i.test(r.texto.trim());
 
 /**
  * Quién es de verdad el de un asiento: el personaje de su «Is The …» (el último)

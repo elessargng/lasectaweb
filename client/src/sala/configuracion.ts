@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { parseApiResponse } from '../utils/api';
 import { KEY_ANTIGUA as KEY_ATAJOS, type AccionAtajo, type Atajo } from './atajos';
+import type { GestosAsignados } from './gestos';
 import { KEY_ANTIGUA as KEY_AVISOS, type AvisosActivos } from './avisosConfig';
 import { KEY_ANTIGUA as KEY_PREFERENCIAS, type PreferenciasGuardables } from './preferencias';
 
@@ -16,6 +17,8 @@ export interface ConfiguracionSala {
   preferencias: PreferenciasGuardables;
   avisos: AvisosActivos;
   atajos: Record<AccionAtajo, Atajo>;
+  /** Los gestos táctiles de los atajos (los que tienen; ver gestos.ts). */
+  gestos: GestosAsignados;
 }
 
 /** Lo que guarda un perfil: la configuración y, además, el nombre en la sala (vacío: el de la cuenta). */

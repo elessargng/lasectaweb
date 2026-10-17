@@ -13,6 +13,7 @@ import type { OpcionMenu } from './MenuDesplegable';
 import MenuUsuario from './MenuUsuario';
 import PanelAccesibilidad from './PanelAccesibilidad';
 import PanelAtajos from './PanelAtajos';
+import { useGestos, useReconocerGestos, type Gesto } from './gestos';
 import PanelInterfaz from './PanelInterfaz';
 import PanelSonido from './PanelSonido';
 import PanelPartida from './PanelPartida';
@@ -63,6 +64,7 @@ import {
   NUM_TECLAS_LLAMADA,
   puedeUsarAtajo,
   useAtajos,
+  type AccionAtajo,
   type Atajo,
 } from './atajos';
 import { AvisosContexto, useAvisosActivos, type TipoAviso } from './avisosConfig';
@@ -83,6 +85,7 @@ import {
   type SalaDespertar,
   type SalaEstado,
   type SalaParticipante,
+  type SalaNota,
   type SalaRecordatorio,
 } from './useSala';
 
@@ -266,6 +269,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     if (nuevo.fase.reinicios !== anterior.fase.reinicios) {
       setNotasGrimorio({});
       setNotasRecordatorios({});
+      setNotasEscritas({});
     }
 
     // Mi personaje: si el narrador me lo cambia (o el alineamiento), se me dice.
@@ -375,6 +379,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // el grimorio propio del jugador (sus notas: solo en este navegador, mientras está en la sala).
   const [notasGrimorio, setNotasGrimorio] = useState<Record<string, ContenidoFicha>>({});
   const [notasRecordatorios, setNotasRecordatorios] = useState<Record<string, SalaRecordatorio[]>>({});
+  const [notasEscritas, setNotasEscritas] = useState<Record<string, SalaNota[]>>({});
   const nombresPersonajesRef = useRef<Map<string, PersonajeMostrado>>(new Map());
   const [wakesAbiertos, setWakesAbiertos] = useState<string[]>([]);
   const [wakeActivo, setWakeActivo] = useState<string | null>(null);
@@ -858,6 +863,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     todosPorId: new Map([...personajesGuion, ...viajerosCatalogo, ...npcsDisponibles].map((p) => [p.id, p])),
     notasRecordatorios,
     anotarRecordatorios: (asientoId, lista) => setNotasRecordatorios((n) => ({ ...n, [asientoId]: lista })),
+    notasEscritas,
+    escribirNotas: (asientoId, lista) => setNotasEscritas((n) => ({ ...n, [asientoId]: lista })),
   };
 
 
@@ -929,6 +936,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     return false;
   };
   const { atajos, cambiar: cambiarAtajo, reemplazar: reemplazarAtajos } = useAtajos();
+  const { gestos, cambiar: cambiarGesto, reemplazar: reemplazarGestos } = useGestos();
   // La tecla rápida que coge una llamada entrante (la de su slot), si tiene.
   const teclaLlamada = (invitacionId: string): Atajo | undefined => {
     const slot = slotsLlamada[invitacionId];
@@ -940,11 +948,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     preferencias: sinComunicaciones(preferencias),
     avisos: avisosActivos,
     atajos,
+    gestos,
   };
   const aplicarConfiguracion = (datos: Partial<Record<keyof ConfiguracionSala, unknown>>) => {
     reemplazarPreferencias(datos.preferencias);
     reemplazarAvisos(datos.avisos);
     reemplazarAtajos(datos.atajos);
+    reemplazarGestos(datos.gestos);
   };
   const {
     carga: cargaConfiguracion,
@@ -973,29 +983,37 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     if (!r.ok) setAviso(r.error);
   };
 
-  // Los atajos que se pueden usar ahora, con lo que hace cada uno.
-  const atajosActivos: [Atajo, () => void][] = [
-    ...(puedeLevantarMano ? [[atajos.levantarMano, alternarMano] as [Atajo, () => void]] : []),
-    ...(accionFase ? [[atajos.cambiarFase, () => void cambiarFase()] as [Atajo, () => void]] : []),
+  // Los atajos que se pueden usar ahora, con lo que hace cada uno: con su tecla y, si
+  // tiene, con su gesto (móviles y tabletas).
+  const accionesActivas: [AccionAtajo, () => void][] = [
+    ...(puedeLevantarMano ? [['levantarMano', alternarMano] as [AccionAtajo, () => void]] : []),
+    ...(accionFase ? [['cambiarFase', () => void cambiarFase()] as [AccionAtajo, () => void]] : []),
     // G: revelar el grimorio (abre el diálogo de quién gana; al cerrarse, el foco vuelve donde estaba)
     ...(estado?.acciones.includes('narrador:revelarGrimorio') && !revelandoGrimorio
-      ? [[atajos.revelarGrimorio, () => setRevelandoGrimorio(true)] as [Atajo, () => void]]
+      ? [['revelarGrimorio', () => setRevelandoGrimorio(true)] as [AccionAtajo, () => void]]
       : []),
     // R: sonar el gong (todos a la plaza)
-    ...(estado?.acciones.includes('narrador:sonarGong') ? [[atajos.sonarGong, () => void sonarGong()] as [Atajo, () => void]] : []),
+    ...(estado?.acciones.includes('narrador:sonarGong') ? [['sonarGong', () => void sonarGong()] as [AccionAtajo, () => void]] : []),
     ...(estado?.video && puedeEmitirVideo
       ? [
-          [atajos.microfono, alternarMicrofonoConAtajo] as [Atajo, () => void],
-          [atajos.camara, alternarCamaraConAtajo] as [Atajo, () => void],
+          ['microfono', alternarMicrofonoConAtajo] as [AccionAtajo, () => void],
+          ['camara', alternarCamaraConAtajo] as [AccionAtajo, () => void],
         ]
       : []),
     // Retroceso: salir de la conversación privada (o dejar de escuchar)
-    ...(miConversacion ? [[atajos.salirConversacion, () => void salirDeConversacion()] as [Atajo, () => void]] : []),
+    ...(miConversacion ? [['salirConversacion', () => void salirDeConversacion()] as [AccionAtajo, () => void]] : []),
     // Teclas de coger llamada: cada llamada entrante, con la tecla de su slot, la acepta
     ...Object.entries(slotsLlamada).map(
-      ([id, slot]) => [atajos[accionCogerLlamada(slot)], () => void responder(id, true)] as [Atajo, () => void],
+      ([id, slot]) => [accionCogerLlamada(slot), () => void responder(id, true)] as [AccionAtajo, () => void],
     ),
   ];
+  const atajosActivos = accionesActivas.map(([accion, hacer]) => [atajos[accion], hacer] as [Atajo, () => void]);
+  useReconocerGestos(
+    accionesActivas.flatMap(([accion, hacer]) => {
+      const gesto = gestos[accion];
+      return gesto ? [[gesto, hacer] as [Gesto, () => void]] : [];
+    }),
+  );
   // Los atajos tienen prioridad sobre el control con el foco: se escuchan en la fase
   // de captura (antes que él) y no se dejan seguir, ni al pulsar ni al soltar
   // (con Espacio, algunos navegadores pulsan el botón al soltar).
@@ -1155,9 +1173,9 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     },
     {
       id: 'atajos',
-      etiqueta: 'Atajos de teclado',
+      etiqueta: 'Atajos',
       conControles: true,
-      contenido: <PanelAtajos atajos={atajos} onCambiar={cambiarAtajo} />,
+      contenido: <PanelAtajos atajos={atajos} onCambiar={cambiarAtajo} gestos={gestos} onCambiarGesto={cambiarGesto} />,
     },
     {
       id: 'comunicaciones',

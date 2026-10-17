@@ -5,6 +5,8 @@ import AvisoGong from './AvisoGong';
 import { useAriaLive, type TipoAviso } from './avisosConfig';
 import AsaMover from './AsaMover';
 import Asiento from './Asiento';
+import NotasAsiento from './NotasAsiento';
+import { describirAsiento } from './nombresAsiento';
 import CuentaAtras from './CuentaAtras';
 import Ondas, { type OndaMesa } from './Ondas';
 import type { ContactoParticipante } from './BotonesContacto';
@@ -16,7 +18,7 @@ import FichaRedonda from './FichaRedonda';
 import PersonajeEnFicha from './PersonajeEnFicha';
 import RecordatoriosFicha from './RecordatoriosFicha';
 import { ESCALA_RECORDATORIO } from './FichaRecordatorio';
-import { describirRecordatorio, recordatoriosDeFicha, useFichas } from './fichas';
+import { describirRecordatorio, NOTAS_MAX, recordatoriosDeFicha, useFichas } from './fichas';
 import LunaDespertar from './LunaDespertar';
 import ManoLevantada from './ManoLevantada';
 import PanelNominacion from './PanelNominacion';
@@ -195,7 +197,7 @@ const Mesa = ({
   const ariaLiveAsientos = useAriaLive('editarAsientos');
   // Lo que lleva cada ficha, para leerlo con el nombre del asiento: el personaje que
   // ve quien mira (el de la partida o, con grimorio, el que ha anotado), la calavera y el sudario.
-  const { porId, notas, todosPorId, notasRecordatorios, anotarRecordatorios } = useFichas();
+  const { porId, notas, todosPorId, notasRecordatorios, anotarRecordatorios, notasEscritas, escribirNotas } = useFichas();
   const personajeVisto = (a: (typeof asientos)[number]) =>
     a.personaje ?? (modoFichas === 'grimorio' ? notas[a.id]?.personaje : null) ?? null;
   // Los recordatorios que se ven: los de la partida (a quien ve el grimorio) y, con grimorio propio, los anotados
@@ -228,6 +230,31 @@ const Mesa = ({
     }
     window.setTimeout(() => document.getElementById(`sala-ficha-${asientoId}-boton`)?.focus(), 0);
   };
+  // Las notas de cada asiento: las del narrador (a quien ve el grimorio) o, con grimorio
+  // propio, las del jugador (en su navegador). Las escriben el narrador y el jugador con grimorio.
+  const [notasAbiertas, setNotasAbiertas] = useState<{ asientoId: string; nueva: boolean } | null>(null);
+  const notasDe = (a: (typeof asientos)[number]) => (modoFichas === 'grimorio' ? (notasEscritas[a.id] ?? []) : (a.notas ?? []));
+  const escriboNotas = modoFichas === 'narrador' || modoFichas === 'grimorio';
+  const guardarNota = async (asientoId: string, notaId: string | null, texto: string): Promise<string | null> => {
+    if (modoFichas === 'grimorio') {
+      const lista = notasEscritas[asientoId] ?? [];
+      if (notaId) escribirNotas(asientoId, lista.map((n) => (n.id === notaId ? { ...n, texto } : n)));
+      else if (lista.length >= NOTAS_MAX) return `Cada asiento puede tener como mucho ${NOTAS_MAX} notas.`;
+      else escribirNotas(asientoId, [...lista, { id: crypto.randomUUID(), texto }]);
+      return null;
+    }
+    const r = await pedir('narrador:escribirNota', { asientoId, notaId, texto });
+    return r.ok ? null : r.error;
+  };
+  const borrarNota = async (asientoId: string, notaId: string): Promise<string | null> => {
+    if (modoFichas === 'grimorio') {
+      escribirNotas(asientoId, (notasEscritas[asientoId] ?? []).filter((n) => n.id !== notaId));
+      return null;
+    }
+    const r = await pedir('narrador:borrarNota', { asientoId, notaId });
+    return r.ok ? null : r.error;
+  };
+
   // Seguir al jugador de una ficha (no a uno mismo, ni editando asientos o revelando el grimorio)
   const seguirA = (ocupante: SalaParticipante | null) => {
     if (!seguimiento || editando || estado.revelacion || !ocupante || ocupante.id === estado.yo || ocupante.rol !== 'jugador') return undefined;
@@ -413,6 +440,22 @@ const Mesa = ({
                   ficha={fichaDe(a)}
                   siguiendo={!!ocupante && seguimiento?.siguiendo === ocupante.id}
                 />
+                {/* Las notas: una pestaña hacia fuera de la mesa (la izquierda o la derecha del cuadro) */}
+                {!editando && (
+                  <NotasAsiento
+                    asientoId={a.id}
+                    nombre={describirAsiento(i + 1, ocupante)}
+                    notas={notasDe(a)}
+                    editable={escriboNotas}
+                    lado={Math.sin((2 * Math.PI * i) / total) < -0.01 ? 'izquierda' : 'derecha'}
+                    abierto={notasAbiertas?.asientoId === a.id}
+                    nueva={notasAbiertas?.asientoId === a.id && notasAbiertas.nueva}
+                    onAbrir={() => setNotasAbiertas({ asientoId: a.id, nueva: false })}
+                    onCerrar={() => setNotasAbiertas((n) => (n?.asientoId === a.id ? null : n))}
+                    onGuardar={(notaId, texto) => guardarNota(a.id, notaId, texto)}
+                    onBorrar={(notaId) => borrarNota(a.id, notaId)}
+                  />
+                )}
               </li>
             );
           })}
@@ -470,6 +513,7 @@ const Mesa = ({
                   despertar={despertarDe(a.id)}
                   seguir={seguir}
                   enJuego={enJuego}
+                  onEscribirNota={escriboNotas && !editando ? () => setNotasAbiertas({ asientoId: a.id, nueva: true }) : undefined}
                   revelando={
                     revelacion
                       ? {
@@ -558,7 +602,7 @@ const Mesa = ({
       {revelacion?.terminada && <AnuncioGanador ganador={revelacion.ganador} />}
 
       {/* El gong del narrador: el aviso de volver a la plaza, alrededor de la mesa */}
-      <AvisoGong gong={estado.gong} ahora={estado.ahora} onAnuncio={(m) => onAnuncio('gong', m)} />
+      <AvisoGong gong={estado.gong} ahora={estado.ahora} mesaRef={mesaRef} onAnuncio={(m) => onAnuncio('gong', m)} />
 
       {agujas && (
         <Agujas

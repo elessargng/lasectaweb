@@ -16,6 +16,7 @@ import {
   SalaRevelacion,
   SalaRol,
   NUM_FAROLES,
+  RECORDATORIO_TEXTO,
 } from '../types/sala';
 import { GuionResuelto, PersonajeDeGuion } from '../types/guiones';
 import { repartoPara } from './partida/distribucion';
@@ -85,6 +86,7 @@ const asientoNuevo = (): SalaAsiento => ({
   personaje: null,
   alineamiento: null,
   recordatorios: [],
+  notas: [],
   faroles: farolesVacios(),
 });
 
@@ -94,6 +96,8 @@ const asientoNuevo = (): SalaAsiento => ({
  * lleve otro personaje (el que cree ser, o la habilidad que tiene).
  */
 export const esRecordatorioDeIdentidad = (texto: string) => /^is the\b/i.test(texto.trim());
+/** Lo mismo con un recordatorio puesto: uno con texto propio nunca lo es (lo escribe el narrador). */
+const esIdentidad = (r: SalaRecordatorio) => r.personaje !== RECORDATORIO_TEXTO && esRecordatorioDeIdentidad(r.texto);
 
 /** El NPC con el que el narrador puede pedir silencio a todos: el Bibliotecario del Infierno. */
 export const NPC_SILENCIO = 'hellslibrarian';
@@ -412,7 +416,7 @@ export class SalaService {
    * reparto; la ficha, para su habilidad (el orden de noche).
    */
   identidad(asiento: SalaAsiento): string | null {
-    const r = [...asiento.recordatorios].reverse().find((x) => esRecordatorioDeIdentidad(x.texto));
+    const r = [...asiento.recordatorios].reverse().find(esIdentidad);
     return r?.personaje ?? asiento.personaje;
   }
 
@@ -487,7 +491,7 @@ export class SalaService {
         a.personaje = personajes[i] ?? null;
         a.alineamiento = null;
         // Un reparto nuevo: quién era cada uno (los «Is The …» del anterior) ya no vale
-        a.recordatorios = a.recordatorios.filter((r) => !esRecordatorioDeIdentidad(r.texto));
+        a.recordatorios = a.recordatorios.filter((r) => !esIdentidad(r));
         this.identidadAutomatica(a);
       });
   }
@@ -612,6 +616,7 @@ export class SalaService {
       a.personaje = null;
       a.alineamiento = null;
       a.recordatorios = [];
+      a.notas = [];
     }
     this.bolsaActual = [];
     this.farolesNarrador = farolesVacios();
@@ -839,6 +844,31 @@ export class SalaService {
   quitarRecordatorio(asientoId: string, recordatorioId: string): void {
     const asiento = this.mesa.find((a) => a.id === asientoId);
     if (asiento) asiento.recordatorios = asiento.recordatorios.filter((r) => r.id !== recordatorioId);
+  }
+
+  /**
+   * Escribe una nota sobre un asiento: nueva (sin `notaId`) o cambia una que ya
+   * estaba. Devuelve su id, o null si no existe (el asiento o la nota). No
+   * comprueba permisos ni cuántas hay.
+   */
+  escribirNota(asientoId: string, notaId: string | null, texto: string): string | null {
+    const asiento = this.mesa.find((a) => a.id === asientoId);
+    if (!asiento) return null;
+    if (notaId === null) {
+      const nota = { id: randomUUID(), texto };
+      asiento.notas.push(nota);
+      return nota.id;
+    }
+    const nota = asiento.notas.find((n) => n.id === notaId);
+    if (!nota) return null;
+    nota.texto = texto;
+    return nota.id;
+  }
+
+  /** Borra una nota de un asiento. No comprueba permisos. */
+  borrarNota(asientoId: string, notaId: string): void {
+    const asiento = this.mesa.find((a) => a.id === asientoId);
+    if (asiento) asiento.notas = asiento.notas.filter((n) => n.id !== notaId);
   }
 
   /** Cambia el alineamiento de la ficha de un asiento. No comprueba permisos. */

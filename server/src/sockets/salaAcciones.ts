@@ -21,7 +21,11 @@ import {
   FichaDespertar,
   MensajeDespertar,
   NUM_FAROLES,
+  RECORDATORIO_TEXTO,
   SALA_FORMAS_MANO,
+  SALA_NOTA_LARGO_MAX,
+  SALA_NOTAS_MAX,
+  SALA_RECORDATORIO_TEXTO_MAX,
   SalaFormaMano,
   SalaParticipante,
   TARJETAS_DESPERTAR,
@@ -644,6 +648,67 @@ export const SALA_ACCIONES: Record<string, Accion> = {
         return { ok: false, error: `Una ficha no puede llevar más de ${MAX_RECORDATORIOS} recordatorios.` };
       }
       sala.ponerRecordatorio(asientoId, { personaje: personaje.id, indice: indice as number, texto });
+      return { ok: true };
+    },
+  },
+
+  /**
+   * Pone un recordatorio con texto propio (sin personaje): lo que escriba el
+   * narrador, corto, porque va en redondo en una ficha pequeña. datos: { asientoId, texto }.
+   */
+  'narrador:ponerRecordatorioTexto': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.asientos().length > 0,
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador pone recordatorios.'),
+    hacer: (sala, _yo, datos) => {
+      const { asientoId, texto } = (datos as { asientoId?: unknown; texto?: unknown }) ?? {};
+      const asiento = sala.asientos().find((a) => a.id === asientoId);
+      if (!asiento || typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
+      const limpio = typeof texto === 'string' ? texto.replace(/\s+/g, ' ').trim() : '';
+      if (!limpio) return { ok: false, error: 'Escribe el texto del recordatorio.' };
+      if ([...limpio].length > SALA_RECORDATORIO_TEXTO_MAX) {
+        return { ok: false, error: `El recordatorio puede tener como mucho ${SALA_RECORDATORIO_TEXTO_MAX} caracteres.` };
+      }
+      if (asiento.recordatorios.length >= MAX_RECORDATORIOS) {
+        return { ok: false, error: `Una ficha no puede llevar más de ${MAX_RECORDATORIOS} recordatorios.` };
+      }
+      sala.ponerRecordatorio(asientoId, { personaje: RECORDATORIO_TEXTO, indice: -1, texto: limpio });
+      return { ok: true };
+    },
+  },
+
+  /**
+   * Escribe una nota sobre un asiento (texto libre, hasta SALA_NOTAS_MAX por
+   * asiento): nueva o, con `notaId`, cambia esa. Devuelve el id de la nota.
+   * datos: { asientoId, notaId?, texto }.
+   */
+  'narrador:escribirNota': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.asientos().length > 0,
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador escribe notas.'),
+    hacer: (sala, _yo, datos) => {
+      const { asientoId, notaId, texto } = (datos as { asientoId?: unknown; notaId?: unknown; texto?: unknown }) ?? {};
+      const asiento = sala.asientos().find((a) => a.id === asientoId);
+      if (!asiento || typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
+      if (notaId !== undefined && notaId !== null && typeof notaId !== 'string') return { ok: false, error: 'Petición desconocida.' };
+      // Se respetan los saltos de línea; solo se quitan los espacios de los extremos
+      const limpio = typeof texto === 'string' ? texto.replace(/\r\n?/g, '\n').trim() : '';
+      if (!limpio) return { ok: false, error: 'La nota está vacía.' };
+      if (limpio.length > SALA_NOTA_LARGO_MAX) return { ok: false, error: `Una nota puede tener como mucho ${SALA_NOTA_LARGO_MAX} caracteres.` };
+      if (!notaId && asiento.notas.length >= SALA_NOTAS_MAX) {
+        return { ok: false, error: `Cada asiento puede tener como mucho ${SALA_NOTAS_MAX} notas.` };
+      }
+      const id = sala.escribirNota(asientoId, (notaId as string | undefined) ?? null, limpio);
+      return id ? { ok: true, valor: id } : { ok: false, error: 'Esa nota ya no existe.' };
+    },
+  },
+
+  /** Borra una nota de un asiento. datos: { asientoId, notaId }. */
+  'narrador:borrarNota': {
+    puede: esNarrador,
+    noPuede: 'Solo un narrador borra notas.',
+    hacer: (sala, _yo, datos) => {
+      const { asientoId, notaId } = (datos as { asientoId?: unknown; notaId?: unknown }) ?? {};
+      if (typeof asientoId !== 'string' || typeof notaId !== 'string') return { ok: false, error: 'Petición desconocida.' };
+      sala.borrarNota(asientoId, notaId);
       return { ok: true };
     },
   },

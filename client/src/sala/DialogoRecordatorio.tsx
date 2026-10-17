@@ -1,8 +1,9 @@
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import Dialog from '../components/Dialog';
-import { botonPeligro, botonSecundario } from './estilos';
+import { botonPeligro, botonPrincipal, botonSecundario, campo } from './estilos';
 import FichaRecordatorio from './FichaRecordatorio';
+import { RECORDATORIO_TEXTO_MAX } from './fichas';
 import { porTipos, type PersonajeMostrado } from './guiones';
 
 interface DialogoRecordatorioProps {
@@ -19,12 +20,15 @@ interface DialogoRecordatorioProps {
   explicacion?: string;
   /** Un botón más en el pie, para seguir sin elegir ninguno («Matar sin recordatorio»). */
   sinRecordatorio?: { etiqueta: string; onElegir: () => void };
+  /** Con esto sale la pestaña «Texto propio»: un recordatorio con lo que se escriba. */
+  onTexto?: (texto: string) => void;
 }
 
-type Pestana = 'enJuego' | 'otros';
+type Pestana = 'enJuego' | 'otros' | 'texto';
 const PESTANAS: { id: Pestana; etiqueta: string }[] = [
   { id: 'enJuego', etiqueta: 'En juego' },
   { id: 'otros', etiqueta: 'Otros personajes' },
+  { id: 'texto', etiqueta: 'Texto propio' },
 ];
 
 /** Lado de las fichas recordatorio en el diálogo (fijo: no depende de la mesa). */
@@ -36,11 +40,27 @@ const TAMANO = '4.5rem';
  * del guion. Por personaje (con su nombre de título), cada recordatorio es un
  * botón. Elegir uno lo pone y cierra el diálogo.
  *
+ * Con `onTexto`, una pestaña más para escribir uno propio (corto: va en redondo
+ * en una ficha pequeña), con la ficha tal como quedará mientras se escribe. Si no
+ * hay ningún personaje (sin guion), se abre en esa.
+ *
  * Pestañas como manda ARIA: las flechas van de una a otra y Tab entra en la lista.
  */
-const DialogoRecordatorio = ({ ficha, enJuego, otros, onElegir, onCerrar, titulo, explicacion, sinRecordatorio }: DialogoRecordatorioProps) => {
-  const [pestana, setPestana] = useState<Pestana>('enJuego');
-  const refs = useRef<Record<Pestana, HTMLButtonElement | null>>({ enJuego: null, otros: null });
+const DialogoRecordatorio = ({ ficha, enJuego, otros, onElegir, onCerrar, titulo, explicacion, sinRecordatorio, onTexto }: DialogoRecordatorioProps) => {
+  const pestanas = PESTANAS.filter((t) => t.id !== 'texto' || onTexto);
+  const sinPersonajes = enJuego.length === 0 && otros.length === 0;
+  const [pestana, setPestana] = useState<Pestana>(onTexto && sinPersonajes ? 'texto' : 'enJuego');
+  const refs = useRef<Record<Pestana, HTMLButtonElement | null>>({ enJuego: null, otros: null, texto: null });
+  const [texto, setTexto] = useState('');
+  const limpio = texto.replace(/\s+/g, ' ').trim();
+  const largo = [...texto].length;
+
+  const ponerTexto = (e: FormEvent) => {
+    e.preventDefault();
+    if (!limpio || !onTexto) return;
+    onTexto(limpio);
+    onCerrar();
+  };
 
   const elegir = (p: PersonajeMostrado, indice: number) => {
     onElegir(p, indice);
@@ -50,13 +70,16 @@ const DialogoRecordatorio = ({ ficha, enJuego, otros, onElegir, onCerrar, titulo
   const alTeclear = (e: KeyboardEvent<HTMLButtonElement>) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
     e.preventDefault();
-    const destino: Pestana =
-      e.key === 'Home' ? 'enJuego' : e.key === 'End' ? 'otros' : pestana === 'enJuego' ? 'otros' : 'enJuego';
+    const i = pestanas.findIndex((t) => t.id === pestana);
+    const n = pestanas.length;
+    const destino = pestanas[
+      e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : e.key === 'ArrowRight' ? (i + 1) % n : (i - 1 + n) % n
+    ].id;
     setPestana(destino);
     refs.current[destino]?.focus();
   };
 
-  const lista = (pestana === 'enJuego' ? enJuego : otros).filter((p) => p.recordatorios.length > 0);
+  const lista = (pestana === 'enJuego' ? enJuego : pestana === 'otros' ? otros : []).filter((p) => p.recordatorios.length > 0);
 
   // En el body: la ficha está en una capa con transform, y dentro de ella «fixed» no sería la pantalla.
   return createPortal(
@@ -76,7 +99,7 @@ const DialogoRecordatorio = ({ ficha, enJuego, otros, onElegir, onCerrar, titulo
           </p>
         )}
         <div role="tablist" aria-label="Personajes" className="flex gap-1 border-b border-outline-ghost px-6 py-2">
-          {PESTANAS.map((t) => (
+          {pestanas.map((t) => (
             <button
               key={t.id}
               ref={(el) => {
@@ -104,11 +127,49 @@ const DialogoRecordatorio = ({ ficha, enJuego, otros, onElegir, onCerrar, titulo
           aria-labelledby={`sala-recordatorio-pestana-${pestana}`}
           className="overflow-y-auto px-6 py-4"
         >
-          {lista.length === 0 ? (
+          {pestana === 'texto' ? (
+            <form onSubmit={ponerTexto} className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
+              {/* Cómo quedará: la ficha, en grande, con lo que se va escribiendo */}
+              <div className="flex shrink-0 flex-col items-center gap-2">
+                <FichaRecordatorio personaje={undefined} texto={{ texto: limpio || 'Tu texto', lang: 'es' }} tamano="7rem" libre />
+                <span aria-hidden="true" className="text-xs text-on-surface-muted">
+                  Así se verá
+                </span>
+              </div>
+              <div className="flex w-full flex-col gap-2">
+                <label htmlFor="sala-recordatorio-texto" className="campo-etiqueta">
+                  Texto del recordatorio
+                </label>
+                <input
+                  id="sala-recordatorio-texto"
+                  type="text"
+                  value={texto}
+                  autoFocus
+                  autoComplete="off"
+                  maxLength={RECORDATORIO_TEXTO_MAX}
+                  onChange={(e) => setTexto(e.target.value)}
+                  aria-describedby="sala-recordatorio-texto-ayuda"
+                  className={campo}
+                />
+                <p id="sala-recordatorio-texto-ayuda" className="flex justify-between gap-3 text-xs text-on-surface-muted">
+                  <span>Corto: va escrito en redondo alrededor de la ficha.</span>
+                  <span aria-live="polite" className={largo >= RECORDATORIO_TEXTO_MAX ? 'text-gold-bright' : ''}>
+                    {largo}/{RECORDATORIO_TEXTO_MAX}
+                  </span>
+                </p>
+                <div className="mt-2 flex justify-end">
+                  <button type="submit" aria-disabled={!limpio || undefined} className={botonPrincipal}>
+                    Poner recordatorio
+                  </button>
+                </div>
+              </div>
+            </form>
+          ) : lista.length === 0 ? (
             <p className="text-on-surface-muted">
               {pestana === 'enJuego'
                 ? 'Ningún personaje en juego tiene recordatorios. Mira en «Otros personajes».'
                 : 'Ningún otro personaje del guion tiene recordatorios.'}
+              {onTexto && ' También puedes escribir uno en «Texto propio».'}
             </p>
           ) : (
             <div className="flex flex-col gap-5">
