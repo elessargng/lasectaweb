@@ -13,6 +13,7 @@ import type { OpcionMenu } from './MenuDesplegable';
 import MenuUsuario from './MenuUsuario';
 import PanelAccesibilidad from './PanelAccesibilidad';
 import PanelAtajos from './PanelAtajos';
+import { sonVecinos } from './nombresAsiento';
 import { useGestos, useReconocerGestos, type Gesto } from './gestos';
 import PanelInterfaz from './PanelInterfaz';
 import PanelSonido from './PanelSonido';
@@ -626,10 +627,17 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // de noche, el narrador a cualquiera y los jugadores solo al narrador (no ven si ya
   // conversa con otro: su invitación espera). Quien ya está en otra no se puede invitar.
   const conversa = (p: SalaParticipante) => p.rol === 'jugador' || p.rol === 'narrador';
+  // Con la Institutriz viva: un jugador solo conversa con sus vecinos (tiene que serlo de
+  // todos los jugadores de la conversación en la que entra)
+  const vecinoDeTodos = (quien: string, con: string[]) =>
+    !estado?.institutriz ||
+    con.every((id) => id === quien || estado.participantes.find((p) => p.id === id)?.rol !== 'jugador' || sonVecinos(estado, quien, id));
   const puedeInvitarA = (otro: SalaParticipante) => {
     if (!estado?.video || !yo || yo.id === otro.id) return false;
     if (!conversa(yo) || !conversa(otro)) return false;
     if (noche && yo.rol !== 'narrador' && otro.rol !== 'narrador') return false;
+    const mia = estado.conversaciones.find((c) => c.miembros.includes(yo.id));
+    if (otro.rol === 'jugador' && !vecinoDeTodos(otro.id, mia ? mia.miembros : [yo.id])) return false;
     return !estado.conversaciones.some((c) => c.miembros.includes(otro.id));
   };
   // Pedir unirse a la conversación de alguien (con las mismas reglas que invitar)
@@ -638,6 +646,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     if (!conversa(yo) || !conversa(otro)) return false;
     if (noche && yo.rol !== 'narrador') return false;
     const suya = estado.conversaciones.find((c) => c.miembros.includes(otro.id));
+    if (suya && yo.rol === 'jugador' && !vecinoDeTodos(yo.id, suya.miembros)) return false;
     return !!suya && !suya.miembros.includes(yo.id);
   };
   const pedirUnirseA = async (otro: SalaParticipante) => {
@@ -926,14 +935,18 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const manoLevantada = !!yo?.manoLevantada;
   // Muerto y sin voto: no puede levantar la mano (el atajo lo dice sin preguntar al servidor)
   const asientoPropio = estado?.asientos.find((a) => a.ocupante === estado.yo);
-  // (la Banshee con su habilidad, que puede levantar las dos, vota sin gastarlo)
-  const sinVoto = !!asientoPropio?.muerto && asientoPropio.votoGastado && !estado?.acciones.includes('sala:levantarDosManos');
+  // (la Banshee con su habilidad, que puede levantar las dos, vota sin gastarlo). Con el
+  // Voudon vivo, solo votan él y los muertos, sin hacerles falta el voto.
+  const soyVoudon = asientoPropio?.personaje === 'voudon';
+  const sinVoto = estado?.voudon
+    ? !!asientoPropio && !asientoPropio.muerto && !soyVoudon
+    : !!asientoPropio?.muerto && asientoPropio.votoGastado && !estado?.acciones.includes('sala:levantarDosManos');
   // La Banshee muerta con su habilidad puede levantar las dos manos (vota doble): 0, 1 o 2
   const puedeDosManos = !!estado?.acciones.includes('sala:levantarDosManos');
   const manos: 0 | 1 | 2 = !manoLevantada ? 0 : yo?.dosManos ? 2 : 1;
   const ponerManos = async (n: 0 | 1 | 2) => {
     if (n > 0 && sinVoto) {
-      setAviso('Ya has gastado tu voto: no puedes levantar la mano.');
+      setAviso(estado?.voudon ? 'Con el Voudon vivo, solo votan él y los muertos.' : 'Ya has gastado tu voto: no puedes levantar la mano.');
       return false;
     }
     const r = await (n === 2 ? pedir('sala:levantarDosManos') : pedir('sala:levantarMano', { levantada: n === 1 }));

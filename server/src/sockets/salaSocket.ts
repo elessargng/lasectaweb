@@ -159,6 +159,8 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
         npcs,
         setupAceptado: yo.rol === 'narrador' ? sala.setupAceptado() : null,
         silencio: sala.silencio(),
+        voudon: sala.voudonVivo(),
+        institutriz: sala.institutrizViva(),
         bootlegger: sala.bootlegger(),
         rolStormcatcher: sala.rolStormcatcher(),
         fichasRetenidas: sala.fichasRetenidas(),

@@ -271,7 +271,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (sala, yo, datos) => {
       const levantada = (datos as { levantada?: unknown } | null)?.levantada;
       if (typeof levantada !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
-      if (levantada && sala.sinVoto(yo.id)) return { ok: false, error: 'Ya has gastado tu voto: no puedes levantar la mano.' };
+      if (levantada && sala.sinVoto(yo.id)) return { ok: false, error: sala.voudonVivo() ? 'Con el Voudon vivo, solo votan él y los muertos.' : 'Ya has gastado tu voto: no puedes levantar la mano.' };
       sala.levantarMano(yo.id, levantada);
       return { ok: true };
     },
@@ -285,7 +285,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     puede: (sala, yo) => yo.rol === 'jugador' && sala.puedeVotarDoble(yo.id),
     noPuede: 'Solo la Banshee con su habilidad puede levantar las dos manos.',
     hacer: (sala, yo) => {
-      if (sala.sinVoto(yo.id)) return { ok: false, error: 'Ya has gastado tu voto: no puedes levantar la mano.' };
+      if (sala.sinVoto(yo.id)) return { ok: false, error: sala.voudonVivo() ? 'Con el Voudon vivo, solo votan él y los muertos.' : 'Ya has gastado tu voto: no puedes levantar la mano.' };
       sala.levantarMano(yo.id, true, true);
       return { ok: true };
     },

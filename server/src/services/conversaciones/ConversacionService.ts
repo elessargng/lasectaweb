@@ -35,6 +35,8 @@ const escucha = (p: SalaParticipante) => p.rol === 'visitante' || p.rol === 'nar
  *   lo ven).
  * - Cada uno está en una como mucho (para aceptar una invitación hay que salir antes).
  * - Al cambiar de noche a día (o al revés) se terminan todas y caducan las invitaciones.
+ * - Con la Institutriz viva, un jugador solo conversa con sus vecinos de mesa: quien
+ *   entra en una conversación tiene que ser vecino de todos los jugadores que hay en ella.
  * - Quien deja de poder estar (cambia de papel o se va) sale. Si queda un solo
  *   miembro, la conversación sigue hasta que sale él: cada uno decide en sus
  *   preferencias si sale automáticamente (lo hace su navegador). Sin miembros
@@ -118,6 +120,7 @@ export class ConversacionService {
     const suya = this.conversaciones.find((c) => c.miembros.includes(otro.id));
     if (!suya) throw new ConversacionError(`${otro.nombre} ya no está en una conversación.`);
     if (suya.miembros.includes(yo.id)) throw new ConversacionError('Ya estás en esa conversación.');
+    if (yo.rol === 'jugador') this.comprobarVecinos(yo.id, suya.miembros);
     if (this.invitaciones.some((i) => i.de === yo.id && i.conversacion === suya.id)) {
       throw new ConversacionError('Ya has pedido unirte a esa conversación.');
     }
@@ -238,6 +241,18 @@ export class ConversacionService {
     return JSON.stringify([this.conversaciones, this.invitaciones]) !== antes;
   }
 
+  /**
+   * Con la Institutriz viva: el jugador `quien` tiene que ser vecino de todos los
+   * jugadores de `con` (los narradores no cuentan). Lanza ConversacionError si no.
+   */
+  private comprobarVecinos(quien: string, con: string[]): void {
+    if (!this.sala.institutrizViva()) return;
+    const jugadores = con.filter((id) => id !== quien && this.sala.buscar(id)?.rol === 'jugador');
+    if (jugadores.some((id) => !this.sala.sonVecinos(quien, id))) {
+      throw new ConversacionError('Con la Institutriz en juego, solo se puede conversar en privado con los vecinos de mesa.');
+    }
+  }
+
   /** Si `yo` puede invitar a `otro` ahora (o, al aceptar, si sigue pudiendo). */
   private comprobar(yoId: string, otroId: string): { yo: SalaParticipante; otro: SalaParticipante } {
     const yo = this.sala.buscar(yoId);
@@ -253,6 +268,8 @@ export class ConversacionService {
     }
     // La mía, si hablo en ella (si solo la escucho, la dejo al empezar otra)
     const mia = this.conversaciones.find((c) => c.miembros.includes(yo.id));
+    // Con la Institutriz, el jugador invitado tiene que ser vecino de los jugadores con los que hablará
+    if (otro.rol === 'jugador') this.comprobarVecinos(otro.id, mia ? mia.miembros : [yo.id]);
     const suya = this.deParticipante(otro.id);
     if (mia && suya === mia) throw new ConversacionError(`${otro.nombre} ya está en la conversación.`);
     // De noche, un jugador no sabe si el narrador conversa: su invitación espera (al

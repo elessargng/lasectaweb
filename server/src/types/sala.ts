@@ -378,6 +378,13 @@ export interface SalaEstado {
    * conversaciones. Para todos.
    */
   silencio: boolean;
+  /**
+   * El Voudon está vivo: solo votan él y los muertos (sin gastar su voto) y basta
+   * con 1 voto. Para todos (es un viajero: público).
+   */
+  voudon: boolean;
+  /** La Institutriz está viva: los jugadores solo conversan en privado con sus vecinos. Para todos. */
+  institutriz: boolean;
   /** Las reglas del Bootlegger: las del guion o las que ha escrito el narrador. Para todos. */
   bootlegger: string[];
   /** El personaje bueno que el narrador ha nombrado con el Storm Catcher (id), o null. Para todos. */

@@ -241,6 +241,10 @@ export interface SalaEstado {
   setupAceptado: string | null;
   /** El narrador ha pedido silencio (Bibliotecario del Infierno): los jugadores no pueden emitir su micrófono. */
   silencio: boolean;
+  /** El Voudon está vivo: solo votan él y los muertos (sin gastar su voto) y basta con 1 voto. */
+  voudon: boolean;
+  /** La Institutriz está viva: los jugadores solo conversan en privado con sus vecinos. */
+  institutriz: boolean;
   /** Las reglas del Bootlegger (las del guion o las del narrador). */
   bootlegger: string[];
   /** El personaje bueno nombrado con el Storm Catcher (id), o null. */

@@ -294,7 +294,9 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado, vigilado
       const nombre = mayuscula(nominacionDe(nuevo, id));
       const resultado = votAhora.resultados[id];
       // Un muerto que vota gasta su único voto: se dice (su vela se apaga)
-      const gasta = typeof resultado === 'number' && nuevo.asientos.find((a) => a.id === id)?.muerto ? ', gasta su voto' : '';
+      // (la Banshee con su habilidad, o con el Voudon vivo, no lo gasta)
+      const gastado = (e: SalaEstado) => !!e.asientos.find((a) => a.id === id)?.votoGastado;
+      const gasta = typeof resultado === 'number' && gastado(nuevo) && !gastado(anterior) ? ', gasta su voto' : '';
       // Si su voto no vale 1 (Banshee, Burócrata, Ladrón), se dice cuánto
       const valor = votAhora.valores?.[id];
       const cuanto = valor !== undefined ? ` (su voto vale ${valor})` : '';

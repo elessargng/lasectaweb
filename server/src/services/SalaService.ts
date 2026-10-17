@@ -734,9 +734,10 @@ export class SalaService {
     const asientoId = v.orden[v.paso];
     const asiento = this.mesa.find((a) => a.id === asientoId);
     const ocupante = asiento?.ocupante ? this.buscar(asiento.ocupante) : undefined;
-    // La Banshee con su habilidad vota aunque esté muerta y sin voto, y no lo gasta
-    const banshee = !!ocupante && this.puedeVotarDoble(ocupante.id);
-    const sinVoto = !!asiento?.muerto && asiento.votoGastado && !banshee;
+    // La Banshee con su habilidad, y los muertos con el Voudon vivo, votan sin gastar el
+    // voto de muerto (ni les hace falta); con el Voudon, los vivos no votan (salvo él)
+    const conservaVoto = (!!ocupante && this.puedeVotarDoble(ocupante.id)) || this.voudonVivo();
+    const sinVoto = !ocupante || this.sinVoto(ocupante.id);
     const vota = ocupante?.rol === 'jugador' && ocupante.manoLevantada && !sinVoto;
     if (vota) {
       const valor = this.valorDelVoto(asiento!, ocupante);
@@ -745,7 +746,7 @@ export class SalaService {
       // Voto contado: la mano baja sola.
       ocupante.manoLevantada = false;
       ocupante.dosManos = false;
-      if (asiento?.muerto && !banshee) asiento.votoGastado = true;
+      if (asiento?.muerto && !conservaVoto) asiento.votoGastado = true;
     }
     v.resultados[asientoId] = vota ? v.votos : null;
     v.paso += 1;
@@ -808,7 +809,9 @@ export class SalaService {
    */
   private votosNecesariosPorDefecto(): number {
     const vivos = this.mesa.filter((a) => !a.muerto).length;
-    return Math.max(1, Math.ceil(vivos / 2), this.maximoDelDia === null ? 0 : this.maximoDelDia + 1);
+    // Con el Voudon vivo no hace falta la mitad: basta 1 (y superar la que más tuvo hoy)
+    const mayoria = this.voudonVivo() ? 1 : Math.ceil(vivos / 2);
+    return Math.max(1, mayoria, this.maximoDelDia === null ? 0 : this.maximoDelDia + 1);
   }
 
   /** El narrador fija los votos que hacen falta en la nominación en curso (null: los de por defecto). */
@@ -834,9 +837,10 @@ export class SalaService {
     };
     this.registro.push(registro);
     this.nominacionEnCurso = { desde, hasta, cuentaAtrasFin: null, votacion: null, votosElegidos: null, registro };
-    // Los muertos sin voto no pueden votar: si tenían la mano levantada, se les baja
+    // Quien no puede votar (un muerto sin voto; con el Voudon vivo, los vivos que no son
+    // él): si tenía la mano levantada, se le baja
     for (const a of this.mesa) {
-      if (!a.muerto || !a.votoGastado || !a.ocupante || this.puedeVotarDoble(a.ocupante)) continue;
+      if (!a.ocupante || !this.sinVoto(a.ocupante)) continue;
       const ocupante = this.buscar(a.ocupante);
       if (ocupante) {
         ocupante.manoLevantada = false;
@@ -1301,8 +1305,44 @@ export class SalaService {
   /** El jugador está muerto y ya ha gastado su voto: no puede levantar la mano. */
   sinVoto(participanteId: string): boolean {
     const asiento = this.asientoDe(participanteId);
+    if (!asiento) return true;
+    // Con el Voudon vivo, solo votan él y los muertos (sin voto de muerto)
+    if (this.voudonVivo()) return !asiento.muerto && !this.esVoudon(asiento);
     // La Banshee con su habilidad vota sin gastar el voto de muerto
-    return !!asiento?.muerto && asiento.votoGastado && !this.puedeVotarDoble(participanteId);
+    return asiento.muerto && asiento.votoGastado && !this.puedeVotarDoble(participanteId);
+  }
+
+  /**
+   * La Institutriz (Matron) está viva en la mesa (su ficha o quien es de verdad): los
+   * jugadores solo pueden conversar en privado con sus vecinos.
+   */
+  institutrizViva(): boolean {
+    return this.mesa.some((a) => !a.muerto && (a.personaje === 'matron' || this.identidad(a) === 'matron'));
+  }
+
+  /**
+   * Si dos participantes son vecinos en la mesa: el asiento ocupado más cercano a
+   * cada lado (los libres se saltan; vivos o muertos, da igual).
+   */
+  sonVecinos(unoId: string, otroId: string): boolean {
+    const ocupados = this.mesa.filter((a) => a.ocupante);
+    const i = ocupados.findIndex((a) => a.ocupante === unoId);
+    if (i < 0 || ocupados.length < 2) return false;
+    const n = ocupados.length;
+    return [ocupados[(i + 1) % n].ocupante, ocupados[(i - 1 + n) % n].ocupante].includes(otroId);
+  }
+
+  /** La ficha es la del Voudon (o lo es de verdad, por su «Is The …»). */
+  private esVoudon(asiento: SalaAsiento): boolean {
+    return asiento.personaje === 'voudon' || this.identidad(asiento) === 'voudon';
+  }
+
+  /**
+   * El Voudon está vivo en la mesa: solo votan él y los muertos, los muertos no
+   * necesitan ni gastan su voto y basta con 1 voto para la calavera.
+   */
+  voudonVivo(): boolean {
+    return this.mesa.some((a) => !a.muerto && this.esVoudon(a));
   }
 
   /** Levanta (una o, con `dos`, las dos) o baja la mano de un jugador. No comprueba permisos. */
