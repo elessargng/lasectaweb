@@ -30,7 +30,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [customAvatar, setCustomAvatar] = useState<string | null>(null);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [remember, setRemember] = useState(false);
-  
+  // Formulario de «¿Has olvidado tu contraseña?», dentro de la pestaña Entrar.
+  const [isForgot, setIsForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSending, setForgotSending] = useState(false);
+
   // Form state
   const [formData, setFormData] = useState({
     username: '',
@@ -48,6 +52,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       setError('');
       setCustomAvatar(null);
       setAcceptTerms(false);
+      setIsForgot(false);
     }
   }, [isOpen]);
 
@@ -118,6 +123,27 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setForgotSending(true);
+    try {
+      const response = await fetch(`${API_URL}/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail })
+      });
+      const data = await parseApiResponse(response);
+      setSuccessMessage(data.message || 'Si ese correo pertenece a alguna cuenta, recibirás un enlace para elegir una contraseña nueva.');
+    } catch (err: any) {
+      setError(err.message === 'Failed to fetch'
+        ? 'Los dioses no responden. Las crónicas no pudieron conectar con el servidor.'
+        : err.message);
+    } finally {
+      setForgotSending(false);
+    }
+  };
+
   if (successMessage) {
     return (
       <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
@@ -125,7 +151,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           <div className="w-16 h-16 bg-theme-main/10 rounded-full flex justify-center items-center mx-auto border border-theme-main/30 animate-pulse">
             <Check className="text-theme-main" size={32} />
           </div>
-          <h2 id="auth-exito-titulo" className="text-2xl font-display text-on-surface">Ritual Iniciado</h2>
+          <h2 id="auth-exito-titulo" className="text-2xl font-display text-on-surface">
+            {isForgot ? 'Revisa tu correo' : 'Ritual Iniciado'}
+          </h2>
           <p className="text-on-surface-muted font-body text-sm leading-relaxed">
             {successMessage}
           </p>
@@ -133,12 +161,57 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             onClick={() => {
               setSuccessMessage('');
               setIsLogin(true);
-            }} 
+              setIsForgot(false);
+            }}
             variant="primary" 
             className="w-full mt-2 py-3"
           >
             Volver a Identificarse
           </Button>
+        </Dialog>
+      </div>
+    );
+  }
+
+  if (isForgot) {
+    return (
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+        <Dialog onClose={onClose} labelledBy="auth-olvido-titulo" className="bg-surface border border-outline-ghost rounded shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="flex justify-between items-center p-6 border-b border-outline-ghost">
+            <h2 id="auth-olvido-titulo" className="text-2xl font-display text-on-surface">Recuperar contraseña</h2>
+            <Button onClick={onClose} variant="text" aria-label="Cerrar" className="text-on-surface-muted hover:text-theme-main transition-colors">
+              <X size={24} />
+            </Button>
+          </div>
+
+          <div className="p-6 overflow-y-auto">
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded mb-4 text-sm font-body">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleForgotSubmit} className="flex flex-col gap-4">
+              <p className="text-sm font-body text-on-surface-muted leading-relaxed">
+                Escribe el correo con el que te registraste y te enviaremos un enlace para elegir una contraseña nueva.
+              </p>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="auth-olvido-correo" className="text-sm font-display text-on-surface-muted">Correo electrónico</label>
+                <input id="auth-olvido-correo" required type="email" autoComplete="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} className="bg-surface-low border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
+              </div>
+              <Button type="submit" variant="primary" className="mt-2 py-3" disabled={forgotSending}>
+                {forgotSending ? 'Enviando...' : 'Enviar enlace'}
+              </Button>
+              <Button
+                type="button"
+                variant="text"
+                onClick={() => { setIsForgot(false); setError(''); }}
+                className="text-sm font-body text-on-surface-muted hover:text-theme-main transition-colors"
+              >
+                Volver a iniciar sesión
+              </Button>
+            </form>
+          </div>
         </Dialog>
       </div>
     );
@@ -189,6 +262,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             <div className="flex flex-col gap-1">
               <label htmlFor="auth-contrasena" className="text-sm font-display text-on-surface-muted">Contraseña</label>
               <input id="auth-contrasena" required type="password" name="password" value={formData.password} onChange={handleChange} className="bg-surface-low border border-outline-ghost rounded px-3 py-2 text-on-surface focus:outline-none focus:border-theme-main transition-colors" />
+              {isLogin && (
+                <Button
+                  type="button"
+                  variant="text"
+                  onClick={() => { setIsForgot(true); setError(''); }}
+                  className="self-end text-xs font-body text-on-surface-muted hover:text-theme-main transition-colors"
+                >
+                  ¿Has olvidado tu contraseña?
+                </Button>
+              )}
             </div>
 
             {isLogin && (

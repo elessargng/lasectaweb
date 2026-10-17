@@ -10,6 +10,9 @@ export interface User {
   isConfirmed: boolean;
   confirmationToken?: string;
   confirmationTokenExpires?: Date;
+  /** Huella SHA-256 del token del enlace para restablecer la contraseña. */
+  passwordResetTokenHash?: string;
+  passwordResetExpires?: Date;
   roles: ('editor' | 'narrador' | 'admin')[];
   /** Quiere recibir por correo las incidencias que detecte el vigilante de La Plaza. */
   vigilanteAlerts?: boolean;

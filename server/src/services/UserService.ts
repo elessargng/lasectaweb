@@ -3,13 +3,35 @@ import { User } from '../models/User';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { sendConfirmationEmail } from '../utils/mailer';
+import { sendConfirmationEmail, sendPasswordResetEmail } from '../utils/mailer';
 import { RoleRequestRepository } from '../repositories/RoleRequestRepository';
 import { RoleRequest } from '../models/RoleRequest';
 
 // Duración del token de sesión: un día por defecto, 30 con «Recordarme».
 const SESSION_TTL = '1d';
 const SESSION_REMEMBER_TTL = '30d';
+
+/** Cuánto vale el enlace para restablecer la contraseña. */
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+
+/** Respuesta a una petición de recuperación, exista o no el correo. */
+const PASSWORD_RESET_REQUESTED_MESSAGE =
+  'Si ese correo pertenece a alguna cuenta, recibirás en unos minutos un enlace para elegir una contraseña nueva.';
+
+const hashResetToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
+
+/** El usuario sin contraseña ni tokens: lo único que puede salir del servidor. */
+function toPublicUser(user: User): Partial<User> {
+  const {
+    passwordHash: _,
+    confirmationToken: __,
+    confirmationTokenExpires: ___,
+    passwordResetTokenHash: ____,
+    passwordResetExpires: _____,
+    ...publicUser
+  } = user;
+  return publicUser;
+}
 
 /** Campos del perfil que cada persona puede cambiar por sí misma. */
 const PROFILE_EDITABLE_FIELDS = [
@@ -88,10 +110,8 @@ export class UserService {
     // guarda solo mientras el navegador siga abierto).
     const expiresIn = remember ? SESSION_REMEMBER_TTL : SESSION_TTL;
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn });
-    const { passwordHash: _, confirmationToken: __, confirmationTokenExpires: ___, ...userWithoutPassword } = user;
-
     return {
-      user: userWithoutPassword,
+      user: toPublicUser(user),
       token
     };
   }
@@ -123,11 +143,59 @@ export class UserService {
     return { message: 'Cuenta confirmada con éxito. Ya puedes iniciar sesión.' };
   }
 
+  /**
+   * Envía a cada cuenta con ese correo un enlace para restablecer la contraseña.
+   *
+   * Responde lo mismo exista o no el correo, para no desvelar quién está
+   * registrado.
+   */
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    const cleanEmail = (email || '').trim();
+    if (!cleanEmail) {
+      throw new Error('Indica el correo electrónico con el que te registraste.');
+    }
+
+    const users = await this.userRepository.findAllByEmail(cleanEmail);
+    for (const user of users) {
+      const token = crypto.randomBytes(32).toString('hex');
+      await this.userRepository.setPasswordReset(
+        user.id,
+        hashResetToken(token),
+        new Date(Date.now() + PASSWORD_RESET_TTL_MS)
+      );
+      try {
+        await sendPasswordResetEmail(user.email, user.username, token);
+      } catch (emailError) {
+        console.error('Error al enviar el correo de recuperación de contraseña:', emailError);
+      }
+    }
+
+    return { message: PASSWORD_RESET_REQUESTED_MESSAGE };
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    if (!token) {
+      throw new Error('Falta el token del enlace de recuperación.');
+    }
+    if (!newPassword) {
+      throw new Error('Escribe la contraseña nueva.');
+    }
+
+    const user = await this.userRepository.findByPasswordResetTokenHash(hashResetToken(token));
+    if (!user || !user.passwordResetExpires || user.passwordResetExpires < new Date()) {
+      throw new Error('El enlace no es válido o ha caducado. Pide uno nuevo desde «¿Has olvidado tu contraseña?».');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.userRepository.resetPassword(user.id, passwordHash);
+
+    return { message: 'Contraseña cambiada. Ya puedes iniciar sesión con la nueva.' };
+  }
+
   async getProfile(userId: string): Promise<Partial<User>> {
     const user = await this.userRepository.findById(userId);
     if (!user) throw new Error('Usuario no encontrado');
-    const { passwordHash: _, confirmationToken: __, confirmationTokenExpires: ___, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return toPublicUser(user);
   }
 
   async updateProfile(userId: string, updateData: Partial<User>): Promise<Partial<User>> {
@@ -152,8 +220,7 @@ export class UserService {
     };
 
     const savedUser = await this.userRepository.update(updatedUser);
-    const { passwordHash: _, confirmationToken: __, confirmationTokenExpires: ___, ...userWithoutPassword } = savedUser;
-    return userWithoutPassword;
+    return toPublicUser(savedUser);
   }
 
   // LOGICA DE ROLES Y SOLICITUDES
@@ -251,7 +318,7 @@ export class UserService {
     }
 
     const allUsers = await this.userRepository.listAll();
-    return allUsers.map(({ passwordHash, confirmationToken, confirmationTokenExpires, ...userWithoutSec }) => userWithoutSec);
+    return allUsers.map(toPublicUser);
   }
 
   async updateUserRoles(targetUserId: string, newRoles: ('editor' | 'narrador' | 'admin')[], actorUserId: string): Promise<Partial<User>> {
@@ -285,7 +352,6 @@ export class UserService {
     targetUser.roles = newRoles;
     const updatedUser = await this.userRepository.update(targetUser);
     
-    const { passwordHash: _, confirmationToken: __, confirmationTokenExpires: ___, ...userWithoutSec } = updatedUser;
-    return userWithoutSec;
+    return toPublicUser(updatedUser);
   }
 }

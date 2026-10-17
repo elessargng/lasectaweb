@@ -11,6 +11,7 @@ import PlazaVigilante from './pages/PlazaVigilante';
 import Rituales from './pages/Rituales';
 import Redes from './pages/Redes';
 import Confirmar from './pages/Confirmar';
+import Restablecer from './pages/Restablecer';
 import Gestion from './pages/Gestion';
 import Landing from './pages/Landing';
 import AvisoLegal from './pages/AvisoLegal';
@@ -35,6 +36,7 @@ function App() {
           <Route path="redes" element={<Redes />} />
           <Route path="profile" element={<Profile />} />
           <Route path="confirmar" element={<Confirmar />} />
+          <Route path="restablecer" element={<Restablecer />} />
           <Route path="gestion" element={<Gestion />} />
           <Route path="landing" element={<Landing />} />
           <Route path="aviso-legal" element={<AvisoLegal />} />

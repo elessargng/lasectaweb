@@ -62,6 +62,25 @@ export class AuthController {
     }
   };
 
+  forgotPassword = async (req: Request, res: Response) => {
+    try {
+      const result = await this.userService.requestPasswordReset(req.body?.email);
+      res.status(200).json(result);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  };
+
+  resetPassword = async (req: Request, res: Response) => {
+    try {
+      const { token, password } = req.body ?? {};
+      const result = await this.userService.resetPassword(token, password);
+      res.status(200).json(result);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  };
+
   createRoleRequest = async (req: AuthRequest, res: Response) => {
     try {
       if (!req.user) {

@@ -867,6 +867,17 @@ export class DatabaseRepository {
     await this.applyMigration('025_add_ritual_signups_in_la_secta', async (db) => {
       await db.exec('ALTER TABLE rituals ADD COLUMN signupsInLaSecta INTEGER NOT NULL DEFAULT 0;');
     });
+
+    // Migración 026: recuperación de contraseña por correo
+    //
+    // Se guarda la huella SHA-256 del token, no el token: quien lea la base de
+    // datos no puede usar los enlaces pendientes para cambiar contraseñas.
+    await this.applyMigration('026_add_user_password_reset', async (db) => {
+      await db.exec(`
+        ALTER TABLE users ADD COLUMN passwordResetTokenHash TEXT;
+        ALTER TABLE users ADD COLUMN passwordResetExpires DATETIME;
+      `);
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

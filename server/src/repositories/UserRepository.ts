@@ -16,6 +16,8 @@ export class UserRepository {
       isConfirmed: row.isConfirmed === 1,
       vigilanteAlerts: row.vigilanteAlerts === 1,
       confirmationTokenExpires: row.confirmationTokenExpires ? new Date(row.confirmationTokenExpires) : undefined,
+      passwordResetTokenHash: row.passwordResetTokenHash ?? undefined,
+      passwordResetExpires: row.passwordResetExpires ? new Date(row.passwordResetExpires) : undefined,
       roles,
       createdAt: new Date(row.createdAt)
     };
@@ -42,6 +44,51 @@ export class UserRepository {
     const row = await db.get<any>('SELECT * FROM users WHERE confirmationToken = ?', [token]);
     if (!row) return undefined;
     return this.mapRowToUser(row);
+  }
+
+  /** Puede haber varias cuentas con el mismo correo: se devuelven todas. */
+  async findAllByEmail(email: string): Promise<User[]> {
+    const db = await DatabaseRepository.getInstance();
+    const rows = await db.all<any[]>('SELECT * FROM users WHERE LOWER(email) = LOWER(?)', [(email || '').trim()]);
+    const users: User[] = [];
+    for (const row of rows) {
+      users.push(await this.mapRowToUser(row));
+    }
+    return users;
+  }
+
+  async findByPasswordResetTokenHash(tokenHash: string): Promise<User | undefined> {
+    const db = await DatabaseRepository.getInstance();
+    const row = await db.get<any>('SELECT * FROM users WHERE passwordResetTokenHash = ?', [tokenHash]);
+    if (!row) return undefined;
+    return this.mapRowToUser(row);
+  }
+
+  async setPasswordReset(userId: string, tokenHash: string, expires: Date): Promise<void> {
+    const db = await DatabaseRepository.getInstance();
+    await db.run(
+      'UPDATE users SET passwordResetTokenHash = ?, passwordResetExpires = ? WHERE id = ?',
+      [tokenHash, expires.toISOString(), userId]
+    );
+  }
+
+  /**
+   * Cambia la contraseña y gasta el enlace de recuperación. Abrir el enlace
+   * demuestra que el correo es suyo, así que de paso la cuenta queda confirmada.
+   */
+  async resetPassword(userId: string, passwordHash: string): Promise<void> {
+    const db = await DatabaseRepository.getInstance();
+    await db.run(
+      `UPDATE users SET
+         passwordHash = ?,
+         passwordResetTokenHash = NULL,
+         passwordResetExpires = NULL,
+         isConfirmed = 1,
+         confirmationToken = NULL,
+         confirmationTokenExpires = NULL
+       WHERE id = ?`,
+      [passwordHash, userId]
+    );
   }
 
   async listAll(): Promise<User[]> {

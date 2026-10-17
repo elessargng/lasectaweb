@@ -54,6 +54,62 @@ export async function sendConfirmationEmail(email: string, username: string, tok
   }
 }
 
+export async function sendPasswordResetEmail(email: string, username: string, token: string): Promise<void> {
+  const resetUrl = `${clientBaseUrl()}/restablecer?token=${token}`;
+
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const emailFrom = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+
+  if (!resendApiKey || resendApiKey === 're_xxxxxxxxx') {
+    console.log('\n==================================================');
+    console.log('📧 [EMAIL DE RECUPERACIÓN DE CONTRASEÑA - SIMULACIÓN RESEND]');
+    console.log(`Para: ${username} (${email})`);
+    console.log(`Enlace para restablecer: ${resetUrl}`);
+    console.log('Nota: Configura un RESEND_API_KEY real en .env para enviar correos reales.');
+    console.log('==================================================\n');
+    return;
+  }
+
+  const text = [
+    `Hola ${username},`,
+    '',
+    'Alguien ha pedido restablecer la contraseña de tu cuenta en La Secta.',
+    'Para elegir una nueva, abre este enlace (vale durante una hora y solo una vez):',
+    '',
+    resetUrl,
+    '',
+    'Si no lo has pedido tú, ignora este correo: tu contraseña no cambia.'
+  ].join('\n');
+
+  const htmlContent = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px; background-color: #121212; color: #ffffff;">
+      <h2 style="color: #e53e3e; text-align: center;">Portal de La Secta</h2>
+      <p>Hola <strong>${escapeHtml(username)}</strong>,</p>
+      <p>Alguien ha pedido restablecer la contraseña de tu cuenta. Para elegir una nueva, pulsa el botón. El enlace vale durante una hora y solo se puede usar una vez.</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${resetUrl}" style="background-color: #e53e3e; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">Elegir contraseña nueva</a>
+      </div>
+      <p style="color: #a0aec0; font-size: 14px;">Si el botón no funciona, copia y pega este enlace en tu navegador:</p>
+      <p style="color: #a0aec0; font-size: 14px; word-break: break-all;">${resetUrl}</p>
+      <p style="color: #a0aec0; font-size: 14px;">Si no lo has pedido tú, ignora este correo: tu contraseña no cambia.</p>
+      <hr style="border: 0; border-top: 1px solid #444; margin: 20px 0;" />
+      <p style="color: #718096; font-size: 12px; text-align: center;">Este es un correo automático, por favor no respondas a él.</p>
+    </div>
+  `;
+
+  const resend = new Resend(resendApiKey);
+  const { error } = await resend.emails.send({
+    from: emailFrom,
+    to: email,
+    subject: 'La Secta · Restablecer tu contraseña',
+    html: htmlContent,
+    text
+  });
+  if (error) {
+    throw new Error(`No se pudo enviar el correo de recuperación: ${error.message || 'Error desconocido'}`);
+  }
+}
+
 // ------------------------------------------------------ Correos a la comunidad
 
 /** Resend admite como mucho 100 correos por envío por lotes. */
