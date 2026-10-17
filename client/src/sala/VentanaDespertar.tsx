@@ -1,7 +1,9 @@
-import { Maximize2, Minimize2, X } from 'lucide-react';
+import { BookOpen, Maximize2, Minimize2, X } from 'lucide-react';
+import EnviarGrimorio, { PERSONAJES_GRIMORIO } from './EnviarGrimorio';
+import { identidadDe } from './fichas';
 import { useState, type KeyboardEvent } from 'react';
 import { nombreDeAsiento } from './despertar';
-import { botonSecundario } from './estilos';
+import { botonPrincipal, botonSecundario } from './estilos';
 import type { PersonajeMostrado } from './guiones';
 import { ID_TITULO_DESPERTAR } from './ids';
 import { BotoneraDespertar, HistorialDespertar } from './PiezasDespertar';
@@ -58,6 +60,14 @@ const VentanaDespertar = ({
   const [minimizada, setMinimizada] = useState(false);
   const actual = abiertos.find((d) => d.asiento === activo) ?? abiertos[0];
   const nombre = nombreDeAsiento(estado, actual.asiento);
+  // El Espía y la Viuda (su ficha o quien es de verdad) ven el grimorio: se les envía desde aquí
+  const [enviandoGrimorio, setEnviandoGrimorio] = useState(false);
+  const asiento = estado.asientos.find((a) => a.id === actual.asiento);
+  const veGrimorio =
+    !soloLectura &&
+    !!asiento?.ocupante &&
+    estado.acciones.includes('narrador:enviarGrimorio') &&
+    (PERSONAJES_GRIMORIO.includes(asiento.personaje ?? '') || PERSONAJES_GRIMORIO.includes(identidadDe(asiento).personaje ?? ''));
   const conPestanas = abiertos.length > 1;
 
   // Pestañas: flechas para moverse entre ellas (y activarlas), Inicio y Fin.
@@ -155,6 +165,24 @@ const VentanaDespertar = ({
               pedir={pedir}
               onError={onError}
               onEnviado={onEnviado}
+            />
+          )}
+          {veGrimorio && (
+            <div className="flex flex-wrap items-center gap-3 rounded border border-gold/30 bg-theme-container/40 px-3 py-2">
+              <p className="min-w-0 flex-1 text-sm text-on-surface-muted">Ve el grimorio: envíale una copia, que puedes cambiar antes.</p>
+              <button type="button" onClick={() => setEnviandoGrimorio(true)} className={`${botonPrincipal} px-3 py-1.5 text-xs`}>
+                <BookOpen size={14} />
+                Enviar grimorio
+              </button>
+            </div>
+          )}
+          {enviandoGrimorio && (
+            <EnviarGrimorio
+              estado={estado}
+              destino={actual.asiento}
+              pedir={pedir}
+              onEnviado={onEnviado}
+              onCerrar={() => setEnviandoGrimorio(false)}
             />
           )}
           <h3 id="sala-despertar-mensajes" className="font-ui text-sm font-semibold text-theme-main">

@@ -5,20 +5,32 @@ import Dialog from '../components/Dialog';
 import DialogoPersonaje from './DialogoPersonaje';
 import DialogoRecordatorio from './DialogoRecordatorio';
 import Interruptor from './Interruptor';
-import MiniGrimorio from './MiniGrimorio';
+import MiniGrimorio, { nombresDeAsientos } from './MiniGrimorio';
+import { nombreDeAsiento } from './despertar';
 import { botonIcono, botonPrincipal, botonSecundario } from './estilos';
 import { alineamientoDe, describirRecordatorio, RECORDATORIO_TEXTO, useFichas } from './fichas';
-import type { SalaAlineamiento, SalaFichaEnviada, SalaRecordatorio, SalaResultado } from './useSala';
+import type { SalaAlineamiento, SalaEstado, SalaFichaEnviada, SalaRecordatorio, SalaResultado } from './useSala';
+
+/** Los personajes que ven el grimorio del narrador: se les envía desde su despertar. */
+export const PERSONAJES_GRIMORIO = ['spy', 'widow'];
+
+/** Una copia del grimorio de ahora, tal como lo ve el narrador. */
+const copiaDelGrimorio = (estado: SalaEstado): SalaFichaEnviada[] =>
+  estado.asientos.map((a) => ({
+    asientoId: a.id,
+    personaje: a.personaje,
+    alineamiento: a.alineamiento,
+    muerto: a.muerto,
+    recordatorios: a.recordatorios ?? [],
+  }));
 
 interface EnviarGrimorioProps {
-  /** A quién se envía: «asiento 3 (Ana)», y su asiento. */
-  destino: { asientoId: string; nombre: string };
-  /** La copia del grimorio de ahora (de la que se parte, y a la que se puede volver). */
-  copia: SalaFichaEnviada[];
-  /** El nombre corto de cada asiento, para el minigrimorio. */
-  nombres: Record<string, string>;
+  estado: SalaEstado;
+  /** El asiento al que se envía (quien se sienta en él lo verá). */
+  destino: string;
   pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
-  onEnviado: () => void;
+  /** Se ha enviado: lo que se anuncia. */
+  onEnviado: (texto: string) => void;
   onCerrar: () => void;
 }
 
@@ -32,8 +44,12 @@ interface EnviarGrimorioProps {
  * Elegir personaje o recordatorio abre su diálogo en lugar de este (un diálogo
  * modal cada vez); al cerrarlo se vuelve aquí, al mismo sitio.
  */
-const EnviarGrimorio = ({ destino, copia, nombres, pedir, onEnviado, onCerrar }: EnviarGrimorioProps) => {
+const EnviarGrimorio = ({ estado, destino, pedir, onEnviado, onCerrar }: EnviarGrimorioProps) => {
   const { personajes, viajeros, todos, todosPorId } = useFichas();
+  // La copia, de cuando se abre (si la partida cambia mientras, no se pisa lo editado)
+  const [copia] = useState(() => copiaDelGrimorio(estado));
+  const [nombres] = useState(() => nombresDeAsientos(estado));
+  const nombreDestino = nombreDeAsiento(estado, destino);
   const [fichas, setFichas] = useState(copia);
   const [elegida, setElegida] = useState<string | null>(copia[0]?.asientoId ?? null);
   const [eligiendo, setEligiendo] = useState<'personaje' | 'recordatorio' | null>(null);
@@ -71,13 +87,13 @@ const EnviarGrimorio = ({ destino, copia, nombres, pedir, onEnviado, onCerrar }:
     if (enviando) return;
     setEnviando(true);
     setError('');
-    const r = await pedir('narrador:enviarGrimorio', { asientoId: destino.asientoId, fichas });
+    const r = await pedir('narrador:enviarGrimorio', { asientoId: destino, fichas });
     setEnviando(false);
     if (!r.ok) {
       setError(r.error);
       return;
     }
-    onEnviado();
+    onEnviado(`Grimorio enviado a ${nombreDestino}.`);
     onCerrar();
   };
 
@@ -120,7 +136,7 @@ const EnviarGrimorio = ({ destino, copia, nombres, pedir, onEnviado, onCerrar }:
       >
         <div className="flex items-center gap-3 px-6 pt-4">
           <h2 id="sala-enviar-grimorio-titulo" className="flex-1 sala-cofre-titulo">
-            Enviar grimorio <span className="font-ui text-base font-normal text-on-surface-muted">a {destino.nombre}</span>
+            Enviar grimorio <span className="font-ui text-base font-normal text-on-surface-muted">a {nombreDestino}</span>
           </h2>
           <button type="button" onClick={onCerrar} aria-label="Cerrar" className={`${botonIcono} h-8 w-8 shrink-0`}>
             <X size={16} />
@@ -147,9 +163,20 @@ const EnviarGrimorio = ({ destino, copia, nombres, pedir, onEnviado, onCerrar }:
                 <p className="text-sm">
                   {personaje ? <span lang={personaje.nombre.lang}>{personaje.nombre.texto}</span> : <span className="text-on-surface-muted">Sin personaje</span>}
                 </p>
-                <button type="button" ref={boton('personaje')} onClick={() => elegir('personaje')} className={botonSecundario}>
-                  Cambiar personaje
-                </button>
+                <div className="flex gap-2">
+                  <button type="button" ref={boton('personaje')} onClick={() => elegir('personaje')} className={`${botonSecundario} flex-1`}>
+                    Cambiar personaje
+                  </button>
+                  {/* Una ficha vacía: sin personaje, alineamiento ni recordatorios */}
+                  <button
+                    type="button"
+                    onClick={() => cambiar({ personaje: null, alineamiento: null, recordatorios: [] })}
+                    aria-disabled={(!ficha.personaje && !ficha.alineamiento && ficha.recordatorios.length === 0) || undefined}
+                    className={botonSecundario}
+                  >
+                    Vaciar ficha
+                  </button>
+                </div>
                 <fieldset className="flex gap-2">
                   <legend className="mb-1 text-xs text-on-surface-muted">Alineamiento</legend>
                   {(['bueno', 'malvado'] as const).map((a) => (

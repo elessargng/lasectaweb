@@ -1,5 +1,48 @@
 [
   {
+    "version": "1.3.0",
+    "date": "2026-10-18",
+    "title": "El Gong de Medianoche",
+    "description": "Una noche de sábado de pruebas en la sala deja un buen puñado de novedades: el narrador ya puede llamar a todos a la plaza con el gong, escribir recordatorios y notas propios y enviar el grimorio al Espía y a la Viuda; las fichas de los jugadores pasan a ser privadas hasta el reparto, y en el móvil se pueden usar gestos en lugar de teclas.",
+    "changes": [
+      {
+        "category": "Narrador",
+        "items": [
+          "Sonar el Gong: Nueva opción del narrador (y la tecla R) que llama a todos a la plaza: suena el gong de botc.app y alrededor de la mesa gira en dorado «¡Por favor, regresad a la plaza del pueblo YA!», por encima de todo, también de las cámaras de las conversaciones privadas.",
+          "Recordatorios con Texto Propio: Al poner un recordatorio, la pestaña «Texto propio» deja escribir uno corto (hasta 14 letras), que va en redondo alrededor de la ficha con una pluma en el centro. Se ve cómo quedará mientras se escribe.",
+          "Notas en los Asientos: «Escribir nota» en el menú de la ficha. Hasta 4 notas por asiento, que se ven en una pestaña de marcapáginas junto al cuadro del jugador y se pueden leer enteras, cambiar o borrar.",
+          "Enviar el Grimorio: Desde el despertar del Espía o de la Viuda, el narrador les envía una copia del grimorio que puede cambiar antes: personajes, alineamientos, muertes, recordatorios o fichas vacías.",
+          "Vaciar la Bolsa: Nuevo botón que saca todos los personajes de la bolsa de una vez. La ventana de la bolsa se cierra ahora con la X de arriba y sus botones caben en una fila.",
+          "Borracho y Marioneta: Si el reparto no cuadra, sus recordatorios salen con los de los personajes en juego, marcados como posibles.",
+          "Orden de Noche: Se abre en la noche que toca (la primera, hasta que amanece; después, las demás). Si el Caníbal tiene la habilidad de un muerto (su recordatorio «Lunch»), ese personaje sale marcado para despertar.",
+          "NPCs del Guion: Al limpiar el grimorio, los legendarios y lóricos que trae el guion vuelven a estar en juego aunque se hubieran quitado."
+        ]
+      },
+      {
+        "category": "Jugadores",
+        "items": [
+          "Tu Ficha, Solo al Repartir: El jugador ve de su ficha lo que le tocó al repartir la bolsa; lo que el narrador cambie después es del grimorio y no se ve hasta el siguiente reparto.",
+          "El Grimorio del Narrador: El Espía y la Viuda reciben el grimorio en un minigrimorio que pueden volver a abrir desde la esquina de la mesa y, con el grimorio de jugadores activado, copiar en el suyo.",
+          "Recordatorios y Notas Propios: Con el grimorio de jugadores, también se pueden poner recordatorios con texto propio y escribir notas, que solo ve quien las escribe.",
+          "Gestos en el Móvil: En Preferencias > Atajos, cada acción puede tener además un gesto con dos o tres dedos (tocar o deslizar), para usar los atajos en móviles y tabletas."
+        ]
+      },
+      {
+        "category": "Hoja del Guion",
+        "items": [
+          "«* No la Primera Noche»: Al final de la hoja de personajes, dentro de la ilustración de su pie, como en la hoja impresa.",
+          "Recordatorios en el Orden de Noche: La ficha que marca dónde va un recordatorio tiene ya el color de las fichas recordatorio."
+        ]
+      },
+      {
+        "category": "Agradecimientos",
+        "items": [
+          "Gracias a Goldlarvitar por quedarse probando la sala un sábado a las 12 de la noche: buena parte de esta versión sale de sus pruebas."
+        ]
+      }
+    ]
+  },
+  {
     "version": "1.2.0",
     "date": "2026-10-16",
     "title": "Se Abre la Sala",

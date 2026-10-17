@@ -4,7 +4,13 @@ import PersonajeEnFicha from './PersonajeEnFicha';
 import RecordatoriosFicha from './RecordatoriosFicha';
 import { ESCALA_RECORDATORIO } from './FichaRecordatorio';
 import { describirRecordatorio, useFichas } from './fichas';
-import type { SalaFichaEnviada, SalaRecordatorio } from './useSala';
+import type { SalaEstado, SalaFichaEnviada, SalaRecordatorio } from './useSala';
+
+/** El nombre corto de cada asiento: quien se sienta, o «Asiento 3» si está libre. */
+export const nombresDeAsientos = (estado: SalaEstado): Record<string, string> =>
+  Object.fromEntries(
+    estado.asientos.map((a, i) => [a.id, estado.participantes.find((p) => p.id === a.ocupante)?.nombre ?? `Asiento ${i + 1}`]),
+  );
 
 interface MiniGrimorioProps {
   fichas: SalaFichaEnviada[];

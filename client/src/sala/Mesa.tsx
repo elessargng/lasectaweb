@@ -6,8 +6,8 @@ import { useAriaLive, type TipoAviso } from './avisosConfig';
 import AsaMover from './AsaMover';
 import Asiento from './Asiento';
 import NotasAsiento from './NotasAsiento';
-import EnviarGrimorio from './EnviarGrimorio';
 import GrimorioRecibido from './GrimorioRecibido';
+import { nombresDeAsientos } from './MiniGrimorio';
 import { BookOpen } from 'lucide-react';
 import { describirAsiento } from './nombresAsiento';
 import CuentaAtras from './CuentaAtras';
@@ -274,23 +274,8 @@ const Mesa = ({
     return r.ok ? null : r.error;
   };
 
-  // El Espía y la Viuda: el narrador les envía una copia del grimorio (que puede cambiar
-  // antes); a ellos se les abre al llegar y la pueden volver a ver (y copiar en el suyo).
-  const nombresAsientos = Object.fromEntries(
-    // (participante() se define más abajo: aquí, a mano)
-    asientos.map((a, i) => [a.id, participantes.find((p) => p.id === a.ocupante)?.nombre ?? `Asiento ${i + 1}`]),
-  );
-  const veGrimorioAjeno = (a: (typeof asientos)[number]) =>
-    ['spy', 'widow'].includes(a.personaje ?? '') || ['spy', 'widow'].includes(identidadDe(a).personaje ?? '');
-  const [enviandoA, setEnviandoA] = useState<string | null>(null);
-  const copiaGrimorio = () =>
-    asientos.map((a) => ({
-      asientoId: a.id,
-      personaje: a.personaje,
-      alineamiento: a.alineamiento,
-      muerto: a.muerto,
-      recordatorios: a.recordatorios ?? [],
-    }));
+  // El Espía y la Viuda: el narrador les envía una copia del grimorio desde su despertar
+  // (EnviarGrimorio); aquí, a ellos se les abre al llegar y la pueden volver a ver (y copiar en el suyo).
   const recibido = estado.grimorioRecibido;
   const [verRecibido, setVerRecibido] = useState(false);
   const horaRecibidoRef = useRef(recibido?.hora ?? null);
@@ -571,11 +556,6 @@ const Mesa = ({
                   enJuego={enJuego}
                   probables={probables}
                   onEscribirNota={escriboNotas && !editando ? () => setNotasAbiertas({ asientoId: a.id, nueva: true }) : undefined}
-                  onEnviarGrimorio={
-                    modoFichas === 'narrador' && !editando && a.ocupante && veGrimorioAjeno(a) && acciones.includes('narrador:enviarGrimorio')
-                      ? () => setEnviandoA(a.id)
-                      : undefined
-                  }
                   revelando={
                     revelacion
                       ? {
@@ -677,19 +657,9 @@ const Mesa = ({
       {recibido && verRecibido && (
         <GrimorioRecibido
           grimorio={recibido}
-          nombres={nombresAsientos}
+          nombres={nombresDeAsientos(estado)}
           onCopiar={modoFichas === 'grimorio' ? copiarRecibido : undefined}
           onCerrar={() => setVerRecibido(false)}
-        />
-      )}
-      {enviandoA && (
-        <EnviarGrimorio
-          destino={{ asientoId: enviandoA, nombre: nombreDeAsiento(estado, enviandoA) }}
-          copia={copiaGrimorio()}
-          nombres={nombresAsientos}
-          pedir={pedir}
-          onEnviado={() => onAnuncio('despertar', `Grimorio enviado a ${nombreDeAsiento(estado, enviandoA)}.`)}
-          onCerrar={() => setEnviandoA(null)}
         />
       )}
 
