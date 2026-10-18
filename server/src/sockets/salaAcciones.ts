@@ -689,16 +689,19 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /**
    * Con el Gardener: intercambia el personaje y el alineamiento de dos fichas
-   * (arrastrando una sobre otra). datos: { desde, hasta } (ids de asiento).
+   * (arrastrando una sobre otra), mientras los personajes repartidos no se hayan
+   * entregado: al entregarlos, se acaba. datos: { desde, hasta } (ids de asiento).
    */
   'narrador:intercambiarFichas': {
-    puede: (sala, yo) => yo.rol === 'narrador' && sala.npcActivo(NPC_GARDENER) && sala.asientos().length > 1,
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.npcActivo(NPC_GARDENER) && sala.fichasRetenidas() && sala.asientos().length > 1,
     noPuede: (sala, yo) =>
       yo.rol !== 'narrador'
         ? 'Solo un narrador puede intercambiar las fichas.'
         : !sala.npcActivo(NPC_GARDENER)
           ? 'Las fichas solo se intercambian con el Gardener en juego.'
-          : 'Hacen falta dos asientos.',
+          : !sala.fichasRetenidas()
+            ? 'Los personajes ya se han entregado: ya no se intercambian.'
+            : 'Hacen falta dos asientos.',
     hacer: (sala, _yo, datos) => {
       const { desde, hasta } = (datos as { desde?: unknown; hasta?: unknown }) ?? {};
       if (typeof desde !== 'string' || typeof hasta !== 'string' || !sala.hayAsiento(desde) || !sala.hayAsiento(hasta)) {

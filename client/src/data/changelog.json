@@ -3,7 +3,7 @@
     "version": "1.3.1",
     "date": "2026-10-18",
     "title": "Bala de Plata",
-    "description": "Las partidas de la sala ya dejan huella: al terminar cada una se guardan tus estadísticas, con logros que desbloquear y la lista de personajes que has jugado. Además, la mano se puede levantar con mil formas (y emoticonos), el narrador gana herramientas para el Gardener, los viajeros y el final de la partida, y la sala se lee mejor con lector de pantalla.",
+    "description": "Las partidas de la sala ya dejan huella: al terminar cada una se guardan tus estadísticas, con logros que desbloquear y la lista de personajes que has jugado. Sobre la cabecera, una ciudad de latón que atardece y amanece con la partida; la mano se levanta con mil formas, emoticonos y cinco estilos que ven todos, y el narrador gana herramientas para el Gardener, los viajeros y el final de la partida. Además, la sala se lee mejor con lector de pantalla.",
     "changes": [
       {
         "category": "Estadísticas y Logros",
@@ -13,14 +13,14 @@
           "Todos los Personajes: La lista completa, por tipos, con los que has jugado y cuántas veces; los que te faltan, en gris.",
           "Públicas o Privadas: En tu perfil eliges si los demás pueden verlas (de entrada, privadas). Ahí mismo están las tuyas.",
           "Perfil de Jugador: Cada uno tiene su página, con su avatar y, si las tiene públicas, sus estadísticas. En la sala, pulsar el nombre de alguien abre su perfil en otra pestaña.",
-          "El Pulpito con Bombín: Quien ha jugado menos de 10 partidas lleva un pequeño pulpo rojo con bombín junto a su nombre en la mesa y en la lista de participantes."
+          "El Pulpito con Bombín: Quien juega y ha jugado menos de 10 partidas lleva junto a su nombre, en la mesa y en la lista de participantes, el Lil’ Monsta con el bombín negro. Al pasar el ratón lo explica."
         ]
       },
       {
         "category": "Narrador",
         "items": [
           "Levantar a un Jugador: Al gestionar los asientos, cada asiento ocupado tiene, junto a «Mover», un botón para levantar a quien se sienta en él.",
-          "Gardener: Con el Gardener en juego, arrastrar una ficha sobre otra intercambia sus personajes. Desde el menú de la ficha, «Intercambiar con…» hace lo mismo sin arrastrar.",
+          "Gardener: Con el Gardener en juego, hasta que entregas los personajes, arrastrar una ficha sobre otra intercambia sus personajes. Desde el menú de la ficha, «Intercambiar con…» hace lo mismo sin arrastrar.",
           "¿Qué Ha Pasado?: Al revelar el grimorio se marcan los personajes en juego cuya habilidad ha acabado la partida (el Cazador, el Alcalde, el Santo, la Gemela…) o que conviene dejar dicho, como el Encantador que pica al Demonio. Se ve y se lee con el bando ganador.",
           "Faroles para el Espía y la Viuda: El grimorio que se les envía lleva también los faroles del Demonio, en el centro, y se pueden cambiar antes de enviarlo.",
           "Tú Eres: Reconoce a los viajeros (también los que no están en el guion), se puede enviar sin decir el alineamiento y, al recibirlo, la ficha del jugador pasa a ser la que se le dice.",
@@ -34,12 +34,15 @@
           "Más Manos: Además de palma, tijera y puño, la peineta, el signo de la paz, los cuernos heavy metal, el lagarto, Spock y el icono de cualquier personaje del guion.",
           "Emoticonos: Caritas, besitos, corazones, flores, palomitas, fantasmas… también se pueden levantar en lugar de la mano.",
           "Menú con Dibujos: El menú de la mano enseña lo que se va a ver, en una rejilla, en lugar de una lista de nombres.",
+          "Cinco Estilos de Mano: En Preferencias > Interfaz, la amarilla (como las de los Simpson), la de cinco dedos en 3D, el guante blanco de los dibujos animados, la esquelética y el guantelete dorado con sus seis gemas, cada una con todos sus gestos (o al azar en cada partida).",
+          "Tu Mano, Como la Ves: El estilo es tu «skin»: todos ven tu mano así, y la de cada uno se ve como la haya elegido.",
           "Iconos en los Recordatorios Propios: Un recordatorio con texto propio puede llevar el logo de La Secta (de entrada), la pluma, un interrogante o el icono de un personaje en juego."
         ]
       },
       {
         "category": "Sala de Juego",
         "items": [
+          "La Ciudad de la Cabecera: Entre el logo y la fase, una ciudad grabada en latón con su torre del reloj. De noche se encienden la esfera y las ventanas, salen las estrellas y cruzan cuervos; de día, sol, nubes y pájaros. Al pasar a la noche atardece y al pasar al día amanece. Se quita en Preferencias > Interfaz.",
           "Atajos del Despertar: Una tecla para mandar «Entendido» en el despertar de noche (E) y otra para volver a abrir el tuyo (D). Se cambian en Preferencias > Atajos.",
           "Habilidades en tu Idioma: La ayuda que sale al pasar el ratón por una ficha usa el idioma que hayas elegido para las descripciones."
         ]
