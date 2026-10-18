@@ -14,6 +14,8 @@ export const nombresDeAsientos = (estado: SalaEstado): Record<string, string> =>
 
 interface MiniGrimorioProps {
   fichas: SalaFichaEnviada[];
+  /** Los faroles del demonio (ids de personaje): van en el centro. */
+  faroles?: string[];
   /** El nombre corto de cada asiento («Ana», o «Asiento 3» si está libre). */
   nombres: Record<string, string>;
   /** Para editar: la ficha elegida y cómo elegir otra (las fichas son botones). Sin esto, solo se ven. */
@@ -30,8 +32,10 @@ interface MiniGrimorioProps {
  * hacia el centro. Las fichas encogen cuantas más hay. Usa las mismas piezas que
  * la mesa (FichaRedonda, PersonajeEnFicha, RecordatoriosFicha), con su propio
  * --sala-ficha.
+ *
+ * En el centro, los faroles del demonio, si los hay (como en el grimorio de verdad).
  */
-const MiniGrimorio = ({ fichas, nombres, elegida, onElegir, onQuitarRecordatorio }: MiniGrimorioProps) => {
+const MiniGrimorio = ({ fichas, faroles = [], nombres, elegida, onElegir, onQuitarRecordatorio }: MiniGrimorioProps) => {
   const { todosPorId } = useFichas();
   const ref = useRef<HTMLDivElement>(null);
   const [lado, setLado] = useState(480);
@@ -122,6 +126,33 @@ const MiniGrimorio = ({ fichas, nombres, elegida, onElegir, onQuitarRecordatorio
           );
         })}
       </ol>
+      {faroles.length > 0 && (
+        // Los faroles, en el centro: el lector los oye en una frase, después de las fichas
+        <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1">
+          <p className="sr-only">
+            Faroles:{' '}
+            {faroles.map((id, i) => {
+              const p = todosPorId.get(id);
+              return (
+                <span key={`${id}-${i}`} lang={p?.nombre.lang}>
+                  {i > 0 ? ', ' : ''}
+                  {p?.nombre.texto ?? id}
+                </span>
+              );
+            })}
+            .
+          </p>
+          <span aria-hidden="true" className="font-ui text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-on-surface-muted">
+            Faroles
+          </span>
+          <div aria-hidden="true" className="flex gap-1" style={{ '--sala-ficha': `${Math.round(ficha * 0.8)}px` } as CSSProperties}>
+            {faroles.map((id, i) => {
+              const p = todosPorId.get(id);
+              return <FichaRedonda key={`${id}-${i}`}>{p && <PersonajeEnFicha personaje={p} alineamiento={null} />}</FichaRedonda>;
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

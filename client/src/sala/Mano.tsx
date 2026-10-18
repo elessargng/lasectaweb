@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import { urlDelServidor } from '../utils/api';
 import { useFichas } from './fichas';
+import { emojiDeMano } from './formasMano';
 import { useMarcas, type EstiloMano } from './marcas';
 import {
   MANO_CUERNOS,
@@ -56,13 +57,22 @@ const Mano = ({ forma, estilo, className = '' }: { forma: FormaMano; estilo?: Es
   const { todosPorId } = useFichas();
   // Un personaje del guion: su icono en lugar de la mano (si no se conoce, la palma)
   const icono = FORMAS[forma] ? null : todosPorId.get(forma)?.icono;
+  // (Un emoticono, más abajo: tampoco es un trazo)
   const caja = FORMAS[forma] ?? FORMAS.palma;
   const { escala, transform } = encajar(caja);
   // El grosor del contorno, el mismo en todas (está en unidades de 256 × 256)
   const trazo = <path d={caja.d} transform={transform} />;
 
-  if (icono) {
-    const imagen = <image href={urlDelServidor(icono)} x="0" y="0" width="256" height="256" preserveAspectRatio="xMidYMid meet" />;
+  // Un emoticono: el emoji del sistema, del tamaño de la mano
+  const emoji = emojiDeMano(forma);
+  if (icono || emoji) {
+    const imagen = emoji ? (
+      <text x="128" y="134" textAnchor="middle" dominantBaseline="central" fontSize="200">
+        {emoji}
+      </text>
+    ) : (
+      <image href={urlDelServidor(icono!)} x="0" y="0" width="256" height="256" preserveAspectRatio="xMidYMid meet" />
+    );
     if (elegido === 'laton') {
       return (
         <svg viewBox="0 0 256 256" aria-hidden="true" focusable="false" className={className}>

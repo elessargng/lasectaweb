@@ -878,6 +878,49 @@ export class DatabaseRepository {
         ALTER TABLE users ADD COLUMN passwordResetExpires DATETIME;
       `);
     });
+
+    // Migración 027: estadísticas de las partidas de la sala
+    //
+    // Al revelar el grimorio se guarda la partida y, por cada jugador y narrador con
+    // cuenta, lo suyo (ver EstadisticasRepository). Cada uno decide en su perfil si
+    // las suyas son públicas (por defecto, privadas).
+    await this.applyMigration('027_add_estadisticas_partidas', async (db) => {
+      await db.exec(`
+        ALTER TABLE users ADD COLUMN estadisticasPublicas INTEGER NOT NULL DEFAULT 0;
+
+        CREATE TABLE IF NOT EXISTS sala_partidas (
+          id TEXT PRIMARY KEY,
+          fecha DATETIME NOT NULL,
+          guion TEXT,
+          edicion TEXT,
+          ganador TEXT NOT NULL,
+          dias INTEGER NOT NULL,
+          jugadores INTEGER NOT NULL,
+          causas TEXT NOT NULL DEFAULT '[]'
+        );
+
+        CREATE TABLE IF NOT EXISTS sala_partidas_participantes (
+          partidaId TEXT NOT NULL,
+          userId TEXT NOT NULL,
+          papel TEXT NOT NULL,
+          roles TEXT NOT NULL DEFAULT '[]',
+          rolFinal TEXT,
+          alineamientoInicial TEXT,
+          alineamientoFinal TEXT,
+          gano INTEGER,
+          vivo INTEGER,
+          causas TEXT NOT NULL DEFAULT '[]',
+          nominaciones INTEGER NOT NULL DEFAULT 0,
+          nominado INTEGER NOT NULL DEFAULT 0,
+          votos INTEGER NOT NULL DEFAULT 0,
+          ejecutado INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (partidaId, userId),
+          FOREIGN KEY (partidaId) REFERENCES sala_partidas(id) ON DELETE CASCADE,
+          FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_sala_partidas_participantes_user ON sala_partidas_participantes(userId);
+      `);
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

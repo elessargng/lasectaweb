@@ -18,6 +18,7 @@ import {
 } from '../services/SalaService';
 import {
   ADJUNTOS_DESPERTAR,
+  CAUSAS_FIN_PARTIDA,
   FICHAS_DESPERTAR,
   FichaDespertar,
   ICONOS_RECORDATORIO_TEXTO,
@@ -37,6 +38,7 @@ import {
 import { guardarAvatarSala } from '../utils/salaAvatarStorage';
 import { GuionResuelto, TIPOS_NPC, TipoPersonaje } from '../types/guiones';
 import { GuionInvalidoError } from '../services/guiones/errores';
+import type { RegistroPartida } from '../services/estadisticas/SeguimientoPartida';
 
 /** `valor`: lo que la acción devuelve a quien la pidió (p. ej. la ruta del avatar subido). */
 export type SalaResultado = { ok: true; valor?: string } | { ok: false; error: string };
@@ -63,6 +65,10 @@ export interface DependenciasSala {
   video: ProveedorVideo | null;
   /** Las imágenes de la Biblioteca (para elegir un fondo de la sala). */
   imagenesBiblioteca: ImagenesBiblioteca;
+  /** Dónde se guarda cada partida al terminar (las estadísticas); sin esto, no se guarda. */
+  guardarPartida?: (registro: RegistroPartida) => Promise<void>;
+  /** Cuántas partidas ha jugado alguien (para el pulpito de novato); sin esto, nadie lo es. */
+  contarPartidas?: (userId: string) => Promise<number>;
 }
 
 /**
@@ -568,6 +574,8 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       const mensaje = leerMensajeDespertar(sala, datos, narra);
       if ('error' in mensaje) return { ok: false, error: mensaje.error };
       sala.enviarDespertar(asientoId, { ...mensaje, autor: narra ? 'narrador' : asientoId });
+      // «Tú eres»: su ficha pasa a ser la que se le dice (con alineamiento, solo si se le dice)
+      if (narra && mensaje.tarjeta === 'tuEres') sala.comunicarFicha(asientoId, mensaje.personajes, mensaje.alineamiento);
       return { ok: true };
     },
   },
@@ -664,6 +672,29 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   },
 
   /**
+   * Con el Gardener: intercambia el personaje y el alineamiento de dos fichas
+   * (arrastrando una sobre otra). datos: { desde, hasta } (ids de asiento).
+   */
+  'narrador:intercambiarFichas': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.npcActivo(NPC_GARDENER) && sala.asientos().length > 1,
+    noPuede: (sala, yo) =>
+      yo.rol !== 'narrador'
+        ? 'Solo un narrador puede intercambiar las fichas.'
+        : !sala.npcActivo(NPC_GARDENER)
+          ? 'Las fichas solo se intercambian con el Gardener en juego.'
+          : 'Hacen falta dos asientos.',
+    hacer: (sala, _yo, datos) => {
+      const { desde, hasta } = (datos as { desde?: unknown; hasta?: unknown }) ?? {};
+      if (typeof desde !== 'string' || typeof hasta !== 'string' || !sala.hayAsiento(desde) || !sala.hayAsiento(hasta)) {
+        return { ok: false, error: 'Ese asiento ya no existe.' };
+      }
+      if (desde === hasta) return { ok: false, error: 'Elige otra ficha.' };
+      sala.intercambiarFichas(desde, hasta);
+      return { ok: true };
+    },
+  },
+
+  /**
    * Pone una ficha recordatorio junto a la de un asiento: uno de los recordatorios
    * de un personaje del guion (esté en juego o no). Se pueden poner las que se quiera.
    * datos: { asientoId, personajeId, indice }.
@@ -742,7 +773,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * Envía un grimorio (el Espía, la Viuda) a quien se sienta en un asiento: una
    * copia del de la partida que el narrador puede haber cambiado. Se comprueba que
    * cada ficha sea de un asiento de la mesa y lleve personajes del guion.
-   * datos: { asientoId, fichas: SalaFichaEnviada[] }.
+   * datos: { asientoId, fichas: SalaFichaEnviada[], faroles?: string[] }.
    */
   'narrador:enviarGrimorio': {
     puede: (sala, yo) => yo.rol === 'narrador' && sala.asientos().some((a) => a.ocupante),
@@ -780,7 +811,11 @@ export const SALA_ACCIONES: Record<string, Accion> = {
         }
         limpias.push({ asientoId: f.asientoId, personaje, alineamiento, muerto: f.muerto === true, recordatorios: limpios });
       }
-      sala.enviarGrimorio(asientoId, limpias);
+      // Los faroles del demonio (los que el narrador haya dejado en la copia)
+      const faroles = (datos as { faroles?: unknown }).faroles ?? [];
+      if (!Array.isArray(faroles) || faroles.length > NUM_FAROLES) return { ok: false, error: 'Los faroles no son válidos.' };
+      if (faroles.some((id) => typeof id !== 'string' || !sala.personaje(id))) return { ok: false, error: 'Hay un farol que no está en el guion.' };
+      sala.enviarGrimorio(asientoId, limpias, faroles as string[]);
       return { ok: true };
     },
   },
@@ -1074,7 +1109,8 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /**
    * Revelar el grimorio (final de la partida): el narrador dice qué bando ha
-   * ganado y todas las fichas se dan la vuelta. datos: { ganador: 'bueno' | 'malvado' }.
+   * ganado y todas las fichas se dan la vuelta. datos: { ganador: 'bueno' | 'malvado', causas?: string[] }
+   * (ver CAUSAS_FIN_PARTIDA: lo que ha pasado con los personajes de la lista en juego).
    */
   'narrador:revelarGrimorio': {
     puede: (sala, yo) => yo.rol === 'narrador' && !sala.revelacion() && sala.asientos().length > 0,
@@ -1085,9 +1121,14 @@ export const SALA_ACCIONES: Record<string, Accion> = {
           ? 'Ya se está revelando el grimorio.'
           : 'La mesa no tiene asientos.',
     hacer: (sala, _yo, datos) => {
-      const ganador = (datos as { ganador?: unknown } | null)?.ganador;
+      const { ganador, causas = [] } = (datos as { ganador?: unknown; causas?: unknown } | null) ?? {};
       if (ganador !== 'bueno' && ganador !== 'malvado') return { ok: false, error: 'Bando desconocido.' };
-      sala.empezarRevelacion(ganador);
+      // Lo que ha pasado: solo de los personajes de la lista que están en juego (quien es de verdad cada uno)
+      const enJuego = new Set(sala.asientos().map((a) => sala.identidad(a)));
+      if (!Array.isArray(causas) || causas.some((c) => typeof c !== 'string' || !CAUSAS_FIN_PARTIDA.includes(c) || !enJuego.has(c))) {
+        return { ok: false, error: 'Hay un personaje que no está en juego.' };
+      }
+      sala.empezarRevelacion(ganador, [...new Set(causas as string[])]);
       return { ok: true };
     },
   },

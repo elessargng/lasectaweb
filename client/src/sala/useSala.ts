@@ -16,6 +16,10 @@ export interface SalaParticipante {
   id: string;
   nombre: string;
   conCuenta: boolean;
+  /** Con cuenta, su id de usuario de la web (su perfil: /perfil/<id>); invitado, null. */
+  usuarioId: string | null;
+  /** Con cuenta, ha jugado menos de 10 partidas: lleva el pulpito junto al nombre. */
+  novato: boolean;
   /** Ruta del avatar de su cuenta; null para los invitados. */
   avatar: string | null;
   rol: SalaRol;
@@ -73,6 +77,8 @@ export interface SalaFichaEnviada {
 export interface SalaGrimorioEnviado {
   hora: number;
   fichas: SalaFichaEnviada[];
+  /** Los faroles del demonio (ids de personaje). */
+  faroles: string[];
 }
 
 /** Una nota sobre un asiento: texto libre (ver NotasAsiento). */
@@ -121,6 +127,8 @@ export type PaseVideo = { ok: true; url: string; token: string } | { ok: false; 
 /** Revelando el grimorio (final de la partida): el bando ganador y las fichas ya reveladas. */
 export interface SalaRevelacion {
   ganador: SalaAlineamiento;
+  /** Lo que ha pasado (ver causasFinal.ts); vacío hasta que todo está revelado. */
+  causas: string[];
   reveladas: string[];
   terminada: boolean;
 }

@@ -56,6 +56,20 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     maxHttpBufferSize: 8 * 1024 * 1024,
   });
   const sala = new SalaService();
+  // Al revelar el grimorio, la partida se guarda (las estadísticas de cada uno)
+  if (deps.guardarPartida) {
+    const guardar = deps.guardarPartida;
+    sala.alTerminarPartida = (registro) => {
+      guardar(registro)
+        .then(async () => {
+          // Con una partida más, quien deja de ser novato pierde el pulpito
+          if (!deps.contarPartidas) return;
+          for (const { userId } of registro.jugadores) sala.cambiarPartidasJugadas(userId, await deps.contarPartidas(userId));
+          difundir();
+        })
+        .catch((err) => console.error('[SALA] No se ha podido guardar la partida:', err));
+    };
+  }
   const chat = new ChatService(deps.mensajes, sala);
   const conversaciones = new ConversacionService(sala);
   // Sin servidor de vídeo configurado, la sala funciona igual, sin cámaras ni micrófonos
@@ -106,7 +120,11 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
       // Con Tor, al morir sabe quién es de verdad (un Borracho con ficha de aldeano: Borracho)
       if (tor) return { ...sinRecordatorios(a), personaje: sala.identidad(a) };
       const viajero = viajeroDe(a);
-      return viajero ? { ...sinRecordatorios(a), personaje: viajero } : { ...sinRecordatorios(a), ...sala.fichaEntregada(a.id) };
+      // Un viajero: quien es lo ve todo el mundo; su alineamiento, como se le dijo (al repartir
+      // o con «Tú eres»), no el que el narrador le ponga en el grimorio
+      return viajero
+        ? { ...sinRecordatorios(a), personaje: viajero, alineamiento: sala.fichaEntregada(a.id).alineamiento }
+        : { ...sinRecordatorios(a), ...sala.fichaEntregada(a.id) };
     };
     // Con el Gardener, mientras el narrador no los entregue, nadie ve ningún personaje
     // (tampoco el suyo ni los viajeros)
@@ -203,6 +221,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
         conCuenta: true,
         avatarPorDefecto: await buscarAvatar(usuario.id).catch(() => null),
         avatarElegido: limpiarAvatarSala(avatar),
+        partidasJugadas: deps.contarPartidas ? await deps.contarPartidas(usuario.id).catch(() => null) : null,
       };
     } else {
       const nombreBase = limpiarNombreSala(nombre);
@@ -214,6 +233,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
         conCuenta: false,
         avatarPorDefecto: SALA_AVATAR_INVITADO,
         avatarElegido: limpiarAvatarSala(avatar),
+        partidasJugadas: null,
       };
       // Un invitado no puede entrar con un nombre que ya usa otro: el cliente lo
       // devuelve a la pantalla de entrada para que elija otro.

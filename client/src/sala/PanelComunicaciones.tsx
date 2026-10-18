@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, campo } from './estilos';
 import type { PreferenciasSala } from './preferencias';
+import Interruptor from './Interruptor';
 
 interface PanelComunicacionesProps {
   preferencias: PreferenciasSala;
@@ -142,21 +143,14 @@ const PanelComunicaciones = ({ preferencias, onCambiar, hayVideo }: PanelComunic
         salvo en las conversaciones privadas.
       </p>
       <div className="flex flex-col gap-1 border-t border-outline-ghost pt-6">
-        <label className="flex cursor-pointer items-center gap-3">
-          <input
-            type="checkbox"
-            role="switch"
-            checked={preferencias.salirConversacionSinNadie}
-            onChange={(e) => onCambiar({ salirConversacionSinNadie: e.target.checked })}
-            aria-describedby="sala-pref-salir-conversacion-ayuda"
-            className="peer sr-only"
-          />
-          <span
-            aria-hidden="true"
-            className="relative h-5 w-9 shrink-0 rounded-full border border-outline-ghost bg-background transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-3.5 after:w-3.5 after:rounded-full after:bg-on-surface-muted after:transition-transform peer-checked:border-theme-main peer-checked:bg-theme-container peer-checked:after:translate-x-4 peer-checked:after:bg-theme-main peer-focus-visible:ring-2 peer-focus-visible:ring-theme-main motion-reduce:transition-none motion-reduce:after:transition-none"
-          />
-          <span className="text-sm">Salir automáticamente de una conversación privada si se van los demás</span>
-        </label>
+        <Interruptor
+          activo={preferencias.salirConversacionSinNadie}
+          onCambiar={(salirConversacionSinNadie) => onCambiar({ salirConversacionSinNadie })}
+          describedBy="sala-pref-salir-conversacion-ayuda"
+          textoClassName="text-sm"
+        >
+          Salir automáticamente de una conversación privada si se van los demás
+        </Interruptor>
         <p id="sala-pref-salir-conversacion-ayuda" className="text-xs text-on-surface-muted">
           Desactivado, sigues en la conversación hasta que pulses «Salir».
         </p>

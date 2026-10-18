@@ -40,7 +40,7 @@ const GrimorioRecibido = ({ grimorio, nombres, onCopiar, onCerrar }: GrimorioRec
         </div>
         <p className="px-6 pb-2 pt-1 text-sm text-on-surface-muted">Te lo ha enviado a las {hora}.</p>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-2">
-          <MiniGrimorio fichas={grimorio.fichas} nombres={nombres} />
+          <MiniGrimorio fichas={grimorio.fichas} faroles={grimorio.faroles ?? []} nombres={nombres} />
         </div>
         {onCopiar && (
           <div className="flex flex-wrap items-center justify-end gap-3 sala-cofre-pie px-6 py-3">

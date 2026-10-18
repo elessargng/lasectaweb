@@ -6,6 +6,7 @@ import Button from './Button';
 import { compressImage } from '../utils/image';
 import { parseApiResponse } from '../utils/api';
 import Dialog from './Dialog';
+import Interruptor from '../sala/Interruptor';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -276,20 +277,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
             {isLogin && (
               <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2.5">
-                  <input
-                    type="checkbox"
-                    id="auth-recordarme"
-                    name="remember"
-                    checked={remember}
-                    onChange={(e) => setRemember(e.target.checked)}
-                    aria-describedby="auth-recordarme-ayuda"
-                    className="w-4 h-4 rounded border-outline-ghost text-theme-main focus:ring-theme-main accent-theme-main bg-surface-low cursor-pointer shrink-0"
-                  />
-                  <label htmlFor="auth-recordarme" className="text-sm font-display text-on-surface-muted cursor-pointer select-none">
-                    Recordarme
-                  </label>
-                </div>
+                <Interruptor
+                  id="auth-recordarme"
+                  name="remember"
+                  activo={remember}
+                  onCambiar={setRemember}
+                  describedBy="auth-recordarme-ayuda"
+                  textoClassName="text-sm font-display text-on-surface-muted select-none"
+                >
+                  Recordarme
+                </Interruptor>
                 <p id="auth-recordarme-ayuda" className="text-xs font-body text-on-surface-muted opacity-80">
                   Mantiene la sesión 30 días en este navegador. No lo marques en un equipo compartido.
                 </p>
@@ -354,18 +351,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   </div>
                 </div>
 
-                {/* Privacy Policy Agreement Checkbox */}
-                <div className="flex items-start gap-2.5 mt-3 pt-3 border-t border-outline-ghost/50">
-                  <input
-                    required
-                    type="checkbox"
+                {/* Aceptar la política de privacidad (obligatorio para registrarse) */}
+                <div className="mt-3 pt-3 border-t border-outline-ghost/50">
+                  <Interruptor
                     id="acceptTerms"
                     name="acceptTerms"
-                    checked={acceptTerms}
-                    onChange={(e) => setAcceptTerms(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 rounded border-outline-ghost text-theme-main focus:ring-theme-main accent-theme-main bg-surface-low cursor-pointer shrink-0"
-                  />
-                  <label htmlFor="acceptTerms" className="text-xs font-body text-on-surface-muted leading-snug cursor-pointer select-none">
+                    required
+                    activo={acceptTerms}
+                    onCambiar={setAcceptTerms}
+                    arriba
+                    textoClassName="text-xs font-body text-on-surface-muted leading-snug select-none"
+                  >
                     He leído y acepto la{' '}
                     <Link 
                       to="/privacidad" 
@@ -377,7 +373,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       Política de Privacidad
                     </Link>{' '}
                     y las condiciones de La Secta.
-                  </label>
+                  </Interruptor>
                 </div>
               </>
             )}

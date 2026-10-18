@@ -82,6 +82,9 @@ import { RitualService } from './services/RitualService';
 import { RitualController } from './controllers/RitualController';
 import { SalaConfiguracionRepository } from './repositories/SalaConfiguracionRepository';
 import { SalaConfiguracionController } from './controllers/SalaConfiguracionController';
+import { EstadisticasController } from './controllers/EstadisticasController';
+import { EstadisticasRepository } from './repositories/EstadisticasRepository';
+import { EstadisticasService } from './services/estadisticas/EstadisticasService';
 import { iniciarSalaSocket } from './sockets/salaSocket';
 import { MemoriaChatRepository } from './repositories/ChatRepository';
 import { leerConfigVideollamada } from './config/videollamada';
@@ -195,6 +198,10 @@ const ritualService = new RitualService(ritualRepository, userRepository, villac
 const ritualController = new RitualController(ritualService);
 
 const salaConfiguracionController = new SalaConfiguracionController(new SalaConfiguracionRepository());
+
+// Estadísticas de las partidas de la sala (se guardan al revelar el grimorio)
+const estadisticasRepository = new EstadisticasRepository();
+const estadisticasController = new EstadisticasController(new EstadisticasService(estadisticasRepository, personajeRepository));
 
 const twitterRepository = new TwitterRepository();
 const instagramRepository = new InstagramRepository();
@@ -311,6 +318,10 @@ app.post('/api/rituals/:id/signups', authenticateJWT as express.RequestHandler, 
 app.delete('/api/rituals/:id/signups', authenticateJWT as express.RequestHandler, ritualController.leave as express.RequestHandler);
 
 // Configuración de la sala: la de cada usuario y sus perfiles (los invitados no guardan nada).
+app.get('/api/estadisticas', estadisticasController.publicos as express.RequestHandler);
+app.get('/api/usuarios/:userId/perfil', estadisticasController.perfil as express.RequestHandler);
+app.get('/api/estadisticas/mias', authenticateJWT as express.RequestHandler, estadisticasController.mias as express.RequestHandler);
+app.get('/api/estadisticas/:userId', optionalAuthenticateJWT as express.RequestHandler, estadisticasController.deUsuario as express.RequestHandler);
 app.get('/api/sala/configuracion', authenticateJWT as express.RequestHandler, salaConfiguracionController.get as express.RequestHandler);
 app.put('/api/sala/configuracion', authenticateJWT as express.RequestHandler, salaConfiguracionController.guardarActual as express.RequestHandler);
 app.post('/api/sala/perfiles', authenticateJWT as express.RequestHandler, salaConfiguracionController.guardarPerfil as express.RequestHandler);
@@ -406,6 +417,8 @@ DatabaseRepository.getInstance()
       },
       // Cámaras y micrófonos: el servidor LiveKit, si está configurado (LIVEKIT_*)
       video: configVideollamada ? new LiveKitProveedor(configVideollamada) : null,
+      guardarPartida: (registro) => estadisticasRepository.guardar(registro),
+      contarPartidas: (userId) => estadisticasRepository.contarPartidas(userId),
     });
     httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

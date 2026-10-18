@@ -39,7 +39,8 @@ interface EnviarGrimorioProps {
  * ahora que el narrador puede cambiar antes de enviarlo (solo cambia lo que se
  * envía, no la partida). Se elige una ficha y, al lado, se le cambia el
  * personaje, el alineamiento, si está muerto y sus recordatorios (pulsar uno lo
- * quita). «Enviar» se lo manda a quien se sienta en ese asiento.
+ * quita). También van los faroles del demonio (los de ahora), que se pueden
+ * quitar o cambiar. «Enviar» se lo manda a quien se sienta en ese asiento.
  *
  * Elegir personaje o recordatorio abre su diálogo en lugar de este (un diálogo
  * modal cada vez); al cerrarlo se vuelve aquí, al mismo sitio.
@@ -53,6 +54,10 @@ const EnviarGrimorio = ({ estado, destino, pedir, onEnviado, onCerrar }: EnviarG
   const [fichas, setFichas] = useState(copia);
   const [elegida, setElegida] = useState<string | null>(copia[0]?.asientoId ?? null);
   const [eligiendo, setEligiendo] = useState<'personaje' | 'recordatorio' | null>(null);
+  // Los faroles de la copia; y cuál se está eligiendo (su posición, o una nueva al final)
+  const [farolesCopia] = useState(() => estado.faroles.filter((id): id is string => !!id && todosPorId.has(id)));
+  const [faroles, setFaroles] = useState(farolesCopia);
+  const [eligiendoFarol, setEligiendoFarol] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
   const volverRef = useRef<HTMLButtonElement>(null);
@@ -87,7 +92,7 @@ const EnviarGrimorio = ({ estado, destino, pedir, onEnviado, onCerrar }: EnviarG
     if (enviando) return;
     setEnviando(true);
     setError('');
-    const r = await pedir('narrador:enviarGrimorio', { asientoId: destino, fichas });
+    const r = await pedir('narrador:enviarGrimorio', { asientoId: destino, fichas, faroles });
     setEnviando(false);
     if (!r.ok) {
       setError(r.error);
@@ -97,6 +102,20 @@ const EnviarGrimorio = ({ estado, destino, pedir, onEnviado, onCerrar }: EnviarG
     onCerrar();
   };
 
+  if (eligiendoFarol !== null) {
+    return (
+      <DialogoPersonaje
+        ficha={`farol ${eligiendoFarol + 1}`}
+        titulo="Elegir farol"
+        personajes={personajes}
+        actual={faroles[eligiendoFarol] ?? null}
+        onElegir={(id) =>
+          setFaroles((fs) => (id ? Object.assign([...fs], { [eligiendoFarol]: id }) : fs.filter((_, i) => i !== eligiendoFarol)))
+        }
+        onCerrar={() => setEligiendoFarol(null)}
+      />
+    );
+  }
   if (eligiendo === 'personaje' && ficha) {
     return (
       <DialogoPersonaje
@@ -148,6 +167,7 @@ const EnviarGrimorio = ({ estado, destino, pedir, onEnviado, onCerrar }: EnviarG
         <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-6 py-2 md:grid-cols-[1fr_17rem]">
           <MiniGrimorio
             fichas={fichas}
+            faroles={faroles}
             nombres={nombres}
             elegida={elegida}
             onElegir={setElegida}
@@ -226,6 +246,41 @@ const EnviarGrimorio = ({ estado, destino, pedir, onEnviado, onCerrar }: EnviarG
               </p>
             )}
           </section>
+          {/* Los faroles del demonio: van en el centro del grimorio que se envía */}
+          <section aria-labelledby="sala-enviar-grimorio-faroles" className="flex flex-col gap-2 self-start rounded border border-outline-ghost bg-background/40 p-4 md:col-start-2">
+            <h3 id="sala-enviar-grimorio-faroles" className="rotulo">
+              Faroles
+            </h3>
+            {faroles.length === 0 ? (
+              <span className="text-sm text-on-surface-muted">Ninguno</span>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {faroles.map((id, i) => {
+                  const p = todosPorId.get(id);
+                  return (
+                    <li key={`${id}-${i}`} className="flex items-center justify-between gap-2 text-sm">
+                      <button type="button" onClick={() => setEligiendoFarol(i)} className="min-w-0 truncate text-left hover:text-gold-bright" aria-label={`Cambiar el farol ${p?.nombre.texto ?? id}`}>
+                        <span lang={p?.nombre.lang}>{p?.nombre.texto ?? id}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFaroles((fs) => fs.filter((_, j) => j !== i))}
+                        aria-label={`Quitar el farol ${p?.nombre.texto ?? id}`}
+                        className="rounded p-0.5 text-on-surface-muted hover:text-blood-pale focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
+                      >
+                        <X size={14} />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {faroles.length < estado.faroles.length && (
+              <button type="button" onClick={() => setEligiendoFarol(faroles.length)} className={`${botonSecundario} mt-1`}>
+                Poner farol
+              </button>
+            )}
+          </section>
         </div>
         {error && (
           <p role="alert" className="px-6 pt-2 text-sm text-blood-pale">
@@ -233,7 +288,14 @@ const EnviarGrimorio = ({ estado, destino, pedir, onEnviado, onCerrar }: EnviarG
           </p>
         )}
         <div className="flex flex-wrap items-center justify-end gap-3 sala-cofre-pie px-6 py-3">
-          <button type="button" onClick={() => setFichas(copia)} className={`${botonSecundario} mr-auto`}>
+          <button
+            type="button"
+            onClick={() => {
+              setFichas(copia);
+              setFaroles(farolesCopia);
+            }}
+            className={`${botonSecundario} mr-auto`}
+          >
             Volver a la copia
           </button>
           <button type="button" onClick={() => void enviar()} aria-disabled={enviando || undefined} className={botonPrincipal}>

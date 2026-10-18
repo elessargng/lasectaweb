@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { parseApiResponse } from '../utils/api';
 import { botonPrincipal, campo } from './estilos';
 import { NOMBRE_MAX, getUltimoNombre, limpiarNombre } from './invitado';
+import Interruptor from './Interruptor';
 
 const API_URL = `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api'}/auth`;
 
@@ -126,17 +127,15 @@ const Entrada = ({ enfocar, aviso, errorInvitado, onInvitado }: EntradaProps) =>
               />
             </div>
             <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <input
-                  id="entrada-recordarme"
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                  aria-describedby="entrada-recordarme-ayuda"
-                  className="w-4 h-4 accent-theme-main"
-                />
-                <label htmlFor="entrada-recordarme" className={labelClass}>Recordarme</label>
-              </div>
+              <Interruptor
+                id="entrada-recordarme"
+                activo={remember}
+                onCambiar={setRemember}
+                describedBy="entrada-recordarme-ayuda"
+                textoClassName={labelClass}
+              >
+                Recordarme
+              </Interruptor>
               <p id="entrada-recordarme-ayuda" className="text-xs text-on-surface-muted">
                 Mantiene la sesión 30 días en este navegador. No lo marques en un equipo compartido.
               </p>

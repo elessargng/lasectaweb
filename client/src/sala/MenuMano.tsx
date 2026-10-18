@@ -1,7 +1,7 @@
 import Mano from './Mano';
 import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { botonIcono } from './estilos';
-import { FORMAS_MANO, nombreMano } from './formasMano';
+import { EMOTICONOS_MANO, FORMAS_MANO, nombreMano } from './formasMano';
 import type { Atajo } from './atajos';
 import type { PersonajeMostrado } from './guiones';
 import type { FormaMano } from './useSala';
@@ -72,15 +72,33 @@ const MenuMano = ({
               ? { id: 'alternar', etiqueta: 'Levantar la mano (sin voto)', deshabilitada: true, elegir: onAlternar }
               : { id: 'alternar', etiqueta: 'Levantar la mano', atajo: atajoLevantar, elegir: onAlternar },
         ]),
+    // Las formas y los personajes, en rejilla: la mano tal como se verá (en el estilo de cada uno)
     ...FORMAS_MANO.map(({ forma: f, nombre }) => ({
       id: f,
       etiqueta: nombre,
       marcada: f === forma,
       elegir: () => onElegirForma(f),
+      dibujo: <Mano forma={f} className="h-full w-full" />,
+      grupo: 'Manos',
+    })),
+    ...EMOTICONOS_MANO.map(({ forma: f, nombre }) => ({
+      id: f,
+      etiqueta: nombre,
+      marcada: f === forma,
+      elegir: () => onElegirForma(f),
+      dibujo: <Mano forma={f} className="h-full w-full" />,
+      grupo: 'Emoticonos',
     })),
     ...personajes
       .filter((p) => p.icono)
-      .map((p) => ({ id: `personaje-${p.id}`, etiqueta: p.nombre.texto, marcada: p.id === forma, elegir: () => onElegirForma(p.id) })),
+      .map((p) => ({
+        id: `personaje-${p.id}`,
+        etiqueta: p.nombre.texto,
+        marcada: p.id === forma,
+        elegir: () => onElegirForma(p.id),
+        dibujo: <Mano forma={p.id} className="h-full w-full" />,
+        grupo: 'Personajes',
+      })),
   ];
 
   return (

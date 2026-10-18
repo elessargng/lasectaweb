@@ -3,9 +3,10 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import Button from '../components/Button';
 import PageHeader from '../components/PageHeader';
-import { Check, Plus, Shield, Eye } from 'lucide-react';
+import { Check, Plus, Shield, Eye, BarChart3 } from 'lucide-react';
 import { compressImage } from '../utils/image';
 import { parseApiResponse, getAvatarUrl } from '../utils/api';
+import { EstadisticasDeUsuario } from '../components/estadisticas/PanelEstadisticas';
 
 const AVATAR_OPTIONS = [
   { id: 'default', url: '/avatar.png', label: 'Adepto' },
@@ -166,6 +167,33 @@ const Profile = () => {
     }
   };
 
+  // Lo mismo para las estadísticas: públicas o privadas, al momento
+  const [savingStats, setSavingStats] = useState(false);
+  const toggleEstadisticasPublicas = async () => {
+    setError('');
+    setSuccess('');
+    setSavingStats(true);
+    const publicas = !user.estadisticasPublicas;
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api';
+      const response = await fetch(`${apiUrl}/auth/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ estadisticasPublicas: publicas })
+      });
+      const data = await parseApiResponse(response);
+      updateUser({ estadisticasPublicas: !!data.estadisticasPublicas });
+      setSuccess(publicas ? 'Tus estadísticas ahora son públicas.' : 'Tus estadísticas ahora son privadas.');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSavingStats(false);
+    }
+  };
+
   const visibleAvatars = [
     ...AVATAR_OPTIONS,
     ...(customAvatar ? [{ id: 'custom', url: customAvatar, label: 'Personalizado' }] : [])
@@ -316,6 +344,51 @@ const Profile = () => {
                       }`}
                     />
                   </button>
+                </div>
+              </div>
+
+              {/* Estadísticas de partida */}
+              <div className="bg-surface-low p-6 border border-outline-ghost shadow-inner rounded mb-8">
+                <h3 className="text-xl font-display text-on-surface mb-6 border-b border-outline-ghost/50 pb-2 flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-theme-main" />
+                  Estadísticas de Partida
+                </h3>
+                <div className="flex justify-between items-center gap-4">
+                  <div>
+                    <p className="font-display text-on-surface text-base" id="estadisticas-publicas-label">
+                      Estadísticas públicas
+                    </p>
+                    <p className="text-sm font-body text-on-surface-muted mt-1">
+                      Al terminar cada partida en la sala se guardan tus roles, tus bandos y si ganaste.
+                      Activado, cualquiera puede verlas en tu perfil; si no, solo tú.{' '}
+                      <Link to="/estadisticas" className="text-theme-main hover:underline">
+                        Ver las de los demás
+                      </Link>
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={!!user.estadisticasPublicas}
+                    aria-labelledby="estadisticas-publicas-label"
+                    onClick={toggleEstadisticasPublicas}
+                    disabled={savingStats}
+                    className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main disabled:opacity-60 ${
+                      user.estadisticasPublicas
+                        ? 'bg-theme-main border-theme-main'
+                        : 'bg-surface border-outline-ghost'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 rounded-full bg-on-surface shadow transition-transform ${
+                        user.estadisticasPublicas ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                {/* Las tuyas: resumen, logros, personajes y últimas partidas */}
+                <div className="mt-8">
+                  <EstadisticasDeUsuario userId={user.id} />
                 </div>
               </div>
 

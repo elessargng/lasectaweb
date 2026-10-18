@@ -16,6 +16,7 @@ import {
   SalaRevelacion,
   SalaRol,
   NUM_FAROLES,
+  SALA_PARTIDAS_NOVATO,
   RECORDATORIO_TEXTO,
   SalaFichaEnviada,
   SalaGrimorioEnviado,
@@ -23,6 +24,7 @@ import {
 import { GuionResuelto, PersonajeDeGuion } from '../types/guiones';
 import { repartoPara } from './partida/distribucion';
 import { esAvatarSalaGuardado } from '../utils/salaAvatarStorage';
+import { SeguimientoPartida, type FotoJugador, type RegistroPartida } from './estadisticas/SeguimientoPartida';
 
 /** Margen para volver tras una desconexión (recarga, red caída) sin perder el papel. */
 export const SALA_GRACIA_MS = 20_000;
@@ -117,6 +119,9 @@ export const NPC_STORMCATCHER = 'stormcatcher';
 export const NPC_FERRYMAN = 'ferryman';
 
 /** Las casillas de farol, todas vacías. */
+/** Con cuenta y menos de SALA_PARTIDAS_NOVATO partidas (si no se sabe cuántas, no). */
+const esNovato = (llegada: SalaLlegada) => llegada.partidasJugadas !== null && llegada.partidasJugadas < SALA_PARTIDAS_NOVATO;
+
 export const farolesVacios = (): (string | null)[] => Array.from({ length: NUM_FAROLES }, () => null);
 
 /** Quién se conecta, según el token o el nombre de invitado. */
@@ -132,6 +137,8 @@ export interface SalaLlegada {
   avatarPorDefecto: string | null;
   /** El que eligió para la sala (ver `SALA_AVATARES`); null: el por defecto. */
   avatarElegido: string | null;
+  /** Con cuenta, las partidas que ha jugado (null si no se sabe, o invitado). */
+  partidasJugadas: number | null;
 }
 
 interface Entrada {
@@ -190,7 +197,7 @@ export class SalaService {
     fondo: null,
   };
   private nominacionEnCurso: NominacionInterna | null = null;
-  private revelacionActual: { ganador: SalaAlineamiento; reveladas: string[] } | null = null;
+  private revelacionActual: { ganador: SalaAlineamiento; causas: string[]; reveladas: string[] } | null = null;
   /** Hora (ms) del último gong del narrador, o null. */
   private ultimoGong: number | null = null;
   /** A quién se ha dejado ver el grimorio (por su `recuerdo`), para devolvérselo si sale y vuelve. */
@@ -311,6 +318,19 @@ export class SalaService {
     this.retenidas = false;
   }
 
+  /**
+   * El narrador le dice a un jugador quién es («Tú eres», de noche): su ficha pasa a
+   * ser esa (el personaje, si es uno solo, y el alineamiento, si se le dice). Así
+   * es como se entera de un cambio: lo que el narrador cambie en el grimorio no lo ve.
+   */
+  comunicarFicha(asientoId: string, personajes: string[], alineamiento: SalaAlineamiento | null): void {
+    const antes = this.fichaEntregada(asientoId);
+    this.entregadas.set(asientoId, {
+      personaje: personajes.length === 1 ? personajes[0] : antes.personaje,
+      alineamiento: alineamiento ?? antes.alineamiento,
+    });
+  }
+
   /** La ficha que se entregó a un asiento en el último reparto (sin reparto, vacía). */
   fichaEntregada(asientoId: string): { personaje: string | null; alineamiento: SalaAlineamiento | null } {
     return this.entregadas.get(asientoId) ?? { personaje: null, alineamiento: null };
@@ -322,10 +342,10 @@ export class SalaService {
    */
   private grimoriosEnviados = new Map<string, { ocupante: string; grimorio: SalaGrimorioEnviado }>();
 
-  /** Envía un grimorio a quien se sienta en un asiento. No comprueba permisos ni las fichas. */
-  enviarGrimorio(asientoId: string, fichas: SalaFichaEnviada[]): void {
+  /** Envía un grimorio (sus fichas y los faroles) a quien se sienta en un asiento. No comprueba permisos ni las fichas. */
+  enviarGrimorio(asientoId: string, fichas: SalaFichaEnviada[], faroles: string[] = []): void {
     const ocupante = this.mesa.find((a) => a.id === asientoId)?.ocupante;
-    if (ocupante) this.grimoriosEnviados.set(asientoId, { ocupante, grimorio: { hora: Date.now(), fichas } });
+    if (ocupante) this.grimoriosEnviados.set(asientoId, { ocupante, grimorio: { hora: Date.now(), fichas, faroles } });
   }
 
   /** El último grimorio enviado a un participante (si sigue en el asiento al que se envió), o null. */
@@ -559,6 +579,47 @@ export class SalaService {
    */
   alCambiarSola: () => void = () => {};
 
+  /**
+   * Las estadísticas: lo que se apunta de cada jugador con cuenta durante la
+   * partida (ver SeguimientoPartida) y a quién se le da al terminar, para que lo
+   * guarde (al revelar el grimorio). Sin esto, no se guarda nada.
+   */
+  private seguimiento = new SeguimientoPartida();
+  alTerminarPartida: (registro: RegistroPartida) => void = () => {};
+
+  /** El id de usuario de un participante con cuenta, o null (invitado, o ya no está). */
+  private cuentaDe(participanteId: string | null): string | null {
+    if (!participanteId) return null;
+    const identidad = [...this.entradas.values()].find((e) => e.participante.id === participanteId)?.identidad;
+    return identidad?.startsWith('u:') ? identidad.slice(2) : null;
+  }
+
+  private cuentaDelAsiento(asientoId: string): string | null {
+    return this.cuentaDe(this.mesa.find((a) => a.id === asientoId)?.ocupante ?? null);
+  }
+
+  /**
+   * El alineamiento de un asiento: el que haya puesto el narrador o, si no, el del
+   * tipo de quien es de verdad (aldeanos y forasteros, buenos; esbirros y
+   * demonios, malvados). Un viajero sin alineamiento puesto: null.
+   */
+  alineamientoEfectivo(asiento: SalaAsiento): SalaAlineamiento | null {
+    if (asiento.alineamiento) return asiento.alineamiento;
+    const id = this.identidad(asiento);
+    const tipo = id ? this.personaje(id)?.tipo : undefined;
+    if (tipo === 'townsfolk' || tipo === 'outsider') return 'bueno';
+    if (tipo === 'minion' || tipo === 'demon') return 'malvado';
+    return null;
+  }
+
+  /** Cómo están ahora los jugadores con cuenta sentados (para las estadísticas). */
+  private fotosDeCuentas(): FotoJugador[] {
+    return this.mesaAlDia().flatMap((a) => {
+      const userId = this.cuentaDe(a.ocupante);
+      return userId ? [{ userId, personaje: this.identidad(a), alineamiento: this.alineamientoEfectivo(a), muerto: a.muerto }] : [];
+    });
+  }
+
   /** El registro de nominaciones y votaciones, en el orden en que se nominó. */
   votaciones(): SalaRegistroVotacion[] {
     return this.registro.map((v) => ({ ...v, votantes: v.votantes && [...v.votantes] }));
@@ -575,6 +636,8 @@ export class SalaService {
    */
   irANoche(): void {
     const { momento, numero, reinicios } = this.faseActual;
+    if (momento === 'preparacion' || !this.seguimiento.estaEmpezada()) this.seguimiento.empezar(this.fotosDeCuentas());
+    else for (const a of this.mesa.filter((x) => x.marcado)) this.seguimiento.ejecutado(this.cuentaDe(a.ocupante));
     this.faseActual = { momento: 'noche', numero: momento === 'preparacion' ? 1 : numero + 1, reinicios };
     this.cerrarNominacion();
     this.desmarcar();
@@ -587,6 +650,8 @@ export class SalaService {
    */
   amanecer(): void {
     this.faseActual = { ...this.faseActual, momento: 'dia' };
+    // El rol con el que empieza el día cuenta como jugado (los cambios de la noche, no)
+    this.seguimiento.anotarRoles(this.fotosDeCuentas());
     this.hilos = [];
   }
 
@@ -659,6 +724,7 @@ export class SalaService {
    */
   limpiarGrimorio(): void {
     this.cerrarNominacion();
+    this.seguimiento.reiniciar();
     // Otra partida: los NPCs del guion, en juego (si alguno se quitó, vuelve); los
     // demás que se pusieron a mano, siguen
     this.npcsActuales = [...this.npcsActuales, ...this.npcsDelGuion().filter((id) => !this.npcsActuales.includes(id))];
@@ -744,6 +810,7 @@ export class SalaService {
       const valor = this.valorDelVoto(asiento!, ocupante);
       v.votos += valor;
       if (valor !== 1) v.valores = { ...v.valores, [asientoId]: valor };
+      this.seguimiento.vota(this.cuentaDe(ocupante.id));
       // Voto contado: la mano baja sola.
       ocupante.manoLevantada = false;
       ocupante.dosManos = false;
@@ -837,6 +904,7 @@ export class SalaService {
       votos: null,
     };
     this.registro.push(registro);
+    this.seguimiento.nomina(this.cuentaDelAsiento(desde), this.cuentaDelAsiento(hasta));
     this.nominacionEnCurso = { desde, hasta, cuentaAtrasFin: null, votacion: null, votosElegidos: null, registro };
     // Quien no puede votar (un muerto sin voto; con el Voudon vivo, los vivos que no son
     // él): si tenía la mano levantada, se le baja
@@ -907,6 +975,19 @@ export class SalaService {
     this.identidadAutomatica(asiento);
   }
 
+  /**
+   * Intercambia el personaje y el alineamiento de dos fichas (con el Gardener, el
+   * narrador decide quién tiene qué). Lo demás (muerte, calavera, recordatorios)
+   * es del asiento y se queda. No comprueba permisos.
+   */
+  intercambiarFichas(desdeId: string, hastaId: string): void {
+    const desde = this.mesa.find((a) => a.id === desdeId);
+    const hasta = this.mesa.find((a) => a.id === hastaId);
+    if (!desde || !hasta || desde === hasta) return;
+    [desde.personaje, hasta.personaje] = [hasta.personaje, desde.personaje];
+    [desde.alineamiento, hasta.alineamiento] = [hasta.alineamiento, desde.alineamiento];
+  }
+
   /** Pone una ficha recordatorio junto a la de un asiento. No comprueba permisos. */
   ponerRecordatorio(asientoId: string, recordatorio: Omit<SalaRecordatorio, 'id'>): void {
     const asiento = this.mesa.find((a) => a.id === asientoId);
@@ -966,13 +1047,36 @@ export class SalaService {
     if (!r) return null;
     // Solo cuentan los asientos que siguen en la mesa
     const reveladas = r.reveladas.filter((id) => this.mesa.some((a) => a.id === id));
-    return { ganador: r.ganador, reveladas, terminada: this.mesa.every((a) => reveladas.includes(a.id)) };
+    const terminada = this.mesa.every((a) => reveladas.includes(a.id));
+    // Lo que ha pasado dice quién estaba en juego: no se cuenta hasta que todo está revelado
+    return { ganador: r.ganador, causas: terminada ? [...r.causas] : [], reveladas, terminada };
   }
 
-  /** Empieza a revelar el grimorio: ha ganado ese bando y todas las fichas se dan la vuelta. */
-  empezarRevelacion(ganador: SalaAlineamiento): void {
+  /**
+   * Empieza a revelar el grimorio: ha ganado ese bando (y lo que haya pasado, ver
+   * CAUSAS_FIN_PARTIDA) y todas las fichas se dan la vuelta.
+   */
+  empezarRevelacion(ganador: SalaAlineamiento, causas: string[] = []): void {
     this.cerrarNominacion();
-    this.revelacionActual = { ganador, reveladas: [] };
+    this.revelacionActual = { ganador, causas, reveladas: [] };
+    // Se acaba la partida: se guarda lo de cada uno (si se había empezado a jugar)
+    const jugadores = this.seguimiento.estaEmpezada() ? this.seguimiento.terminar(this.fotosDeCuentas(), ganador, causas) : [];
+    const narradores = [...this.entradas.values()]
+      .filter((e) => e.participante.rol === 'narrador')
+      .map((e) => this.cuentaDe(e.participante.id))
+      .filter((id): id is string => !!id);
+    if (jugadores.length > 0 || narradores.length > 0) {
+      this.alTerminarPartida({
+        fecha: new Date(),
+        guion: this.guionActual?.nombre ?? null,
+        edicion: this.guionActual?.edicion ?? null,
+        ganador,
+        dias: this.faseActual.numero,
+        causas,
+        jugadores,
+        narradores,
+      });
+    }
   }
 
   /** Revela la ficha de un asiento (todos verán su personaje). */
@@ -1208,6 +1312,8 @@ export class SalaService {
         id,
         nombre: llegada.alias || llegada.nombreBase,
         conCuenta: llegada.conCuenta,
+        usuarioId: llegada.identidad.startsWith('u:') ? llegada.identidad.slice(2) : null,
+        novato: esNovato(llegada),
         avatar: llegada.avatarElegido ?? llegada.avatarPorDefecto,
         rol: 'visitante',
         conectado: true,
@@ -1236,6 +1342,14 @@ export class SalaService {
     entrada.avatarPorDefecto = llegada.avatarPorDefecto;
     entrada.participante.avatar = llegada.avatarElegido ?? llegada.avatarPorDefecto;
     entrada.participante.nombre = llegada.alias || llegada.nombreBase;
+    entrada.participante.novato = esNovato(llegada);
+  }
+
+  /** Al terminar una partida: si con las que lleva ahora sigue siendo novato (ver SALA_PARTIDAS_NOVATO). */
+  cambiarPartidasJugadas(userId: string, partidas: number): void {
+    for (const e of this.entradas.values()) {
+      if (e.identidad === `u:${userId}`) e.participante.novato = partidas < SALA_PARTIDAS_NOVATO;
+    }
   }
 
   /** Se va a propósito: sale de la sala sin esperar. */

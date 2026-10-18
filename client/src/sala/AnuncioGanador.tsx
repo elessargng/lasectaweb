@@ -10,8 +10,10 @@ import type { SalaAlineamiento } from './useSala';
  * quedarse como estandarte bajo la cabecera, para que se vean las fichas
  * reveladas (sala.css; con menos movimiento, quieto ya en su sitio). No recibe el
  * ratón. Es el destino del foco al terminar (se anuncia aparte).
+ *
+ * Debajo, lo que ha pasado (ver causasFinal.ts): «Exterminador: ha matado al demonio…».
  */
-const AnuncioGanador = ({ ganador }: { ganador: SalaAlineamiento }) =>
+const AnuncioGanador = ({ ganador, causas = [] }: { ganador: SalaAlineamiento; causas?: { nombre: string; lang: string; texto: string }[] }) =>
   createPortal(
     <div className="sala-ganador pointer-events-none fixed inset-x-0 top-[30vh] z-30 flex justify-center" data-bando={ganador}>
       <div className="sala-ganador-franja flex w-full flex-col items-center gap-2 px-4 py-5">
@@ -23,6 +25,18 @@ const AnuncioGanador = ({ ganador }: { ganador: SalaAlineamiento }) =>
           {ganador === 'bueno' ? 'Gana el bando bueno' : 'Gana el bando malo'}
         </p>
         <span aria-hidden="true" className="sala-ganador-filo" />
+        {causas.length > 0 && (
+          <ul className="flex flex-col items-center gap-0.5 text-center font-body text-sm text-on-surface">
+            {causas.map((c) => (
+              <li key={c.nombre}>
+                <span lang={c.lang} className="font-semibold text-gold-bright">
+                  {c.nombre}
+                </span>
+                : {c.texto.charAt(0).toLocaleLowerCase('es') + c.texto.slice(1)}.
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>,
     document.body,

@@ -2,28 +2,40 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
+import { CAUSAS_FINAL } from './causasFinal';
 import { botonSecundario } from './estilos';
-import type { SalaAlineamiento, SalaResultado } from './useSala';
+import { identidadDe, useFichas } from './fichas';
+import Interruptor from './Interruptor';
+import type { SalaAlineamiento, SalaEstado, SalaResultado } from './useSala';
 
 interface DialogoRevelarProps {
+  estado: SalaEstado;
   pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
   onCerrar: () => void;
 }
 
 /**
- * Revelar el grimorio (final de la partida): primero, qué bando ha ganado. Al
- * elegirlo, todas las fichas se dan la vuelta y el narrador las va revelando.
+ * Revelar el grimorio (final de la partida): primero, qué bando ha ganado y, de
+ * los personajes en juego que pueden acabarla (o que conviene dejar dicho, ver
+ * CAUSAS_FINAL), lo que ha pasado. Al elegir el bando, todas las fichas se dan la
+ * vuelta y el narrador las va revelando; lo marcado se ve con el bando ganador.
  */
-const DialogoRevelar = ({ pedir, onCerrar }: DialogoRevelarProps) => {
+const DialogoRevelar = ({ estado, pedir, onCerrar }: DialogoRevelarProps) => {
+  const { todosPorId } = useFichas();
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [causas, setCausas] = useState<string[]>([]);
   const ariaLive = useAriaLive('errores');
+
+  // Los de la lista que están en juego: quien es de verdad cada uno (su «Is The …»)
+  const enJuego = new Set(estado.asientos.map((a) => identidadDe(a).personaje));
+  const posibles = CAUSAS_FINAL.filter((c) => enJuego.has(c.personaje));
 
   const elegir = async (ganador: SalaAlineamiento) => {
     if (enviando) return;
     setEnviando(true);
     setError('');
-    const r = await pedir('narrador:revelarGrimorio', { ganador });
+    const r = await pedir('narrador:revelarGrimorio', { ganador, causas });
     setEnviando(false);
     if (r.ok) onCerrar();
     else setError(r.error);
@@ -35,11 +47,39 @@ const DialogoRevelar = ({ pedir, onCerrar }: DialogoRevelarProps) => {
       <Dialog
         onClose={onCerrar}
         labelledBy="sala-revelar-titulo"
-        className="w-full max-w-md sala-cofre sala-cofre-esquinas p-6"
+        className="max-h-[92vh] w-full max-w-md overflow-y-auto sala-cofre sala-cofre-esquinas p-6"
       >
         <h2 id="sala-revelar-titulo" className="mb-2 sala-cofre-titulo">
           Revelar grimorio
         </h2>
+        {posibles.length > 0 && (
+          <fieldset className="mb-5 flex flex-col gap-3">
+            <legend className="mb-1 font-ui text-sm font-semibold text-theme-main">¿Qué ha pasado?</legend>
+            <p className="-mt-1 text-xs text-on-surface-muted">
+              Lo que marques se verá con el bando ganador, al terminar de revelar.
+            </p>
+            {posibles.map((c) => {
+              const p = todosPorId.get(c.personaje);
+              return (
+                <Interruptor
+                  key={c.personaje}
+                  activo={causas.includes(c.personaje)}
+                  onCambiar={(activo) =>
+                    setCausas((cs) => (activo ? [...cs, c.personaje] : cs.filter((x) => x !== c.personaje)))
+                  }
+                  arriba
+                  textoClassName="text-sm"
+                >
+                  <span lang={p?.nombre.lang} className="font-semibold">
+                    {p?.nombre.texto ?? c.personaje}
+                  </span>
+                  : {c.texto.charAt(0).toLocaleLowerCase('es') + c.texto.slice(1)}
+                  {!c.terminaPartida && <span className="text-on-surface-muted"> (no acaba la partida)</span>}
+                </Interruptor>
+              );
+            })}
+          </fieldset>
+        )}
         <p className="mb-4 text-sm text-on-surface-muted">
           ¿Qué bando ha ganado? Todas las fichas se darán la vuelta y las irás revelando una a una.
         </p>

@@ -40,7 +40,8 @@ const PROFILE_EDITABLE_FIELDS = [
   'email',
   'telegramUsername',
   'profilePicture',
-  'vigilanteAlerts'
+  'vigilanteAlerts',
+  'estadisticasPublicas'
 ] as const;
 
 export class UserService {
@@ -211,6 +212,9 @@ export class UserService {
     }
     if (editable.vigilanteAlerts !== undefined) {
       editable.vigilanteAlerts = editable.vigilanteAlerts === true;
+    }
+    if (editable.estadisticasPublicas !== undefined) {
+      editable.estadisticasPublicas = editable.estadisticasPublicas === true;
     }
 
     const updatedUser = {

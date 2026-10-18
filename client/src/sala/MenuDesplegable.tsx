@@ -16,6 +16,13 @@ export interface OpcionMenu {
   atajo?: Atajo;
   /** Para las que actúan directamente: devuelve si salió bien. */
   elegir: () => Promise<boolean> | void;
+  /**
+   * Lo que se verá (p. ej. la mano): la opción va en una rejilla de varias columnas
+   * con su dibujo, y el nombre solo para el lector y al pasar el ratón.
+   */
+  dibujo?: ReactNode;
+  /** Con dibujo: el rótulo de su rejilla («Manos», «Personajes»); las seguidas del mismo van juntas. */
+  grupo?: string;
 }
 
 interface MenuDesplegableProps {
@@ -37,6 +44,9 @@ interface MenuDesplegableProps {
   alinear?: 'izquierda' | 'derecha';
 }
 
+const casillaClass =
+  'sala-opcion flex aspect-square w-full items-center justify-center rounded p-1 aria-pressed:bg-theme-container aria-pressed:ring-2 aria-pressed:ring-gold-bright focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main aria-disabled:opacity-50';
+
 const opcionClass =
   'sala-opcion flex w-full items-center gap-2 text-left px-4 py-2 text-on-surface aria-pressed:text-gold-bright aria-disabled:text-on-surface-muted aria-disabled:hover:bg-none aria-disabled:hover:shadow-none';
 
@@ -45,6 +55,9 @@ const opcionClass =
  * como cualquier otro control y los lectores lo anuncian como
  * «contraído/expandido». Escape o salir con el foco lo cierran. Si no hay
  * opciones, no sale.
+ *
+ * Las opciones con dibujo van en rejillas, una por grupo (con su rótulo), en
+ * lugar de una fila de texto cada una: se ve lo que se elige.
  */
 const MenuDesplegable = ({
   id,
@@ -87,6 +100,17 @@ const MenuDesplegable = ({
   }, [abierto]);
 
   if (opciones.length === 0) return null;
+
+  // Las opciones en tramos: cada una sin dibujo, sola (una fila); las seguidas con dibujo
+  // y del mismo grupo, juntas en una rejilla.
+  const tramos: ({ opcion: OpcionMenu } | { grupo: string | undefined; opciones: OpcionMenu[] })[] = [];
+  for (const opcion of opciones) {
+    const ultimo = tramos[tramos.length - 1];
+    if (!opcion.dibujo) tramos.push({ opcion });
+    else if (ultimo && 'grupo' in ultimo && ultimo.grupo === opcion.grupo) ultimo.opciones.push(opcion);
+    else tramos.push({ grupo: opcion.grupo, opciones: [opcion] });
+  }
+  const conDibujos = tramos.some((t) => 'grupo' in t);
 
   const cerrar = () => {
     setAbierto(false);
@@ -131,28 +155,58 @@ const MenuDesplegable = ({
         ref={listaRef}
         id={id}
         hidden={!abierto}
-        className={`absolute ${alinear === 'derecha' ? 'right-0' : 'left-0'} top-full z-20 mt-2 min-w-full w-max sala-cofre py-1.5 data-[arriba=true]:bottom-full data-[arriba=true]:top-auto data-[arriba=true]:mb-2 data-[arriba=true]:mt-0`}
+        className={`absolute ${alinear === 'derecha' ? 'right-0' : 'left-0'} top-full z-20 mt-2 min-w-full w-max sala-cofre py-1.5 ${conDibujos ? 'max-h-[75vh] overflow-y-auto' : ''} data-[arriba=true]:bottom-full data-[arriba=true]:top-auto data-[arriba=true]:mb-2 data-[arriba=true]:mt-0`}
       >
-        {opciones.map((opcion) => (
-          <li key={opcion.id}>
-            <button
-              type="button"
-              aria-haspopup={opcion.abreDialogo ? 'dialog' : undefined}
-              aria-disabled={opcion.deshabilitada || undefined}
-              aria-pressed={opcion.marcada === undefined ? undefined : opcion.marcada}
-              onClick={() => elegir(opcion)}
-              className={opcionClass}
-            >
-              {opcion.marcada !== undefined && (
-                <span aria-hidden="true" className="inline-block w-3">
-                  {opcion.marcada ? '✓' : ''}
-                </span>
+        {tramos.map((tramo) =>
+          'grupo' in tramo ? (
+            <li key={`grupo-${tramo.opciones[0].id}`} className="px-3 py-1.5">
+              {tramo.grupo && (
+                <p id={`${id}-grupo-${tramo.opciones[0].id}`} className="mb-1 font-ui text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-on-surface-muted">
+                  {tramo.grupo}
+                </p>
               )}
-              {opcion.etiqueta}
-              {opcion.atajo && <TeclaAtajo atajo={opcion.atajo} ocultoALector className="ml-auto" />}
-            </button>
-          </li>
-        ))}
+              <ul
+                aria-labelledby={tramo.grupo ? `${id}-grupo-${tramo.opciones[0].id}` : undefined}
+                className="grid grid-cols-[repeat(5,3.25rem)] gap-1"
+              >
+                {tramo.opciones.map((opcion) => (
+                  <li key={opcion.id}>
+                    <button
+                      type="button"
+                      aria-label={opcion.etiqueta}
+                      title={opcion.etiqueta}
+                      aria-disabled={opcion.deshabilitada || undefined}
+                      aria-pressed={opcion.marcada === undefined ? undefined : opcion.marcada}
+                      onClick={() => elegir(opcion)}
+                      className={casillaClass}
+                    >
+                      {opcion.dibujo}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ) : (
+            <li key={tramo.opcion.id}>
+              <button
+                type="button"
+                aria-haspopup={tramo.opcion.abreDialogo ? 'dialog' : undefined}
+                aria-disabled={tramo.opcion.deshabilitada || undefined}
+                aria-pressed={tramo.opcion.marcada === undefined ? undefined : tramo.opcion.marcada}
+                onClick={() => elegir(tramo.opcion)}
+                className={opcionClass}
+              >
+                {tramo.opcion.marcada !== undefined && (
+                  <span aria-hidden="true" className="inline-block w-3">
+                    {tramo.opcion.marcada ? '✓' : ''}
+                  </span>
+                )}
+                {tramo.opcion.etiqueta}
+                {tramo.opcion.atajo && <TeclaAtajo atajo={tramo.opcion.atajo} ocultoALector className="ml-auto" />}
+              </button>
+            </li>
+          ),
+        )}
       </ul>
     </div>
   );

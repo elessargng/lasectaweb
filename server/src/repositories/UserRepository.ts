@@ -15,6 +15,7 @@ export class UserRepository {
       ...row,
       isConfirmed: row.isConfirmed === 1,
       vigilanteAlerts: row.vigilanteAlerts === 1,
+      estadisticasPublicas: row.estadisticasPublicas === 1,
       confirmationTokenExpires: row.confirmationTokenExpires ? new Date(row.confirmationTokenExpires) : undefined,
       passwordResetTokenHash: row.passwordResetTokenHash ?? undefined,
       passwordResetExpires: row.passwordResetExpires ? new Date(row.passwordResetExpires) : undefined,
@@ -146,7 +147,8 @@ export class UserRepository {
          isConfirmed = ?,
          confirmationToken = ?,
          confirmationTokenExpires = ?,
-         vigilanteAlerts = ?
+         vigilanteAlerts = ?,
+         estadisticasPublicas = ?
        WHERE id = ?`,
       [
         user.username,
@@ -159,6 +161,7 @@ export class UserRepository {
         user.confirmationToken || null,
         user.confirmationTokenExpires ? user.confirmationTokenExpires.toISOString() : null,
         user.vigilanteAlerts ? 1 : 0,
+        user.estadisticasPublicas ? 1 : 0,
         user.id
       ]
     );

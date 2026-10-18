@@ -16,5 +16,7 @@ export interface User {
   roles: ('editor' | 'narrador' | 'admin')[];
   /** Quiere recibir por correo las incidencias que detecte el vigilante de La Plaza. */
   vigilanteAlerts?: boolean;
+  /** Deja que los demás vean sus estadísticas de la sala (por defecto, privadas). */
+  estadisticasPublicas?: boolean;
   createdAt: Date;
 }

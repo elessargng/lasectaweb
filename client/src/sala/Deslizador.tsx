@@ -1,5 +1,6 @@
 import { botonSecundario } from './estilos';
 import type { Rango } from './preferencias';
+import Interruptor from './Interruptor';
 
 /** Cómo se lee cada unidad. */
 const UNIDADES = { px: 'píxeles', '%': 'por ciento', s: 'segundos' };
@@ -42,19 +43,15 @@ const Deslizador = ({ id, etiqueta, valor, rango, onCambiar, unidad = 'px', ayud
         </label>
       )}
       {automatico && (
-        <div className="flex items-center gap-2">
-          <input
-            id={`${id}-auto`}
-            type="checkbox"
-            checked={auto}
-            onChange={(e) => automatico.onCambiar(e.target.checked)}
-            aria-describedby={`${id}-auto-ayuda`}
-            className="h-4 w-4 accent-theme-main"
-          />
-          <label htmlFor={`${id}-auto`} className="text-sm">
-            <span className="sr-only">{etiqueta}: </span>Automático
-          </label>
-        </div>
+        <Interruptor
+          id={`${id}-auto`}
+          activo={auto}
+          onCambiar={automatico.onCambiar}
+          describedBy={`${id}-auto-ayuda`}
+          textoClassName="text-sm"
+        >
+          <span className="sr-only">{etiqueta}: </span>Automático
+        </Interruptor>
       )}
       {automatico && (
         <p id={`${id}-auto-ayuda`} className="text-xs text-on-surface-muted">

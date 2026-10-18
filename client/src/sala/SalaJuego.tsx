@@ -33,6 +33,7 @@ import VentanaConversacion from './VentanaConversacion';
 import VentanaDespertar from './VentanaDespertar';
 import DespertarJugador from './DespertarJugador';
 import { describirMensaje, esEntendido, nombreDeAsiento } from './despertar';
+import { CAUSAS_FINAL } from './causasFinal';
 import PanelInvitaciones from './PanelInvitaciones';
 import ControlesVideo from './ControlesVideo';
 import type { ContactoParticipante } from './BotonesContacto';
@@ -244,6 +245,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     }
     if (revAhora?.terminada && !revAntes?.terminada) {
       avisos.push({ tipo: 'revelacion', texto: revAhora.ganador === 'bueno' ? 'Gana el bando bueno.' : 'Gana el bando malo.' });
+      // Y lo que ha pasado (ver causasFinal.ts), una frase por personaje
+      for (const id of revAhora.causas ?? []) {
+        const causa = CAUSAS_FINAL.find((c) => c.personaje === id);
+        const nombre = personajesGuionRef.current.get(id)?.nombre.texto ?? id;
+        if (causa) avisos.push({ tipo: 'revelacion', texto: `${nombre}: ${causa.texto.charAt(0).toLocaleLowerCase('es') + causa.texto.slice(1)}.` });
+      }
     }
 
     // El silencio del narrador (Bibliotecario del Infierno): a los jugadores, al momento
@@ -1812,7 +1819,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             noLeidos={noLeidos}
             onActivar={activarDespertar}
             onCerrar={cerrarDespertar}
-            personajes={personajesGuion}
+            // También los viajeros del catálogo (no solo los del guion): «Tú eres» a un viajero
+            personajes={[...personajesGuion, ...viajerosCatalogo.filter((v) => !personajesGuion.some((p) => p.id === v.id))]}
             porId={personajesGuionPorId}
             pedir={pedirPropio}
             onError={setAviso}

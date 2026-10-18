@@ -18,6 +18,8 @@ import AvisoLegal from './pages/AvisoLegal';
 import Privacidad from './pages/Privacidad';
 import CookiesPage from './pages/Cookies';
 import Biblioteca from './pages/Biblioteca';
+import Estadisticas from './pages/Estadisticas';
+import PerfilJugador from './pages/PerfilJugador';
 
 function App() {
   return (
@@ -35,6 +37,9 @@ function App() {
           <Route path="rituales" element={<Rituales />} />
           <Route path="redes" element={<Redes />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="estadisticas" element={<Estadisticas />} />
+          <Route path="estadisticas/:userId" element={<Estadisticas />} />
+          <Route path="perfil/:userId" element={<PerfilJugador />} />
           <Route path="confirmar" element={<Confirmar />} />
           <Route path="restablecer" element={<Restablecer />} />
           <Route path="gestion" element={<Gestion />} />

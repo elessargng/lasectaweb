@@ -32,6 +32,9 @@ import { ID_AYUDA_MOVER, idLunaFicha, idNombreAsiento, ID_GANADOR, idRevelarFich
 import { nombreDeAsiento } from './despertar';
 import { tamanoAvatarAuto, tamanoFichaAuto } from './tamanosAutomaticos';
 import { useMoverAsientos } from './useMoverAsientos';
+import { useIntercambiarFichas } from './useIntercambiarFichas';
+import { CAUSAS_FINAL } from './causasFinal';
+import DialogoIntercambio from './DialogoIntercambio';
 import { useNominacion } from './useNominacion';
 import type { SalaEstado, SalaParticipante, SalaRecordatorio, SalaResultado } from './useSala';
 
@@ -340,6 +343,17 @@ const Mesa = ({
   const nominar = useNominacion({ estado, pedir, onError, onAnuncio: (m) => onAnuncio('nominaciones', m) });
   // Asientos (desde 0) de quien nomina y del nominado, para las agujas.
   const { nominacion, revelacion } = estado;
+  // Con el Gardener: arrastrar una ficha sobre otra (o «Intercambiar con…») intercambia sus personajes
+  const puedeIntercambiar =
+    acciones.includes('narrador:intercambiarFichas') && modoFichas === 'narrador' && !editando && !revelacion;
+  const [intercambiando, setIntercambiando] = useState<string | null>(null);
+  const intercambio = useIntercambiarFichas({
+    activo: puedeIntercambiar,
+    pedir,
+    onError,
+    onHecho: (desde, hasta) =>
+      onAnuncio('bolsa', `Fichas intercambiadas: ${nombreDeAsiento(estado, desde)} y ${nombreDeAsiento(estado, hasta)}.`),
+  });
   // Revelando el grimorio (narradores): pulsar una ficha la revela a todos; «Terminar» revela las que quedan
   const puedeRevelar = acciones.includes('narrador:revelarFicha');
   // La ficha revelada deja de ser un botón: el foco va a la siguiente boca abajo (en
@@ -546,9 +560,15 @@ const Mesa = ({
                   className="pointer-events-none absolute inset-0 z-10 hover:z-20 focus-within:z-20 has-[[aria-expanded=true]]:z-40"
                 >
                   <div
+                    {...intercambio.propsFicha(a.id)}
                     aria-hidden={soloSeVe || undefined}
-                    // La ficha con el menú abierto, por encima de las demás (si no, su menú quedaría debajo)
-                    className={`absolute -translate-x-1/2 -translate-y-1/2 has-[[aria-expanded=true]]:z-50 ${soloSeVe ? '' : 'pointer-events-auto'}`}
+                    // La ficha con el menú abierto, por encima de las demás (si no, su menú quedaría debajo).
+                    // Arrastrándola (Gardener), se queda en tenue; aquella sobre la que se soltaría, resaltada.
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full has-[[aria-expanded=true]]:z-50 ${soloSeVe ? '' : 'pointer-events-auto'} ${
+                      puedeIntercambiar ? 'touch-none' : ''
+                    } ${intercambio.arrastre?.desde === a.id ? 'opacity-40' : ''} ${
+                      intercambio.arrastre?.hasta === a.id ? 'ring-4 ring-gold-bright ring-offset-2 ring-offset-background' : ''
+                    }`}
                     style={posicionFicha(i, total)}
                   >
                     <FichaAsiento
@@ -570,6 +590,7 @@ const Mesa = ({
                       // Los de la mitad derecha de la mesa, a la derecha; los demás, a la izquierda
                       ladoVela={Math.sin((2 * Math.PI * i) / total) > 0.01 ? 'derecha' : 'izquierda'}
                       onEscribirNota={escriboNotas && !editando ? () => setNotasAbiertas({ asientoId: a.id, nueva: true }) : undefined}
+                      onIntercambiar={puedeIntercambiar ? () => setIntercambiando(a.id) : undefined}
                       revelando={
                         revelacion
                           ? {
@@ -660,10 +681,48 @@ const Mesa = ({
         </div>
       )}
 
+      {intercambio.arrastre && (
+        // La ficha que se arrastra (Gardener), siguiendo al puntero (solo visual)
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 opacity-90 drop-shadow-[0_6px_10px_rgba(0,0,0,0.7)]"
+          style={{ left: intercambio.arrastre.x, top: intercambio.arrastre.y }}
+        >
+          {(() => {
+            const a = asientos.find((x) => x.id === intercambio.arrastre!.desde);
+            const p = a?.personaje ? todosPorId.get(a.personaje) : undefined;
+            return <FichaRedonda>{p && <PersonajeEnFicha personaje={p} alineamiento={a!.alineamiento} />}</FichaRedonda>;
+          })()}
+        </div>
+      )}
+      {intercambiando && (
+        <DialogoIntercambio
+          ficha={nombreDeAsiento(estado, intercambiando)}
+          otras={asientos
+            .filter((a) => a.id !== intercambiando)
+            .map((a) => ({
+              asientoId: a.id,
+              nombre: describirAsiento(asientos.indexOf(a) + 1, participante(a.ocupante)),
+              personaje: a.personaje ? todosPorId.get(a.personaje) : undefined,
+            }))}
+          onElegir={(hasta) => void intercambio.intercambiar(intercambiando, hasta)}
+          onCerrar={() => setIntercambiando(null)}
+        />
+      )}
+
       <Ondas ondas={ondas} total={total} />
 
       {/* Todas reveladas: el bando ganador, en grande (se anuncia aparte) */}
-      {revelacion?.terminada && <AnuncioGanador ganador={revelacion.ganador} />}
+      {revelacion?.terminada && (
+        <AnuncioGanador
+          ganador={revelacion.ganador}
+          causas={(revelacion.causas ?? []).flatMap((id) => {
+            const causa = CAUSAS_FINAL.find((c) => c.personaje === id);
+            const p = todosPorId.get(id);
+            return causa ? [{ nombre: p?.nombre.texto ?? id, lang: p?.nombre.lang ?? 'en', texto: causa.texto }] : [];
+          })}
+        />
+      )}
 
       {/* El grimorio que me ha enviado el narrador (Espía, Viuda): en la esquina de la mesa, para volver a verlo */}
       {recibido && (

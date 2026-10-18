@@ -123,7 +123,7 @@ const MenuNarrador = ({ estado, pedir, onAsientos, revelando, onRevelando, atajo
           onCerrar={() => setEligiendo(null)}
         />
       )}
-      {revelando && <DialogoRevelar pedir={pedir} onCerrar={() => onRevelando(false)} />}
+      {revelando && <DialogoRevelar estado={estado} pedir={pedir} onCerrar={() => onRevelando(false)} />}
       {limpiando && (
         <DialogoConfirmar
           titulo="Limpiar grimorio"

@@ -71,6 +71,8 @@ interface FichaAsientoProps {
   probables?: Set<string>;
   /** Abre las notas del asiento con una nueva («Escribir nota»); sin esto, no sale. */
   onEscribirNota?: () => void;
+  /** Con el Gardener (narradores): elegir otra ficha con la que intercambiar el personaje; sin esto, no sale. */
+  onIntercambiar?: () => void;
 }
 
 const NOMBRE_ALINEAMIENTO: Record<SalaAlineamiento, string> = { bueno: 'bueno', malvado: 'malvado' };
@@ -113,6 +115,7 @@ const FichaAsiento = ({
   ladoVela,
   probables,
   onEscribirNota,
+  onIntercambiar,
 }: FichaAsientoProps) => {
   const { hayGuion, personajes, viajeros, porId, notas, anotar, todos, todosPorId, notasRecordatorios, anotarRecordatorios } = useFichas();
   const [eligiendoPersonaje, setEligiendoPersonaje] = useState(false);
@@ -408,6 +411,8 @@ const FichaAsiento = ({
             ? { id: 'nominar', etiqueta: 'Nominar a…', elegir: onNominar }
             : { id: 'nominar', etiqueta: 'Nominar a…', deshabilitada: true, elegir: () => {} },
           ...(hayGuion ? [cambiarFicha] : []),
+          // Con el Gardener: lo mismo que arrastrarla sobre otra
+          ...(onIntercambiar ? [{ id: 'intercambiar', etiqueta: 'Intercambiar con…', abreDialogo: true, elegir: onIntercambiar }] : []),
           ...opcionesAlineamiento,
           // Sin guion, el recordatorio solo puede ser de texto propio
           opcionRecordatorio,

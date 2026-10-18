@@ -1,3 +1,4 @@
+import PulpitoNovato from './PulpitoNovato';
 import { Ear } from 'lucide-react';
 import { IconoGente, IconoLibroSecreto } from './IconosJuego';
 import { useEffect, useRef, useState } from 'react';
@@ -117,16 +118,31 @@ const ListaParticipantes = ({ participantes, yo, escuchando }: ListaParticipante
                         </span>
                         <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
                           {escuchando.has(p.id) && <Ear size={14} className="shrink-0 text-gold" />}
-                          {/* Tu nombre, en latón (el lector oye «(tú)») */}
-                          <span
-                            className={`min-w-0 truncate ${
-                              !p.conectado ? 'text-on-surface-muted' : p.id === yo ? 'font-semibold text-gold-bright' : 'text-on-surface-bright'
-                            }`}
-                          >
-                            {p.nombre}
-                            {p.id === yo && <span className="sr-only"> (tú)</span>}
-                          </span>
+                          {/* Tu nombre, en latón (el lector oye «(tú)»). Con cuenta, abre su perfil en otra pestaña */}
+                          {(() => {
+                            const color = !p.conectado ? 'text-on-surface-muted' : p.id === yo ? 'font-semibold text-gold-bright' : 'text-on-surface-bright';
+                            const nombre = (
+                              <>
+                                {p.nombre}
+                                {p.id === yo && <span className="sr-only"> (tú)</span>}
+                              </>
+                            );
+                            return p.usuarioId ? (
+                              <a
+                                href={`/perfil/${encodeURIComponent(p.usuarioId)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`min-w-0 truncate rounded underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${color}`}
+                              >
+                                {nombre}
+                                <span className="sr-only"> (abre su perfil en una pestaña nueva)</span>
+                              </a>
+                            ) : (
+                              <span className={`min-w-0 truncate ${color}`}>{nombre}</span>
+                            );
+                          })()}
                           {/* Distintivos: a la vista, una pastilla; para el lector, «(invitado)»… */}
+                          {p.novato && <PulpitoNovato className="h-4 w-4" />}
                           {!p.conCuenta && <Distintivo>invitado</Distintivo>}
                           {!p.conectado && <Distintivo tono="apagado">desconectado</Distintivo>}
                           {escuchando.has(p.id) && <span className="sr-only"> (escuchando una conversación)</span>}

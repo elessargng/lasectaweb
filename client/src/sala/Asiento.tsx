@@ -1,3 +1,4 @@
+import PulpitoNovato from './PulpitoNovato';
 import { Link, MicOff, VolumeX } from 'lucide-react';
 import { IconoConversar } from './IconosJuego';
 import type { VideoTrack } from 'livekit-client';
@@ -185,6 +186,7 @@ const Asiento = ({
                     {ocupante.nombre}
                   </span>
                   {esYo && <span className="sr-only"> (tú)</span>}
+                  {ocupante.novato && <PulpitoNovato />}
                   {ocupante.sinSonido && (
                     // Ha quitado el sonido: no oye a la mesa
                     <>

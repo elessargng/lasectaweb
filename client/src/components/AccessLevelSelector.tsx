@@ -1,5 +1,6 @@
 import { Globe, Lock, Shield } from 'lucide-react';
 import { LIBRARY_ASSIGNABLE_ROLES, type LibraryAccessLevel } from '../utils/libraryApi';
+import Interruptor from '../sala/Interruptor';
 
 interface AccessLevelSelectorProps {
   accessLevel: LibraryAccessLevel;
@@ -65,15 +66,14 @@ export default function AccessLevelSelector({
           <span className="text-xs font-medium text-purple-200">Selecciona los roles con acceso:</span>
           <div className="flex items-center gap-4 flex-wrap">
             {LIBRARY_ASSIGNABLE_ROLES.map(role => (
-              <label key={role} className="inline-flex items-center gap-2 text-xs text-on-surface cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={allowedRoles.includes(role)}
-                  onChange={e => toggleRole(role, e.target.checked)}
-                  className="rounded bg-surface-container border-outline-ghost text-purple-500 focus:ring-purple-500/40"
-                />
-                <span className="capitalize">{role}</span>
-              </label>
+              <Interruptor
+                key={role}
+                activo={allowedRoles.includes(role)}
+                onCambiar={activo => toggleRole(role, activo)}
+                textoClassName="text-xs text-on-surface capitalize"
+              >
+                {role}
+              </Interruptor>
             ))}
           </div>
         </div>

@@ -21,6 +21,8 @@ interface User {
   roles: string[];
   /** Recibe por correo los avisos del vigilante de La Plaza. */
   vigilanteAlerts?: boolean;
+  /** Los demás pueden ver sus estadísticas de la sala. */
+  estadisticasPublicas?: boolean;
 }
 
 interface AuthContextType {

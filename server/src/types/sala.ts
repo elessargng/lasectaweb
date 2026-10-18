@@ -9,7 +9,17 @@ export type SalaRol = 'narrador' | 'jugador' | 'visitante';
  * (la mano es su icono).
  */
 export type SalaFormaMano = string;
-export const SALA_FORMAS_MANO: SalaFormaMano[] = ['palma', 'tijera', 'puno', 'peineta', 'paz', 'cuernos', 'lagarto', 'spock', 'perrito'];
+/** Partidas jugadas (terminadas en la sala) por debajo de las que se es novato. */
+export const SALA_PARTIDAS_NOVATO = 10;
+
+export const SALA_FORMAS_MANO: SalaFormaMano[] = [
+  'palma', 'tijera', 'puno', 'peineta', 'paz', 'cuernos', 'lagarto', 'spock', 'perrito',
+  // Emoticonos (el cliente sabe qué emoji es cada uno: formasMano.ts)
+  ...['sonrisa', 'risa', 'guino', 'enamorado', 'beso', 'gafas', 'pensando', 'sospecha', 'silencio', 'susto',
+    'llanto', 'enfado', 'diablo', 'angel', 'sueno', 'fiesta', 'labios', 'corazon', 'rosa', 'girasol',
+    'ramo', 'pulgar-arriba', 'pulgar-abajo', 'aplausos', 'por-favor', 'palomitas', 'calavera', 'fantasma',
+    'fuego', 'ojos'].map((e) => `emoji-${e}`),
+];
 
 export interface SalaParticipante {
   /** Identificador dentro de la sala (no es el id de usuario de la web). */
@@ -17,6 +27,10 @@ export interface SalaParticipante {
   nombre: string;
   /** Entró con su cuenta de la web (si no, es invitado). */
   conCuenta: boolean;
+  /** Con cuenta, su id de usuario de la web (para enlazar a su perfil); invitado, null. */
+  usuarioId: string | null;
+  /** Con cuenta, ha jugado menos de SALA_PARTIDAS_NOVATO partidas (lleva el pulpito junto al nombre). */
+  novato: boolean;
   /** Ruta del avatar de su cuenta; null para los invitados. */
   avatar: string | null;
   rol: SalaRol;
@@ -115,10 +129,14 @@ export interface SalaFichaEnviada {
   recordatorios: SalaRecordatorio[];
 }
 
-/** Un grimorio enviado (el último) a un asiento: cuándo y sus fichas, en el orden de la mesa. */
+/**
+ * Un grimorio enviado (el último) a un asiento: cuándo, sus fichas (en el orden de
+ * la mesa) y los faroles del demonio (ids de personaje, hasta NUM_FAROLES).
+ */
 export interface SalaGrimorioEnviado {
   hora: number;
   fichas: SalaFichaEnviada[];
+  faroles: string[];
 }
 
 /** Una nota del narrador sobre un asiento: texto libre. */
@@ -166,8 +184,20 @@ export type SalaAlineamiento = 'bueno' | 'malvado';
  * se dan la vuelta y él las va revelando una a una (todos ven el personaje de
  * las reveladas). Con todas reveladas, se anuncia el ganador.
  */
+/**
+ * Los personajes cuya habilidad puede acabar la partida (o que conviene dejar
+ * dicho al final, como el Encantador de serpientes que pica al demonio): al
+ * revelar, el narrador marca lo que ha pasado con los que están en juego. Los
+ * textos los pone el cliente (causasFinal.ts); para añadir uno, en los dos sitios.
+ */
+export const CAUSAS_FIN_PARTIDA = [
+  'slayer', 'mayor', 'alsaahir', 'goblin', 'saint', 'mastermind', 'snakecharmer', 'klutz', 'eviltwin', 'fanggu', 'vortox',
+];
+
 export interface SalaRevelacion {
   ganador: SalaAlineamiento;
+  /** Lo que ha pasado (ids de CAUSAS_FIN_PARTIDA, de personajes en juego), por orden. */
+  causas: string[];
   /** Asientos cuya ficha ya se ha revelado, en orden. */
   reveladas: string[];
   /** Están todas reveladas. */

@@ -3,6 +3,7 @@ import FondoSala, { type CambioFondo } from './FondoSala';
 import type { SalaMensajesPrivados } from './chat';
 import type { SalaConfiguracion, SalaResultado } from './useSala';
 import { campo } from './estilos';
+import Interruptor from './Interruptor';
 
 /** Lo que tarda la aguja de ficha en ficha al votar; el servidor tiene los mismos límites. */
 const SEGUNDOS_POR_FICHA = { min: 0.25, max: 2, paso: 0.25, defecto: 1 };
@@ -22,19 +23,15 @@ interface PanelPartidaProps {
 const PanelPartida = ({ configuracion, onCambiar, onCambiarFondo }: PanelPartidaProps) => (
   <div className="flex flex-col gap-6">
     <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2">
-        <input
-          id="sala-pref-grimorio"
-          type="checkbox"
-          checked={configuracion.grimorioJugadores}
-          onChange={(e) => onCambiar({ grimorioJugadores: e.target.checked })}
-          aria-describedby="sala-pref-grimorio-ayuda"
-          className="h-4 w-4 accent-theme-main"
-        />
-        <label htmlFor="sala-pref-grimorio" className="text-sm">
-          Grimorio para los jugadores
-        </label>
-      </div>
+      <Interruptor
+        id="sala-pref-grimorio"
+        activo={configuracion.grimorioJugadores}
+        onCambiar={(grimorioJugadores) => onCambiar({ grimorioJugadores })}
+        describedBy="sala-pref-grimorio-ayuda"
+        textoClassName="text-sm"
+      >
+        Grimorio para los jugadores
+      </Interruptor>
       <p id="sala-pref-grimorio-ayuda" className="text-xs text-on-surface-muted">
         Activado, cada jugador puede cambiar las fichas en su propio grimorio, como el narrador. Si no, ve su ficha con su
         rol y las demás vacías.

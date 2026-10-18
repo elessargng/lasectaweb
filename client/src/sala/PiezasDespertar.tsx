@@ -45,7 +45,8 @@ const PersonajeVisto = ({
   alineamiento?: SalaAlineamiento | null;
   grande?: boolean;
 }) => {
-  const icono = iconoDe(personaje, alineamiento);
+  // Sin alineamiento (no se le dice), el icono de por defecto: el de su bando lo diría
+  const icono = alineamiento ? iconoDe(personaje, alineamiento) : (personaje.icono ?? iconoDe(personaje, null));
   return (
     <span className="inline-flex flex-col items-center gap-1 text-center">
       {icono ? (
@@ -321,7 +322,7 @@ const EditorAdjunto = ({ pendiente, asientos, personajes, onEnviar, onCancelar }
                   onChange={() => setBando(a)}
                   className="accent-[var(--color-theme-main)]"
                 />
-                {a ? NOMBRE_BANDO[a] : 'Sin decir'}
+                {a ? NOMBRE_BANDO[a] : 'No decir el alineamiento'}
               </label>
             ))}
           </fieldset>
