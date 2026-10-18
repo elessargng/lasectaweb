@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><defs><radialGradient id="guante-tela" cx="104" cy="88" r="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#f3f1f6"/><stop offset="1" stop-color="#c9c3d4"/>
+    </radialGradient></defs><g transform="rotate(90 128 128) translate(256 0) scale(-1 1)">
+  <g><line x1="95" y1="134" x2="92.4" y2="46" stroke="#14100c" stroke-width="49" stroke-linecap="round"/><line x1="128" y1="126" x2="128" y2="28" stroke="#14100c" stroke-width="49" stroke-linecap="round"/><line x1="161" y1="134" x2="163.6" y2="46" stroke="#14100c" stroke-width="49" stroke-linecap="round"/><path d="M128,100 C178,100 194,128 192,160 C190,196 168,212 128,212 C88,212 66,196 64,160 C62,128 78,100 128,100 Z" fill="#14100c" stroke="#14100c" stroke-width="9" stroke-linejoin="round"/><line x1="86" y1="172" x2="56.4" y2="115" stroke="#14100c" stroke-width="51" stroke-linecap="round"/><path d="M88,198 C112,206 144,206 168,198 L192,240 C194,249 188,253 177,253 L79,253 C68,253 62,249 64,240 Z" fill="#14100c" stroke="#14100c" stroke-width="9" stroke-linejoin="round"/></g>
+  <g><line x1="95" y1="134" x2="92.4" y2="46" stroke="url(#guante-tela)" stroke-width="40" stroke-linecap="round"/><line x1="128" y1="126" x2="128" y2="28" stroke="url(#guante-tela)" stroke-width="40" stroke-linecap="round"/><line x1="161" y1="134" x2="163.6" y2="46" stroke="url(#guante-tela)" stroke-width="40" stroke-linecap="round"/><path d="M128,100 C178,100 194,128 192,160 C190,196 168,212 128,212 C88,212 66,196 64,160 C62,128 78,100 128,100 Z" fill="url(#guante-tela)" stroke="url(#guante-tela)" stroke-width="0" stroke-linejoin="round"/><line x1="86" y1="172" x2="56.4" y2="115" stroke="url(#guante-tela)" stroke-width="42" stroke-linecap="round"/><path d="M88,198 C112,206 144,206 168,198 L192,240 C194,249 188,253 177,253 L79,253 C68,253 62,249 64,240 Z" fill="url(#guante-tela)" stroke="url(#guante-tela)" stroke-width="0" stroke-linejoin="round"/></g>
+  
+  <g fill="none" stroke="#14100c" stroke-width="7" stroke-linecap="round">
+    <path d="M106,136 C101,151 101,166 106,180"/>
+    <path d="M128,132 L128,184"/>
+    <path d="M150,136 C155,151 155,166 150,180"/>
+  </g>
+  <path d="M86,118 C96,109 110,106 122,107" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity=".95"/></g></svg>

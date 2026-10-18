@@ -13,7 +13,7 @@ export type SalaFormaMano = string;
 export const SALA_PARTIDAS_NOVATO = 10;
 
 export const SALA_FORMAS_MANO: SalaFormaMano[] = [
-  'palma', 'tijera', 'puno', 'peineta', 'paz', 'cuernos', 'lagarto', 'spock', 'perrito',
+  'palma', 'tijera', 'puno', 'peineta', 'paz', 'cuernos', 'lagarto', 'spock',
   // Emoticonos (el cliente sabe qué emoji es cada uno: formasMano.ts)
   ...['sonrisa', 'risa', 'guino', 'enamorado', 'beso', 'gafas', 'pensando', 'sospecha', 'silencio', 'susto',
     'llanto', 'enfado', 'diablo', 'angel', 'sueno', 'fiesta', 'labios', 'corazon', 'rosa', 'girasol',

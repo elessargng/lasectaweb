@@ -9,7 +9,6 @@ import {
   MANO_PALMA,
   MANO_PAZ,
   MANO_PEINETA,
-  MANO_PERRITO,
   MANO_PUNO,
   MANO_SPOCK,
   MANO_TIJERA,
@@ -29,7 +28,6 @@ const FORMAS: Record<string, TrazoCaja> = {
   cuernos: MANO_CUERNOS,
   lagarto: MANO_LAGARTO,
   spock: MANO_SPOCK,
-  perrito: MANO_PERRITO,
 };
 
 /** Lleva el trazo de su caja a la de 256 × 256, centrado: la escala y cómo colocarlo. */
@@ -39,20 +37,23 @@ function encajar({ ancho, alto }: TrazoCaja) {
 }
 
 /**
- * La mano abierta de los estilos con dibujo propio (Preferencias > Interfaz): la de
- * cinco dedos (la mano levantada de Microsoft Fluent Emoji, en 3D; licencia MIT) y el
- * guante blanco de los dibujos animados. Las demás formas se ven con su trazo.
+ * Los estilos con dibujo propio (Preferencias > Interfaz), un dibujo por gesto en
+ * public/manos/<estilo>/<forma>: la de cinco dedos (Microsoft Fluent Emoji, en 3D;
+ * licencia MIT), el guante blanco de los dibujos animados, la mano esquelética y
+ * el guantelete dorado de las seis gemas (estos tres, de client/scripts/generar-manos.cjs).
  */
-const PALMA_DE: Partial<Record<EstiloMano, string>> = {
-  cinco: '/manos/cinco-dedos.png',
-  guante: '/manos/guante.svg',
+const DIBUJO_DE: Partial<Record<EstiloMano, (forma: string) => string>> = {
+  cinco: (forma) => `/manos/cinco/${forma}.png`,
+  guante: (forma) => `/manos/guante/${forma}.svg`,
+  esqueleto: (forma) => `/manos/esqueleto/${forma}.svg`,
+  guantelete: (forma) => `/manos/guantelete/${forma}.svg`,
 };
 
 /**
  * Una mano levantada, en el estilo que haya elegido cada uno (Preferencias >
  * Interfaz) o en el que se le pase: amarilla (como las de los Simpson), de cinco
- * dedos o el guante; en los dos últimos cambia la mano abierta, que es la que se
- * levanta para votar. Un personaje o un emoticono se ven igual en todos. Solo
+ * dedos, el guante o esquelética, cada gesto con su dibujo. Un personaje o un
+ * emoticono se ven igual en todos. Solo
  * visual: quien la usa dice para el lector de quién es y qué forma tiene.
  */
 const Mano = ({ forma, estilo, className = '' }: { forma: FormaMano; estilo?: EstiloMano; className?: string }) => {
@@ -78,12 +79,12 @@ const Mano = ({ forma, estilo, className = '' }: { forma: FormaMano; estilo?: Es
     );
   }
 
-  // La mano abierta de los estilos con dibujo propio
-  const palma = (FORMAS[forma] ? forma : 'palma') === 'palma' ? PALMA_DE[elegido] : undefined;
-  if (palma) {
+  // Los estilos con dibujo propio: el de ese gesto (una forma que ya no existe, la palma)
+  const dibujo = DIBUJO_DE[elegido]?.(FORMAS[forma] ? forma : 'palma');
+  if (dibujo) {
     return (
       <svg viewBox="0 0 256 256" aria-hidden="true" focusable="false" className={className}>
-        <image href={palma} x="0" y="0" width="256" height="256" preserveAspectRatio="xMidYMid meet" />
+        <image href={dibujo} x="0" y="0" width="256" height="256" preserveAspectRatio="xMidYMid meet" />
       </svg>
     );
   }

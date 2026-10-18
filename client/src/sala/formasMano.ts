@@ -16,7 +16,6 @@ export const FORMAS_MANO: { forma: FormaMano; nombre: string }[] = [
   { forma: 'cuernos', nombre: 'Cuernos heavy metal' },
   { forma: 'lagarto', nombre: 'Lagarto' },
   { forma: 'spock', nombre: 'Spock' },
-  { forma: 'perrito', nombre: 'Perrito' },
 ];
 
 /**

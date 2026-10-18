@@ -23,6 +23,8 @@ export const ESTILOS_MANO = [
   { id: 'laton', nombre: 'Amarilla', descripcion: 'Como las de los Simpson' },
   { id: 'cinco', nombre: 'Cinco dedos', descripcion: 'Una mano abierta de verdad, en 3D' },
   { id: 'guante', nombre: 'Guante', descripcion: 'El guante blanco de los dibujos animados' },
+  { id: 'esqueleto', nombre: 'Esquelética', descripcion: 'Hueso a hueso' },
+  { id: 'guantelete', nombre: 'Guantelete', descripcion: 'Dorado, con sus seis gemas' },
   { id: 'azar', nombre: 'Al azar', descripcion: 'Una distinta en cada partida' },
 ] as const;
 export type PreferenciaMano = (typeof ESTILOS_MANO)[number]['id'];

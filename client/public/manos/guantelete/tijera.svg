@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><defs><linearGradient id="oro" x1="40" y1="20" x2="210" y2="250" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff3b8"/><stop offset=".35" stop-color="#f0c457"/><stop offset=".7" stop-color="#c88a22"/><stop offset="1" stop-color="#8a5a12"/>
+    </linearGradient></defs>
+    <line x1="87" y1="132" x2="82.6" y2="98.3" stroke-linecap="round" stroke="#2a1a05" stroke-width="32"/><line x1="87" y1="132" x2="82.6" y2="98.3" stroke-linecap="round" stroke="url(#oro)" stroke-width="25"/><line x1="87" y1="132" x2="82.6" y2="98.3" stroke-linecap="round" stroke="#fff6d0" stroke-width="4" opacity=".55" transform="translate(-5.5 0)"/><line x1="82.6" y1="98.3" x2="79.2" y2="76.6" stroke-linecap="round" stroke="#2a1a05" stroke-width="29.5"/><line x1="82.6" y1="98.3" x2="79.2" y2="76.6" stroke-linecap="round" stroke="url(#oro)" stroke-width="22.5"/><line x1="82.6" y1="98.3" x2="79.2" y2="76.6" stroke-linecap="round" stroke="#fff6d0" stroke-width="3.6" opacity=".55" transform="translate(-4.9 0)"/><line x1="79.2" y1="76.6" x2="76.5" y2="59.8" stroke-linecap="round" stroke="#2a1a05" stroke-width="27"/><line x1="79.2" y1="76.6" x2="76.5" y2="59.8" stroke-linecap="round" stroke="url(#oro)" stroke-width="20"/><line x1="79.2" y1="76.6" x2="76.5" y2="59.8" stroke-linecap="round" stroke="#fff6d0" stroke-width="3.2" opacity=".55" transform="translate(-4.4 0)"/><line x1="114" y1="122" x2="118.8" y2="85.4" stroke-linecap="round" stroke="#2a1a05" stroke-width="33"/><line x1="114" y1="122" x2="118.8" y2="85.4" stroke-linecap="round" stroke="url(#oro)" stroke-width="26"/><line x1="114" y1="122" x2="118.8" y2="85.4" stroke-linecap="round" stroke="#fff6d0" stroke-width="4.2" opacity=".55" transform="translate(-5.7 0)"/><line x1="118.8" y1="85.4" x2="122.6" y2="61.7" stroke-linecap="round" stroke="#2a1a05" stroke-width="30.5"/><line x1="118.8" y1="85.4" x2="122.6" y2="61.7" stroke-linecap="round" stroke="url(#oro)" stroke-width="23.5"/><line x1="118.8" y1="85.4" x2="122.6" y2="61.7" stroke-linecap="round" stroke="#fff6d0" stroke-width="3.8" opacity=".55" transform="translate(-5.2 0)"/><line x1="122.6" y1="61.7" x2="125.4" y2="43.9" stroke-linecap="round" stroke="#2a1a05" stroke-width="28"/><line x1="122.6" y1="61.7" x2="125.4" y2="43.9" stroke-linecap="round" stroke="url(#oro)" stroke-width="21"/><line x1="122.6" y1="61.7" x2="125.4" y2="43.9" stroke-linecap="round" stroke="#fff6d0" stroke-width="3.4" opacity=".55" transform="translate(-4.6 0)"/><line x1="142" y1="122" x2="142" y2="106" stroke-linecap="round" stroke="#2a1a05" stroke-width="32"/><line x1="142" y1="122" x2="142" y2="106" stroke-linecap="round" stroke="url(#oro)" stroke-width="25"/><line x1="142" y1="122" x2="142" y2="106" stroke-linecap="round" stroke="#fff6d0" stroke-width="4" opacity=".55" transform="translate(-5.5 0)"/><line x1="142" y1="108" x2="144.5" y2="117.7" stroke-linecap="round" stroke="#2a1a05" stroke-width="29"/><line x1="142" y1="108" x2="144.5" y2="117.7" stroke-linecap="round" stroke="url(#oro)" stroke-width="22"/><line x1="142" y1="108" x2="144.5" y2="117.7" stroke-linecap="round" stroke="#fff6d0" stroke-width="3.5" opacity=".55" transform="translate(-4.8 0)"/><line x1="168" y1="134" x2="168" y2="118" stroke-linecap="round" stroke="#2a1a05" stroke-width="29"/><line x1="168" y1="134" x2="168" y2="118" stroke-linecap="round" stroke="url(#oro)" stroke-width="22"/><line x1="168" y1="134" x2="168" y2="118" stroke-linecap="round" stroke="#fff6d0" stroke-width="3.5" opacity=".55" transform="translate(-4.8 0)"/><line x1="168" y1="120" x2="170.5" y2="129.7" stroke-linecap="round" stroke="#2a1a05" stroke-width="26"/><line x1="168" y1="120" x2="170.5" y2="129.7" stroke-linecap="round" stroke="url(#oro)" stroke-width="19"/><line x1="168" y1="120" x2="170.5" y2="129.7" stroke-linecap="round" stroke="#fff6d0" stroke-width="3" opacity=".55" transform="translate(-4.2 0)"/>
+    <!-- El dorso: una placa con nervios que van a la gema grande -->
+    <path d="M78,128 C78,106 104,102 128,102 C152,102 180,106 180,130 L177,192 C176,210 158,216 128,216 C98,216 81,210 80,192 Z" fill="url(#oro)" stroke="#2a1a05" stroke-width="7" stroke-linejoin="round"/>
+    <g fill="none" stroke="#7a4e0e" stroke-width="3" stroke-linecap="round" opacity=".85">
+      <path d="M96,118 C104,132 110,142 116,150"/><path d="M160,118 C152,132 146,142 140,150"/>
+      <path d="M100,202 C108,190 114,182 118,176"/><path d="M156,202 C148,190 142,182 138,176"/>
+    </g>
+    <path d="M90,114 C104,106 118,105 132,106" fill="none" stroke="#fff6d0" stroke-width="4" stroke-linecap="round" opacity=".7"/>
+    <line x1="86" y1="182" x2="113" y2="168.8" stroke-linecap="round" stroke="#2a1a05" stroke-width="37"/><line x1="86" y1="182" x2="113" y2="168.8" stroke-linecap="round" stroke="url(#oro)" stroke-width="30"/><line x1="86" y1="182" x2="113" y2="168.8" stroke-linecap="round" stroke="#fff6d0" stroke-width="4.8" opacity=".55" transform="translate(-6.6 0)"/><line x1="113" y1="168.8" x2="134.8" y2="171.1" stroke-linecap="round" stroke="#2a1a05" stroke-width="32"/><line x1="113" y1="168.8" x2="134.8" y2="171.1" stroke-linecap="round" stroke="url(#oro)" stroke-width="25"/><line x1="113" y1="168.8" x2="134.8" y2="171.1" stroke-linecap="round" stroke="#fff6d0" stroke-width="4" opacity=".55" transform="translate(-5.5 0)"/>
+    <!-- El brazal, abocinado, con su ribete y sus remaches -->
+    <path d="M84,206 L172,206 L190,248 C191,253 188,256 183,256 L73,256 C68,256 65,253 66,248 Z" fill="url(#oro)" stroke="#2a1a05" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M78,222 L178,222" stroke="#2a1a05" stroke-width="4"/>
+    <g fill="#fff0b8" stroke="#2a1a05" stroke-width="2">
+      <circle cx="92" cy="238" r="4"/><circle cx="128" cy="240" r="4"/><circle cx="164" cy="238" r="4"/>
+    </g>
+    <!-- Las gemas: en los nudillos de los dedos estirados o doblados, en el pulgar y la del dorso -->
+    
+    <ellipse cx="87" cy="132" rx="12.5" ry="11.5" fill="url(#oro)" stroke="#2a1a05" stroke-width="3.5"/>
+    <radialGradient id="gema-indice" cx="84.4" cy="129.4" r="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/><stop offset=".22" stop-color="#ff4a4a"/><stop offset="1" stop-color="#8a0f14"/>
+    </radialGradient>
+    <ellipse cx="87" cy="132" rx="7.5" ry="6.5" fill="url(#gema-indice)" stroke="#2a1a05" stroke-width="2"/>
+    <ellipse cx="84.4" cy="129.3" rx="2.4" ry="1.4" fill="#ffffff" opacity=".85"/>
+    <ellipse cx="114" cy="122" rx="12.5" ry="11.5" fill="url(#oro)" stroke="#2a1a05" stroke-width="3.5"/>
+    <radialGradient id="gema-corazon" cx="111.4" cy="119.4" r="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/><stop offset=".22" stop-color="#ffe14a"/><stop offset="1" stop-color="#a87a00"/>
+    </radialGradient>
+    <ellipse cx="114" cy="122" rx="7.5" ry="6.5" fill="url(#gema-corazon)" stroke="#2a1a05" stroke-width="2"/>
+    <ellipse cx="111.4" cy="119.3" rx="2.4" ry="1.4" fill="#ffffff" opacity=".85"/>
+    <ellipse cx="142" cy="124" rx="12.5" ry="11.5" fill="url(#oro)" stroke="#2a1a05" stroke-width="3.5"/>
+    <radialGradient id="gema-anular" cx="139.4" cy="121.4" r="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/><stop offset=".22" stop-color="#58a8ff"/><stop offset="1" stop-color="#123e8a"/>
+    </radialGradient>
+    <ellipse cx="142" cy="124" rx="7.5" ry="6.5" fill="url(#gema-anular)" stroke="#2a1a05" stroke-width="2"/>
+    <ellipse cx="139.4" cy="121.3" rx="2.4" ry="1.4" fill="#ffffff" opacity=".85"/>
+    <ellipse cx="168" cy="136" rx="12.5" ry="11.5" fill="url(#oro)" stroke="#2a1a05" stroke-width="3.5"/>
+    <radialGradient id="gema-menique" cx="165.4" cy="133.4" r="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/><stop offset=".22" stop-color="#c27bff"/><stop offset="1" stop-color="#4a1488"/>
+    </radialGradient>
+    <ellipse cx="168" cy="136" rx="7.5" ry="6.5" fill="url(#gema-menique)" stroke="#2a1a05" stroke-width="2"/>
+    <ellipse cx="165.4" cy="133.3" rx="2.4" ry="1.4" fill="#ffffff" opacity=".85"/>
+    
+    <ellipse cx="100.8" cy="174.7" rx="12.5" ry="11.5" fill="url(#oro)" stroke="#2a1a05" stroke-width="3.5"/>
+    <radialGradient id="gema-pulgar" cx="98.2" cy="172.1" r="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/><stop offset=".22" stop-color="#5fe08a"/><stop offset="1" stop-color="#11683a"/>
+    </radialGradient>
+    <ellipse cx="100.8" cy="174.7" rx="7.5" ry="6.5" fill="url(#gema-pulgar)" stroke="#2a1a05" stroke-width="2"/>
+    <ellipse cx="98.2" cy="172" rx="2.4" ry="1.4" fill="#ffffff" opacity=".85"/>
+    
+    <ellipse cx="128" cy="160" rx="18" ry="22" fill="url(#oro)" stroke="#2a1a05" stroke-width="3.5"/>
+    <radialGradient id="gema-dorso" cx="123.5" cy="153.2" r="27.2" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/><stop offset=".22" stop-color="#ffad42"/><stop offset="1" stop-color="#9a4a00"/>
+    </radialGradient>
+    <ellipse cx="128" cy="160" rx="13" ry="17" fill="url(#gema-dorso)" stroke="#2a1a05" stroke-width="2"/>
+    <ellipse cx="123.5" cy="152.9" rx="4.2" ry="3.7" fill="#ffffff" opacity=".85"/></svg>
