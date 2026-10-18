@@ -142,7 +142,8 @@ const ListaParticipantes = ({ participantes, yo, escuchando }: ListaParticipante
                             );
                           })()}
                           {/* Distintivos: a la vista, una pastilla; para el lector, «(invitado)»… */}
-                          {p.novato && <PulpitoNovato className="h-4 w-4" />}
+                          {/* El pulpito, solo a quien juega (el narrador y los visitantes no juegan) */}
+                          {p.novato && p.rol === 'jugador' && <PulpitoNovato className="h-6 w-6" />}
                           {!p.conCuenta && <Distintivo>invitado</Distintivo>}
                           {!p.conectado && <Distintivo tono="apagado">desconectado</Distintivo>}
                           {escuchando.has(p.id) && <span className="sr-only"> (escuchando una conversación)</span>}
