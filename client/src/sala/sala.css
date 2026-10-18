@@ -935,14 +935,23 @@
 .sala-ciudad {
   position: absolute;
   inset: 0;
+  overflow: hidden;
   pointer-events: none;
   -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%);
   mask-image: linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%);
 }
+/* Siempre de la altura de la cabecera (no se corta por arriba): si el hueco es más
+   estrecho que la ciudad, se recorta por los lados, alrededor de la torre */
 .sala-ciudad svg {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
   display: block;
-  width: 100%;
   height: 100%;
+  width: auto;
+  max-width: none;
+  aspect-ratio: 600 / 62;
+  transform: translateX(-50%);
 }
 .sala-ciudad .t {
   transition:

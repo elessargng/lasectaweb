@@ -5,6 +5,8 @@ import type { SalaFase } from './useSala';
 const DURACION_TRANSICION_MS = 3600;
 /** El suelo de la ciudad (alto del dibujo): la cabecera mide más o menos eso. */
 const SUELO = 56;
+/** Aire por encima de la aguja de la torre, para que no toque el borde de la cabecera. */
+const AIRE = 6;
 
 type Tejado = 'dos' | 'plano' | 'aguja' | 'chimenea';
 type Casa = [x: number, ancho: number, alto: number, tejado: Tejado];
@@ -156,7 +158,7 @@ const SkylineCabecera = ({ fase }: { fase: SalaFase['momento'] }) => {
       data-fase={fase}
       data-transicion={transicion ?? undefined}
     >
-      <svg viewBox={`0 0 600 ${SUELO}`} preserveAspectRatio="xMidYMax slice" focusable="false">
+      <svg viewBox={`0 -${AIRE} 600 ${SUELO + AIRE}`} preserveAspectRatio="xMidYMax meet" focusable="false">
         <defs>
           <linearGradient id="sala-ciudad-cielo-noche" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="#4b3c86" stopOpacity="0" />
@@ -193,9 +195,9 @@ const SkylineCabecera = ({ fase }: { fase: SalaFase['momento'] }) => {
         </defs>
 
         {/* El cielo: el de la noche, el del día y el del ocaso (solo al cambiar), que se funden */}
-        <rect className="cielo-noche t" width="600" height={SUELO} />
-        <rect className="cielo-dia t" width="600" height={SUELO} />
-        <rect className="cielo-ocaso" width="600" height={SUELO} />
+        <rect className="cielo-noche t" y={-AIRE} width="600" height={SUELO + AIRE} />
+        <rect className="cielo-dia t" y={-AIRE} width="600" height={SUELO + AIRE} />
+        <rect className="cielo-ocaso" y={-AIRE} width="600" height={SUELO + AIRE} />
         <g>
           {DIBUJO.estrellas.map((e, i) => (
             <circle
@@ -220,7 +222,7 @@ const SkylineCabecera = ({ fase }: { fase: SalaFase['momento'] }) => {
           <circle className="sol-brillo t" cx="470" cy="13" r="26" fill="url(#sala-ciudad-sol)" />
           <circle className="sol-disco t" cx="470" cy="13" r="6.5" />
         </g>
-        <rect className="destello" width="600" height={SUELO} fill="url(#sala-ciudad-destello)" />
+        <rect className="destello" y={-AIRE} width="600" height={SUELO + AIRE} fill="url(#sala-ciudad-destello)" />
         <g className="nubes">
           {NUBES.map((n, i) => (
             <g key={i} className="nube" style={{ '--dur': `${n.dur}s`, '--delay': `${n.delay}s` } as CSSProperties}>

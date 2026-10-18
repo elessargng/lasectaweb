@@ -38,7 +38,8 @@ const Cabecera = ({ centro, derecha, ciudad }: CabeceraProps) => {
             La Secta
           </p>
         </div>
-        {ciudad && <div className="relative -my-2 hidden min-w-0 flex-1 self-stretch sm:block">{ciudad}</div>}
+        {/* Como mucho 20rem, centrada entre el logo y el centro */}
+        {ciudad && <div className="relative -my-2 mx-auto hidden w-full min-w-0 max-w-[20rem] self-stretch sm:block">{ciudad}</div>}
       </div>
       <div className="flex min-w-0 flex-1 justify-center">{centro}</div>
       {derecha && <div className="flex basis-full justify-end lg:basis-auto lg:shrink-0 xl:justify-self-end">{derecha}</div>}
