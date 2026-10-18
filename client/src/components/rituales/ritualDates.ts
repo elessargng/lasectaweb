@@ -55,6 +55,14 @@ export function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 }
 
+/**
+ * Fecha completa para el lector de pantalla, que se lee antes de la hora: a la
+ * vista el día lo da la casilla o el grupo en que está el ritual, al oído no.
+ */
+export function formatSpokenDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 export function formatLongDay(date: Date): string {
   return date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 }

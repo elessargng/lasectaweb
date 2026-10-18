@@ -1,7 +1,7 @@
 import { Ban, Clock, MapPin, Repeat, ScrollText, Users } from 'lucide-react';
 import type { Ritual } from '../../utils/ritualsApi';
 import { RITUAL_KINDS, alpha, kindOf } from './ritualKinds';
-import { formatShortDate, formatTime, isMultiDay } from './ritualDates';
+import { formatShortDate, formatSpokenDate, formatTime, isMultiDay } from './ritualDates';
 import { attendanceSummary, isIntention } from './ritualSignups';
 
 interface RitualCardProps {
@@ -73,7 +73,9 @@ export const RitualCard = ({ ritual, highlighted = false, userId, onOpen }: Ritu
             </li>
           )}
           <li className="inline-flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 shrink-0" /> {when}
+            <Clock className="w-3.5 h-3.5 shrink-0" />{' '}
+            {!isMultiDay(ritual) && <span className="sr-only">{formatSpokenDate(ritual.startsAt)}, </span>}
+            {when}
             {(ritual.recurrenceDays || ritual.recurrenceMonths) && (
               <>
                 <Repeat className="w-3.5 h-3.5 shrink-0 ml-1" />

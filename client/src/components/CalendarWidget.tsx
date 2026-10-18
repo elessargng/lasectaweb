@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Modal } from "./Modal";
 import { listRituals, type Ritual } from "../utils/ritualsApi";
 import { RITUAL_KINDS, kindOf, alpha } from "./rituales/ritualKinds";
-import { addDays, coversDay, dayKey, expandOccurrences, formatTime, isSameDay, keyOf, ritualPath, startOfDay } from "./rituales/ritualDates";
+import { addDays, coversDay, dayKey, expandOccurrences, formatSpokenDate, formatTime, isSameDay, keyOf, ritualPath, startOfDay } from "./rituales/ritualDates";
 
 import {
   CirclePlus
@@ -49,7 +49,8 @@ function RitualPill({ ritual, day, onHover }: {
   const Icon = style.icon;
   const cancelled = ritual.status === 'cancelado';
   // Una jornada de varios días muestra la hora solo el día en que empieza.
-  const label = isSameDay(new Date(ritual.startsAt), day) ? formatTime(ritual.startsAt) : style.shortLabel;
+  const startsToday = isSameDay(new Date(ritual.startsAt), day);
+  const label = startsToday ? formatTime(ritual.startsAt) : style.shortLabel;
 
   const className = `flex items-center justify-center gap-1 w-full py-1 px-1.5 border rounded-sm font-ui text-xs font-semibold tracking-wide text-center transition-all duration-200 hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 active:translate-y-0 shadow-[0_4px_10px_-4px_rgba(0,0,0,0.8)] ${cancelled ? 'line-through opacity-50' : ''}`;
   const colors = { color: style.color, backgroundColor: alpha(style.color, 0.15), borderColor: alpha(style.color, 0.45) };
@@ -57,7 +58,9 @@ function RitualPill({ ritual, day, onHover }: {
     <>
       <Icon size={13} className="shrink-0" />
       {/* La hora sola no dice qué partida es: el lector oye también el tipo y el título */}
-      <span className="sr-only">{style.label}: {ritual.title}{cancelled ? ' (cancelada)' : ''}, </span>
+      <span className="sr-only">
+        {style.label}: {ritual.title}{cancelled ? ' (cancelada)' : ''}, {startsToday && `${formatSpokenDate(ritual.startsAt)}, `}
+      </span>
       <span className="truncate">{label}</span>
     </>
   );

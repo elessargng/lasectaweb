@@ -115,6 +115,8 @@ const MiniGrimorio = ({ fichas, nombres, elegida, onElegir, onQuitarRecordatorio
                 hacia={{ x: -x, y: -y }}
                 puedeQuitar={() => !!onQuitarRecordatorio}
                 onQuitar={(r) => onQuitarRecordatorio?.(f.asientoId, r)}
+                // Al editar se quitan también desde el panel de la ficha elegida; aquí, para el lector, se repetirían
+                soloRaton
               />
             </li>
           );

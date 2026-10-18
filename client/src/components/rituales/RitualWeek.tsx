@@ -5,6 +5,7 @@ import {
   addDays,
   compareRituals,
   coversDay,
+  formatSpokenDate,
   formatTime,
   isMultiDay,
   isSameDay,
@@ -211,7 +212,16 @@ const WeekEvent = ({ ritual, className = '', onClick }: WeekEventProps) => {
       {/* Hora y tipo */}
       <span className="flex items-center gap-1.5 font-ui text-[0.68rem] font-semibold tracking-wide" style={{ color: style.color }}>
         <Icon className="w-3.5 h-3.5 shrink-0" />
-        <span className="tabular-nums">{isMultiDay(ritual) ? 'Jornadas' : formatTime(ritual.startsAt)}</span>
+        <span className="tabular-nums">
+          {isMultiDay(ritual) ? (
+            'Jornadas'
+          ) : (
+            <>
+              <span className="sr-only">{formatSpokenDate(ritual.startsAt)}, </span>
+              {formatTime(ritual.startsAt)}
+            </>
+          )}
+        </span>
         {!isMultiDay(ritual) && <span className="truncate opacity-80">· {style.shortLabel}</span>}
         {(ritual.recurrenceDays || ritual.recurrenceMonths) && (
           <>

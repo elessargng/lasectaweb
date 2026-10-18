@@ -12,6 +12,12 @@ interface RecordatoriosFichaProps {
   /** Los que quien mira puede quitar (botón); los demás solo se ven. */
   puedeQuitar: (r: SalaRecordatorio) => boolean;
   onQuitar: (r: SalaRecordatorio) => void;
+  /**
+   * Quitar solo con el ratón: los botones no se leen ni se alcanzan con el
+   * tabulador, porque quien los usa ya tiene otro sitio para quitarlos (y la
+   * ficha ya dice qué recordatorios lleva).
+   */
+  soloRaton?: boolean;
 }
 
 /**
@@ -22,7 +28,7 @@ interface RecordatoriosFichaProps {
  * Las que se pueden quitar son botones («Quitar recordatorio…»); las demás solo
  * se ven (lo que llevan se lee con el nombre del asiento y en la ficha).
  */
-const RecordatoriosFicha = ({ recordatorios, style, hacia, puedeQuitar, onQuitar }: RecordatoriosFichaProps) => {
+const RecordatoriosFicha = ({ recordatorios, style, hacia, puedeQuitar, onQuitar, soloRaton = false }: RecordatoriosFichaProps) => {
   const { todosPorId } = useFichas();
   if (recordatorios.length === 0) return null;
   const n = recordatorios.length;
@@ -45,7 +51,9 @@ const RecordatoriosFicha = ({ recordatorios, style, hacia, puedeQuitar, onQuitar
             key={r.id}
             type="button"
             onClick={() => onQuitar(r)}
-            aria-label={`Quitar recordatorio ${describirRecordatorio(r, personaje)}`}
+            aria-label={soloRaton ? undefined : `Quitar recordatorio ${describirRecordatorio(r, personaje)}`}
+            aria-hidden={soloRaton || undefined}
+            tabIndex={soloRaton ? -1 : undefined}
             className={`${clases} cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main`}
             style={colocar}
           >

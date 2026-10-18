@@ -2,7 +2,7 @@ import { MapPin, ScrollText, Users } from 'lucide-react';
 import type { Ritual } from '../../utils/ritualsApi';
 import { RITUAL_KINDS, kindOf } from './ritualKinds';
 import { compactPlaces } from './ritualSignups';
-import { addDays, compareRituals, dayKey, formatShortDate, formatTime, isMultiDay, isSameDay, keyOf, startOfDay } from './ritualDates';
+import { addDays, compareRituals, dayKey, formatShortDate, formatSpokenDate, formatTime, isMultiDay, isSameDay, keyOf, startOfDay } from './ritualDates';
 
 interface RitualAgendaProps {
   month: Date;
@@ -108,6 +108,7 @@ const AgendaRow = ({ ritual, focused, onClick }: AgendaRowProps) => {
     >
       <Icon className="w-4 h-4 shrink-0" style={{ color: style.color }} />
       <span className="w-20 md:w-24 shrink-0 text-xs font-semibold tabular-nums" style={{ color: style.color }}>
+        {!isMultiDay(ritual) && <span className="sr-only">{formatSpokenDate(ritual.startsAt)}, </span>}
         {when}
       </span>
       <span className="flex-1 min-w-0">

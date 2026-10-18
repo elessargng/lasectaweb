@@ -1,7 +1,7 @@
 import { Plus } from 'lucide-react';
 import type { Ritual } from '../../utils/ritualsApi';
 import { RITUAL_KINDS, alpha, kindOf } from './ritualKinds';
-import { WEEKDAYS, compareRituals, coversDay, formatTime, isMultiDay, isSameDay, keyOf, monthGrid, weekLanes } from './ritualDates';
+import { WEEKDAYS, compareRituals, coversDay, formatSpokenDate, formatTime, isMultiDay, isSameDay, keyOf, monthGrid, weekLanes } from './ritualDates';
 import { compactPlaces } from './ritualSignups';
 
 interface RitualCalendarProps {
@@ -174,6 +174,7 @@ export const RitualCalendar = ({
                         style={{ backgroundColor: 'rgba(7, 8, 13, 0.6)', borderLeft: `2px solid ${style.color}` }}
                       >
                         <span className="font-semibold tabular-nums shrink-0" style={{ color: style.color }}>
+                          <span className="sr-only">{formatSpokenDate(r.startsAt)}, </span>
                           {formatTime(r.startsAt)}
                         </span>
                         <span className="truncate text-on-surface/90">
