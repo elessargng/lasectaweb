@@ -1,4 +1,5 @@
 import { nombreMano } from './formasMano';
+import type { PersonajeMostrado } from './guiones';
 import { datosAsiento } from './nombresAsiento';
 import type { TipoAviso } from './avisosConfig';
 import type { SalaEstado, SalaParticipante, SalaFase } from './useSala';
@@ -31,7 +32,13 @@ export const hacenFalta = (votos: number) => `Hacen falta ${votos === 1 ? '1 vot
  * Quien vigila la mano de alguien (`vigilados`) oye al momento cuándo la levanta
  * o la baja (manosVigiladas); aquí no se repite.
  */
-export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado, vigilados: Set<string> = new Set()): Aviso[] {
+export function avisosDeCambio(
+  anterior: SalaEstado,
+  nuevo: SalaEstado,
+  vigilados: Set<string> = new Set(),
+  /** Los personajes del guion: para el nombre de una mano que es un personaje. */
+  personajes?: Map<string, PersonajeMostrado>,
+): Aviso[] {
   const yo = nuevo.yo;
   const antes = new Map(anterior.participantes.map((p) => [p.id, p]));
   const ahora = new Map(nuevo.participantes.map((p) => [p.id, p]));
@@ -177,7 +184,7 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado, vigilado
     if (quien) avisa('asientos', `${quien.nombre} se sienta en el asiento ${asientoDe(nuevo, a.ocupante)}.`);
   }
 
-  const forma = (p: SalaParticipante) => nombreMano(p.formaMano).toLocaleLowerCase('es');
+  const forma = (p: SalaParticipante) => nombreMano(p.formaMano, personajes).toLocaleLowerCase('es');
   // La propia, bajada sola al empezar una nominación por no tener ya voto
   const miMano = { antes: antes.get(yo)?.manoLevantada, ahora: ahora.get(yo)?.manoLevantada };
   const nominacionNueva =
@@ -190,9 +197,9 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado, vigilado
   for (const p of nuevo.participantes) {
     const previo = antes.get(p.id);
     if (!previo || p.id === yo || previo.manoLevantada === p.manoLevantada || vigilados.has(p.id)) continue;
-    // Bajarla por levantarse del asiento no se dice (ya se dice que se levanta), ni
-    // al contarse su voto (se baja sola; ya se dice que vota).
-    if (!p.manoLevantada && p.rol !== 'jugador') continue;
+    // Bajarla por cambiar de papel (levantarse del asiento, dejar de narrar) no se dice
+    // (ya se dice eso), ni al contarse su voto (se baja sola; ya se dice que vota).
+    if (!p.manoLevantada && p.rol !== previo.rol) continue;
     const votoContado = (() => {
       const v = nuevo.nominacion?.votacion;
       const pasoAntes = anterior.nominacion?.votacion?.paso ?? 0;
@@ -314,7 +321,12 @@ export function avisosDeCambio(anterior: SalaEstado, nuevo: SalaEstado, vigilado
 }
 
 /** Las manos que se vigilan: siempre que la levantan o la bajan, para leerlo al momento (assertive). */
-export function manosVigiladas(anterior: SalaEstado, nuevo: SalaEstado, vigilados: Set<string>): string[] {
+export function manosVigiladas(
+  anterior: SalaEstado,
+  nuevo: SalaEstado,
+  vigilados: Set<string>,
+  personajes?: Map<string, PersonajeMostrado>,
+): string[] {
   const textos: string[] = [];
   for (const p of nuevo.participantes) {
     const previo = anterior.participantes.find((x) => x.id === p.id);
@@ -325,7 +337,7 @@ export function manosVigiladas(anterior: SalaEstado, nuevo: SalaEstado, vigilado
           ? `${p.nombre} levanta las dos manos.`
           : previo.manoLevantada
             ? `${p.nombre} baja una mano.`
-            : `${p.nombre} levanta la mano (${nombreMano(p.formaMano).toLocaleLowerCase('es')}).`
+            : `${p.nombre} levanta la mano (${nombreMano(p.formaMano, personajes).toLocaleLowerCase('es')}).`
         : `${p.nombre} baja la mano.`,
     );
   }

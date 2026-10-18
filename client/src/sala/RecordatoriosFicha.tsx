@@ -44,7 +44,16 @@ const RecordatoriosFicha = ({ recordatorios, style, hacia, puedeQuitar, onQuitar
           zIndex: n - k,
           transform: `translate(-50%, -50%) translate(calc(${hacia.x * k} * var(--paso) * ${TAMANO_RECORDATORIO}), calc(${hacia.y * k} * var(--paso) * ${TAMANO_RECORDATORIO}))`,
         };
-        const ficha = <FichaRecordatorio personaje={personaje} texto={textoRecordatorio(r, personaje)} libre={esRecordatorioTexto(r)} />;
+        // Con texto propio, el «personaje» de la ficha es el de su icono (si lo es)
+        const libre = esRecordatorioTexto(r);
+        const ficha = (
+          <FichaRecordatorio
+            personaje={libre ? (r.icono ? todosPorId.get(r.icono) : undefined) : personaje}
+            texto={textoRecordatorio(r, personaje)}
+            libre={libre}
+            icono={r.icono}
+          />
+        );
         const clases = 'absolute left-0 top-0 block rounded-full transition-transform duration-150 motion-reduce:transition-none';
         return puedeQuitar(r) ? (
           <button

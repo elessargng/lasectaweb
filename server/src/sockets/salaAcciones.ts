@@ -20,6 +20,7 @@ import {
   ADJUNTOS_DESPERTAR,
   FICHAS_DESPERTAR,
   FichaDespertar,
+  ICONOS_RECORDATORIO_TEXTO,
   MensajeDespertar,
   NUM_FAROLES,
   RECORDATORIO_TEXTO,
@@ -165,6 +166,16 @@ const TIPOS_EN_FICHA: string[] = ['townsfolk', 'outsider', 'minion', 'demon', 't
 const MAX_REPETIDOS = 5;
 /** Recordatorios como mucho en una ficha (de sobra para una partida). */
 const MAX_RECORDATORIOS = 20;
+
+/**
+ * El icono de un recordatorio con texto propio: uno de los fijos o un personaje del
+ * guion. Sin icono, null (el de por defecto); undefined si no vale.
+ */
+function leerIconoRecordatorio(sala: SalaService, icono: unknown): string | null | undefined {
+  if (icono === undefined || icono === null) return null;
+  if (typeof icono !== 'string') return undefined;
+  return ICONOS_RECORDATORIO_TEXTO.includes(icono) || sala.personaje(icono) ? icono : undefined;
+}
 /** Los que van en la bolsa para repartir (también viajeros, de cualquier guion: no cuentan para el reparto por tipos). */
 const TIPOS_EN_BOLSA: string[] = ['townsfolk', 'outsider', 'minion', 'demon', 'traveller'];
 
@@ -264,14 +275,17 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
-  /** Un jugador levanta o baja la mano (un muerto sin voto solo puede bajarla). datos: { levantada: boolean }. */
+  /**
+   * Un jugador o un narrador levanta o baja la mano (un muerto sin voto solo puede
+   * bajarla). La del narrador no vota: es para hacerse ver. datos: { levantada: boolean }.
+   */
   'sala:levantarMano': {
-    puede: (_sala, yo) => yo.rol === 'jugador',
-    noPuede: 'Solo los jugadores sentados pueden levantar la mano.',
+    puede: (_sala, yo) => yo.rol === 'jugador' || yo.rol === 'narrador',
+    noPuede: 'Solo los jugadores sentados y los narradores pueden levantar la mano.',
     hacer: (sala, yo, datos) => {
       const levantada = (datos as { levantada?: unknown } | null)?.levantada;
       if (typeof levantada !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
-      if (levantada && sala.sinVoto(yo.id)) return { ok: false, error: sala.voudonVivo() ? 'Con el Voudon vivo, solo votan él y los muertos.' : 'Ya has gastado tu voto: no puedes levantar la mano.' };
+      if (levantada && yo.rol === 'jugador' && sala.sinVoto(yo.id)) return { ok: false, error: sala.voudonVivo() ? 'Con el Voudon vivo, solo votan él y los muertos.' : 'Ya has gastado tu voto: no puedes levantar la mano.' };
       sala.levantarMano(yo.id, levantada);
       return { ok: true };
     },
@@ -291,13 +305,18 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
-  /** Un jugador elige la forma de su mano (palma, puño o tijera). datos: { forma }. */
+  /**
+   * Un jugador o un narrador elige la forma de su mano: una de SALA_FORMAS_MANO o un
+   * personaje del guion (su icono). datos: { forma }.
+   */
   'sala:elegirMano': {
-    puede: (_sala, yo) => yo.rol === 'jugador',
-    noPuede: 'Solo los jugadores sentados tienen mano que levantar.',
+    puede: (_sala, yo) => yo.rol === 'jugador' || yo.rol === 'narrador',
+    noPuede: 'Solo los jugadores sentados y los narradores tienen mano que levantar.',
     hacer: (sala, yo, datos) => {
       const forma = (datos as { forma?: unknown } | null)?.forma;
-      if (!SALA_FORMAS_MANO.includes(forma as SalaFormaMano)) return { ok: false, error: 'Forma de mano desconocida.' };
+      if (typeof forma !== 'string' || (!SALA_FORMAS_MANO.includes(forma) && !sala.personaje(forma))) {
+        return { ok: false, error: 'Forma de mano desconocida.' };
+      }
       sala.elegirFormaMano(yo.id, forma as SalaFormaMano);
       return { ok: true };
     },
@@ -670,13 +689,13 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /**
    * Pone un recordatorio con texto propio (sin personaje): lo que escriba el
-   * narrador, corto, porque va en redondo en una ficha pequeña. datos: { asientoId, texto }.
+   * narrador, corto, porque va en redondo en una ficha pequeña. datos: { asientoId, texto, icono? }.
    */
   'narrador:ponerRecordatorioTexto': {
     puede: (sala, yo) => yo.rol === 'narrador' && sala.asientos().length > 0,
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador pone recordatorios.'),
     hacer: (sala, _yo, datos) => {
-      const { asientoId, texto } = (datos as { asientoId?: unknown; texto?: unknown }) ?? {};
+      const { asientoId, texto, icono } = (datos as { asientoId?: unknown; texto?: unknown; icono?: unknown }) ?? {};
       const asiento = sala.asientos().find((a) => a.id === asientoId);
       if (!asiento || typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
       const limpio = typeof texto === 'string' ? texto.replace(/\s+/g, ' ').trim() : '';
@@ -687,7 +706,9 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       if (asiento.recordatorios.length >= MAX_RECORDATORIOS) {
         return { ok: false, error: `Una ficha no puede llevar más de ${MAX_RECORDATORIOS} recordatorios.` };
       }
-      sala.ponerRecordatorio(asientoId, { personaje: RECORDATORIO_TEXTO, indice: -1, texto: limpio });
+      const conIcono = leerIconoRecordatorio(sala, icono);
+      if (conIcono === undefined) return { ok: false, error: 'Ese icono no está en el guion.' };
+      sala.ponerRecordatorio(asientoId, { personaje: RECORDATORIO_TEXTO, indice: -1, texto: limpio, ...(conIcono ? { icono: conIcono } : {}) });
       return { ok: true };
     },
   },
@@ -746,7 +767,9 @@ export const SALA_ACCIONES: Record<string, Accion> = {
           const texto = typeof r?.texto === 'string' ? r.texto.replace(/\s+/g, ' ').trim() : '';
           if (r?.personaje === RECORDATORIO_TEXTO) {
             if (!texto || [...texto].length > SALA_RECORDATORIO_TEXTO_MAX) return { ok: false, error: 'Hay un recordatorio con un texto no válido.' };
-            limpios.push({ id: randomUUID(), personaje: RECORDATORIO_TEXTO, indice: -1, texto });
+            const icono = leerIconoRecordatorio(sala, r.icono);
+            if (icono === undefined) return { ok: false, error: 'Hay un recordatorio con un icono que no está en el guion.' };
+            limpios.push({ id: randomUUID(), personaje: RECORDATORIO_TEXTO, indice: -1, texto, ...(icono ? { icono } : {}) });
             continue;
           }
           const del = typeof r?.personaje === 'string' ? sala.personaje(r.personaje) : undefined;

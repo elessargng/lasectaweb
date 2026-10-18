@@ -6,8 +6,11 @@ import type { GuionResuelto } from './guiones';
 
 export type SalaRol = 'narrador' | 'jugador' | 'visitante';
 
-/** Forma de la mano que levanta un jugador (como en piedra, papel o tijera). */
-export type FormaMano = 'palma' | 'puno' | 'tijera';
+/**
+ * Forma de la mano que levanta un jugador o un narrador: una de FORMAS_MANO
+ * (formasMano.ts) o el id de un personaje del guion (la mano es su icono).
+ */
+export type FormaMano = string;
 
 export interface SalaParticipante {
   id: string;
@@ -88,6 +91,8 @@ export interface SalaRecordatorio {
   personaje: string;
   indice: number;
   texto: string;
+  /** Con texto propio, el icono del centro (ICONOS_LIBRES de fichas.ts o un personaje); sin él, el logo de La Secta. */
+  icono?: string;
 }
 
 export type SalaAlineamiento = 'bueno' | 'malvado';

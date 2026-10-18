@@ -1,8 +1,9 @@
-import { Fragment, useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import Agujas from './Agujas';
 import AnuncioGanador from './AnuncioGanador';
 import AvisoGong from './AvisoGong';
 import { useAriaLive, type TipoAviso } from './avisosConfig';
+import AsaLevantar from './AsaLevantar';
 import AsaMover from './AsaMover';
 import Asiento from './Asiento';
 import NotasAsiento from './NotasAsiento';
@@ -325,6 +326,17 @@ const Mesa = ({
     onError,
     onAnuncio: (m) => onAnuncio('moverJugadores', m),
   });
+  // Editando asientos, levantar a un jugador desde su asiento (el aviso «… se levanta» ya sale solo)
+  const puedeLevantar = acciones.includes('narrador:levantarJugador');
+  const [levantando, setLevantando] = useState(false);
+  const levantar = async (participanteId: string) => {
+    setLevantando(true);
+    const r = await pedir('narrador:levantarJugador', { participanteId });
+    setLevantando(false);
+    if (!r.ok) return onError(r.error);
+    // El botón desaparece con el jugador: que el foco no se pierda
+    document.getElementById('sala-asientos')?.focus();
+  };
   const nominar = useNominacion({ estado, pedir, onError, onAnuncio: (m) => onAnuncio('nominaciones', m) });
   // Asientos (desde 0) de quien nomina y del nominado, para las agujas.
   const { nominacion, revelacion } = estado;
@@ -432,6 +444,8 @@ const Mesa = ({
   const sinMas = total >= ASIENTOS_MAX;
   const sinAsientos = total === 0;
   const pocosParaMezclar = !asientos.some((a) => a.ocupante);
+  // Las fichas solo se ven (sin menú, sin seguir ni despertares): el asiento ya dice lo que lleva la suya
+  const capaOculta = modoFichas === 'ver' && !seguimiento && !despertares;
 
   return (
     <div
@@ -448,64 +462,175 @@ const Mesa = ({
             const visible = editando ? mover.ocupanteVisible(a) : a.ocupante;
             const ocupante = participante(visible);
             const real = participante(a.ocupante);
+            const eligiendo = nominar.eligiendo(a.id);
+            const seguir = seguirA(ocupante);
+            // La luna del despertar (narradores, y visitantes que ven el grimorio) también se pulsa
+            const conLuna = !!despertares?.hilos.has(a.id) && !editando;
+            const soloSeVe = modoFichas === 'ver' && !eligiendo && !seguir && !conLuna;
+            const posRecordatorios = posicionRecordatorios(i, total);
             return (
-              <li
-                key={a.id}
-                data-asiento={a.id}
-                className="absolute -translate-x-1/2 -translate-y-1/2"
-                style={posicion(i, total)}
-              >
-                <Asiento
-                  id={a.id}
-                  numero={i + 1}
-                  ocupante={ocupante}
-                  esYo={visible === yo}
-                  puedeSentarse={puedeSentarse}
-                  onSentarse={() => sentarse(a.id)}
-                  destino={editando && !!mover.activo && mover.activo.hasta === a.id && mover.activo.hasta !== mover.activo.desde}
-                  // Mitad inferior de la mesa (entre las 3 y las 9, sin contarlas): nombre debajo
-                  nombreAbajo={-Math.cos((2 * Math.PI * i) / total) > 0.01}
-                  angulo={(2 * Math.PI * i) / total}
-                  contacto={ocupante ? contacto?.(ocupante) : undefined}
-                  video={ocupante ? pistas.get(ocupante.id)?.video : undefined}
-                  espejo={!!ocupante && ocupante.id === estado.yo}
-                  hablando={!!ocupante && !!pistas.get(ocupante.id)?.hablando}
-                  enConversacion={!!ocupante && estado.conversaciones.some((c) => c.miembros.includes(ocupante.id))}
-                  // Micro cerrado en la mesa (quien conversa en privado ya lleva su icono)
-                  silenciado={
-                    !!ocupante &&
-                    !!pistas.get(ocupante.id) &&
-                    !pistas.get(ocupante.id)!.microfono &&
-                    !estado.conversaciones.some((c) => c.miembros.includes(ocupante.id))
-                  }
-                  asa={editando && real && (
-                      <AsaMover
-                        {...mover.propsAsa(a.id)}
-                        nombre={real.nombre}
-                        numero={i + 1}
-                        // En la esquina del lado en el que se sienta (los de la mitad derecha, a la derecha)
-                        lado={Math.sin((2 * Math.PI * i) / total) > 0.01 ? 'derecha' : 'izquierda'}
-                      />
-                    )}
-                  ficha={fichaDe(a)}
-                  siguiendo={!!ocupante && seguimiento?.siguiendo === ocupante.id}
-                />
-                {/* Las notas: una pestaña hacia fuera de la mesa (la izquierda o la derecha del cuadro) */}
-                {!editando && (
-                  <NotasAsiento
-                    asientoId={a.id}
-                    nombre={describirAsiento(i + 1, ocupante)}
-                    notas={notasDe(a)}
-                    editable={escriboNotas}
-                    lado={Math.sin((2 * Math.PI * i) / total) < -0.01 ? 'izquierda' : 'derecha'}
-                    abierto={notasAbiertas?.asientoId === a.id}
-                    nueva={notasAbiertas?.asientoId === a.id && notasAbiertas.nueva}
-                    onAbrir={() => setNotasAbiertas({ asientoId: a.id, nueva: false })}
-                    onCerrar={() => setNotasAbiertas((n) => (n?.asientoId === a.id ? null : n))}
-                    onGuardar={(notaId, texto) => guardarNota(a.id, notaId, texto)}
-                    onBorrar={(notaId) => borrarNota(a.id, notaId)}
+              // Cada asiento con su ficha justo después: el lector los lee juntos, asiento a asiento.
+              // El li no tiene caja (contents): el asiento y la capa de su ficha se colocan respecto a la mesa.
+              <li key={a.id} className="contents">
+                <div data-asiento={a.id} className="absolute -translate-x-1/2 -translate-y-1/2" style={posicion(i, total)}>
+                  <Asiento
+                    id={a.id}
+                    numero={i + 1}
+                    ocupante={ocupante}
+                    esYo={visible === yo}
+                    puedeSentarse={puedeSentarse}
+                    onSentarse={() => sentarse(a.id)}
+                    destino={editando && !!mover.activo && mover.activo.hasta === a.id && mover.activo.hasta !== mover.activo.desde}
+                    // Mitad inferior de la mesa (entre las 3 y las 9, sin contarlas): nombre debajo
+                    nombreAbajo={-Math.cos((2 * Math.PI * i) / total) > 0.01}
+                    angulo={(2 * Math.PI * i) / total}
+                    contacto={ocupante ? contacto?.(ocupante) : undefined}
+                    video={ocupante ? pistas.get(ocupante.id)?.video : undefined}
+                    espejo={!!ocupante && ocupante.id === estado.yo}
+                    hablando={!!ocupante && !!pistas.get(ocupante.id)?.hablando}
+                    enConversacion={!!ocupante && estado.conversaciones.some((c) => c.miembros.includes(ocupante.id))}
+                    // Micro cerrado en la mesa (quien conversa en privado ya lleva su icono)
+                    silenciado={
+                      !!ocupante &&
+                      !!pistas.get(ocupante.id) &&
+                      !pistas.get(ocupante.id)!.microfono &&
+                      !estado.conversaciones.some((c) => c.miembros.includes(ocupante.id))
+                    }
+                    asa={editando && real && (
+                        <>
+                          <AsaMover
+                            {...mover.propsAsa(a.id)}
+                            nombre={real.nombre}
+                            numero={i + 1}
+                            // En la esquina del lado en el que se sienta (los de la mitad derecha, a la derecha)
+                            lado={Math.sin((2 * Math.PI * i) / total) > 0.01 ? 'derecha' : 'izquierda'}
+                          />
+                          {puedeLevantar && (
+                            <AsaLevantar
+                              nombre={real.nombre}
+                              numero={i + 1}
+                              lado={Math.sin((2 * Math.PI * i) / total) > 0.01 ? 'derecha' : 'izquierda'}
+                              desactivado={!!mover.activo || levantando}
+                              onLevantar={() => void levantar(real.id)}
+                            />
+                          )}
+                        </>
+                      )}
+                    ficha={fichaDe(a)}
+                    siguiendo={!!ocupante && seguimiento?.siguiendo === ocupante.id}
                   />
-                )}
+                  {/* Las notas: una pestaña hacia fuera de la mesa (la izquierda o la derecha del cuadro) */}
+                  {!editando && (
+                    <NotasAsiento
+                      asientoId={a.id}
+                      nombre={describirAsiento(i + 1, ocupante)}
+                      notas={notasDe(a)}
+                      editable={escriboNotas}
+                      lado={Math.sin((2 * Math.PI * i) / total) < -0.01 ? 'izquierda' : 'derecha'}
+                      abierto={notasAbiertas?.asientoId === a.id}
+                      nueva={notasAbiertas?.asientoId === a.id && notasAbiertas.nueva}
+                      onAbrir={() => setNotasAbiertas({ asientoId: a.id, nueva: false })}
+                      onCerrar={() => setNotasAbiertas((n) => (n?.asientoId === a.id ? null : n))}
+                      onGuardar={(notaId, texto) => guardarNota(a.id, notaId, texto)}
+                      onBorrar={(notaId) => borrarNota(a.id, notaId)}
+                    />
+                  )}
+                </div>
+                {/* Su ficha, hacia dentro del círculo y por encima de los cuadros (z-index). La capa ocupa
+                    toda la mesa (las fichas se colocan respecto a ella, como los asientos) y no captura el
+                    ratón, así que lo que tapa se sigue pudiendo pulsar. Al pasar el ratón o con el foco, por
+                    encima de las de los demás; con su menú abierto, también de las agujas y del centro.
+                    Solo se ve (sin menú): fuera del árbol de accesibilidad, salvo las que se pueden seguir. */}
+                <div
+                  aria-hidden={capaOculta || undefined}
+                  className="pointer-events-none absolute inset-0 z-10 hover:z-20 focus-within:z-20 has-[[aria-expanded=true]]:z-40"
+                >
+                  <div
+                    aria-hidden={soloSeVe || undefined}
+                    // La ficha con el menú abierto, por encima de las demás (si no, su menú quedaría debajo)
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 has-[[aria-expanded=true]]:z-50 ${soloSeVe ? '' : 'pointer-events-auto'}`}
+                    style={posicionFicha(i, total)}
+                  >
+                    <FichaAsiento
+                      asiento={a}
+                      numero={i + 1}
+                      ocupante={ocupante}
+                      modo={modoFichas}
+                      pedir={pedir}
+                      onError={onError}
+                      onNominar={nominar.onNominar?.(a.id)}
+                      eligiendo={eligiendo}
+                      voto={nominacion?.votacion?.resultados[a.id]}
+                      reloj={!!nominacion && !revelacion}
+                      deNoche={estado.fase.momento === 'noche'}
+                      despertar={despertarDe(a.id)}
+                      seguir={seguir}
+                      enJuego={enJuego}
+                      probables={probables}
+                      // Los de la mitad derecha de la mesa, a la derecha; los demás, a la izquierda
+                      ladoVela={Math.sin((2 * Math.PI * i) / total) > 0.01 ? 'derecha' : 'izquierda'}
+                      onEscribirNota={escriboNotas && !editando ? () => setNotasAbiertas({ asientoId: a.id, nueva: true }) : undefined}
+                      revelando={
+                        revelacion
+                          ? {
+                              revelada: revelacion.reveladas.includes(a.id),
+                              onRevelar: puedeRevelar ? () => void revelar(a.id) : undefined,
+                            }
+                          : undefined
+                      }
+                    />
+                    {a.muertePendiente && acciones.includes('narrador:confirmarMuerte') && !editando && (
+                      // La muerte de la noche, por anunciar: el sudario semitransparente es un botón que
+                      // la hace efectiva (la ven todos). Al pasar el ratón o con el foco se ve ya entero.
+                      <button
+                        type="button"
+                        onClick={() => void anunciarMuerte(a.id)}
+                        className="group/sudario absolute left-1/2 top-[-6%] z-10 h-[56%] w-[42%] -translate-x-1/2 cursor-pointer rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+                      >
+                        <img
+                          src="/sudario.webp"
+                          alt=""
+                          className="mx-auto h-full w-auto opacity-0 drop-shadow-[0_0_6px_rgba(212,175,106,0.6)] transition-opacity group-hover/sudario:opacity-100 group-focus-visible/sudario:opacity-100 motion-reduce:transition-none"
+                        />
+                        <span className="sr-only">Anunciar la muerte de {nombreDeAsiento(estado, a.id)}</span>
+                      </button>
+                    )}
+                    {conLuna && despertares && (
+                      // El despertar: una luna con cara sobre toda la ficha (como la calavera), color
+                      // hueso con contorno de tinta; dorada y con un halo quieto (y lo dice) si el
+                      // jugador ha mandado algo que el narrador no ha visto. Solo la luna recibe el
+                      // clic (lo vuelve a abrir): el resto de la ficha sigue abriendo su menú.
+                      <button
+                        id={idLunaFicha(a.id)}
+                        type="button"
+                        onClick={() => despertares.onAbrir(a.id)}
+                        className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                      >
+                        <LunaDespertar nueva={despertares.noLeidos.has(a.id)} entendido={despertares.entendidos.has(a.id)} className="w-[72%]" />
+                        <span className="sr-only">
+                          {a.ocupante === estado.yo ? 'Tu despertar' : `Despertar de ${nombreDeAsiento(estado, a.id)}`}
+                          {despertares.entendidos.has(a.id) ? ', entendido' : ''}
+                          {despertares.noLeidos.has(a.id) ? ', mensajes nuevos' : ''}
+                        </span>
+                      </button>
+                    )}
+                    {ocupante && (
+                      // La mano levantada: en la esquina de la ficha (sube y baja) o, en una
+                      // nominación, grande en el centro; se dice en el nombre de la ficha y en los avisos
+                      <ManoLevantada levantada={ocupante.manoLevantada} dos={ocupante.dosManos} forma={ocupante.formaMano} enNominacion={!!nominacion} />
+                    )}
+                  </div>
+                  {/* Sus recordatorios, después de la ficha (en el orden del tabulador también) */}
+                  {!revelacion && (
+                    <RecordatoriosFicha
+                      recordatorios={recordatoriosDe(a)}
+                      style={posRecordatorios.style}
+                      hacia={posRecordatorios.hacia}
+                      puedeQuitar={(r) => modoFichas === 'narrador' || anotadoPorMi(a.id, r)}
+                      onQuitar={(r) => void quitarRecordatorio(a.id, r)}
+                    />
+                  )}
+                </div>
               </li>
             );
           })}
@@ -517,119 +642,6 @@ const Mesa = ({
           </p>
         )
       )}
-
-      {/* Una ficha por jugador sentado, hacia dentro del círculo y por encima de
-          los cuadros (después de ellos y con z-index). La capa ocupa toda la mesa
-          (las fichas se colocan respecto a ella, como los asientos) y no captura el
-          ratón, así que lo que tapa se sigue pudiendo pulsar. Cada ficha es un botón
-          para el narrador o un jugador con grimorio; para los demás, solo se ve. */}
-      {/* Con el menú de una ficha abierto, la capa sube por encima de las agujas y del centro */}
-      {/* Solo se ve (sin menú): fuera del árbol de accesibilidad, salvo las que se pueden seguir */}
-      <div
-        aria-hidden={modoFichas === 'ver' && !seguimiento && !despertares ? true : undefined}
-        className="pointer-events-none absolute inset-0 z-10 has-[[aria-expanded=true]]:z-40"
-      >
-        {asientos.map((a, i) => {
-          // La ficha es del asiento; quien se ve sentado (con el movimiento provisional, si lo hay).
-          const visible = editando ? mover.ocupanteVisible(a) : a.ocupante;
-          const ocupante = participante(visible);
-          const eligiendo = nominar.eligiendo(a.id);
-          const seguir = seguirA(ocupante);
-          // La luna del despertar (narradores, y visitantes que ven el grimorio) también se pulsa
-          const conLuna = !!despertares?.hilos.has(a.id) && !editando;
-          const soloSeVe = modoFichas === 'ver' && !eligiendo && !seguir && !conLuna;
-          const posRecordatorios = posicionRecordatorios(i, total);
-          return (
-            <Fragment key={a.id}>
-              <div
-                aria-hidden={soloSeVe || undefined}
-                // La ficha con el menú abierto, por encima de las demás (si no, su menú quedaría debajo)
-                className={`absolute -translate-x-1/2 -translate-y-1/2 has-[[aria-expanded=true]]:z-50 ${soloSeVe ? '' : 'pointer-events-auto'}`}
-                style={posicionFicha(i, total)}
-              >
-                <FichaAsiento
-                  asiento={a}
-                  numero={i + 1}
-                  ocupante={ocupante}
-                  modo={modoFichas}
-                  pedir={pedir}
-                  onError={onError}
-                  onNominar={nominar.onNominar?.(a.id)}
-                  eligiendo={eligiendo}
-                  voto={nominacion?.votacion?.resultados[a.id]}
-                  reloj={!!nominacion && !revelacion}
-                  deNoche={estado.fase.momento === 'noche'}
-                  despertar={despertarDe(a.id)}
-                  seguir={seguir}
-                  enJuego={enJuego}
-                  probables={probables}
-                  // Los de la mitad derecha de la mesa, a la derecha; los demás, a la izquierda
-                  ladoVela={Math.sin((2 * Math.PI * i) / total) > 0.01 ? 'derecha' : 'izquierda'}
-                  onEscribirNota={escriboNotas && !editando ? () => setNotasAbiertas({ asientoId: a.id, nueva: true }) : undefined}
-                  revelando={
-                    revelacion
-                      ? {
-                          revelada: revelacion.reveladas.includes(a.id),
-                          onRevelar: puedeRevelar ? () => void revelar(a.id) : undefined,
-                        }
-                      : undefined
-                  }
-                />
-                {a.muertePendiente && acciones.includes('narrador:confirmarMuerte') && !editando && (
-                  // La muerte de la noche, por anunciar: el sudario semitransparente es un botón que
-                  // la hace efectiva (la ven todos). Al pasar el ratón o con el foco se ve ya entero.
-                  <button
-                    type="button"
-                    onClick={() => void anunciarMuerte(a.id)}
-                    className="group/sudario absolute left-1/2 top-[-6%] z-10 h-[56%] w-[42%] -translate-x-1/2 cursor-pointer rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gold"
-                  >
-                    <img
-                      src="/sudario.webp"
-                      alt=""
-                      className="mx-auto h-full w-auto opacity-0 drop-shadow-[0_0_6px_rgba(212,175,106,0.6)] transition-opacity group-hover/sudario:opacity-100 group-focus-visible/sudario:opacity-100 motion-reduce:transition-none"
-                    />
-                    <span className="sr-only">Anunciar la muerte de {nombreDeAsiento(estado, a.id)}</span>
-                  </button>
-                )}
-                {conLuna && despertares && (
-                  // El despertar: una luna con cara sobre toda la ficha (como la calavera), color
-                  // hueso con contorno de tinta; dorada y con un halo quieto (y lo dice) si el
-                  // jugador ha mandado algo que el narrador no ha visto. Solo la luna recibe el
-                  // clic (lo vuelve a abrir): el resto de la ficha sigue abriendo su menú.
-                  <button
-                    id={idLunaFicha(a.id)}
-                    type="button"
-                    onClick={() => despertares.onAbrir(a.id)}
-                    className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                  >
-                    <LunaDespertar nueva={despertares.noLeidos.has(a.id)} entendido={despertares.entendidos.has(a.id)} className="w-[72%]" />
-                    <span className="sr-only">
-                      {a.ocupante === estado.yo ? 'Tu despertar' : `Despertar de ${nombreDeAsiento(estado, a.id)}`}
-                      {despertares.entendidos.has(a.id) ? ', entendido' : ''}
-                      {despertares.noLeidos.has(a.id) ? ', mensajes nuevos' : ''}
-                    </span>
-                  </button>
-                )}
-                {ocupante && (
-                  // La mano levantada: en la esquina de la ficha (sube y baja) o, en una
-                  // nominación, grande en el centro; se dice en el nombre de la ficha y en los avisos
-                  <ManoLevantada levantada={ocupante.manoLevantada} dos={ocupante.dosManos} forma={ocupante.formaMano} enNominacion={!!nominacion} />
-                )}
-              </div>
-              {/* Sus recordatorios, después de la ficha (en el orden del tabulador también) */}
-              {!revelacion && (
-                <RecordatoriosFicha
-                  recordatorios={recordatoriosDe(a)}
-                  style={posRecordatorios.style}
-                  hacia={posRecordatorios.hacia}
-                  puedeQuitar={(r) => modoFichas === 'narrador' || anotadoPorMi(a.id, r)}
-                  onQuitar={(r) => void quitarRecordatorio(a.id, r)}
-                />
-              )}
-            </Fragment>
-          );
-        })}
-      </div>
 
       {editando && (
         <p id={ID_AYUDA_MOVER} className="sr-only">

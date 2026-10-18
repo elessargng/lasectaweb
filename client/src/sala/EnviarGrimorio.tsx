@@ -117,7 +117,7 @@ const EnviarGrimorio = ({ estado, destino, pedir, onEnviado, onCerrar }: EnviarG
         enJuego={todos.filter((p) => enCopia.has(p.id))}
         otros={todos.filter((p) => !enCopia.has(p.id))}
         onElegir={(p, indice) => ponerRecordatorio({ personaje: p.id, indice, texto: p.recordatorios[indice]?.texto ?? '' })}
-        onTexto={(texto) => ponerRecordatorio({ personaje: RECORDATORIO_TEXTO, indice: -1, texto })}
+        onTexto={(texto, icono) => ponerRecordatorio({ personaje: RECORDATORIO_TEXTO, indice: -1, texto, icono })}
         onCerrar={() => setEligiendo(null)}
       />
     );

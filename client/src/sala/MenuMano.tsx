@@ -3,6 +3,7 @@ import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { botonIcono } from './estilos';
 import { FORMAS_MANO, nombreMano } from './formasMano';
 import type { Atajo } from './atajos';
+import type { PersonajeMostrado } from './guiones';
 import type { FormaMano } from './useSala';
 
 interface MenuManoProps {
@@ -21,11 +22,14 @@ interface MenuManoProps {
   siguientes?: 0 | 1 | 2;
   onManos?: (n: 0 | 1 | 2) => Promise<boolean>;
   onElegirForma: (forma: FormaMano) => Promise<boolean>;
+  /** Los personajes del guion: la mano también puede ser su icono (van detrás de las formas). */
+  personajes?: PersonajeMostrado[];
 }
 
 /**
- * En la cabecera, para los jugadores: botón con el dibujo de su mano que
- * despliega levantarla o bajarla y elegir su forma (palma, puño o tijera).
+ * En la cabecera, para los jugadores y los narradores: botón con el dibujo de su
+ * mano que despliega levantarla o bajarla y elegir su forma (ver FORMAS_MANO) o
+ * el icono de un personaje del guion. La del narrador no vota.
  * Levantarla también tiene atajo de teclado (Preferencias > Atajos). Un muerto
  * que ya ha gastado su voto no puede levantarla: la opción sale desactivada.
  */
@@ -40,7 +44,9 @@ const MenuMano = ({
   puedeDosManos = false,
   siguientes,
   onManos,
+  personajes = [],
 }: MenuManoProps) => {
+  const porId = new Map(personajes.map((p) => [p.id, p]));
   // La Banshee con su habilidad: una mano, las dos o bajarlas (la tecla, en la que toca)
   const conDos: OpcionMenu[] =
     puedeDosManos && onManos
@@ -72,6 +78,9 @@ const MenuMano = ({
       marcada: f === forma,
       elegir: () => onElegirForma(f),
     })),
+    ...personajes
+      .filter((p) => p.icono)
+      .map((p) => ({ id: `personaje-${p.id}`, etiqueta: p.nombre.texto, marcada: p.id === forma, elegir: () => onElegirForma(p.id) })),
   ];
 
   return (
@@ -80,7 +89,7 @@ const MenuMano = ({
       alinear="derecha"
       etiqueta="Tu mano"
       // El estado, en la descripción: al bajarse sola (al votar) no se anuncia
-      descripcion={`${nombreMano(forma)}, ${manos === 2 ? 'las dos levantadas' : levantada ? 'levantada' : 'bajada'}${sinVoto ? ', sin voto' : ''}`}
+      descripcion={`${nombreMano(forma, porId)}, ${manos === 2 ? 'las dos levantadas' : levantada ? 'levantada' : 'bajada'}${sinVoto ? ', sin voto' : ''}`}
       boton={<Mano forma={forma} className={`h-7 w-7 ${levantada ? '' : 'opacity-60'}`} />}
       botonClassName={botonIcono}
       opciones={opciones}

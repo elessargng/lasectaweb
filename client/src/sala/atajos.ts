@@ -23,6 +23,8 @@ export type AccionAtajo =
   | 'microfono'
   | 'camara'
   | 'salirConversacion'
+  | 'entendidoDespertar'
+  | 'abrirDespertar'
   | 'cogerLlamada1'
   | 'cogerLlamada2'
   | 'cogerLlamada3'
@@ -45,6 +47,8 @@ export const ACCIONES_ATAJO: { accion: AccionAtajo; etiqueta: string }[] = [
   { accion: 'microfono', etiqueta: 'Activar o silenciar el micrófono' },
   { accion: 'camara', etiqueta: 'Activar o apagar la cámara' },
   { accion: 'salirConversacion', etiqueta: 'Salir de la conversación privada' },
+  { accion: 'entendidoDespertar', etiqueta: 'Mandar «Entendido» en el despertar de noche' },
+  { accion: 'abrirDespertar', etiqueta: 'Abrir mi despertar de noche' },
   { accion: 'cogerLlamada1', etiqueta: 'Coger la 1.ª llamada entrante' },
   { accion: 'cogerLlamada2', etiqueta: 'Coger la 2.ª llamada entrante' },
   { accion: 'cogerLlamada3', etiqueta: 'Coger la 3.ª llamada entrante' },
@@ -58,6 +62,8 @@ const R: Atajo = { code: 'KeyR', key: 'r', ctrl: false, alt: false, shift: false
 const PUNTO: Atajo = { code: 'Period', key: '.', ctrl: false, alt: false, shift: false, meta: false };
 const COMA: Atajo = { code: 'Comma', key: ',', ctrl: false, alt: false, shift: false, meta: false };
 const RETROCESO: Atajo = { code: 'Backspace', key: 'Backspace', ctrl: false, alt: false, shift: false, meta: false };
+const E: Atajo = { code: 'KeyE', key: 'e', ctrl: false, alt: false, shift: false, meta: false };
+const D: Atajo = { code: 'KeyD', key: 'd', ctrl: false, alt: false, shift: false, meta: false };
 const digito = (n: number): Atajo => ({ code: `Digit${n}`, key: String(n), ctrl: false, alt: false, shift: false, meta: false });
 
 export const ATAJOS_INICIALES: Record<AccionAtajo, Atajo> = {
@@ -68,6 +74,8 @@ export const ATAJOS_INICIALES: Record<AccionAtajo, Atajo> = {
   microfono: PUNTO,
   camara: COMA,
   salirConversacion: RETROCESO,
+  entendidoDespertar: E,
+  abrirDespertar: D,
   cogerLlamada1: digito(1),
   cogerLlamada2: digito(2),
   cogerLlamada3: digito(3),

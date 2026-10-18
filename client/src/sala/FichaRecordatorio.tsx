@@ -1,5 +1,6 @@
 import { Feather } from 'lucide-react';
-import { useId } from 'react';
+import { ICONO_LIBRE_INICIAL } from './fichas';
+import { useId, type CSSProperties } from 'react';
 import { urlDelServidor } from '../utils/api';
 import type { PersonajeMostrado, Texto } from './guiones';
 
@@ -17,9 +18,25 @@ interface FichaRecordatorioProps {
   texto: Texto;
   /** Tamaño (CSS); por defecto, a escala de las fichas de la mesa. */
   tamano?: string;
-  /** Con texto propio (sin personaje): el texto da la vuelta a la ficha y en el centro va una pluma. */
+  /**
+   * Con texto propio: el texto da la vuelta a la ficha y en el centro va su icono,
+   * el del `personaje` si lo hay o, si no, el de `icono` (ICONOS_LIBRES).
+   */
   libre?: boolean;
+  icono?: string;
 }
+
+/** El icono del centro de un recordatorio con texto propio, si no es de un personaje. */
+const IconoLibre = ({ icono }: { icono: string }) => {
+  const sombra = 'drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]';
+  if (icono === '_pluma') return <Feather className={`h-[34%] w-[34%] text-[#e9c97a] ${sombra}`} strokeWidth={2.2} />;
+  if (icono === '_interrogante') {
+    return (
+      <span className={`font-display font-bold leading-none text-[#e9c97a] ${sombra} text-[calc(var(--rec-lado)*0.42)]`}>?</span>
+    );
+  }
+  return <img src="/logo-2.png" alt="" className={`h-[46%] w-[46%] object-contain ${sombra}`} />;
+};
 
 /**
  * Una ficha recordatorio: redonda, con el fondo violeta de las del juego (el de
@@ -48,7 +65,7 @@ const tamanoLibre = (texto: string) => Math.min(TAMANO_LIBRE, 190 / (Math.max(te
 // Desde abajo, en el sentido del reloj: el centro del camino (50 %) queda arriba
 const CIRCULO_LIBRE = `M 50 ${50 + RADIO_LIBRE} A ${RADIO_LIBRE} ${RADIO_LIBRE} 0 1 1 50 ${50 - RADIO_LIBRE} A ${RADIO_LIBRE} ${RADIO_LIBRE} 0 1 1 50 ${50 + RADIO_LIBRE}`;
 
-const FichaRecordatorio = ({ personaje, texto, tamano = TAMANO_RECORDATORIO, libre = false }: FichaRecordatorioProps) => {
+const FichaRecordatorio = ({ personaje, texto, tamano = TAMANO_RECORDATORIO, libre = false, icono = ICONO_LIBRE_INICIAL }: FichaRecordatorioProps) => {
   // Cada ficha, su arco (los id del SVG son de toda la página)
   const idArco = `arco-rec-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   return (
@@ -57,10 +74,15 @@ const FichaRecordatorio = ({ personaje, texto, tamano = TAMANO_RECORDATORIO, lib
       className="relative flex aspect-square items-center justify-center overflow-hidden rounded-full shadow-[0_0_0_1px_rgba(20,12,32,0.6),0_2px_5px_rgba(0,0,0,0.6)]"
       // El fondo violeta de los recordatorios de botc.app (copia local, public/recordatorio.webp),
       // de borde a borde; debajo, un violeta parecido por si tarda en cargar
-      style={{ width: tamano, background: "url('/recordatorio.webp') center / cover no-repeat, #3d2a5c" }}
+      style={{ width: tamano, '--rec-lado': tamano, background: "url('/recordatorio.webp') center / cover no-repeat, #3d2a5c" } as CSSProperties}
     >
       {libre ? (
-        <Feather className="h-[34%] w-[34%] text-[#e9c97a] drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]" strokeWidth={2.2} />
+        // Por dentro del texto, que da la vuelta entera: más pequeño que el de un recordatorio normal
+        personaje?.icono ? (
+          <img src={urlDelServidor(personaje.icono)} alt="" className="h-[50%] w-[50%] object-contain" />
+        ) : (
+          <IconoLibre icono={icono} />
+        )
       ) : (
         personaje?.icono && (
           <img src={urlDelServidor(personaje.icono)} alt="" className="h-[62%] w-[62%] -translate-y-[12%] object-contain" />

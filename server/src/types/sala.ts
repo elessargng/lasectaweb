@@ -4,8 +4,12 @@ import { SalaMensajesPrivados } from './chat';
 export type SalaRol = 'narrador' | 'jugador' | 'visitante';
 
 /** Forma de la mano que levanta un jugador (como en piedra, papel o tijera). */
-export type SalaFormaMano = 'palma' | 'puno' | 'tijera';
-export const SALA_FORMAS_MANO: SalaFormaMano[] = ['palma', 'puno', 'tijera'];
+/**
+ * La forma de la mano: una de SALA_FORMAS_MANO o el id de un personaje del guion
+ * (la mano es su icono).
+ */
+export type SalaFormaMano = string;
+export const SALA_FORMAS_MANO: SalaFormaMano[] = ['palma', 'tijera', 'puno', 'peineta', 'paz', 'cuernos', 'lagarto', 'spock', 'perrito'];
 
 export interface SalaParticipante {
   /** Identificador dentro de la sala (no es el id de usuario de la web). */
@@ -145,7 +149,15 @@ export interface SalaRecordatorio {
   indice: number;
   /** Su texto en el original (el cliente lo traduce si puede). */
   texto: string;
+  /**
+   * Con texto propio, el icono del centro: uno de ICONOS_RECORDATORIO_TEXTO o el
+   * id de un personaje del guion. Sin él, el logo de La Secta.
+   */
+  icono?: string;
 }
+
+/** Los iconos que no son de un personaje para un recordatorio con texto propio. */
+export const ICONOS_RECORDATORIO_TEXTO = ['_secta', '_pluma', '_interrogante'];
 
 export type SalaAlineamiento = 'bueno' | 'malvado';
 

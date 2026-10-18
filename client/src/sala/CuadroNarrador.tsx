@@ -6,7 +6,9 @@ import CuadroAvatar from './CuadroAvatar';
 import { botonPrincipal } from './estilos';
 import { idNombreNarrador } from './ids';
 import { urlDelServidor } from '../utils/api';
-import { iconoDe } from './fichas';
+import { iconoDe, useFichas } from './fichas';
+import { nombreMano } from './formasMano';
+import ManoLevantada from './ManoLevantada';
 import type { PersonajeMostrado } from './guiones';
 import type { SalaParticipante } from './useSala';
 
@@ -46,6 +48,9 @@ interface CuadroNarradorProps {
  * el lector está siempre, justo después del nombre. Pedido, se queda como
  * «Grimorio solicitado» (desactivado) hasta que el narrador responde: así el
  * foco no se pierde y se sabe que está pedido.
+ *
+ * También puede levantar la mano (no vota: es para hacerse ver): sale en la
+ * esquina del retrato, como la de los jugadores en su ficha, y se dice con el nombre.
  */
 const CuadroNarrador = ({
   narrador,
@@ -59,7 +64,9 @@ const CuadroNarrador = ({
   escuchando = false,
   silenciado = false,
   npc,
-}: CuadroNarradorProps) => (
+}: CuadroNarradorProps) => {
+  const { todosPorId } = useFichas();
+  return (
   <div className={`group relative rounded ${hablando ? 'sala-habla' : ''}`}>
     <CuadroAvatar
       titulo="Narrador"
@@ -92,6 +99,9 @@ const CuadroNarrador = ({
                 <span className="sr-only"> (</span>desconectado<span className="sr-only">)</span>
               </span>
             )}
+            {narrador.manoLevantada && (
+              <span className="sr-only"> (mano levantada: {nombreMano(narrador.formaMano, todosPorId).toLocaleLowerCase('es')})</span>
+            )}
             {enConversacion && <span className="sr-only"> (en una conversación privada)</span>}
             {escuchando && <span className="sr-only"> (escuchando una conversación)</span>}
           </p>
@@ -111,6 +121,10 @@ const CuadroNarrador = ({
         />
       </div>
     )}
+    {/* La mano, en la esquina de arriba a la derecha del retrato (la caja tiene su tamaño y su sitio) */}
+    <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-5 z-10 aspect-square">
+      <ManoLevantada levantada={narrador.manoLevantada} forma={narrador.formaMano} enNominacion={false} />
+    </div>
     {grimorio && (
       // Sobre el retrato (debajo del rótulo «Narrador»), centrado; solo el botón recibe el ratón
       <div className="pointer-events-none absolute inset-x-0 top-5 flex aspect-square items-center justify-center">
@@ -125,6 +139,7 @@ const CuadroNarrador = ({
       </div>
     )}
   </div>
-);
+  );
+};
 
 export default CuadroNarrador;

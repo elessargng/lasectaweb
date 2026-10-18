@@ -17,6 +17,17 @@ export const RECORDATORIO_TEXTO = '_texto';
 export const RECORDATORIO_TEXTO_MAX = 14;
 export const esRecordatorioTexto = (r: SalaRecordatorio) => r.personaje === RECORDATORIO_TEXTO;
 
+/**
+ * Los iconos de un recordatorio con texto propio que no son de un personaje (lo
+ * mismo en el servidor, types/sala.ts). El primero es el de por defecto.
+ */
+export const ICONOS_LIBRES = [
+  { id: '_secta', nombre: 'Logo de La Secta' },
+  { id: '_pluma', nombre: 'Pluma' },
+  { id: '_interrogante', nombre: 'Interrogante' },
+] as const;
+export const ICONO_LIBRE_INICIAL = ICONOS_LIBRES[0].id;
+
 /** Notas como mucho por asiento, y su largo máximo (como en el servidor). */
 export const NOTAS_MAX = 4;
 export const NOTA_LARGO_MAX = 500;

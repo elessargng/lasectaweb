@@ -1331,9 +1331,10 @@ export class SalaService {
     if (!participante) return;
     // El acceso al grimorio es de los visitantes: al cambiar de papel se pierde (y se vuelve a pedir).
     if (participante.rol !== rol && participante.accesoGrimorio !== 'ninguno') this.cambiarAccesoGrimorio(id, 'ninguno');
+    const cambia = participante.rol !== rol;
     participante.rol = rol;
-    // La mano solo cuenta en la partida: quien deja de jugar la baja.
-    if (rol !== 'jugador') {
+    // La mano es de jugadores y narradores, y de su papel: quien cambia de papel la baja.
+    if (cambia || rol === 'visitante') {
       participante.manoLevantada = false;
       participante.dosManos = false;
     }

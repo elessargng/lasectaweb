@@ -191,9 +191,9 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     }
 
     // Lo que han hecho otros (ver avisosSala); lo propio no se avisa: ya se sabe.
-    const avisos = propia ? [] : avisosDeCambio(anterior, nuevo, vigilados);
+    const avisos = propia ? [] : avisosDeCambio(anterior, nuevo, vigilados, personajesGuionRef.current);
     // Las manos vigiladas: siempre (también tras una acción propia), sin filtros
-    const urgentes = manosVigiladas(anterior, nuevo, vigilados);
+    const urgentes = manosVigiladas(anterior, nuevo, vigilados, personajesGuionRef.current);
     if (urgentes.length) anunciarUrgente(urgentes.join(' '));
 
     // Llamadas entrantes: a las nuevas se les da su tecla (slot), suena un toque
@@ -849,13 +849,14 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   };
 
   const traduccionesNombres = useTraducciones(preferencias.idiomaNombres, preferencias.genero);
-  // (Sin useMemo: el compilador de React ya memoriza lo que no cambia)
-  const personajesGuion = guion ? mostrarPersonajes(guion.personajes, traduccionesNombres, null) : [];
-  // Los viajeros del catálogo que no trae el guion: se pueden poner en una ficha o meter en la bolsa
-  const viajerosCatalogo = guion ? mostrarPersonajes(guion.viajeros ?? [], traduccionesNombres, null) : [];
-  const personajesGuionPorId = new Map([...personajesGuion, ...viajerosCatalogo].map((p) => [p.id, p]));
-  // NPCs: los legendarios y lóricos del guion y los del catálogo, con su habilidad traducida
+  // La habilidad (la pista de las fichas, la de los NPCs), en el idioma de las descripciones
   const traduccionesDescripciones = useTraducciones(preferencias.idiomaDescripciones, preferencias.genero);
+  // (Sin useMemo: el compilador de React ya memoriza lo que no cambia)
+  const personajesGuion = guion ? mostrarPersonajes(guion.personajes, traduccionesNombres, traduccionesDescripciones) : [];
+  // Los viajeros del catálogo que no trae el guion: se pueden poner en una ficha o meter en la bolsa
+  const viajerosCatalogo = guion ? mostrarPersonajes(guion.viajeros ?? [], traduccionesNombres, traduccionesDescripciones) : [];
+  const personajesGuionPorId = new Map([...personajesGuion, ...viajerosCatalogo].map((p) => [p.id, p]));
+  // NPCs: los legendarios y lóricos del guion y los del catálogo
   const npcsDisponibles = guion
     ? mostrarPersonajes(
         [...guion.personajes.filter((p) => p.tipo === 'fabled' || p.tipo === 'loric'), ...(guion.npcs ?? [])],
@@ -960,7 +961,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const alternarMano = () => ponerManos(siguientesManos);
   const elegirFormaMano = async (forma: FormaMano) => {
     const r = await pedir('sala:elegirMano', { forma });
-    if (r.ok) anunciar('miMano', `Tu mano: ${nombreMano(forma).toLocaleLowerCase('es')}.`);
+    if (r.ok) anunciar('miMano', `Tu mano: ${nombreMano(forma, personajesGuionPorId).toLocaleLowerCase('es')}.`);
     else setAviso(r.error);
     return false;
   };
@@ -1012,6 +1013,15 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     if (!r.ok) setAviso(r.error);
   };
 
+  // «Entendido» con su tecla, sin pasar por «Enviar»: el jugador, en su despertar; el
+  // narrador, en la ventana de despertar que tiene delante. Al llegar, se cierra como siempre.
+  const despertarEntendido = narro ? activoNarrador : miDespertar ? miDespertar.asiento : null;
+  const mandarEntendido = async () => {
+    const r = await pedirPropio('despertar:enviar', narro ? { ficha: 'entendido', asientoId: despertarEntendido } : { ficha: 'entendido' });
+    if (r.ok) anunciar('despertar', 'Enviado: Entendido.');
+    else setAviso(r.error);
+  };
+
   // Los atajos que se pueden usar ahora, con lo que hace cada uno: con su tecla y, si
   // tiene, con su gesto (móviles y tabletas).
   const accionesActivas: [AccionAtajo, () => void][] = [
@@ -1031,6 +1041,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       : []),
     // Retroceso: salir de la conversación privada (o dejar de escuchar)
     ...(miConversacion ? [['salirConversacion', () => void salirDeConversacion()] as [AccionAtajo, () => void]] : []),
+    // E: «Entendido» en el despertar (el propio, o el que el narrador tiene abierto)
+    ...(despertarEntendido && estado?.acciones.includes('despertar:enviar')
+      ? [['entendidoDespertar', () => void mandarEntendido()] as [AccionAtajo, () => void]]
+      : []),
+    // D: volver a abrir el despertar propio, si se había cerrado
+    ...(miDespertar && wakeCerradoJugador ? [['abrirDespertar', () => setWakeCerradoJugador(false)] as [AccionAtajo, () => void]] : []),
     // Teclas de coger llamada: cada llamada entrante, con la tecla de su slot, la acepta
     ...Object.entries(slotsLlamada).map(
       ([id, slot]) => [accionCogerLlamada(slot), () => void responder(id, true)] as [AccionAtajo, () => void],
@@ -1577,6 +1593,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   atajoLevantar={atajos.levantarMano}
                   onAlternar={alternarMano}
                   onElegirForma={elegirFormaMano}
+                  // Los del guion, que conoce todo el mundo (los en juego solo los sabe el narrador)
+                  personajes={personajesGuion}
                 />
               )}
               {/* Solo narradores: el servidor solo les manda a ellos el registro */}
@@ -1708,7 +1726,11 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                 />
               </div>
               {/* sala-columna-mesa: la mesa centrada en la ventana y apartada de la hoja del guion (sala.css) */}
-              <div className="sala-columna-mesa min-w-0 flex-1">
+              <section aria-labelledby="sala-plaza-titulo" className="sala-columna-mesa min-w-0 flex-1">
+                {/* Para saltar con el lector a la mesa: los asientos, cada uno con su ficha */}
+                <h2 id="sala-plaza-titulo" className="sr-only">
+                  La plaza
+                </h2>
                 <Mesa
                   estado={estado}
                   manual={{ avatar: preferencias.tamanoAvatar, ficha: preferencias.tamanoFicha }}
@@ -1746,7 +1768,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   }
                   seguimiento={puedeSeguir ? { siguiendo: sigoA?.id ?? null, onAlternar: alternarSeguir } : null}
                 />
-              </div>
+              </section>
               {/* Fuera de la mesa, para no tapar sus fichas: en pantallas anchas, abajo
                   del todo a la derecha (apartándose de la hoja del guion); en estrechas, debajo de la mesa */}
               <RepartoPartida

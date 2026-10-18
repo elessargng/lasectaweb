@@ -249,7 +249,7 @@ const FichaAsiento = ({
     asiento.muertePendiente && 'muerta esta noche, sin anunciar',
     asiento.marcado && 'con la calavera',
     ocupante?.manoLevantada &&
-      (ocupante.dosManos ? 'las dos manos levantadas' : `mano levantada (${nombreMano(ocupante.formaMano).toLocaleLowerCase('es')})`),
+      (ocupante.dosManos ? 'las dos manos levantadas' : `mano levantada (${nombreMano(ocupante.formaMano, todosPorId).toLocaleLowerCase('es')})`),
     voto === null && 'no vota',
     typeof voto === 'number' && `vota (${voto === 1 ? '1 voto' : `${voto} votos`})`,
     recordatorios.length > 0 &&
@@ -373,13 +373,13 @@ const FichaAsiento = ({
     if (!r.ok) onError(r.error);
   };
   // Con texto propio: igual, pero sin personaje (va en redondo en la ficha)
-  const ponerRecordatorioTexto = async (texto: string) => {
+  const ponerRecordatorioTexto = async (texto: string, icono: string) => {
     if (modo !== 'narrador') {
-      const nuevo = { id: crypto.randomUUID(), personaje: RECORDATORIO_TEXTO, indice: -1, texto };
+      const nuevo = { id: crypto.randomUUID(), personaje: RECORDATORIO_TEXTO, indice: -1, texto, icono };
       anotarRecordatorios(asiento.id, [...(notasRecordatorios[asiento.id] ?? []), nuevo]);
       return;
     }
-    const r = await pedir('narrador:ponerRecordatorioTexto', { asientoId: asiento.id, texto });
+    const r = await pedir('narrador:ponerRecordatorioTexto', { asientoId: asiento.id, texto, icono });
     if (!r.ok) onError(r.error);
   };
   const opcionRecordatorio: OpcionMenu = {
@@ -458,7 +458,7 @@ const FichaAsiento = ({
           probables={probables}
           otros={todos.filter((p) => !enJuego.has(p.id))}
           onElegir={(p, i) => void ponerRecordatorio(p, i)}
-          onTexto={(texto) => void ponerRecordatorioTexto(texto)}
+          onTexto={(texto, icono) => void ponerRecordatorioTexto(texto, icono)}
           onCerrar={() => setEligiendoRecordatorio(false)}
         />
       )}

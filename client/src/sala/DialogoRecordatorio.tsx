@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import Dialog from '../components/Dialog';
 import { botonPeligro, botonPrincipal, botonSecundario, campo } from './estilos';
 import FichaRecordatorio from './FichaRecordatorio';
-import { RECORDATORIO_TEXTO_MAX } from './fichas';
+import { ICONO_LIBRE_INICIAL, ICONOS_LIBRES, RECORDATORIO_TEXTO_MAX } from './fichas';
 import { porTipos, type PersonajeMostrado } from './guiones';
 
 interface DialogoRecordatorioProps {
@@ -22,8 +22,11 @@ interface DialogoRecordatorioProps {
   explicacion?: string;
   /** Un botón más en el pie, para seguir sin elegir ninguno («Matar sin recordatorio»). */
   sinRecordatorio?: { etiqueta: string; onElegir: () => void };
-  /** Con esto sale la pestaña «Texto propio»: un recordatorio con lo que se escriba. */
-  onTexto?: (texto: string) => void;
+  /**
+   * Con esto sale la pestaña «Texto propio»: un recordatorio con lo que se escriba
+   * y el icono elegido (uno de ICONOS_LIBRES o un personaje en juego).
+   */
+  onTexto?: (texto: string, icono: string) => void;
 }
 
 type Pestana = 'enJuego' | 'otros' | 'texto';
@@ -43,8 +46,9 @@ const TAMANO = '4.5rem';
  * botón. Elegir uno lo pone y cierra el diálogo.
  *
  * Con `onTexto`, una pestaña más para escribir uno propio (corto: va en redondo
- * en una ficha pequeña), con la ficha tal como quedará mientras se escribe. Si no
- * hay ningún personaje (sin guion), se abre en esa.
+ * en una ficha pequeña), con la ficha tal como quedará mientras se escribe, y el
+ * icono del centro: el logo de La Secta (de entrada), una pluma, un interrogante
+ * o el de un personaje en juego. Si no hay ningún personaje (sin guion), se abre en esa.
  *
  * Pestañas como manda ARIA: las flechas van de una a otra y Tab entra en la lista.
  */
@@ -54,13 +58,16 @@ const DialogoRecordatorio = ({ ficha, enJuego, otros, probables, onElegir, onCer
   const [pestana, setPestana] = useState<Pestana>(onTexto && sinPersonajes ? 'texto' : 'enJuego');
   const refs = useRef<Record<Pestana, HTMLButtonElement | null>>({ enJuego: null, otros: null, texto: null });
   const [texto, setTexto] = useState('');
+  const [icono, setIcono] = useState<string>(ICONO_LIBRE_INICIAL);
+  const conIcono = enJuego.filter((p) => p.icono);
+  const personajeIcono = conIcono.find((p) => p.id === icono);
   const limpio = texto.replace(/\s+/g, ' ').trim();
   const largo = [...texto].length;
 
   const ponerTexto = (e: FormEvent) => {
     e.preventDefault();
     if (!limpio || !onTexto) return;
-    onTexto(limpio);
+    onTexto(limpio, icono);
     onCerrar();
   };
 
@@ -133,7 +140,7 @@ const DialogoRecordatorio = ({ ficha, enJuego, otros, probables, onElegir, onCer
             <form onSubmit={ponerTexto} className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
               {/* Cómo quedará: la ficha, en grande, con lo que se va escribiendo */}
               <div className="flex shrink-0 flex-col items-center gap-2">
-                <FichaRecordatorio personaje={undefined} texto={{ texto: limpio || 'Tu texto', lang: 'es' }} tamano="7rem" libre />
+                <FichaRecordatorio personaje={personajeIcono} texto={{ texto: limpio || 'Tu texto', lang: 'es' }} tamano="7rem" libre icono={icono} />
                 <span aria-hidden="true" className="text-xs text-on-surface-muted">
                   Así se verá
                 </span>
@@ -159,6 +166,29 @@ const DialogoRecordatorio = ({ ficha, enJuego, otros, probables, onElegir, onCer
                     {largo}/{RECORDATORIO_TEXTO_MAX}
                   </span>
                 </p>
+                {/* El icono del centro: radios, uno por icono (se ve la ficha con cada uno) */}
+                <fieldset className="mt-2 flex flex-col gap-2">
+                  <legend className="campo-etiqueta mb-2">Icono</legend>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      ...ICONOS_LIBRES.map((i) => ({ id: i.id as string, nombre: i.nombre, lang: 'es', personaje: undefined })),
+                      ...conIcono.map((p) => ({ id: p.id, nombre: p.nombre.texto, lang: p.nombre.lang, personaje: p })),
+                    ].map((o) => (
+                      <label key={o.id} title={o.nombre} className="relative block cursor-pointer rounded-full has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-theme-main has-[:checked]:ring-2 has-[:checked]:ring-gold-bright has-[:checked]:ring-offset-2 has-[:checked]:ring-offset-surface hover:brightness-125">
+                        <input
+                          type="radio"
+                          name="sala-recordatorio-icono"
+                          value={o.id}
+                          checked={icono === o.id}
+                          onChange={() => setIcono(o.id)}
+                          className="sr-only"
+                        />
+                        <span lang={o.lang} className="sr-only">{o.nombre}</span>
+                        <FichaRecordatorio personaje={o.personaje} texto={{ texto: '', lang: 'es' }} tamano="2.75rem" libre icono={o.id} />
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
                 <div className="mt-2 flex justify-end">
                   <button type="submit" aria-disabled={!limpio || undefined} className={botonPrincipal}>
                     Poner recordatorio
