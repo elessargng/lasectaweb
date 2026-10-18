@@ -69,6 +69,8 @@ export interface PreferenciasSala {
   silla: PreferenciaSilla;
   /** Cómo se ve si a un muerto le queda el voto: su vela o un círculo en el sudario. Pestaña Interfaz. */
   voto: EstiloVoto;
+  /** La ciudad animada de la cabecera (de día y de noche, con su atardecer y su amanecer). Pestaña Interfaz. */
+  ciudadCabecera: boolean;
   /** Cámara y micrófono elegidos (deviceId); vacío: los del sistema. Pestaña Comunicaciones. */
   idCamara: string;
   idMicrofono: string;
@@ -81,7 +83,8 @@ type ClaveSiNo =
   | 'salirConversacionSinNadie'
   | 'invitacionesFuera'
   | 'panelLateralContraido'
-  | 'farolesFijados';
+  | 'farolesFijados'
+  | 'ciudadCabecera';
 
 /** Los paneles de la columna de la izquierda: uno a la vez, elegido en su barra de iconos. */
 export const PANELES_LATERALES = ['mensajes', 'conversaciones', 'npcs', 'faroles'] as const;
@@ -114,6 +117,7 @@ const SI_NO: Record<ClaveSiNo, boolean> = {
   invitacionesFuera: false,
   panelLateralContraido: false,
   farolesFijados: false,
+  ciudadCabecera: true,
 };
 
 /** Lo que guardaba antes la sala en el navegador (para llevarlo a la cuenta la primera vez). */

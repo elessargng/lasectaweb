@@ -16,6 +16,7 @@ import PanelAtajos from './PanelAtajos';
 import { sonVecinos } from './nombresAsiento';
 import { useGestos, useReconocerGestos, type Gesto } from './gestos';
 import PanelInterfaz from './PanelInterfaz';
+import SkylineCabecera from './SkylineCabecera';
 import PanelSonido from './PanelSonido';
 import PanelPartida from './PanelPartida';
 import PanelUsuario, { type ResultadoPerfil } from './PanelUsuario';
@@ -1508,6 +1509,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       <FichasContexto.Provider value={contextoFichas}>
       <div className="contents" style={tamanos}>
         <Cabecera
+          ciudad={estado && preferencias.ciudadCabecera ? <SkylineCabecera fase={estado.fase.momento} /> : undefined}
           centro={
             estado && (
               <div className="flex min-w-0 items-center gap-2">

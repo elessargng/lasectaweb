@@ -1,3 +1,4 @@
+import Interruptor from './Interruptor';
 import Deslizador from './Deslizador';
 import FichaRedonda from './FichaRedonda';
 import Mano from './Mano';
@@ -193,6 +194,21 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, onCambiar }: PanelIn
         )
       }
     />
+    <div className="flex flex-col gap-1">
+      <Interruptor
+        id="sala-pref-ciudad"
+        activo={preferencias.ciudadCabecera}
+        onCambiar={(ciudadCabecera) => onCambiar({ ciudadCabecera })}
+        describedBy="sala-pref-ciudad-ayuda"
+        textoClassName="text-sm"
+      >
+        Ciudad animada en la cabecera
+      </Interruptor>
+      <p id="sala-pref-ciudad-ayuda" className="text-xs text-on-surface-muted">
+        La ciudad con la torre del reloj entre el logo y la fase: de noche y de día, con su atardecer y su amanecer al
+        cambiar. Desactivada, no se ve.
+      </p>
+    </div>
   </div>
 );
 

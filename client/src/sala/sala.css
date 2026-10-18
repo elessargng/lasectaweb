@@ -924,9 +924,206 @@
   }
 }
 
+/* ───────────────────────── La ciudad de la cabecera ───────────────────────── */
+
+/*
+ * La ciudad entre el logo y la fase (SkylineCabecera): un aguafuerte de latón que
+ * cambia con la fase. Se funde por los lados para no cortarse contra el logo ni
+ * contra la fase. Los colores van por fase (data-fase) y cambian despacio (t); al
+ * cambiar de fase, data-transicion lanza el atardecer o el amanecer.
+ */
+.sala-ciudad {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%);
+}
+.sala-ciudad svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.sala-ciudad .t {
+  transition:
+    fill 2.8s ease,
+    stroke 2.8s ease,
+    opacity 2.8s ease,
+    transform 2.8s cubic-bezier(0.45, 0.05, 0.25, 1);
+}
+/* Con la pestaña oculta, todo quieto */
+.sala-ciudad-quieta,
+.sala-ciudad-quieta * {
+  animation-play-state: paused !important;
+}
+
+/* El cielo: el de la noche, el del día y el del ocaso, que solo sale al cambiar */
+.sala-ciudad .cielo-noche { fill: url(#sala-ciudad-cielo-noche); }
+.sala-ciudad .cielo-dia { fill: url(#sala-ciudad-cielo-dia); opacity: 0; }
+.sala-ciudad .cielo-ocaso { fill: url(#sala-ciudad-cielo-ocaso); opacity: 0; }
+.sala-ciudad .destello { opacity: 0; }
+.sala-ciudad[data-fase='dia'] .cielo-dia { opacity: 1; }
+.sala-ciudad[data-fase='dia'] .cielo-noche { opacity: 0; }
+.sala-ciudad[data-fase='preparacion'] .cielo-ocaso { opacity: 0.55; }
+.sala-ciudad[data-transicion] .cielo-ocaso { animation: sala-ciudad-ocaso 3.4s ease forwards; }
+.sala-ciudad[data-transicion='amanecer'] .destello { animation: sala-ciudad-destello 3.4s ease forwards; }
+@keyframes sala-ciudad-ocaso {
+  0% { opacity: 0; }
+  35% { opacity: 0.95; }
+  65% { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+@keyframes sala-ciudad-destello {
+  0%, 45% { opacity: 0; }
+  62% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
+/* Estrellas (de noche, una a una, y titilan), luna y sol, que suben y bajan */
+.sala-ciudad .estrella {
+  fill: #ecd29a;
+  opacity: 0;
+  transition: opacity 1.6s ease;
+}
+.sala-ciudad[data-fase='noche'] .estrella {
+  opacity: var(--o, 0.8);
+  transition-delay: calc(1.6s + var(--d, 0s));
+  animation: sala-ciudad-titilar var(--p, 4s) ease-in-out infinite var(--d, 0s);
+}
+@keyframes sala-ciudad-titilar {
+  0%, 100% { opacity: var(--o, 0.8); }
+  50% { opacity: 0.15; }
+}
+.sala-ciudad .sol { transform: translateY(64px); }
+.sala-ciudad .luna { transform: translateY(0); }
+.sala-ciudad[data-fase='dia'] .sol { transform: translateY(0); transition-delay: 0.9s; }
+.sala-ciudad[data-fase='dia'] .luna { transform: translateY(64px); }
+.sala-ciudad[data-fase='noche'] .luna { transition-delay: 1.1s; }
+.sala-ciudad[data-fase='preparacion'] .sol { transform: translateY(40px); }
+.sala-ciudad[data-fase='preparacion'] .luna { transform: translateY(64px); }
+.sala-ciudad .luna-disco { fill: none; stroke: #ecd29a; stroke-width: 0.8; }
+.sala-ciudad .sol-disco { fill: none; stroke: #d4af6a; stroke-width: 0.8; }
+.sala-ciudad .sol-brillo { opacity: 0; }
+.sala-ciudad .rayos {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sala-ciudad-giro 60s linear infinite;
+}
+.sala-ciudad .rayos line { stroke: #d4af6a; stroke-width: 0.6; stroke-linecap: round; }
+@keyframes sala-ciudad-giro {
+  to { transform: rotate(360deg); }
+}
+
+/* La ciudad, en líneas de latón; las casas tapan lo que hay detrás (las estrellas) */
+.sala-ciudad .edif {
+  fill: #0c0915;
+  stroke: #d4af6a;
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+}
+.sala-ciudad .lejos .edif { stroke-width: 0.5; opacity: 0.45; }
+.sala-ciudad .cerca .edif { stroke-width: 1; }
+.sala-ciudad[data-fase='noche'] .lineas { filter: drop-shadow(0 0 1.6px rgba(236, 210, 154, 0.55)); }
+.sala-ciudad[data-fase='preparacion'] .edif { stroke: #b8945f; }
+
+/* Las ventanas: de noche se encienden una a una; algunas titilan como una vela */
+.sala-ciudad .ventana {
+  fill: #f2c46d;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+.sala-ciudad[data-fase='noche'] .ventana {
+  opacity: 1;
+  transition-delay: calc(1.5s + var(--d, 0s));
+}
+.sala-ciudad[data-fase='noche'] .ventana.titila {
+  animation: sala-ciudad-titila 5.5s steps(1) infinite calc(4s + var(--d, 0s));
+}
+@keyframes sala-ciudad-titila {
+  0%, 46%, 50%, 80%, 100% { opacity: 1; }
+  48% { opacity: 0.35; }
+  78% { opacity: 0.55; }
+}
+
+/* La torre del reloj: la esfera se enciende antes que nada, con un halo que respira */
+.sala-ciudad .esfera { fill: #0c0915; stroke: #d4af6a; stroke-width: 0.7; }
+.sala-ciudad[data-fase='noche'] .esfera { fill: #f6d58a; }
+.sala-ciudad .manecilla { stroke: #d4af6a; stroke-width: 0.8; stroke-linecap: round; }
+.sala-ciudad[data-fase='noche'] .manecilla { stroke: #3b2a12; }
+.sala-ciudad .aguja-min,
+.sala-ciudad .aguja-hora {
+  transform-box: view-box;
+  transform-origin: 300px 28px;
+}
+.sala-ciudad .aguja-min { animation: sala-ciudad-giro 90s linear infinite; }
+.sala-ciudad .aguja-hora { animation: sala-ciudad-giro 1080s linear infinite; }
+.sala-ciudad .halo,
+.sala-ciudad .farol-luz { opacity: 0; }
+.sala-ciudad[data-fase='noche'] .halo { opacity: 1; transition-delay: 0.8s; }
+.sala-ciudad[data-fase='preparacion'] .halo { opacity: 0.35; }
+.sala-ciudad[data-fase='noche'] .farol-luz { opacity: 1; transition-delay: 1.3s; }
+.sala-ciudad .halo-respira {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sala-ciudad-respira 4.5s ease-in-out infinite;
+}
+@keyframes sala-ciudad-respira {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.12); opacity: 1; }
+}
+.sala-ciudad .farol { fill: none; stroke: #d4af6a; stroke-width: 0.8; }
+
+/* De día (mañana velada): el cielo se templa, el latón se aclara, sol con algo de brillo */
+.sala-ciudad[data-fase='dia'] .edif { stroke: #d9b77a; fill: #15100c; }
+.sala-ciudad[data-fase='dia'] .esfera { fill: #2a1f14; stroke: #d9b77a; }
+.sala-ciudad[data-fase='dia'] .manecilla { stroke: #e2c58f; }
+.sala-ciudad[data-fase='dia'] .sol-disco { fill: rgba(255, 210, 122, 0.35); stroke: #e8c27c; }
+.sala-ciudad[data-fase='dia'] .sol-brillo { opacity: 0.45; }
+
+/* Cuervos de noche; de día, nubes y pájaros */
+.sala-ciudad .ave { fill: none; stroke: #d4af6a; stroke-width: 0.8; stroke-linecap: round; }
+.sala-ciudad .cuervos,
+.sala-ciudad .pajaros,
+.sala-ciudad .nubes {
+  opacity: 0;
+  transition: opacity 2s ease;
+}
+.sala-ciudad[data-fase='noche'] .cuervos { opacity: 1; transition-delay: 2s; }
+.sala-ciudad[data-fase='dia'] .pajaros,
+.sala-ciudad[data-fase='dia'] .nubes { opacity: 1; transition-delay: 1.4s; }
+.sala-ciudad .vuela { animation: sala-ciudad-vuelo var(--dur, 18s) linear infinite var(--delay, 0s); }
+@keyframes sala-ciudad-vuelo {
+  0% { transform: translate(-30px, var(--y, 16px)); }
+  50% { transform: translate(300px, calc(var(--y, 16px) - 5px)); }
+  100% { transform: translate(640px, calc(var(--y, 16px) + 2px)); }
+}
+.sala-ciudad .ala {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: sala-ciudad-aleteo 0.42s ease-in-out infinite alternate;
+}
+@keyframes sala-ciudad-aleteo {
+  from { transform: scaleY(1); }
+  to { transform: scaleY(-0.55); }
+}
+.sala-ciudad .nube { animation: sala-ciudad-deriva var(--dur, 80s) linear infinite var(--delay, 0s); }
+@keyframes sala-ciudad-deriva {
+  from { transform: translateX(-120px); }
+  to { transform: translateX(660px); }
+}
+.sala-ciudad .nube-trazo { fill: rgba(246, 222, 176, 0.18); stroke: #d9b77a; stroke-width: 0.6; }
+
 /* ───────────────────────── Movimiento reducido ───────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
+  /* La ciudad de la cabecera: sin animaciones; al cambiar de fase, solo el cambio de luz, corto */
+  .sala-ciudad,
+  .sala-ciudad * {
+    animation: none !important;
+    transition-duration: 0.4s !important;
+    transition-delay: 0s !important;
+  }
+
   .sala-onda {
     animation: none;
     left: 50%;
