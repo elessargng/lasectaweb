@@ -64,7 +64,7 @@ export class ChatService {
     if (yo.id === otro.id) return false;
     if (yo.rol === 'narrador' || otro.rol === 'narrador') return true;
     if (yo.rol !== 'jugador' || otro.rol !== 'jugador') return false;
-    const modo = this.sala.configuracion().mensajes;
+    const modo = this.modoMensajes();
     if (modo === 'todos') return true;
     if (modo === 'vecinos') return this.vecinos(yo.id).includes(otro.id);
     return false;
@@ -109,9 +109,18 @@ export class ChatService {
   private porQueNo(yo: SalaParticipante, otro: SalaParticipante): string {
     if (yo.id === otro.id) return 'No puedes escribirte a ti mismo.';
     if (yo.rol !== 'jugador' || otro.rol !== 'jugador') return 'Solo puedes escribir en privado a los narradores.';
-    return this.sala.configuracion().mensajes === 'vecinos'
+    if (this.sala.configuracion().mensajes === 'todos' && this.sala.institutrizViva()) {
+      return 'Con la Institutriz en juego, solo se escribe en privado con los vecinos.';
+    }
+    return this.modoMensajes() === 'vecinos'
       ? 'En esta sala solo se escribe en privado con los vecinos.'
       : 'En esta sala no se escriben mensajes privados.';
+  }
+
+  /** Los privados entre jugadores, como están: con la Institutriz viva, «todos» se queda en los vecinos. */
+  private modoMensajes() {
+    const modo = this.sala.configuracion().mensajes;
+    return modo === 'todos' && this.sala.institutrizViva() ? 'vecinos' : modo;
   }
 
   /** Los vecinos de un jugador: el más cercano sentado a cada lado de la mesa. */

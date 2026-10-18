@@ -478,7 +478,15 @@ const Mesa = ({
                     !pistas.get(ocupante.id)!.microfono &&
                     !estado.conversaciones.some((c) => c.miembros.includes(ocupante.id))
                   }
-                  asa={editando && real && <AsaMover {...mover.propsAsa(a.id)} nombre={real.nombre} numero={i + 1} />}
+                  asa={editando && real && (
+                      <AsaMover
+                        {...mover.propsAsa(a.id)}
+                        nombre={real.nombre}
+                        numero={i + 1}
+                        // En la esquina del lado en el que se sienta (los de la mitad derecha, a la derecha)
+                        lado={Math.sin((2 * Math.PI * i) / total) > 0.01 ? 'derecha' : 'izquierda'}
+                      />
+                    )}
                   ficha={fichaDe(a)}
                   siguiendo={!!ocupante && seguimiento?.siguiendo === ocupante.id}
                 />

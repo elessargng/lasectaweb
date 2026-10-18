@@ -57,7 +57,7 @@ const PanelPartida = ({ configuracion, onCambiar, onCambiarFondo }: PanelPartida
       </select>
       <p id="sala-pref-mensajes-ayuda" className="text-xs text-on-surface-muted">
         Al narrador se le puede escribir siempre, y él a todos. El chat general (jugadores) y el de visitantes están
-        siempre abiertos.
+        siempre abiertos. Con la Institutriz en juego, solo con los vecinos aunque aquí diga «Con todos».
       </p>
     </div>
     <Deslizador

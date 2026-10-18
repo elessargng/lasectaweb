@@ -94,7 +94,8 @@ export function puedeEscribirA(estado: SalaEstado, yo: SalaParticipante, otro: S
   if (yo.id === otro.id) return false;
   if (yo.rol === 'narrador' || otro.rol === 'narrador') return true;
   if (yo.rol !== 'jugador' || otro.rol !== 'jugador') return false;
-  const modo = estado.configuracion.mensajes;
+  // Con la Institutriz viva, «todos» se queda en los vecinos (como en el servidor)
+  const modo = estado.configuracion.mensajes === 'todos' && estado.institutriz ? 'vecinos' : estado.configuracion.mensajes;
   if (modo === 'todos') return true;
   if (modo === 'vecinos') return vecinos(estado, yo.id).includes(otro.id);
   return false;

@@ -185,7 +185,8 @@ export class SalaService {
   private ajustes: SalaConfiguracion = {
     grimorioJugadores: false,
     segundosPorFicha: SALA_SEGUNDOS_POR_FICHA.defecto,
-    mensajes: 'todos',
+    // Por defecto, los privados entre jugadores solo con los vecinos
+    mensajes: 'vecinos',
     fondo: null,
   };
   private nominacionEnCurso: NominacionInterna | null = null;
@@ -1066,14 +1067,65 @@ export class SalaService {
    */
   mezclarAsientos(): number {
     const mesa = this.mesaAlDia();
-    const ocupantes = mesa.map((a) => a.ocupante);
-    // Fisher-Yates sobre la mesa entera: los huecos libres también se barajan
-    for (let i = ocupantes.length - 1; i > 0; i--) {
+    // Fisher-Yates sobre la mesa entera: los huecos libres también se barajan. Cada
+    // asiento nuevo recibe a quien estaba en el de `orden[i]`, con su ficha
+    const orden = mesa.map((_, i) => i);
+    for (let i = orden.length - 1; i > 0; i--) {
       const j = randomInt(i + 1);
-      [ocupantes[i], ocupantes[j]] = [ocupantes[j], ocupantes[i]];
+      [orden[i], orden[j]] = [orden[j], orden[i]];
     }
-    mesa.forEach((a, i) => (a.ocupante = ocupantes[i]));
+    const ocupantes = mesa.map((a) => a.ocupante);
+    this.llevarFichas(new Map(orden.map((desde, i) => [mesa[desde].id, mesa[i].id])));
+    mesa.forEach((a, i) => (a.ocupante = ocupantes[orden[i]]));
     return ocupantes.filter(Boolean).length;
+  }
+
+  /**
+   * Lleva lo de cada ficha (personaje, alineamiento, muerte, voto, calavera,
+   * recordatorios, notas; y lo que va por asiento: lo entregado, los faroles, el
+   * grimorio enviado, los despertares, lo revelado, la nominación) del asiento de
+   * cada clave al de su valor. Al cambiar de sitio a los jugadores, su ficha va con
+   * ellos: cambian de silla, no de personaje. `destino` es una permutación de la mesa.
+   */
+  private llevarFichas(destino: Map<string, string>): void {
+    const a = (id: string) => destino.get(id) ?? id;
+    const fichas = new Map(
+      this.mesa.map((s) => [
+        s.id,
+        {
+          muerto: s.muerto,
+          muertePendiente: s.muertePendiente,
+          votoGastado: s.votoGastado,
+          marcado: s.marcado,
+          votosMarca: s.votosMarca,
+          personaje: s.personaje,
+          alineamiento: s.alineamiento,
+          recordatorios: s.recordatorios,
+          notas: s.notas,
+        },
+      ]),
+    );
+    for (const [desde, hasta] of destino) {
+      const asiento = this.mesa.find((s) => s.id === hasta);
+      const ficha = fichas.get(desde);
+      if (asiento && ficha) Object.assign(asiento, ficha);
+    }
+    const remapear = <V>(m: Map<string, V>) => new Map([...m].map(([k, v]) => [a(k), v] as const));
+    this.entregadas = remapear(this.entregadas);
+    this.farolesAsientos = remapear(this.farolesAsientos);
+    this.grimoriosEnviados = remapear(this.grimoriosEnviados);
+    for (const h of this.hilos) h.asiento = a(h.asiento);
+    if (this.revelacionActual) this.revelacionActual.reveladas = this.revelacionActual.reveladas.map(a);
+    const n = this.nominacionEnCurso;
+    if (n) {
+      n.desde = a(n.desde);
+      n.hasta = a(n.hasta);
+      if (n.votacion) {
+        n.votacion.orden = n.votacion.orden.map(a);
+        n.votacion.resultados = Object.fromEntries(Object.entries(n.votacion.resultados).map(([k, v]) => [a(k), v]));
+        if (n.votacion.valores) n.votacion.valores = Object.fromEntries(Object.entries(n.votacion.valores).map(([k, v]) => [a(k), v]));
+      }
+    }
   }
 
   /**
@@ -1086,6 +1138,9 @@ export class SalaService {
     const destino = mesa.find((a) => a.id === hasta);
     if (!origen || !destino) return 'Ese asiento ya no existe.';
     if (!origen.ocupante) return 'Ya no hay nadie en ese asiento.';
+    if (origen === destino) return null;
+    // Cambian de silla con su ficha (su personaje, sus recordatorios…)
+    this.llevarFichas(new Map([[origen.id, destino.id], [destino.id, origen.id]]));
     [origen.ocupante, destino.ocupante] = [destino.ocupante, origen.ocupante];
     return null;
   }
