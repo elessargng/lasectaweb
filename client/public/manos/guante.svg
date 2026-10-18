@@ -1,0 +1,39 @@
+<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Tela blanca con volumen: luz arriba a la izquierda, sombra suave hacia los bordes -->
+    <radialGradient id="guante-tela" cx=".35" cy=".28" r=".9">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".55" stop-color="#f4f2f7"/>
+      <stop offset="1" stop-color="#cfcad8"/>
+    </radialGradient>
+    <linearGradient id="guante-puno" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".7" stop-color="#ebe8f0"/>
+      <stop offset="1" stop-color="#cdc8d6"/>
+    </linearGradient>
+  </defs>
+  <g stroke="#14100c" stroke-width="8.5" stroke-linejoin="round" stroke-linecap="round" fill="url(#guante-tela)">
+    <!-- Los tres dedos: anchos, cortos y redondos, un poco abiertos -->
+    <rect x="60" y="48" width="52" height="112" rx="26" transform="rotate(-13 86 150)"/>
+    <rect x="102" y="28" width="52" height="124" rx="26"/>
+    <rect x="144" y="50" width="52" height="110" rx="26" transform="rotate(13 170 150)"/>
+    <!-- El dorso: redondo y lleno, tapa el nacimiento de los dedos -->
+    <path d="M128,98 C178,98 198,126 196,160 C194,192 170,208 128,208 C86,208 62,192 60,160 C58,126 78,98 128,98 Z"/>
+    <!-- El pulgar, rechoncho y hacia fuera -->
+    <rect x="20" y="118" width="50" height="86" rx="25" transform="rotate(-48 62 186)"/>
+    <!-- El puño vuelto: se abre hacia abajo, con el borde enrollado -->
+    <path d="M84,198 C110,206 146,206 172,198 L196,236 C198,246 192,252 180,252 L76,252 C64,252 58,246 60,236 Z" fill="url(#guante-puno)"/>
+    <path d="M64,224 C104,234 152,234 192,224" fill="none" stroke-width="6"/>
+  </g>
+  <!-- Las tres rayas del dorso, siguiendo la curva de la mano -->
+  <g fill="none" stroke="#14100c" stroke-width="7.5" stroke-linecap="round">
+    <path d="M104,134 C99,150 99,166 104,180"/>
+    <path d="M128,130 L128,184"/>
+    <path d="M152,134 C157,150 157,166 152,180"/>
+  </g>
+  <!-- Brillos de la tela -->
+  <g fill="none" stroke="#ffffff" stroke-linecap="round" opacity=".95">
+    <path d="M84,120 C94,110 108,107 120,108" stroke-width="5"/>
+    <path d="M118,44 C122,40 130,39 136,41" stroke-width="4"/>
+  </g>
+</svg>

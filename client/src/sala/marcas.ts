@@ -19,10 +19,10 @@ export type PreferenciaCalavera = (typeof ESTILOS_CALAVERA)[number]['id'];
 export type EstiloCalavera = Exclude<PreferenciaCalavera, 'azar'>;
 
 export const ESTILOS_MANO = [
-  { id: 'laton', nombre: 'Latón', descripcion: 'Dorada, como las agujas del reloj' },
-  { id: 'recordatorio', nombre: 'Ficha recordatorio', descripcion: 'En tinta sobre una ficha pequeña' },
-  { id: 'medallon', nombre: 'Medallón', descripcion: 'En pergamino sobre el morado del grimorio' },
-  { id: 'lacre', nombre: 'Lacre', descripcion: 'Sobre un sello de cera roja' },
+  // (El id «laton» se queda: es el de siempre, ahora en amarillo; los que se quitaron vuelven a este)
+  { id: 'laton', nombre: 'Amarilla', descripcion: 'Como las de los Simpson' },
+  { id: 'cinco', nombre: 'Cinco dedos', descripcion: 'Una mano abierta de verdad, en 3D' },
+  { id: 'guante', nombre: 'Guante', descripcion: 'El guante blanco de los dibujos animados' },
   { id: 'azar', nombre: 'Al azar', descripcion: 'Una distinta en cada partida' },
 ] as const;
 export type PreferenciaMano = (typeof ESTILOS_MANO)[number]['id'];
