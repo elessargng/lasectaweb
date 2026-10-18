@@ -25,6 +25,7 @@ import {
   MensajeDespertar,
   NUM_FAROLES,
   RECORDATORIO_TEXTO,
+  SALA_ESTILOS_MANO,
   SALA_FORMAS_MANO,
   SALA_NOTA_LARGO_MAX,
   SALA_NOTAS_MAX,
@@ -315,6 +316,21 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * Un jugador o un narrador elige la forma de su mano: una de SALA_FORMAS_MANO o un
    * personaje del guion (su icono). datos: { forma }.
    */
+  /**
+   * Cualquiera dice cómo se ve su mano (su «skin», de las preferencias): todos la ven
+   * así. datos: { estilo } (uno de SALA_ESTILOS_MANO).
+   */
+  'sala:estiloMano': {
+    puede: cualquiera,
+    noPuede: '',
+    hacer: (sala, yo, datos) => {
+      const estilo = (datos as { estilo?: unknown } | null)?.estilo;
+      if (typeof estilo !== 'string' || !SALA_ESTILOS_MANO.includes(estilo)) return { ok: false, error: 'Estilo de mano desconocido.' };
+      sala.elegirEstiloMano(yo.id, estilo);
+      return { ok: true };
+    },
+  },
+
   'sala:elegirMano': {
     puede: (_sala, yo) => yo.rol === 'jugador' || yo.rol === 'narrador',
     noPuede: 'Solo los jugadores sentados y los narradores tienen mano que levantar.',

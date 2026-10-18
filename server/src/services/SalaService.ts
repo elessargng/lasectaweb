@@ -1322,6 +1322,7 @@ export class SalaService {
         // Si ya lo vio y salió de la sala, lo recupera (vuelve como visitante)
         accesoGrimorio: this.conGrimorio.has(recuerdo) ? 'concedido' : 'ninguno',
         formaMano: 'palma',
+        estiloMano: 'laton',
         sinSonido: false,
       },
       identidad: llegada.identidad,
@@ -1546,6 +1547,12 @@ export class SalaService {
   elegirFormaMano(id: string, forma: SalaFormaMano): void {
     const participante = this.buscar(id);
     if (participante) participante.formaMano = forma;
+  }
+
+  /** Cómo se ve su mano para todos (su «skin»). No comprueba que el estilo exista. */
+  elegirEstiloMano(id: string, estilo: string): void {
+    const participante = this.buscar(id);
+    if (participante) participante.estiloMano = estilo;
   }
 
   /** Los que siguen en la sala, también los que esperan reconexión, por orden de llegada. */

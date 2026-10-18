@@ -17,16 +17,23 @@ interface ElegirEstiloProps<T extends string> {
   onCambiar: (valor: T) => void;
   /** El dibujo de cada estilo (no se lee: lo dice su nombre). */
   muestra: (estilo: T) => ReactNode;
+  /** Una explicación bajo la leyenda (se lee como descripción del grupo). */
+  ayuda?: string;
 }
 
 /**
  * Elegir un estilo de dibujo: botones de opción (se recorren con las flechas)
  * con su muestra sobre una ficha; el elegido, con filo de latón.
  */
-function ElegirEstilo<T extends string>({ id, leyenda, estilos, valor, onCambiar, muestra }: ElegirEstiloProps<T>) {
+function ElegirEstilo<T extends string>({ id, leyenda, estilos, valor, onCambiar, muestra, ayuda }: ElegirEstiloProps<T>) {
   return (
-    <fieldset className="flex flex-col gap-2">
+    <fieldset className="flex flex-col gap-2" aria-describedby={ayuda ? `${id}-ayuda` : undefined}>
       <legend className="campo-etiqueta">{leyenda}</legend>
+      {ayuda && (
+        <p id={`${id}-ayuda`} className="-mt-1 text-xs text-on-surface-muted">
+          {ayuda}
+        </p>
+      )}
       <div className="grid grid-cols-[repeat(auto-fill,minmax(6.25rem,1fr))] gap-2">
         {estilos.map((e) => (
           <div key={e.id}>
@@ -147,6 +154,7 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, onCambiar }: PanelIn
     <ElegirEstilo
       id="sala-pref-mano"
       leyenda="Mano levantada"
+      ayuda="Es tu mano: todos la ven así. Las de los demás se ven como las haya elegido cada uno."
       estilos={ESTILOS_MANO}
       valor={preferencias.mano}
       onCambiar={(mano) => onCambiar({ mano })}

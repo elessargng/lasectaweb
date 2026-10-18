@@ -9,6 +9,9 @@ export type SalaRol = 'narrador' | 'jugador' | 'visitante';
  * (la mano es su icono).
  */
 export type SalaFormaMano = string;
+/** Los estilos de mano (lo mismo en el cliente, ESTILOS_MANO de marcas.ts, sin «al azar»). */
+export const SALA_ESTILOS_MANO = ['laton', 'cinco', 'guante', 'esqueleto', 'guantelete'];
+
 /** Partidas jugadas (terminadas en la sala) por debajo de las que se es novato. */
 export const SALA_PARTIDAS_NOVATO = 10;
 
@@ -45,6 +48,11 @@ export interface SalaParticipante {
   dosManos: boolean;
   /** La forma de su mano al levantarla; se conserva aunque la baje. */
   formaMano: SalaFormaMano;
+  /**
+   * Cómo se ve su mano (su «skin»: ver SALA_ESTILOS_MANO). La elige cada uno y la ven
+   * así todos; cada mano, con la de quien la levanta.
+   */
+  estiloMano: string;
   /** Ha quitado el sonido: no oye a los demás (los demás lo ven junto a su nombre). */
   sinSonido: boolean;
   /**

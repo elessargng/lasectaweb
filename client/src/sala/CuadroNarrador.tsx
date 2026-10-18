@@ -123,7 +123,7 @@ const CuadroNarrador = ({
     )}
     {/* La mano, en la esquina de arriba a la derecha del retrato (la caja tiene su tamaño y su sitio) */}
     <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-5 z-10 aspect-square">
-      <ManoLevantada levantada={narrador.manoLevantada} forma={narrador.formaMano} enNominacion={false} />
+      <ManoLevantada levantada={narrador.manoLevantada} forma={narrador.formaMano} estilo={narrador.estiloMano} enNominacion={false} />
     </div>
     {grimorio && (
       // Sobre el retrato (debajo del rótulo «Narrador»), centrado; solo el botón recibe el ratón

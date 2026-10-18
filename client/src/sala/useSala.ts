@@ -31,6 +31,8 @@ export interface SalaParticipante {
   dosManos: boolean;
   /** La forma de su mano al levantarla. */
   formaMano: FormaMano;
+  /** Cómo se ve su mano (su «skin», que elige cada uno en sus preferencias): así la ven todos. */
+  estiloMano: string;
   /** Ha quitado el sonido: no oye a los demás (se ve junto a su nombre). */
   sinSonido: boolean;
   /** Visitantes: si ha pedido ver el grimorio del narrador, o si lo ve. */

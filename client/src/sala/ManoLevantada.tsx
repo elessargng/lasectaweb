@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Mano from './Mano';
+import type { EstiloMano } from './marcas';
 import type { FormaMano } from './useSala';
 
 interface ManoLevantadaProps {
@@ -9,6 +10,8 @@ interface ManoLevantadaProps {
   enNominacion: boolean;
   /** Las dos manos (la Banshee, que vota doble): la otra, en espejo. */
   dos?: boolean;
+  /** El estilo de quien la levanta (su «skin»); sin él, el tuyo. */
+  estilo?: string;
 }
 
 /**
@@ -20,7 +23,9 @@ interface ManoLevantadaProps {
  * centro, para que se vea quién la levanta, y sin animación. Solo visual: se
  * dice en el nombre de la ficha y en los avisos.
  */
-const ManoLevantada = ({ levantada, forma, enNominacion, dos = false }: ManoLevantadaProps) => {
+const ManoLevantada = ({ levantada, forma, enNominacion, dos = false, estilo: estiloDe }: ManoLevantadaProps) => {
+  // (Un estilo que no se conoce se pinta con el de por defecto)
+  const estilo = estiloDe as EstiloMano | undefined;
   // Bajándola, la mano sigue un momento a la vista (la animación de bajar)
   const [bajando, setBajando] = useState(false);
   const [antes, setAntes] = useState(levantada);
@@ -35,13 +40,14 @@ const ManoLevantada = ({ levantada, forma, enNominacion, dos = false }: ManoLeva
     if (dos) {
       return (
         <span className="pointer-events-none absolute left-1/2 top-1/2 z-10 flex w-[96%] -translate-x-1/2 -translate-y-1/2 justify-center">
-          <Mano forma="palma" className="w-1/2 -scale-x-100 drop-shadow-[0_3px_6px_rgba(0,0,0,0.8)]" />
-          <Mano forma="palma" className="w-1/2 drop-shadow-[0_3px_6px_rgba(0,0,0,0.8)]" />
+          <Mano estilo={estilo} forma="palma" className="w-1/2 -scale-x-100 drop-shadow-[0_3px_6px_rgba(0,0,0,0.8)]" />
+          <Mano estilo={estilo} forma="palma" className="w-1/2 drop-shadow-[0_3px_6px_rgba(0,0,0,0.8)]" />
         </span>
       );
     }
     return (
       <Mano
+        estilo={estilo}
         forma="palma"
         className="pointer-events-none absolute left-1/2 top-1/2 z-10 w-[78%] -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_3px_6px_rgba(0,0,0,0.8)]"
       />
@@ -56,10 +62,11 @@ const ManoLevantada = ({ levantada, forma, enNominacion, dos = false }: ManoLeva
       }`}
       onAnimationEnd={() => bajando && setBajando(false)}
     >
-      <Mano forma={forma} className="block w-full drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]" />
+      <Mano estilo={estilo} forma={forma} className="block w-full drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]" />
       {/* La otra mano, en espejo, en la esquina de la izquierda de la ficha */}
       {dos && (
         <Mano
+          estilo={estilo}
           forma={forma}
           className="absolute top-0 block w-full -scale-x-100 drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)] [right:calc(var(--sala-ficha,4.5rem)*1.16-100%)]"
         />

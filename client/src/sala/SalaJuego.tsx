@@ -1489,6 +1489,15 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // La semilla de los estilos «al azar»: quién mira (su nombre, que no cambia al recargar)
   // y la partida (sube al limpiar el grimorio o cambiar de guion)
   const semillaPartida = `${yo?.nombre ?? ''}:${estado?.fase.reinicios ?? 0}`;
+  // Tu mano (la elegida o, al azar, la de esta partida) es tu «skin»: la ven así todos, así que
+  // se le dice a la sala cada vez que cambia. Las de los demás se ven con la suya.
+  const miEstiloMano = estiloDePartida(preferencias.mano, ESTILOS_MANO, `${semillaPartida}:mano`);
+  useEffect(() => {
+    if (conexion !== 'conectada' || !yo || yo.estiloMano === miEstiloMano) return;
+    void pedir('sala:estiloMano', { estilo: miEstiloMano });
+    // Solo cuando cambia la tuya o lo que la sala tiene de ti
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conexion, yo?.estiloMano, miEstiloMano]);
   const tamanos = {
     '--sala-avatar': `${avatarFuera}px`,
     '--sala-ficha': `${preferencias.fichaAuto ? tamanoFichaAuto(avatarFuera) : preferencias.tamanoFicha}px`,
@@ -1501,7 +1510,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       <MarcasContexto.Provider
         value={{
           calavera: estiloDePartida(preferencias.calavera, ESTILOS_CALAVERA, `${semillaPartida}:calavera`),
-          mano: estiloDePartida(preferencias.mano, ESTILOS_MANO, `${semillaPartida}:mano`),
+          mano: miEstiloMano,
           silla: estiloDePartida(preferencias.silla, ESTILOS_SILLA, `${semillaPartida}:silla`),
           voto: preferencias.voto,
         }}
