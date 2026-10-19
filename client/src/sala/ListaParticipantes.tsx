@@ -2,9 +2,10 @@ import PulpitoNovato from './PulpitoNovato';
 import { Ear } from 'lucide-react';
 import { IconoGente, IconoLibroSecreto } from './IconosJuego';
 import { useEffect, useRef, useState } from 'react';
-import { getAvatarUrl } from '../utils/api';
 import { botonIcono } from './estilos';
 import type { SalaParticipante, SalaRol } from './useSala';
+import ImagenAvatar from './ImagenAvatar';
+import VolumenParticipante from './VolumenParticipante';
 
 const GRUPOS: { rol: SalaRol; titulo: string }[] = [
   { rol: 'narrador', titulo: 'Narradores' },
@@ -33,16 +34,22 @@ interface ListaParticipantesProps {
   yo: string;
   /** Quienes escuchan una conversación (solo llega a narradores y visitantes): una oreja delante. */
   escuchando: Set<string>;
+  /**
+   * Con videollamada: el volumen al que se oye a cada jugador y narrador (0 a 1) y
+   * cómo cambiarlo (un altavoz junto a su nombre). null sin videollamada.
+   */
+  volumen?: { de: (id: string) => number; cambiar: (id: string, volumen: number) => void } | null;
 }
 
 /**
  * En la cabecera: un botón con icono (y el número de participantes) que abre el
- * panel con la lista, dividida por papel. Escape lo cierra.
+ * panel con la lista, dividida por papel. Escape lo cierra. Con videollamada, junto
+ * al nombre de cada jugador y narrador (menos uno mismo), su volumen (ver VolumenParticipante).
  *
  * El panel va en la cabecera, antes del h1, así que no usa títulos (romperían
  * su orden): cada grupo es una lista con su etiqueta, y se navega por listas.
  */
-const ListaParticipantes = ({ participantes, yo, escuchando }: ListaParticipantesProps) => {
+const ListaParticipantes = ({ participantes, yo, escuchando, volumen = null }: ListaParticipantesProps) => {
   const [abierta, setAbierta] = useState(false);
   const botonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -102,7 +109,7 @@ const ListaParticipantes = ({ participantes, yo, escuchando }: ListaParticipante
                 ) : (
                   <ul aria-labelledby={idTitulo} className="flex flex-col gap-1.5">
                     {grupo.map((p) => (
-                      <li key={p.id} className="flex min-w-0 items-center gap-2">
+                      <li key={p.id} className="group flex min-w-0 items-center gap-2">
                         {/* El retrato, con aro de latón (el tuyo, más brillante); desconectado, apagado */}
                         <span
                           aria-hidden="true"
@@ -111,7 +118,7 @@ const ListaParticipantes = ({ participantes, yo, escuchando }: ListaParticipante
                           } ${p.conectado ? '' : 'opacity-50 grayscale'}`}
                         >
                           {p.avatar ? (
-                            <img src={getAvatarUrl(p.avatar)} alt="" className="h-full w-full object-cover" />
+                            <ImagenAvatar avatar={p.avatar} />
                           ) : (
                             p.nombre.charAt(0).toLocaleUpperCase('es')
                           )}
@@ -143,7 +150,7 @@ const ListaParticipantes = ({ participantes, yo, escuchando }: ListaParticipante
                           })()}
                           {/* Distintivos: a la vista, una pastilla; para el lector, «(invitado)»… */}
                           {/* El pulpito, solo a quien juega (el narrador y los visitantes no juegan) */}
-                          {p.novato && p.rol === 'jugador' && <PulpitoNovato tamano="h-6 w-6" />}
+                          {p.novato && p.rol === 'jugador' && <PulpitoNovato tamano="h-6 w-6" paraLector />}
                           {!p.conCuenta && <Distintivo>invitado</Distintivo>}
                           {!p.conectado && <Distintivo tono="apagado">desconectado</Distintivo>}
                           {escuchando.has(p.id) && <span className="sr-only"> (escuchando una conversación)</span>}
@@ -154,6 +161,10 @@ const ListaParticipantes = ({ participantes, yo, escuchando }: ListaParticipante
                             </>
                           )}
                         </span>
+                        {/* Su volumen: los que hablan en la plaza (jugadores y narradores), no uno mismo */}
+                        {volumen && p.id !== yo && (p.rol === 'jugador' || p.rol === 'narrador') && (
+                          <VolumenParticipante nombre={p.nombre} volumen={volumen.de(p.id)} onCambiar={(v) => volumen.cambiar(p.id, v)} />
+                        )}
                       </li>
                     ))}
                   </ul>

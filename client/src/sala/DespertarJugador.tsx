@@ -26,6 +26,8 @@ interface DespertarJugadorProps {
   /** Lo urgente (las manos vigiladas), que interrumpe. */
   anuncioUrgente: string;
   error: string;
+  /** Escondido mientras se elige a alguien en la plaza (vuelve igual que estaba). */
+  oculto?: boolean;
 }
 
 /**
@@ -49,6 +51,7 @@ const DespertarJugador = ({
   anuncio,
   anuncioUrgente,
   error,
+  oculto = false,
 }: DespertarJugadorProps) => {
   const ariaLiveErrores = useAriaLive('errores');
   const ultimo = [...despertar.mensajes].reverse().find((m) => m.autor === 'narrador');
@@ -66,8 +69,9 @@ const DespertarJugador = ({
     else onError(r.error);
   };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sala-velo">
+    <div hidden={oculto} className="fixed inset-0 z-50 flex items-center justify-center p-4 sala-velo">
       <Dialog
+        inactivo={oculto}
         onClose={onCerrar}
         labelledBy="sala-despierto-titulo"
         describedBy="sala-despierto-ultimo"

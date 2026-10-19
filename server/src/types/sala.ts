@@ -202,6 +202,19 @@ export const CAUSAS_FIN_PARTIDA = [
   'slayer', 'mayor', 'alsaahir', 'goblin', 'saint', 'mastermind', 'snakecharmer', 'klutz', 'eviltwin', 'fanggu', 'vortox',
 ];
 
+/**
+ * El reloj del narrador: una cuenta atrás que ven todos, con su mensaje
+ * («Conversaciones privadas»). Al acabar suena el gong. Cada cliente la calcula
+ * con el reloj del servidor, así que el servidor no tiene que avisar al terminar.
+ */
+export interface SalaReloj {
+  /** Cuándo empezó y cuándo acaba (ms, reloj del servidor). */
+  inicio: number;
+  fin: number;
+  /** El mensaje (puede ir vacío). */
+  mensaje: string;
+}
+
 export interface SalaRevelacion {
   ganador: SalaAlineamiento;
   /** Lo que ha pasado (ids de CAUSAS_FIN_PARTIDA, de personajes en juego), por orden. */
@@ -451,6 +464,8 @@ export interface SalaEstado {
    * o null. Al cambiar, suena y se ve el aviso. Para todos.
    */
   gong: number | null;
+  /** El reloj del narrador (una cuenta atrás con un mensaje), o null. Para todos. */
+  reloj: SalaReloj | null;
   /** Hay videollamada (cámaras y micrófonos) en esta sala. */
   video: boolean;
   /** Las conversaciones privadas en curso (todos ven quién habla con quién, no qué). */

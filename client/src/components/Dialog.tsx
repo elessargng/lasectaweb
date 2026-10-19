@@ -12,6 +12,11 @@ interface DialogProps {
   /** id de lo que lo describe (se lee al abrirlo, tras el título). */
   describedBy?: string;
   className?: string;
+  /**
+   * Escondido un momento (p. ej. el despertar mientras se elige a alguien en la
+   * plaza): ni atrapa el tabulador ni se cierra con Escape. Quien lo usa lo esconde.
+   */
+  inactivo?: boolean;
   children: ReactNode;
 }
 
@@ -21,11 +26,13 @@ interface DialogProps {
  * tabulador no sale de ella, Escape la cierra y, al cerrarse, el foco vuelve
  * a donde estaba. Se monta solo mientras el modal está abierto.
  */
-const Dialog = ({ onClose, labelledBy, label, describedBy, className = '', children }: DialogProps) => {
+const Dialog = ({ onClose, labelledBy, label, describedBy, className = '', inactivo = false, children }: DialogProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
+  const inactivoRef = useRef(inactivo);
   useEffect(() => {
     onCloseRef.current = onClose;
+    inactivoRef.current = inactivo;
   });
 
   useEffect(() => {
@@ -34,6 +41,7 @@ const Dialog = ({ onClose, labelledBy, label, describedBy, className = '', child
     dialog.focus();
 
     const onKey = (e: KeyboardEvent) => {
+      if (inactivoRef.current) return;
       if (e.key === 'Escape') {
         e.preventDefault();
         onCloseRef.current();

@@ -1,6 +1,6 @@
 import { JuntoAlTexto } from './BotonesContacto';
 import type { ReactNode } from 'react';
-import { getAvatarUrl } from '../utils/api';
+import ImagenAvatar from './ImagenAvatar';
 
 interface CuadroAvatarProps {
   /** Rótulo encima del cuadro («Narrador»). Solo visual: quien lo use lo dice en el pie para el lector. */
@@ -50,7 +50,7 @@ const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, ap
         vacio ? 'p-2' : ''
       } ${apagado ? '[&_img]:grayscale [&_video]:grayscale' : ''}`}
     >
-      {contenido ?? (imagen && <img src={getAvatarUrl(imagen)} alt="" className="h-full w-full object-cover" />)}
+      {contenido ?? (imagen && <ImagenAvatar avatar={imagen} />)}
     </div>
     {pieFuera ? (
       <div className={`absolute left-0 w-full ${pieFuera === 'arriba' ? 'bottom-full' : 'top-full'}`}>{pie}</div>

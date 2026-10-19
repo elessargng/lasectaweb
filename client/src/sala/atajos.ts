@@ -20,6 +20,7 @@ export type AccionAtajo =
   | 'cambiarFase'
   | 'revelarGrimorio'
   | 'sonarGong'
+  | 'reloj'
   | 'microfono'
   | 'camara'
   | 'salirConversacion'
@@ -44,6 +45,7 @@ export const ACCIONES_ATAJO: { accion: AccionAtajo; etiqueta: string }[] = [
   { accion: 'cambiarFase', etiqueta: 'Ir a la noche o amanecer (narradores)' },
   { accion: 'revelarGrimorio', etiqueta: 'Revelar el grimorio (narradores)' },
   { accion: 'sonarGong', etiqueta: 'Sonar el gong: todos a la plaza (narradores)' },
+  { accion: 'reloj', etiqueta: 'Poner el reloj: una cuenta atrás para todos (narradores)' },
   { accion: 'microfono', etiqueta: 'Activar o silenciar el micrófono' },
   { accion: 'camara', etiqueta: 'Activar o apagar la cámara' },
   { accion: 'salirConversacion', etiqueta: 'Salir de la conversación privada' },
@@ -64,6 +66,7 @@ const COMA: Atajo = { code: 'Comma', key: ',', ctrl: false, alt: false, shift: f
 const RETROCESO: Atajo = { code: 'Backspace', key: 'Backspace', ctrl: false, alt: false, shift: false, meta: false };
 const E: Atajo = { code: 'KeyE', key: 'e', ctrl: false, alt: false, shift: false, meta: false };
 const D: Atajo = { code: 'KeyD', key: 'd', ctrl: false, alt: false, shift: false, meta: false };
+const Z: Atajo = { code: 'KeyZ', key: 'z', ctrl: false, alt: false, shift: false, meta: false };
 const digito = (n: number): Atajo => ({ code: `Digit${n}`, key: String(n), ctrl: false, alt: false, shift: false, meta: false });
 
 export const ATAJOS_INICIALES: Record<AccionAtajo, Atajo> = {
@@ -71,6 +74,7 @@ export const ATAJOS_INICIALES: Record<AccionAtajo, Atajo> = {
   cambiarFase: N,
   revelarGrimorio: G,
   sonarGong: R,
+  reloj: Z,
   microfono: PUNTO,
   camara: COMA,
   salirConversacion: RETROCESO,
@@ -99,11 +103,27 @@ const NOMBRES: Record<string, string> = {
   ',': 'Coma',
 };
 
-/** Cómo se lee y se ve un atajo: «Ctrl + Mayús + M», «Espacio». */
-export function describirAtajo(a: Atajo): string {
+/** Las teclas que se ven mejor con su símbolo que con su nombre (el nombre es para el lector). */
+const SIMBOLOS: Record<string, string> = {
+  '.': '.',
+  ',': ',',
+  Backspace: '⟵',
+};
+
+function componer(a: Atajo, nombres: Record<string, string>): string {
   const partes = [a.ctrl && 'Ctrl', a.alt && 'Alt', a.shift && 'Mayús', a.meta && 'Meta'].filter(Boolean) as string[];
-  const tecla = NOMBRES[a.key] ?? (a.key.length === 1 ? a.key.toLocaleUpperCase('es') : a.key);
+  const tecla = nombres[a.key] ?? (a.key.length === 1 ? a.key.toLocaleUpperCase('es') : a.key);
   return [...partes, tecla].join(' + ');
+}
+
+/** Cómo se lee un atajo (y se dice en los avisos): «Ctrl + Mayús + M», «Espacio», «Punto». */
+export function describirAtajo(a: Atajo): string {
+  return componer(a, NOMBRES);
+}
+
+/** Cómo se ve un atajo en su tecla dibujada: como describirAtajo, pero «.», «,» y «⟵» (Retroceso). */
+export function simboloAtajo(a: Atajo): string {
+  return componer(a, { ...NOMBRES, ...SIMBOLOS });
 }
 
 /** El atajo que forma una pulsación, o null si es solo un modificador. */
@@ -120,7 +140,8 @@ export function esAtajo(e: KeyboardEvent, a: Atajo): boolean {
 /** Lo que guardaba antes la sala en el navegador (para llevarlo a la cuenta la primera vez). */
 export const KEY_ANTIGUA = 'sala:atajos';
 
-function valido(a: unknown): a is Atajo {
+/** Si algo (guardado, de un perfil…) es un atajo bien formado. */
+export function esAtajoValido(a: unknown): a is Atajo {
   const x = a as Atajo;
   return (
     !!x &&
@@ -136,7 +157,7 @@ export function normalizarAtajos(datos: unknown): Record<AccionAtajo, Atajo> {
   const atajos = { ...ATAJOS_INICIALES };
   for (const { accion } of ACCIONES_ATAJO) {
     const guardado = guardados[accion];
-    if (valido(guardado)) {
+    if (esAtajoValido(guardado)) {
       const { code, key, ctrl, alt, shift, meta } = guardado;
       atajos[accion] = { code, key, ctrl, alt, shift, meta };
     }

@@ -1,14 +1,7 @@
-import { useRef, useState, type KeyboardEvent } from 'react';
-import {
-  ACCIONES_ATAJO,
-  ATAJOS_INICIALES,
-  ATRIBUTO_CAPTURANDO,
-  atajoDe,
-  describirAtajo,
-  type AccionAtajo,
-  type Atajo,
-} from './atajos';
+import { useState } from 'react';
+import { ACCIONES_ATAJO, ATAJOS_INICIALES, describirAtajo, simboloAtajo, type AccionAtajo, type Atajo } from './atajos';
 import { useAriaLive } from './avisosConfig';
+import BotonCapturarTecla from './BotonCapturarTecla';
 import { botonSecundario, campo } from './estilos';
 import { describirGesto, GESTOS, type Gesto, type GestosAsignados } from './gestos';
 import TeclaAtajo from './TeclaAtajo';
@@ -25,8 +18,7 @@ interface PanelAtajosProps {
 /**
  * Pestaña Atajos: cada acción con su tecla. «Cambiar» se queda
  * escuchando y la siguiente tecla (o combinación) que se pulse pasa a ser el
- * atajo; Escape cancela. Mientras escucha, los atajos no actúan (lleva la marca
- * ATRIBUTO_CAPTURANDO), para poder asignar también la tecla de uno de ellos.
+ * atajo; Escape cancela (ver BotonCapturarTecla).
  *
  * Para móviles y tabletas, cada acción puede tener además un gesto con varios
  * dedos, elegido de una lista (gestos.ts). Un gesto es de una sola acción: si se
@@ -45,32 +37,8 @@ const PanelAtajos = ({ atajos, onCambiar, gestos, onCambiarGesto }: PanelAtajosP
         : `${etiqueta}: sin gesto.`,
     );
   };
-  const [escuchando, setEscuchando] = useState<AccionAtajo | null>(null);
   const [aviso, setAviso] = useState('');
   const ariaLive = useAriaLive('preferencias');
-  // Al capturar Espacio o Intro con el foco en «Cambiar», el navegador hace después
-  // clic en el botón: ese clic se ignora para no volver a escuchar.
-  const ignorarClicRef = useRef(false);
-
-  const capturar = (accion: AccionAtajo, etiqueta: string) => (e: KeyboardEvent<HTMLButtonElement>) => {
-    if (escuchando !== accion) return;
-    // Tab sigue moviendo el foco (y al salir se deja de escuchar).
-    if (e.key === 'Tab') return;
-    e.preventDefault();
-    // Que Escape no cierre el diálogo: aquí solo cancela.
-    e.stopPropagation();
-    if (e.key === 'Escape') {
-      setEscuchando(null);
-      setAviso('Cambio cancelado.');
-      return;
-    }
-    const atajo = atajoDe(e);
-    if (!atajo) return; // solo un modificador: se espera a la tecla
-    onCambiar(accion, atajo);
-    ignorarClicRef.current = true;
-    setEscuchando(null);
-    setAviso(`${etiqueta}: ${describirAtajo(atajo)}.`);
-  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -89,28 +57,15 @@ const PanelAtajos = ({ atajos, onCambiar, gestos, onCambiarGesto }: PanelAtajosP
               {etiqueta}
             </span>
             <TeclaAtajo atajo={atajos[accion]} ocultoALector className="px-2 py-1 text-sm" />
-            <button
-              type="button"
-              aria-describedby={`sala-atajo-${accion}`}
-              onClick={() => {
-                if (ignorarClicRef.current) {
-                  ignorarClicRef.current = false;
-                  return;
-                }
-                setAviso('');
-                setEscuchando(escuchando === accion ? null : accion);
+            <BotonCapturarTecla
+              describedBy={`sala-atajo-${accion}`}
+              onEmpezar={() => setAviso('')}
+              onCancelar={() => setAviso('Cambio cancelado.')}
+              onCapturar={(atajo) => {
+                onCambiar(accion, atajo);
+                setAviso(`${etiqueta}: ${describirAtajo(atajo)}.`);
               }}
-              onKeyUp={() => {
-                // Si la tecla no ha acabado en clic (no era Espacio ni Intro), no hay nada que ignorar.
-                window.setTimeout(() => (ignorarClicRef.current = false), 0);
-              }}
-              onKeyDown={capturar(accion, etiqueta)}
-              onBlur={() => escuchando === accion && setEscuchando(null)}
-              {...{ [ATRIBUTO_CAPTURANDO]: escuchando === accion ? '' : undefined }}
-              className={botonSecundario}
-            >
-              {escuchando === accion ? 'Pulsa la nueva tecla (Escape para cancelar)' : 'Cambiar'}
-            </button>
+            />
             <button
               type="button"
               aria-describedby={`sala-atajo-${accion}`}
@@ -120,7 +75,9 @@ const PanelAtajos = ({ atajos, onCambiar, gestos, onCambiarGesto }: PanelAtajosP
               }}
               className={botonSecundario}
             >
-              Volver a {describirAtajo(ATAJOS_INICIALES[accion])}
+              {/* Se ve el símbolo («Volver a .»); se lee el nombre («Volver a Punto») */}
+              Volver a <span aria-hidden="true">{simboloAtajo(ATAJOS_INICIALES[accion])}</span>
+              <span className="sr-only">{describirAtajo(ATAJOS_INICIALES[accion])}</span>
             </button>
             <label className="flex items-center gap-2 text-sm">
               <span className="sr-only">Gesto para {etiqueta}</span>

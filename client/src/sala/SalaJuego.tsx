@@ -56,6 +56,8 @@ import {
   type SalaSusurro,
 } from './chat';
 import RepartoPartida from './RepartoPartida';
+import RelojSala from './RelojSala';
+import { duracionReloj, RELOJ_TRAS_FIN_MS } from './reloj';
 import { ESTILOS_CALAVERA, ESTILOS_MANO, ESTILOS_SILLA, estiloDePartida, MarcasContexto } from './marcas';
 import { FichasContexto, identidadDe, TIPOS_EN_FICHA, type ContenidoFicha, type ContextoFichas } from './fichas';
 import { mostrarPersonajes, tituloDeGuion, useTraducciones, type PersonajeMostrado } from './guiones';
@@ -74,7 +76,8 @@ import { AvisosContexto, useAvisosActivos, type TipoAviso } from './avisosConfig
 import { avisosDeCambio, manosVigiladas, nombreFase } from './avisosSala';
 import { recibidasDe, reconciliarSlots } from './slotsLlamada';
 import { setSonidosActivos, tocarPrivado, tocarSinVoto, tocarSolicitud, tocarVoto } from './sonidos';
-import { idPestanaLateral, ID_BOTON_MENU_NARRADOR, ID_SIN_NARRADOR, ID_TITULO_DESPERTAR, idLunaFicha, idNombreNarrador } from './ids';
+import { idFichaNominar, idPestanaLateral, ID_BOTON_MENU_NARRADOR, ID_SIN_NARRADOR, ID_TITULO_DESPERTAR, idLunaFicha, idNombreNarrador } from './ids';
+import { ElegirEnPlazaContexto, type PedidoEleccion } from './elegirEnPlaza';
 import { getPerfil, limpiarNombre, setPerfil } from './invitado';
 import { sinComunicaciones, usePreferencias } from './preferencias';
 import { useConfiguracionCuenta, type ConfiguracionSala, type PerfilConfiguracion } from './configuracion';
@@ -274,8 +277,9 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       }
     }
 
-    // Al limpiar el grimorio, también se borran las notas del grimorio propio.
-    if (nuevo.fase.reinicios !== anterior.fase.reinicios) {
+    // Al revelar el grimorio (se acaba la partida) y al limpiarlo, se borra el grimorio
+    // propio: los personajes, recordatorios y notas que anotó el jugador.
+    if ((nuevo.revelacion && !anterior.revelacion) || nuevo.fase.reinicios !== anterior.fase.reinicios) {
       setNotasGrimorio({});
       setNotasRecordatorios({});
       setNotasEscritas({});
@@ -609,6 +613,52 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   };
   const miDespertar = yo?.rol === 'jugador' ? despertares[0] : undefined;
   const despiertoYo = !!miDespertar && !wakeCerradoJugador;
+
+  // Elegir a un jugador del despertar en la plaza (Preferencias > Accesibilidad): la
+  // ventana del despertar se esconde, las fichas se pulsan para elegir y, al elegir
+  // (o cancelar con Escape o «Cancelar»), vuelve como estaba y el foco, al botón que lo pidió.
+  const [eleccion, setEleccion] = useState<(Omit<PedidoEleccion, 'volver'> & { volver: HTMLElement | null }) | null>(null);
+  const focoEleccionRef = useRef<HTMLElement | string | null>(null);
+  useEffect(() => {
+    const destino = focoEleccionRef.current;
+    if (!destino) return;
+    focoEleccionRef.current = null;
+    (typeof destino === 'string' ? document.getElementById(destino) : destino)?.focus();
+  }, [eleccion]);
+  const elegirEnPlaza =
+    preferencias.eleccionDespertar === 'plaza' && estado
+      ? (pedido: PedidoEleccion) => {
+          const primera = estado.asientos.find((a) => !pedido.excluidos.includes(a.id));
+          if (!primera) return anunciar('despertar', 'Ya están elegidos todos los jugadores.');
+          const volver = (pedido.volver && document.getElementById(pedido.volver)) || document.activeElement;
+          setEleccion({ ...pedido, volver: volver instanceof HTMLElement ? volver : null });
+          focoEleccionRef.current = idFichaNominar(primera.id);
+          anunciar('despertar', `Elige en la plaza un jugador para «${pedido.titulo}»: pulsa su ficha. Escape para cancelar.`);
+        }
+      : null;
+  const terminarEleccion = (aviso: string) => {
+    focoEleccionRef.current = eleccion?.volver ?? null;
+    setEleccion(null);
+    // Después de que vuelva la ventana (su aviso, si es el del jugador, va en ella)
+    window.setTimeout(() => anunciar('despertar', aviso), 100);
+  };
+  const elegidoEnPlaza = (asientoId: string) => {
+    if (!eleccion || !estado) return;
+    eleccion.onElegido(asientoId);
+    terminarEleccion(`Añadido: ${nombreDeAsiento(estado, asientoId)}.`);
+  };
+  const cancelarEleccion = () => terminarEleccion('Elección cancelada.');
+  // Escape cancela mientras se elige (el despertar del jugador, escondido, no lo atiende)
+  useEffect(() => {
+    if (!eleccion) return;
+    const alPulsar = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      cancelarEleccion();
+    };
+    document.addEventListener('keydown', alPulsar);
+    return () => document.removeEventListener('keydown', alPulsar);
+  });
   const miConversacion =
     estado?.conversaciones.find((c) => c.miembros.includes(estado.yo) || c.oyentes.includes(estado.yo)) ?? null;
   const hablaEnConversacion = !!miConversacion?.miembros.includes(estado?.yo ?? '');
@@ -1021,6 +1071,29 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     if (!r.ok) setAviso(r.error);
   };
 
+  // El reloj del narrador: su diálogo se abre desde el menú o con su tecla
+  const [poniendoReloj, setPoniendoReloj] = useState(false);
+  const quitarReloj = async () => {
+    const r = await pedirPropio('narrador:quitarReloj');
+    if (!r.ok) return setAviso(r.error);
+    // El botón desaparece con el reloj: el foco, al reparto, que estaba al lado
+    document.getElementById('sala-reparto-titulo')?.focus();
+    anunciar('reloj', 'Reloj quitado.');
+  };
+  // Con su tecla (Preferencias > Accesibilidad): lo que queda y el mensaje. Se lee
+  // siempre (lo ha pedido) y al momento, aunque sea lo mismo que la última vez.
+  const leerReloj = () => {
+    const reloj = estado?.reloj;
+    const queda = reloj ? reloj.fin - (Date.now() + desfaseReloj) : 0;
+    if (!reloj || queda < -RELOJ_TRAS_FIN_MS) return anunciarUrgente('No hay ningún reloj.');
+    const mensaje = reloj.mensaje ? ` ${reloj.mensaje}.` : '';
+    if (queda <= 0) return anunciarUrgente(`Se acabó el tiempo.${mensaje}`);
+    const segundos = Math.ceil(queda / 1000);
+    // «Queda 1 minuto y 30 segundos», «Quedan 2 minutos»
+    const verbo = (segundos >= 60 ? Math.floor(segundos / 60) : segundos) === 1 ? 'Queda' : 'Quedan';
+    anunciarUrgente(`${verbo} ${duracionReloj(segundos)}.${mensaje}`);
+  };
+
   // «Entendido» con su tecla, sin pasar por «Enviar»: el jugador, en su despertar; el
   // narrador, en la ventana de despertar que tiene delante. Al llegar, se cierra como siempre.
   const despertarEntendido = narro ? activoNarrador : miDespertar ? miDespertar.asiento : null;
@@ -1041,6 +1114,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       : []),
     // R: sonar el gong (todos a la plaza)
     ...(estado?.acciones.includes('narrador:sonarGong') ? [['sonarGong', () => void sonarGong()] as [AccionAtajo, () => void]] : []),
+    // Z: poner el reloj (abre su diálogo; al cerrarse, el foco vuelve donde estaba)
+    ...(estado?.acciones.includes('narrador:reloj') && !poniendoReloj
+      ? [['reloj', () => setPoniendoReloj(true)] as [AccionAtajo, () => void]]
+      : []),
     ...(estado?.video && puedeEmitirVideo
       ? [
           ['microfono', alternarMicrofonoConAtajo] as [AccionAtajo, () => void],
@@ -1060,7 +1137,11 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       ([id, slot]) => [accionCogerLlamada(slot), () => void responder(id, true)] as [AccionAtajo, () => void],
     ),
   ];
-  const atajosActivos = accionesActivas.map(([accion, hacer]) => [atajos[accion], hacer] as [Atajo, () => void]);
+  const atajosActivos = [
+    // La tecla de leer el reloj (Accesibilidad, no es de la pestaña Atajos): si coincide con un atajo, gana ella
+    ...(preferencias.teclaLeerReloj ? [[preferencias.teclaLeerReloj, leerReloj] as [Atajo, () => void]] : []),
+    ...accionesActivas.map(([accion, hacer]) => [atajos[accion], hacer] as [Atajo, () => void]),
+  ];
   useReconocerGestos(
     accionesActivas.flatMap(([accion, hacer]) => {
       const gesto = gestos[accion];
@@ -1221,6 +1302,11 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           onCambiarTodos={cambiarTodosAvisos}
           invitacionesFuera={preferencias.invitacionesFuera}
           onInvitacionesFuera={(invitacionesFuera) => cambiarPreferencias({ invitacionesFuera })}
+          teclaLeerReloj={preferencias.teclaLeerReloj}
+          onTeclaLeerReloj={(teclaLeerReloj) => cambiarPreferencias({ teclaLeerReloj })}
+          atajos={atajos}
+          eleccionDespertar={preferencias.eleccionDespertar}
+          onEleccionDespertar={(eleccionDespertar) => cambiarPreferencias({ eleccionDespertar })}
         />
       ),
     },
@@ -1506,6 +1592,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
   return (
     <AvisosContexto.Provider value={avisosActivos}>
+      {/* Cómo eligen jugadores las ventanas del despertar: en la plaza o en una lista */}
+      <ElegirEnPlazaContexto.Provider value={elegirEnPlaza}>
       {/* La calavera, la mano, la silla y el voto de los muertos que se pintan: las elegidas o, al azar, unas por partida (y por persona) */}
       <MarcasContexto.Provider
         value={{
@@ -1597,6 +1685,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   atajoFase={atajos.cambiarFase}
                   atajoRevelar={atajos.revelarGrimorio}
                   atajoGong={atajos.sonarGong}
+                  poniendoReloj={poniendoReloj}
+                  onPoniendoReloj={setPoniendoReloj}
+                  atajoReloj={atajos.reloj}
+                  onRelojPuesto={(texto) => anunciar('reloj', texto)}
                 />
               )}
               {puedeLevantarMano && yo && (
@@ -1622,6 +1714,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   participantes={estado.participantes}
                   yo={estado.yo}
                   escuchando={new Set(estado.conversaciones.flatMap((c) => c.oyentes))}
+                  volumen={estado.video ? { de: (id) => video.volumenes[id] ?? 1, cambiar: video.cambiarVolumen } : null}
                 />
               )}
               <MenuUsuario
@@ -1644,10 +1737,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           </h1>
 
           <div aria-live="polite" className="sr-only">
-            {despiertoYo ? '' : anuncio}
+            {despiertoYo && !eleccion ? '' : anuncio}
           </div>
           <div aria-live="assertive" className="sr-only">
-            {despiertoYo ? '' : anuncioUrgente}
+            {despiertoYo && !eleccion ? '' : anuncioUrgente}
           </div>
 
           {/* Flota abajo: no empuja el contenido ni genera scroll. Conexión y errores se
@@ -1785,20 +1878,37 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                         : null
                   }
                   seguimiento={puedeSeguir ? { siguiendo: sigoA?.id ?? null, onAlternar: alternarSeguir } : null}
+                  eleccion={
+                    eleccion
+                      ? { titulo: eleccion.titulo, excluidos: eleccion.excluidos, onElegir: elegidoEnPlaza, onCancelar: cancelarEleccion }
+                      : null
+                  }
                 />
               </section>
               {/* Fuera de la mesa, para no tapar sus fichas: en pantallas anchas, abajo
-                  del todo a la derecha (apartándose de la hoja del guion); en estrechas, debajo de la mesa */}
-              <RepartoPartida
-                distribucion={estado.distribucion}
-                bolsa={estado.acciones.includes('narrador:bolsa') ? estado.bolsa : null}
-                asientos={estado.asientos}
-                npcs={estado.npcs}
-                setupAceptado={estado.setupAceptado}
-                preparacion={estado.fase.momento === 'preparacion'}
-                pedir={pedirPropio}
-                onError={setAviso}
-              />
+                  del todo a la derecha (apartándose de la hoja del guion); en estrechas, debajo de la mesa.
+                  El reloj del narrador, si lo hay, a la izquierda del reparto */}
+              <div className="flex flex-wrap items-end gap-3 self-start lg:fixed lg:bottom-4 lg:right-[calc(var(--sala-panel-guion-ancho,0px)+1rem)] lg:z-30">
+                {estado.reloj && (
+                  <RelojSala
+                    key={estado.reloj.inicio}
+                    reloj={estado.reloj}
+                    desfase={desfaseReloj}
+                    onAnuncio={(texto) => anunciar('reloj', texto)}
+                    onQuitar={estado.acciones.includes('narrador:quitarReloj') ? () => void quitarReloj() : undefined}
+                  />
+                )}
+                <RepartoPartida
+                  distribucion={estado.distribucion}
+                  bolsa={estado.acciones.includes('narrador:bolsa') ? estado.bolsa : null}
+                  asientos={estado.asientos}
+                  npcs={estado.npcs}
+                  setupAceptado={estado.setupAceptado}
+                  preparacion={estado.fase.momento === 'preparacion'}
+                  pedir={pedirPropio}
+                  onError={setAviso}
+                />
+              </div>
             </div>
           )}
         </main>
@@ -1836,6 +1946,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             pedir={pedirPropio}
             onError={setAviso}
             onEnviado={(t) => anunciar('despertar', t)}
+            oculta={!!eleccion}
           />
         )}
         {estado && miDespertar && despiertoYo && (
@@ -1849,9 +1960,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             pedir={pedirPropio}
             onError={setAviso}
             onEnviado={(t) => anunciar('despertar', t)}
-            anuncio={anuncio}
-            anuncioUrgente={anuncioUrgente}
+            anuncio={eleccion ? '' : anuncio}
+            anuncioUrgente={eleccion ? '' : anuncioUrgente}
             error={aviso}
+            oculto={!!eleccion}
           />
         )}
 
@@ -1861,6 +1973,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       </div>
       </FichasContexto.Provider>
       </MarcasContexto.Provider>
+      </ElegirEnPlazaContexto.Provider>
     </AvisosContexto.Provider>
   );
 };

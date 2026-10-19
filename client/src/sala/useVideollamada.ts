@@ -1,14 +1,19 @@
 import {
+  ConnectionState,
+  createAudioAnalyser,
   Room,
   RoomEvent,
   Track,
+  TrackEvent,
   VideoPresets,
+  type LocalAudioTrack,
   type LocalParticipant,
   type Participant,
   type RemoteTrack,
+  type RemoteTrackPublication,
   type VideoTrack,
 } from 'livekit-client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PaseVideo } from './useSala';
 
 /**
@@ -83,11 +88,49 @@ function pistasDe(room: Room | null): Map<string, PistasParticipante> {
   return pistas;
 }
 
-function clasificar(error: unknown): ProblemaDispositivo['motivo'] {
+/**
+ * Por qué ha fallado el dispositivo, o null si no es cosa del dispositivo (la
+ * sala se está cerrando, aún no hay permiso para esa fuente…): eso se arregla
+ * solo en cuanto cambia la sala y no hay que apagar el botón ni avisar.
+ */
+/**
+ * Uno mismo habla según lo que capta su micrófono, aquí mismo: lo que dice el
+ * servidor de vídeo llega uno o dos segundos tarde, y ver el propio aro con
+ * retraso desconcierta. Volumen (0-1) a partir del que se habla, y cuánto se
+ * sigue «hablando» tras callar (las pausas entre palabras no lo apagan).
+ */
+const UMBRAL_VOZ = 0.05;
+const PAUSA_VOZ_MS = 400;
+const CADA_MS = 50;
+
+/**
+ * Oír o no a los de una sala, cada uno a su volumen (0 a 1; de entrada, 1). Bajar
+ * el volumen a 0 no basta: Safari en iPhone y iPad no deja cambiarlo y seguiría
+ * sonando. Así que, sin oírle, además se le pide al servidor que deje de mandar su audio.
+ */
+function oir(room: Room | null, oye: boolean, volumenes: Record<string, number>) {
+  for (const p of room?.remoteParticipants.values() ?? []) {
+    const volumen = oye ? (volumenes[p.identity] ?? 1) : 0;
+    p.setVolume(volumen);
+    for (const publicacion of p.audioTrackPublications.values()) publicacion.setEnabled(volumen > 0);
+  }
+}
+
+function clasificar(error: unknown): ProblemaDispositivo['motivo'] | null {
   const nombre = error instanceof Error ? error.name : '';
   if (nombre === 'NotAllowedError' || nombre === 'SecurityError') return 'permiso';
   if (nombre === 'NotFoundError' || nombre === 'OverconstrainedError' || nombre === 'DevicesNotFoundError') return 'sinDispositivo';
-  return 'otro';
+  // En uso por otro programa (o el sistema no deja abrirlo)
+  if (nombre === 'NotReadableError' || nombre === 'TrackStartError' || nombre === 'AbortError') return 'otro';
+  return null;
+}
+
+/** Si el servidor le deja emitir esa fuente en esa sala (sin lista, todas). */
+function puedePublicar(p: LocalParticipant, fuente: Track.Source): boolean {
+  if (!p.permissions) return true;
+  const { canPublish, canPublishSources } = p.permissions;
+  if (!canPublish) return false;
+  return canPublishSources.length === 0 || canPublishSources.some((s) => Track.sourceFromProto(s) === fuente);
 }
 
 export function useVideollamada({
@@ -105,15 +148,27 @@ export function useVideollamada({
   const [microfono, setMicrofono] = useState(false);
   // Oír a los demás (el botón de sonido de la cabecera)
   const [sonido, setSonido] = useState(true);
+  // El volumen al que se oye a cada uno (0 a 1, por su id; de entrada, 1), en esta pestaña
+  const [volumenes, setVolumenes] = useState<Record<string, number>>({});
   const [problema, setProblema] = useState<ProblemaDispositivo | null>(null);
   const [sonidoBloqueado, setSonidoBloqueado] = useState(false);
   // Lo que se ve y se oye, por sala (se recalcula con cada novedad de LiveKit)
   const [mesa, setMesa] = useState<Map<string, PistasParticipante>>(new Map());
   const [privada, setPrivada] = useState<Map<string, PistasParticipante>>(new Map());
+  // Uno mismo (su id de participante) y si está hablando, medido en su micrófono
+  const [yo, setYo] = useState<string | null>(null);
+  const [yoHablando, setYoHablando] = useState(false);
+  // Sube cada vez que publico o retiro una pista (para medir el micrófono que toca)
+  const [pistasPropias, setPistasPropias] = useState(0);
   // Sube cada vez que una sala termina de conectarse (para publicar en ella)
   const [conectadas, setConectadas] = useState(0);
   const mesaRef = useRef<Room | null>(null);
   const privadaRef = useRef<Room | null>(null);
+  /** Si ahora toca oír cada sala (para cortar desde el principio el audio que llegue nuevo). */
+  const oyeMesaRef = useRef(true);
+  const oyePrivadaRef = useRef(true);
+  /** Lo último pedido a cada sala (publicar o dejar de hacerlo), para encadenar lo siguiente. */
+  const colasRef = useRef(new WeakMap<Room, Promise<void>>());
   const pedirPaseRef = useRef(pedirPase);
   useEffect(() => {
     pedirPaseRef.current = pedirPase;
@@ -121,14 +176,21 @@ export function useVideollamada({
 
   /** Conecta a una sala de vídeo y avisa de cada cambio; devuelve cómo desconectarse. */
   const conectar = useCallback(
-    (sala: string, ref: { current: Room | null }, alCambiar: (pistas: Map<string, PistasParticipante>) => void) => {
+    (
+      sala: string,
+      ref: { current: Room | null },
+      oye: { current: boolean },
+      alCambiar: (pistas: Map<string, PistasParticipante>) => void,
+    ) => {
       const room = crearRoom();
       let cerrada = false;
       const refrescar = () => !cerrada && alCambiar(pistasDe(room));
       room
-        .on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
+        .on(RoomEvent.TrackSubscribed, (track: RemoteTrack, publicacion: RemoteTrackPublication) => {
           // El audio de los demás suena por un elemento oculto (fuera del árbol de accesibilidad)
           if (track.kind === Track.Kind.Audio) {
+            // Si ahora no toca oír esta sala, cortado desde el primer instante
+            if (!oye.current) publicacion.setEnabled(false);
             const elemento = track.attach();
             elemento.setAttribute('aria-hidden', 'true');
             elemento.hidden = true;
@@ -145,12 +207,26 @@ export function useVideollamada({
         .on(RoomEvent.ActiveSpeakersChanged, refrescar)
         .on(RoomEvent.ParticipantConnected, refrescar)
         .on(RoomEvent.ParticipantDisconnected, refrescar)
-        .on(RoomEvent.LocalTrackPublished, refrescar)
-        .on(RoomEvent.LocalTrackUnpublished, refrescar)
+        .on(RoomEvent.LocalTrackPublished, () => {
+          refrescar();
+          if (!cerrada) setPistasPropias((n) => n + 1);
+        })
+        .on(RoomEvent.LocalTrackUnpublished, () => {
+          refrescar();
+          if (!cerrada) setPistasPropias((n) => n + 1);
+        })
         // Si cambian los permisos propios (p. ej. un narrador que pasa de escuchar a
         // estar dentro), se vuelve a mirar qué publicar
         .on(RoomEvent.ParticipantPermissionsChanged, (_antes, p) => {
           if (!cerrada && p === room.localParticipant) setConectadas((n) => n + 1);
+        })
+        // Tras un corte de red, se vuelve a mirar qué publicar
+        .on(RoomEvent.Reconnected, () => !cerrada && setConectadas((n) => n + 1))
+        // El servidor la ha cerrado (p. ej. al salir de una conversación, antes de que
+        // llegue el aviso de la sala): ya no se publica en ella
+        .on(RoomEvent.Disconnected, () => {
+          if (ref.current === room) ref.current = null;
+          if (!cerrada) alCambiar(new Map());
         })
         .on(RoomEvent.AudioPlaybackStatusChanged, () => !cerrada && setSonidoBloqueado(!room.canPlaybackAudio));
       void pedirPaseRef.current(sala).then(async (pase) => {
@@ -159,6 +235,7 @@ export function useVideollamada({
           await room.connect(pase.url, pase.token);
           if (cerrada) return void room.disconnect();
           ref.current = room;
+          setYo(room.localParticipant.identity);
           setSonidoBloqueado(!room.canPlaybackAudio);
           setConectadas((n) => n + 1);
           refrescar();
@@ -179,36 +256,51 @@ export function useVideollamada({
   // La mesa: mientras haya videollamada
   useEffect(() => {
     if (!activa) return;
-    return conectar('principal', mesaRef, setMesa);
+    return conectar('principal', mesaRef, oyeMesaRef, setMesa);
   }, [activa, conectar]);
 
   // La conversación privada: mientras se esté en una
   useEffect(() => {
     if (!activa || !conversacion) return;
-    return conectar(conversacion, privadaRef, setPrivada);
+    return conectar(conversacion, privadaRef, oyePrivadaRef, setPrivada);
   }, [activa, conversacion, conectar]);
 
   // Qué se emite y dónde: en la conversación, si se está en una (cámara también de
   // noche); si no, en la mesa (sin cámara de noche). Nunca en las dos.
   useEffect(() => {
     const enConversacion = !!conversacion;
-    const publicar = async (room: Room | null, cam: boolean, micro: boolean) => {
-      if (!room) return;
+    /** Enciende o apaga una fuente; solo un fallo del dispositivo apaga el botón y avisa. */
+    const ajustar = async (room: Room, dispositivo: ProblemaDispositivo['dispositivo'], encender: boolean) => {
       const p = room.localParticipant;
-      // Aún sin permiso para emitir (llega enseguida): se publica cuando llegue
-      if ((cam || micro) && p.permissions && !p.permissions.canPublish) return;
+      const fuente = dispositivo === 'camara' ? Track.Source.Camera : Track.Source.Microphone;
+      // Aún sin permiso para emitirla (llega enseguida): se publica cuando llegue
+      if (encender && !puedePublicar(p, fuente)) return;
       try {
-        await p.setMicrophoneEnabled(micro, idMicrofono ? { deviceId: idMicrofono } : undefined);
+        if (dispositivo === 'camara') {
+          await p.setCameraEnabled(encender, idCamara ? { deviceId: idCamara, resolution: VideoPresets.h360.resolution } : undefined);
+        } else {
+          await p.setMicrophoneEnabled(encender, idMicrofono ? { deviceId: idMicrofono } : undefined);
+        }
       } catch (e) {
-        setMicrofono(false);
-        setProblema({ dispositivo: 'microfono', motivo: clasificar(e) });
+        // Con la sala cerrándose (al salir de una conversación) o sin permiso todavía,
+        // no es cosa del dispositivo: se vuelve a intentar con el siguiente cambio
+        const motivo = room.state === ConnectionState.Connected ? clasificar(e) : null;
+        if (!motivo) return console.warn(`[Videollamada] No se ha podido ${encender ? 'encender' : 'apagar'} ${dispositivo}:`, e);
+        if (dispositivo === 'camara') setCamara(false);
+        else setMicrofono(false);
+        setProblema({ dispositivo, motivo });
       }
-      try {
-        await p.setCameraEnabled(cam, idCamara ? { deviceId: idCamara, resolution: VideoPresets.h360.resolution } : undefined);
-      } catch (e) {
-        setCamara(false);
-        setProblema({ dispositivo: 'camara', motivo: clasificar(e) });
-      }
+    };
+    // Las órdenes a cada sala van una detrás de otra: encender y apagar a la vez se pisan
+    const publicar = (room: Room | null, cam: boolean, micro: boolean) => {
+      if (!room) return;
+      const aplicar = async () => {
+        if (room.state !== ConnectionState.Connected) return;
+        await ajustar(room, 'microfono', micro);
+        await ajustar(room, 'camara', cam);
+      };
+      const siguiente = (colasRef.current.get(room) ?? Promise.resolve()).then(aplicar);
+      colasRef.current.set(room, siguiente);
     };
     const enMesa = puedeEmitir && !enConversacion;
     // Con silencio, el micrófono se apaga en todas partes (se queda «encendido» para cuando acabe)
@@ -229,15 +321,63 @@ export function useVideollamada({
 
   // Lo que se oye: nada con el sonido quitado; en una conversación privada, solo ella (la mesa no)
   useEffect(() => {
-    for (const p of mesaRef.current?.remoteParticipants.values() ?? []) p.setVolume(sonido && !conversacion ? 1 : 0);
-    for (const p of privadaRef.current?.remoteParticipants.values() ?? []) p.setVolume(sonido ? 1 : 0);
-  }, [sonido, conversacion, mesa, privada]);
+    oyeMesaRef.current = sonido && !conversacion;
+    oyePrivadaRef.current = sonido;
+    oir(mesaRef.current, oyeMesaRef.current, volumenes);
+    oir(privadaRef.current, oyePrivadaRef.current, volumenes);
+  }, [sonido, conversacion, mesa, privada, volumenes]);
+
+  // Si hablo: el volumen de mi micrófono, en la sala en la que lo emito (la
+  // conversación o la mesa). Se vuelve a mirar al publicar o retirar pistas y al
+  // conectarse; silenciarse no la retira, pero se mira en cada medida.
+  useEffect(() => {
+    const room = conversacion ? (hablaEnConversacion ? privadaRef.current : null) : mesaRef.current;
+    const publicacion = room?.localParticipant.getTrackPublication(Track.Source.Microphone);
+    const pista = publicacion?.track as LocalAudioTrack | undefined;
+    // Sin micrófono que medir, callado (la limpieza de la medida anterior ya lo apagó)
+    if (!publicacion || !pista || !microfono || silenciado) return;
+    let analizador = createAudioAnalyser(pista, { cloneTrack: true });
+    // Al cambiar de micrófono en Preferencias la pista se reinicia: se vuelve a medir la nueva
+    const alReiniciar = () => {
+      void analizador.cleanup();
+      analizador = createAudioAnalyser(pista, { cloneTrack: true });
+    };
+    pista.on(TrackEvent.Restarted, alReiniciar);
+    let ultimaVoz = 0;
+    const medir = window.setInterval(() => {
+      const ahora = Date.now();
+      if (!publicacion.isMuted && analizador.calculateVolume() > UMBRAL_VOZ) ultimaVoz = ahora;
+      setYoHablando(ahora - ultimaVoz < PAUSA_VOZ_MS);
+    }, CADA_MS);
+    return () => {
+      window.clearInterval(medir);
+      pista.off(TrackEvent.Restarted, alReiniciar);
+      void analizador.cleanup();
+      setYoHablando(false);
+    };
+  }, [pistasPropias, conectadas, conversacion, hablaEnConversacion, microfono, silenciado]);
+
+  // Lo que dice el servidor de los demás, pero lo mío medido aquí
+  const conYo = useCallback(
+    (pistas: Map<string, PistasParticipante>) => {
+      const mias = yo ? pistas.get(yo) : undefined;
+      if (!yo || !mias || mias.hablando === yoHablando) return pistas;
+      return new Map(pistas).set(yo, { ...mias, hablando: yoHablando });
+    },
+    [yo, yoHablando],
+  );
+  const mesaConYo = useMemo(() => conYo(mesa), [conYo, mesa]);
+  const privadaConYo = useMemo(() => conYo(privada), [conYo, privada]);
 
   const alternarCamara = useCallback(() => {
     setProblema(null);
     setCamara((c) => !c);
   }, []);
   const alternarSonido = useCallback(() => setSonido((s) => !s), []);
+  /** El volumen al que se oye a alguien (0 a 1), en la mesa y en las conversaciones. */
+  const cambiarVolumen = useCallback((id: string, volumen: number) => {
+    setVolumenes((v) => ({ ...v, [id]: Math.min(1, Math.max(0, volumen)) }));
+  }, []);
   const alternarMicrofono = useCallback(() => {
     setProblema(null);
     setMicrofono((m) => !m);
@@ -255,12 +395,14 @@ export function useVideollamada({
     alternarMicrofono,
     sonido,
     alternarSonido,
+    volumenes,
+    cambiarVolumen,
     problema,
     cerrarProblema: () => setProblema(null),
     sonidoBloqueado,
     activarSonido,
     /** Lo que se ve y se oye en la mesa y en la conversación privada, por participante. */
-    mesa,
-    privada,
+    mesa: mesaConYo,
+    privada: privadaConYo,
   };
 }

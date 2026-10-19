@@ -127,6 +127,15 @@ export interface SalaInvitacion {
 export type PaseVideo = { ok: true; url: string; token: string } | { ok: false; error: string };
 
 /** Revelando el grimorio (final de la partida): el bando ganador y las fichas ya reveladas. */
+/** El reloj del narrador: una cuenta atrás para todos con su mensaje; al acabar suena el gong. */
+export interface SalaReloj {
+  /** Cuándo empezó y cuándo acaba (ms, reloj del servidor). */
+  inicio: number;
+  fin: number;
+  /** El mensaje (puede ir vacío). */
+  mensaje: string;
+}
+
 export interface SalaRevelacion {
   ganador: SalaAlineamiento;
   /** Lo que ha pasado (ver causasFinal.ts); vacío hasta que todo está revelado. */
@@ -270,6 +279,8 @@ export interface SalaEstado {
   revelacion: SalaRevelacion | null;
   /** Hora del servidor (ms) del último gong del narrador (todos a la plaza), o null. */
   gong: number | null;
+  /** El reloj del narrador (cuenta atrás con mensaje), o null. */
+  reloj: SalaReloj | null;
   /** Hay videollamada (cámaras y micrófonos) en esta sala. */
   video: boolean;
   /** Las conversaciones privadas en curso (quién habla con quién, no qué). */

@@ -21,6 +21,8 @@ import FichaAsiento from './FichaAsiento';
 import FichaRedonda from './FichaRedonda';
 import PersonajeEnFicha from './PersonajeEnFicha';
 import RecordatoriosFicha from './RecordatoriosFicha';
+import VelaVoto from './VelaVoto';
+import { useMarcas } from './marcas';
 import { ESCALA_RECORDATORIO } from './FichaRecordatorio';
 import { contarBolsa, describirRecordatorio, identidadDe, NOTAS_MAX, recordatoriosDeFicha, TIPOS_REPARTO, useFichas } from './fichas';
 import { descuadres } from './comprobarReparto';
@@ -93,6 +95,12 @@ interface MesaProps {
   /** `entendidos`: los asientos cuyo jugador ha contestado «Entendido» (la luna pasa a pulgar arriba). */
   despertares: { hilos: Set<string>; noLeidos: Set<string>; entendidos: Set<string>; onAbrir: (asientoId: string) => void } | null;
   /**
+   * Eligiendo a un jugador en la plaza para el despertar (ver elegirEnPlaza): las
+   * fichas son botones para elegirlo (menos las ya elegidas) y el centro de la mesa
+   * dice para qué y ofrece cancelar. null si no se está eligiendo.
+   */
+  eleccion?: { titulo: string; excluidos: string[]; onElegir: (asientoId: string) => void; onCancelar: () => void } | null;
+  /**
    * Visitantes y narradores: a quién siguen (id) y cómo seguir o dejar de seguir
    * al jugador de una ficha. null si no pueden seguir a nadie.
    */
@@ -133,18 +141,57 @@ function posicionFicha(i: number, total: number): CSSProperties {
   return { left: `calc(50% + ${x} * ${radio})`, top: `calc(50% + ${y} * ${radio})` };
 }
 
+/** La vela de un muerto (si se ha elegido la vela: Preferencias > Interfaz): su ancho y su alto, en fichas. */
+const ANCHO_VELA = 0.5;
+const ALTO_VELA = (ANCHO_VELA * 64) / 60;
+/**
+ * La zona de la llama: lo que hay en el dibujo de la vela por encima de la cera
+ * (VelaVoto: la cera empieza a 20 de 64 desde arriba de la llama), en fichas. Puede
+ * meterse en lo que tenga encima sin taparle nada.
+ */
+const LLAMA_VELA = (ALTO_VELA * 20) / 64;
+
+/**
+ * Cuánto se acerca (en fichas) lo que la llama tiene enfrente, a lo largo del radio:
+ * la llama apunta arriba, así que solo cuenta la parte vertical del radio (toda en
+ * los asientos de las 12 y de las 6, nada en los de los lados).
+ */
+const acercarALaLlama = (angulo: number) => LLAMA_VELA * Math.abs(Math.cos(angulo));
+
+/**
+ * Dónde va la vela del muerto del asiento `i`: su centro, en el mismo radio que el
+ * cuadro y la ficha, justo después de la ficha hacia la plaza (el centro). En el
+ * semicírculo de arriba la ficha le queda encima: se acerca a ella hasta meter la
+ * zona de la llama.
+ */
+function posicionVela(i: number, total: number): CSSProperties {
+  const angulo = (2 * Math.PI * i) / total;
+  const x = Math.sin(angulo).toFixed(4);
+  const y = (-Math.cos(angulo)).toFixed(4);
+  const t = 'var(--sala-ficha-distancia, 0.75)';
+  const ficha = 'var(--sala-ficha, 4.5rem)';
+  const arriba = Math.cos(angulo) > 0;
+  const separacion = (1 + ALTO_VELA) / 2 - (arriba ? acercarALaLlama(angulo) : 0);
+  const radio = `(50% - var(--sala-avatar, 10rem) / 2 - ${t} * (var(--sala-avatar, 10rem) + ${ficha}) / 2 - ${ficha} * ${separacion.toFixed(4)})`;
+  return { left: `calc(50% + ${x} * ${radio})`, top: `calc(50% + ${y} * ${radio})` };
+}
+
 /**
  * Dónde empiezan los recordatorios de la ficha `i`: junto a ella, hacia el
  * centro de la mesa (medio diámetro de la ficha y medio de un recordatorio más
- * adentro), y hacia dónde se apilan (el centro).
+ * adentro; con la vela del muerto, además lo que ocupa la vela), y hacia dónde
+ * se apilan (el centro). Con la vela, se acercan lo mismo que ella a la ficha: en
+ * el semicírculo de arriba porque la vela se ha acercado a la ficha; en el de
+ * abajo, porque es a ellos a quienes apunta la llama.
  */
-function posicionRecordatorios(i: number, total: number): { style: CSSProperties; hacia: { x: number; y: number } } {
+function posicionRecordatorios(i: number, total: number, conVela: boolean): { style: CSSProperties; hacia: { x: number; y: number } } {
   const angulo = (2 * Math.PI * i) / total;
   const x = Math.sin(angulo);
   const y = -Math.cos(angulo);
   const t = 'var(--sala-ficha-distancia, 0.75)';
   const ficha = 'var(--sala-ficha, 4.5rem)';
-  const radio = `(50% - var(--sala-avatar, 10rem) / 2 - ${t} * (var(--sala-avatar, 10rem) + ${ficha}) / 2 - ${ficha} * ${(1 + ESCALA_RECORDATORIO) / 2} - 2px)`;
+  const vela = conVela ? ` - ${ficha} * ${(ALTO_VELA - acercarALaLlama(angulo)).toFixed(4)} - 2px` : '';
+  const radio = `(50% - var(--sala-avatar, 10rem) / 2 - ${t} * (var(--sala-avatar, 10rem) + ${ficha}) / 2 - ${ficha} * ${(1 + ESCALA_RECORDATORIO) / 2} - 2px${vela})`;
   return {
     style: { left: `calc(50% + ${x.toFixed(4)} * ${radio})`, top: `calc(50% + ${y.toFixed(4)} * ${radio})` },
     hacia: { x: -x, y: -y },
@@ -183,6 +230,7 @@ const Mesa = ({
   ondas,
   despertares,
   seguimiento,
+  eleccion = null,
 }: MesaProps) => {
   const anadirRef = useRef<HTMLButtonElement>(null);
   const [pidiendo, setPidiendo] = useState(false);
@@ -190,8 +238,9 @@ const Mesa = ({
   const total = asientos.length;
   const puedeSentarse = acciones.includes('sala:sentarse');
   // El narrador usa las fichas (matar, revivir…) si el servidor se lo permite; un
-  // jugador con grimorio, para cambiarlas en el suyo; si no, solo se ven.
-  const modoFichas = acciones.includes('narrador:cambiarVida') ? 'narrador' : grimorio ? 'grimorio' : 'ver';
+  // jugador con grimorio, para cambiarlas en el suyo; si no, solo se ven. Revelando el
+  // grimorio, el jugador con grimorio ve las del narrador (lo de verdad), no lo que anotó.
+  const modoFichas = acciones.includes('narrador:cambiarVida') ? 'narrador' : grimorio && !estado.revelacion ? 'grimorio' : 'ver';
   const mesaRef = useRef<HTMLDivElement>(null);
 
   // El narrador despierta (de noche) al jugador de una ficha, o a la ficha si el
@@ -206,6 +255,8 @@ const Mesa = ({
   // Lo que lleva cada ficha, para leerlo con el nombre del asiento: el personaje que
   // ve quien mira (el de la partida o, con grimorio, el que ha anotado), la calavera y el sudario.
   const { porId, notas, anotar, todosPorId, notasRecordatorios, anotarRecordatorios, notasEscritas, escribirNotas } = useFichas();
+  // Cómo se ve si a un muerto le queda el voto (Preferencias > Interfaz): su vela, o el círculo en el sudario
+  const estiloVoto = useMarcas().voto;
   // Con grimorio propio, lo anotado tapa lo que se ve de la partida (también en la propia)
   const personajeVisto = (a: (typeof asientos)[number]) =>
     modoFichas === 'grimorio' && notas[a.id] ? notas[a.id].personaje : a.personaje;
@@ -476,12 +527,19 @@ const Mesa = ({
             const visible = editando ? mover.ocupanteVisible(a) : a.ocupante;
             const ocupante = participante(visible);
             const real = participante(a.ocupante);
-            const eligiendo = nominar.eligiendo(a.id);
+            // Eligiendo en la plaza para el despertar: todas las fichas salvo las ya elegidas
+            const eligiendo = eleccion
+              ? eleccion.excluidos.includes(a.id)
+                ? undefined
+                : { papel: 'candidata' as const, onPulsar: () => eleccion.onElegir(a.id), accion: 'Elegir' }
+              : nominar.eligiendo(a.id);
             const seguir = seguirA(ocupante);
             // La luna del despertar (narradores, y visitantes que ven el grimorio) también se pulsa
             const conLuna = !!despertares?.hilos.has(a.id) && !editando;
             const soloSeVe = modoFichas === 'ver' && !eligiendo && !seguir && !conLuna;
-            const posRecordatorios = posicionRecordatorios(i, total);
+            // La vela del muerto, si se ha elegido (si no, el círculo va en el sudario)
+            const conVela = a.muerto && estiloVoto === 'vela';
+            const posRecordatorios = posicionRecordatorios(i, total, conVela);
             return (
               // Cada asiento con su ficha justo después: el lector los lee juntos, asiento a asiento.
               // El li no tiene caja (contents): el asiento y la capa de su ficha se colocan respecto a la mesa.
@@ -563,8 +621,12 @@ const Mesa = ({
                     {...intercambio.propsFicha(a.id)}
                     aria-hidden={soloSeVe || undefined}
                     // La ficha con el menú abierto, por encima de las demás (si no, su menú quedaría debajo).
+                    // Con la mano levantada, también por encima: la mano va dentro y si no la taparían
+                    // las fichas de los asientos siguientes (siempre por debajo del centro de la mesa).
                     // Arrastrándola (Gardener), se queda en tenue; aquella sobre la que se soltaría, resaltada.
-                    className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full has-[[aria-expanded=true]]:z-50 ${soloSeVe ? '' : 'pointer-events-auto'} ${
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full has-[[aria-expanded=true]]:z-50 ${
+                      ocupante?.manoLevantada ? 'z-20' : ''
+                    } ${soloSeVe ? '' : 'pointer-events-auto'} ${
                       puedeIntercambiar ? 'touch-none' : ''
                     } ${intercambio.arrastre?.desde === a.id ? 'opacity-40' : ''} ${
                       intercambio.arrastre?.hasta === a.id ? 'ring-4 ring-gold-bright ring-offset-2 ring-offset-background' : ''
@@ -587,8 +649,6 @@ const Mesa = ({
                       seguir={seguir}
                       enJuego={enJuego}
                       probables={probables}
-                      // Los de la mitad derecha de la mesa, a la derecha; los demás, a la izquierda
-                      ladoVela={Math.sin((2 * Math.PI * i) / total) > 0.01 ? 'derecha' : 'izquierda'}
                       onEscribirNota={escriboNotas && !editando ? () => setNotasAbiertas({ asientoId: a.id, nueva: true }) : undefined}
                       onIntercambiar={puedeIntercambiar ? () => setIntercambiando(a.id) : undefined}
                       revelando={
@@ -641,6 +701,16 @@ const Mesa = ({
                       <ManoLevantada levantada={ocupante.manoLevantada} dos={ocupante.dosManos} forma={ocupante.formaMano} estilo={ocupante.estiloMano} enNominacion={!!nominacion} />
                     )}
                   </div>
+                  {conVela && (
+                    // La vela, entre la ficha y sus recordatorios: encendida mientras le queda el voto.
+                    // Solo visual: el nombre del asiento ya dice si le queda
+                    <div
+                      className="pointer-events-none absolute w-[calc(var(--sala-ficha,4.5rem)*0.5)] -translate-x-1/2 -translate-y-1/2"
+                      style={posicionVela(i, total)}
+                    >
+                      <VelaVoto encendida={!a.votoGastado} className="aspect-[60/64] w-full drop-shadow-[0_2px_2px_rgba(0,0,0,0.7)]" />
+                    </div>
+                  )}
                   {/* Sus recordatorios, después de la ficha (en el orden del tabulador también) */}
                   {!revelacion && (
                     <RecordatoriosFicha
@@ -774,7 +844,7 @@ const Mesa = ({
 
       {/* El centro de la mesa: la cuenta atrás (todos), el panel de la nominación y
           el de editar asientos (narradores). Por encima de las agujas. */}
-      {(nominacion?.cuentaAtrasFin || nominar.panel || nominar.cancelar || editando || revelacion || estado.fichasRetenidas) && (
+      {(nominacion?.cuentaAtrasFin || nominar.panel || nominar.cancelar || eleccion || editando || revelacion || estado.fichasRetenidas) && (
         <div className="absolute left-1/2 top-1/2 z-30 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">
           {/* Gardener: los personajes repartidos esperan a que el narrador los entregue */}
           {estado.fichasRetenidas &&
@@ -823,6 +893,17 @@ const Mesa = ({
               desfase={desfaseReloj}
               onTermina={() => onAnuncio('cuentaAtras', 'Tiempo.')}
             />
+          )}
+          {eleccion && (
+            // Eligiendo para el despertar (su ventana está escondida): para qué y cómo volver sin elegir
+            <div className="flex max-w-60 flex-col items-center gap-2 sala-cofre p-4 text-center">
+              <p className="text-sm text-on-surface">
+                Elige un jugador para «{eleccion.titulo}»: pulsa su ficha.
+              </p>
+              <button type="button" onClick={eleccion.onCancelar} className={botonSecundario}>
+                Cancelar
+              </button>
+            </div>
           )}
           {nominar.cancelar && (
             <div className="sala-cofre p-4">

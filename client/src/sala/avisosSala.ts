@@ -1,6 +1,7 @@
 import { nombreMano } from './formasMano';
 import type { PersonajeMostrado } from './guiones';
 import { datosAsiento } from './nombresAsiento';
+import { anuncioReloj } from './reloj';
 import type { TipoAviso } from './avisosConfig';
 import type { SalaEstado, SalaParticipante, SalaFase } from './useSala';
 
@@ -315,6 +316,16 @@ export function avisosDeCambio(
   }
   if (nomAhora?.cuentaAtrasFin && nomAhora.cuentaAtrasFin !== nomAntes?.cuentaAtrasFin) {
     avisa('cuentaAtras', 'Cuenta atrás.');
+  }
+
+  // El reloj del narrador: al ponerlo (o cambiarlo) y si lo quitan antes de acabar
+  // (el final lo avisa el propio reloj, que es quien sabe cuándo llega)
+  const relojAntes = anterior.reloj;
+  const relojAhora = nuevo.reloj;
+  if (relojAhora && relojAhora.inicio !== relojAntes?.inicio) {
+    avisa('reloj', anuncioReloj(Math.round((relojAhora.fin - relojAhora.inicio) / 1000), relojAhora.mensaje));
+  } else if (relojAntes && !relojAhora && relojAntes.fin > nuevo.ahora) {
+    avisa('reloj', 'Reloj quitado.');
   }
 
   return avisos;

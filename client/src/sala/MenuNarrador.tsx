@@ -2,6 +2,7 @@ import { ScrollText } from 'lucide-react';
 import { useState } from 'react';
 import DialogoConfirmar from './DialogoConfirmar';
 import DialogoRevelar from './DialogoRevelar';
+import DialogoReloj from './DialogoReloj';
 import DialogoElegirParticipante from './DialogoElegirParticipante';
 import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { botonIcono } from './estilos';
@@ -23,6 +24,12 @@ interface MenuNarradorProps {
   atajoRevelar?: Atajo;
   /** Tecla de sonar el gong (se ve al lado). */
   atajoGong?: Atajo;
+  /** El diálogo del reloj, abierto (también se abre con su tecla, desde fuera del menú). */
+  poniendoReloj: boolean;
+  onPoniendoReloj: (abierto: boolean) => void;
+  atajoReloj?: Atajo;
+  /** Confirmación para el lector al poner el reloj. */
+  onRelojPuesto: (texto: string) => void;
 }
 
 /** Opciones del menú que abren el diálogo para elegir a alguien; la clave es la acción del servidor. */
@@ -77,7 +84,20 @@ const ELEGIR: Record<
  * Cada opción es una acción del servidor y solo sale si `estado.acciones` la
  * permite; si no queda ninguna (no narras), el botón no sale.
  */
-const MenuNarrador = ({ estado, pedir, onAsientos, revelando, onRevelando, atajoFase, atajoRevelar, atajoGong }: MenuNarradorProps) => {
+const MenuNarrador = ({
+  estado,
+  pedir,
+  onAsientos,
+  revelando,
+  onRevelando,
+  atajoFase,
+  atajoRevelar,
+  atajoGong,
+  poniendoReloj,
+  onPoniendoReloj,
+  atajoReloj,
+  onRelojPuesto,
+}: MenuNarradorProps) => {
   // Acción de ELEGIR cuyo diálogo está abierto.
   const [eligiendo, setEligiendo] = useState<string | null>(null);
   const [limpiando, setLimpiando] = useState(false);
@@ -90,6 +110,7 @@ const MenuNarrador = ({ estado, pedir, onAsientos, revelando, onRevelando, atajo
     { id: 'narrador:irANoche', etiqueta: 'Ir a la noche', atajo: atajoFase, elegir: () => void pedir('narrador:irANoche') },
     { id: 'narrador:amanecer', etiqueta: 'Amanece', atajo: atajoFase, elegir: () => void pedir('narrador:amanecer') },
     { id: 'narrador:sonarGong', etiqueta: 'Sonar gong', atajo: atajoGong, elegir: () => void pedir('narrador:sonarGong') },
+    { id: 'narrador:reloj', etiqueta: 'Reloj', atajo: atajoReloj, abreDialogo: true, elegir: () => onPoniendoReloj(true) },
     { id: 'narrador:revelarGrimorio', etiqueta: 'Revelar grimorio', atajo: atajoRevelar, abreDialogo: true, elegir: () => onRevelando(true) },
     { id: 'narrador:limpiarGrimorio', etiqueta: 'Limpiar grimorio', abreDialogo: true, elegir: () => setLimpiando(true) },
     ...Object.entries(ELEGIR).map(([accion, { etiqueta }]) => ({
@@ -124,6 +145,7 @@ const MenuNarrador = ({ estado, pedir, onAsientos, revelando, onRevelando, atajo
         />
       )}
       {revelando && <DialogoRevelar estado={estado} pedir={pedir} onCerrar={() => onRevelando(false)} />}
+      {poniendoReloj && <DialogoReloj pedir={pedir} onPuesto={onRelojPuesto} onCerrar={() => onPoniendoReloj(false)} />}
       {limpiando && (
         <DialogoConfirmar
           titulo="Limpiar grimorio"

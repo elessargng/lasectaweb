@@ -35,6 +35,7 @@ const escucha = (p: SalaParticipante) => p.rol === 'visitante' || p.rol === 'nar
  *   lo ven).
  * - Cada uno está en una como mucho (para aceptar una invitación hay que salir antes).
  * - Al cambiar de noche a día (o al revés) se terminan todas y caducan las invitaciones.
+ *   Limpiar el grimorio (vuelve a la preparación) no las termina: nadie sale de la suya.
  * - Con la Institutriz viva, un jugador solo conversa con sus vecinos de mesa: quien
  *   entra en una conversación tiene que ser vecino de todos los jugadores que hay en ella.
  * - Quien deja de poder estar (cambia de papel o se va) sale. Si queda un solo
@@ -48,9 +49,12 @@ export class ConversacionService {
   private conversaciones: SalaConversacion[] = [];
   private invitaciones: SalaInvitacion[] = [];
   private faseVista: string;
+  /** Las veces que se ha limpiado el grimorio, la última vez que se miró. */
+  private reiniciosVistos: number;
 
   constructor(private readonly sala: SalaService) {
     this.faseVista = this.claveFase();
+    this.reiniciosVistos = this.sala.fase().reinicios;
   }
 
   /** Todas las conversaciones, con sus oyentes. */
@@ -219,8 +223,13 @@ export class ConversacionService {
     const fase = this.claveFase();
     if (fase !== this.faseVista) {
       this.faseVista = fase;
-      this.conversaciones = [];
-      this.invitaciones = [];
+      // Si el cambio es por limpiar el grimorio, las conversaciones siguen
+      const { reinicios } = this.sala.fase();
+      if (reinicios === this.reiniciosVistos) {
+        this.conversaciones = [];
+        this.invitaciones = [];
+      }
+      this.reiniciosVistos = reinicios;
     }
     const sigue = (id: string, puede: (p: SalaParticipante) => boolean) => {
       const p = this.sala.buscar(id);

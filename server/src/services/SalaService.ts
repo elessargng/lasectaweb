@@ -13,6 +13,7 @@ import {
   SalaNominacion,
   SalaParticipante,
   SalaRegistroVotacion,
+  SalaReloj,
   SalaRevelacion,
   SalaRol,
   NUM_FAROLES,
@@ -43,6 +44,10 @@ export const SALA_ASIENTOS = { inicial: 7, min: 0, max: 20 };
  * (4 s, lo que dura su sonido en el cliente).
  */
 export const SALA_CUENTA_ATRAS_MS = 4000;
+
+/** El reloj del narrador: cuánto puede durar (segundos) y cuánto se sigue viendo al acabar (ms). */
+export const SALA_RELOJ = { minSegundos: 5, maxSegundos: 60 * 60, mensajeMax: 120 };
+const SALA_RELOJ_TRAS_FIN_MS = 15_000;
 
 /** Lo que tarda la aguja de ficha en ficha al votar, en segundos (de cuarto en cuarto). */
 export const SALA_SEGUNDOS_POR_FICHA = { min: 0.25, max: 2, paso: 0.25, defecto: 1 };
@@ -200,6 +205,8 @@ export class SalaService {
   private revelacionActual: { ganador: SalaAlineamiento; causas: string[]; reveladas: string[] } | null = null;
   /** Hora (ms) del último gong del narrador, o null. */
   private ultimoGong: number | null = null;
+  /** El reloj del narrador (ver SalaEstado.reloj), o null. */
+  private relojActual: SalaReloj | null = null;
   /** A quién se ha dejado ver el grimorio (por su `recuerdo`), para devolvérselo si sale y vuelve. */
   private conGrimorio = new Set<string>();
   /** Los votos de la votación de hoy que más tuvo (de las que llegaron a los necesarios), o null. */
@@ -1039,6 +1046,26 @@ export class SalaService {
   /** Suena el gong: todos vuelven a la plaza. No comprueba permisos. */
   sonarGong(): void {
     this.ultimoGong = Date.now();
+  }
+
+  /**
+   * El reloj del narrador, o null. Acabado, se sigue viendo un rato (con su
+   * «¡Tiempo!»); después ya no se manda, para que no lo vea quien entra.
+   */
+  reloj(): SalaReloj | null {
+    if (this.relojActual && Date.now() - this.relojActual.fin > SALA_RELOJ_TRAS_FIN_MS) this.relojActual = null;
+    return this.relojActual;
+  }
+
+  /** Pone el reloj: cuenta atrás de `segundos` con su mensaje (sustituye al que hubiera). No comprueba permisos. */
+  ponerReloj(segundos: number, mensaje: string): void {
+    const inicio = Date.now();
+    this.relojActual = { inicio, fin: inicio + segundos * 1000, mensaje };
+  }
+
+  /** Quita el reloj. No comprueba permisos. */
+  quitarReloj(): void {
+    this.relojActual = null;
   }
 
   /** La revelación del grimorio en curso (o acabada), o null. */

@@ -8,6 +8,7 @@ import { Dices } from 'lucide-react';
 import { carpetaSilla, ESTILOS_CALAVERA, ESTILOS_MANO, ESTILOS_SILLA, ESTILOS_VOTO, MarcasContexto } from './marcas';
 import type { TamanosMesa } from './Mesa';
 import { RANGOS, type PreferenciasSala } from './preferencias';
+import VelaVoto from './VelaVoto';
 
 interface ElegirEstiloProps<T extends string> {
   id: string;
@@ -176,12 +177,22 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, onCambiar }: PanelIn
       estilos={ESTILOS_VOTO}
       valor={preferencias.voto}
       onCambiar={(voto) => onCambiar({ voto })}
-      muestra={(voto) => (
-        // Un muerto que ya ha gastado su voto, con este estilo (su vela apagada o el círculo)
-        <MarcasContexto.Provider value={{ calavera: 'clasica', mano: 'laton', silla: 'clasica', voto }}>
-          <FichaRedonda muerto votoGastado />
-        </MarcasContexto.Provider>
-      )}
+      muestra={(voto) =>
+        // Un muerto que ya ha gastado su voto, con este estilo: como en el asiento de las
+        // 12, su ficha y, hacia la plaza (abajo), su vela apagada; o el círculo en el sudario
+        voto === 'vela' ? (
+          <span className="flex flex-col items-center">
+            <MarcasContexto.Provider value={{ calavera: 'clasica', mano: 'laton', silla: 'clasica', voto }}>
+              <FichaRedonda muerto votoGastado />
+            </MarcasContexto.Provider>
+            <VelaVoto encendida={false} className="aspect-[60/64] w-[calc(var(--sala-ficha)*0.5)] drop-shadow-[0_2px_2px_rgba(0,0,0,0.7)]" />
+          </span>
+        ) : (
+          <MarcasContexto.Provider value={{ calavera: 'clasica', mano: 'laton', silla: 'clasica', voto }}>
+            <FichaRedonda muerto votoGastado />
+          </MarcasContexto.Provider>
+        )
+      }
     />
     <ElegirEstilo
       id="sala-pref-silla"

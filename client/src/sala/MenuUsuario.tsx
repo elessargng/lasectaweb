@@ -1,5 +1,5 @@
-import { getAvatarUrl } from '../utils/api';
 import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
+import ImagenAvatar from './ImagenAvatar';
 
 interface MenuUsuarioProps {
   nombre: string;
@@ -37,7 +37,7 @@ const MenuUsuario = ({ nombre, avatar, conCuenta, onPreferencias, enLaSala, onSa
             className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gold bg-surface font-display text-gold-bright shadow-[0_0_0_2px_var(--color-background),0_0_0_3px_rgba(212,175,106,0.35)]"
           >
             {avatar ? (
-              <img src={getAvatarUrl(avatar)} alt="" className="h-full w-full object-cover" />
+              <ImagenAvatar avatar={avatar} />
             ) : (
               nombre.charAt(0).toLocaleUpperCase('es')
             )}

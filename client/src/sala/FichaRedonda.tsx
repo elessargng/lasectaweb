@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import Calavera from './Calavera';
 import { useMarcas } from './marcas';
-import VelaVoto from './VelaVoto';
 
 interface FichaRedondaProps {
   /** Lo que lleva dentro (más adelante, el rol). */
@@ -10,10 +9,8 @@ interface FichaRedondaProps {
   muerto?: boolean;
   /** Muerto de noche, por anunciar: el sudario, semitransparente (solo lo ve quien ve el grimorio). */
   muertePendiente?: boolean;
-  /** Muerto, ya ha gastado su voto: su vela, apagada, o el círculo azul en el sudario (Preferencias > Interfaz). */
+  /** Muerto, ya ha gastado su voto: el círculo azul en el sudario, si se ha elegido así (Preferencias > Interfaz). */
   votoGastado?: boolean;
-  /** De qué lado de la ficha va la vela del muerto: del lado de la mesa en el que está el jugador. */
-  ladoVela?: 'izquierda' | 'derecha';
   /** Lleva la marca de la calavera (nominación). */
   marcado?: boolean;
   /** En una votación: los votos acumulados si votó, null (✗) si no; sin definir si aún no le ha tocado. */
@@ -43,16 +40,15 @@ interface FichaRedondaProps {
  * número de votos que lleva (si votó) o una ✗.
  *
  * Muerto (ya anunciado), además se ve si le queda el voto, como haya elegido
- * cada uno: su vela negra en la esquina de abajo a la izquierda (encendida
- * mientras lo tiene, apagada al gastarlo) o, al perderlo, un círculo azul con
- * halo en lo alto del sudario.
+ * cada uno: al perderlo, un círculo azul con halo en lo alto del sudario. (La
+ * otra forma, la vela, va en la mesa, entre la ficha y sus recordatorios: ver Mesa.)
  *
  * Tiene dos caras: boca abajo se ve el reverso (el de botc.app; muerta, el
  * violeta) y al darle la vuelta gira sobre sí misma (sin animación si se pide menos movimiento).
  *
  * Solo visual: quien la use dice para el lector de quién es y si está muerto.
  */
-const FichaRedonda = ({ children, ladoVela = 'izquierda', muerto = false, muertePendiente = false, votoGastado = false, marcado = false, voto, bocaAbajo = false, reloj = false, asomar = false }: FichaRedondaProps) => {
+const FichaRedonda = ({ children, muerto = false, muertePendiente = false, votoGastado = false, marcado = false, voto, bocaAbajo = false, reloj = false, asomar = false }: FichaRedondaProps) => {
   const estiloVoto = useMarcas().voto;
   return (
   // span (de bloque) y no div: la ficha puede ir dentro de un botón
@@ -102,13 +98,6 @@ const FichaRedonda = ({ children, ladoVela = 'izquierda', muerto = false, muerte
           <span className="sala-voto-perdido absolute left-1/2 top-[28%] block aspect-square w-[58%] rounded-full" />
         )}
       </span>
-    )}
-    {muerto && estiloVoto === 'vela' && (
-      // La vela del muerto, de pie junto a la ficha, abajo y del lado del jugador (por fuera de la mesa)
-      <VelaVoto
-        encendida={!votoGastado}
-        className={`absolute bottom-[-13%] z-[1] h-[54%] w-[50%] drop-shadow-[0_2px_2px_rgba(0,0,0,0.7)] ${ladoVela === 'derecha' ? '-right-[24%]' : '-left-[24%]'}`}
-      />
     )}
     {marcado && !bocaAbajo && (
       // La calavera, en el estilo que haya elegido cada uno (Preferencias > Interfaz),

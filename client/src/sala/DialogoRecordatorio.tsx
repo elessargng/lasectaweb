@@ -20,6 +20,8 @@ interface DialogoRecordatorioProps {
   titulo?: string;
   /** Explicación bajo el título (qué hace elegir uno). */
   explicacion?: string;
+  /** Qué personajes salen, si no son todos («que mate de noche»): para decir que no hay ninguno. */
+  cuales?: string;
   /** Un botón más en el pie, para seguir sin elegir ninguno («Matar sin recordatorio»). */
   sinRecordatorio?: { etiqueta: string; onElegir: () => void };
   /**
@@ -52,7 +54,7 @@ const TAMANO = '4.5rem';
  *
  * Pestañas como manda ARIA: las flechas van de una a otra y Tab entra en la lista.
  */
-const DialogoRecordatorio = ({ ficha, enJuego, otros, probables, onElegir, onCerrar, titulo, explicacion, sinRecordatorio, onTexto }: DialogoRecordatorioProps) => {
+const DialogoRecordatorio = ({ ficha, enJuego, otros, probables, onElegir, onCerrar, titulo, explicacion, cuales, sinRecordatorio, onTexto }: DialogoRecordatorioProps) => {
   const pestanas = PESTANAS.filter((t) => t.id !== 'texto' || onTexto);
   const sinPersonajes = enJuego.length === 0 && otros.length === 0;
   const [pestana, setPestana] = useState<Pestana>(onTexto && sinPersonajes ? 'texto' : 'enJuego');
@@ -199,8 +201,8 @@ const DialogoRecordatorio = ({ ficha, enJuego, otros, probables, onElegir, onCer
           ) : lista.length === 0 ? (
             <p className="text-on-surface-muted">
               {pestana === 'enJuego'
-                ? 'Ningún personaje en juego tiene recordatorios. Mira en «Otros personajes».'
-                : 'Ningún otro personaje del guion tiene recordatorios.'}
+                ? `Ningún personaje en juego${cuales ? ` ${cuales}` : ''} tiene recordatorios. Mira en «Otros personajes».`
+                : `Ningún otro personaje del guion${cuales ? ` ${cuales}` : ''} tiene recordatorios.`}
               {onTexto && ' También puedes escribir uno en «Texto propio».'}
             </p>
           ) : (

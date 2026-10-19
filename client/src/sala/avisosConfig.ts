@@ -34,6 +34,7 @@ export type TipoAviso =
   | 'resultadoVotacion'
   | 'mezclar'
   | 'gong'
+  | 'reloj'
   | 'moverJugadores'
   | 'editarAsientos'
   | 'errores'
@@ -98,6 +99,7 @@ export const GRUPOS_AVISOS: { grupo: string; tipos: { tipo: TipoAviso; etiqueta:
     grupo: 'Acciones del narrador',
     tipos: [
       { tipo: 'gong', etiqueta: 'Gong: el narrador llama a todos a la plaza' },
+      { tipo: 'reloj', etiqueta: 'Reloj: cuando el narrador lo pone, lo quita y cuando se acaba el tiempo' },
       { tipo: 'mezclar', etiqueta: 'Mezclar jugadores' },
       { tipo: 'bolsa', etiqueta: 'Bolsa de personajes: setup modificado y personajes repartidos' },
       { tipo: 'moverJugadores', etiqueta: 'Mover a un jugador de asiento (instrucciones y pasos)' },

@@ -13,6 +13,7 @@ import {
   NPC_SILENCIO,
   NPC_STORMCATCHER,
   SALA_ASIENTOS,
+  SALA_RELOJ,
   SALA_SEGUNDOS_POR_FICHA,
   SalaService,
 } from '../services/SalaService';
@@ -356,7 +357,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /**
    * Sube una imagen propia como avatar para la sala (su perfil de la web no
-   * cambia). datos: { imagen } JPEG en base64. Devuelve su ruta en `valor`.
+   * cambia). datos: { imagen } JPEG o GIF (animado) en base64. Devuelve su ruta en `valor`.
    */
   'sala:subirAvatar': {
     puede: cualquiera,
@@ -646,6 +647,34 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       const ultimo = sala.gong();
       if (ultimo && Date.now() - ultimo < SALA_PAUSA_GONG_MS) return { ok: false, error: 'El gong aún está sonando.' };
       sala.sonarGong();
+      return { ok: true };
+    },
+  },
+
+  /**
+   * Pone el reloj: una cuenta atrás para todos con un mensaje; al acabar suena el
+   * gong. Sustituye al que hubiera. datos: { segundos, mensaje }.
+   */
+  'narrador:reloj': {
+    puede: (_sala, yo) => yo.rol === 'narrador',
+    noPuede: 'Solo un narrador puede poner el reloj.',
+    hacer: (sala, _yo, datos) => {
+      const { segundos, mensaje } = (datos as { segundos?: unknown; mensaje?: unknown } | null) ?? {};
+      if (typeof segundos !== 'number' || !Number.isInteger(segundos)) return { ok: false, error: 'Indica cuánto dura el reloj.' };
+      if (segundos < SALA_RELOJ.minSegundos) return { ok: false, error: `El reloj tiene que durar al menos ${SALA_RELOJ.minSegundos} segundos.` };
+      if (segundos > SALA_RELOJ.maxSegundos) return { ok: false, error: `El reloj puede durar como mucho ${SALA_RELOJ.maxSegundos / 60} minutos.` };
+      if (mensaje !== undefined && typeof mensaje !== 'string') return { ok: false, error: 'Mensaje no válido.' };
+      sala.ponerReloj(segundos, (mensaje ?? '').trim().slice(0, SALA_RELOJ.mensajeMax));
+      return { ok: true };
+    },
+  },
+
+  /** Quita el reloj antes de que acabe (o el «¡Tiempo!» que se queda al acabar). */
+  'narrador:quitarReloj': {
+    puede: (sala, yo) => yo.rol === 'narrador' && !!sala.reloj(),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'No hay ningún reloj en marcha.' : 'Solo un narrador puede quitar el reloj.'),
+    hacer: (sala) => {
+      sala.quitarReloj();
       return { ok: true };
     },
   },

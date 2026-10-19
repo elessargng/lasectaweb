@@ -1,17 +1,29 @@
 import { ImagePlus } from 'lucide-react';
 import { useState, type ChangeEvent, type FormEvent } from 'react';
-import { getAvatarUrl } from '../utils/api';
 import { compressImage } from '../utils/image';
 import { AVATAR_INVITADO, AVATARES_SALA } from './avatares';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, campo } from './estilos';
 import { NOMBRE_MAX } from './invitado';
+import ImagenAvatar from './ImagenAvatar';
 
 /** Si sale bien, `avatar` es cómo queda guardado (la ruta, si se ha subido una imagen). */
 export type ResultadoPerfil = { ok: true; avatar: string } | { ok: false; error: string; campo: 'nombre' | 'avatar' };
 
 /** Lado máximo con el que se sube una imagen propia: el de los cuadros más grandes. */
 const LADO_IMAGEN_PROPIA = 256;
+
+/** Los GIF animados se suben tal cual (reducirlos los dejaría quietos), hasta este tamaño (como el servidor). */
+const GIF_MAX_BYTES = 1536 * 1024;
+
+/** Lee un archivo tal cual, como data URL. */
+const leerComoDataUrl = (archivo: File) =>
+  new Promise<string>((resolve, reject) => {
+    const lector = new FileReader();
+    lector.onload = () => resolve(lector.result as string);
+    lector.onerror = () => reject(lector.error);
+    lector.readAsDataURL(archivo);
+  });
 
 /** Una imagen propia ya subida a la sala (las predefinidas van por /avatar(s)…). */
 const esImagenPropia = (avatar: string) => avatar.startsWith('/uploads/sala/');
@@ -62,8 +74,13 @@ const PanelUsuario = ({ nombreActual, avatarElegido, cuenta, onGuardar }: PanelU
     e.target.value = '';
     if (!archivo) return;
     setResultado(null);
+    const gif = archivo.type === 'image/gif';
+    if (gif && archivo.size > GIF_MAX_BYTES) {
+      setResultado({ ok: false, error: 'El GIF pesa demasiado: como mucho, 1,5 MB.', campo: 'avatar' });
+      return;
+    }
     try {
-      const imagen = await compressImage(archivo, LADO_IMAGEN_PROPIA);
+      const imagen = gif ? await leerComoDataUrl(archivo) : await compressImage(archivo, LADO_IMAGEN_PROPIA);
       setPropia(imagen);
       setAvatar(imagen);
     } catch {
@@ -123,7 +140,7 @@ const PanelUsuario = ({ nombreActual, avatarElegido, cuenta, onGuardar }: PanelU
               />
               <span className="flex flex-col items-center gap-1 rounded p-1 text-center text-xs opacity-70 hover:opacity-100 peer-checked:bg-theme-container peer-checked:opacity-100 peer-focus-visible:ring-2 peer-focus-visible:ring-theme-main">
                 <span className="block aspect-square w-full overflow-hidden rounded border border-outline-ghost bg-background">
-                  {o.imagen && <img src={getAvatarUrl(o.imagen)} alt="" className="h-full w-full object-cover" />}
+                  {o.imagen && <ImagenAvatar avatar={o.imagen} />}
                 </span>
                 {o.etiqueta}
               </span>
@@ -141,7 +158,9 @@ const PanelUsuario = ({ nombreActual, avatarElegido, cuenta, onGuardar }: PanelU
             <input type="file" accept="image/*" onChange={elegirImagen} className="sr-only" />
           </label>
         </div>
-        <p className="mt-2 text-xs text-on-surface-muted">Tu imagen solo se verá en la sala; no cambia tu perfil.</p>
+        <p className="mt-2 text-xs text-on-surface-muted">
+          Tu imagen solo se verá en la sala; no cambia tu perfil. Puede ser un GIF animado (hasta 1,5 MB).
+        </p>
       </fieldset>
 
       <div aria-live={ariaLive}>

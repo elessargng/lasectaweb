@@ -27,6 +27,8 @@ interface VentanaDespertarProps {
   onEnviado: (texto: string) => void;
   /** Visitantes que ven el grimorio: solo leen lo que se dicen (no mandan nada). */
   soloLectura?: boolean;
+  /** Escondida mientras se elige a alguien en la plaza (vuelve igual que estaba). */
+  oculta?: boolean;
 }
 
 const idPestana = (asientoId: string) => `sala-despertar-pestana-${asientoId}`;
@@ -56,6 +58,7 @@ const VentanaDespertar = ({
   onError,
   onEnviado,
   soloLectura = false,
+  oculta = false,
 }: VentanaDespertarProps) => {
   const [minimizada, setMinimizada] = useState(false);
   const actual = abiertos.find((d) => d.asiento === activo) ?? abiertos[0];
@@ -90,6 +93,7 @@ const VentanaDespertar = ({
   const boton = `${botonSecundario} flex items-center gap-1 px-2 py-1 text-xs`;
   return (
     <section
+      hidden={oculta}
       aria-labelledby={ID_TITULO_DESPERTAR}
       className={`fixed left-1/2 top-16 z-40 flex w-[min(94vw,64rem)] -translate-x-1/2 flex-col gap-3 sala-cofre backdrop-blur ${
         minimizada ? 'p-2' : 'max-h-[85vh] overflow-y-auto p-4'

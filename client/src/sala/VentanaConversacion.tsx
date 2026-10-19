@@ -1,6 +1,5 @@
 import { GripHorizontal, LogIn, Maximize2, MicOff, Minimize2, PhoneOff, VolumeX } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
-import { getAvatarUrl } from '../utils/api';
 import { botonSecundario } from './estilos';
 import TeclaAtajo from './TeclaAtajo';
 import type { Atajo } from './atajos';
@@ -8,6 +7,7 @@ import type { SalaConversacion, SalaParticipante } from './useSala';
 import type { PistasParticipante } from './useVideollamada';
 import VideoPista from './VideoPista';
 import NombresOyentes from './NombresOyentes';
+import ImagenAvatar from './ImagenAvatar';
 
 interface VentanaConversacionProps {
   conversacion: SalaConversacion;
@@ -211,7 +211,7 @@ const VentanaConversacion = ({
                 {suyas?.video ? (
                   <VideoPista pista={suyas.video} espejo={soyYo} />
                 ) : (
-                  p.avatar && <img src={getAvatarUrl(p.avatar)} alt="" className="h-full w-full object-contain" />
+                  p.avatar && <ImagenAvatar avatar={p.avatar} className="h-full w-full object-contain" />
                 )}
               </span>
               <span className={`flex max-w-full items-center gap-1 ${minimizada ? 'text-[0.65rem]' : 'text-sm'}`}>

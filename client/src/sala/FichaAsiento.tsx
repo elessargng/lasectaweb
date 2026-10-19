@@ -10,6 +10,7 @@ import {
   alineamientoReal,
   describirRecordatorio,
   identidadDe,
+  mataDeNoche,
   RECORDATORIO_TEXTO,
   recordatoriosDeFicha,
   useFichas,
@@ -42,8 +43,10 @@ interface FichaAsientoProps {
   /**
    * Se está eligiendo a quién nomina una ficha: esta es un botón para elegirla
    * (también la que nomina, que se nominaría a sí misma; se distingue con un aro blanco).
+   * También al elegir a alguien en la plaza para el despertar: `accion` es el verbo
+   * del botón («Elegir»; si no, «Nominar»).
    */
-  eligiendo?: { papel: 'origen' | 'candidata'; onPulsar: () => void };
+  eligiendo?: { papel: 'origen' | 'candidata'; onPulsar: () => void; accion?: string };
   /** En una votación: votos acumulados si votó, null si no; sin definir si aún no le ha tocado. */
   voto?: number | null;
   /**
@@ -65,8 +68,6 @@ interface FichaAsientoProps {
   seguir?: { siguiendo: boolean; onAlternar: () => void };
   /** Los personajes en juego (en alguna ficha, para quien mira): sus recordatorios salen primero al poner uno. */
   enJuego: Set<string>;
-  /** De qué lado de la ficha va la vela del muerto (el del jugador en la mesa). */
-  ladoVela?: 'izquierda' | 'derecha';
   /** Los de `enJuego` que solo lo están probablemente (el Borracho si no cuadran los forasteros…). */
   probables?: Set<string>;
   /** Abre las notas del asiento con una nueva («Escribir nota»); sin esto, no sale. */
@@ -112,7 +113,6 @@ const FichaAsiento = ({
   despertar,
   seguir,
   enJuego,
-  ladoVela,
   probables,
   onEscribirNota,
   onIntercambiar,
@@ -190,7 +190,6 @@ const FichaAsiento = ({
   const ficha = (
     <span ref={fichaRef} data-resaltada={(resaltada && conPista) || undefined} className="relative block">
       <FichaRedonda
-        ladoVela={ladoVela}
         muerto={asiento.muerto}
         muertePendiente={asiento.muertePendiente}
         votoGastado={asiento.votoGastado}
@@ -233,7 +232,7 @@ const FichaAsiento = ({
         id={idFichaNominar(asiento.id)}
         type="button"
         onClick={eligiendo.onPulsar}
-        aria-label={`Nominar al ${describirAsiento(numero, ocupante)}${origen ? ', que es el que nomina' : ''}`}
+        aria-label={`${eligiendo.accion ?? 'Nominar'} al ${describirAsiento(numero, ocupante)}${origen ? ', que es el que nomina' : ''}`}
         className={`block cursor-pointer rounded-full ring-offset-2 ring-offset-background focus:outline-none focus-visible:ring-4 focus-visible:ring-white ${
           origen ? 'ring-4 ring-white/80' : 'ring-2 ring-blood-bright'
         }`}
@@ -471,10 +470,12 @@ const FichaAsiento = ({
         <DialogoRecordatorio
           ficha={nombreFicha.replace(/^Ficha del /, '')}
           titulo="Matar de noche"
-          explicacion="Elige el recordatorio de quien lo mata. Su muerte no se verá hasta que la anuncies de día, pulsando su sudario."
-          enJuego={todos.filter((p) => enJuego.has(p.id))}
+          explicacion="Elige el recordatorio de quien lo mata: un demonio o un personaje que mata de noche (el Asesino, el Padrino…). Su muerte no se verá hasta que la anuncies de día, pulsando su sudario."
+          // Solo los que matan de noche: los demonios y los personajes que lo hacen
+          enJuego={todos.filter((p) => enJuego.has(p.id) && mataDeNoche(p))}
           probables={probables}
-          otros={todos.filter((p) => !enJuego.has(p.id))}
+          otros={todos.filter((p) => !enJuego.has(p.id) && mataDeNoche(p))}
+          cuales="que mate de noche"
           onElegir={(p, i) => void matarDeNoche({ personaje: p, indice: i })}
           sinRecordatorio={{ etiqueta: 'Matar sin recordatorio', onElegir: () => void matarDeNoche(null) }}
           onCerrar={() => setMatando(false)}

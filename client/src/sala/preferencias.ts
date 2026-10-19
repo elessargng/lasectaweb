@@ -13,6 +13,7 @@ import {
   type PreferenciaMano,
   type PreferenciaSilla,
 } from './marcas';
+import { esAtajoValido, type Atajo } from './atajos';
 import { SONIDOS, type SonidosActivos } from './sonidos';
 
 /**
@@ -49,6 +50,17 @@ export interface PreferenciasSala {
    * Pestaña Accesibilidad.
    */
   invitacionesFuera: boolean;
+  /**
+   * La tecla que lee el reloj del narrador (lo que queda y su mensaje), o null
+   * si no hay. Pestaña Accesibilidad (no es un atajo de la pestaña Atajos).
+   */
+  teclaLeerReloj: Atajo | null;
+  /**
+   * Cómo se eligen los jugadores en el despertar de noche: en la plaza (la ventana
+   * se esconde y se pulsa su ficha; de entrada) o en una lista dentro de la ventana.
+   * Pestaña Accesibilidad.
+   */
+  eleccionDespertar: 'plaza' | 'lista';
   /** Lo que se ve en la columna de la izquierda (ver ColumnaLateral). */
   panelLateral: PanelLateral;
   /** La columna de la izquierda contraída: solo su barra de iconos. */
@@ -162,6 +174,12 @@ export function normalizarPreferencias(datos: unknown): PreferenciasSala {
   ) as SonidosActivos;
   // Los dispositivos: un id del navegador, o vacío (el predeterminado del sistema)
   const idDispositivo = (v: unknown) => (typeof v === 'string' && v.length <= 200 ? v : '');
+  preferencias.eleccionDespertar = guardadas.eleccionDespertar === 'lista' ? 'lista' : 'plaza';
+  // La tecla de leer el reloj: solo lo que es de un atajo
+  const tecla = guardadas.teclaLeerReloj;
+  preferencias.teclaLeerReloj = esAtajoValido(tecla)
+    ? { code: tecla.code, key: tecla.key, ctrl: tecla.ctrl, alt: tecla.alt, shift: tecla.shift, meta: tecla.meta }
+    : null;
   preferencias.idCamara = idDispositivo(guardadas.idCamara);
   preferencias.idMicrofono = idDispositivo(guardadas.idMicrofono);
   return preferencias;

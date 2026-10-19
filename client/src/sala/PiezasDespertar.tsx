@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { MousePointerClick, X } from 'lucide-react';
 import { Fragment, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { urlDelServidor } from '../utils/api';
 import { useAriaLive } from './avisosConfig';
@@ -16,6 +16,7 @@ import {
   type TarjetaDespertar,
 } from './despertar';
 import { botonPrincipal, botonSecundario, campo } from './estilos';
+import { useElegirEnPlaza } from './elegirEnPlaza';
 import { alineamientoDe, iconoDe } from './fichas';
 import { porTipos, type PersonajeMostrado } from './guiones';
 import type { MensajeDespertar, SalaAlineamiento, SalaEstado, SalaResultado } from './useSala';
@@ -174,7 +175,10 @@ interface EditorAdjuntoProps {
  * Confirmar una ficha o tarjeta antes de mandarla, eligiendo lo que lleve
  * (jugadores, personajes, alineamiento o un texto). Cada jugador o personaje que
  * se pulsa en la lista se añade, como una carta, a «Se enviará», en el orden en
- * que se pulsa; se quita pulsando su carta. Va dentro de la misma ventana (no es
+ * que se pulsa; se quita pulsando su carta. Los jugadores, según Preferencias >
+ * Accesibilidad, se eligen en la plaza (al abrirse, si aún no lleva ninguno, la
+ * ventana se esconde sola, se pulsa su ficha y vuelve aquí con él añadido; para
+ * añadir más, «Elegir otro jugador en la plaza») o en una lista. Va dentro de la misma ventana (no es
  * otro diálogo): al abrirse, el foco va a su título; al cerrarse, vuelve a la
  * ficha que lo abrió.
  */
@@ -189,6 +193,7 @@ const EditorAdjunto = ({ pendiente, asientos, personajes, onEnviar, onCancelar }
   const [enviando, setEnviando] = useState(false);
   const ariaLive = useAriaLive('errores');
   const { adjunto } = pendiente;
+  const elegirEnPlaza = useElegirEnPlaza();
 
   const enviarRef = useRef<HTMLButtonElement>(null);
   const sinAdjunto = !adjunto.jugadores && !adjunto.personajes && !adjunto.texto && !adjunto.alineamiento;
@@ -209,6 +214,26 @@ const EditorAdjunto = ({ pendiente, asientos, personajes, onEnviar, onCancelar }
     poner([...lista, id]);
     setAviso(`Añadido: ${nombre}.`);
   };
+  // En la plaza: quien elige ahí avisa al lector (esta ventana estaba escondida y no se oiría)
+  const idPlaza = `${base}-plaza`;
+  const elegirJugadorEnPlaza = () =>
+    elegirEnPlaza?.({
+      titulo: pendiente.titulo,
+      excluidos: jugadores,
+      onElegido: (id) => setJugadores((l) => (l.includes(id) ? l : [...l, id])),
+      // Al volver, el foco en el botón: para añadir otro o seguir a «Enviar»
+      volver: idPlaza,
+    });
+  // Lleva jugadores y aún no hay ninguno: directamente a la plaza, sin pasar por el botón
+  // (una vez, al abrirse; si se cancela, se queda aquí con el botón)
+  const plazaAbiertaRef = useRef(false);
+  useEffect(() => {
+    if (plazaAbiertaRef.current || !elegirEnPlaza || !adjunto.jugadores || jugadores.length > 0) return;
+    plazaAbiertaRef.current = true;
+    elegirJugadorEnPlaza();
+    // Solo al abrirse
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Al quitar una carta, el foco pasa a la siguiente (o a la anterior; si no queda ninguna, al título)
   const idCarta = (tipo: string, id: string) => `${base}-carta-${tipo}-${id}`;
   const focoTrasQuitar = useRef<string | null>(null);
@@ -275,7 +300,7 @@ const EditorAdjunto = ({ pendiente, asientos, personajes, onEnviar, onCancelar }
             Se enviará
           </p>
           {jugadores.length + elegidos.length === 0 ? (
-            <p className="text-sm text-on-surface-muted">Pulsa abajo un jugador o un personaje para añadirlo.</p>
+            <p className="text-sm text-on-surface-muted">Añade abajo un jugador o un personaje.</p>
           ) : (
             <ul aria-labelledby={`${base}-cartas`} className="flex flex-wrap gap-2">
               {jugadores.map((id) => (
@@ -327,7 +352,15 @@ const EditorAdjunto = ({ pendiente, asientos, personajes, onEnviar, onCancelar }
             ))}
           </fieldset>
         )}
-        {adjunto.jugadores && (
+        {adjunto.jugadores && elegirEnPlaza && (
+          <div>
+            <button id={idPlaza} type="button" onClick={elegirJugadorEnPlaza} className={`${botonSecundario} flex items-center gap-2`}>
+              <MousePointerClick size={16} />
+              {jugadores.length > 0 ? 'Elegir otro jugador en la plaza' : 'Elegir jugador en la plaza'}
+            </button>
+          </div>
+        )}
+        {adjunto.jugadores && !elegirEnPlaza && (
           <fieldset>
             <legend className="mb-2 text-sm text-on-surface-muted">Jugadores para añadir</legend>
             <ul className="flex flex-wrap gap-2">

@@ -25,9 +25,8 @@ interface RepartoPartidaProps {
 }
 
 /**
- * Abajo del todo a la derecha de la sala; con la hoja de personajes o el orden
- * de noche abiertos, a su izquierda, para que no lo tapen (en pantallas estrechas, debajo de
- * la mesa), para todos: cuántos aldeanos, forasteros,
+ * Abajo del todo a la derecha de la sala (lo coloca SalaJuego, junto al reloj del
+ * narrador), para todos: cuántos aldeanos, forasteros,
  * esbirros y demonios tiene la partida (según los asientos, sin los viajeros).
  *
  * El narrador lo ve en una tabla: por tipo, lo que ven los jugadores (por
@@ -84,7 +83,7 @@ const RepartoPartida = ({ distribucion, bolsa, asientos, npcs, setupAceptado, pr
   return (
     <section
       aria-labelledby="sala-reparto-titulo"
-      className={`sala-aviso self-start px-3 py-2 text-sm lg:fixed lg:bottom-4 lg:right-[calc(var(--sala-panel-guion-ancho,0px)+1rem)] lg:z-30 ${
+      className={`sala-aviso px-3 py-2 text-sm ${
         mal ? 'sala-aviso-error' : ''
       }`}
     >

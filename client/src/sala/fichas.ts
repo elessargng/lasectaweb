@@ -83,6 +83,28 @@ export interface ContextoFichas {
   escribirNotas: (asientoId: string, notas: SalaNota[]) => void;
 }
 
+/**
+ * Los personajes (que no son demonios) que matan o causan una muerte de noche:
+ * el Asesino, el Padrino, el Chismoso, el Jugador, el Niño Lunar, el Calderero,
+ * el Acróbata, el Licántropo, la Abuela, la Cortesana y la Bruja del Foso.
+ */
+const MATAN_DE_NOCHE = [
+  'assassin',
+  'godfather',
+  'gossip',
+  'gambler',
+  'moonchild',
+  'tinker',
+  'acrobat',
+  'lycanthrope',
+  'grandmother',
+  'harlot',
+  'pithag',
+];
+
+/** Si sus recordatorios sirven para decir quién mata de noche: los demonios (también los propios de un guion) y MATAN_DE_NOCHE. */
+export const mataDeNoche = (p: { id: string; tipo: string }) => p.tipo === 'demon' || MATAN_DE_NOCHE.includes(p.id);
+
 export const FichasContexto = createContext<ContextoFichas>({
   hayGuion: false,
   personajes: [],
