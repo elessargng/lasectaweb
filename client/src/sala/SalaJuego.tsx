@@ -1,6 +1,6 @@
 import { MessagesSquare, Phone } from 'lucide-react';
 import { IconoConversar, IconoDestellos, IconoMascaras } from './IconosJuego';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { urlDelServidor } from '../utils/api';
 import { botonPrincipal } from './estilos';
 import Cabecera from './Cabecera';
@@ -83,6 +83,7 @@ import { sinComunicaciones, usePreferencias } from './preferencias';
 import { useConfiguracionCuenta, type ConfiguracionSala, type PerfilConfiguracion } from './configuracion';
 import PanelPerfiles from './PanelPerfiles';
 import { tamanoFichaAuto, tamanoNarradorAuto } from './tamanosAutomaticos';
+import { anguloAsiento } from './geometriaMesa';
 import { nombreMano } from './formasMano';
 import {
   useSala,
@@ -666,6 +667,19 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const noche = estado?.fase.momento === 'noche';
   // Silencio del narrador (Bibliotecario del Infierno): los jugadores no pueden hablar
   const callado = !!estado?.silencio && yo?.rol === 'jugador';
+  // Sonido envolvente: cada voz desde el ángulo de su asiento en la plaza (por id de quien se sienta)
+  const asientosSala = estado?.asientos;
+  const posicionesVoz = useMemo(() => {
+    const posiciones = new Map<string, number>();
+    asientosSala?.forEach((a, i, todos) => {
+      if (a.ocupante) posiciones.set(a.ocupante, anguloAsiento(i, todos.length));
+    });
+    return posiciones;
+  }, [asientosSala]);
+  const envolvente = useMemo(
+    () => (preferencias.sonidoEnvolvente ? { salida: preferencias.salidaAudio, posiciones: posicionesVoz } : null),
+    [preferencias.sonidoEnvolvente, preferencias.salidaAudio, posicionesVoz],
+  );
   const video = useVideollamada({
     activa: !!estado?.video && conexion === 'conectada',
     puedeEmitir: puedeEmitirVideo,
@@ -676,6 +690,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     idCamara: preferencias.idCamara,
     idMicrofono: preferencias.idMicrofono,
     pedirPase: pedirPaseVideo,
+    envolvente,
   });
   // De noche, fuera de una conversación privada, no hay cámaras
   const sinCamaraDeNoche = noche && !hablaEnConversacion;
@@ -1307,6 +1322,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           atajos={atajos}
           eleccionDespertar={preferencias.eleccionDespertar}
           onEleccionDespertar={(eleccionDespertar) => cambiarPreferencias({ eleccionDespertar })}
+          sonidoEnvolvente={preferencias.sonidoEnvolvente}
+          onSonidoEnvolvente={(sonidoEnvolvente) => cambiarPreferencias({ sonidoEnvolvente })}
+          salidaAudio={preferencias.salidaAudio}
+          onSalidaAudio={(salidaAudio) => cambiarPreferencias({ salidaAudio })}
+          canalesSalida={video.canalesSalida}
+          onProbarSonido={video.probarEnvolvente}
         />
       ),
     },

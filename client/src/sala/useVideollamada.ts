@@ -9,11 +9,14 @@ import {
   type LocalAudioTrack,
   type LocalParticipant,
   type Participant,
+  type RemoteAudioTrack,
+  type RemoteParticipant,
   type RemoteTrack,
   type RemoteTrackPublication,
   type VideoTrack,
 } from 'livekit-client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { MezcladorEspacial, type SalidaAudio } from './sonidoEnvolvente';
 import type { PaseVideo } from './useSala';
 
 /**
@@ -61,6 +64,11 @@ interface OpcionesVideollamada {
   idCamara: string;
   idMicrofono: string;
   pedirPase: (sala: string) => Promise<PaseVideo>;
+  /**
+   * Sonido envolvente: con qué se oye y el ángulo del asiento de cada uno (por su
+   * id; quien no tiene asiento suena delante). null: cada voz por su elemento, sin situarla.
+   */
+  envolvente: { salida: SalidaAudio; posiciones: Map<string, number> } | null;
 }
 
 
@@ -108,12 +116,27 @@ const CADA_MS = 50;
  * el volumen a 0 no basta: Safari en iPhone y iPad no deja cambiarlo y seguiría
  * sonando. Así que, sin oírle, además se le pide al servidor que deje de mandar su audio.
  */
-function oir(room: Room | null, oye: boolean, volumenes: Record<string, number>) {
+function oir(room: Room | null, oye: boolean, volumenes: Record<string, number>, mezclador: MezcladorEspacial | null) {
   for (const p of room?.remoteParticipants.values() ?? []) {
     const volumen = oye ? (volumenes[p.identity] ?? 1) : 0;
     p.setVolume(volumen);
-    for (const publicacion of p.audioTrackPublications.values()) publicacion.setEnabled(volumen > 0);
+    for (const publicacion of p.audioTrackPublications.values()) {
+      publicacion.setEnabled(volumen > 0);
+      // Con sonido envolvente el elemento está callado: el volumen va en el mezclador
+      if (publicacion.track) mezclador?.volumen(publicacion.track as RemoteAudioTrack, volumen);
+    }
   }
+}
+
+/** Las voces que ya llegan de una sala: cada pista con el id de quien habla. */
+function vocesDe(room: Room | null): [RemoteAudioTrack, string][] {
+  const voces: [RemoteAudioTrack, string][] = [];
+  for (const p of room?.remoteParticipants.values() ?? []) {
+    for (const publicacion of p.audioTrackPublications.values()) {
+      if (publicacion.track) voces.push([publicacion.track as RemoteAudioTrack, p.identity]);
+    }
+  }
+  return voces;
 }
 
 function clasificar(error: unknown): ProblemaDispositivo['motivo'] | null {
@@ -143,6 +166,7 @@ export function useVideollamada({
   idCamara,
   idMicrofono,
   pedirPase,
+  envolvente,
 }: OpcionesVideollamada) {
   const [camara, setCamara] = useState(false);
   const [microfono, setMicrofono] = useState(false);
@@ -170,8 +194,13 @@ export function useVideollamada({
   /** Lo último pedido a cada sala (publicar o dejar de hacerlo), para encadenar lo siguiente. */
   const colasRef = useRef(new WeakMap<Room, Promise<void>>());
   const pedirPaseRef = useRef(pedirPase);
+  // Sonido envolvente: mientras esté activo, las voces de los demás suenan por el mezclador
+  const [mezclador, setMezclador] = useState<MezcladorEspacial | null>(null);
+  const mezcladorRef = useRef<MezcladorEspacial | null>(null);
+  const envolventeRef = useRef(envolvente);
   useEffect(() => {
     pedirPaseRef.current = pedirPase;
+    envolventeRef.current = envolvente;
   });
 
   /** Conecta a una sala de vídeo y avisa de cada cambio; devuelve cómo desconectarse. */
@@ -186,7 +215,7 @@ export function useVideollamada({
       let cerrada = false;
       const refrescar = () => !cerrada && alCambiar(pistasDe(room));
       room
-        .on(RoomEvent.TrackSubscribed, (track: RemoteTrack, publicacion: RemoteTrackPublication) => {
+        .on(RoomEvent.TrackSubscribed, (track: RemoteTrack, publicacion: RemoteTrackPublication, participante: RemoteParticipant) => {
           // El audio de los demás suena por un elemento oculto (fuera del árbol de accesibilidad)
           if (track.kind === Track.Kind.Audio) {
             // Si ahora no toca oír esta sala, cortado desde el primer instante
@@ -195,10 +224,13 @@ export function useVideollamada({
             elemento.setAttribute('aria-hidden', 'true');
             elemento.hidden = true;
             document.body.appendChild(elemento);
+            // Con sonido envolvente, suena desde su asiento (y el elemento, callado)
+            mezcladorRef.current?.conectar(track as RemoteAudioTrack, participante.identity);
           }
           refrescar();
         })
         .on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
+          if (track.kind === Track.Kind.Audio) mezcladorRef.current?.desconectar(track as RemoteAudioTrack);
           track.detach().forEach((el) => el.remove());
           refrescar();
         })
@@ -323,9 +355,49 @@ export function useVideollamada({
   useEffect(() => {
     oyeMesaRef.current = sonido && !conversacion;
     oyePrivadaRef.current = sonido;
-    oir(mesaRef.current, oyeMesaRef.current, volumenes);
-    oir(privadaRef.current, oyePrivadaRef.current, volumenes);
-  }, [sonido, conversacion, mesa, privada, volumenes]);
+    oir(mesaRef.current, oyeMesaRef.current, volumenes, mezclador);
+    oir(privadaRef.current, oyePrivadaRef.current, volumenes, mezclador);
+  }, [sonido, conversacion, mesa, privada, volumenes, mezclador]);
+
+  // Sonido envolvente: al activarlo, las voces que ya llegan pasan al mezclador; al
+  // quitarlo, vuelven a sus elementos. Su AudioContext arranca con el primer gesto.
+  const conEnvolvente = !!envolvente;
+  useEffect(() => {
+    const opciones = envolventeRef.current;
+    if (!conEnvolvente || !opciones) return;
+    let nuevo: MezcladorEspacial;
+    try {
+      nuevo = new MezcladorEspacial(opciones.salida);
+    } catch (e) {
+      return console.warn('[Videollamada] Sin Web Audio no hay sonido envolvente:', e);
+    }
+    nuevo.colocar(opciones.posiciones);
+    for (const room of [mesaRef.current, privadaRef.current]) {
+      for (const [pista, id] of vocesDe(room)) nuevo.conectar(pista, id);
+    }
+    mezcladorRef.current = nuevo;
+    setMezclador(nuevo);
+    const desbloquear = () => nuevo.reanudar();
+    window.addEventListener('pointerdown', desbloquear, { capture: true });
+    window.addEventListener('keydown', desbloquear, { capture: true });
+    return () => {
+      window.removeEventListener('pointerdown', desbloquear, { capture: true });
+      window.removeEventListener('keydown', desbloquear, { capture: true });
+      if (mezcladorRef.current === nuevo) mezcladorRef.current = null;
+      setMezclador(null);
+      nuevo.cerrar();
+    };
+  }, [conEnvolvente]);
+
+  // Con qué se oye y dónde se sienta cada uno: se cambia en caliente
+  const salidaAudio = envolvente?.salida;
+  const posicionesVoz = envolvente?.posiciones;
+  useEffect(() => {
+    if (salidaAudio) mezclador?.cambiarSalida(salidaAudio);
+  }, [mezclador, salidaAudio]);
+  useEffect(() => {
+    if (posicionesVoz) mezclador?.colocar(posicionesVoz);
+  }, [mezclador, posicionesVoz]);
 
   // Si hablo: el volumen de mi micrófono, en la sala en la que lo emito (la
   // conversación o la mesa). Se vuelve a mirar al publicar o retirar pistas y al
@@ -382,9 +454,15 @@ export function useVideollamada({
     setProblema(null);
     setMicrofono((m) => !m);
   }, []);
+  /** Un sonido desde cada asiento de una plaza de 8 y luego desde el narrador; devuelve cómo pararlo. */
+  const probarEnvolvente = useCallback(
+    (alPaso: (texto: string, hablado: boolean) => void) => mezcladorRef.current?.probar(alPaso) ?? (() => {}),
+    [],
+  );
   /** El navegador no deja sonar nada hasta que se interactúa: un clic lo desbloquea. */
   const activarSonido = useCallback(() => {
     for (const room of [mesaRef.current, privadaRef.current]) void room?.startAudio();
+    mezcladorRef.current?.reanudar();
     setSonidoBloqueado(false);
   }, []);
 
@@ -401,6 +479,9 @@ export function useVideollamada({
     cerrarProblema: () => setProblema(null),
     sonidoBloqueado,
     activarSonido,
+    /** Sonido envolvente: los canales que da el sistema (null si no está activo) y la prueba de sonido. */
+    canalesSalida: mezclador?.canales ?? null,
+    probarEnvolvente,
     /** Lo que se ve y se oye en la mesa y en la conversación privada, por participante. */
     mesa: mesaConYo,
     privada: privadaConYo,

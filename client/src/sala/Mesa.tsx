@@ -33,6 +33,7 @@ import { botonPrincipal, botonSecundario } from './estilos';
 import { ID_AYUDA_MOVER, idLunaFicha, idNombreAsiento, ID_GANADOR, idRevelarFicha } from './ids';
 import { nombreDeAsiento } from './despertar';
 import { tamanoAvatarAuto, tamanoFichaAuto } from './tamanosAutomaticos';
+import { anguloAsiento } from './geometriaMesa';
 import { useMoverAsientos } from './useMoverAsientos';
 import { useIntercambiarFichas } from './useIntercambiarFichas';
 import { CAUSAS_FINAL } from './causasFinal';
@@ -113,7 +114,7 @@ interface MesaProps {
  * El centro del cuadro se separa del borde de la mesa medio cuadro (--sala-avatar).
  */
 function posicion(i: number, total: number): CSSProperties {
-  const angulo = (2 * Math.PI * i) / total;
+  const angulo = anguloAsiento(i, total);
   const x = Math.sin(angulo).toFixed(4);
   const y = (-Math.cos(angulo)).toFixed(4);
   const radio = '(50% - var(--sala-avatar, 10rem) / 2)';
@@ -132,7 +133,7 @@ function posicion(i: number, total: number): CSSProperties {
  * pueden rozar la esquina del cuadro).
  */
 function posicionFicha(i: number, total: number): CSSProperties {
-  const angulo = (2 * Math.PI * i) / total;
+  const angulo = anguloAsiento(i, total);
   const x = Math.sin(angulo).toFixed(4);
   const y = (-Math.cos(angulo)).toFixed(4);
   const t = 'var(--sala-ficha-distancia, 0.75)';
@@ -165,7 +166,7 @@ const acercarALaLlama = (angulo: number) => LLAMA_VELA * Math.abs(Math.cos(angul
  * zona de la llama.
  */
 function posicionVela(i: number, total: number): CSSProperties {
-  const angulo = (2 * Math.PI * i) / total;
+  const angulo = anguloAsiento(i, total);
   const x = Math.sin(angulo).toFixed(4);
   const y = (-Math.cos(angulo)).toFixed(4);
   const t = 'var(--sala-ficha-distancia, 0.75)';
@@ -185,7 +186,7 @@ function posicionVela(i: number, total: number): CSSProperties {
  * abajo, porque es a ellos a quienes apunta la llama.
  */
 function posicionRecordatorios(i: number, total: number, conVela: boolean): { style: CSSProperties; hacia: { x: number; y: number } } {
-  const angulo = (2 * Math.PI * i) / total;
+  const angulo = anguloAsiento(i, total);
   const x = Math.sin(angulo);
   const y = -Math.cos(angulo);
   const t = 'var(--sala-ficha-distancia, 0.75)';
@@ -554,8 +555,8 @@ const Mesa = ({
                     onSentarse={() => sentarse(a.id)}
                     destino={editando && !!mover.activo && mover.activo.hasta === a.id && mover.activo.hasta !== mover.activo.desde}
                     // Mitad inferior de la mesa (entre las 3 y las 9, sin contarlas): nombre debajo
-                    nombreAbajo={-Math.cos((2 * Math.PI * i) / total) > 0.01}
-                    angulo={(2 * Math.PI * i) / total}
+                    nombreAbajo={-Math.cos(anguloAsiento(i, total)) > 0.01}
+                    angulo={anguloAsiento(i, total)}
                     contacto={ocupante ? contacto?.(ocupante) : undefined}
                     video={ocupante ? pistas.get(ocupante.id)?.video : undefined}
                     espejo={!!ocupante && ocupante.id === estado.yo}
@@ -575,13 +576,13 @@ const Mesa = ({
                             nombre={real.nombre}
                             numero={i + 1}
                             // En la esquina del lado en el que se sienta (los de la mitad derecha, a la derecha)
-                            lado={Math.sin((2 * Math.PI * i) / total) > 0.01 ? 'derecha' : 'izquierda'}
+                            lado={Math.sin(anguloAsiento(i, total)) > 0.01 ? 'derecha' : 'izquierda'}
                           />
                           {puedeLevantar && (
                             <AsaLevantar
                               nombre={real.nombre}
                               numero={i + 1}
-                              lado={Math.sin((2 * Math.PI * i) / total) > 0.01 ? 'derecha' : 'izquierda'}
+                              lado={Math.sin(anguloAsiento(i, total)) > 0.01 ? 'derecha' : 'izquierda'}
                               desactivado={!!mover.activo || levantando}
                               onLevantar={() => void levantar(real.id)}
                             />
@@ -598,7 +599,7 @@ const Mesa = ({
                       nombre={describirAsiento(i + 1, ocupante)}
                       notas={notasDe(a)}
                       editable={escriboNotas}
-                      lado={Math.sin((2 * Math.PI * i) / total) < -0.01 ? 'izquierda' : 'derecha'}
+                      lado={Math.sin(anguloAsiento(i, total)) < -0.01 ? 'izquierda' : 'derecha'}
                       abierto={notasAbiertas?.asientoId === a.id}
                       nueva={notasAbiertas?.asientoId === a.id && notasAbiertas.nueva}
                       onAbrir={() => setNotasAbiertas({ asientoId: a.id, nueva: false })}

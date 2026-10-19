@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ACCIONES_ATAJO, describirAtajo, type AccionAtajo, type Atajo } from './atajos';
 import { GRUPOS_AVISOS, useAriaLive, type AvisosActivos, type TipoAviso } from './avisosConfig';
 import BotonCapturarTecla from './BotonCapturarTecla';
-import { botonSecundario } from './estilos';
+import { botonSecundario, campo } from './estilos';
 import Interruptor from './Interruptor';
+import { esSalidaAudio, SALIDAS_AUDIO, type SalidaAudio } from './sonidoEnvolvente';
 import TeclaAtajo from './TeclaAtajo';
 
 interface PanelAccesibilidadProps {
@@ -21,6 +22,15 @@ interface PanelAccesibilidadProps {
   /** Cómo se eligen los jugadores en el despertar de noche. */
   eleccionDespertar: 'plaza' | 'lista';
   onEleccionDespertar: (eleccion: 'plaza' | 'lista') => void;
+  /** Oír cada voz desde su asiento en la plaza, y con qué se oye. */
+  sonidoEnvolvente: boolean;
+  onSonidoEnvolvente: (activo: boolean) => void;
+  salidaAudio: SalidaAudio;
+  onSalidaAudio: (salida: SalidaAudio) => void;
+  /** Los canales que da el sistema (null mientras no está activo). */
+  canalesSalida: number | null;
+  /** Suena desde cada asiento de una plaza de 8 y luego desde el narrador; devuelve cómo pararlo. */
+  onProbarSonido: (alPaso: (texto: string, hablado: boolean) => void) => () => void;
 }
 
 const MODOS_ELECCION = [
@@ -99,9 +109,126 @@ const TeclaLeerReloj = ({ tecla, onCambiar, atajos }: { tecla: Atajo | null; onC
   );
 };
 
+/** Lo que hace la salida elegida, con lo que da el sistema (se lee como descripción del desplegable). */
+function ayudaSalida(salida: SalidaAudio, canales: number | null): string {
+  switch (salida) {
+    case 'auriculares71':
+      if (canales !== null && canales >= 6)
+        return `Tu equipo da ${canales} canales: el narrador va al altavoz central y los jugadores, de un oído a otro. El 7.1 no tiene altavoces encima ni debajo: para distinguirlos, elige «Auriculares estéreo».`;
+      return 'Tu equipo solo da 2 canales, así que se usa el sonido 3D de los auriculares estéreo. Para usar el 7.1, configura los auriculares como 7.1 en el sistema.';
+    case 'auriculares':
+      return 'Sonido 3D: el narrador, delante; los jugadores, en un círculo que pasa por tus oídos: el de arriba de la plaza, encima de la cabeza; el de abajo, debajo; los de los lados, en cada oído.';
+    case 'altavoces':
+      return 'El narrador, en el centro; los jugadores, de izquierda a derecha. Con altavoces no se distingue encima de debajo.';
+    case 'mono':
+      return 'Con un solo altavoz no se puede situar el sonido: las voces se oyen centradas.';
+  }
+}
+
+/**
+ * Sonido envolvente: el narrador delante y los jugadores alrededor de la cabeza,
+ * según su asiento en la plaza. Al activarlo se elige con qué se oye, y se puede
+ * probar: suena en cada sitio y el lector dice dónde, para saber qué se debería oír.
+ */
+const SonidoEnvolvente = ({
+  activo,
+  onActivar,
+  salida,
+  onSalida,
+  canales,
+  onProbar,
+}: {
+  activo: boolean;
+  onActivar: (activo: boolean) => void;
+  salida: SalidaAudio;
+  onSalida: (salida: SalidaAudio) => void;
+  canales: number | null;
+  onProbar: (alPaso: (texto: string, hablado: boolean) => void) => () => void;
+}) => {
+  // Cuál suena de la prueba (a la vista) y, si no lo dice su grabación, lo que dice el lector
+  const [lugar, setLugar] = useState('');
+  const [aviso, setAviso] = useState('');
+  const pararRef = useRef<(() => void) | null>(null);
+  const parar = () => {
+    pararRef.current?.();
+    pararRef.current = null;
+    setLugar('');
+    setAviso('');
+  };
+  // Al cerrar las preferencias (o apagarlo) a media prueba, se para
+  useEffect(() => () => pararRef.current?.(), []);
+  return (
+    <fieldset className="flex flex-col gap-3">
+      <legend className="mb-1 font-semibold">Sonido envolvente</legend>
+      <Interruptor
+        id="sala-sonido-envolvente"
+        activo={activo}
+        onCambiar={(si) => {
+          if (!si) parar();
+          onActivar(si);
+        }}
+        arriba
+        textoClassName="text-sm"
+      >
+        Oír cada voz desde su sitio: el narrador, delante; los jugadores, alrededor de tu cabeza según su asiento en la plaza
+        (el de arriba, encima; el de abajo, debajo; los de los lados, en cada oído).
+      </Interruptor>
+      {activo && (
+        <>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="sala-salida-audio" className="text-sm">
+              Con qué lo oyes
+            </label>
+            <select
+              id="sala-salida-audio"
+              value={salida}
+              onChange={(e) => {
+                if (esSalidaAudio(e.target.value)) onSalida(e.target.value);
+              }}
+              aria-describedby="sala-salida-audio-ayuda"
+              className={`${campo} max-w-md`}
+            >
+              {SALIDAS_AUDIO.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.nombre}
+                </option>
+              ))}
+            </select>
+            <p id="sala-salida-audio-ayuda" className="text-xs text-on-surface-muted">
+              {ayudaSalida(salida, canales)}
+            </p>
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                parar();
+                pararRef.current = onProbar((texto, hablado) => {
+                  setLugar(texto);
+                  setAviso(hablado ? '' : texto);
+                });
+              }}
+              className={botonSecundario}
+            >
+              Probar sonido
+            </button>
+          </div>
+          {/* Cuál suena de la prueba: si lo dice su grabación, el lector no lo repite */}
+          <p aria-hidden="true" className="text-sm text-on-surface-muted">
+            {lugar}
+          </p>
+          <p aria-live="polite" className="sr-only">
+            {aviso}
+          </p>
+        </>
+      )}
+    </fieldset>
+  );
+};
+
 /**
  * Pestaña Accesibilidad: dónde salen las peticiones de llamada entrantes, cómo
- * se eligen jugadores en el despertar de noche, la tecla de leer el reloj y qué
+ * se eligen jugadores en el despertar de noche, el sonido envolvente, la tecla de leer el reloj y qué
  * avisos dice el lector de pantalla, por grupos. Se aplica al momento; con
  * cuenta se guarda en el servidor.
  */
@@ -116,6 +243,12 @@ const PanelAccesibilidad = ({
   atajos,
   eleccionDespertar,
   onEleccionDespertar,
+  sonidoEnvolvente,
+  onSonidoEnvolvente,
+  salidaAudio,
+  onSalidaAudio,
+  canalesSalida,
+  onProbarSonido,
 }: PanelAccesibilidadProps) => (
   <div className="flex flex-col gap-6">
     <fieldset className="flex flex-col gap-2">
@@ -147,6 +280,14 @@ const PanelAccesibilidad = ({
         </div>
       ))}
     </fieldset>
+    <SonidoEnvolvente
+      activo={sonidoEnvolvente}
+      onActivar={onSonidoEnvolvente}
+      salida={salidaAudio}
+      onSalida={onSalidaAudio}
+      canales={canalesSalida}
+      onProbar={onProbarSonido}
+    />
     <TeclaLeerReloj tecla={teclaLeerReloj} onCambiar={onTeclaLeerReloj} atajos={atajos} />
     <p className="text-sm text-on-surface-muted">
       Elige qué te anuncia el lector de pantalla. Lo que también se ve en pantalla se sigue viendo aunque no se lea.

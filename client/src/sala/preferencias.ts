@@ -15,6 +15,7 @@ import {
 } from './marcas';
 import { esAtajoValido, type Atajo } from './atajos';
 import { SONIDOS, type SonidosActivos } from './sonidos';
+import { esSalidaAudio, SALIDA_DEFECTO, type SalidaAudio } from './sonidoEnvolvente';
 
 /**
  * Preferencias de la sala que solo cambian cómo la ves tú (tamaños, distancias,
@@ -61,6 +62,13 @@ export interface PreferenciasSala {
    * Pestaña Accesibilidad.
    */
   eleccionDespertar: 'plaza' | 'lista';
+  /**
+   * Oír cada voz desde el lugar de su asiento en la plaza (ver sonidoEnvolvente.ts).
+   * Pestaña Accesibilidad; de entrada, no.
+   */
+  sonidoEnvolvente: boolean;
+  /** Con qué se oye, para el sonido envolvente: cambia cómo se procesa. Pestaña Accesibilidad. */
+  salidaAudio: SalidaAudio;
   /** Lo que se ve en la columna de la izquierda (ver ColumnaLateral). */
   panelLateral: PanelLateral;
   /** La columna de la izquierda contraída: solo su barra de iconos. */
@@ -94,6 +102,7 @@ type ClaveSiNo =
   | 'fichaAuto'
   | 'salirConversacionSinNadie'
   | 'invitacionesFuera'
+  | 'sonidoEnvolvente'
   | 'panelLateralContraido'
   | 'farolesFijados'
   | 'ciudadCabecera';
@@ -127,6 +136,7 @@ const SI_NO: Record<ClaveSiNo, boolean> = {
   fichaAuto: true,
   salirConversacionSinNadie: false,
   invitacionesFuera: false,
+  sonidoEnvolvente: false,
   panelLateralContraido: false,
   farolesFijados: false,
   ciudadCabecera: true,
@@ -175,6 +185,7 @@ export function normalizarPreferencias(datos: unknown): PreferenciasSala {
   // Los dispositivos: un id del navegador, o vacío (el predeterminado del sistema)
   const idDispositivo = (v: unknown) => (typeof v === 'string' && v.length <= 200 ? v : '');
   preferencias.eleccionDespertar = guardadas.eleccionDespertar === 'lista' ? 'lista' : 'plaza';
+  preferencias.salidaAudio = esSalidaAudio(guardadas.salidaAudio) ? guardadas.salidaAudio : SALIDA_DEFECTO;
   // La tecla de leer el reloj: solo lo que es de un atajo
   const tecla = guardadas.teclaLeerReloj;
   preferencias.teclaLeerReloj = esAtajoValido(tecla)

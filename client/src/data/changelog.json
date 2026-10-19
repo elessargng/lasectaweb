@@ -1,5 +1,51 @@
 [
   {
+    "version": "1.3.2",
+    "date": "2026-10-19",
+    "title": "Ecos de la Plaza",
+    "description": "Ahora se puede oír la plaza: con el sonido envolvente, el narrador suena delante y cada jugador desde su asiento, alrededor de tu cabeza. El narrador estrena reloj con cuenta atrás y gong, el despertar de noche se elige en la propia plaza, y las comunicaciones son más fiables: la cámara y el micrófono ya no se apagan solos y cada uno tiene su volumen.",
+    "changes": [
+      {
+        "category": "Accesibilidad",
+        "items": [
+          "Sonido Envolvente: En Preferencias > Accesibilidad, cada voz suena desde su sitio: el narrador, delante; los jugadores, alrededor de tu cabeza a la altura de los oídos según su asiento en la plaza (el de arriba, encima; el de la derecha, en el oído derecho; el de abajo, debajo; el de la izquierda, en el oído izquierdo).",
+          "Con Qué lo Oyes: Al activarlo eliges entre auriculares 7.1, auriculares estéreo, altavoces estéreo o altavoces mono, y el sonido se prepara para cada uno. Con auriculares estéreo se distingue también encima y debajo.",
+          "Probar Sonido: Recorre una plaza de 8 asientos con una voz que dice «Asiento 1», «Asiento 2»… desde cada sitio, y al final «Narrador», para comprobar que se oye donde toca.",
+          "Leer el Reloj: Una tecla, que eliges en Preferencias > Accesibilidad, para que el lector diga lo que queda del reloj del narrador y su mensaje.",
+          "Teclas con su Símbolo: Las teclas «.», «,» y «⟵» se ven con su símbolo, y el lector sigue diciendo su nombre.",
+          "Sin Lecturas de Más: El lector ya no lee la ayuda del pulpito de los novatos en la plaza."
+        ]
+      },
+      {
+        "category": "Comunicaciones",
+        "items": [
+          "Cámara y Micrófono Estables: Ya no se apagan solos al entrar o salir de una conversación privada.",
+          "Tu Aro, al Momento: El aro de «hablando» propio se enciende en cuanto hablas, sin el retraso del servidor.",
+          "Conversaciones Privadas en iPhone y iPad: Dentro de una conversación privada ya no se oye la plaza.",
+          "Volumen de Cada Uno: En la lista de participantes, cada persona tiene su propio control de volumen."
+        ]
+      },
+      {
+        "category": "Narrador",
+        "items": [
+          "El Reloj: Con la tecla Z, una cuenta atrás con mensaje para todos, junto al reparto. Al acabar suena el gong.",
+          "Despertar en la Plaza: En el despertar de noche, los jugadores se eligen pulsando su ficha en la plaza, o en una lista si se prefiere (Preferencias > Accesibilidad).",
+          "Matar de Noche: Solo salen los recordatorios de los demonios y de quienes matan de noche.",
+          "Limpiar el Grimorio: Ya no saca a nadie de las conversaciones privadas."
+        ]
+      },
+      {
+        "category": "Sala de Juego",
+        "items": [
+          "Avatares Animados: Los avatares en GIF se mueven (y se quedan quietos si pides menos movimiento).",
+          "La Vela del Voto: La vela de los muertos va entre la ficha y sus recordatorios.",
+          "Manos a la Vista: Las manos levantadas quedan por encima de las fichas.",
+          "Al Revelar el Grimorio: Se ven las fichas del narrador y se borra el grimorio propio de cada jugador."
+        ]
+      }
+    ]
+  },
+  {
     "version": "1.3.1",
     "date": "2026-10-18",
     "title": "Bala de Plata",
