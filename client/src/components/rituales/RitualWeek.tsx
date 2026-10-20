@@ -133,7 +133,7 @@ export const RitualWeek = ({
                 <button
                   type="button"
                   onClick={() => onSelectDay(day)}
-                  className="flex md:flex-col items-baseline md:items-center gap-2 md:gap-0 px-3 py-2 md:py-3 border-b border-outline-ghost/40 text-left md:text-center focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-theme-main"
+                  className={`flex md:flex-col items-baseline md:items-center gap-2 md:gap-0 px-3 ${canCreate ? 'pr-10 md:pr-3' : ''} py-2 md:py-3 border-b border-outline-ghost/40 text-left md:text-center focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-theme-main`}
                 >
                   <span
                     className={`text-[10px] md:text-xs font-display uppercase tracking-[0.2em] ${

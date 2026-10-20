@@ -124,9 +124,13 @@
 }
 
 /* Etiqueta de los botones de icono (data-tip). Es solo visual: el lector usa el aria-label del
-   botón, que siempre dice lo mismo, así que no se anuncia dos veces como pasaría con title. */
-[data-tip] {
-  position: relative;
+   botón, que siempre dice lo mismo, así que no se anuncia dos veces como pasaría con title.
+   El relative va en una capa para que le gane cualquier utilidad de posición (absolute en los
+   «+» del calendario): fuera de capa pisaba a Tailwind y el botón caía encima del día siguiente. */
+@layer components {
+  [data-tip] {
+    position: relative;
+  }
 }
 
 [data-tip]:hover::after,
