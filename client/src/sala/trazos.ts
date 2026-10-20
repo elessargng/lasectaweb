@@ -49,6 +49,15 @@ export const PULGAR_ARRIBA = {
 };
 
 /**
+ * Mano que señala con el índice hacia arriba, en 256 × 256 (propia): el índice,
+ * el puño con los nudillos de los dedos doblados, el pulgar y la muñeca. Al
+ * pintarla con el contorno por debajo (paint-order: stroke), las piezas se ven
+ * como una sola silueta. La sala la gira hacia la ficha señalada.
+ */
+export const MANO_SENALAR =
+  'M90,124 L90,46 A21,21 0 0 1 132,46 L132,124 Z M78,140 C78,112 92,100 112,100 L182,100 C200,100 210,114 210,132 L206,184 C202,210 182,226 150,226 L118,226 C92,226 76,208 76,184 Z M134,108 A20,20 0 1 1 174,108 A20,20 0 1 1 134,108 Z M166,112 A19,19 0 1 1 204,112 A19,19 0 1 1 166,112 Z M54,160 A26,22 0 1 1 106,160 A26,22 0 1 1 54,160 Z M100,214 L176,214 L184,252 L92,252 Z';
+
+/**
  * Más formas de mano, de Font Awesome Free (licencia CC BY 4.0, fontawesome.com):
  * cada una con su caja (ancho × alto), porque no son de 256 × 256.
  */

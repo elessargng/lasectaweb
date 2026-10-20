@@ -33,6 +33,7 @@ import ColumnaLateral, { type PestanaLateral } from './ColumnaLateral';
 import VentanaConversacion from './VentanaConversacion';
 import VentanaDespertar from './VentanaDespertar';
 import DespertarJugador from './DespertarJugador';
+import { useSenalamientoCongelado } from './senales';
 import { describirMensaje, esEntendido, nombreDeAsiento } from './despertar';
 import { CAUSAS_FINAL } from './causasFinal';
 import PanelInvitaciones from './PanelInvitaciones';
@@ -614,6 +615,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   };
   const miDespertar = yo?.rol === 'jugador' ? despertares[0] : undefined;
   const despiertoYo = !!miDespertar && !wakeCerradoJugador;
+  // Me toca señalar (un señalamiento sin congelar): la ventana del despertar se esconde
+  // para que se vean y se pulsen las fichas; al congelarse, vuelve
+  const senalCongelada = useSenalamientoCongelado(estado?.senalamiento ?? null, desfaseReloj);
+  const senalandoYo = !!estado?.senalamiento && !senalCongelada && !!estado.acciones.includes('jugador:senalar');
 
   // Elegir a un jugador del despertar en la plaza (Preferencias > Accesibilidad): la
   // ventana del despertar se esconde, las fichas se pulsan para elegir y, al elegir
@@ -937,6 +942,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
         traduccionesDescripciones,
       )
     : [];
+  // Las reglas del Djinn del guion, con sus dos personajes (en la tarjeta del Djinn)
+  const reglasDjinn = (guion?.djinn ?? []).flatMap((r) => {
+    const a = personajesGuionPorId.get(r.personajes[0]);
+    const b = personajesGuionPorId.get(r.personajes[1]);
+    return a && b ? [{ personajes: [a, b] as [PersonajeMostrado, PersonajeMostrado], texto: r.texto }] : [];
+  });
   const personajesFichas = personajesGuion.filter((p) => TIPOS_EN_FICHA.includes(p.tipo));
   // Los del catálogo (no del guion) que están en juego: viajeros en alguna ficha y NPCs
   const idsEnJuego = new Set([...(estado?.asientos.map((a) => a.personaje) ?? []), ...(estado?.npcs ?? [])]);
@@ -1018,7 +1029,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // La Banshee muerta con su habilidad puede levantar las dos manos (vota doble): 0, 1 o 2
   const puedeDosManos = !!estado?.acciones.includes('sala:levantarDosManos');
   const manos: 0 | 1 | 2 = !manoLevantada ? 0 : yo?.dosManos ? 2 : 1;
+  // Mientras se señala (si lo veo), las manos no se levantan: las de señalar van en las fichas
+  const senalandoMano = !!estado?.senalamiento;
   const ponerManos = async (n: 0 | 1 | 2) => {
+    if (n > 0 && senalandoMano) {
+      setAviso('Mientras se señala no se puede levantar la mano.');
+      return false;
+    }
     if (n > 0 && sinVoto) {
       setAviso(estado?.voudon ? 'Con el Voudon vivo, solo votan él y los muertos.' : 'Ya has gastado tu voto: no puedes levantar la mano.');
       return false;
@@ -1505,6 +1522,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                 narro={yo.rol === 'narrador'}
                 hayGuion={!!guion}
                 bootlegger={estado.bootlegger}
+                djinn={reglasDjinn}
                 rolStormcatcher={estado.rolStormcatcher ? (personajesGuionPorId.get(estado.rolStormcatcher) ?? null) : null}
                 buenos={personajesGuion.filter((p) => p.tipo === 'townsfolk' || p.tipo === 'outsider')}
                 pedir={pedirPropio}
@@ -1631,7 +1649,18 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           centro={
             estado && (
               <div className="flex min-w-0 items-center gap-2">
-                <FasePartida fase={estado.fase} />
+                <FasePartida
+                  fase={estado.fase}
+                  onVolverAtras={
+                    estado.acciones.includes('narrador:volverAtras')
+                      ? async () => {
+                          const r = await pedirPropio('narrador:volverAtras');
+                          if (!r.ok) setAviso(r.error);
+                          return r.ok;
+                        }
+                      : undefined
+                  }
+                />
                 <TituloGuion
                   guion={guion}
                   puedeCambiar={estado.acciones.includes('narrador:cambiarGuion')}
@@ -1721,6 +1750,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   siguientes={siguientesManos}
                   onManos={ponerManos}
                   sinVoto={sinVoto}
+                  senalando={senalandoMano}
                   atajoLevantar={atajos.levantarMano}
                   onAlternar={alternarMano}
                   onElegirForma={elegirFormaMano}
@@ -1758,10 +1788,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           </h1>
 
           <div aria-live="polite" className="sr-only">
-            {despiertoYo && !eleccion ? '' : anuncio}
+            {despiertoYo && !eleccion && !senalandoYo ? '' : anuncio}
           </div>
           <div aria-live="assertive" className="sr-only">
-            {despiertoYo && !eleccion ? '' : anuncioUrgente}
+            {despiertoYo && !eleccion && !senalandoYo ? '' : anuncioUrgente}
           </div>
 
           {/* Flota abajo: no empuja el contenido ni genera scroll. Conexión y errores se
@@ -1981,10 +2011,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             pedir={pedirPropio}
             onError={setAviso}
             onEnviado={(t) => anunciar('despertar', t)}
-            anuncio={eleccion ? '' : anuncio}
-            anuncioUrgente={eleccion ? '' : anuncioUrgente}
+            anuncio={eleccion || senalandoYo ? '' : anuncio}
+            anuncioUrgente={eleccion || senalandoYo ? '' : anuncioUrgente}
             error={aviso}
-            oculto={!!eleccion}
+            oculto={!!eleccion || senalandoYo}
           />
         )}
 

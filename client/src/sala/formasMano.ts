@@ -16,6 +16,8 @@ export const FORMAS_MANO: { forma: FormaMano; nombre: string }[] = [
   { forma: 'cuernos', nombre: 'Cuernos heavy metal' },
   { forma: 'lagarto', nombre: 'Lagarto' },
   { forma: 'spock', nombre: 'Spock' },
+  // El mismo dibujo que la mano que señala (Senalamiento)
+  { forma: 'senalar', nombre: 'Dedo levantado' },
 ];
 
 /**

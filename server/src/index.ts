@@ -50,6 +50,9 @@ import { GuionController } from './controllers/GuionController';
 import { IdiomaRepository } from './repositories/IdiomaRepository';
 import { TraduccionRepository } from './repositories/TraduccionRepository';
 import { VillacuervosFuenteTraducciones } from './services/traducciones/VillacuervosFuenteTraducciones';
+import { DjinnRepository } from './repositories/DjinnRepository';
+import { SincronizacionDjinnService } from './services/djinn/SincronizacionDjinnService';
+import { VillacuervosFuenteDjinn } from './services/djinn/VillacuervosFuenteDjinn';
 import { SincronizacionTraduccionesService } from './services/traducciones/SincronizacionTraduccionesService';
 import { TraduccionService } from './services/traducciones/TraduccionService';
 import { TraduccionController } from './controllers/TraduccionController';
@@ -131,6 +134,7 @@ if (!configVideollamada) console.log('[Videollamada] Sin LIVEKIT_URL/LIVEKIT_API
 const personajeRepository = new PersonajeRepository();
 const idiomaRepository = new IdiomaRepository();
 const traduccionRepository = new TraduccionRepository();
+const djinnRepository = new DjinnRepository();
 const sincronizacionPersonajes = new SincronizacionPersonajesService(
   new VillacuervosFuentePersonajes(villacuervosRepository),
   personajeRepository,
@@ -142,6 +146,7 @@ const sincronizacionTraducciones = new SincronizacionTraduccionesService(
   traduccionRepository,
   configPersonajes.pausaEntrePeticionesMs,
 );
+const sincronizacionDjinn = new SincronizacionDjinnService(new VillacuervosFuenteDjinn(villacuervosRepository), djinnRepository);
 const informarPersonajes = (r: { personajes: number; iconosDescargados: number } | null) =>
   r && console.log(`[SincronizacionPersonajes] ${r.personajes} personajes, ${r.iconosDescargados} iconos descargados.`);
 const informarTraducciones = (r: { idiomas: number; traducciones: number; fallidos: string[] } | null) =>
@@ -176,18 +181,26 @@ const sincronizarTraducciones = (soloSiCaducada: boolean) =>
     )
     .then(informarTraducciones)
     .catch((e) => console.error('[SincronizacionTraducciones] Error; se sigue con la copia actual:', e));
-// Personajes y traducciones juntos, uno detrás de otro (así no se pide a la vez)
+const sincronizarDjinn = (soloSiCaducada: boolean) =>
+  registroSincronizaciones
+    .registrar('djinn', () =>
+      soloSiCaducada ? sincronizacionDjinn.sincronizarSiCaducada(configPersonajes.vigenciaMs) : sincronizacionDjinn.sincronizar(),
+    )
+    .then((r) => r && console.log(`[SincronizacionDjinn] ${r.reglas} reglas del Djinn.`))
+    .catch((e) => console.error('[SincronizacionDjinn] Error; se sigue con la copia actual:', e));
+// Personajes, traducciones y reglas del Djinn, uno detrás de otro (así no se pide a la vez)
 const tareaSincronizacionPersonajes = new TareaProgramada(
   'SincronizacionPersonajes',
   configPersonajes.cronSincronizacion,
   async () => {
     await sincronizarPersonajes(false);
     await sincronizarTraducciones(false);
+    await sincronizarDjinn(false);
   },
 );
 const sincronizacionController = new SincronizacionController(registroSincronizaciones);
 const soloAdministracion = exigirRol('admin', async (id) => (await userRepository.findById(id))?.roles ?? null);
-const guionService = new GuionService(personajeRepository);
+const guionService = new GuionService(personajeRepository, djinnRepository);
 const guionController = new GuionController(guionService);
 const traduccionController = new TraduccionController(new TraduccionService(idiomaRepository, traduccionRepository));
 const villacuervosController = new VillacuervosController(villacuervosService);
@@ -321,6 +334,7 @@ app.delete('/api/rituals/:id/signups', authenticateJWT as express.RequestHandler
 app.get('/api/estadisticas', estadisticasController.publicos as express.RequestHandler);
 app.get('/api/usuarios/:userId/perfil', estadisticasController.perfil as express.RequestHandler);
 app.get('/api/estadisticas/mias', authenticateJWT as express.RequestHandler, estadisticasController.mias as express.RequestHandler);
+app.get('/api/estadisticas/:userId/historial', optionalAuthenticateJWT as express.RequestHandler, estadisticasController.historial as express.RequestHandler);
 app.get('/api/estadisticas/:userId', optionalAuthenticateJWT as express.RequestHandler, estadisticasController.deUsuario as express.RequestHandler);
 app.get('/api/sala/configuracion', authenticateJWT as express.RequestHandler, salaConfiguracionController.get as express.RequestHandler);
 app.put('/api/sala/configuracion', authenticateJWT as express.RequestHandler, salaConfiguracionController.guardarActual as express.RequestHandler);
@@ -396,6 +410,7 @@ DatabaseRepository.getInstance()
     (async () => {
       await sincronizarPersonajes(true);
       await sincronizarTraducciones(true);
+      await sincronizarDjinn(true);
     })();
     
     // La sala de juego va por WebSocket sobre el mismo servidor HTTP

@@ -47,6 +47,20 @@ export interface GuionResuelto {
   viajeros?: PersonajeDeGuion[];
   /** Las reglas propias del guion (las del Bootlegger), una por línea. */
   bootlegger?: string[];
+  /** Las reglas del Djinn entre personajes del guion (ids del catálogo). */
+  djinn?: ReglaDjinn[];
+}
+
+/** Una regla del Djinn: cómo cambian dos personajes cuando están en el mismo guion. */
+export interface ReglaDjinn {
+  personajes: [string, string];
+  texto: string;
+}
+
+/** Una regla del Djinn lista para pintar, con sus dos personajes. */
+export interface ReglaDjinnMostrada {
+  personajes: [PersonajeMostrado, PersonajeMostrado];
+  texto: string;
 }
 
 /** Un guion por defecto que se puede elegir. */

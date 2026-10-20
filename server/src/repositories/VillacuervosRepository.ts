@@ -86,15 +86,18 @@ export class VillacuervosRepository {
   }
 
   async getJinxes(): Promise<PublicJinxSchema[]> {
-    return this.getCachedOrFetch('jinxes', async () => {
-      const response = await fetch(`${this.baseUrl}/jinxes/`, {
-        headers: { accept: 'application/json' }
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to fetch jinxes from Villacuervos: ${response.statusText}`);
-      }
-      return await response.json() as PublicJinxSchema[];
+    return this.getCachedOrFetch('jinxes', () => this.fetchJinxes());
+  }
+
+  /** Las reglas del Djinn («jinxes») directamente de Villacuervos, sin caché (la usa la sincronización). */
+  async fetchJinxes(): Promise<PublicJinxSchema[]> {
+    const response = await fetch(`${this.baseUrl}/jinxes/`, {
+      headers: { accept: 'application/json' }
     });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch jinxes from Villacuervos: ${response.statusText}`);
+    }
+    return await response.json() as PublicJinxSchema[];
   }
 
   async getTranslationPacks(): Promise<PublicPackSchema[]> {

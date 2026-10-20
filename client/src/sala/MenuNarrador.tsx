@@ -3,6 +3,7 @@ import { useState } from 'react';
 import DialogoConfirmar from './DialogoConfirmar';
 import DialogoRevelar from './DialogoRevelar';
 import DialogoReloj from './DialogoReloj';
+import DialogoSenalamiento from './DialogoSenalamiento';
 import DialogoElegirParticipante from './DialogoElegirParticipante';
 import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { botonIcono } from './estilos';
@@ -101,6 +102,7 @@ const MenuNarrador = ({
   // Acción de ELEGIR cuyo diálogo está abierto.
   const [eligiendo, setEligiendo] = useState<string | null>(null);
   const [limpiando, setLimpiando] = useState(false);
+  const [senalando, setSenalando] = useState(false);
   const puede = (accion: string) => estado.acciones.includes(accion);
 
   // id = acción del servidor que la respalda.
@@ -110,6 +112,7 @@ const MenuNarrador = ({
     { id: 'narrador:irANoche', etiqueta: 'Ir a la noche', atajo: atajoFase, elegir: () => void pedir('narrador:irANoche') },
     { id: 'narrador:amanecer', etiqueta: 'Amanece', atajo: atajoFase, elegir: () => void pedir('narrador:amanecer') },
     { id: 'narrador:sonarGong', etiqueta: 'Sonar gong', atajo: atajoGong, elegir: () => void pedir('narrador:sonarGong') },
+    { id: 'narrador:senalamiento', etiqueta: 'Señalar', abreDialogo: true, elegir: () => setSenalando(true) },
     { id: 'narrador:reloj', etiqueta: 'Reloj', atajo: atajoReloj, abreDialogo: true, elegir: () => onPoniendoReloj(true) },
     { id: 'narrador:revelarGrimorio', etiqueta: 'Revelar grimorio', atajo: atajoRevelar, abreDialogo: true, elegir: () => onRevelando(true) },
     { id: 'narrador:limpiarGrimorio', etiqueta: 'Limpiar grimorio', abreDialogo: true, elegir: () => setLimpiando(true) },
@@ -146,6 +149,7 @@ const MenuNarrador = ({
       )}
       {revelando && <DialogoRevelar estado={estado} pedir={pedir} onCerrar={() => onRevelando(false)} />}
       {poniendoReloj && <DialogoReloj pedir={pedir} onPuesto={onRelojPuesto} onCerrar={() => onPoniendoReloj(false)} />}
+      {senalando && <DialogoSenalamiento estado={estado} pedir={pedir} onCerrar={() => setSenalando(false)} />}
       {limpiando && (
         <DialogoConfirmar
           titulo="Limpiar grimorio"

@@ -17,8 +17,10 @@ import {
   SALA_SEGUNDOS_POR_FICHA,
   SalaService,
 } from '../services/SalaService';
+import { SALA_SENALAMIENTO } from '../types/sala';
 import {
   ADJUNTOS_DESPERTAR,
+  CAUSAS_DE_ESBIRRO,
   CAUSAS_FIN_PARTIDA,
   FICHAS_DESPERTAR,
   FichaDespertar,
@@ -293,6 +295,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (sala, yo, datos) => {
       const levantada = (datos as { levantada?: unknown } | null)?.levantada;
       if (typeof levantada !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
+      if (levantada && sala.manosBloqueadas(yo)) return { ok: false, error: 'Mientras se señala no se puede levantar la mano.' };
       if (levantada && yo.rol === 'jugador' && sala.sinVoto(yo.id)) return { ok: false, error: sala.voudonVivo() ? 'Con el Voudon vivo, solo votan él y los muertos.' : 'Ya has gastado tu voto: no puedes levantar la mano.' };
       sala.levantarMano(yo.id, levantada);
       return { ok: true };
@@ -307,6 +310,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     puede: (sala, yo) => yo.rol === 'jugador' && sala.puedeVotarDoble(yo.id),
     noPuede: 'Solo la Banshee con su habilidad puede levantar las dos manos.',
     hacer: (sala, yo) => {
+      if (sala.manosBloqueadas(yo)) return { ok: false, error: 'Mientras se señala no se puede levantar la mano.' };
       if (sala.sinVoto(yo.id)) return { ok: false, error: sala.voudonVivo() ? 'Con el Voudon vivo, solo votan él y los muertos.' : 'Ya has gastado tu voto: no puedes levantar la mano.' };
       sala.levantarMano(yo.id, true, true);
       return { ok: true };
@@ -558,6 +562,17 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   },
 
   /**
+   * La máquina del tiempo: vuelve a la fase anterior (del día N a la noche N, de la
+   * noche N al día anterior o, de la noche 1, a la preparación), por si el narrador
+   * se ha precipitado. Ver SalaService.volverAtras.
+   */
+  'narrador:volverAtras': {
+    puede: (sala, yo) => yo.rol === 'narrador' && !!sala.faseAnterior(),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'En la preparación no hay a dónde volver.' : 'Solo un narrador puede volver atrás.'),
+    hacer: (sala) => (sala.volverAtras() ? { ok: true } : { ok: false, error: 'No hay a dónde volver.' }),
+  },
+
+  /**
    * Abre de noche el despertar de un asiento (también de uno libre: cuenta como un
    * jugador más), para mandarle información y que conteste. Se pueden tener
    * varios a la vez; si ya lo tiene, no hace nada. datos: { asientoId }.
@@ -676,6 +691,92 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (sala) => {
       sala.quitarReloj();
       return { ok: true };
+    },
+  },
+
+  /**
+   * Empieza un señalamiento (sustituye al que hubiera): quiénes señalan, a
+   * quiénes (listas vacías: todos), el mensaje y la cuenta atrás (null: sin ella).
+   * datos: { mensaje?, segundos: number | null, senaladores?: asientoId[], objetivos?: asientoId[] }.
+   */
+  'narrador:senalamiento': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.asientos().length > 0,
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador puede pedir que se señale.'),
+    hacer: (sala, _yo, datos) => {
+      const d = (datos as { mensaje?: unknown; segundos?: unknown; senaladores?: unknown; objetivos?: unknown } | null) ?? {};
+      const { minSegundos, maxSegundos, mensajeMax } = SALA_SENALAMIENTO;
+      if (d.segundos !== null && (typeof d.segundos !== 'number' || !Number.isInteger(d.segundos))) {
+        return { ok: false, error: 'Indica cuántos segundos dura la cuenta atrás.' };
+      }
+      if (d.segundos !== null && (d.segundos < minSegundos || d.segundos > maxSegundos)) {
+        return { ok: false, error: `La cuenta atrás tiene que durar entre ${minSegundos} y ${maxSegundos} segundos.` };
+      }
+      if (d.mensaje !== undefined && typeof d.mensaje !== 'string') return { ok: false, error: 'Mensaje no válido.' };
+      const asientos = (lista: unknown) =>
+        Array.isArray(lista) && lista.every((id) => typeof id === 'string' && sala.hayAsiento(id)) ? (lista as string[]) : null;
+      const senaladores = d.senaladores === undefined ? [] : asientos(d.senaladores);
+      const objetivos = d.objetivos === undefined ? [] : asientos(d.objetivos);
+      if (!senaladores || !objetivos) return { ok: false, error: 'Alguno de esos asientos ya no existe.' };
+      sala.empezarSenalamiento({
+        mensaje: (d.mensaje ?? '').replace(/\s+/g, ' ').trim().slice(0, mensajeMax),
+        segundos: d.segundos,
+        senaladores,
+        objetivos,
+      });
+      return { ok: true };
+    },
+  },
+
+  /**
+   * Lil' Monsta (de noche, con él en el guion, sin demonio y con un esbirro de más):
+   * despierta a los esbirros vivos y señalan, sin cuenta atrás, hasta que todos
+   * eligen al mismo (ese lo cuida: ver SalaService.senalar).
+   */
+  'narrador:lilmonsta': {
+    puede: (sala, yo) => yo.rol === 'narrador' && !!sala.esbirrosLilmonsta(),
+    noPuede: (_sala, yo) =>
+      yo.rol === 'narrador'
+        ? "Lil' Monsta se empieza de noche, sin demonio en la mesa y con un esbirro de más."
+        : "Solo un narrador puede empezar Lil' Monsta.",
+    hacer: (sala) => {
+      const esbirros = sala.esbirrosLilmonsta()!;
+      sala.empezarSenalamiento({
+        tipo: 'lilmonsta',
+        mensaje: "Esbirros, elegid quién cuida de Lil' Monsta",
+        segundos: null,
+        senaladores: esbirros,
+        objetivos: esbirros,
+      });
+      return { ok: true };
+    },
+  },
+
+  /** Quita el señalamiento (en marcha o ya congelado). */
+  'narrador:terminarSenalamiento': {
+    puede: (sala, yo) => yo.rol === 'narrador' && !!sala.senalamiento(),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'No hay ningún señalamiento.' : 'Solo un narrador puede terminar el señalamiento.'),
+    hacer: (sala) => {
+      sala.terminarSenalamiento();
+      return { ok: true };
+    },
+  },
+
+  /**
+   * El jugador de un asiento que señala elige a quién (o deja de señalar), mientras
+   * no se congele. datos: { asientoId: string | null }.
+   */
+  'jugador:senalar': {
+    puede: (sala, yo) => {
+      const s = sala.senalamiento();
+      const asiento = sala.asientoDe(yo.id);
+      return yo.rol === 'jugador' && !!s && !s.congelado && !!asiento && s.senaladores.includes(asiento.id);
+    },
+    noPuede: 'No te toca señalar.',
+    hacer: (sala, yo, datos) => {
+      const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
+      if (asientoId !== null && typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
+      const error = sala.senalar(yo.id, asientoId);
+      return error ? { ok: false, error } : { ok: true };
     },
   },
 
@@ -1169,14 +1270,31 @@ export const SALA_ACCIONES: Record<string, Accion> = {
           ? 'Ya se está revelando el grimorio.'
           : 'La mesa no tiene asientos.',
     hacer: (sala, _yo, datos) => {
-      const { ganador, causas = [] } = (datos as { ganador?: unknown; causas?: unknown } | null) ?? {};
+      const { ganador, causas = [], esbirros = {} } =
+        (datos as { ganador?: unknown; causas?: unknown; esbirros?: unknown } | null) ?? {};
       if (ganador !== 'bueno' && ganador !== 'malvado') return { ok: false, error: 'Bando desconocido.' };
       // Lo que ha pasado: solo de los personajes de la lista que están en juego (quien es de verdad cada uno)
       const enJuego = new Set(sala.asientos().map((a) => sala.identidad(a)));
       if (!Array.isArray(causas) || causas.some((c) => typeof c !== 'string' || !CAUSAS_FIN_PARTIDA.includes(c) || !enJuego.has(c))) {
         return { ok: false, error: 'Hay un personaje que no está en juego.' };
       }
-      sala.empezarRevelacion(ganador, [...new Set(causas as string[])]);
+      // Las causas de esbirro (la Doncel cazada) dicen qué esbirro fue: un asiento que es esbirro de verdad
+      if (typeof esbirros !== 'object' || esbirros === null) return { ok: false, error: 'Esbirros no válidos.' };
+      const elegidos = esbirros as Record<string, unknown>;
+      const esEsbirro = (id: unknown) => {
+        const a = sala.asientos().find((x) => x.id === id);
+        const quien = a ? sala.identidad(a) : null;
+        return !!quien && sala.personaje(quien)?.tipo === 'minion';
+      };
+      for (const c of causas as string[]) {
+        if (CAUSAS_DE_ESBIRRO.includes(c) && !esEsbirro(elegidos[c])) {
+          return { ok: false, error: 'Elige qué esbirro descubrió a la Doncel.' };
+        }
+      }
+      const esbirroDe = Object.fromEntries(
+        (causas as string[]).filter((c) => CAUSAS_DE_ESBIRRO.includes(c)).map((c) => [c, elegidos[c] as string]),
+      );
+      sala.empezarRevelacion(ganador, [...new Set(causas as string[])], esbirroDe);
       return { ok: true };
     },
   },
@@ -1267,6 +1385,24 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       if (typeof asientoId !== 'string' || !sala.hayAsiento(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (typeof muerto !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
       sala.cambiarVida(asientoId, muerto);
+      return { ok: true };
+    },
+  },
+
+  /**
+   * Ejecuta al que lleva la calavera: muere, se le ponen los recordatorios de los
+   * personajes que funcionan con las ejecuciones y anochece (salvo con el Carnicero
+   * vivo). Ver SalaService.ejecutar. datos: { asientoId }.
+   */
+  'narrador:ejecutar': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.hayMarca(),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'Nadie lleva la calavera.' : 'Solo un narrador puede ejecutar.'),
+    hacer: (sala, _yo, datos) => {
+      const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
+      const asiento = sala.asientos().find((a) => a.id === asientoId);
+      if (!asiento) return { ok: false, error: 'Ese asiento ya no existe.' };
+      if (!asiento.marcado) return { ok: false, error: 'Solo se ejecuta a quien lleva la calavera.' };
+      sala.ejecutar(asiento.id);
       return { ok: true };
     },
   },

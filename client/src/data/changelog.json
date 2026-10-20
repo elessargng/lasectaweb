@@ -1,5 +1,46 @@
 [
   {
+    "version": "1.3.3",
+    "date": "2026-10-20",
+    "title": "El Dedo Acusador",
+    "description": "Llega la función de señalar, nuevas herramientas para el narrador y una página propia para tus estadísticas.",
+    "changes": [
+      {
+        "category": "Narrador",
+        "items": [
+          "Añadida la función de señalar.",
+          "Añadida la opción de ejecutar.",
+          "Añadida la máquina del tiempo para volver a la fase anterior."
+        ]
+      },
+      {
+        "category": "Personajes",
+        "items": [
+          "Añadidas las reglas del Djinn.",
+          "Añadido el Revolucionario al repartir la bolsa.",
+          "Añadida la votación secreta del Organ Grinder.",
+          "Añadido Lil' Monsta."
+        ]
+      },
+      {
+        "category": "Sala de Juego",
+        "items": [
+          "Añadido el gesto de dedo levantado."
+        ]
+      },
+      {
+        "category": "Estadísticas y Logros",
+        "items": [
+          "Las estadísticas tienen su propia página, con pestañas.",
+          "Añadido el historial de partidas.",
+          "Añadidos diez logros nuevos.",
+          "Algunos logros solo cuentan si ganas la partida.",
+          "Los personajes salen en el idioma que tienes elegido."
+        ]
+      }
+    ]
+  },
+  {
     "version": "1.3.2",
     "date": "2026-10-19",
     "title": "Ecos de la Plaza",

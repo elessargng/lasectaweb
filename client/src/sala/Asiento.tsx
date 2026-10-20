@@ -50,7 +50,16 @@ interface AsientoProps {
    * Lo que lleva su ficha y ve quien mira (el personaje, si lo ve; la calavera;
    * el sudario). Se ve en la ficha; aquí es para el lector, en el nombre del asiento.
    */
-  ficha?: { personaje: Texto | null; marcado: boolean; muerto: boolean; votoGastado?: boolean; muertePendiente?: boolean; recordatorios?: string[] };
+  ficha?: {
+    personaje: Texto | null;
+    marcado: boolean;
+    muerto: boolean;
+    votoGastado?: boolean;
+    muertePendiente?: boolean;
+    recordatorios?: string[];
+    /** En un señalamiento: a quién señala y quién la señala. */
+    senal?: string | null;
+  };
 }
 
 /**
@@ -113,7 +122,7 @@ const Asiento = ({
   const sentarse = !ocupante && puedeSentarse;
   // La ficha, para el lector: «1, Paco, Lavandera, marca, muerte, recordatorios: …» (lo visual ya está en la ficha)
   const conRecordatorios = !!ficha?.recordatorios?.length;
-  const fichaParaLector = ficha && (ficha.personaje || ficha.marcado || ficha.muerto || ficha.muertePendiente || conRecordatorios) && (
+  const fichaParaLector = ficha && (ficha.personaje || ficha.marcado || ficha.muerto || ficha.muertePendiente || conRecordatorios || ficha.senal) && (
     <span className="sr-only">
       {ficha.personaje && (
         <>
@@ -124,6 +133,7 @@ const Asiento = ({
       {ficha.muerto && (ficha.votoGastado ? ', muerte, sin voto' : ', muerte, con voto')}
       {ficha.muertePendiente && ', muerte por anunciar'}
       {conRecordatorios && `, recordatorios: ${ficha.recordatorios!.join(', ')}`}
+      {ficha.senal && `, ${ficha.senal}`}
     </span>
   );
   const silla = sillaVacia(angulo);

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
-import { EstadisticasDeUsuario } from '../components/estadisticas/PanelEstadisticas';
+import Button from '../components/Button';
 import { useAuth } from '../context/AuthContext';
 import { getAvatarUrl } from '../utils/api';
 import { getPerfilPublico, type PerfilPublico } from '../utils/estadisticasApi';
@@ -54,7 +54,12 @@ const PerfilJugador = () => {
               </div>
             </div>
             {perfil.estadisticasPublicas ? (
-              <EstadisticasDeUsuario userId={perfil.userId} />
+              <div className="flex flex-col gap-4 rounded border border-outline-ghost bg-surface-low p-6 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-on-surface-muted">Sus partidas, los roles que ha jugado, sus logros y la crónica de cada partida.</p>
+                <Button to={`/estadisticas/${perfil.userId}`} variant="primary" className="px-6 py-2 shrink-0">
+                  Ver sus estadísticas
+                </Button>
+              </div>
             ) : (
               <p className="flex items-center gap-2 text-on-surface-muted">
                 <Lock className="w-4 h-4" aria-hidden="true" /> Sus estadísticas son privadas.

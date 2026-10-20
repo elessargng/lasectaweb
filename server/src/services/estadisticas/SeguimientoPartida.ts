@@ -1,4 +1,11 @@
-import type { SalaAlineamiento } from '../../types/sala';
+import { CAUSAS_CON_VICTORIA, type SalaAlineamiento, type SalaRegistroVotacion } from '../../types/sala';
+
+/** Una causa de final y, si es de alguien concreto (el esbirro que cazó a la Doncel), su cuenta. */
+export interface CausaFinal {
+  id: string;
+  /** Solo para causas de esbirro: la cuenta del esbirro elegido (null: sin cuenta, no es de nadie). */
+  userId?: string | null;
+}
 
 /** Cómo está un jugador con cuenta en un momento de la partida (ver SalaService.fotosDeCuentas). */
 export interface FotoJugador {
@@ -27,6 +34,22 @@ export interface RegistroJugador {
   ejecutado: number;
 }
 
+/** Un asiento de la mesa al terminar la partida (con cuenta o sin ella), para el historial. */
+export interface AsientoPartida {
+  /** Su número en la mesa (1, el de las 12). */
+  numero: number;
+  /** Quien se sentaba (su nombre en la sala), o null si estaba libre. */
+  nombre: string | null;
+  /** Su cuenta, si la tenía. */
+  userId: string | null;
+  /** Quien era de verdad (su «Is The …» o su ficha). */
+  personaje: string | null;
+  /** La ficha que llevaba, si no era quien era de verdad (el Borracho que se creía Lavandera). */
+  ficha: string | null;
+  alineamiento: SalaAlineamiento | null;
+  muerto: boolean;
+}
+
 /** Una partida terminada, tal como se guarda (ver EstadisticasRepository). */
 export interface RegistroPartida {
   fecha: Date;
@@ -39,6 +62,17 @@ export interface RegistroPartida {
   jugadores: RegistroJugador[];
   /** Los narradores con cuenta. */
   narradores: string[];
+  /** La mesa entera, los nombres de quienes narraban, los NPCs y las nominaciones (para el historial). */
+  mesa: AsientoPartida[];
+  narradoresNombres: string[];
+  npcs: string[];
+  votaciones: SalaRegistroVotacion[];
+}
+
+/** Lo apuntado en un momento (ver instantanea). */
+export interface InstantaneaSeguimiento {
+  seguidos: [string, Seguido][];
+  empezada: boolean;
 }
 
 interface Seguido {
@@ -100,7 +134,7 @@ export class SeguimientoPartida {
    * Termina la partida: lo de cada uno, con cómo acaba (los que siguen en la mesa)
    * o como se le vio por última vez (los que se fueron antes).
    */
-  terminar(finales: FotoJugador[], ganador: SalaAlineamiento, causas: string[]): RegistroJugador[] {
+  terminar(finales: FotoJugador[], ganador: SalaAlineamiento, causas: CausaFinal[]): RegistroJugador[] {
     for (const foto of finales) this.seguido(foto).ultima = foto;
     const registros = [...this.seguidos].map(([userId, s]) => {
       const final = s.ultima;
@@ -112,7 +146,12 @@ export class SeguimientoPartida {
         alineamientoFinal: final.alineamiento,
         gano: final.alineamiento ? final.alineamiento === ganador : null,
         vivo: !final.muerto,
-        causas: causas.filter((c) => s.roles.includes(c) || final.personaje === c),
+        // Cada logro, de quien llevaba ese personaje (o del esbirro elegido); los que exigen
+        // ganar, solo si ha ganado
+        causas: causas
+          .filter((c) => (c.userId !== undefined ? c.userId === userId : s.roles.includes(c.id) || final.personaje === c.id))
+          .filter((c) => !CAUSAS_CON_VICTORIA.includes(c.id) || final.alineamiento === ganador)
+          .map((c) => c.id),
         nominaciones: s.nominaciones,
         nominado: s.nominado,
         votos: s.votos,
@@ -121,6 +160,17 @@ export class SeguimientoPartida {
     });
     this.reiniciar();
     return registros;
+  }
+
+  /** Una copia de lo apuntado hasta ahora, para volver a ello (la máquina del tiempo del narrador). */
+  instantanea(): InstantaneaSeguimiento {
+    return { seguidos: structuredClone([...this.seguidos]), empezada: this.empezada };
+  }
+
+  /** Vuelve a lo apuntado en una instantánea. */
+  restaurar(i: InstantaneaSeguimiento): void {
+    this.seguidos = new Map(structuredClone(i.seguidos));
+    this.empezada = i.empezada;
   }
 
   /** Otra partida (o la misma, desde cero): se olvida lo apuntado. */

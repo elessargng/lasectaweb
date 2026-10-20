@@ -32,6 +32,7 @@ export type TipoAviso =
   | 'cuentaAtras'
   | 'votoAVoto'
   | 'resultadoVotacion'
+  | 'senalamientos'
   | 'mezclar'
   | 'gong'
   | 'reloj'
@@ -80,6 +81,7 @@ export const GRUPOS_AVISOS: { grupo: string; tipos: { tipo: TipoAviso; etiqueta:
       { tipo: 'cuentaAtras', etiqueta: 'Cuenta atrás: cuando empieza y cuando acaba' },
       { tipo: 'votoAVoto', etiqueta: 'Votación, ficha a ficha: el nombre y los votos' },
       { tipo: 'resultadoVotacion', etiqueta: 'Votación: cuando empieza y su resultado' },
+      { tipo: 'senalamientos', etiqueta: 'Señalamientos: cuando empiezan, a quién señalas y el resultado' },
     ],
   },
   {

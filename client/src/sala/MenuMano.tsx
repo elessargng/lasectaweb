@@ -11,6 +11,8 @@ interface MenuManoProps {
   levantada: boolean;
   /** Muerto y sin voto: no puede levantarla (solo bajarla, si la tenía levantada). */
   sinVoto?: boolean;
+  /** Hay un señalamiento (que se ve): tampoco se puede levantar. */
+  senalando?: boolean;
   /** La tecla de levantar o bajar la mano (se ve al lado de la opción). */
   atajoLevantar?: Atajo;
   /** Levanta o baja la mano; devuelve false para que el menú se cierre. */
@@ -31,12 +33,14 @@ interface MenuManoProps {
  * mano que despliega levantarla o bajarla y elegir su forma (ver FORMAS_MANO) o
  * el icono de un personaje del guion. La del narrador no vota.
  * Levantarla también tiene atajo de teclado (Preferencias > Atajos). Un muerto
- * que ya ha gastado su voto no puede levantarla: la opción sale desactivada.
+ * que ya ha gastado su voto no puede levantarla, ni nadie mientras se señala:
+ * la opción sale desactivada, con el motivo.
  */
 const MenuMano = ({
   forma,
   levantada,
   sinVoto = false,
+  senalando = false,
   atajoLevantar,
   onAlternar,
   onElegirForma,
@@ -47,6 +51,8 @@ const MenuMano = ({
   personajes = [],
 }: MenuManoProps) => {
   const porId = new Map(personajes.map((p) => [p.id, p]));
+  // Por qué no se puede levantar ahora (se dice junto a la opción, desactivada), o null
+  const bloqueo = senalando ? 'se está señalando' : sinVoto ? 'sin voto' : null;
   // La Banshee con su habilidad: una mano, las dos o bajarlas (la tecla, en la que toca)
   const conDos: OpcionMenu[] =
     puedeDosManos && onManos
@@ -56,8 +62,8 @@ const MenuMano = ({
           manos !== 0 && { id: 'bajar', etiqueta: manos === 2 ? 'Bajar las manos' : 'Bajar la mano', n: 0 as const },
         ].filter(Boolean) as { id: string; etiqueta: string; n: 0 | 1 | 2 }[]).map(({ id, etiqueta, n }) => ({
           id,
-          etiqueta: n > 0 && sinVoto ? `${etiqueta} (sin voto)` : etiqueta,
-          deshabilitada: n > 0 && sinVoto,
+          etiqueta: n > 0 && bloqueo ? `${etiqueta} (${bloqueo})` : etiqueta,
+          deshabilitada: n > 0 && !!bloqueo,
           atajo: n === siguientes ? atajoLevantar : undefined,
           elegir: () => onManos(n),
         }))
@@ -68,8 +74,8 @@ const MenuMano = ({
       : [
           levantada
             ? { id: 'alternar', etiqueta: 'Bajar la mano', atajo: atajoLevantar, elegir: onAlternar }
-            : sinVoto
-              ? { id: 'alternar', etiqueta: 'Levantar la mano (sin voto)', deshabilitada: true, elegir: onAlternar }
+            : bloqueo
+              ? { id: 'alternar', etiqueta: `Levantar la mano (${bloqueo})`, deshabilitada: true, elegir: onAlternar }
               : { id: 'alternar', etiqueta: 'Levantar la mano', atajo: atajoLevantar, elegir: onAlternar },
         ]),
     // Las formas y los personajes, en rejilla: la mano tal como se verá (en el estilo de cada uno)

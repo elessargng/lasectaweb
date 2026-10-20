@@ -12,7 +12,7 @@
 /** Los sonidos, en el orden en que salen en las preferencias. */
 export const SONIDOS = [
   { id: 'gong', nombre: 'Gong del narrador', descripcion: 'Cuando el narrador llama a todos a la plaza.' },
-  { id: 'cuentaAtras', nombre: 'Cuenta atrás de las nominaciones', descripcion: 'Los últimos segundos antes de votar.' },
+  { id: 'cuentaAtras', nombre: 'Cuenta atrás de las nominaciones', descripcion: 'Los últimos segundos antes de votar y de un señalamiento de día.' },
   { id: 'voto', nombre: 'Cada voto', descripcion: 'Al votar, un sonido por cada mano levantada.' },
   { id: 'sinVoto', nombre: 'Quien no vota', descripcion: 'Un tic cuando la aguja pasa por alguien que no vota.' },
   { id: 'solicitudLlamada', nombre: 'Te solicitan una llamada', descripcion: 'Un toque breve cuando alguien te pide conversar.' },

@@ -16,7 +16,7 @@ const fecha = (iso: string) =>
 
 /**
  * Para la administración, en la gestión: cómo van las sincronizaciones con
- * Villacuervos (personajes y traducciones). Si alguna ha fallado, lo dice en
+ * Villacuervos (personajes, traducciones y reglas del Djinn). Si alguna ha fallado, lo dice en
  * rojo con el motivo y la fecha de la última correcta (la web sigue con esa copia).
  */
 const EstadoSincronizaciones = ({ token }: { token: string }) => {

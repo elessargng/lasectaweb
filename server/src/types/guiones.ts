@@ -120,6 +120,17 @@ export interface GuionResuelto {
   viajeros: PersonajeDeGuion[];
   /** Las reglas propias del guion (las del Bootlegger), una por línea; vacío si no trae. */
   bootlegger: string[];
+  /** Las reglas del Djinn entre personajes del guion (de la copia local); vacío si no hay. */
+  djinn: ReglaDjinn[];
+}
+
+/**
+ * Una regla del Djinn («jinx»): cómo cambian dos personajes cuando están en el
+ * mismo guion. Los ids son los del catálogo.
+ */
+export interface ReglaDjinn {
+  personajes: [string, string];
+  texto: string;
 }
 
 /** Los tipos que van como NPCs de la partida (no se sientan en la mesa). */

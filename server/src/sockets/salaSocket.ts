@@ -2,7 +2,7 @@ import type { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
 import { farolesVacios, NPC_TOR, limpiarAvatarSala, limpiarNombreSala, SALA_AVATAR_INVITADO, SalaLlegada, SalaService } from '../services/SalaService';
-import { SalaAsiento, SalaEstado } from '../types/sala';
+import { SalaAsiento, SalaEstado, SalaNominacion } from '../types/sala';
 import { ChatError, ChatService } from '../services/chat/ChatService';
 import { ConversacionError, ConversacionService } from '../services/conversaciones/ConversacionService';
 import { PaseVideo, VideollamadaError, VideollamadaService } from '../services/videollamada/VideollamadaService';
@@ -47,6 +47,27 @@ const sinPersonaje = (a: SalaAsiento): SalaAsiento => ({
   faroles: farolesVacios(),
 });
 const sinRecordatorios = (a: SalaAsiento): SalaAsiento => ({ ...a, recordatorios: [], notas: [] });
+
+/**
+ * La nominación como la ve quien no ve el grimorio en una votación secreta (Organ
+ * Grinder): sin los votos que hacen falta ni el recuento; de lo que vota cada
+ * asiento, solo lo suyo (cuánto vale su voto, no por dónde va el recuento).
+ */
+const nominacionSecreta = (n: SalaNominacion, miAsiento: string | null): SalaNominacion => {
+  const v = n.votacion;
+  const mio = miAsiento && v && miAsiento in v.resultados ? v.resultados[miAsiento] : undefined;
+  return {
+    ...n,
+    votosNecesarios: 0,
+    votosNecesariosPorDefecto: 0,
+    votacion: v && {
+      ...v,
+      votos: 0,
+      valores: undefined,
+      resultados: mio === undefined ? {} : { [miAsiento!]: mio === null ? null : (v.valores?.[miAsiento!] ?? 1) },
+    },
+  };
+};
 
 export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAvatar, deps: DependenciasSala): void {
   const io = new Server(httpServer, {
@@ -136,10 +157,21 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     const recordatoriosNoche = sala.recordatoriosNoche();
     const ahora = Date.now();
     const noche = sala.fase().momento === 'noche';
+    const senalamiento = sala.senalamiento();
+    // Votación secreta (Organ Grinder): lo que no ve quien no ve el grimorio
+    const secreta = sala.votacionSecreta();
+    const gastadosAlVotar = sala.gastadosAlVotar();
     for (const { socketId, clave, id } of sala.conexiones()) {
       const yo = sala.participanteDe(clave)!;
+      const veVotos = yo.rol === 'narrador' || (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido');
+      const ocultarVotos = secreta && !veVotos;
+      const miAsiento = sala.asientoDe(yo.id)?.id ?? null;
       const estado: SalaEstado = {
-        participantes,
+        // Votación secreta, con una nominación abierta: las manos de los demás no se ven
+        participantes:
+          ocultarVotos && nominacion
+            ? participantes.map((p) => (p.id === yo.id ? p : { ...p, manoLevantada: false, dosManos: false }))
+            : participantes,
         asientos:
           yo.rol === 'narrador' || (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido')
             ? asientos
@@ -153,14 +185,22 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
                       ? comoLaVeSuJugador(a)
                       : comoLaVenTodos(a)),
                 muertePendiente: false,
+                // Votación secreta: con cuántos votos se puso la calavera no se sabe, y mientras
+                // se vota, el voto de los muertos ajenos se ve como estaba al empezar
+                ...(ocultarVotos && {
+                  votosMarca: null,
+                  votoGastado: gastadosAlVotar && a.ocupante !== yo.id ? gastadosAlVotar.has(a.id) : a.votoGastado,
+                }),
               })),
         configuracion,
-        nominacion,
+        nominacion: ocultarVotos && nominacion ? nominacionSecreta(nominacion, miAsiento) : nominacion,
         fase: sala.fase(),
         distribucion,
         revelacion,
         gong: sala.gong(),
         reloj: sala.reloj(),
+        // De noche, solo quien señala (y quien ve el grimorio)
+        senalamiento: sala.veSenalamiento(yo) ? senalamiento : null,
         video: !!videollamada,
         // Los jugadores no saben qué visitantes escuchan las conversaciones; de noche, ni
         // siquiera que las hay: solo ven aquella en la que están

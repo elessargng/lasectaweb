@@ -15,7 +15,7 @@ import CuentaAtras from './CuentaAtras';
 import Ondas, { type OndaMesa } from './Ondas';
 import type { ContactoParticipante } from './BotonesContacto';
 import type { PistasParticipante } from './useVideollamada';
-import { hacenFalta } from './avisosSala';
+import { hacenFalta, votacionOculta } from './avisosSala';
 import CuadroAvatar from './CuadroAvatar';
 import FichaAsiento from './FichaAsiento';
 import FichaRedonda from './FichaRedonda';
@@ -29,8 +29,10 @@ import { descuadres } from './comprobarReparto';
 import LunaDespertar from './LunaDespertar';
 import ManoLevantada from './ManoLevantada';
 import PanelNominacion from './PanelNominacion';
+import { ManosSenalamiento, PanelSenalamiento } from './Senalamiento';
+import { resultadoSenalamiento, senalDeFicha, useSenalamientoCongelado } from './senales';
 import { botonPrincipal, botonSecundario } from './estilos';
-import { ID_AYUDA_MOVER, idLunaFicha, idNombreAsiento, ID_GANADOR, idRevelarFicha } from './ids';
+import { ID_AYUDA_MOVER, idFichaNominar, idLunaFicha, idNombreAsiento, ID_GANADOR, idRevelarFicha } from './ids';
 import { nombreDeAsiento } from './despertar';
 import { tamanoAvatarAuto, tamanoFichaAuto } from './tamanosAutomaticos';
 import { anguloAsiento } from './geometriaMesa';
@@ -244,6 +246,69 @@ const Mesa = ({
   const modoFichas = acciones.includes('narrador:cambiarVida') ? 'narrador' : grimorio && !estado.revelacion ? 'grimorio' : 'ver';
   const mesaRef = useRef<HTMLDivElement>(null);
 
+  // El señalamiento (si lo veo): si me toca señalar, las fichas que se pueden señalar son
+  // botones para señalarlas (o dejar de hacerlo, la que ya señalo); al congelarse, ya no.
+  const senalamiento = estado.senalamiento;
+  const senalCongelada = useSenalamientoCongelado(senalamiento, desfaseReloj);
+  const miAsiento = asientos.find((a) => a.ocupante === yo)?.id ?? null;
+  const senalo =
+    !!senalamiento && !senalCongelada && !!miAsiento && senalamiento.senaladores.includes(miAsiento) && acciones.includes('jugador:senalar');
+  const miSenal = senalamiento && miAsiento ? (senalamiento.senales[miAsiento] ?? null) : null;
+  const senalar = async (asientoId: string) => {
+    const hasta = miSenal === asientoId ? null : asientoId;
+    const r = await pedir('jugador:senalar', { asientoId: hasta });
+    if (!r.ok) return onError(r.error);
+    onAnuncio('senalamientos', hasta ? `Señalas al ${nombreDeAsiento(estado, hasta).replace(/^A/, 'a')}.` : 'Ya no señalas a nadie.');
+  };
+  const eligiendoSenal = (asientoId: string) =>
+    senalo && senalamiento!.objetivos.includes(asientoId)
+      ? {
+          papel: 'candidata' as const,
+          onPulsar: () => void senalar(asientoId),
+          accion: miSenal === asientoId ? 'Dejar de señalar' : 'Señalar',
+        }
+      : undefined;
+  // El narrador lo termina: el botón desaparece, el foco va a la lista de asientos
+  const terminarSenalamiento = async () => {
+    const r = await pedir('narrador:terminarSenalamiento');
+    if (!r.ok) return onError(r.error);
+    onAnuncio('senalamientos', 'Señalamiento terminado.');
+    window.setTimeout(() => document.getElementById('sala-asientos')?.focus(), 0);
+  };
+  // Al lector: cuando empieza (si me toca, qué hacer, y el foco a la primera ficha que puedo
+  // señalar, salvo que esté escribiendo), cuando se congela (el resultado) y si se quita
+  // antes de congelarse. Lo que señala cada uno no se dice uno a uno (sería una ráfaga):
+  // lo dice el nombre de cada ficha. Al entrar en la sala con uno en marcha, no se dice nada.
+  const senalAnteriorRef = useRef<{ id: string; congelado: boolean } | null | undefined>(undefined);
+  useEffect(() => {
+    const antes = senalAnteriorRef.current;
+    const s = senalamiento;
+    senalAnteriorRef.current = s ? { id: s.id, congelado: senalCongelada } : null;
+    if (antes === undefined) return;
+    if (s && antes?.id !== s.id) {
+      const que = s.tipo === 'lilmonsta' ? "Lil' Monsta: los esbirros eligen quién lo cuida" : s.mensaje ? `Señalamiento: ${s.mensaje}` : 'Señalamiento';
+      const segundos = s.fin !== null ? Math.round((s.fin - s.inicio) / 1000) : null;
+      const plazo = segundos !== null ? `, tienes ${segundos} segundos` : '';
+      onAnuncio('senalamientos', senalo ? `${que}. Te toca señalar: pulsa la ficha que señalas${plazo}.` : `${que}.`);
+      const primera = senalo ? asientos.find((a) => s.objetivos.includes(a.id)) : undefined;
+      const activo = document.activeElement as HTMLElement | null;
+      const escribiendo = !!activo && (activo.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(activo.tagName));
+      if (primera && !escribiendo) window.setTimeout(() => document.getElementById(idFichaNominar(primera.id))?.focus(), 0);
+    } else if (s && antes?.id === s.id && !antes.congelado && senalCongelada) {
+      onAnuncio('senalamientos', `Señalamiento terminado. ${resultadoSenalamiento(estado, s)}`);
+      // Las fichas dejan de ser botones para señalar: si el foco estaba en una, va al nombre de su asiento
+      window.setTimeout(() => {
+        if (document.activeElement && document.activeElement !== document.body) return;
+        const donde = miSenal ?? miAsiento;
+        document.getElementById(donde ? idNombreAsiento(donde) : 'sala-asientos')?.focus();
+      }, 0);
+    } else if (!s && antes && !antes.congelado && !acciones.includes('narrador:senalamiento')) {
+      onAnuncio('senalamientos', 'El narrador ha terminado el señalamiento.');
+    }
+    // Solo al empezar, congelarse o quitarse
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [senalamiento?.id, senalCongelada]);
+
   // El narrador despierta (de noche) al jugador de una ficha, o a la ficha si el
   // asiento está libre (cuenta como un jugador más), o abre su despertar si ya lo tiene.
   const despertarDe = (asientoId: string) => {
@@ -274,6 +339,7 @@ const Mesa = ({
       votoGastado: a.votoGastado,
       muertePendiente: a.muertePendiente,
       recordatorios: recordatoriosDe(a).map((r) => describirRecordatorio(r, todosPorId.get(r.personaje))),
+      senal: senalamiento ? senalDeFicha(estado, senalamiento, a.id) : null,
     };
   };
   // Los personajes en juego (para quien mira): sus recordatorios salen primero al poner uno
@@ -395,6 +461,8 @@ const Mesa = ({
   const nominar = useNominacion({ estado, pedir, onError, onAnuncio: (m) => onAnuncio('nominaciones', m) });
   // Asientos (desde 0) de quien nomina y del nominado, para las agujas.
   const { nominacion, revelacion } = estado;
+  // Votación secreta (Organ Grinder): ni los votos que hacen falta ni el recuento
+  const secreta = votacionOculta(estado);
   // Con el Gardener: arrastrar una ficha sobre otra (o «Intercambiar con…») intercambia sus personajes
   const puedeIntercambiar =
     acciones.includes('narrador:intercambiarFichas') && modoFichas === 'narrador' && !editando && !revelacion;
@@ -533,7 +601,9 @@ const Mesa = ({
               ? eleccion.excluidos.includes(a.id)
                 ? undefined
                 : { papel: 'candidata' as const, onPulsar: () => eleccion.onElegir(a.id), accion: 'Elegir' }
-              : nominar.eligiendo(a.id);
+              : senalo
+                ? eligiendoSenal(a.id)
+                : nominar.eligiendo(a.id);
             const seguir = seguirA(ocupante);
             // La luna del despertar (narradores, y visitantes que ven el grimorio) también se pulsa
             const conLuna = !!despertares?.hilos.has(a.id) && !editando;
@@ -650,6 +720,12 @@ const Mesa = ({
                       seguir={seguir}
                       enJuego={enJuego}
                       probables={probables}
+                      senal={senalamiento ? senalDeFicha(estado, senalamiento, a.id) : null}
+                      onLilmonsta={
+                        acciones.includes('narrador:lilmonsta') && !editando
+                          ? () => void pedir('narrador:lilmonsta').then((r) => !r.ok && onError(r.error))
+                          : undefined
+                      }
                       onEscribirNota={escriboNotas && !editando ? () => setNotasAbiertas({ asientoId: a.id, nueva: true }) : undefined}
                       onIntercambiar={puedeIntercambiar ? () => setIntercambiando(a.id) : undefined}
                       revelando={
@@ -783,6 +859,8 @@ const Mesa = ({
 
       <Ondas ondas={ondas} total={total} />
 
+      {senalamiento && <ManosSenalamiento estado={estado} senalamiento={senalamiento} miAsiento={miAsiento} />}
+
       {/* Todas reveladas: el bando ganador, en grande (se anuncia aparte) */}
       {revelacion?.terminada && (
         <AnuncioGanador
@@ -838,14 +916,15 @@ const Mesa = ({
 
       {nominacion && !nominar.panel && (
         // Debajo del eje de las agujas: los votos que hacen falta (el narrador lo ve en su panel)
+        // (con la votación secreta, no se sabe: solo que lo es)
         <p className="absolute left-1/2 top-[calc(50%+3rem)] z-30 -translate-x-1/2 whitespace-nowrap rounded border border-gold/30 bg-background/80 px-3 py-1 font-ui text-sm font-semibold tracking-wide text-on-surface-bright">
-          {hacenFalta(nominacion.votosNecesarios)}
+          {secreta ? 'Votación secreta' : hacenFalta(nominacion.votosNecesarios)}
         </p>
       )}
 
       {/* El centro de la mesa: la cuenta atrás (todos), el panel de la nominación y
           el de editar asientos (narradores). Por encima de las agujas. */}
-      {(nominacion?.cuentaAtrasFin || nominar.panel || nominar.cancelar || eleccion || editando || revelacion || estado.fichasRetenidas) && (
+      {(nominacion?.cuentaAtrasFin || nominar.panel || nominar.cancelar || eleccion || editando || revelacion || estado.fichasRetenidas || senalamiento) && (
         <div className="absolute left-1/2 top-1/2 z-30 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">
           {/* Gardener: los personajes repartidos esperan a que el narrador los entregue */}
           {estado.fichasRetenidas &&
@@ -879,8 +958,8 @@ const Mesa = ({
               </button>
             </div>
           )}
-          {nominacion?.votacion ? (
-            // Votando: los votos que lleva, en grande (se anuncian al terminar)
+          {nominacion?.votacion && secreta ? null : nominacion?.votacion ? (
+            // Votando: los votos que lleva, en grande (se anuncian al terminar); en la secreta, nada
             <p
               aria-hidden="true"
               className="font-teutonic1 text-5xl leading-none text-gold-bright drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]"
@@ -893,6 +972,18 @@ const Mesa = ({
               fin={nominacion.cuentaAtrasFin}
               desfase={desfaseReloj}
               onTermina={() => onAnuncio('cuentaAtras', 'Tiempo.')}
+            />
+          )}
+          {senalamiento && (
+            <PanelSenalamiento
+              estado={estado}
+              senalamiento={senalamiento}
+              congelado={senalCongelada}
+              desfase={desfaseReloj}
+              puedoSenalar={senalo}
+              onTerminar={acciones.includes('narrador:terminarSenalamiento') ? () => void terminarSenalamiento() : undefined}
+              // Lo que queda dentro del círculo de las fichas (con la distancia por defecto), con margen
+              anchoMax={Math.max(180, (ladoMesa || 600) - avatar - 0.75 * (avatar + ficha) - 1.8 * ficha)}
             />
           )}
           {eleccion && (

@@ -25,6 +25,16 @@ export class EstadisticasController {
     res.json(resumen);
   };
 
+  /** El historial de partidas de alguien (las propias, siempre; las de otro, si son públicas). */
+  historial = async (req: AuthRequest, res: Response): Promise<void> => {
+    const historial = await this.service.historial(String(req.params.userId), req.user?.id ?? null);
+    if (!historial) {
+      res.status(404).json({ error: 'Este historial no existe o es privado.' });
+      return;
+    }
+    res.json(historial);
+  };
+
   /** El perfil público de alguien (su nombre, su avatar y si sus estadísticas son públicas). */
   perfil = async (req: AuthRequest, res: Response): Promise<void> => {
     const perfil = await this.service.perfil(String(req.params.userId));

@@ -921,6 +921,37 @@ export class DatabaseRepository {
         CREATE INDEX IF NOT EXISTS idx_sala_partidas_participantes_user ON sala_partidas_participantes(userId);
       `);
     });
+
+    // Migración 028: reglas del Djinn (los «jinxes» de Villacuervos)
+    //
+    // Copia local, sincronizada cada semana junto con los personajes: al resolver
+    // un guion se buscan aquí las de sus pares de personajes.
+    await this.applyMigration('028_add_reglas_djinn', async (db) => {
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS reglas_djinn (
+          personajeA TEXT NOT NULL,
+          personajeB TEXT NOT NULL,
+          texto TEXT NOT NULL,
+          sincronizadoEn DATETIME NOT NULL,
+          PRIMARY KEY (personajeA, personajeB)
+        );
+      `);
+    });
+
+    // Migración 029: la mesa entera de cada partida, para el historial
+    //
+    // Hasta ahora solo se guardaba lo de quien tenía cuenta. Desde aquí, también cada
+    // asiento (nombre, personaje, bando, si acabó vivo; invitados incluidos), quién
+    // narró, los NPCs y el registro de nominaciones y votaciones. Las partidas de
+    // antes se quedan sin esto (null) y el historial enseña lo que hay.
+    await this.applyMigration('029_partidas_mesa_completa', async (db) => {
+      await db.exec(`
+        ALTER TABLE sala_partidas ADD COLUMN mesa TEXT;
+        ALTER TABLE sala_partidas ADD COLUMN narradoresNombres TEXT;
+        ALTER TABLE sala_partidas ADD COLUMN npcs TEXT;
+        ALTER TABLE sala_partidas ADD COLUMN votaciones TEXT;
+      `);
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

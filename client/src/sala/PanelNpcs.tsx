@@ -5,7 +5,7 @@ import DialogoBootlegger from './DialogoBootlegger';
 import DialogoNpcs from './DialogoNpcs';
 import DialogoPersonaje from './DialogoPersonaje';
 import { botonPrincipal } from './estilos';
-import type { PersonajeMostrado } from './guiones';
+import type { PersonajeMostrado, ReglaDjinnMostrada } from './guiones';
 import CasillaFarol from './CasillaFarol';
 import { colocarDesplegable } from './colocarDesplegable';
 import type { SalaResultado } from './useSala';
@@ -20,6 +20,8 @@ interface PanelNpcsProps {
   hayGuion: boolean;
   /** Las reglas del Bootlegger (salen en su tarjeta). */
   bootlegger: string[];
+  /** Las reglas del Djinn entre personajes del guion (salen en su tarjeta). */
+  djinn: ReglaDjinnMostrada[];
   /** El personaje que ha nombrado el Storm Catcher (sale en su tarjeta), o null. */
   rolStormcatcher: PersonajeMostrado | null;
   /** Los personajes buenos del guion, para nombrar el del Storm Catcher. */
@@ -42,7 +44,7 @@ const TIPO: Record<string, string> = { fabled: 'Legendario', loric: 'Lórico' };
  * en la bolsa) y los quita con la ✕ de su esquina. Sin ninguno, lo dice y cómo
  * se añaden.
  */
-const PanelNpcs = ({ npcs, disponibles, narro, hayGuion, bootlegger, rolStormcatcher, buenos, pedir, onError }: PanelNpcsProps) => {
+const PanelNpcs = ({ npcs, disponibles, narro, hayGuion, bootlegger, djinn, rolStormcatcher, buenos, pedir, onError }: PanelNpcsProps) => {
   const [anadiendo, setAnadiendo] = useState(false);
   // Los diálogos de los NPCs con algo que decidir (el narrador)
   const [editandoReglas, setEditandoReglas] = useState(false);
@@ -160,6 +162,26 @@ const PanelNpcs = ({ npcs, disponibles, narro, hayGuion, bootlegger, rolStormcat
                       ))}
                     </ul>
                   )}
+                  {/* Djinn: las reglas entre personajes del guion */}
+                  {p.id === 'djinn' &&
+                    (djinn.length > 0 ? (
+                      <ul className="mt-2 flex flex-col gap-1.5 border-t border-outline-ghost pt-2 text-xs leading-snug text-on-surface">
+                        {djinn.map(({ personajes: [a, b], texto }) => (
+                          <li key={`${a.id}-${b.id}`}>
+                            <strong className="text-on-surface-bright">
+                              <span lang={a.nombre.lang}>{a.nombre.texto}</span> y{' '}
+                              <span lang={b.nombre.lang}>{b.nombre.texto}</span>:
+                            </strong>{' '}
+                            {/* Villacuervos solo las da en inglés */}
+                            <span lang="en">{texto}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 border-t border-outline-ghost pt-2 text-xs text-on-surface-muted">
+                        Este guion no tiene reglas del Djinn.
+                      </p>
+                    ))}
                   {/* Storm Catcher: el personaje que ha nombrado el narrador */}
                   {p.id === 'stormcatcher' && (
                     <p className="mt-2 border-t border-outline-ghost pt-2 text-xs text-on-surface">

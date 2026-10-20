@@ -112,6 +112,7 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
       nominacion && acciones.includes('narrador:cerrarNominacion')
         ? {
             marcado: !!nominado?.marcado,
+            secreta: !!nominacion.privada,
             puedeCuentaAtras: acciones.includes('narrador:cuentaAtras'),
             votos: acciones.includes('narrador:votosNecesarios')
               ? {

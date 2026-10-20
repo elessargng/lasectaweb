@@ -136,6 +136,32 @@ export interface SalaReloj {
   mensaje: string;
 }
 
+/**
+ * Un señalamiento: unos jugadores señalan a otros, con un mensaje y una cuenta
+ * atrás (o sin ella); al acabar se congela. De noche solo lo ven los que señalan
+ * (y quien ve el grimorio). El de Lil' Monsta: los esbirros eligen quién lo cuida.
+ */
+export interface SalaSenalamiento {
+  id: string;
+  tipo: 'normal' | 'lilmonsta';
+  mensaje: string;
+  /** Asientos que señalan y que se pueden señalar. */
+  senaladores: string[];
+  objetivos: string[];
+  /** De día: lo ven todos y suena la cuenta atrás. */
+  publico: boolean;
+  /** ms, reloj del servidor; fin null: sin cuenta atrás. */
+  inicio: number;
+  fin: number | null;
+  /** Ya no se puede señalar (también cuando pasa `fin`, aunque el servidor no lo haya mandado). */
+  congelado: boolean;
+  /** Asiento que señala → asiento señalado. */
+  senales: Record<string, string>;
+}
+
+/** Los límites de un señalamiento (como el servidor, SALA_SENALAMIENTO). */
+export const SENALAMIENTO = { minSegundos: 3, maxSegundos: 120, defectoSegundos: 10, mensajeMax: 120 };
+
 export interface SalaRevelacion {
   ganador: SalaAlineamiento;
   /** Lo que ha pasado (ver causasFinal.ts); vacío hasta que todo está revelado. */
@@ -216,6 +242,12 @@ export interface SalaNominacion {
   votosNecesarios: number;
   /** Los de por defecto: la mitad de los vivos y, si hay calavera con votos, uno más que esos. */
   votosNecesariosPorDefecto: number;
+  /**
+   * Votación secreta (el Organ Grinder vivo y sin su «Drunk»). A quien no ve el
+   * grimorio el servidor no le manda los votos que hacen falta (0), el recuento (0),
+   * quién vota (solo lo suyo, lo que vale su voto) ni las manos de los demás.
+   */
+  privada?: boolean;
 }
 
 /** Un mensaje de un despertar, entre el narrador y el jugador de un asiento (ver despertar.ts). */
@@ -281,6 +313,8 @@ export interface SalaEstado {
   gong: number | null;
   /** El reloj del narrador (cuenta atrás con mensaje), o null. */
   reloj: SalaReloj | null;
+  /** El señalamiento en curso o congelado (de noche, solo si lo ves), o null. */
+  senalamiento: SalaSenalamiento | null;
   /** Hay videollamada (cámaras y micrófonos) en esta sala. */
   video: boolean;
   /** Las conversaciones privadas en curso (quién habla con quién, no qué). */

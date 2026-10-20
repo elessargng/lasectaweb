@@ -26,6 +26,17 @@ export interface Aviso {
 export const nombreFase = (f: SalaFase) =>
   f.momento === 'preparacion' ? 'Preparación' : `${f.momento === 'noche' ? 'Noche' : 'Día'} ${f.numero}`;
 
+/**
+ * La votación es secreta para quien recibe el estado (Organ Grinder): no ve los
+ * votos que hacen falta, ni el recuento, ni quién vota salvo él, ni las manos de los
+ * demás. Los narradores y quien ve el grimorio lo ven todo.
+ */
+export function votacionOculta(e: SalaEstado): boolean {
+  if (!e.nominacion?.privada) return false;
+  const yo = e.participantes.find((p) => p.id === e.yo);
+  return !(yo?.rol === 'narrador' || (yo?.rol === 'visitante' && yo.accesoGrimorio === 'concedido'));
+}
+
 /** «Hacen falta 3 votos» (o «1 voto»). */
 export const hacenFalta = (votos: number) => `Hacen falta ${votos === 1 ? '1 voto' : `${votos} votos`}`;
 
@@ -194,8 +205,11 @@ export function avisosDeCambio(
     const mio = nuevo.asientos.find((a) => a.ocupante === yo);
     if (mio?.muerto && mio.votoGastado) avisa('miMano', 'Se te baja la mano: ya no te queda voto.');
   }
-  // Manos levantadas (las propias las avisa quien la levanta).
+  // Manos levantadas (las propias las avisa quien la levanta). Con la votación secreta, las
+  // de los demás no se ven (ni se dice que aparecen o desaparecen al abrirla o cerrarla)
+  const manosOcultas = votacionOculta(anterior) || votacionOculta(nuevo);
   for (const p of nuevo.participantes) {
+    if (manosOcultas) break;
     const previo = antes.get(p.id);
     if (!previo || p.id === yo || previo.manoLevantada === p.manoLevantada || vigilados.has(p.id)) continue;
     // Bajarla por cambiar de papel (levantarse del asiento, dejar de narrar) no se dice
@@ -211,12 +225,14 @@ export function avisosDeCambio(
   }
   // De una mano a dos, o de dos a una (sigue con la mano levantada)
   for (const p of nuevo.participantes) {
+    if (manosOcultas) break;
     const previo = antes.get(p.id);
     if (!previo || p.id === yo || !p.manoLevantada || !previo.manoLevantada || !!previo.dosManos === !!p.dosManos || vigilados.has(p.id)) continue;
     avisa('manos', p.dosManos ? `${p.nombre} levanta las dos manos.` : `${p.nombre} baja una mano.`);
   }
   // Cambio de forma con la mano levantada (con ella bajada no se ve).
   for (const p of nuevo.participantes) {
+    if (manosOcultas) break;
     const previo = antes.get(p.id);
     if (!previo || p.id === yo || !p.manoLevantada || !previo.manoLevantada || previo.formaMano === p.formaMano) continue;
     avisa('manos', `${p.nombre} cambia la mano a ${forma(p)}.`);
@@ -277,14 +293,15 @@ export function avisosDeCambio(
   };
   if (nomAhora && (nomAhora.desde !== nomAntes?.desde || nomAhora.hasta !== nomAntes?.hasta)) {
     const sujeto = mayuscula(nominacionDe(nuevo, nomAhora.desde));
-    const necesarios = ` ${hacenFalta(nomAhora.votosNecesarios)}.`;
+    // Votación secreta: no se sabe cuántos votos hacen falta
+    const necesarios = votacionOculta(nuevo) ? ' Votación secreta.' : ` ${hacenFalta(nomAhora.votosNecesarios)}.`;
     if (nomAhora.desde === nomAhora.hasta) {
       avisa('nominaciones', `${sujeto} se nomina.${necesarios}`);
     } else {
       const objeto = nominacionDe(nuevo, nomAhora.hasta).replace(/^el /, 'al ');
       avisa('nominaciones', `${sujeto} nomina ${objeto.startsWith('al ') ? objeto : `a ${objeto}`}.${necesarios}`);
     }
-  } else if (nomAhora && nomAntes && nomAhora.votosNecesarios !== nomAntes.votosNecesarios) {
+  } else if (nomAhora && nomAntes && !votacionOculta(nuevo) && !votacionOculta(anterior) && nomAhora.votosNecesarios !== nomAntes.votosNecesarios) {
     // La misma nominación, pero ahora hacen falta otros votos (lo cambia el narrador, o muere alguien)
     avisa('nominaciones', `Ahora ${hacenFalta(nomAhora.votosNecesarios).toLocaleLowerCase('es')}.`);
   } else if (nomAntes && !nomAhora && !seMarca && !cambioFase && !nuevo.asientos.some((a) => antesAsiento.get(a.id)?.marcado && !a.marcado)) {
@@ -296,11 +313,18 @@ export function avisosDeCambio(
   if (votAhora && !votAntes) avisa('resultadoVotacion', 'Empieza la votación.');
   // Cada ficha por la que pasa la aguja: su nombre, y si vota, el total de votos.
   // (Quien use lector pondrá una velocidad de agujas que le dé tiempo a oírlo.)
+  const secreta = votacionOculta(nuevo);
   if (votAhora) {
     const desdePaso = votAntes ? votAntes.paso : 0;
     for (const id of votAhora.orden.slice(desdePaso, votAhora.paso)) {
       const nombre = mayuscula(nominacionDe(nuevo, id));
       const resultado = votAhora.resultados[id];
+      // Votación secreta: de los demás, solo por dónde va la aguja; de uno mismo, si vota
+      if (secreta) {
+        const mio = nuevo.asientos.find((a) => a.id === id)?.ocupante === yo;
+        avisa('votoAVoto', mio ? (typeof resultado === 'number' ? 'Tu voto cuenta.' : 'No votas.') : `${nombre}.`);
+        continue;
+      }
       // Un muerto que vota gasta su único voto: se dice (su vela se apaga)
       // (la Banshee con su habilidad, o con el Voudon vivo, no lo gasta)
       const gastado = (e: SalaEstado) => !!e.asientos.find((a) => a.id === id)?.votoGastado;
@@ -312,7 +336,10 @@ export function avisosDeCambio(
     }
   }
   if (votAhora?.terminada && !votAntes?.terminada) {
-    avisa('resultadoVotacion', `Votación terminada: ${votAhora.votos === 1 ? '1 voto' : `${votAhora.votos} votos`}.`);
+    avisa(
+      'resultadoVotacion',
+      secreta ? 'Votación terminada.' : `Votación terminada: ${votAhora.votos === 1 ? '1 voto' : `${votAhora.votos} votos`}.`,
+    );
   }
   if (nomAhora?.cuentaAtrasFin && nomAhora.cuentaAtrasFin !== nomAntes?.cuentaAtrasFin) {
     avisa('cuentaAtras', 'Cuenta atrás.');

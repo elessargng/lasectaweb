@@ -22,6 +22,8 @@ interface PanelNominacionProps {
   votos: VotosNominacion | null;
   /** Quién lleva ahora la calavera y con cuántos votos (para ver empates), o null. */
   marcaActual: string | null;
+  /** Votación secreta (Organ Grinder): se recuerda que los jugadores no ven los votos. */
+  secreta: boolean;
   /** Quitar la calavera a quien la lleve (sale si alguien la lleva). */
   onDesmarcar: (() => void) | null;
   onCuentaAtras: () => void;
@@ -39,8 +41,14 @@ const PanelNominacion = ({
   onCuentaAtras,
   onMarca,
   onCerrar,
+  secreta,
 }: PanelNominacionProps) => (
   <div role="group" aria-label="Nominación" className="flex flex-col gap-2">
+    {secreta && (
+      <p className="max-w-56 text-center text-sm text-on-surface-muted">
+        Votación secreta (<span lang="en">Organ Grinder</span>): los jugadores no ven los votos ni las manos de los demás.
+      </p>
+    )}
     {marcaActual && <p className="max-w-56 text-center text-sm text-on-surface-muted">Marca actual: {marcaActual}</p>}
     {votos && <VotosNecesarios {...votos} />}
     {puedeCuentaAtras && (

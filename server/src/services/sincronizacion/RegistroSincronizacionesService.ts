@@ -4,6 +4,7 @@ import { SincronizacionRepository } from '../../repositories/SincronizacionRepos
 export const SINCRONIZACIONES = {
   personajes: 'Personajes',
   traducciones: 'Traducciones de los personajes',
+  djinn: 'Reglas del Djinn',
 } as const;
 export type IdSincronizacion = keyof typeof SINCRONIZACIONES;
 

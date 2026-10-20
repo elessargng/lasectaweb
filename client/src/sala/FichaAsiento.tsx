@@ -74,6 +74,14 @@ interface FichaAsientoProps {
   onEscribirNota?: () => void;
   /** Con el Gardener (narradores): elegir otra ficha con la que intercambiar el personaje; sin esto, no sale. */
   onIntercambiar?: () => void;
+  /** En un señalamiento: a quién señala y quién la señala («señala a…, señalada por…»), o null. */
+  senal?: string | null;
+  /**
+   * Narradores, cuando se puede (de noche, Lil' Monsta en el guion, sin demonio y con un
+   * esbirro de más): despertar a los esbirros para que elijan quién lo cuida. Sale en
+   * las fichas de esbirro; sin esto, no sale.
+   */
+  onLilmonsta?: () => void;
 }
 
 const NOMBRE_ALINEAMIENTO: Record<SalaAlineamiento, string> = { bueno: 'bueno', malvado: 'malvado' };
@@ -116,6 +124,8 @@ const FichaAsiento = ({
   probables,
   onEscribirNota,
   onIntercambiar,
+  senal = null,
+  onLilmonsta,
 }: FichaAsientoProps) => {
   const { hayGuion, personajes, viajeros, porId, notas, anotar, todos, todosPorId, notasRecordatorios, anotarRecordatorios } = useFichas();
   const [eligiendoPersonaje, setEligiendoPersonaje] = useState(false);
@@ -256,6 +266,7 @@ const FichaAsiento = ({
     typeof voto === 'number' && `vota (${voto === 1 ? '1 voto' : `${voto} votos`})`,
     recordatorios.length > 0 &&
       `recordatorios: ${recordatorios.map((r) => describirRecordatorio(r, todosPorId.get(r.personaje))).join(', ')}`,
+    senal,
     seguir?.siguiendo && 'siguiendo',
   ].filter(Boolean);
   // En el botón de seguir (visitantes) no hace falta: lo dice aria-pressed
@@ -304,6 +315,14 @@ const FichaAsiento = ({
     }
     const r = await pedir('narrador:cambiarVida', { asientoId: asiento.id, muerto: true });
     if (!r.ok) onError(r.error);
+  };
+  // Ejecutar al que lleva la calavera: muere, se le ponen los recordatorios de las
+  // ejecuciones (el Caníbal, el Enterrador…) y anochece, salvo con el Carnicero vivo
+  const ejecutar = async () => {
+    const r = await pedir('narrador:ejecutar', { asientoId: asiento.id });
+    if (!r.ok) onError(r.error);
+    // false: el menú se cierra y el foco vuelve a la ficha, que ya dice que ha muerto.
+    return false;
   };
   const confirmarMuerte = async () => {
     const r = await pedir('narrador:confirmarMuerte', { asientoId: asiento.id });
@@ -398,6 +417,7 @@ const FichaAsiento = ({
   const opciones: OpcionMenu[] =
     modo === 'narrador'
       ? [
+          ...(asiento.marcado ? [{ id: 'ejecutar', etiqueta: `Ejecutar ${quien}`, elegir: ejecutar }] : []),
           vivo && deNoche
             ? { id: 'vida', etiqueta: `Matar ${quien}`, abreDialogo: true, elegir: () => setMatando(true) }
             : { id: 'vida', etiqueta: vivo ? `Matar ${quien}` : `Revivir ${quien}`, elegir: cambiarVida },
@@ -411,6 +431,10 @@ const FichaAsiento = ({
             : { id: 'nominar', etiqueta: 'Nominar a…', deshabilitada: true, elegir: () => {} },
           ...(hayGuion ? [cambiarFicha] : []),
           // Con el Gardener: lo mismo que arrastrarla sobre otra
+          // Lil' Monsta: en las fichas de esbirro (se despierta a todos los esbirros)
+          ...(onLilmonsta && personaje?.tipo === 'minion'
+            ? [{ id: 'lilmonsta', etiqueta: "Iniciar Lil' Monsta", elegir: onLilmonsta }]
+            : []),
           ...(onIntercambiar ? [{ id: 'intercambiar', etiqueta: 'Intercambiar con…', abreDialogo: true, elegir: onIntercambiar }] : []),
           ...opcionesAlineamiento,
           // Sin guion, el recordatorio solo puede ser de texto propio

@@ -1,131 +1,213 @@
-import { useEffect, useState } from 'react';
-import { BarChart3, Lock, Trophy } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { allBotcCharacters } from '../../data/botcRoles';
+import { BarChart3, History, Lock, ScrollText, Trophy, Users } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { LOGRO_PLATINO, LOGROS, type Logro, type NivelLogro } from '../../data/logros';
 import { urlDelServidor } from '../../utils/api';
-import {
-  getCatalogoPersonajes,
-  getEstadisticas,
-  type Participacion,
-  type PersonajeDelCatalogo,
-  type ResumenEstadisticas,
-} from '../../utils/estadisticasApi';
+import type { ResumenEstadisticas } from '../../utils/estadisticasApi';
+import HistorialPartidas from './HistorialPartidas';
+import Pestanas from './Pestanas';
+import NombrePersonaje from './NombrePersonaje';
+import TextoLogro from './TextoLogro';
+import { porcentaje, TIPOS, usePersonajes, veces, type DatosPersonajes } from './personajes';
 
-/** El nombre en español de un personaje de la sala (su id: el nombre inglés en minúsculas y sin espacios). */
-const NOMBRES_ES = new Map(allBotcCharacters.map((c) => [c.originalName.toLowerCase().replace(/[^a-z0-9]/g, ''), c.name]));
-
-/** Los tipos que se juegan en una ficha, en el orden del grimorio. */
-const TIPOS: { tipo: string; titulo: string }[] = [
-  { tipo: 'townsfolk', titulo: 'Aldeanos' },
-  { tipo: 'outsider', titulo: 'Forasteros' },
-  { tipo: 'minion', titulo: 'Esbirros' },
-  { tipo: 'demon', titulo: 'Demonios' },
-  { tipo: 'traveller', titulo: 'Viajeros' },
-];
-
-const porcentaje = (parte: number, total: number) => (total > 0 ? `${Math.round((parte / total) * 100)} %` : '—');
-const bando = (b: 'bueno' | 'malvado' | null) => (b === 'bueno' ? 'Bueno' : b === 'malvado' ? 'Malvado' : '—');
-const colorBando = (b: 'bueno' | 'malvado' | null) =>
-  b === 'bueno' ? 'text-good-bright' : b === 'malvado' ? 'text-blood-bright' : 'text-on-surface-muted';
 const titulo = 'text-xl font-display text-theme-main flex items-center gap-2 mb-4';
+const PESTANAS = ['general', 'roles', 'logros', 'historial'] as const;
 
 /**
- * Las estadísticas de alguien, cargadas por su id: las propias, siempre; las de
- * otro, si las tiene públicas (si no, lo dice). Es lo que va en el perfil propio,
- * en el de otro y en la página de estadísticas.
+ * Las estadísticas de alguien, en pestañas: General (las cifras), Roles (los
+ * personajes jugados), Logros e Historial (cada partida). La pestaña va en la
+ * dirección (?pestana=historial), así que se puede enlazar y volver a ella.
  */
-export const EstadisticasDeUsuario = ({ userId }: { userId: string }) => {
-  const { user, token } = useAuth();
-  const [resumen, setResumen] = useState<ResumenEstadisticas | null>(null);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    setResumen(null);
-    setError('');
-    getEstadisticas(userId, token)
-      .then(setResumen)
-      .catch((e: Error) => setError(e.message));
-  }, [userId, token]);
-
-  if (error) {
-    return (
-      <p className="flex items-center gap-2 text-on-surface-muted">
-        <Lock className="w-4 h-4" aria-hidden="true" /> {error}
-      </p>
-    );
-  }
-  if (!resumen) return <p className="text-on-surface-muted">Cargando estadísticas…</p>;
-  return <PanelEstadisticas resumen={resumen} propias={user?.id === userId} />;
-};
-
 const PanelEstadisticas = ({ resumen: r, propias }: { resumen: ResumenEstadisticas; propias: boolean }) => {
-  const [catalogo, setCatalogo] = useState<PersonajeDelCatalogo[] | null>(null);
-  useEffect(() => {
-    getCatalogoPersonajes()
-      .then(setCatalogo)
-      .catch(() => setCatalogo([]));
-  }, []);
-
-  const nombre = (id: string) => NOMBRES_ES.get(id) ?? r.personajes[id]?.nombre ?? catalogo?.find((p) => p.id === id)?.nombre ?? id;
-  const icono = (id: string) => r.personajes[id]?.icono ?? catalogo?.find((p) => p.id === id)?.icono;
-  const veces = new Map(r.roles.map((x) => [x.id, x.veces]));
+  const [params, setParams] = useSearchParams();
+  const pedida = params.get('pestana');
+  const activa = PESTANAS.find((p) => p === pedida) ?? 'general';
+  const personajes = usePersonajes(r);
   const logros = new Map(r.causas.map((x) => [x.id, x.veces]));
+  const conseguidos = LOGROS.filter((l) => logros.has(l.id)).length;
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       {propias && (
-        <p className="text-sm text-on-surface-muted">
-          Tus estadísticas son {r.publicas ? 'públicas: las ve cualquiera' : 'privadas: solo las ves tú'}. Se cambia en tu perfil.
+        <p className="flex flex-wrap items-center gap-x-2 text-sm text-on-surface-muted">
+          <Lock className="h-4 w-4" aria-hidden="true" />
+          Tus estadísticas son {r.publicas ? 'públicas: las ve cualquiera' : 'privadas: solo las ves tú'}.
+          <Link to="/profile" className="text-theme-main hover:underline">
+            Cambiarlo en tu perfil
+          </Link>
         </p>
       )}
+      <Pestanas
+        etiqueta="Estadísticas"
+        activa={activa}
+        onCambiar={(id) => setParams(id === 'general' ? {} : { pestana: id }, { replace: true })}
+        pestanas={[
+          { id: 'general', titulo: 'General', icono: <BarChart3 className="h-4 w-4" aria-hidden="true" />, contenido: <General r={r} /> },
+          { id: 'roles', titulo: 'Roles', icono: <Users className="h-4 w-4" aria-hidden="true" />, contenido: <Roles r={r} personajes={personajes} /> },
+          {
+            id: 'logros',
+            titulo: 'Logros',
+            contador: `${conseguidos}/${LOGROS.length}`,
+            contadorLector: `${conseguidos} de ${LOGROS.length}`,
+            icono: <Trophy className="h-4 w-4" aria-hidden="true" />,
+            contenido: <Logros conseguidos={logros} personajes={personajes} />,
+          },
+          {
+            id: 'historial',
+            titulo: 'Historial',
+            icono: <History className="h-4 w-4" aria-hidden="true" />,
+            contenido: <HistorialPartidas usuario={r.usuario} propias={propias} personajes={personajes} />,
+          },
+        ]}
+      />
+    </div>
+  );
+};
 
-      {/* Lo principal, en cifras */}
+/** La pestaña General: lo principal en grande, cómo le va en cada bando y el resto de cifras. */
+const General = ({ r }: { r: ResumenEstadisticas }) => {
+  if (r.jugadas === 0 && r.narradas === 0) {
+    return <p className="text-on-surface-muted">Todavía no hay ninguna partida terminada en la sala.</p>;
+  }
+  return (
+    <div className="space-y-10">
       <section aria-labelledby="estadisticas-resumen">
-        <h3 id="estadisticas-resumen" className={titulo}>
-          <BarChart3 className="w-5 h-5" aria-hidden="true" /> Resumen
+        <h3 id="estadisticas-resumen" className="sr-only">
+          Resumen
         </h3>
-        {r.jugadas === 0 && r.narradas === 0 ? (
-          <p className="text-on-surface-muted">Todavía no hay ninguna partida terminada en la sala.</p>
-        ) : (
-          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Cifra titulo="Partidas jugadas" valor={r.jugadas} />
-            <Cifra titulo="Ganadas" valor={r.ganadas} detalle={porcentaje(r.ganadas, r.jugadas)} />
-            <Cifra
-              titulo="Acabando en el bueno"
-              valor={`${r.porBando.bueno.ganadas} / ${r.porBando.bueno.jugadas}`}
-              detalle={`ganadas: ${porcentaje(r.porBando.bueno.ganadas, r.porBando.bueno.jugadas)}`}
-              clase="text-good-bright"
-            />
-            <Cifra
-              titulo="Acabando en el malvado"
-              valor={`${r.porBando.malvado.ganadas} / ${r.porBando.malvado.jugadas}`}
-              detalle={`ganadas: ${porcentaje(r.porBando.malvado.ganadas, r.porBando.malvado.jugadas)}`}
-              clase="text-blood-bright"
-            />
-            <Cifra titulo="Empezó en el bueno" valor={r.empezo.bueno} clase="text-good-bright" />
-            <Cifra titulo="Empezó en el malvado" valor={r.empezo.malvado} clase="text-blood-bright" />
-            <Cifra titulo="Cambios de bando" valor={r.cambiosDeBando} />
-            <Cifra titulo="Vivo al final" valor={r.vivoAlFinal} detalle={porcentaje(r.vivoAlFinal, r.jugadas)} />
-            <Cifra titulo="Nominaciones hechas" valor={r.nominaciones} />
-            <Cifra titulo="Veces nominado" valor={r.nominado} />
-            <Cifra titulo="Votos" valor={r.votos} />
-            <Cifra titulo="Veces ejecutado" valor={r.ejecutado} />
-            <Cifra titulo="Partidas narradas" valor={r.narradas} />
-          </dl>
-        )}
+        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Medallon titulo="Partidas jugadas" valor={r.jugadas} />
+          <Medallon titulo="Victorias" valor={porcentaje(r.ganadas, r.jugadas)} detalle={`${r.ganadas} de ${r.jugadas}`} />
+          <Medallon titulo="Partidas narradas" valor={r.narradas} />
+        </dl>
       </section>
 
-      <Logros conseguidos={logros} />
+      <section aria-labelledby="estadisticas-bandos">
+        <h3 id="estadisticas-bandos" className={titulo}>
+          Por bando
+        </h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <BarraBando bando="bueno" titulo="En el bien" ganadas={r.porBando.bueno.ganadas} jugadas={r.porBando.bueno.jugadas} empezo={r.empezo.bueno} />
+          <BarraBando
+            bando="malvado"
+            titulo="En el mal"
+            ganadas={r.porBando.malvado.ganadas}
+            jugadas={r.porBando.malvado.jugadas}
+            empezo={r.empezo.malvado}
+          />
+        </div>
+      </section>
 
-      {/* Todos los personajes que existen: jugados (con cuántas veces) y por jugar */}
+      <section aria-labelledby="estadisticas-cifras">
+        <h3 id="estadisticas-cifras" className={titulo}>
+          En la plaza
+        </h3>
+        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Cifra titulo="Vivo al final" valor={r.vivoAlFinal} detalle={porcentaje(r.vivoAlFinal, r.jugadas)} />
+          <Cifra titulo="Cambios de bando" valor={r.cambiosDeBando} />
+          <Cifra titulo="Nominaciones hechas" valor={r.nominaciones} />
+          <Cifra titulo="Veces nominado" valor={r.nominado} />
+          <Cifra titulo="Votos" valor={r.votos} />
+          <Cifra titulo="Veces ejecutado" valor={r.ejecutado} />
+        </dl>
+      </section>
+
+      {r.guiones.length > 0 && (
+        <section aria-labelledby="estadisticas-guiones">
+          <h3 id="estadisticas-guiones" className={titulo}>
+            <ScrollText className="h-5 w-5" aria-hidden="true" /> Guiones más jugados
+          </h3>
+          <ol className="space-y-2">
+            {r.guiones.slice(0, 8).map((g) => (
+              <li key={g.id} className="relative overflow-hidden rounded border border-outline-ghost bg-surface-low px-4 py-2.5">
+                {/* La barra, proporcional al más jugado (solo visual: el número ya lo dice) */}
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-gold/15 to-gold/5"
+                  style={{ width: `${(g.veces / r.guiones[0].veces) * 100}%` }}
+                />
+                <span className="relative flex items-center justify-between gap-3">
+                  <span className="font-display text-on-surface">{g.id}</span>
+                  <span className="text-sm tabular-nums text-on-surface-muted">{g.veces === 1 ? '1 partida' : `${g.veces} partidas`}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+    </div>
+  );
+};
+
+/** Una cifra principal, grande, en un medallón con filo de latón. */
+const Medallon = ({ titulo: t, valor, detalle }: { titulo: string; valor: number | string; detalle?: string }) => (
+  <div className="panel-premium flex flex-col items-center rounded-sm px-4 py-6 text-center">
+    <dt className="font-ui text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-on-surface-muted">{t}</dt>
+    <dd className="mt-2">
+      <span className="text-gilded block font-display text-5xl leading-none tabular-nums">{valor}</span>
+      {detalle && <span className="mt-2 block text-xs text-on-surface-muted">{detalle}</span>}
+    </dd>
+  </div>
+);
+
+/** Cómo le va en un bando: partidas acabadas en él, cuántas ganadas (con su barra) y cuántas empezó en él. */
+const BarraBando = ({ bando, titulo: t, ganadas, jugadas, empezo }: { bando: 'bueno' | 'malvado'; titulo: string; ganadas: number; jugadas: number; empezo: number }) => {
+  const color = bando === 'bueno' ? 'text-good-bright' : 'text-blood-bright';
+  const relleno = bando === 'bueno' ? 'from-good to-good-bright' : 'from-blood to-blood-bright';
+  const ancho = jugadas > 0 ? (ganadas / jugadas) * 100 : 0;
+  return (
+    <div className="rounded border border-outline-ghost bg-surface-low p-4">
+      <p className={`font-display text-lg ${color}`}>{t}</p>
+      <p className="mt-1 text-sm text-on-surface">
+        Ganadas <span className="tabular-nums">{ganadas}</span> de <span className="tabular-nums">{jugadas}</span>
+        <span className="text-on-surface-muted"> · {porcentaje(ganadas, jugadas)}</span>
+      </p>
+      <div aria-hidden="true" className="mt-3 h-2 overflow-hidden rounded-full bg-background/60">
+        <div className={`h-full rounded-full bg-gradient-to-r ${relleno}`} style={{ width: `${ancho}%` }} />
+      </div>
+      <p className="mt-2 text-xs text-on-surface-muted">Empezó en este bando {veces(empezo)}.</p>
+    </div>
+  );
+};
+
+/** La pestaña Roles: los favoritos y todos los personajes que existen, jugados (con cuántas veces) o por jugar. */
+const Roles = ({ r, personajes }: { r: ResumenEstadisticas; personajes: DatosPersonajes }) => {
+  const { catalogo, nombre, icono } = personajes;
+  const vecesRol = new Map(r.roles.map((x) => [x.id, x.veces]));
+  const favoritos = r.roles.slice(0, 3);
+  return (
+    <div className="space-y-10">
+      {favoritos.length > 0 && (
+        <section aria-labelledby="estadisticas-favoritos">
+          <h3 id="estadisticas-favoritos" className={titulo}>
+            Los más jugados
+          </h3>
+          <ol className="grid gap-4 sm:grid-cols-3">
+            {favoritos.map((f, i) => {
+              const img = icono(f.id);
+              return (
+                <li key={f.id} className="panel-premium flex flex-col items-center rounded-sm p-5 text-center">
+                  <span aria-hidden="true" className="font-ui text-xs font-semibold uppercase tracking-[0.3em] text-gold">
+                    {['I', 'II', 'III'][i]}
+                  </span>
+                  {img ? (
+                    <img src={urlDelServidor(img)} alt="" className="my-2 h-20 w-20 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)]" />
+                  ) : (
+                    <span className="my-2 h-20 w-20" aria-hidden="true" />
+                  )}
+                  <NombrePersonaje id={f.id} personajes={personajes} className="font-display text-lg text-on-surface-bright" />
+                  <span className="text-sm text-on-surface-muted">{veces(f.veces)}</span>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      )}
+
       <section aria-labelledby="estadisticas-personajes">
         <h3 id="estadisticas-personajes" className={titulo}>
-          Personajes
+          Todos los personajes
         </h3>
-        <p className="-mt-2 mb-4 text-xs text-on-surface-muted">
-          Cuenta el rol con el que empieza la partida y cada día; los cambios de la noche, no.
-        </p>
+        <p className="-mt-2 mb-4 text-xs text-on-surface-muted">Cuenta el rol con el que empieza la partida y cada día; los cambios de la noche, no.</p>
         {!catalogo ? (
           <p className="text-on-surface-muted">Cargando personajes…</p>
         ) : (
@@ -133,18 +215,21 @@ const PanelEstadisticas = ({ resumen: r, propias }: { resumen: ResumenEstadistic
             {TIPOS.map(({ tipo, titulo: t }) => {
               const deTipo = catalogo
                 .filter((p) => p.tipo === tipo)
-                .sort((a, b) => (veces.get(b.id) ?? 0) - (veces.get(a.id) ?? 0) || nombre(a.id).localeCompare(nombre(b.id), 'es'));
+                .sort((a, b) => (vecesRol.get(b.id) ?? 0) - (vecesRol.get(a.id) ?? 0) || nombre(a.id).localeCompare(nombre(b.id), 'es'));
               if (deTipo.length === 0) return null;
-              const jugados = deTipo.filter((p) => veces.has(p.id)).length;
+              const jugados = deTipo.filter((p) => vecesRol.has(p.id)).length;
               const id = `estadisticas-tipo-${tipo}`;
               return (
                 <div key={tipo}>
                   <h4 id={id} className="mb-2 font-ui text-sm font-semibold text-on-surface">
-                    {t} <span className="font-normal text-on-surface-muted">· {jugados} de {deTipo.length} jugados</span>
+                    {t}{' '}
+                    <span className="font-normal text-on-surface-muted">
+                      · {jugados} de {deTipo.length} jugados
+                    </span>
                   </h4>
                   <ul aria-labelledby={id} className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                     {deTipo.map((p) => {
-                      const n = veces.get(p.id) ?? 0;
+                      const n = vecesRol.get(p.id) ?? 0;
                       const img = icono(p.id);
                       return (
                         <li
@@ -154,12 +239,12 @@ const PanelEstadisticas = ({ resumen: r, propias }: { resumen: ResumenEstadistic
                           }`}
                         >
                           {img ? <img src={urlDelServidor(img)} alt="" className="h-9 w-9 object-contain" /> : <span className="h-9 w-9" aria-hidden="true" />}
-                          <span className="flex-1 text-sm">{nombre(p.id)}</span>
+                          <NombrePersonaje id={p.id} personajes={personajes} className="flex-1 text-sm" />
                           <span className="text-sm tabular-nums text-on-surface-muted">
                             {n > 0 ? (
                               <>
-                                × {n}
-                                <span className="sr-only">: jugado {n === 1 ? '1 vez' : `${n} veces`}</span>
+                                <span aria-hidden="true">× {n}</span>
+                                <span className="sr-only">: jugado {veces(n)}</span>
                               </>
                             ) : (
                               <span className="sr-only">: no jugado</span>
@@ -175,47 +260,6 @@ const PanelEstadisticas = ({ resumen: r, propias }: { resumen: ResumenEstadistic
           </div>
         )}
       </section>
-
-      {r.guiones.length > 0 && (
-        <section aria-labelledby="estadisticas-guiones">
-          <h3 id="estadisticas-guiones" className={titulo}>
-            Guiones más jugados
-          </h3>
-          <ul className="flex flex-wrap gap-2">
-            {r.guiones.map((g) => (
-              <li key={g.id} className="rounded border border-outline-ghost bg-surface-low px-3 py-1.5 text-sm">
-                {g.id} <span className="text-on-surface-muted">× {g.veces}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {r.ultimas.length > 0 && (
-        <section aria-labelledby="estadisticas-ultimas">
-          <h3 id="estadisticas-ultimas" className={titulo}>
-            Últimas partidas
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-on-surface-muted">
-                <tr className="border-b border-outline-ghost">
-                  <th scope="col" className="py-2 pr-3 font-semibold">Fecha</th>
-                  <th scope="col" className="py-2 pr-3 font-semibold">Guion</th>
-                  <th scope="col" className="py-2 pr-3 font-semibold">Roles</th>
-                  <th scope="col" className="py-2 pr-3 font-semibold">Bando</th>
-                  <th scope="col" className="py-2 font-semibold">Resultado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {r.ultimas.map((p) => (
-                  <FilaPartida key={p.partidaId} p={p} nombre={nombre} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
     </div>
   );
 };
@@ -229,17 +273,17 @@ const COLOR_NIVEL: Record<NivelLogro, string> = {
 const NOMBRE_NIVEL: Record<NivelLogro, string> = { bronce: 'Bronce', plata: 'Plata', oro: 'Oro', platino: 'Platino' };
 
 /**
- * Los logros, como los trofeos de una consola: cada vez que su personaje se ha
- * activado (lo que marca el narrador al revelar el grimorio). Los que faltan se
+ * La pestaña Logros, como los trofeos de una consola: cada vez que su personaje se
+ * ha activado (lo que marca el narrador al revelar el grimorio). Los que faltan se
  * ven en gris; el de platino, al tenerlos todos.
  */
-const Logros = ({ conseguidos }: { conseguidos: Map<string, number> }) => {
+const Logros = ({ conseguidos, personajes }: { conseguidos: Map<string, number>; personajes: DatosPersonajes }) => {
   const total = LOGROS.filter((l) => conseguidos.has(l.id)).length;
   const platino = total === LOGROS.length;
   return (
     <section aria-labelledby="estadisticas-logros">
       <h3 id="estadisticas-logros" className={titulo}>
-        <Trophy className="w-5 h-5" aria-hidden="true" /> Logros
+        <Trophy className="h-5 w-5" aria-hidden="true" /> Logros
         <span className="font-body text-sm font-normal text-on-surface-muted">
           · {total} de {LOGROS.length}
         </span>
@@ -251,21 +295,26 @@ const Logros = ({ conseguidos }: { conseguidos: Map<string, number> }) => {
         aria-valuemin={0}
         aria-valuemax={LOGROS.length}
         aria-valuenow={total}
-        className="mb-4 h-2 overflow-hidden rounded-full border border-outline-ghost bg-surface-low"
+        className="mb-6 h-2 overflow-hidden rounded-full border border-outline-ghost bg-surface-low"
       >
-        <div className="h-full bg-theme-main transition-[width]" style={{ width: `${(total / LOGROS.length) * 100}%` }} />
+        <div className="h-full bg-gradient-to-r from-gold-deep to-gold-bright" style={{ width: `${(total / LOGROS.length) * 100}%` }} />
       </div>
       <ul className="grid gap-3 sm:grid-cols-2">
         {[LOGRO_PLATINO, ...LOGROS].map((l) => (
-          <TarjetaLogro key={l.id} logro={l} veces={l.id === 'platino' ? (platino ? 1 : 0) : (conseguidos.get(l.id) ?? 0)} />
+          <TarjetaLogro
+            key={l.id}
+            logro={l}
+            veces={l.id === 'platino' ? (platino ? 1 : 0) : (conseguidos.get(l.id) ?? 0)}
+            personajes={personajes}
+          />
         ))}
       </ul>
     </section>
   );
 };
 
-const TarjetaLogro = ({ logro, veces }: { logro: Logro; veces: number }) => {
-  const conseguido = veces > 0;
+const TarjetaLogro = ({ logro, veces: n, personajes }: { logro: Logro; veces: number; personajes: DatosPersonajes }) => {
+  const conseguido = n > 0;
   return (
     <li
       className={`flex items-center gap-3 rounded border p-3 ${
@@ -282,12 +331,15 @@ const TarjetaLogro = ({ logro, veces }: { logro: Logro; veces: number }) => {
       </span>
       <span className="min-w-0 flex-1">
         <span className="block font-display text-on-surface">{logro.nombre}</span>
-        <span className="block text-xs text-on-surface-muted">{logro.descripcion}</span>
+        <span className="block text-xs text-on-surface-muted">
+          <TextoLogro texto={logro.descripcion} personajes={personajes} />
+          {logro.exigeVictoria && <span className="italic"> Solo cuenta si ganas.</span>}
+        </span>
         <span className="mt-0.5 block font-ui text-[0.68rem] font-semibold uppercase tracking-[0.15em]">
           <span className={conseguido ? COLOR_NIVEL[logro.nivel] : 'text-on-surface-muted'}>{NOMBRE_NIVEL[logro.nivel]}</span>
           <span className="text-on-surface-muted">
             {' · '}
-            {conseguido ? (logro.id === 'platino' ? 'conseguido' : veces === 1 ? 'conseguido 1 vez' : `conseguido ${veces} veces`) : 'bloqueado'}
+            {conseguido ? (logro.id === 'platino' ? 'conseguido' : `conseguido ${veces(n)}`) : 'bloqueado'}
           </span>
         </span>
       </span>
@@ -295,52 +347,14 @@ const TarjetaLogro = ({ logro, veces }: { logro: Logro; veces: number }) => {
   );
 };
 
-const Cifra = ({ titulo, valor, detalle, clase = 'text-on-surface' }: { titulo: string; valor: number | string; detalle?: string; clase?: string }) => (
+const Cifra = ({ titulo: t, valor, detalle, clase = 'text-on-surface' }: { titulo: string; valor: number | string; detalle?: string; clase?: string }) => (
   <div className="rounded border border-outline-ghost bg-surface-low p-3">
-    <dt className="text-xs text-on-surface-muted">{titulo}</dt>
+    <dt className="text-xs text-on-surface-muted">{t}</dt>
     <dd className={`font-display text-2xl tabular-nums ${clase}`}>
       {valor}
       {detalle && <span className="block font-body text-xs text-on-surface-muted">{detalle}</span>}
     </dd>
   </div>
 );
-
-const FilaPartida = ({ p, nombre }: { p: Participacion; nombre: (id: string) => string }) => {
-  const fecha = new Date(p.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
-  if (p.papel === 'narrador') {
-    return (
-      <tr className="border-b border-outline-ghost/50">
-        <td className="py-2 pr-3 whitespace-nowrap">{fecha}</td>
-        <td className="py-2 pr-3">{p.guion ?? '—'}</td>
-        <td className="py-2 pr-3 italic text-on-surface-muted" colSpan={2}>
-          Narrador
-        </td>
-        <td className="py-2">Ganó el {p.ganador === 'bueno' ? 'bueno' : 'malvado'}</td>
-      </tr>
-    );
-  }
-  const cambio = p.alineamientoInicial && p.alineamientoFinal && p.alineamientoInicial !== p.alineamientoFinal;
-  return (
-    <tr className="border-b border-outline-ghost/50">
-      <td className="py-2 pr-3 whitespace-nowrap">{fecha}</td>
-      <td className="py-2 pr-3">{p.guion ?? '—'}</td>
-      <td className="py-2 pr-3">{p.roles.length ? p.roles.map(nombre).join(' → ') : '—'}</td>
-      <td className="py-2 pr-3 whitespace-nowrap">
-        {cambio ? (
-          <>
-            <span className={colorBando(p.alineamientoInicial)}>{bando(p.alineamientoInicial)}</span> →{' '}
-            <span className={colorBando(p.alineamientoFinal)}>{bando(p.alineamientoFinal)}</span>
-          </>
-        ) : (
-          <span className={colorBando(p.alineamientoFinal)}>{bando(p.alineamientoFinal)}</span>
-        )}
-      </td>
-      <td className="py-2 whitespace-nowrap">
-        {p.gano === null ? '—' : p.gano ? <span className="text-gold-bright">Ganó</span> : 'Perdió'}
-        {p.vivo !== null && <span className="text-on-surface-muted"> · {p.vivo ? 'vivo' : 'muerto'}</span>}
-      </td>
-    </tr>
-  );
-};
 
 export default PanelEstadisticas;

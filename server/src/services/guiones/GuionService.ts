@@ -1,3 +1,4 @@
+import { DjinnRepository } from '../../repositories/DjinnRepository';
 import { PersonajeGuardado, PersonajeRepository } from '../../repositories/PersonajeRepository';
 import {
   GuionImportado,
@@ -22,10 +23,13 @@ const TIPOS_BASE = ['townsfolk', 'outsider', 'minion', 'demon'] as const;
 /**
  * Todo lo de los guiones: el catálogo de personajes, los guiones por defecto,
  * importar un guion (JSON) y resolverlo a sus personajes y su orden de noche.
- * Lee el catálogo de la copia local (PersonajeRepository), nunca de fuera.
+ * Lee el catálogo y las reglas del Djinn de la copia local, nunca de fuera.
  */
 export class GuionService {
-  constructor(private personajes: PersonajeRepository) {}
+  constructor(
+    private personajes: PersonajeRepository,
+    private djinn: DjinnRepository,
+  ) {}
 
   async catalogo(): Promise<Personaje[]> {
     return (await this.personajes.listar()).map(sinDatosDeSincronizacion);
@@ -88,6 +92,8 @@ export class GuionService {
       npcs,
       viajeros,
       bootlegger: guion.bootlegger,
+      // Las del Djinn: las de los pares de personajes que trae el guion
+      djinn: await this.djinn.entrePersonajes([...enGuion]),
     };
   }
 }

@@ -10,6 +10,7 @@ import {
   MANO_PAZ,
   MANO_PEINETA,
   MANO_PUNO,
+  MANO_SENALAR,
   MANO_SPOCK,
   MANO_TIJERA,
   type TrazoCaja,
@@ -28,6 +29,8 @@ const FORMAS: Record<string, TrazoCaja> = {
   cuernos: MANO_CUERNOS,
   lagarto: MANO_LAGARTO,
   spock: MANO_SPOCK,
+  // El dedo levantado; también es la mano que señala (ver ManosSenalamiento)
+  senalar: EN_256(MANO_SENALAR),
 };
 
 /** Lleva el trazo de su caja a la de 256 × 256, centrado: la escala y cómo colocarlo. */

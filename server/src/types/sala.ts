@@ -16,7 +16,7 @@ export const SALA_ESTILOS_MANO = ['laton', 'cinco', 'guante', 'esqueleto', 'guan
 export const SALA_PARTIDAS_NOVATO = 10;
 
 export const SALA_FORMAS_MANO: SalaFormaMano[] = [
-  'palma', 'tijera', 'puno', 'peineta', 'paz', 'cuernos', 'lagarto', 'spock',
+  'palma', 'tijera', 'puno', 'peineta', 'paz', 'cuernos', 'lagarto', 'spock', 'senalar',
   // Emoticonos (el cliente sabe qué emoji es cada uno: formasMano.ts)
   ...['sonrisa', 'risa', 'guino', 'enamorado', 'beso', 'gafas', 'pensando', 'sospecha', 'silencio', 'susto',
     'llanto', 'enfado', 'diablo', 'angel', 'sueno', 'fiesta', 'labios', 'corazon', 'rosa', 'girasol',
@@ -200,7 +200,21 @@ export type SalaAlineamiento = 'bueno' | 'malvado';
  */
 export const CAUSAS_FIN_PARTIDA = [
   'slayer', 'mayor', 'alsaahir', 'goblin', 'saint', 'mastermind', 'snakecharmer', 'klutz', 'eviltwin', 'fanggu', 'vortox',
+  'huntsman', 'damsel', 'fearmonger', 'leviathan', 'cultleader', 'puzzlemaster', 'banshee', 'amnesiac', 'scarletwoman',
+  'politician',
 ];
+
+/**
+ * Las causas cuyo logro solo cuenta si quien lo consigue gana la partida: picar al
+ * Demonio y perder, o salvar un día más al Demonio y que gane el bien, no valen.
+ */
+export const CAUSAS_CON_VICTORIA = ['mastermind', 'snakecharmer', 'fanggu', 'scarletwoman', 'leviathan', 'cultleader', 'politician'];
+
+/**
+ * Las causas cuyo logro no es de quien lleva ese personaje sino de un esbirro que
+ * elige el narrador: la Doncel descubierta es logro del esbirro que la cazó.
+ */
+export const CAUSAS_DE_ESBIRRO = ['damsel'];
 
 /**
  * El reloj del narrador: una cuenta atrás que ven todos, con su mensaje
@@ -214,6 +228,35 @@ export interface SalaReloj {
   /** El mensaje (puede ir vacío). */
   mensaje: string;
 }
+
+/**
+ * Un señalamiento: el narrador pide que unos jugadores señalen a otros (con un
+ * mensaje). Mientras dura la cuenta atrás cada uno elige (y puede cambiar);
+ * al acabar se congela. De día lo ven todos; de noche, solo los que señalan
+ * (despiertos) y quien ve el grimorio. Lo quita el narrador.
+ */
+export interface SalaSenalamiento {
+  id: string;
+  /** 'normal', o el de Lil' Monsta: los esbirros eligen quién lo cuida, sin cuenta atrás. */
+  tipo: 'normal' | 'lilmonsta';
+  /** Lo que se pide, en grande (puede ir vacío). */
+  mensaje: string;
+  /** Los asientos que señalan y los que se pueden señalar (ids; si no se eligió ninguno, todos). */
+  senaladores: string[];
+  objetivos: string[];
+  /** De día: lo ven todos (y suena la cuenta atrás). */
+  publico: boolean;
+  /** Cuándo empezó y cuándo acaba la cuenta atrás (ms, reloj del servidor); fin null: sin cuenta atrás. */
+  inicio: number;
+  fin: number | null;
+  /** Ya no se puede señalar: acabó la cuenta atrás o (Lil' Monsta) todos coinciden. */
+  congelado: boolean;
+  /** A quién señala cada asiento (asiento que señala → asiento señalado). */
+  senales: Record<string, string>;
+}
+
+/** Los límites de un señalamiento: segundos de la cuenta atrás (10 por defecto) y largo del mensaje. */
+export const SALA_SENALAMIENTO = { minSegundos: 3, maxSegundos: 120, defectoSegundos: 10, mensajeMax: 120 };
 
 export interface SalaRevelacion {
   ganador: SalaAlineamiento;
@@ -288,6 +331,12 @@ export interface SalaNominacion {
    * más que la que más votos tuvo (aunque empatara y nadie lleve la calavera).
    */
   votosNecesariosPorDefecto: number;
+  /**
+   * Votación secreta (el Organ Grinder vivo y sin su «Drunk»): a quien no ve el
+   * grimorio no se le mandan los votos que hacen falta, ni el recuento, ni quién
+   * vota (salvo lo suyo), ni las manos de los demás (ver salaSocket).
+   */
+  privada: boolean;
 }
 
 /** Una nominación del día y, si se votó, su votación, para el registro del narrador. */
@@ -466,6 +515,11 @@ export interface SalaEstado {
   gong: number | null;
   /** El reloj del narrador (una cuenta atrás con un mensaje), o null. Para todos. */
   reloj: SalaReloj | null;
+  /**
+   * El señalamiento en curso (o ya congelado), o null. De día, para todos; de
+   * noche, para los narradores, quien ve el grimorio y los jugadores que señalan.
+   */
+  senalamiento: SalaSenalamiento | null;
   /** Hay videollamada (cámaras y micrófonos) en esta sala. */
   video: boolean;
   /** Las conversaciones privadas en curso (todos ven quién habla con quién, no qué). */

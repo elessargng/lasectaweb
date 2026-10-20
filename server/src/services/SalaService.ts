@@ -14,6 +14,7 @@ import {
   SalaParticipante,
   SalaRegistroVotacion,
   SalaReloj,
+  SalaSenalamiento,
   SalaRevelacion,
   SalaRol,
   NUM_FAROLES,
@@ -25,7 +26,12 @@ import {
 import { GuionResuelto, PersonajeDeGuion } from '../types/guiones';
 import { repartoPara } from './partida/distribucion';
 import { esAvatarSalaGuardado } from '../utils/salaAvatarStorage';
-import { SeguimientoPartida, type FotoJugador, type RegistroPartida } from './estadisticas/SeguimientoPartida';
+import {
+  SeguimientoPartida,
+  type FotoJugador,
+  type InstantaneaSeguimiento,
+  type RegistroPartida,
+} from './estadisticas/SeguimientoPartida';
 
 /** Margen para volver tras una desconexión (recarga, red caída) sin perder el papel. */
 export const SALA_GRACIA_MS = 20_000;
@@ -108,6 +114,16 @@ export const esRecordatorioDeIdentidad = (texto: string) => /^is the\b/i.test(te
 /** Lo mismo con un recordatorio puesto: uno con texto propio nunca lo es (lo escribe el narrador). */
 const esIdentidad = (r: SalaRecordatorio) => r.personaje !== RECORDATORIO_TEXTO && esRecordatorioDeIdentidad(r.texto);
 
+/** Una copia de la lista barajada al azar (Fisher-Yates). */
+const barajar = <T>(lista: readonly T[]): T[] => {
+  const copia = [...lista];
+  for (let i = copia.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [copia[i], copia[j]] = [copia[j], copia[i]];
+  }
+  return copia;
+};
+
 /** El NPC con el que el narrador puede pedir silencio a todos: el Bibliotecario del Infierno. */
 export const NPC_SILENCIO = 'hellslibrarian';
 /** Tor: los jugadores no saben su personaje (lo ven al morir). */
@@ -122,6 +138,29 @@ export const NPC_POPE = 'pope';
 export const NPC_STORMCATCHER = 'stormcatcher';
 /** El Barquero: el último día, los muertos recuperan su voto (el narrador lo hace con un botón). */
 export const NPC_FERRYMAN = 'ferryman';
+/** Revolutionary: los dos asientos con su recordatorio reciben, al repartir la bolsa, personajes del mismo alineamiento. */
+export const NPC_REVOLUTIONARY = 'revolutionary';
+/** El Carnicero (viajero): vivo, tras la primera ejecución se puede nominar otra vez (no anochece). */
+export const VIAJERO_BUTCHER = 'butcher';
+/** Lil' Monsta: cada noche los esbirros eligen (señalando) quién lo cuida; ese lleva su «Is The Demon». */
+export const DEMONIO_LILMONSTA = 'lilmonsta';
+/** Organ Grinder: vivo y sin su «Drunk», las votaciones son secretas (ver SalaNominacion.privada). */
+export const ESBIRRO_ORGAN_GRINDER = 'organgrinder';
+
+/**
+ * Los recordatorios que se ponen solos en la ficha del ejecutado si su personaje
+ * está en juego y vivo: su texto en el original (en el catálogo). `unico`: solo
+ * hay uno en la mesa (se quita de donde estuviera); `soloBueno`: solo si el
+ * ejecutado es bueno.
+ */
+const RECORDATORIOS_EJECUCION: { personaje: string; texto: string; unico: boolean; soloBueno?: boolean }[] = [
+  // Tiene la habilidad del último ejecutado
+  { personaje: 'cannibal', texto: 'Lunch', unico: true },
+  // Esta noche sabe qué personaje fue ejecutado hoy
+  { personaje: 'undertaker', texto: 'Die Today', unico: true },
+  // Si se ejecuta a más de un bueno, gana el mal
+  { personaje: 'leviathan', texto: 'Good Player Executed', unico: false, soloBueno: true },
+];
 
 /** Las casillas de farol, todas vacías. */
 /** Con cuenta y menos de SALA_PARTIDAS_NOVATO partidas (si no se sabe cuántas, no). */
@@ -171,11 +210,31 @@ interface Entrada {
  * en la lista cada uno tiene otro id, público.
  */
 /** La nominación tal como se guarda: los votos que hacen falta se calculan al pedirla. */
-type NominacionInterna = Omit<SalaNominacion, 'votosNecesarios' | 'votosNecesariosPorDefecto'> & {
+/**
+ * Lo que un cambio de fase deja atrás y la máquina del tiempo devuelve: al
+ * anochecer, la calavera y el récord de votos del día; al amanecer, los
+ * despertares y el señalamiento de la noche. Y lo apuntado para las estadísticas.
+ */
+interface PasoDeFase {
+  antes: SalaFase;
+  despues: SalaFase;
+  seguimiento: InstantaneaSeguimiento;
+  marcas?: { asiento: string; votos: number | null }[];
+  maximoDelDia?: number | null;
+  hilos?: { asiento: string; ocupante: string | null; mensajes: MensajeDespertar[] }[];
+  senalamiento?: SalaSenalamiento | null;
+}
+
+/** Cuántos cambios de fase se recuerdan para volver atrás. */
+const PASOS_DE_FASE_MAX = 20;
+
+type NominacionInterna = Omit<SalaNominacion, 'votosNecesarios' | 'votosNecesariosPorDefecto' | 'privada'> & {
   /** Los votos que ha fijado el narrador; null: los de por defecto. */
   votosElegidos: number | null;
   /** Su entrada del registro, que se completa al terminar la votación. */
   registro: SalaRegistroVotacion | null;
+  /** Los asientos de muertos que ya no tenían voto al empezar la votación (para la votación secreta). */
+  gastadosAlVotar?: string[];
 };
 
 export class SalaService {
@@ -559,22 +618,49 @@ export class SalaService {
    * asientos que no llevan un viajero puesto a mano (tiene que haber tantos como
    * asientos; no lo comprueba). El
    * alineamiento vuelve a ser el de su tipo. La bolsa se queda como estaba.
+   *
+   * Revolutionary: si exactamente dos de esos asientos llevan su recordatorio,
+   * les tocan dos personajes del mismo alineamiento (ver mismoAlineamiento).
    */
   repartirBolsa(): void {
-    const personajes = [...this.bolsaActual];
-    for (let i = personajes.length - 1; i > 0; i--) {
-      const j = randomInt(i + 1);
-      [personajes[i], personajes[j]] = [personajes[j], personajes[i]];
+    const asientos = this.mesa.filter((a) => !this.llevaViajero(a));
+    const revolucionarios = asientos.flatMap((a, i) =>
+      a.recordatorios.some((r) => r.personaje === NPC_REVOLUTIONARY) ? [i] : [],
+    );
+    let personajes = barajar(this.bolsaActual);
+    if (revolucionarios.length === 2) {
+      personajes = this.mismoAlineamiento(personajes, revolucionarios[0], revolucionarios[1]);
     }
-    this.mesa
-      .filter((a) => !this.llevaViajero(a))
-      .forEach((a, i) => {
-        a.personaje = personajes[i] ?? null;
-        a.alineamiento = null;
-        // Un reparto nuevo: quién era cada uno (los «Is The …» del anterior) ya no vale
-        a.recordatorios = a.recordatorios.filter((r) => !esIdentidad(r));
-        this.identidadAutomatica(a);
-      });
+    asientos.forEach((a, i) => {
+      a.personaje = personajes[i] ?? null;
+      a.alineamiento = null;
+      // Un reparto nuevo: quién era cada uno (los «Is The …» del anterior) ya no vale
+      a.recordatorios = a.recordatorios.filter((r) => !esIdentidad(r));
+      this.identidadAutomatica(a);
+    });
+  }
+
+  /**
+   * Los personajes ya barajados, con dos del mismo alineamiento por su tipo en
+   * las posiciones x e y (aldeanos y forasteros, buenos; esbirros y demonios,
+   * malvados; los viajeros no cuentan). El par se elige al azar entre todos los
+   * posibles, así que sale malvado tan a menudo como pares malvados hay. Los
+   * demás siguen en su orden barajado. Sin ningún par posible, los deja igual.
+   */
+  private mismoAlineamiento(personajes: string[], x: number, y: number): string[] {
+    const tipo = (id: string) => this.personaje(id)?.tipo;
+    const buenos = personajes.filter((id) => tipo(id) === 'townsfolk' || tipo(id) === 'outsider');
+    const malvados = personajes.filter((id) => tipo(id) === 'minion' || tipo(id) === 'demon');
+    const pares = (n: number) => (n * (n - 1)) / 2;
+    const total = pares(buenos.length) + pares(malvados.length);
+    if (total === 0) return personajes;
+    const grupo = randomInt(total) < pares(buenos.length) ? buenos : malvados;
+    // Dos distintos del grupo, cada uno a una de las dos posiciones
+    const [primero, segundo] = barajar(grupo.map((_, i) => i)).slice(0, 2);
+    const elegidos = [grupo[primero], grupo[segundo]];
+    const resto = [...personajes];
+    for (const id of elegidos) resto.splice(resto.indexOf(id), 1);
+    return personajes.map((_, i) => (i === x ? elegidos[0] : i === y ? elegidos[1] : resto.shift()!));
   }
   /** Lo siguiente que toca en la nominación: el fin de la cuenta atrás o el próximo paso de la votación. */
   private temporizador: NodeJS.Timeout | null = null;
@@ -643,12 +729,23 @@ export class SalaService {
    */
   irANoche(): void {
     const { momento, numero, reinicios } = this.faseActual;
+    // Para poder volver (lo que se quita al anochecer y las estadísticas como estaban)
+    const paso: PasoDeFase = {
+      antes: { ...this.faseActual },
+      despues: this.faseActual,
+      seguimiento: this.seguimiento.instantanea(),
+      marcas: this.mesa.filter((a) => a.marcado).map((a) => ({ asiento: a.id, votos: a.votosMarca })),
+      maximoDelDia: this.maximoDelDia,
+    };
     if (momento === 'preparacion' || !this.seguimiento.estaEmpezada()) this.seguimiento.empezar(this.fotosDeCuentas());
     else for (const a of this.mesa.filter((x) => x.marcado)) this.seguimiento.ejecutado(this.cuentaDe(a.ocupante));
     this.faseActual = { momento: 'noche', numero: momento === 'preparacion' ? 1 : numero + 1, reinicios };
+    // Lo que se señaló de día no sigue de noche (lo verían otros)
+    this.senalamientoActual = null;
     this.cerrarNominacion();
     this.desmarcar();
     this.maximoDelDia = null;
+    this.recordarPaso({ ...paso, despues: { ...this.faseActual } });
   }
 
   /**
@@ -656,10 +753,72 @@ export class SalaService {
    * se ven de día y la noche siguiente empieza sin ellos.
    */
   amanecer(): void {
+    const paso: PasoDeFase = {
+      antes: { ...this.faseActual },
+      despues: this.faseActual,
+      seguimiento: this.seguimiento.instantanea(),
+      hilos: this.hilos.map((h) => ({ ...h, mensajes: [...h.mensajes] })),
+      senalamiento: this.senalamientoActual,
+    };
     this.faseActual = { ...this.faseActual, momento: 'dia' };
     // El rol con el que empieza el día cuenta como jugado (los cambios de la noche, no)
     this.seguimiento.anotarRoles(this.fotosDeCuentas());
     this.hilos = [];
+    // Lo de la noche no se ve de día
+    this.senalamientoActual = null;
+    this.recordarPaso({ ...paso, despues: { ...this.faseActual } });
+  }
+
+  /** Los cambios de fase hechos, para volver atrás (los más antiguos se olvidan). */
+  private pasosDeFase: PasoDeFase[] = [];
+
+  private recordarPaso(paso: PasoDeFase): void {
+    this.pasosDeFase.push(paso);
+    if (this.pasosDeFase.length > PASOS_DE_FASE_MAX) this.pasosDeFase.shift();
+  }
+
+  /**
+   * La fase a la que se volvería con la máquina del tiempo: del día N, la noche N;
+   * de la noche N, el día anterior (de la noche 1, la preparación). null en la preparación.
+   */
+  faseAnterior(): SalaFase | null {
+    const { momento, numero, reinicios } = this.faseActual;
+    if (momento === 'preparacion') return null;
+    if (momento === 'dia') return { momento: 'noche', numero, reinicios };
+    return numero <= 1 ? { momento: 'preparacion', numero: 0, reinicios } : { momento: 'dia', numero: numero - 1, reinicios };
+  }
+
+  /**
+   * La máquina del tiempo del narrador: vuelve a la fase anterior (ver faseAnterior),
+   * por si se pasó de fase antes de tiempo. Si fue este mismo cambio el que se
+   * hizo, devuelve lo que se quitó: al volver al día, la calavera y el récord de
+   * votos; a la noche, sus despertares (con lo que se dijeron) y su señalamiento; y
+   * las estadísticas, como estaban. Lo demás de la partida (muertes, fichas,
+   * recordatorios) se queda como está. Se cierra la nominación abierta. No comprueba permisos.
+   */
+  volverAtras(): boolean {
+    const anterior = this.faseAnterior();
+    if (!anterior) return false;
+    const igual = (a: SalaFase, b: SalaFase) => a.momento === b.momento && a.numero === b.numero && a.reinicios === b.reinicios;
+    const ultimo = this.pasosDeFase[this.pasosDeFase.length - 1];
+    const paso = ultimo && igual(ultimo.despues, this.faseActual) && igual(ultimo.antes, anterior) ? this.pasosDeFase.pop()! : null;
+    this.cerrarNominacion();
+    this.senalamientoActual = null;
+    this.faseActual = anterior;
+    if (anterior.momento === 'dia') {
+      // Al día: sin los despertares de la noche (como al amanecer) y, si se puede, con su calavera
+      this.hilos = [];
+      this.maximoDelDia = paso?.maximoDelDia ?? null;
+      for (const m of paso?.marcas ?? []) this.marcar(m.asiento, true, m.votos);
+    } else if (anterior.momento === 'noche') {
+      this.desmarcar();
+      this.maximoDelDia = null;
+      if (paso?.hilos) this.hilos = paso.hilos;
+      if (paso?.senalamiento) this.senalamientoActual = paso.senalamiento;
+    }
+    if (paso) this.seguimiento.restaurar(paso.seguimiento);
+    else if (anterior.momento === 'preparacion') this.seguimiento.reiniciar();
+    return true;
   }
 
   /** Recordatorios del orden de noche cambiados a mano (ver SalaEstado.recordatoriosNoche). */
@@ -731,6 +890,8 @@ export class SalaService {
    */
   limpiarGrimorio(): void {
     this.cerrarNominacion();
+    this.senalamientoActual = null;
+    this.pasosDeFase = [];
     this.seguimiento.reiniciar();
     // Otra partida: los NPCs del guion, en juego (si alguno se quitó, vuelve); los
     // demás que se pusieron a mano, siguen
@@ -792,6 +953,7 @@ export class SalaService {
     const i = this.mesa.findIndex((a) => a.id === n.hasta);
     const orden = this.mesa.map((_, k) => this.mesa[(i + 1 + k) % this.mesa.length].id);
     n.votacion = { orden, paso: 0, resultados: {}, votos: 0, terminada: false };
+    n.gastadosAlVotar = this.mesa.filter((a) => a.votoGastado).map((a) => a.id);
     this.alCambiarSola();
     this.temporizador = setTimeout(() => this.avanzarVotacion(), this.ajustes.segundosPorFicha * 1000);
   }
@@ -874,7 +1036,28 @@ export class SalaService {
       votacion: actual.votacion ? { ...actual.votacion, resultados: { ...actual.votacion.resultados } } : null,
       votosNecesarios: votosElegidos ?? porDefecto,
       votosNecesariosPorDefecto: porDefecto,
+      privada: this.votacionSecreta(),
     };
+  }
+
+  /**
+   * Las votaciones son secretas: el Organ Grinder está en juego (de verdad: un
+   * Borracho que se cree Organ Grinder no cuenta), vivo y sin un recordatorio
+   * «Drunk» en su ficha (el suyo, al elegir estar borracho, o el de otro).
+   */
+  votacionSecreta(): boolean {
+    const og = this.mesaAlDia().find((a) => !a.muerto && this.identidad(a) === ESBIRRO_ORGAN_GRINDER);
+    return !!og && !og.recordatorios.some((r) => /^drunk$/i.test(r.texto.trim()));
+  }
+
+  /**
+   * En la votación en curso, los asientos que ya no tenían voto al empezar (null si
+   * no se está votando): en la votación secreta, a los demás se les manda esto en
+   * lugar de su voto gastado, para que no se sepa qué muertos votan.
+   */
+  gastadosAlVotar(): Set<string> | null {
+    const n = this.nominacionVigente();
+    return n?.votacion && n.gastadosAlVotar ? new Set(n.gastadosAlVotar) : null;
   }
 
   /**
@@ -1068,6 +1251,144 @@ export class SalaService {
     this.relojActual = null;
   }
 
+  /** El señalamiento (ver SalaEstado.senalamiento), o null. */
+  private senalamientoActual: SalaSenalamiento | null = null;
+
+  /**
+   * El señalamiento, o null. Al leerlo se pone al día: los asientos que ya no
+   * existen salen, y con la cuenta atrás acabada queda congelado.
+   */
+  senalamiento(): SalaSenalamiento | null {
+    const s = this.senalamientoActual;
+    if (!s) return null;
+    const ids = new Set(this.mesaAlDia().map((a) => a.id));
+    s.senaladores = s.senaladores.filter((id) => ids.has(id));
+    s.objetivos = s.objetivos.filter((id) => ids.has(id));
+    for (const [desde, hasta] of Object.entries(s.senales)) if (!ids.has(desde) || !ids.has(hasta)) delete s.senales[desde];
+    if (!s.congelado && s.fin !== null && Date.now() >= s.fin) s.congelado = true;
+    return { ...s, senaladores: [...s.senaladores], objetivos: [...s.objetivos], senales: { ...s.senales } };
+  }
+
+  /**
+   * Si este participante ve el señalamiento: de día, todos; de noche, los
+   * narradores, los visitantes que ven el grimorio y los jugadores sentados en
+   * un asiento que señala.
+   */
+  veSenalamiento(participante: SalaParticipante): boolean {
+    const s = this.senalamientoActual;
+    if (!s) return false;
+    if (s.publico || participante.rol === 'narrador') return true;
+    if (participante.rol === 'visitante') return participante.accesoGrimorio === 'concedido';
+    const asiento = this.asientoDe(participante.id);
+    return !!asiento && s.senaladores.includes(asiento.id);
+  }
+
+  /**
+   * Mientras hay un señalamiento (también congelado, hasta que el narrador lo quite),
+   * quien lo ve no levanta la mano: las manos de señalar van en las fichas. De noche,
+   * quien no lo ve sigue igual (así no sabe que lo hay).
+   */
+  manosBloqueadas(participante: SalaParticipante): boolean {
+    return this.veSenalamiento(participante);
+  }
+
+  /**
+   * Empieza un señalamiento (sustituye al que hubiera). Sin asientos que señalan
+   * o que se pueden señalar, todos. De día es público; de noche se despierta a
+   * los que señalan (ver despertar). `segundos` null: sin cuenta atrás. No
+   * valida los datos ni comprueba permisos.
+   */
+  empezarSenalamiento(datos: {
+    tipo?: SalaSenalamiento['tipo'];
+    mensaje: string;
+    segundos: number | null;
+    senaladores: string[];
+    objetivos: string[];
+  }): void {
+    const todos = this.mesaAlDia().map((a) => a.id);
+    const deLaMesa = (ids: string[]) => (ids.length ? todos.filter((id) => ids.includes(id)) : todos);
+    const publico = this.faseActual.momento !== 'noche';
+    const inicio = Date.now();
+    this.senalamientoActual = {
+      id: randomUUID(),
+      tipo: datos.tipo ?? 'normal',
+      mensaje: datos.mensaje,
+      senaladores: deLaMesa(datos.senaladores),
+      objetivos: deLaMesa(datos.objetivos),
+      publico,
+      inicio,
+      fin: datos.segundos === null ? null : inicio + datos.segundos * 1000,
+      congelado: false,
+      senales: {},
+    };
+    if (!publico) for (const id of this.senalamientoActual.senaladores) this.despertar(id);
+    // Quien lo ve baja la mano (no se puede levantar mientras dure)
+    for (const { participante } of this.entradas.values()) {
+      if (participante.manoLevantada && this.veSenalamiento(participante)) this.levantarMano(participante.id, false);
+    }
+  }
+
+  /**
+   * El jugador de un asiento que señala, señala a otro (null: deja de señalar).
+   * Con Lil' Monsta, cuando todos los esbirros sentados señalan al mismo, se
+   * congela y ese lleva su «Is The Demon». Devuelve el error, si lo hay.
+   */
+  senalar(participanteId: string, objetivo: string | null): string | null {
+    const s = this.senalamiento() && this.senalamientoActual!;
+    if (!s) return 'No hay ningún señalamiento.';
+    if (s.congelado) return 'El señalamiento ya ha terminado.';
+    const asiento = this.asientoDe(participanteId);
+    if (!asiento || !s.senaladores.includes(asiento.id)) return 'No te toca señalar.';
+    if (objetivo === null) {
+      delete s.senales[asiento.id];
+      return null;
+    }
+    if (!s.objetivos.includes(objetivo)) return 'Ese asiento no se puede señalar.';
+    s.senales[asiento.id] = objetivo;
+    if (s.tipo === 'lilmonsta') this.resolverLilmonsta(s);
+    return null;
+  }
+
+  /** Lil' Monsta: si todos los esbirros sentados señalan al mismo, ese lo cuida. */
+  private resolverLilmonsta(s: SalaSenalamiento): void {
+    const sentados = this.mesaAlDia().filter((a) => a.ocupante && s.senaladores.includes(a.id));
+    const elegidos = new Set(sentados.map((a) => s.senales[a.id]));
+    if (sentados.length === 0 || elegidos.size !== 1) return;
+    const [cuidador] = [...elegidos];
+    if (!cuidador) return;
+    s.congelado = true;
+    // Su «Is The Demon» pasa al que lo cuida (solo hay uno)
+    const recordatorios = this.personaje(DEMONIO_LILMONSTA)?.recordatorios ?? [];
+    const indice = recordatorios.findIndex((t) => /^is the demon$/i.test(t.trim()));
+    if (indice < 0) return;
+    for (const a of this.mesa) {
+      a.recordatorios = a.recordatorios.filter((r) => !(r.personaje === DEMONIO_LILMONSTA && r.indice === indice));
+    }
+    this.ponerRecordatorio(cuidador, { personaje: DEMONIO_LILMONSTA, indice, texto: recordatorios[indice] });
+  }
+
+  /** Quita el señalamiento. No comprueba permisos. */
+  terminarSenalamiento(): void {
+    this.senalamientoActual = null;
+  }
+
+  /**
+   * Se puede empezar Lil' Monsta: es de noche, el guion lo trae, ninguna ficha
+   * es un demonio y hay un esbirro más de los que tocan (el que hace de demonio).
+   * Devuelve los asientos de los esbirros vivos, o null si no.
+   */
+  esbirrosLilmonsta(): string[] | null {
+    if (this.faseActual.momento !== 'noche' || !this.guionActual?.personajes.some((p) => p.id === DEMONIO_LILMONSTA)) return null;
+    const tipo = (a: SalaAsiento) => (a.personaje ? this.personaje(a.personaje)?.tipo : undefined);
+    const mesa = this.mesaAlDia();
+    if (mesa.some((a) => tipo(a) === 'demon')) return null;
+    const esbirros = mesa.filter((a) => tipo(a) === 'minion');
+    const tocan = this.distribucion().esbirros;
+    if (esbirros.length === 0 || (tocan !== null && esbirros.length <= tocan)) return null;
+    const vivos = esbirros.filter((a) => !a.muerto).map((a) => a.id);
+    return vivos.length ? vivos : null;
+  }
+
   /** La revelación del grimorio en curso (o acabada), o null. */
   revelacion(): SalaRevelacion | null {
     const r = this.revelacionActual;
@@ -1083,17 +1404,43 @@ export class SalaService {
    * Empieza a revelar el grimorio: ha ganado ese bando (y lo que haya pasado, ver
    * CAUSAS_FIN_PARTIDA) y todas las fichas se dan la vuelta.
    */
-  empezarRevelacion(ganador: SalaAlineamiento, causas: string[] = []): void {
+  empezarRevelacion(ganador: SalaAlineamiento, causas: string[] = [], esbirros: Record<string, string> = {}): void {
     this.cerrarNominacion();
     this.revelacionActual = { ganador, causas, reveladas: [] };
-    // Se acaba la partida: se guarda lo de cada uno (si se había empezado a jugar)
-    const jugadores = this.seguimiento.estaEmpezada() ? this.seguimiento.terminar(this.fotosDeCuentas(), ganador, causas) : [];
+    // Se acaba la partida: se guarda lo de cada uno (si se había empezado a jugar). Las
+    // causas de esbirro (la Doncel cazada), para la cuenta del esbirro que eligió el narrador
+    const deCadaUno = causas.map((id) => {
+      const asiento = esbirros[id];
+      if (!asiento) return { id };
+      return { id, userId: this.cuentaDe(this.mesa.find((a) => a.id === asiento)?.ocupante ?? null) };
+    });
+    const jugadores = this.seguimiento.estaEmpezada() ? this.seguimiento.terminar(this.fotosDeCuentas(), ganador, deCadaUno) : [];
     const narradores = [...this.entradas.values()]
       .filter((e) => e.participante.rol === 'narrador')
       .map((e) => this.cuentaDe(e.participante.id))
       .filter((id): id is string => !!id);
     if (jugadores.length > 0 || narradores.length > 0) {
+      // La mesa entera, invitados incluidos, para el historial
+      const mesa = this.mesaAlDia().map((a, i) => {
+        const personaje = this.identidad(a);
+        return {
+          numero: i + 1,
+          nombre: a.ocupante ? (this.buscar(a.ocupante)?.nombre ?? null) : null,
+          userId: this.cuentaDe(a.ocupante),
+          personaje,
+          ficha: a.personaje && a.personaje !== personaje ? a.personaje : null,
+          alineamiento: this.alineamientoEfectivo(a),
+          muerto: a.muerto,
+        };
+      });
+      const narradoresNombres = [...this.entradas.values()]
+        .filter((e) => e.participante.rol === 'narrador')
+        .map((e) => e.participante.nombre);
       this.alTerminarPartida({
+        mesa,
+        narradoresNombres,
+        npcs: [...this.npcsActuales],
+        votaciones: this.votaciones(),
         fecha: new Date(),
         guion: this.guionActual?.nombre ?? null,
         edicion: this.guionActual?.edicion ?? null,
@@ -1138,6 +1485,35 @@ export class SalaService {
       asiento.marcado = false;
       asiento.votosMarca = null;
     }
+  }
+
+  /**
+   * Ejecuta al de un asiento (el que lleva la calavera): muere como al matarlo y,
+   * por cada personaje que funciona con las ejecuciones (RECORDATORIOS_EJECUCION)
+   * en juego y vivo, se le pone su recordatorio. Luego anochece, salvo con el
+   * Carnicero en juego y vivo (puede haber otra ejecución). Devuelve si ha
+   * anochecido, o null si el asiento no existe. No comprueba permisos.
+   */
+  ejecutar(asientoId: string): { anochece: boolean } | null {
+    const asiento = this.mesa.find((a) => a.id === asientoId);
+    if (!asiento) return null;
+    const bueno = this.alineamientoEfectivo(asiento) === 'bueno';
+    // En juego y vivo: en la ficha (el Borracho que se cree Enterrador también) o de verdad
+    const vivoEnJuego = (id: string) =>
+      this.mesa.some((a) => a !== asiento && !a.muerto && (a.personaje === id || this.identidad(a) === id));
+    for (const { personaje, texto, unico, soloBueno } of RECORDATORIOS_EJECUCION) {
+      if ((soloBueno && !bueno) || !vivoEnJuego(personaje)) continue;
+      const indice = this.personaje(personaje)?.recordatorios.findIndex((t) => t.toLowerCase() === texto.toLowerCase()) ?? -1;
+      if (indice < 0) continue;
+      const delPersonaje = (r: SalaRecordatorio) => r.personaje === personaje && r.indice === indice;
+      if (unico) for (const a of this.mesa) a.recordatorios = a.recordatorios.filter((r) => !delPersonaje(r));
+      asiento.recordatorios.push({ id: randomUUID(), personaje, indice, texto: this.personaje(personaje)!.recordatorios[indice] });
+    }
+    this.seguimiento.ejecutado(this.cuentaDe(asiento.ocupante));
+    this.cambiarVida(asiento.id, true);
+    const anochece = !this.mesa.some((a) => !a.muerto && this.identidad(a) === VIAJERO_BUTCHER);
+    if (anochece) this.irANoche();
+    return { anochece };
   }
 
   /** Hace efectiva una muerte pendiente (el narrador la anuncia): ya la ven todos. No comprueba permisos. */
@@ -1200,11 +1576,7 @@ export class SalaService {
     const mesa = this.mesaAlDia();
     // Fisher-Yates sobre la mesa entera: los huecos libres también se barajan. Cada
     // asiento nuevo recibe a quien estaba en el de `orden[i]`, con su ficha
-    const orden = mesa.map((_, i) => i);
-    for (let i = orden.length - 1; i > 0; i--) {
-      const j = randomInt(i + 1);
-      [orden[i], orden[j]] = [orden[j], orden[i]];
-    }
+    const orden = barajar(mesa.map((_, i) => i));
     const ocupantes = mesa.map((a) => a.ocupante);
     this.llevarFichas(new Map(orden.map((desde, i) => [mesa[desde].id, mesa[i].id])));
     mesa.forEach((a, i) => (a.ocupante = ocupantes[orden[i]]));

@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { DatabaseRepository } from './DatabaseRepository';
-import type { RegistroPartida } from '../services/estadisticas/SeguimientoPartida';
+import type { AsientoPartida, RegistroPartida } from '../services/estadisticas/SeguimientoPartida';
+import type { SalaRegistroVotacion } from '../types/sala';
 
 /** Lo que ha hecho alguien en una partida (como jugador o como narrador), con la partida. */
 export interface Participacion {
@@ -34,6 +35,42 @@ const lista = (texto: string | null): string[] => {
   }
 };
 const booleano = (n: number | null) => (n === null ? null : n === 1);
+/** Un JSON guardado (una lista), o null si no lo hay (las partidas de antes de guardarlo). */
+const jsonLista = <T>(texto: string | null): T[] | null => {
+  if (texto === null || texto === undefined) return null;
+  try {
+    const v = JSON.parse(texto);
+    return Array.isArray(v) ? (v as T[]) : null;
+  } catch {
+    return null;
+  }
+};
+
+/** Alguien con cuenta en una partida del historial, con su nombre y si sus estadísticas son públicas. */
+export interface ParticipanteHistorial
+  extends Omit<Participacion, 'partidaId' | 'fecha' | 'guion' | 'edicion' | 'ganador' | 'dias' | 'jugadores'> {
+  userId: string;
+  username: string;
+  profilePicture: string | null;
+  estadisticasPublicas: boolean;
+}
+
+/** Una partida, con todo lo guardado de ella. */
+export interface PartidaGuardada {
+  partidaId: string;
+  fecha: string;
+  guion: string | null;
+  edicion: string | null;
+  ganador: 'bueno' | 'malvado';
+  dias: number;
+  causas: string[];
+  participantes: ParticipanteHistorial[];
+  /** null en las partidas de antes de guardar la mesa entera. */
+  mesa: AsientoPartida[] | null;
+  narradoresNombres: string[] | null;
+  npcs: string[] | null;
+  votaciones: SalaRegistroVotacion[] | null;
+}
 
 /**
  * Las partidas de la sala que han terminado (tabla sala_partidas) y lo de cada
@@ -47,8 +84,12 @@ export class EstadisticasRepository {
     await db.exec('BEGIN TRANSACTION;');
     try {
       await db.run(
-        'INSERT INTO sala_partidas (id, fecha, guion, edicion, ganador, dias, jugadores, causas) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, r.fecha.toISOString(), r.guion, r.edicion, r.ganador, r.dias, r.jugadores.length, JSON.stringify(r.causas)]
+        `INSERT INTO sala_partidas (id, fecha, guion, edicion, ganador, dias, jugadores, causas, mesa, narradoresNombres, npcs, votaciones)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id, r.fecha.toISOString(), r.guion, r.edicion, r.ganador, r.dias, r.jugadores.length, JSON.stringify(r.causas),
+          JSON.stringify(r.mesa), JSON.stringify(r.narradoresNombres), JSON.stringify(r.npcs), JSON.stringify(r.votaciones),
+        ]
       );
       for (const j of r.jugadores) {
         await db.run(
@@ -86,6 +127,61 @@ export class EstadisticasRepository {
       [userId]
     );
     return filas.map((f) => ({ ...f, roles: lista(f.roles), causas: lista(f.causas), gano: booleano(f.gano), vivo: booleano(f.vivo) }));
+  }
+
+  /**
+   * Las partidas en las que ha estado alguien (jugando o narrando), de la más
+   * reciente a la más antigua, con todo lo guardado y todos los que tenían cuenta.
+   */
+  async historial(userId: string): Promise<PartidaGuardada[]> {
+    const db = await DatabaseRepository.getInstance();
+    const partidas = await db.all<any[]>(
+      `SELECT p.* FROM sala_partidas p
+        WHERE p.id IN (SELECT partidaId FROM sala_partidas_participantes WHERE userId = ?)
+        ORDER BY p.fecha DESC`,
+      [userId]
+    );
+    if (partidas.length === 0) return [];
+    const marcas = partidas.map(() => '?').join(', ');
+    const filas = await db.all<any[]>(
+      `SELECT pp.*, u.username, u.profilePicture, u.estadisticasPublicas
+         FROM sala_partidas_participantes pp JOIN users u ON u.id = pp.userId
+        WHERE pp.partidaId IN (${marcas})`,
+      partidas.map((p) => p.id)
+    );
+    return partidas.map((p) => ({
+      partidaId: p.id,
+      fecha: p.fecha,
+      guion: p.guion,
+      edicion: p.edicion,
+      ganador: p.ganador,
+      dias: p.dias,
+      causas: lista(p.causas),
+      participantes: filas
+        .filter((f) => f.partidaId === p.id)
+        .map((f) => ({
+          userId: f.userId,
+          username: f.username,
+          profilePicture: f.profilePicture ?? null,
+          estadisticasPublicas: f.estadisticasPublicas === 1,
+          papel: f.papel,
+          roles: lista(f.roles),
+          rolFinal: f.rolFinal,
+          alineamientoInicial: f.alineamientoInicial,
+          alineamientoFinal: f.alineamientoFinal,
+          gano: booleano(f.gano),
+          vivo: booleano(f.vivo),
+          causas: lista(f.causas),
+          nominaciones: f.nominaciones,
+          nominado: f.nominado,
+          votos: f.votos,
+          ejecutado: f.ejecutado,
+        })),
+      mesa: jsonLista<AsientoPartida>(p.mesa),
+      narradoresNombres: jsonLista<string>(p.narradoresNombres),
+      npcs: jsonLista<string>(p.npcs),
+      votaciones: jsonLista<SalaRegistroVotacion>(p.votaciones),
+    }));
   }
 
   /** Cuántas partidas ha jugado alguien (como jugador). */

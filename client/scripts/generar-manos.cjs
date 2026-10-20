@@ -23,6 +23,8 @@ const GESTOS = {
   cuernos: { dedos: [-12, null, null, 15], pulgar: null },
   spock: { dedos: [-13, -9, 11, 15], pulgar: -52 },
   lagarto: { dedos: [-2, 0, 2, 3], pulgar: -24, girar: true },
+  // Señalar: el índice, recto hacia arriba (la sala la gira hacia la ficha señalada)
+  senalar: { dedos: [0, null, null, null], pulgar: null },
 };
 
 // ───────────── El guante (tres dedos y pulgar, en una sola pieza) ─────────────

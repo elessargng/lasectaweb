@@ -6,7 +6,6 @@ import PageHeader from '../components/PageHeader';
 import { Check, Plus, Shield, Eye, BarChart3 } from 'lucide-react';
 import { compressImage } from '../utils/image';
 import { parseApiResponse, getAvatarUrl } from '../utils/api';
-import { EstadisticasDeUsuario } from '../components/estadisticas/PanelEstadisticas';
 
 const AVATAR_OPTIONS = [
   { id: 'default', url: '/avatar.png', label: 'Adepto' },
@@ -386,9 +385,14 @@ const Profile = () => {
                     />
                   </button>
                 </div>
-                {/* Las tuyas: resumen, logros, personajes y últimas partidas */}
-                <div className="mt-8">
-                  <EstadisticasDeUsuario userId={user.id} />
+                {/* Las tuyas, en su propia página (general, roles, logros e historial) */}
+                <div className="mt-6 flex flex-col gap-4 border-t border-outline-ghost/50 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm font-body text-on-surface-muted">
+                    Tus partidas, los roles que has jugado, tus logros y la crónica de cada partida.
+                  </p>
+                  <Button to={`/estadisticas/${user.id}`} variant="primary" className="px-6 py-2 shrink-0">
+                    Consultar tus estadísticas
+                  </Button>
                 </div>
               </div>
 
