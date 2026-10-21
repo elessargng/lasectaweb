@@ -11,12 +11,12 @@ import { getAvatarUrl } from '../utils/api';
 
 // Secciones de la web, en el orden en que aparecen en la cabecera y en el menú móvil.
 const SECCIONES = [
-  { to: '/cronicas', label: 'Crónicas' },
+  { to: '/rituales', label: 'Rituales' },
   { to: '/grimorio', label: 'Grimorio' },
   { to: '/escrituras', label: 'Códice' },
   { to: '/biblioteca', label: 'Biblioteca' },
   { to: '/plaza', label: 'Plaza' },
-  { to: '/rituales', label: 'Rituales' },
+  { to: '/cronicas', label: 'Crónicas' },
   { to: '/redes', label: 'Redes' },
 ];
 
