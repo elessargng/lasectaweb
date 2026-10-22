@@ -18,8 +18,12 @@ export class CamaraCompartida {
   /** Quién la usa ahora (las salas de vídeo). */
   private usuarios = new Set<object>();
 
-  /** `alTerminar`: la cámara se ha cerrado sola (desenchufada, o la ha cogido el sistema). */
-  constructor(private readonly alTerminar: () => void) {}
+  /** La cámara se ha cerrado sola (desenchufada, o la ha cogido el sistema). */
+  private readonly alTerminar: () => void;
+
+  constructor(alTerminar: () => void) {
+    this.alTerminar = alTerminar;
+  }
 
   private abrir(dispositivo: string): Promise<MediaStreamTrack> {
     const { width, height, frameRate } = VideoPresets.h360.resolution;
