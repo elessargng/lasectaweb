@@ -57,11 +57,10 @@ import {
   type SalaSusurro,
 } from './chat';
 import RepartoPartida from './RepartoPartida';
-import RelojSala from './RelojSala';
 import { duracionReloj, RELOJ_TRAS_FIN_MS } from './reloj';
 import { ESTILOS_CALAVERA, ESTILOS_MANO, ESTILOS_SILLA, estiloDePartida, MarcasContexto } from './marcas';
 import { FichasContexto, identidadDe, TIPOS_EN_FICHA, type ContenidoFicha, type ContextoFichas } from './fichas';
-import { mostrarPersonajes, tituloDeGuion, useTraducciones, type PersonajeMostrado } from './guiones';
+import { actuaAlMorir, mostrarPersonajes, tituloDeGuion, useTraducciones, type PersonajeMostrado } from './guiones';
 import ZonaNarradores from './ZonaNarradores';
 import {
   accionCogerLlamada,
@@ -76,7 +75,10 @@ import {
 import { AvisosContexto, useAvisosActivos, type TipoAviso } from './avisosConfig';
 import { avisosDeCambio, manosVigiladas, nombreFase } from './avisosSala';
 import { recibidasDe, reconciliarSlots } from './slotsLlamada';
-import { setSonidosActivos, tocarPrivado, tocarSinVoto, tocarSolicitud, tocarVoto } from './sonidos';
+import { setSonidosActivos, setTonoLlamada, tocarPrivado, tocarSinVoto, tocarSolicitud, tocarVoto } from './sonidos';
+import { esTeclaLlamadaBotc, LlamadaBotcContexto } from './llamadaBotc';
+import CieloEstrellado from './CieloEstrellado';
+import DialogoFinal from './DialogoFinal';
 import { idFichaNominar, idPestanaLateral, ID_BOTON_MENU_NARRADOR, ID_SIN_NARRADOR, ID_TITULO_DESPERTAR, idLunaFicha, idNombreNarrador } from './ids';
 import { ElegirEnPlazaContexto, type PedidoEleccion } from './elegirEnPlaza';
 import { getPerfil, limpiarNombre, setPerfil } from './invitado';
@@ -316,6 +318,17 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           : 'El narrador ha desactivado el grimorio para los jugadores.',
       });
     }
+    // El narrador deja ver (o vuelve a ocultar) las cámaras de las conversaciones en la
+    // plaza: se avisa a quien no lo ha cambiado (es su cámara la que se ve o no)
+    const ocultas = nuevo.configuracion.ocultarCamarasConversacion;
+    if (ocultas !== anterior.configuracion.ocultarCamarasConversacion && !propia) {
+      avisos.push({
+        tipo: 'conversaciones',
+        texto: ocultas
+          ? 'El narrador oculta las cámaras de las conversaciones privadas: en la plaza ya no se ven.'
+          : 'El narrador deja ver las cámaras de las conversaciones privadas: en la plaza se ven, sin voz.',
+      });
+    }
     // Despertares: lo que manda el narrador (al jugador) o lo que contesta el jugador (a
     // los narradores); lo propio no, ya se confirma al mandarlo. Si el narrador manda
     // algo (o abre el despertar) al jugador que tenía su ventana cerrada, se le vuelve a abrir.
@@ -403,15 +416,26 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // Recordatorios del orden de noche (narradores, compartidos): los automáticos son
   // los personajes en juego y vivos, y Esbirros y Demonios si hay alguno vivo; lo que
   // los narradores quitan o ponen a mano lo guarda el servidor hasta limpiar el grimorio.
+  // Quien ha muerto esta noche (sudario transparente, sin anunciar) ya no cuenta como vivo:
+  // no se despierta. Salvo los personajes que actúan precisamente por morir esa noche
+  // (el Ravenkeeper, el Sage…, ver actuaAlMorir).
+  const sigueVivo = (a: SalaEstado['asientos'][number]) => !a.muerto && !a.muertePendiente;
   const recordatoriosNoche = (e: SalaEstado) => {
-    const vivos = e.asientos.filter((a) => a.personaje && !a.muerto).map((a) => a.personaje!);
+    const actua = (id: string) => {
+      const p = guion?.personajes.find((x) => x.id === id);
+      return !!p && actuaAlMorir(p);
+    };
+    const vivos = e.asientos
+      .filter((a) => a.personaje && (sigueVivo(a) || (!a.muerto && actua(a.personaje))))
+      .map((a) => a.personaje!);
+    const vivosDeVerdad = e.asientos.filter((a) => a.personaje && sigueVivo(a)).map((a) => a.personaje!);
     const tipoDe = (id: string) => personajesGuionPorId.get(id)?.tipo;
     const automaticos = new Set(vivos);
-    if (vivos.some((id) => tipoDe(id) === 'minion')) automaticos.add('esbirros');
-    if (vivos.some((id) => tipoDe(id) === 'demon')) automaticos.add('demonios');
+    if (vivosDeVerdad.some((id) => tipoDe(id) === 'minion')) automaticos.add('esbirros');
+    if (vivosDeVerdad.some((id) => tipoDe(id) === 'demon')) automaticos.add('demonios');
     // El Caníbal (vivo) tiene la habilidad del muerto que lleva su recordatorio «Lunch»:
     // ese personaje también se despierta (en su sitio del orden de noche)
-    const canibalVivo = e.asientos.some((a) => !a.muerto && (a.personaje === 'cannibal' || identidadDe(a).personaje === 'cannibal'));
+    const canibalVivo = e.asientos.some((a) => sigueVivo(a) && (a.personaje === 'cannibal' || identidadDe(a).personaje === 'cannibal'));
     const porCanibal = canibalVivo
       ? e.asientos
           .filter((a) => a.muerto && a.recordatorios.some((r) => r.personaje === 'cannibal' && /\blunch\b/i.test(r.texto)))
@@ -554,6 +578,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     reemplazar: reemplazarPreferencias,
   } = usePreferencias(!!cuenta);
   useEffect(() => setSonidosActivos(preferencias.sonidos), [preferencias.sonidos]);
+  useEffect(() => setTonoLlamada(preferencias.tonoLlamada), [preferencias.tonoLlamada]);
 
   // El fondo de la sala que ha elegido el narrador (sin elegir: el de por defecto, ver sala.css)
   const fondoSala = estado?.configuracion.fondo ?? null;
@@ -562,6 +587,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     if (fondoSala) raiz.style.setProperty('--sala-fondo', `url("${urlDelServidor(fondoSala)}")`);
     else raiz.style.removeProperty('--sala-fondo');
   }, [fondoSala]);
+  // De noche, el fondo se oscurece con un velo de medianoche (ver sala.css)
+  const esNoche = estado?.fase.momento === 'noche';
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-noche', esNoche);
+    return () => document.documentElement.removeAttribute('data-noche');
+  }, [esNoche]);
 
   // Videollamada: cámaras y micrófonos en la mesa y en la conversación privada
   // La conversación en la que estoy: hablando (miembro) o escuchando (visitante)
@@ -691,6 +722,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     noche,
     conversacion: miConversacion?.id ?? null,
     hablaEnConversacion,
+    camaraEnMesaConversando: estado?.configuracion.ocultarCamarasConversacion === false,
     silenciado: callado,
     idCamara: preferencias.idCamara,
     idMicrofono: preferencias.idMicrofono,
@@ -875,6 +907,31 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     });
     anunciar('manos', vigilaba ? `Dejas de vigilar a ${otro.nombre}.` : `Vigilas a ${otro.nombre}.`);
   };
+  // La llamada estilo botc.app (Preferencias > Interfaz): Intro muestra (o quita) los
+  // botones de llamar y escribir en los cuadros; Escape los quita. Solo si Intro no es
+  // de otra cosa (un botón, un campo, un diálogo). Al usar uno, se esconden.
+  const [iconosLlamada, setIconosLlamada] = useState(false);
+  const llamadaBotc = preferencias.llamadaBotc;
+  useEffect(() => {
+    if (!llamadaBotc) {
+      setIconosLlamada(false);
+      return;
+    }
+    const alPulsar = (e: KeyboardEvent) => {
+      if ((e.key !== 'Enter' && e.key !== 'Escape') || !esTeclaLlamadaBotc(e)) return;
+      const ahora = e.key === 'Enter' ? !iconosLlamada : false;
+      if (ahora === iconosLlamada) return;
+      setIconosLlamada(ahora);
+      anunciar('conversaciones', ahora ? 'Botones de llamada a la vista.' : 'Botones de llamada ocultos.');
+    };
+    document.addEventListener('keydown', alPulsar);
+    return () => document.removeEventListener('keydown', alPulsar);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [llamadaBotc, iconosLlamada]);
+  const contextoLlamadaBotc = useMemo(
+    () => ({ activa: llamadaBotc, visibles: llamadaBotc && iconosLlamada, ocultar: () => setIconosLlamada(false) }),
+    [llamadaBotc, iconosLlamada],
+  );
   const contacto = (otro: SalaParticipante): ContactoParticipante | undefined => {
     const onMensaje = mensajePara(otro);
     let conversar: ContactoParticipante['conversar'];
@@ -1096,6 +1153,14 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
   // El diálogo de revelar el grimorio: desde el menú del narrador o con su tecla
   const [revelandoGrimorio, setRevelandoGrimorio] = useState(false);
+  // Una ejecución que deja solo dos jugadores vivos no anochece sola: quien ejecutó
+  // elige entre la noche y revelar el grimorio (DialogoFinal)
+  const [decidiendoFinal, setDecidiendoFinal] = useState(false);
+  const pedirEnMesa = async (accion: string, datos?: unknown) => {
+    const r = await pedirPropio(accion, datos);
+    if (accion === 'narrador:ejecutar' && r.ok && r.valor === 'final') setDecidiendoFinal(true);
+    return r;
+  };
 
   // El gong del narrador: desde el menú o con su tecla
   const sonarGong = async () => {
@@ -1105,13 +1170,6 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
   // El reloj del narrador: su diálogo se abre desde el menú o con su tecla
   const [poniendoReloj, setPoniendoReloj] = useState(false);
-  const quitarReloj = async () => {
-    const r = await pedirPropio('narrador:quitarReloj');
-    if (!r.ok) return setAviso(r.error);
-    // El botón desaparece con el reloj: el foco, al reparto, que estaba al lado
-    document.getElementById('sala-reparto-titulo')?.focus();
-    anunciar('reloj', 'Reloj quitado.');
-  };
   // Con su tecla (Preferencias > Accesibilidad): lo que queda y el mensaje. Se lee
   // siempre (lo ha pedido) y al momento, aunque sea lo mismo que la última vez.
   const leerReloj = () => {
@@ -1643,7 +1701,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
         }}
       >
       <FichasContexto.Provider value={contextoFichas}>
+      <LlamadaBotcContexto.Provider value={contextoLlamadaBotc}>
       <div className="contents" style={tamanos}>
+        {/* De noche, el cielo estrellado detrás de la sala */}
+        <CieloEstrellado activo={esNoche} />
         <Cabecera
           ciudad={estado && preferencias.ciudadCabecera ? <SkylineCabecera fase={estado.fase.momento} /> : undefined}
           centro={
@@ -1900,7 +1961,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   onTamanos={setTamanosMesa}
                   editando={editando}
                   grimorio={yo?.rol === 'jugador' && estado.configuracion.grimorioJugadores}
-                  pedir={pedirPropio}
+                  pedir={pedirEnMesa}
                   onError={setAviso}
                   onAnuncio={anunciar}
                   focoAsientoRef={focoAsientoRef}
@@ -1937,18 +1998,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                 />
               </section>
               {/* Fuera de la mesa, para no tapar sus fichas: en pantallas anchas, abajo
-                  del todo a la derecha (apartándose de la hoja del guion); en estrechas, debajo de la mesa.
-                  El reloj del narrador, si lo hay, a la izquierda del reparto */}
+                  del todo a la derecha (apartándose de la hoja del guion); en estrechas, debajo de la mesa */}
               <div className="flex flex-wrap items-end gap-3 self-start lg:fixed lg:bottom-4 lg:right-[calc(var(--sala-panel-guion-ancho,0px)+1rem)] lg:z-30">
-                {estado.reloj && (
-                  <RelojSala
-                    key={estado.reloj.inicio}
-                    reloj={estado.reloj}
-                    desfase={desfaseReloj}
-                    onAnuncio={(texto) => anunciar('reloj', texto)}
-                    onQuitar={estado.acciones.includes('narrador:quitarReloj') ? () => void quitarReloj() : undefined}
-                  />
-                )}
                 <RepartoPartida
                   distribucion={estado.distribucion}
                   bolsa={estado.acciones.includes('narrador:bolsa') ? estado.bolsa : null}
@@ -2018,10 +2069,22 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           />
         )}
 
+        {decidiendoFinal && (
+          <DialogoFinal
+            onNoche={() => pedirPropio('narrador:irANoche')}
+            onRevelar={() => {
+              setDecidiendoFinal(false);
+              setRevelandoGrimorio(true);
+            }}
+            onCerrar={() => setDecidiendoFinal(false)}
+          />
+        )}
+
         {preferenciasAbiertas && (
           <DialogoPreferencias pestanas={pestanasPreferencias} onCerrar={() => setPreferenciasAbiertas(false)} />
         )}
       </div>
+      </LlamadaBotcContexto.Provider>
       </FichasContexto.Provider>
       </MarcasContexto.Provider>
       </ElegirEnPlazaContexto.Provider>

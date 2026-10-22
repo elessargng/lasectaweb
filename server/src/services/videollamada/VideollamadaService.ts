@@ -28,6 +28,8 @@ export interface PaseVideo {
  * - Quien está en una conversación privada no emite en la mesa: su cámara y su
  *   voz solo llegan a los de su conversación (que tiene su propia sala de vídeo,
  *   con cámara también de noche). Los visitantes que la escuchan no emiten.
+ *   Si el narrador no oculta las cámaras de las conversaciones (Preferencias >
+ *   Partida), sus miembros siguen emitiendo la cámara en la mesa, sin la voz.
  *
  * Firma los pases (solo a quien está en la sala o en la conversación) y, cada vez
  * que cambia la sala, ajusta los permisos de quien ya está dentro y saca a quien
@@ -54,9 +56,14 @@ export class VideollamadaService {
   /** Los permisos en la mesa de alguien, según su papel, la fase, si conversa en privado y el silencio. */
   private permisosEnMesa(id: string): PermisosVideo {
     const p = this.sala.buscar(id);
-    // Quien está en una conversación (hablando o escuchando) no emite en la mesa
-    const emite = !!p && (p.rol === 'jugador' || p.rol === 'narrador') && !this.conversaciones.deParticipante(id);
-    return { publicar: emite, camara: this.sala.fase().momento !== 'noche', microfono: !this.callado(id) };
+    const puede = !!p && (p.rol === 'jugador' || p.rol === 'narrador');
+    const dia = this.sala.fase().momento !== 'noche';
+    // Quien está en una conversación (hablando o escuchando) no emite en la mesa; si
+    // el narrador no oculta sus cámaras, los que hablan en ella siguen emitiendo la cámara
+    const conversacion = this.conversaciones.deParticipante(id);
+    if (!conversacion) return { publicar: puede, camara: dia, microfono: !this.callado(id) };
+    const camara = puede && dia && !this.sala.configuracion().ocultarCamarasConversacion && conversacion.miembros.includes(id);
+    return { publicar: camara, camara, microfono: false };
   }
 
   /** Los permisos en una conversación: los miembros hablan y se ven (salvo el silencio); los oyentes, no. */

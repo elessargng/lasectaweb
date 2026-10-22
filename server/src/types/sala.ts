@@ -293,6 +293,12 @@ export interface SalaConfiguracion {
   mensajes: SalaMensajesPrivados;
   /** El fondo de la sala (ruta de una imagen en /uploads/sala/fondos), o null: el de por defecto. */
   fondo: string | null;
+  /**
+   * Las cámaras de quien conversa en privado no se ven en la mesa (de entrada,
+   * sí se ocultan). Si no, en la mesa se ve su cámara, sin su voz (de día: de
+   * noche no hay cámaras en la mesa).
+   */
+  ocultarCamarasConversacion: boolean;
 }
 
 /**

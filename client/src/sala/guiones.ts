@@ -30,6 +30,17 @@ export interface PersonajeDeGuion {
   conocido: boolean;
 }
 
+/**
+ * Si su paso de las otras noches es por haber muerto él (el Ravenkeeper, el Sage,
+ * el Farmer, el Barber, el Sweetheart…): su recordatorio original empieza por «If
+ * the Ravenkeeper died tonight», «If the Sage was killed by the Demon», «If a
+ * Farmer died tonight». Con la muerte aún por anunciar, se despierta (o actúa por
+ * él el narrador). No vale «If the Grandmother's grandchild was killed»: es otro.
+ */
+export function actuaAlMorir(p: PersonajeDeGuion): boolean {
+  return /^\s*if (?:the|a|an)\s+[^:.,'’]*?\b(?:died|dies|was killed|is killed)\b/i.test(p.recordatorioOtrasNoches ?? '');
+}
+
 /** El guion de la sala, ya resuelto por el servidor. */
 export interface GuionResuelto {
   nombre: string;

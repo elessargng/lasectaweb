@@ -317,7 +317,8 @@ const FichaAsiento = ({
     if (!r.ok) onError(r.error);
   };
   // Ejecutar al que lleva la calavera: muere, se le ponen los recordatorios de las
-  // ejecuciones (el Caníbal, el Enterrador…) y anochece, salvo con el Carnicero vivo
+  // ejecuciones (el Caníbal, el Enterrador…) y anochece, salvo con el Carnicero vivo o si
+  // quedan dos vivos (entonces el narrador elige: noche o revelar el grimorio, ver SalaJuego)
   const ejecutar = async () => {
     const r = await pedir('narrador:ejecutar', { asientoId: asiento.id });
     if (!r.ok) onError(r.error);

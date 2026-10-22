@@ -90,6 +90,22 @@ interface PanelInterfazProps {
  */
 const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, onCambiar }: PanelInterfazProps) => (
   <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-1">
+      <Interruptor
+        id="sala-pref-llamada-botc"
+        activo={preferencias.llamadaBotc}
+        onCambiar={(llamadaBotc) => onCambiar({ llamadaBotc })}
+        describedBy="sala-pref-llamada-botc-ayuda"
+        textoClassName="text-sm"
+      >
+        Llamada estilo botc.app
+      </Interruptor>
+      <p id="sala-pref-llamada-botc-ayuda" className="text-xs text-on-surface-muted">
+        Los botones de llamar y de mandar un mensaje, con los iconos de botc.app, no salen al pasar el ratón por el
+        cuadro de cada uno: pulsa Intro y salen en los cuadros de todos los jugadores y del narrador; vuelve a
+        pulsarla, o Escape, para quitarlos.
+      </p>
+    </div>
     {/* La vista previa, con los tamaños de la mesa (un jugador se ve así) */}
     <div
       style={

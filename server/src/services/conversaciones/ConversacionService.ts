@@ -34,6 +34,7 @@ const escucha = (p: SalaParticipante) => p.rol === 'visitante' || p.rol === 'nar
  *   ven, y los jugadores no saben que están (solo los narradores y los visitantes
  *   lo ven).
  * - Cada uno está en una como mucho (para aceptar una invitación hay que salir antes).
+ *   Si a quien has llamado entra en otra, tu llamada se cancela sola.
  * - Al cambiar de noche a día (o al revés) se terminan todas y caducan las invitaciones.
  *   Limpiar el grimorio (vuelve a la preparación) no las termina: nadie sale de la suya.
  * - Con la Institutriz viva, un jugador solo conversa con sus vecinos de mesa: quien
@@ -156,9 +157,21 @@ export class ConversacionService {
     if (!this.esMiembro(anfitrion.id)) this.salir(anfitrion.id);
     const suya = this.conversaciones.find((c) => c.miembros.includes(anfitrion.id));
     if (suya) suya.miembros.push(invitado.id);
-    else this.conversaciones.push({ id: randomUUID(), miembros: [anfitrion.id, invitado.id], oyentes: [] });
-    // Ya está en una: las demás invitaciones que había recibido caducan
-    this.invitaciones = this.invitaciones.filter((i) => i.para !== invitado.id);
+    else {
+      this.conversaciones.push({ id: randomUUID(), miembros: [anfitrion.id, invitado.id], oyentes: [] });
+      // Quien invitaba también entra en una
+      this.haEntrado(anfitrion.id);
+    }
+    this.haEntrado(invitado.id);
+  }
+
+  /**
+   * Alguien acaba de entrar en una conversación: las llamadas que tenía
+   * pendientes (las que le hacían y sus peticiones para unirse a otras) se
+   * cancelan solas. Sus invitaciones a otros siguen: quien acepte, entra en la suya.
+   */
+  private haEntrado(id: string): void {
+    this.invitaciones = this.invitaciones.filter((i) => i.para !== id && !(i.de === id && i.conversacion));
   }
 
   /** Un narrador entra en una conversación como miembro (sin invitación). */
@@ -181,8 +194,7 @@ export class ConversacionService {
     const conversacion = this.conversaciones.find((c) => c.id === conversacionId);
     if (!conversacion) throw new ConversacionError('Esa conversación ya ha terminado.');
     conversacion.miembros.push(id);
-    // Ya está en una: lo que había recibido caduca, y sus otras peticiones también
-    this.invitaciones = this.invitaciones.filter((i) => i.para !== id && !(i.de === id && i.conversacion));
+    this.haEntrado(id);
   }
 
   /** Quien invitó la retira. */

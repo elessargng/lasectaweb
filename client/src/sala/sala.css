@@ -146,6 +146,30 @@
     text-rendering: optimizeLegibility;
   }
 
+  /*
+   * De noche (data-noche en <html>, lo pone SalaJuego), un velo azul de
+   * medianoche sobre el fondo, más oscuro arriba, que entra y sale fundiéndose.
+   * Por debajo de todo lo demás y sin recibir el ratón.
+   */
+  body::before {
+    content: '';
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(rgba(0, 0, 0, 0.5) 0%, rgba(1, 22, 46, 0.5) 50%, rgba(0, 39, 70, 0.5) 100%);
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+  }
+  html[data-noche] body::before {
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body::before {
+      transition: none;
+    }
+  }
+
   ::selection {
     background: var(--theme-ritual-main);
     color: #140e05;

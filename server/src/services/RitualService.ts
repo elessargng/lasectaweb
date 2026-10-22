@@ -30,6 +30,17 @@ function toSignupLists(lists: PublicPlayListSchema[]): RitualSignupList[] {
     }));
 }
 
+/**
+ * El enlace a una partida en la web de La Secta: la agenda de rituales en su día
+ * (en hora de España, como la ve la web) con la partida abierta.
+ */
+function laSectaRitualUrl(id: string, startsAt: string): string {
+  const raw = process.env.VITE_CLIENT_URL || 'http://localhost:5173';
+  const base = raw.endsWith('/') ? raw.slice(0, -1) : raw;
+  const dia = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(new Date(startsAt));
+  return `${base}/rituales?dia=${dia}&ritual=${encodeURIComponent(id)}`;
+}
+
 function withVillacuervosUrl(ritual: Ritual): Ritual {
   if (ritual.villacuervosPlayId && ritual.villacuervosSlug) {
     ritual.villacuervosUrl = villacuervosPlayUrl(ritual.villacuervosPlayId, ritual.villacuervosSlug);
@@ -201,16 +212,24 @@ export class RitualService {
   async create(userId: string, raw: any): Promise<Ritual> {
     await this.checkOrganizerPermission(userId);
     const input = await this.validate(raw);
+    // El id, antes de publicarla en Villacuervos: su descripción enlaza aquí
+    const id = crypto.randomUUID();
 
     let villacuervos: { playId: number; slug: string } | undefined;
     if (raw?.alsoInVillacuervos === true) {
       if (input.type !== 'partida_online') {
         throw new Error('Solo las partidas online se pueden crear también en Villacuervos.');
       }
+      // Si la inscripción se lleva aquí, al final de la descripción de Villacuervos va
+      // dónde apuntarse (la descripción de aquí no cambia)
+      const apuntarse = raw?.signupsInLaSecta === true
+        ? `Apúntate en <a href="${laSectaRitualUrl(id, input.startsAt)}">la web de La Secta</a>.`
+        : null;
+      const texto = [input.description, apuntarse].filter(Boolean).join('\n\n') || null;
       const play = await this.villacuervosService.createPlay(userId, {
         name: input.title,
         date: input.startsAt,
-        text: input.description ?? null,
+        text: texto,
         link: input.link ?? null,
         in_person: false,
         public: true,
@@ -222,7 +241,6 @@ export class RitualService {
     // Llevar la inscripción aquí solo tiene sentido si la partida se publica en Villacuervos.
     input.signupsInLaSecta = !!villacuervos && raw?.signupsInLaSecta === true;
 
-    const id = crypto.randomUUID();
     await this.ritualRepository.create(id, userId, input, villacuervos);
     return (await this.getById(id))!;
   }

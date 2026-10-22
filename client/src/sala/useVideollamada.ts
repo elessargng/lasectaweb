@@ -1,6 +1,7 @@
 import {
   ConnectionState,
   createAudioAnalyser,
+  LocalVideoTrack,
   Room,
   RoomEvent,
   Track,
@@ -16,6 +17,7 @@ import {
   type VideoTrack,
 } from 'livekit-client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CamaraCompartida } from './camaraCompartida';
 import { MezcladorEspacial, type SalidaAudio } from './sonidoEnvolvente';
 import type { PaseVideo } from './useSala';
 
@@ -26,10 +28,15 @@ import type { PaseVideo } from './useSala';
  *   cámaras (solo voz).
  * - Una conversación privada: sus miembros se ven y se oyen solo entre ellos (y
  *   no emiten en la mesa, ni la oyen). Los visitantes que la escuchan no emiten.
+ *   Si el narrador no oculta sus cámaras, los miembros emiten además la cámara en
+ *   la mesa (sin la voz; de día).
  *
  * El servidor decide los permisos (no se puede emitir lo que no toca); aquí se
  * publica o no según los botones de cámara y micrófono, que empiezan apagados:
  * el navegador pide permiso la primera vez que se encienden, no al entrar.
+ *
+ * La cámara se abre una sola vez aunque se emita en las dos salas (ver
+ * CamaraCompartida): cada sala publica una copia de la misma captura.
  */
 
 /** Lo que se ve y se oye de alguien (por su id de participante). */
@@ -59,6 +66,8 @@ interface OpcionesVideollamada {
   conversacion: string | null;
   /** En ella habla (miembro); si solo escucha (visitante), no emite. */
   hablaEnConversacion: boolean;
+  /** Conversando (como miembro), la cámara se sigue viendo en la mesa (el narrador no la oculta). */
+  camaraEnMesaConversando: boolean;
   /** El narrador ha pedido silencio: el micrófono no se emite (el servidor tampoco lo deja). */
   silenciado: boolean;
   idCamara: string;
@@ -162,6 +171,7 @@ export function useVideollamada({
   noche,
   conversacion,
   hablaEnConversacion,
+  camaraEnMesaConversando,
   silenciado,
   idCamara,
   idMicrofono,
@@ -194,6 +204,16 @@ export function useVideollamada({
   /** Lo último pedido a cada sala (publicar o dejar de hacerlo), para encadenar lo siguiente. */
   const colasRef = useRef(new WeakMap<Room, Promise<void>>());
   const pedirPaseRef = useRef(pedirPase);
+  // La captura de la cámara, una para las dos salas. Si se cierra sola (desenchufada),
+  // se apaga el botón y se avisa.
+  const [camaraCompartida] = useState(
+    () =>
+      new CamaraCompartida(() => {
+        setCamara(false);
+        setProblema({ dispositivo: 'camara', motivo: 'sinDispositivo' });
+      }),
+  );
+  useEffect(() => () => camaraCompartida.cerrar(), [camaraCompartida]);
   // Sonido envolvente: mientras esté activo, las voces de los demás suenan por el mezclador
   const [mezclador, setMezclador] = useState<MezcladorEspacial | null>(null);
   const mezcladorRef = useRef<MezcladorEspacial | null>(null);
@@ -257,6 +277,8 @@ export function useVideollamada({
         // El servidor la ha cerrado (p. ej. al salir de una conversación, antes de que
         // llegue el aviso de la sala): ya no se publica en ella
         .on(RoomEvent.Disconnected, () => {
+          // Al desconectarse, la sala para sus pistas: su copia de la cámara ya no cuenta
+          camaraCompartida.soltar(room);
           if (ref.current === room) ref.current = null;
           if (!cerrada) alCambiar(new Map());
         })
@@ -279,10 +301,11 @@ export function useVideollamada({
         cerrada = true;
         if (ref.current === room) ref.current = null;
         alCambiar(new Map());
+        camaraCompartida.soltar(room);
         void room.disconnect();
       };
     },
-    [],
+    [camaraCompartida],
   );
 
   // La mesa: mientras haya videollamada
@@ -298,9 +321,35 @@ export function useVideollamada({
   }, [activa, conversacion, conectar]);
 
   // Qué se emite y dónde: en la conversación, si se está en una (cámara también de
-  // noche); si no, en la mesa (sin cámara de noche). Nunca en las dos.
+  // noche); si no, en la mesa (sin cámara de noche). La voz, nunca en las dos; la
+  // cámara, en las dos si el narrador no oculta las de las conversaciones.
   useEffect(() => {
     const enConversacion = !!conversacion;
+    /** La cámara en una sala: su copia de la captura compartida, publicada o retirada (y parada). */
+    const camaraEn = async (room: Room, encender: boolean) => {
+      const p = room.localParticipant;
+      const publicada = p.getTrackPublication(Track.Source.Camera)?.track;
+      if (!encender) {
+        if (publicada) await p.unpublishTrack(publicada, true);
+        camaraCompartida.soltar(room);
+        return;
+      }
+      if (publicada && publicada.mediaStreamTrack.readyState === 'live') return;
+      // La de antes se ha cerrado (la cámara se desenchufó): fuera, y una copia nueva
+      if (publicada) await p.unpublishTrack(publicada, true);
+      const copia = await camaraCompartida.copia(room, idCamara);
+      if (!copia) return;
+      if (room.state !== ConnectionState.Connected) {
+        copia.stop();
+        return;
+      }
+      try {
+        await p.publishTrack(new LocalVideoTrack(copia, undefined, true), { source: Track.Source.Camera });
+      } catch (e) {
+        copia.stop();
+        throw e;
+      }
+    };
     /** Enciende o apaga una fuente; solo un fallo del dispositivo apaga el botón y avisa. */
     const ajustar = async (room: Room, dispositivo: ProblemaDispositivo['dispositivo'], encender: boolean) => {
       const p = room.localParticipant;
@@ -309,7 +358,7 @@ export function useVideollamada({
       if (encender && !puedePublicar(p, fuente)) return;
       try {
         if (dispositivo === 'camara') {
-          await p.setCameraEnabled(encender, idCamara ? { deviceId: idCamara, resolution: VideoPresets.h360.resolution } : undefined);
+          await camaraEn(room, encender);
         } else {
           await p.setMicrophoneEnabled(encender, idMicrofono ? { deviceId: idMicrofono } : undefined);
         }
@@ -337,19 +386,36 @@ export function useVideollamada({
     const enMesa = puedeEmitir && !enConversacion;
     // Con silencio, el micrófono se apaga en todas partes (se queda «encendido» para cuando acabe)
     const micro = microfono && !silenciado;
-    void publicar(mesaRef.current, camara && enMesa && !noche, micro && enMesa);
     const hablo = enConversacion && hablaEnConversacion;
+    const camaraEnMesa = puedeEmitir && (!enConversacion || (hablo && camaraEnMesaConversando));
+    void publicar(mesaRef.current, camara && camaraEnMesa && !noche, micro && enMesa);
     void publicar(privadaRef.current, camara && hablo, micro && hablo);
-  }, [camara, microfono, silenciado, noche, puedeEmitir, conversacion, hablaEnConversacion, idCamara, idMicrofono, conectadas]);
+  }, [camara, microfono, silenciado, noche, puedeEmitir, conversacion, hablaEnConversacion, camaraEnMesaConversando, idCamara, idMicrofono, conectadas, camaraCompartida]);
 
-  // Cambiar de cámara o de micrófono en Preferencias: se cambia en caliente
+  // Cambiar de cámara o de micrófono en Preferencias: se cambia en caliente. La cámara,
+  // una vez: se abre la nueva y cada sala cambia su copia (y para la de antes).
+  useEffect(() => {
+    const cambiarCopias = async (nueva: MediaStreamTrack) => {
+      for (const room of [mesaRef.current, privadaRef.current]) {
+        const pista = room?.localParticipant.getTrackPublication(Track.Source.Camera)?.track;
+        if (!pista) continue;
+        const antes = pista.mediaStreamTrack;
+        await pista.replaceTrack(nueva.clone(), true);
+        antes.stop();
+      }
+    };
+    camaraCompartida.cambiarDispositivo(idCamara, cambiarCopias).catch((e: unknown) => {
+      const motivo = clasificar(e);
+      if (!motivo) return console.warn('[Videollamada] No se ha podido cambiar de cámara:', e);
+      setCamara(false);
+      setProblema({ dispositivo: 'camara', motivo });
+    });
+  }, [idCamara, camaraCompartida]);
   useEffect(() => {
     for (const room of [mesaRef.current, privadaRef.current]) {
-      if (!room) continue;
-      void room.switchActiveDevice('videoinput', idCamara || 'default').catch(() => undefined);
-      void room.switchActiveDevice('audioinput', idMicrofono || 'default').catch(() => undefined);
+      void room?.switchActiveDevice('audioinput', idMicrofono || 'default').catch(() => undefined);
     }
-  }, [idCamara, idMicrofono]);
+  }, [idMicrofono]);
 
   // Lo que se oye: nada con el sonido quitado; en una conversación privada, solo ella (la mesa no)
   useEffect(() => {

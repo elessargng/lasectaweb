@@ -1,8 +1,8 @@
 import { Volume2 } from 'lucide-react';
 import Interruptor from './Interruptor';
-import { botonIcono } from './estilos';
+import { botonIcono, campo } from './estilos';
 import type { PreferenciasSala } from './preferencias';
-import { probarSonido, SONIDOS, type IdSonido } from './sonidos';
+import { esTonoLlamada, probarSonido, SONIDOS, TONOS_LLAMADA, type IdSonido } from './sonidos';
 
 interface PanelSonidoProps {
   preferencias: PreferenciasSala;
@@ -29,6 +29,30 @@ const PanelSonido = ({ preferencias, onCambiar }: PanelSonidoProps) => {
               <p id={`sala-pref-sonido-${id}-desc`} className="ml-12 mt-0.5 text-xs text-on-surface-muted">
                 {descripcion}
               </p>
+              {id === 'solicitudLlamada' && (
+                // El tono: al elegirlo, suena (así se sabe cómo es sin buscar el altavoz)
+                <div className="ml-12 mt-2 flex flex-col gap-1">
+                  <label htmlFor="sala-pref-tono-llamada" className="text-xs">
+                    Tono de las llamadas entrantes
+                  </label>
+                  <select
+                    id="sala-pref-tono-llamada"
+                    value={preferencias.tonoLlamada}
+                    onChange={(e) => {
+                      if (!esTonoLlamada(e.target.value)) return;
+                      onCambiar({ tonoLlamada: e.target.value });
+                      probarSonido('solicitudLlamada', e.target.value);
+                    }}
+                    className={`${campo} max-w-xs text-sm`}
+                  >
+                    {TONOS_LLAMADA.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
             <button type="button" onClick={() => probarSonido(id)} aria-label={`Escuchar: ${nombre}`} className={`${botonIcono} h-8 w-8`}>
               <Volume2 size={16} />

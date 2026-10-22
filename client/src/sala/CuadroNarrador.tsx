@@ -1,6 +1,6 @@
 import type { VideoTrack } from 'livekit-client';
 import { Ear, MicOff, VolumeX } from 'lucide-react';
-import BotonesContacto, { type ContactoParticipante } from './BotonesContacto';
+import BotonesContacto, { BotonesEnCuadro, type ContactoParticipante } from './BotonesContacto';
 import VideoPista from './VideoPista';
 import CuadroAvatar from './CuadroAvatar';
 import { botonPrincipal } from './estilos';
@@ -26,7 +26,8 @@ interface CuadroNarradorProps {
   video?: VideoTrack | null;
   espejo?: boolean;
   hablando?: boolean;
-  enConversacion?: boolean;
+  /** Está en una conversación privada: con quién, para el lector (ver conQuienConversa); vacío si está solo. */
+  enConversacion?: string;
   /** Escucha una conversación (solo se sabe entre narradores y visitantes): una oreja delante del nombre. */
   escuchando?: boolean;
   /** Tiene el micrófono cerrado (un micro tachado a la izquierda del nombre). */
@@ -60,7 +61,7 @@ const CuadroNarrador = ({
   video,
   espejo = false,
   hablando = false,
-  enConversacion = false,
+  enConversacion,
   escuchando = false,
   silenciado = false,
   npc,
@@ -70,13 +71,15 @@ const CuadroNarrador = ({
   <div className={`group relative rounded ${hablando ? 'sala-habla' : ''}`}>
     <CuadroAvatar
       titulo="Narrador"
-      // Mensaje y conversación junto al rótulo «Narrador», arriba
-      junto={contacto && <BotonesContacto nombre={narrador.nombre} {...contacto} />}
+      // Vigilar (para el lector) junto al rótulo «Narrador», arriba; mensaje y conversación, en el cuadro
+      junto={contacto?.vigilar && <BotonesContacto nombre={narrador.nombre} {...contacto} />}
       contenido={video ? <VideoPista pista={video} espejo={espejo} /> : undefined}
       imagen={narrador.avatar}
+      // Conversando en privado: su avatar o su cámara, y su nombre, más oscuros
+      atenuado={enConversacion !== undefined}
       pie={
         <>
-          <p id={idNombreNarrador(narrador.id)} tabIndex={-1} className="mt-2 text-center font-semibold break-words [text-shadow:0_1px_3px_rgba(0,0,0,0.9)] focus:outline-none">
+          <p id={idNombreNarrador(narrador.id)} tabIndex={-1} className={`mt-2 text-center font-semibold break-words [text-shadow:0_1px_3px_rgba(0,0,0,0.9)] focus:outline-none ${enConversacion !== undefined ? 'opacity-55' : ''}`}>
             <span className="sr-only">Narrador: </span>
             {silenciado && (
               <>
@@ -102,7 +105,9 @@ const CuadroNarrador = ({
             {narrador.manoLevantada && (
               <span className="sr-only"> (mano levantada: {nombreMano(narrador.formaMano, todosPorId).toLocaleLowerCase('es')})</span>
             )}
-            {enConversacion && <span className="sr-only"> (en una conversación privada)</span>}
+            {enConversacion !== undefined && (
+              <span className="sr-only"> (en una conversación privada{enConversacion && ` ${enConversacion}`})</span>
+            )}
             {escuchando && <span className="sr-only"> (escuchando una conversación)</span>}
           </p>
         </>
@@ -125,6 +130,10 @@ const CuadroNarrador = ({
     <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-5 z-10 aspect-square">
       <ManoLevantada levantada={narrador.manoLevantada} forma={narrador.formaMano} estilo={narrador.estiloMano} enNominacion={false} />
     </div>
+    {/* Llamar y escribir, en grande dentro del cuadro (abajo si está el botón del grimorio) */}
+    {contacto && (
+      <BotonesEnCuadro nombre={narrador.nombre} onMensaje={contacto.onMensaje} conversar={contacto.conversar} bajoRotulo abajo={!!grimorio} />
+    )}
     {grimorio && (
       // Sobre el retrato (debajo del rótulo «Narrador»), centrado; solo el botón recibe el ratón
       <div className="pointer-events-none absolute inset-x-0 top-5 flex aspect-square items-center justify-center">

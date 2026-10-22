@@ -175,7 +175,15 @@ export function avisosDeCambio(
       continue;
     }
     // Si ha entrado en mi conversación, ya se dice que se suma
-    if (!miAhora?.miembros.includes(i.para)) avisa('conversaciones', `${nombreDe(i.para)} no ha aceptado la invitación.`);
+    if (miAhora?.miembros.includes(i.para)) continue;
+    // Si ha entrado en otra (y la veo), la llamada se ha cancelado sola
+    const enOtra = nuevo.conversaciones.some((c) => c.miembros.includes(i.para));
+    avisa(
+      'conversaciones',
+      enOtra
+        ? `Se cancela tu llamada a ${nombreDe(i.para)}: ha entrado en otra conversación.`
+        : `${nombreDe(i.para)} no ha aceptado la invitación.`,
+    );
   }
 
   // Asientos: quién se sienta y quién se levanta (o se va y lo deja libre).

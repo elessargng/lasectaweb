@@ -2,7 +2,7 @@ import PulpitoNovato from './PulpitoNovato';
 import { Link, MicOff, VolumeX } from 'lucide-react';
 import { IconoConversar } from './IconosJuego';
 import type { VideoTrack } from 'livekit-client';
-import BotonesContacto, { JuntoAlTexto, type ContactoParticipante } from './BotonesContacto';
+import BotonesContacto, { BotonesEnCuadro, JuntoAlTexto, type ContactoParticipante } from './BotonesContacto';
 import VideoPista from './VideoPista';
 import CuadroAvatar from './CuadroAvatar';
 import { botonPrincipal } from './estilos';
@@ -40,8 +40,11 @@ interface AsientoProps {
   espejo?: boolean;
   /** Está hablando (un aro alrededor del cuadro). */
   hablando?: boolean;
-  /** Está en una conversación privada (fuera de la mesa). */
-  enConversacion?: boolean;
+  /**
+   * Está en una conversación privada (fuera de la mesa): con quién, para el lector
+   * («con Ana y Luis», ver conQuienConversa); vacío si está solo en ella.
+   */
+  enConversacion?: string;
   /** Tiene el micrófono cerrado (un micro tachado a la izquierda del nombre). */
   silenciado?: boolean;
   /** Quien mira le sigue (visitantes y narradores): un enlace delante del nombre. */
@@ -114,7 +117,7 @@ const Asiento = ({
   video,
   espejo = false,
   hablando = false,
-  enConversacion = false,
+  enConversacion,
   silenciado = false,
   siguiendo = false,
   ficha,
@@ -147,7 +150,7 @@ const Asiento = ({
       }`}
     >
       {asa}
-      {enConversacion && (
+      {enConversacion !== undefined && (
         // Conversando en privado: su cámara y su voz no llegan a la mesa
         <span className="absolute left-1 top-1 z-10 rounded-full border border-gold/40 bg-background/85 p-1 text-gold-bright">
           <IconoConversar size={14} />
@@ -157,6 +160,8 @@ const Asiento = ({
         pieFuera={nombreAbajo ? 'abajo' : 'arriba'}
         // Muerto: su avatar o su cámara, en gris (lo dice su ficha)
         apagado={!!ocupante && !!ficha?.muerto}
+        // Conversando en privado: su avatar o su cámara, y su nombre, más oscuros
+        atenuado={!!ocupante && enConversacion !== undefined}
         imagen={ocupante?.avatar}
         contenido={
           ocupante ? (
@@ -174,7 +179,7 @@ const Asiento = ({
           // Los botones van pegados al nombre, sin quitarle ancho (ver JuntoAlTexto)
           <p className={`${nombreAbajo ? 'mt-1' : 'mb-1'} text-center text-sm break-words [text-shadow:0_1px_3px_rgba(0,0,0,0.95)]`}>
             {/* Lo que se lee al llevar el foco al nombre (sentarse, levantarse): sin los botones */}
-            <span id={idNombreAsiento(id)} tabIndex={-1} className="focus:outline-none">
+            <span id={idNombreAsiento(id)} tabIndex={-1} className={`focus:outline-none ${ocupante && enConversacion !== undefined ? 'opacity-55' : ''}`}>
               {ocupante ? (
                 <>
                   {/* Solo el número: «3, Ana» (la lista ya dice que son asientos) */}
@@ -211,7 +216,9 @@ const Asiento = ({
                     </span>
                   )}
                   {fichaParaLector}
-                  {enConversacion && <span className="sr-only"> (en una conversación privada)</span>}
+                  {enConversacion !== undefined && (
+                    <span className="sr-only"> (en una conversación privada{enConversacion && ` ${enConversacion}`})</span>
+                  )}
                 </>
               ) : (
                 <>
@@ -222,8 +229,8 @@ const Asiento = ({
                 </>
               )}
             </span>
-            {/* Junto al nombre (sobre el retrato las taparían las fichas) */}
-            {ocupante && contacto && (
+            {/* Vigilar su mano (para el lector), junto al nombre; mensaje y conversación, en el cuadro */}
+            {ocupante && contacto?.vigilar && (
               <JuntoAlTexto>
                 <BotonesContacto nombre={ocupante.nombre} {...contacto} />
               </JuntoAlTexto>
@@ -231,6 +238,8 @@ const Asiento = ({
           </p>
         }
       />
+      {/* Llamar y escribir, en grande dentro del cuadro (después del nombre para el lector) */}
+      {ocupante && contacto && <BotonesEnCuadro nombre={ocupante.nombre} onMensaje={contacto.onMensaje} conversar={contacto.conversar} />}
       {sentarse && (
         // Encima del cuadro, centrado; solo el botón recibe el ratón
         <div className="pointer-events-none absolute inset-x-0 top-0 flex aspect-square items-center justify-center">

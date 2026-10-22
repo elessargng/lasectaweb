@@ -235,6 +235,12 @@ type NominacionInterna = Omit<SalaNominacion, 'votosNecesarios' | 'votosNecesari
   registro: SalaRegistroVotacion | null;
   /** Los asientos de muertos que ya no tenían voto al empezar la votación (para la votación secreta). */
   gastadosAlVotar?: string[];
+  /**
+   * Los votos que hacían falta por defecto cuando terminó su votación: se siguen
+   * enseñando hasta la siguiente nominación (el récord del día que deja esta
+   * votación, la que más tuvo, solo cuenta para las siguientes).
+   */
+  porDefectoAlTerminar?: number;
 };
 
 export class SalaService {
@@ -259,6 +265,7 @@ export class SalaService {
     // Por defecto, los privados entre jugadores solo con los vecinos
     mensajes: 'vecinos',
     fondo: null,
+    ocultarCamarasConversacion: true,
   };
   private nominacionEnCurso: NominacionInterna | null = null;
   private revelacionActual: { ganador: SalaAlineamiento; causas: string[]; reveladas: string[] } | null = null;
@@ -740,8 +747,9 @@ export class SalaService {
     if (momento === 'preparacion' || !this.seguimiento.estaEmpezada()) this.seguimiento.empezar(this.fotosDeCuentas());
     else for (const a of this.mesa.filter((x) => x.marcado)) this.seguimiento.ejecutado(this.cuentaDe(a.ocupante));
     this.faseActual = { momento: 'noche', numero: momento === 'preparacion' ? 1 : numero + 1, reinicios };
-    // Lo que se señaló de día no sigue de noche (lo verían otros)
+    // Lo que se señaló de día no sigue de noche (lo verían otros); el reloj tampoco
     this.senalamientoActual = null;
+    this.relojActual = null;
     this.cerrarNominacion();
     this.desmarcar();
     this.maximoDelDia = null;
@@ -764,8 +772,9 @@ export class SalaService {
     // El rol con el que empieza el día cuenta como jugado (los cambios de la noche, no)
     this.seguimiento.anotarRoles(this.fotosDeCuentas());
     this.hilos = [];
-    // Lo de la noche no se ve de día
+    // Lo de la noche no se ve de día (y el reloj se quita)
     this.senalamientoActual = null;
+    this.relojActual = null;
     this.recordarPaso({ ...paso, despues: { ...this.faseActual } });
   }
 
@@ -804,6 +813,7 @@ export class SalaService {
     const paso = ultimo && igual(ultimo.despues, this.faseActual) && igual(ultimo.antes, anterior) ? this.pasosDeFase.pop()! : null;
     this.cerrarNominacion();
     this.senalamientoActual = null;
+    this.relojActual = null;
     this.faseActual = anterior;
     if (anterior.momento === 'dia') {
       // Al día: sin los despertares de la noche (como al amanecer) y, si se puede, con su calavera
@@ -891,6 +901,7 @@ export class SalaService {
   limpiarGrimorio(): void {
     this.cerrarNominacion();
     this.senalamientoActual = null;
+    this.relojActual = null;
     this.pasosDeFase = [];
     this.seguimiento.reiniciar();
     // Otra partida: los NPCs del guion, en juego (si alguno se quitó, vuelve); los
@@ -990,6 +1001,7 @@ export class SalaService {
     if (v.paso >= v.orden.length) {
       v.terminada = true;
       this.temporizador = null;
+      n.porDefectoAlTerminar = this.votosNecesariosPorDefecto();
       // Si llega a los necesarios, la siguiente tendrá que superarla (aunque empate y
       // nadie se quede con la calavera)
       if (v.votos >= (n.votosElegidos ?? this.votosNecesariosPorDefecto())) {
@@ -1028,9 +1040,10 @@ export class SalaService {
   nominacion(): SalaNominacion | null {
     const actual = this.nominacionVigente();
     if (!actual) return null;
-    const { votosElegidos: _, registro: __, ...resto } = actual;
+    const { votosElegidos: _, registro: __, porDefectoAlTerminar, ...resto } = actual;
     const votosElegidos = actual.votosElegidos;
-    const porDefecto = this.votosNecesariosPorDefecto();
+    // Votada, los de cuando terminó (no cambian al quedar el récord de esta votación)
+    const porDefecto = porDefectoAlTerminar ?? this.votosNecesariosPorDefecto();
     return {
       ...resto,
       votacion: actual.votacion ? { ...actual.votacion, resultados: { ...actual.votacion.resultados } } : null,
@@ -1246,7 +1259,17 @@ export class SalaService {
     this.relojActual = { inicio, fin: inicio + segundos * 1000, mensaje };
   }
 
-  /** Quita el reloj. No comprueba permisos. */
+  /** El reloj está en marcha (aún no ha acabado). */
+  relojEnMarcha(): boolean {
+    return !!this.relojActual && this.relojActual.fin > Date.now();
+  }
+
+  /** Acaba el reloj ya: suena el gong y se ve «¡Tiempo!», como si se hubiera agotado. No comprueba permisos. */
+  terminarReloj(): void {
+    if (this.relojActual && this.relojActual.fin > Date.now()) this.relojActual = { ...this.relojActual, fin: Date.now() };
+  }
+
+  /** Quita el reloj (sin gong). No comprueba permisos. */
   quitarReloj(): void {
     this.relojActual = null;
   }
@@ -1491,10 +1514,12 @@ export class SalaService {
    * Ejecuta al de un asiento (el que lleva la calavera): muere como al matarlo y,
    * por cada personaje que funciona con las ejecuciones (RECORDATORIOS_EJECUCION)
    * en juego y vivo, se le pone su recordatorio. Luego anochece, salvo con el
-   * Carnicero en juego y vivo (puede haber otra ejecución). Devuelve si ha
-   * anochecido, o null si el asiento no existe. No comprueba permisos.
+   * Carnicero en juego y vivo (puede haber otra ejecución) o si quedan solo dos
+   * jugadores vivos (`final`): entonces decide el narrador si se va a la noche o
+   * se revela el grimorio. Devuelve si ha anochecido y si quedan dos, o null si
+   * el asiento no existe. No comprueba permisos.
    */
-  ejecutar(asientoId: string): { anochece: boolean } | null {
+  ejecutar(asientoId: string): { anochece: boolean; final: boolean } | null {
     const asiento = this.mesa.find((a) => a.id === asientoId);
     if (!asiento) return null;
     const bueno = this.alineamientoEfectivo(asiento) === 'bueno';
@@ -1511,9 +1536,13 @@ export class SalaService {
     }
     this.seguimiento.ejecutado(this.cuentaDe(asiento.ocupante));
     this.cambiarVida(asiento.id, true);
-    const anochece = !this.mesa.some((a) => !a.muerto && this.identidad(a) === VIAJERO_BUTCHER);
+    // Los vivos que quedan: los asientos (también los libres, que cuentan como jugadores)
+    // sin muerte, sin contar a los viajeros
+    const vivos = this.mesa.filter((a) => !a.muerto && !a.muertePendiente && !this.llevaViajero(a)).length;
+    const final = vivos <= 2;
+    const anochece = !final && !this.mesa.some((a) => !a.muerto && this.identidad(a) === VIAJERO_BUTCHER);
     if (anochece) this.irANoche();
-    return { anochece };
+    return { anochece, final };
   }
 
   /** Hace efectiva una muerte pendiente (el narrador la anuncia): ya la ven todos. No comprueba permisos. */

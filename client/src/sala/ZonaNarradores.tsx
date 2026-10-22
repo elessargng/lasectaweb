@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { conQuienConversa } from './conversacionDe';
 import AccesoGrimorio from './AccesoGrimorio';
 import type { ContactoParticipante } from './BotonesContacto';
 import type { PistasParticipante } from './useVideollamada';
@@ -67,7 +68,7 @@ const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas }: ZonaNarrad
                 video={pistas?.get(n.id)?.video}
                 espejo={n.id === estado.yo}
                 hablando={pistas?.get(n.id)?.hablando}
-                enConversacion={estado.conversaciones.some((c) => c.miembros.includes(n.id))}
+                enConversacion={conQuienConversa(estado, n.id)}
                 escuchando={estado.conversaciones.some((c) => c.oyentes.includes(n.id))}
                 // Micro cerrado en la mesa (quien conversa o escucha ya lleva su icono)
                 silenciado={

@@ -1,5 +1,53 @@
 [
   {
+    "version": "1.3.4",
+    "date": "2026-10-22",
+    "title": "Noche Estrellada",
+    "description": "Las noches tienen cielo estrellado, las llamadas privadas se hacen como en botc.app y el narrador gana control sobre el reloj, las cámaras y el final de la partida.",
+    "changes": [
+      {
+        "category": "Sala de Juego",
+        "items": [
+          "Añadido el cielo estrellado de noche.",
+          "Añadida la llamada estilo botc.app.",
+          "Los botones de llamar y de mensaje están dentro del cuadro de cada jugador.",
+          "Quien está en una conversación privada se ve más oscuro en la plaza.",
+          "Una llamada se cancela sola si la otra persona entra en otra conversación.",
+          "La conversación minimizada ya no se sale de su ventana."
+        ]
+      },
+      {
+        "category": "Narrador",
+        "items": [
+          "El reloj se ve en grande en el centro de la mesa.",
+          "Añadida la opción de terminar o cancelar el reloj.",
+          "Añadida la opción de mostrar las cámaras de las conversaciones privadas.",
+          "Con tres jugadores vivos, tras una ejecución se elige entre la noche o revelar el grimorio.",
+          "Los votos necesarios cambian en la siguiente nominación, no al acabar la votación.",
+          "Quien muere de noche se desmarca solo del orden de noche."
+        ]
+      },
+      {
+        "category": "Sonido",
+        "items": [
+          "Añadida la elección del tono de llamada."
+        ]
+      },
+      {
+        "category": "Accesibilidad",
+        "items": [
+          "El lector dice con quién está cada uno en una conversación privada."
+        ]
+      },
+      {
+        "category": "Rituales",
+        "items": [
+          "Las partidas publicadas en Villacuervos enlazan a la web de La Secta para apuntarse."
+        ]
+      }
+    ]
+  },
+  {
     "version": "1.3.3",
     "date": "2026-10-20",
     "title": "El Dedo Acusador",

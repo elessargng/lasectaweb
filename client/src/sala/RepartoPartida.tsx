@@ -25,8 +25,7 @@ interface RepartoPartidaProps {
 }
 
 /**
- * Abajo del todo a la derecha de la sala (lo coloca SalaJuego, junto al reloj del
- * narrador), para todos: cuántos aldeanos, forasteros,
+ * Abajo del todo a la derecha de la sala (lo coloca SalaJuego), para todos: cuántos aldeanos, forasteros,
  * esbirros y demonios tiene la partida (según los asientos, sin los viajeros).
  *
  * El narrador lo ve en una tabla: por tipo, lo que ven los jugadores (por

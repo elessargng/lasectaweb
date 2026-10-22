@@ -121,7 +121,9 @@ const VentanaConversacion = ({
   };
 
   const columnas = minimizada ? 'grid-cols-3' : miembros.length <= 1 ? 'grid-cols-1' : miembros.length <= 4 ? 'grid-cols-2' : 'grid-cols-3';
-  const boton = `${botonSecundario} flex items-center gap-1 px-2 py-1 text-xs`;
+  // Minimizada, los botones son solo su icono (si no, no caben): el nombre, para el lector
+  const boton = `${botonSecundario} flex shrink-0 items-center gap-1 py-1 text-xs ${minimizada ? 'px-1.5' : 'px-2'}`;
+  const texto = minimizada ? 'sr-only' : undefined;
 
   return (
     <section
@@ -169,12 +171,12 @@ const VentanaConversacion = ({
         </h2>
         <button type="button" onClick={() => setMinimizada((m) => !m)} className={boton}>
           {minimizada ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
-          {minimizada ? 'Ampliar' : 'Minimizar'}
+          <span className={texto}>{minimizada ? 'Ampliar' : 'Minimizar'}</span>
         </button>
         {escucho && onEntrar && (
           <button type="button" onClick={onEntrar} className={boton}>
             <LogIn size={14} />
-            Entrar
+            <span className={texto}>Entrar</span>
             <span className="sr-only"> en la conversación</span>
           </button>
         )}
@@ -186,8 +188,8 @@ const VentanaConversacion = ({
           className={`${boton} text-blood-pale`}
         >
           <PhoneOff size={14} />
-          {escucho ? 'Dejar de escuchar' : 'Salir'}
-          <TeclaAtajo atajo={atajoSalir} ocultoALector />
+          <span className={texto}>{escucho ? 'Dejar de escuchar' : 'Salir'}</span>
+          {!minimizada && <TeclaAtajo atajo={atajoSalir} ocultoALector />}
         </button>
       </div>
 

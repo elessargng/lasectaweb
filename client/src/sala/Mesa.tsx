@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
+import { conQuienConversa } from './conversacionDe';
 import Agujas from './Agujas';
 import AnuncioGanador from './AnuncioGanador';
 import AvisoGong from './AvisoGong';
@@ -12,6 +13,7 @@ import { nombresDeAsientos } from './MiniGrimorio';
 import { BookOpen } from 'lucide-react';
 import { describirAsiento } from './nombresAsiento';
 import CuentaAtras from './CuentaAtras';
+import RelojSala, { ID_CANCELAR_RELOJ } from './RelojSala';
 import Ondas, { type OndaMesa } from './Ondas';
 import type { ContactoParticipante } from './BotonesContacto';
 import type { PistasParticipante } from './useVideollamada';
@@ -510,6 +512,18 @@ const Mesa = ({
     if (!r.ok) onError(r.error);
     else window.setTimeout(() => document.getElementById(ID_GANADOR)?.focus(), 0);
   };
+  // El reloj del narrador: terminarlo (suena el gong; el foco, al botón que queda) o quitarlo sin más
+  const terminarReloj = async () => {
+    const r = await pedir('narrador:terminarReloj');
+    if (!r.ok) onError(r.error);
+    else window.setTimeout(() => document.getElementById(ID_CANCELAR_RELOJ)?.focus(), 0);
+  };
+  const cancelarReloj = async () => {
+    const r = await pedir('narrador:quitarReloj');
+    if (!r.ok) return onError(r.error);
+    onAnuncio('reloj', 'Reloj quitado.');
+    window.setTimeout(() => document.getElementById('sala-asientos')?.focus(), 0);
+  };
   const posicionDe = (id: string) => asientos.findIndex((a) => a.id === id);
   const agujas =
     nominacion && posicionDe(nominacion.desde) >= 0 && posicionDe(nominacion.hasta) >= 0
@@ -615,7 +629,12 @@ const Mesa = ({
               // Cada asiento con su ficha justo después: el lector los lee juntos, asiento a asiento.
               // El li no tiene caja (contents): el asiento y la capa de su ficha se colocan respecto a la mesa.
               <li key={a.id} className="contents">
-                <div data-asiento={a.id} className="absolute -translate-x-1/2 -translate-y-1/2" style={posicion(i, total)}>
+                {/* Con los botones de llamada a la vista (Intro, el ratón encima o el foco en ellos), el asiento pasa por encima de las fichas */}
+                <div
+                  data-asiento={a.id}
+                  className="absolute -translate-x-1/2 -translate-y-1/2 has-[[data-iconos-llamada]:focus-within]:z-[15] has-[[data-visibles=true]]:z-[15] hover:has-[[data-iconos-llamada]]:z-[15]"
+                  style={posicion(i, total)}
+                >
                   <Asiento
                     id={a.id}
                     numero={i + 1}
@@ -631,7 +650,7 @@ const Mesa = ({
                     video={ocupante ? pistas.get(ocupante.id)?.video : undefined}
                     espejo={!!ocupante && ocupante.id === estado.yo}
                     hablando={!!ocupante && !!pistas.get(ocupante.id)?.hablando}
-                    enConversacion={!!ocupante && estado.conversaciones.some((c) => c.miembros.includes(ocupante.id))}
+                    enConversacion={ocupante ? conQuienConversa(estado, ocupante.id) : undefined}
                     // Micro cerrado en la mesa (quien conversa en privado ya lleva su icono)
                     silenciado={
                       !!ocupante &&
@@ -922,10 +941,20 @@ const Mesa = ({
         </p>
       )}
 
-      {/* El centro de la mesa: la cuenta atrás (todos), el panel de la nominación y
-          el de editar asientos (narradores). Por encima de las agujas. */}
-      {(nominacion?.cuentaAtrasFin || nominar.panel || nominar.cancelar || eleccion || editando || revelacion || estado.fichasRetenidas || senalamiento) && (
+      {/* El centro de la mesa: el reloj del narrador y la cuenta atrás (todos), el panel
+          de la nominación y el de editar asientos (narradores). Por encima de las agujas. */}
+      {(estado.reloj || nominacion?.cuentaAtrasFin || nominar.panel || nominar.cancelar || eleccion || editando || revelacion || estado.fichasRetenidas || senalamiento) && (
         <div className="absolute left-1/2 top-1/2 z-30 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">
+          {estado.reloj && (
+            <RelojSala
+              key={estado.reloj.inicio}
+              reloj={estado.reloj}
+              desfase={desfaseReloj}
+              onAnuncio={(texto) => onAnuncio('reloj', texto)}
+              onTerminar={acciones.includes('narrador:terminarReloj') ? () => void terminarReloj() : undefined}
+              onCancelar={acciones.includes('narrador:quitarReloj') ? () => void cancelarReloj() : undefined}
+            />
+          )}
           {/* Gardener: los personajes repartidos esperan a que el narrador los entregue */}
           {estado.fichasRetenidas &&
             (acciones.includes('narrador:entregarFichas') ? (

@@ -14,7 +14,7 @@ import {
   type PreferenciaSilla,
 } from './marcas';
 import { esAtajoValido, type Atajo } from './atajos';
-import { SONIDOS, type SonidosActivos } from './sonidos';
+import { esTonoLlamada, SONIDOS, TONO_LLAMADA_DEFECTO, type SonidosActivos, type TonoLlamada } from './sonidos';
 import { esSalidaAudio, SALIDA_DEFECTO, type SalidaAudio } from './sonidoEnvolvente';
 
 /**
@@ -39,6 +39,8 @@ export interface PreferenciasSala {
   fichaAuto: boolean;
   /** Qué sonidos suenan, uno a uno (la cuenta atrás, los votos, los de las conversaciones…). Pestaña Sonido. */
   sonidos: SonidosActivos;
+  /** Cómo suena una llamada entrante (el de botc.app, la campanilla de antes o un teléfono). Pestaña Sonido. */
+  tonoLlamada: TonoLlamada;
   /**
    * Al quedarte sin nadie más en una conversación privada, salir de ella sin
    * pulsar «Salir». Pestaña Comunicaciones; de entrada, no: se sale a mano.
@@ -89,6 +91,12 @@ export interface PreferenciasSala {
   silla: PreferenciaSilla;
   /** Cómo se ve si a un muerto le queda el voto: su vela o un círculo en el sudario. Pestaña Interfaz. */
   voto: EstiloVoto;
+  /**
+   * La llamada estilo botc.app: llamar y mandar un mensaje no van junto al
+   * nombre, sino dentro del cuadro de cada uno, y se ven al pulsar Intro
+   * (ver llamadaBotc.ts). Pestaña Interfaz; de entrada, no.
+   */
+  llamadaBotc: boolean;
   /** La ciudad animada de la cabecera (de día y de noche, con su atardecer y su amanecer). Pestaña Interfaz. */
   ciudadCabecera: boolean;
   /** Cámara y micrófono elegidos (deviceId); vacío: los del sistema. Pestaña Comunicaciones. */
@@ -105,7 +113,8 @@ type ClaveSiNo =
   | 'sonidoEnvolvente'
   | 'panelLateralContraido'
   | 'farolesFijados'
-  | 'ciudadCabecera';
+  | 'ciudadCabecera'
+  | 'llamadaBotc';
 
 /** Los paneles de la columna de la izquierda: uno a la vez, elegido en su barra de iconos. */
 export const PANELES_LATERALES = ['mensajes', 'conversaciones', 'npcs', 'faroles'] as const;
@@ -140,6 +149,7 @@ const SI_NO: Record<ClaveSiNo, boolean> = {
   panelLateralContraido: false,
   farolesFijados: false,
   ciudadCabecera: true,
+  llamadaBotc: false,
 };
 
 /** Lo que guardaba antes la sala en el navegador (para llevarlo a la cuenta la primera vez). */
@@ -182,6 +192,7 @@ export function normalizarPreferencias(datos: unknown): PreferenciasSala {
       return [id, typeof guardado === 'boolean' ? guardado : true];
     }),
   ) as SonidosActivos;
+  preferencias.tonoLlamada = esTonoLlamada(guardadas.tonoLlamada) ? guardadas.tonoLlamada : TONO_LLAMADA_DEFECTO;
   // Los dispositivos: un id del navegador, o vacío (el predeterminado del sistema)
   const idDispositivo = (v: unknown) => (typeof v === 'string' && v.length <= 200 ? v : '');
   preferencias.eleccionDespertar = guardadas.eleccionDespertar === 'lista' ? 'lista' : 'plaza';

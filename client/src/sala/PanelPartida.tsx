@@ -66,6 +66,21 @@ const PanelPartida = ({ configuracion, onCambiar, onCambiarFondo }: PanelPartida
       ayuda="Lo que tarda la aguja en pasar de una ficha a la siguiente."
       onCambiar={(segundosPorFicha) => onCambiar({ segundosPorFicha })}
     />
+    <div className="flex flex-col gap-1">
+      <Interruptor
+        id="sala-pref-ocultar-camaras"
+        activo={configuracion.ocultarCamarasConversacion}
+        onCambiar={(ocultarCamarasConversacion) => onCambiar({ ocultarCamarasConversacion })}
+        describedBy="sala-pref-ocultar-camaras-ayuda"
+        textoClassName="text-sm"
+      >
+        Ocultar las cámaras en conversaciones privadas
+      </Interruptor>
+      <p id="sala-pref-ocultar-camaras-ayuda" className="text-xs text-on-surface-muted">
+        Activado, la cámara de quien conversa en privado solo la ven los de su conversación. Desactivado, en la plaza se
+        sigue viendo su cámara, pero no se le oye. De noche no hay cámaras en la plaza.
+      </p>
+    </div>
     <FondoSala fondo={configuracion.fondo} onCambiar={onCambiarFondo} />
   </div>
 );

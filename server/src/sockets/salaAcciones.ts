@@ -395,14 +395,15 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   /**
    * Ajustes de la partida (Preferencias > Partida). datos: cualquiera de
    * { grimorioJugadores: boolean, segundosPorFicha: número de 0,25 en 0,25,
-   *   mensajes: 'ninguno' | 'vecinos' | 'todos' (mensajes privados entre jugadores) }.
+   *   mensajes: 'ninguno' | 'vecinos' | 'todos' (mensajes privados entre jugadores),
+   *   ocultarCamarasConversacion: boolean }.
    * (La cuenta atrás no se configura: siempre es de 3 a 0.)
    */
   'narrador:configurarPartida': {
     puede: esNarrador,
     noPuede: 'Solo un narrador puede cambiar los ajustes de la partida.',
     hacer: (sala, _yo, datos) => {
-      const { grimorioJugadores, segundosPorFicha, mensajes } = (datos as Record<string, unknown>) ?? {};
+      const { grimorioJugadores, segundosPorFicha, mensajes, ocultarCamarasConversacion } = (datos as Record<string, unknown>) ?? {};
       const cambios: Parameters<SalaService['configurar']>[0] = {};
       if (grimorioJugadores !== undefined) {
         if (typeof grimorioJugadores !== 'boolean') return { ok: false, error: 'Ajuste desconocido.' };
@@ -423,6 +424,10 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       if (mensajes !== undefined) {
         if (!MENSAJES_PRIVADOS.includes(mensajes as SalaMensajesPrivados)) return { ok: false, error: 'Ajuste desconocido.' };
         cambios.mensajes = mensajes as SalaMensajesPrivados;
+      }
+      if (ocultarCamarasConversacion !== undefined) {
+        if (typeof ocultarCamarasConversacion !== 'boolean') return { ok: false, error: 'Ajuste desconocido.' };
+        cambios.ocultarCamarasConversacion = ocultarCamarasConversacion;
       }
       if (Object.keys(cambios).length === 0) return { ok: false, error: 'Ajuste desconocido.' };
       sala.configurar(cambios);
@@ -684,7 +689,17 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
-  /** Quita el reloj antes de que acabe (o el «¡Tiempo!» que se queda al acabar). */
+  /** Acaba el reloj antes de tiempo: suena el gong para todos, como si se hubiera agotado. */
+  'narrador:terminarReloj': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.relojEnMarcha(),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'No hay ningún reloj en marcha.' : 'Solo un narrador puede terminar el reloj.'),
+    hacer: (sala) => {
+      sala.terminarReloj();
+      return { ok: true };
+    },
+  },
+
+  /** Quita el reloj sin que suene (antes de que acabe, o el «¡Tiempo!» que se queda al acabar). */
   'narrador:quitarReloj': {
     puede: (sala, yo) => yo.rol === 'narrador' && !!sala.reloj(),
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'No hay ningún reloj en marcha.' : 'Solo un narrador puede quitar el reloj.'),
@@ -1402,8 +1417,9 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       const asiento = sala.asientos().find((a) => a.id === asientoId);
       if (!asiento) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (!asiento.marcado) return { ok: false, error: 'Solo se ejecuta a quien lleva la calavera.' };
-      sala.ejecutar(asiento.id);
-      return { ok: true };
+      // Si quedan dos vivos, no anochece: el narrador elige (valor «final») entre la noche y revelar el grimorio
+      const { final } = sala.ejecutar(asiento.id) ?? { final: false };
+      return final ? { ok: true, valor: 'final' } : { ok: true };
     },
   },
 

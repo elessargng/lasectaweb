@@ -190,6 +190,8 @@ export interface SalaConfiguracion {
   mensajes: SalaMensajesPrivados;
   /** El fondo de la sala (ruta en el servidor), o null: el de por defecto. */
   fondo: string | null;
+  /** Las cámaras de quien conversa en privado no se ven en la mesa (si no, se ven sin su voz). */
+  ocultarCamarasConversacion: boolean;
 }
 
 /** La votación de una nominación (ver el servidor). */

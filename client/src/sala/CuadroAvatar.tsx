@@ -17,6 +17,8 @@ interface CuadroAvatarProps {
   vacio?: boolean;
   /** Jugador muerto: su avatar o su cámara, en escala de grises. */
   apagado?: boolean;
+  /** En una conversación privada (fuera de la mesa): su avatar o su cámara, más oscuros. */
+  atenuado?: boolean;
   /**
    * El pie va fuera de la caja del componente, que mide solo el cuadro, para
    * colocarlo por su centro (asientos de la mesa): encima (jugadores, porque
@@ -32,7 +34,7 @@ interface CuadroAvatarProps {
  *
  * La imagen no se lee (alt vacío): el pie dice de quién es.
  */
-const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, apagado = false, pieFuera }: CuadroAvatarProps) => (
+const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, apagado = false, atenuado = false, pieFuera }: CuadroAvatarProps) => (
   <div className="relative w-[var(--sala-avatar,10rem)]">
     {titulo && (
       <div className="mb-1 text-center leading-none">
@@ -48,7 +50,7 @@ const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, ap
       data-vacio={vacio}
       className={`sala-retrato flex aspect-square w-full items-center justify-center overflow-hidden rounded-[3px] [&_img]:transition-[filter] [&_img]:duration-700 [&_video]:transition-[filter] [&_video]:duration-700 motion-reduce:[&_img]:transition-none motion-reduce:[&_video]:transition-none ${
         vacio ? 'p-2' : ''
-      } ${apagado ? '[&_img]:grayscale [&_video]:grayscale' : ''}`}
+      } ${apagado ? '[&_img]:grayscale [&_video]:grayscale' : ''} ${atenuado ? '[&_img]:brightness-[0.45] [&_video]:brightness-[0.45]' : ''}`}
     >
       {contenido ?? (imagen && <ImagenAvatar avatar={imagen} />)}
     </div>
