@@ -10,7 +10,7 @@ export type SalaRol = 'narrador' | 'jugador' | 'visitante';
  */
 export type SalaFormaMano = string;
 /** Los estilos de mano (lo mismo en el cliente, ESTILOS_MANO de marcas.ts, sin «al azar»). */
-export const SALA_ESTILOS_MANO = ['laton', 'cinco', 'guante', 'esqueleto', 'guantelete'];
+export const SALA_ESTILOS_MANO = ['defecto', 'laton', 'cinco', 'guante', 'esqueleto', 'guantelete'];
 
 /** Partidas jugadas (terminadas en la sala) por debajo de las que se es novato. */
 export const SALA_PARTIDAS_NOVATO = 10;
@@ -291,7 +291,10 @@ export interface SalaConfiguracion {
   segundosPorFicha: number;
   /** Mensajes privados entre jugadores: ninguno, solo con los vecinos o con todos. */
   mensajes: SalaMensajesPrivados;
-  /** El fondo de la sala (ruta de una imagen en /uploads/sala/fondos), o null: el de por defecto. */
+  /**
+   * El fondo de la sala: una imagen en /uploads/sala/fondos (subida o de la
+   * Biblioteca), la dirección https del fondo que trae el guion, o null: el de por defecto.
+   */
   fondo: string | null;
   /**
    * Las cámaras de quien conversa en privado no se ven en la mesa (de entrada,

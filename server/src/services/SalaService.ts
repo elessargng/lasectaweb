@@ -1750,7 +1750,7 @@ export class SalaService {
         // Si ya lo vio y salió de la sala, lo recupera (vuelve como visitante)
         accesoGrimorio: this.conGrimorio.has(recuerdo) ? 'concedido' : 'ninguno',
         formaMano: 'palma',
-        estiloMano: 'laton',
+        estiloMano: 'defecto',
         sinSonido: false,
       },
       identidad: llegada.identidad,

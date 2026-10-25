@@ -7,6 +7,9 @@ import { createContext, useContext } from 'react';
  * «Al azar» elige uno distinto en cada partida (ver estiloDePartida).
  */
 export const ESTILOS_CALAVERA = [
+  { id: 'defecto', nombre: 'Dibujada', descripcion: 'Una calavera de verdad, a tinta y color' },
+  { id: 'punisher', nombre: 'Punisher', descripcion: 'Ojos rasgados y dientes largos' },
+  { id: 'terminator', nombre: 'Terminator', descripcion: 'De metal, con los ojos rojos' },
   { id: 'clasica', nombre: 'Clásica', descripcion: 'Hueso con contorno de tinta' },
   { id: 'lacre', nombre: 'Sello de lacre', descripcion: 'Estampada en cera roja' },
   { id: 'laton', nombre: 'Latón', descripcion: 'Dorada, con grietas y dientes' },
@@ -19,7 +22,8 @@ export type PreferenciaCalavera = (typeof ESTILOS_CALAVERA)[number]['id'];
 export type EstiloCalavera = Exclude<PreferenciaCalavera, 'azar'>;
 
 export const ESTILOS_MANO = [
-  // (El id «laton» se queda: es el de siempre, ahora en amarillo; los que se quitaron vuelven a este)
+  { id: 'defecto', nombre: 'Dibujada', descripcion: 'Una mano de verdad, a tinta y color' },
+  // (El id «laton» se queda: es el de antes, ahora en amarillo; los que se quitaron vuelven a este)
   { id: 'laton', nombre: 'Amarilla', descripcion: 'Como las de los Simpson' },
   { id: 'cinco', nombre: 'Cinco dedos', descripcion: 'Una mano abierta de verdad, en 3D' },
   { id: 'guante', nombre: 'Guante', descripcion: 'El guante blanco de los dibujos animados' },
@@ -35,9 +39,9 @@ export type EstiloMano = Exclude<PreferenciaMano, 'azar'>;
  * propias (public/sillas/<id>), cada una en sus cinco ángulos (ver Asiento).
  */
 export const ESTILOS_SILLA = [
+  { id: 'comedor', nombre: 'Silla de comedor', descripcion: 'Respaldo de damasco, entre candelabros' },
   { id: 'clasica', nombre: 'Clásica', descripcion: 'La silla tapizada de siempre' },
-  { id: 'gotico', nombre: 'Trono gótico', descripcion: 'Arco apuntado y pináculos, en un nicho' },
-  { id: 'orejero', nombre: 'Butacón orejero', descripcion: 'Terciopelo con capitoné, junto al fuego' },
+  { id: 'tronos', nombre: 'Trono de espadas', descripcion: 'Forjado con espadas, en un nicho de piedra' },
   { id: 'azar', nombre: 'Al azar', descripcion: 'Una distinta en cada partida' },
 ] as const;
 export type PreferenciaSilla = (typeof ESTILOS_SILLA)[number]['id'];
@@ -57,9 +61,9 @@ export type EstiloVoto = (typeof ESTILOS_VOTO)[number]['id'];
 /** La carpeta de las imágenes de una silla (con su barra final), en public/. */
 export const carpetaSilla = (silla: EstiloSilla) => (silla === 'clasica' ? '/sillas/' : `/sillas/${silla}/`);
 
-export const CALAVERA_DEFECTO: PreferenciaCalavera = 'clasica';
-export const MANO_DEFECTO: PreferenciaMano = 'laton';
-export const SILLA_DEFECTO: PreferenciaSilla = 'clasica';
+export const CALAVERA_DEFECTO: PreferenciaCalavera = 'defecto';
+export const MANO_DEFECTO: PreferenciaMano = 'defecto';
+export const SILLA_DEFECTO: PreferenciaSilla = 'comedor';
 export const VOTO_DEFECTO: EstiloVoto = 'vela';
 
 export const esEstiloCalavera = (v: unknown): v is PreferenciaCalavera => ESTILOS_CALAVERA.some((e) => e.id === v);
@@ -85,9 +89,9 @@ export function estiloDePartida<T extends string>(
 }
 
 export const MarcasContexto = createContext<{ calavera: EstiloCalavera; mano: EstiloMano; silla: EstiloSilla; voto: EstiloVoto }>({
-  calavera: 'clasica',
-  mano: 'laton',
-  silla: 'clasica',
+  calavera: 'defecto',
+  mano: 'defecto',
+  silla: 'comedor',
   voto: 'vela',
 });
 

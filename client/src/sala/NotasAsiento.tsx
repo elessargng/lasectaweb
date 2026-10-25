@@ -210,7 +210,7 @@ const NotasAsiento = ({ asientoId, nombre, notas, editable, lado, abierto, nueva
           aria-controls={abierto ? idPanel : undefined}
           onClick={() => (abierto ? cerrar() : onAbrir())}
           data-lado={lado}
-          className={`sala-nota-pestana absolute top-[10%] z-20 flex min-h-7 items-center gap-1 px-1.5 py-1 font-ui text-xs font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
+          className={`sala-nota-pestana absolute top-[10%] z-[5] flex min-h-7 items-center gap-1 px-1.5 py-1 font-ui text-xs font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
             lado === 'derecha' ? 'left-full rounded-r-md' : 'right-full rounded-l-md'
           }`}
         >

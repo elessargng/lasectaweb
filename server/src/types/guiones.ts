@@ -55,6 +55,9 @@ export interface PersonajePropio {
   habilidad: string;
   /** Dirección https de su icono, si la trae. */
   icono: string | null;
+  /** Su icono cuando es bueno o malvado, si los trae (la segunda y la tercera imagen de «image»). */
+  iconoBueno: string | null;
+  iconoMalvado: string | null;
   primeraNoche: Despertar;
   otrasNoches: Despertar;
   /** Altera la preparación de la partida («setup» en el JSON). */
@@ -70,6 +73,8 @@ export interface GuionImportado {
   entradas: (string | PersonajePropio)[];
   /** Las reglas propias del guion (las del Bootlegger: `_meta.bootlegger`), una por línea. */
   bootlegger: string[];
+  /** La imagen de fondo del guion (`_meta.background`, una dirección https), o null. */
+  fondo: string | null;
 }
 
 /** Un personaje de un guion, con lo necesario para mostrarlo. */
@@ -120,6 +125,8 @@ export interface GuionResuelto {
   viajeros: PersonajeDeGuion[];
   /** Las reglas propias del guion (las del Bootlegger), una por línea; vacío si no trae. */
   bootlegger: string[];
+  /** La imagen de fondo que trae el guion (https), o null: al cargarlo, es el fondo de la sala. */
+  fondo: string | null;
   /** Las reglas del Djinn entre personajes del guion (de la copia local); vacío si no hay. */
   djinn: ReglaDjinn[];
 }

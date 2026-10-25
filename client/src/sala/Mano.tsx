@@ -41,11 +41,12 @@ function encajar({ ancho, alto }: TrazoCaja) {
 
 /**
  * Los estilos con dibujo propio (Preferencias > Interfaz), un dibujo por gesto en
- * public/manos/<estilo>/<forma>: la de cinco dedos (Microsoft Fluent Emoji, en 3D;
+ * public/manos/<estilo>/<forma>: la dibujada (la de por defecto), la de cinco dedos (Microsoft Fluent Emoji, en 3D;
  * licencia MIT), el guante blanco de los dibujos animados, la mano esquelética y
  * el guantelete dorado de las seis gemas (estos tres, de client/scripts/generar-manos.cjs).
  */
 const DIBUJO_DE: Partial<Record<EstiloMano, (forma: string) => string>> = {
+  defecto: (forma) => `/manos/defecto/${forma}.webp`,
   cinco: (forma) => `/manos/cinco/${forma}.png`,
   guante: (forma) => `/manos/guante/${forma}.svg`,
   esqueleto: (forma) => `/manos/esqueleto/${forma}.svg`,
@@ -54,7 +55,7 @@ const DIBUJO_DE: Partial<Record<EstiloMano, (forma: string) => string>> = {
 
 /**
  * Una mano levantada, en el estilo que haya elegido cada uno (Preferencias >
- * Interfaz) o en el que se le pase: amarilla (como las de los Simpson), de cinco
+ * Interfaz) o en el que se le pase: dibujada, amarilla (como las de los Simpson), de cinco
  * dedos, el guante o esquelética, cada gesto con su dibujo. Un personaje o un
  * emoticono se ven igual en todos. Solo
  * visual: quien la usa dice para el lector de quién es y qué forma tiene.

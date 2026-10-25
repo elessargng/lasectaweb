@@ -14,6 +14,15 @@ const Calavera = ({ estilo, className = '' }: { estilo?: EstiloCalavera; classNa
   const comun = { 'aria-hidden': true, focusable: false, className } as const;
 
   switch (estilo ?? elegido) {
+    case 'defecto':
+    case 'punisher':
+    case 'terminator':
+      // Las dibujadas: una imagen en public/calaveras
+      return (
+        <svg viewBox="0 0 256 256" {...comun}>
+          <image href={`/calaveras/${estilo ?? elegido}.webp`} x="0" y="0" width="256" height="256" preserveAspectRatio="xMidYMid meet" />
+        </svg>
+      );
     case 'lacre':
       // Un sello de cera roja con la calavera en relieve (una copia clara arriba a la
       // izquierda y otra oscura abajo a la derecha) y un brillo

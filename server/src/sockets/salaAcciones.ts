@@ -452,6 +452,8 @@ export const SALA_ACCIONES: Record<string, Accion> = {
             ? await guiones.guionPredeterminado(predeterminado)
             : await guiones.importar(json, typeof archivo === 'string' ? archivo : undefined);
         sala.cambiarGuion(guion);
+        // Si el guion trae su imagen de fondo, es la de la sala (luego se puede cambiar)
+        if (guion.fondo) sala.configurar({ fondo: guion.fondo });
         return { ok: true };
       } catch (e) {
         // Un guion inválido trae un mensaje para quien lo carga; cualquier otro fallo, no.

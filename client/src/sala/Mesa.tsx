@@ -629,74 +629,81 @@ const Mesa = ({
               // Cada asiento con su ficha justo después: el lector los lee juntos, asiento a asiento.
               // El li no tiene caja (contents): el asiento y la capa de su ficha se colocan respecto a la mesa.
               <li key={a.id} className="contents">
-                {/* Con los botones de llamada a la vista (Intro, el ratón encima o el foco en ellos), el asiento pasa por encima de las fichas */}
-                <div
-                  data-asiento={a.id}
-                  className="absolute -translate-x-1/2 -translate-y-1/2 has-[[data-iconos-llamada]:focus-within]:z-[15] has-[[data-visibles=true]]:z-[15] hover:has-[[data-iconos-llamada]]:z-[15]"
-                  style={posicion(i, total)}
-                >
-                  <Asiento
-                    id={a.id}
-                    numero={i + 1}
-                    ocupante={ocupante}
-                    esYo={visible === yo}
-                    puedeSentarse={puedeSentarse}
-                    onSentarse={() => sentarse(a.id)}
-                    destino={editando && !!mover.activo && mover.activo.hasta === a.id && mover.activo.hasta !== mover.activo.desde}
-                    // Mitad inferior de la mesa (entre las 3 y las 9, sin contarlas): nombre debajo
-                    nombreAbajo={-Math.cos(anguloAsiento(i, total)) > 0.01}
-                    angulo={anguloAsiento(i, total)}
-                    contacto={ocupante ? contacto?.(ocupante) : undefined}
-                    video={ocupante ? pistas.get(ocupante.id)?.video : undefined}
-                    espejo={!!ocupante && ocupante.id === estado.yo}
-                    hablando={!!ocupante && !!pistas.get(ocupante.id)?.hablando}
-                    enConversacion={ocupante ? conQuienConversa(estado, ocupante.id) : undefined}
-                    // Micro cerrado en la mesa (quien conversa en privado ya lleva su icono)
-                    silenciado={
-                      !!ocupante &&
-                      !!pistas.get(ocupante.id) &&
-                      !pistas.get(ocupante.id)!.microfono &&
-                      !estado.conversaciones.some((c) => c.miembros.includes(ocupante.id))
-                    }
-                    asa={editando && real && (
-                        <>
-                          <AsaMover
-                            {...mover.propsAsa(a.id)}
-                            nombre={real.nombre}
-                            numero={i + 1}
-                            // En la esquina del lado en el que se sienta (los de la mitad derecha, a la derecha)
-                            lado={Math.sin(anguloAsiento(i, total)) > 0.01 ? 'derecha' : 'izquierda'}
-                          />
-                          {puedeLevantar && (
-                            <AsaLevantar
+                {/* Centrado en su punto sin transform ni z-index (una caja de 0×0 que centra el asiento): así no
+                    forma su propio plano y, dentro, el cuadro queda bajo las fichas mientras la mano y los
+                    botones de llamada (z-[25], ver Asiento) pasan por encima de ellas */}
+                <div data-asiento={a.id} className="absolute flex h-0 w-0 items-center justify-center" style={posicion(i, total)}>
+                  <div className="relative shrink-0">
+                    <Asiento
+                      id={a.id}
+                      numero={i + 1}
+                      ocupante={ocupante}
+                      esYo={visible === yo}
+                      puedeSentarse={puedeSentarse}
+                      onSentarse={() => sentarse(a.id)}
+                      destino={editando && !!mover.activo && mover.activo.hasta === a.id && mover.activo.hasta !== mover.activo.desde}
+                      // Mitad inferior de la mesa (entre las 3 y las 9, sin contarlas): nombre debajo
+                      nombreAbajo={-Math.cos(anguloAsiento(i, total)) > 0.01}
+                      angulo={anguloAsiento(i, total)}
+                      contacto={ocupante ? contacto?.(ocupante) : undefined}
+                      video={ocupante ? pistas.get(ocupante.id)?.video : undefined}
+                      espejo={!!ocupante && ocupante.id === estado.yo}
+                      hablando={!!ocupante && !!pistas.get(ocupante.id)?.hablando}
+                      enConversacion={ocupante ? conQuienConversa(estado, ocupante.id) : undefined}
+                      // Micro cerrado en la mesa (quien conversa en privado ya lleva su icono)
+                      silenciado={
+                        !!ocupante &&
+                        !!pistas.get(ocupante.id) &&
+                        !pistas.get(ocupante.id)!.microfono &&
+                        !estado.conversaciones.some((c) => c.miembros.includes(ocupante.id))
+                      }
+                      asa={editando && real && (
+                          <>
+                            <AsaMover
+                              {...mover.propsAsa(a.id)}
                               nombre={real.nombre}
                               numero={i + 1}
+                              // En la esquina del lado en el que se sienta (los de la mitad derecha, a la derecha)
                               lado={Math.sin(anguloAsiento(i, total)) > 0.01 ? 'derecha' : 'izquierda'}
-                              desactivado={!!mover.activo || levantando}
-                              onLevantar={() => void levantar(real.id)}
                             />
-                          )}
-                        </>
-                      )}
-                    ficha={fichaDe(a)}
-                    siguiendo={!!ocupante && seguimiento?.siguiendo === ocupante.id}
-                  />
-                  {/* Las notas: una pestaña hacia fuera de la mesa (la izquierda o la derecha del cuadro) */}
-                  {!editando && (
-                    <NotasAsiento
-                      asientoId={a.id}
-                      nombre={describirAsiento(i + 1, ocupante)}
-                      notas={notasDe(a)}
-                      editable={escriboNotas}
-                      lado={Math.sin(anguloAsiento(i, total)) < -0.01 ? 'izquierda' : 'derecha'}
-                      abierto={notasAbiertas?.asientoId === a.id}
-                      nueva={notasAbiertas?.asientoId === a.id && notasAbiertas.nueva}
-                      onAbrir={() => setNotasAbiertas({ asientoId: a.id, nueva: false })}
-                      onCerrar={() => setNotasAbiertas((n) => (n?.asientoId === a.id ? null : n))}
-                      onGuardar={(notaId, texto) => guardarNota(a.id, notaId, texto)}
-                      onBorrar={(notaId) => borrarNota(a.id, notaId)}
+                            {puedeLevantar && (
+                              <AsaLevantar
+                                nombre={real.nombre}
+                                numero={i + 1}
+                                lado={Math.sin(anguloAsiento(i, total)) > 0.01 ? 'derecha' : 'izquierda'}
+                                desactivado={!!mover.activo || levantando}
+                                onLevantar={() => void levantar(real.id)}
+                              />
+                            )}
+                          </>
+                        )}
+                      ficha={fichaDe(a)}
+                      siguiendo={!!ocupante && seguimiento?.siguiendo === ocupante.id}
+                      // Su mano levantada sale del cuadro (en una nominación va en la ficha)
+                      mano={
+                        ocupante &&
+                        !nominacion && (
+                          <ManoLevantada levantada={ocupante.manoLevantada} dos={ocupante.dosManos} forma={ocupante.formaMano} estilo={ocupante.estiloMano} enNominacion={false} />
+                        )
+                      }
                     />
-                  )}
+                    {/* Las notas: una pestaña hacia fuera de la mesa (la izquierda o la derecha del cuadro) */}
+                    {!editando && (
+                      <NotasAsiento
+                        asientoId={a.id}
+                        nombre={describirAsiento(i + 1, ocupante)}
+                        notas={notasDe(a)}
+                        editable={escriboNotas}
+                        lado={Math.sin(anguloAsiento(i, total)) < -0.01 ? 'izquierda' : 'derecha'}
+                        abierto={notasAbiertas?.asientoId === a.id}
+                        nueva={notasAbiertas?.asientoId === a.id && notasAbiertas.nueva}
+                        onAbrir={() => setNotasAbiertas({ asientoId: a.id, nueva: false })}
+                        onCerrar={() => setNotasAbiertas((n) => (n?.asientoId === a.id ? null : n))}
+                        onGuardar={(notaId, texto) => guardarNota(a.id, notaId, texto)}
+                        onBorrar={(notaId) => borrarNota(a.id, notaId)}
+                      />
+                    )}
+                  </div>
                 </div>
                 {/* Su ficha, hacia dentro del círculo y por encima de los cuadros (z-index). La capa ocupa
                     toda la mesa (las fichas se colocan respecto a ella, como los asientos) y no captura el
@@ -711,12 +718,8 @@ const Mesa = ({
                     {...intercambio.propsFicha(a.id)}
                     aria-hidden={soloSeVe || undefined}
                     // La ficha con el menú abierto, por encima de las demás (si no, su menú quedaría debajo).
-                    // Con la mano levantada, también por encima: la mano va dentro y si no la taparían
-                    // las fichas de los asientos siguientes (siempre por debajo del centro de la mesa).
                     // Arrastrándola (Gardener), se queda en tenue; aquella sobre la que se soltaría, resaltada.
-                    className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full has-[[aria-expanded=true]]:z-50 ${
-                      ocupante?.manoLevantada ? 'z-20' : ''
-                    } ${soloSeVe ? '' : 'pointer-events-auto'} ${
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full has-[[aria-expanded=true]]:z-50 ${soloSeVe ? '' : 'pointer-events-auto'} ${
                       puedeIntercambiar ? 'touch-none' : ''
                     } ${intercambio.arrastre?.desde === a.id ? 'opacity-40' : ''} ${
                       intercambio.arrastre?.hasta === a.id ? 'ring-4 ring-gold-bright ring-offset-2 ring-offset-background' : ''
@@ -791,10 +794,10 @@ const Mesa = ({
                         </span>
                       </button>
                     )}
-                    {ocupante && (
-                      // La mano levantada: en la esquina de la ficha (sube y baja) o, en una
-                      // nominación, grande en el centro; se dice en el nombre de la ficha y en los avisos
-                      <ManoLevantada levantada={ocupante.manoLevantada} dos={ocupante.dosManos} forma={ocupante.formaMano} estilo={ocupante.estiloMano} enNominacion={!!nominacion} />
+                    {ocupante && nominacion && (
+                      // En una nominación, la mano levantada va grande en el centro de la ficha (fuera
+                      // de ellas sale del cuadro, en Asiento); se dice en el nombre de la ficha y en los avisos
+                      <ManoLevantada levantada={ocupante.manoLevantada} dos={ocupante.dosManos} forma={ocupante.formaMano} estilo={ocupante.estiloMano} enNominacion />
                     )}
                   </div>
                   {conVela && (

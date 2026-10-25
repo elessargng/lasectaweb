@@ -46,7 +46,7 @@ export class GuionService {
     const personajes = await this.personajes.listarPorEdicion(guion.id, TIPOS_BASE);
     if (personajes.length === 0) throw new GuionInvalidoError('Todavía no se han cargado los personajes. Prueba en un rato.');
     return this.resolver(
-      { nombre: guion.nombre, autor: guion.autor, entradas: personajes.map((p) => p.id), bootlegger: [] },
+      { nombre: guion.nombre, autor: guion.autor, entradas: personajes.map((p) => p.id), bootlegger: [], fondo: null },
       guion.id,
     );
   }
@@ -92,6 +92,7 @@ export class GuionService {
       npcs,
       viajeros,
       bootlegger: guion.bootlegger,
+      fondo: guion.fondo,
       // Las del Djinn: las de los pares de personajes que trae el guion
       djinn: await this.djinn.entrePersonajes([...enGuion]),
     };
@@ -159,8 +160,8 @@ function propio(p: PersonajePropio): ConOrden {
       tipo: p.tipo,
       habilidad: p.habilidad,
       icono: p.icono,
-      iconoBueno: null,
-      iconoMalvado: null,
+      iconoBueno: p.iconoBueno,
+      iconoMalvado: p.iconoMalvado,
       recordatorioPrimeraNoche: p.primeraNoche.recordatorio,
       recordatorioOtrasNoches: p.otrasNoches.recordatorio,
       recordatorios: p.recordatorios,

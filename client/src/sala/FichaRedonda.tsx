@@ -13,7 +13,7 @@ interface FichaRedondaProps {
   votoGastado?: boolean;
   /** Lleva la marca de la calavera (nominación). */
   marcado?: boolean;
-  /** En una votación: los votos acumulados si votó, null (✗) si no; sin definir si aún no le ha tocado. */
+  /** En una votación: los votos acumulados si votó, null (el aspa) si no; sin definir si aún no le ha tocado. */
   voto?: number | null;
   /** Boca abajo (revelando el grimorio): se ve el reverso. Al cambiar, gira. */
   bocaAbajo?: boolean;
@@ -37,7 +37,7 @@ interface FichaRedondaProps {
  * Muerto, lleva el sudario: una banderola negra de dos picos que cae desde las
  * 12 hasta la mitad de la ficha, asomando un poco por arriba. Marcado (en una
  * nominación), lleva una calavera grande en el centro. En una votación, el
- * número de votos que lleva (si votó) o una ✗.
+ * número de votos que lleva (si votó) o un aspa grande que la tapa (public/aspa.webp).
  *
  * Muerto (ya anunciado), además se ve si le queda el voto, como haya elegido
  * cada uno: al perderlo, un círculo azul con halo en lo alto del sudario. (La
@@ -101,17 +101,21 @@ const FichaRedonda = ({ children, muerto = false, muertePendiente = false, votoG
     )}
     {marcado && !bocaAbajo && (
       // La calavera, en el estilo que haya elegido cada uno (Preferencias > Interfaz),
-      // centrada y grande: se lee encima del personaje
-      <Calavera className="absolute left-1/2 top-1/2 w-[62%] -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_2px_2px_rgba(0,0,0,0.55)]" />
+      // centrada y grande, algo transparente: se lee encima del personaje sin taparlo
+      <Calavera className="absolute left-1/2 top-1/2 w-[62%] -translate-x-1/2 -translate-y-1/2 opacity-60 drop-shadow-[0_2px_2px_rgba(0,0,0,0.55)]" />
     )}
-    {voto !== undefined && !bocaAbajo && (
-      // El voto, grande en el centro: el número de votos que lleva la votación, o una ✗
-      <span
-        className={`absolute inset-0 flex items-center justify-center font-teutonic1 leading-none drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)] text-[calc(var(--sala-ficha,4.5rem)*0.55)] ${
-          voto === null ? 'text-[#8b1a1a]' : 'text-[#2b1d0e]'
-        }`}
-      >
-        {voto === null ? '✗' : voto}
+    {voto === null && !bocaAbajo && (
+      // No vota: un aspa grande que tapa la ficha (lo dice la descripción de la ficha: «no vota»)
+      <img
+        src="/aspa.webp"
+        alt=""
+        className="pointer-events-none absolute left-1/2 top-1/2 w-[65%] -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_2px_3px_rgba(0,0,0,0.6)]"
+      />
+    )}
+    {typeof voto === 'number' && !bocaAbajo && (
+      // El voto, grande en el centro: el número de votos que lleva la votación
+      <span className="absolute inset-0 flex items-center justify-center font-teutonic1 leading-none text-[#2b1d0e] drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)] text-[calc(var(--sala-ficha,4.5rem)*0.55)]">
+        {voto}
       </span>
     )}
   </span>

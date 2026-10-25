@@ -8,6 +8,7 @@ import { Dices } from 'lucide-react';
 import { carpetaSilla, ESTILOS_CALAVERA, ESTILOS_MANO, ESTILOS_SILLA, ESTILOS_VOTO, MarcasContexto } from './marcas';
 import type { TamanosMesa } from './Mesa';
 import { RANGOS, type PreferenciasSala } from './preferencias';
+import { FONDOS, rutaFondo } from './fondos';
 import VelaVoto from './VelaVoto';
 
 interface ElegirEstiloProps<T extends string> {
@@ -81,6 +82,8 @@ interface PanelInterfazProps {
   preferencias: PreferenciasSala;
   /** Tamaños con los que se pinta ahora la mesa (los automáticos, si lo son). */
   tamanosMesa: TamanosMesa | null;
+  /** El fondo de la sala (del guion o del narrador), con su dirección completa, o null. */
+  fondoDeLaSala: string | null;
   onCambiar: (cambios: Partial<PreferenciasSala>) => void;
 }
 
@@ -88,7 +91,7 @@ interface PanelInterfazProps {
  * Pestaña Interfaz: cómo ves la sala (avatares y fichas), con una vista previa
  * arriba. Los cambios se aplican al momento; con cuenta se guardan en el servidor.
  */
-const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, onCambiar }: PanelInterfazProps) => (
+const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, fondoDeLaSala, onCambiar }: PanelInterfazProps) => (
   <div className="flex flex-col gap-6">
     <div className="flex flex-col gap-1">
       <Interruptor
@@ -150,6 +153,23 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, onCambiar }: PanelIn
       unidad="%"
       ayuda="Al mínimo, la ficha queda en el centro del cuadro; al máximo, entera fuera, hacia el centro de la mesa."
       onCambiar={(distanciaFicha) => onCambiar({ distanciaFicha })}
+    />
+    <ElegirEstilo
+      id="sala-pref-fondo"
+      leyenda="Fondo de la sala"
+      ayuda="Solo cambia lo que ves tú."
+      estilos={FONDOS}
+      valor={preferencias.fondo}
+      onCambiar={(fondo) => onCambiar({ fondo })}
+      muestra={(fondo) => (
+        // Cada fondo en pequeño (el del guion, el que tiene ahora la sala)
+        <img
+          src={rutaFondo(fondo, fondoDeLaSala)}
+          alt=""
+          loading="lazy"
+          className="block aspect-[2/1] w-20 rounded-[3px] object-cover"
+        />
+      )}
     />
     <ElegirEstilo
       id="sala-pref-calavera"
@@ -244,6 +264,23 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, onCambiar }: PanelIn
         cambiar. Desactivada, no se ve.
       </p>
     </div>
+    {/* Solo con la ciudad: sin ella no hay poblado que quitar */}
+    {preferencias.ciudadCabecera && (
+      <div className="flex flex-col gap-1">
+        <Interruptor
+          id="sala-pref-poblado"
+          activo={preferencias.pobladoCabecera}
+          onCambiar={(pobladoCabecera) => onCambiar({ pobladoCabecera })}
+          describedBy="sala-pref-poblado-ayuda"
+          textoClassName="text-sm"
+        >
+          Poblado en la ciudad
+        </Interruptor>
+        <p id="sala-pref-poblado-ayuda" className="text-xs text-on-surface-muted">
+          Las casas y la torre del reloj. Desactivado, solo se ve el cielo, con el sol, la luna y las aves.
+        </p>
+      </div>
+    )}
   </div>
 );
 

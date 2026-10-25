@@ -1,5 +1,6 @@
 import { JuntoAlTexto } from './BotonesContacto';
 import type { ReactNode } from 'react';
+import BordeHabla from './BordeHabla';
 import ImagenAvatar from './ImagenAvatar';
 
 interface CuadroAvatarProps {
@@ -25,6 +26,8 @@ interface CuadroAvatarProps {
    * debajo van las fichas) o debajo. Sin esto, va debajo dentro de la caja.
    */
   pieFuera?: 'arriba' | 'abajo';
+  /** Está hablando: un borde eléctrico en el marco (BordeHabla). */
+  hablando?: boolean;
 }
 
 /**
@@ -34,7 +37,7 @@ interface CuadroAvatarProps {
  *
  * La imagen no se lee (alt vacío): el pie dice de quién es.
  */
-const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, apagado = false, atenuado = false, pieFuera }: CuadroAvatarProps) => (
+const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, apagado = false, atenuado = false, pieFuera, hablando = false }: CuadroAvatarProps) => (
   <div className="relative w-[var(--sala-avatar,10rem)]">
     {titulo && (
       <div className="mb-1 text-center leading-none">
@@ -46,13 +49,17 @@ const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, ap
       </div>
     )}
     {/* Un marco de retrato con doble filo de latón (sala-retrato); vacío, discontinuo */}
-    <div
-      data-vacio={vacio}
-      className={`sala-retrato flex aspect-square w-full items-center justify-center overflow-hidden rounded-[3px] [&_img]:transition-[filter] [&_img]:duration-700 [&_video]:transition-[filter] [&_video]:duration-700 motion-reduce:[&_img]:transition-none motion-reduce:[&_video]:transition-none ${
-        vacio ? 'p-2' : ''
-      } ${apagado ? '[&_img]:grayscale [&_video]:grayscale' : ''} ${atenuado ? '[&_img]:brightness-[0.45] [&_video]:brightness-[0.45]' : ''}`}
-    >
-      {contenido ?? (imagen && <ImagenAvatar avatar={imagen} />)}
+    <div className="relative">
+      <div
+        data-vacio={vacio}
+        className={`sala-retrato flex aspect-square w-full items-center justify-center overflow-hidden rounded-[3px] [&_img]:transition-[filter] [&_img]:duration-700 [&_video]:transition-[filter] [&_video]:duration-700 motion-reduce:[&_img]:transition-none motion-reduce:[&_video]:transition-none ${
+          vacio ? 'p-2' : ''
+        } ${apagado ? '[&_img]:grayscale [&_video]:grayscale' : ''} ${atenuado ? '[&_img]:brightness-[0.45] [&_video]:brightness-[0.45]' : ''}`}
+      >
+        {contenido ?? (imagen && <ImagenAvatar avatar={imagen} />)}
+      </div>
+      {/* Encima del marco, fuera de él (que recorta): así no se toca el vídeo al hablar */}
+      <BordeHabla activo={hablando} />
     </div>
     {pieFuera ? (
       <div className={`absolute left-0 w-full ${pieFuera === 'arriba' ? 'bottom-full' : 'top-full'}`}>{pie}</div>

@@ -1,19 +1,6 @@
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useRef } from 'react';
 import { getAvatarUrl } from '../utils/api';
-
-const MENOS_MOVIMIENTO = '(prefers-reduced-motion: reduce)';
-
-/** Si el sistema pide menos movimiento (y se entera si cambia). */
-function useMenosMovimiento(): boolean {
-  return useSyncExternalStore(
-    (avisar) => {
-      const consulta = window.matchMedia(MENOS_MOVIMIENTO);
-      consulta.addEventListener('change', avisar);
-      return () => consulta.removeEventListener('change', avisar);
-    },
-    () => window.matchMedia(MENOS_MOVIMIENTO).matches,
-  );
-}
+import { useMenosMovimiento } from './useMenosMovimiento';
 
 /** Un GIF (subido, o recién elegido y aún sin subir): puede estar animado. */
 const esGif = (avatar: string) => /\.gif$/i.test(avatar) || avatar.startsWith('data:image/gif');

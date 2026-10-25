@@ -38,7 +38,7 @@ interface AsientoProps {
   /** Su cámara, si la tiene encendida en la mesa (la propia, en espejo). */
   video?: VideoTrack | null;
   espejo?: boolean;
-  /** Está hablando (un aro alrededor del cuadro). */
+  /** Está hablando (un borde eléctrico en el cuadro). */
   hablando?: boolean;
   /**
    * Está en una conversación privada (fuera de la mesa): con quién, para el lector
@@ -49,6 +49,8 @@ interface AsientoProps {
   silenciado?: boolean;
   /** Quien mira le sigue (visitantes y narradores): un enlace delante del nombre. */
   siguiendo?: boolean;
+  /** Su mano levantada (ManoLevantada), que sale del cuadro. Solo visual. */
+  mano?: ReactNode;
   /**
    * Lo que lleva su ficha y ve quien mira (el personaje, si lo ve; la calavera;
    * el sudario). Se ve en la ficha; aquí es para el lector, en el nombre del asiento.
@@ -121,6 +123,7 @@ const Asiento = ({
   silenciado = false,
   siguiendo = false,
   ficha,
+  mano,
 }: AsientoProps) => {
   const sentarse = !ocupante && puedeSentarse;
   // La ficha, para el lector: «1, Paco, Lavandera, marca, muerte, recordatorios: …» (lo visual ya está en la ficha)
@@ -146,18 +149,20 @@ const Asiento = ({
   return (
     <div
       className={`group relative rounded ${
-        destino ? 'sala-siguiendo' : hablando ? 'sala-habla' : ''
+        destino ? 'sala-siguiendo' : ''
       }`}
     >
       {asa}
       {enConversacion !== undefined && (
         // Conversando en privado: su cámara y su voz no llegan a la mesa
-        <span className="absolute left-1 top-1 z-10 rounded-full border border-gold/40 bg-background/85 p-1 text-gold-bright">
+        <span className="absolute left-1 top-1 z-[5] rounded-full border border-gold/40 bg-background/85 p-1 text-gold-bright">
           <IconoConversar size={14} />
         </span>
       )}
       <CuadroAvatar
         pieFuera={nombreAbajo ? 'abajo' : 'arriba'}
+        // Hablando: el borde eléctrico (no mientras se mueve a alguien aquí, que lleva su aro)
+        hablando={hablando && !destino}
         // Muerto: su avatar o su cámara, en gris (lo dice su ficha)
         apagado={!!ocupante && !!ficha?.muerto}
         // Conversando en privado: su avatar o su cámara, y su nombre, más oscuros
@@ -238,6 +243,12 @@ const Asiento = ({
           </p>
         }
       />
+      {/* La mano levantada, saliendo del cuadro (la caja tiene su tamaño y su sitio); por encima de las fichas */}
+      {mano && (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-[25] aspect-square">
+          {mano}
+        </div>
+      )}
       {/* Llamar y escribir, en grande dentro del cuadro (después del nombre para el lector) */}
       {ocupante && contacto && <BotonesEnCuadro nombre={ocupante.nombre} onMensaje={contacto.onMensaje} conversar={contacto.conversar} />}
       {sentarse && (

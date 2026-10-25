@@ -23,7 +23,7 @@ const AsaLevantar = ({ nombre, numero, lado = 'izquierda', desactivado = false, 
     aria-label={`Levantar a ${nombre} del asiento ${numero}`}
     aria-disabled={desactivado || undefined}
     title="Levantar del asiento"
-    className={`absolute top-1 z-10 ${lado === 'derecha' ? 'right-10' : 'left-10'} flex h-8 w-8 items-center justify-center rounded-full border border-gold/70 bg-surface text-gold-bright shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
+    className={`absolute top-1 z-[5] ${lado === 'derecha' ? 'right-10' : 'left-10'} flex h-8 w-8 items-center justify-center rounded-full border border-gold/70 bg-surface text-gold-bright shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
       desactivado ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-theme-container hover:text-blood-pale'
     }`}
   >

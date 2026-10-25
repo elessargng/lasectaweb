@@ -79,6 +79,7 @@ import { setSonidosActivos, setTonoLlamada, tocarPrivado, tocarSinVoto, tocarSol
 import { esTeclaLlamadaBotc, LlamadaBotcContexto } from './llamadaBotc';
 import CieloEstrellado from './CieloEstrellado';
 import DialogoFinal from './DialogoFinal';
+import { rutaFondo } from './fondos';
 import { idFichaNominar, idPestanaLateral, ID_BOTON_MENU_NARRADOR, ID_SIN_NARRADOR, ID_TITULO_DESPERTAR, idLunaFicha, idNombreNarrador } from './ids';
 import { ElegirEnPlazaContexto, type PedidoEleccion } from './elegirEnPlaza';
 import { getPerfil, limpiarNombre, setPerfil } from './invitado';
@@ -580,13 +581,17 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   useEffect(() => setSonidosActivos(preferencias.sonidos), [preferencias.sonidos]);
   useEffect(() => setTonoLlamada(preferencias.tonoLlamada), [preferencias.tonoLlamada]);
 
-  // El fondo de la sala que ha elegido el narrador (sin elegir: el de por defecto, ver sala.css)
+  // El fondo: el de la sala (el del guion o el que ha elegido el narrador; sin él, el
+  // de La Secta) o el que ha elegido cada uno en Preferencias > Interfaz (ver fondos.ts)
   const fondoSala = estado?.configuracion.fondo ?? null;
+  const fondoDeLaSala = fondoSala ? urlDelServidor(fondoSala) : null;
+  const fondoVisto = rutaFondo(preferencias.fondo, fondoDeLaSala);
   useEffect(() => {
-    const raiz = document.documentElement;
-    if (fondoSala) raiz.style.setProperty('--sala-fondo', `url("${urlDelServidor(fondoSala)}")`);
-    else raiz.style.removeProperty('--sala-fondo');
-  }, [fondoSala]);
+    document.documentElement.style.setProperty('--sala-fondo', `url("${fondoVisto}")`);
+    return () => {
+      document.documentElement.style.removeProperty('--sala-fondo');
+    };
+  }, [fondoVisto]);
   // De noche, el fondo se oscurece con un velo de medianoche (ver sala.css)
   const esNoche = estado?.fase.momento === 'noche';
   useEffect(() => {
@@ -1371,6 +1376,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           nombre={yo?.nombre ?? (alias || cuenta?.username || invitado || '')}
           preferencias={preferencias}
           tamanosMesa={tamanosMesa}
+          fondoDeLaSala={fondoDeLaSala}
           onCambiar={cambiarPreferencias}
         />
       ),
@@ -1706,7 +1712,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
         {/* De noche, el cielo estrellado detrás de la sala */}
         <CieloEstrellado activo={esNoche} />
         <Cabecera
-          ciudad={estado && preferencias.ciudadCabecera ? <SkylineCabecera fase={estado.fase.momento} /> : undefined}
+          ciudad={estado && preferencias.ciudadCabecera ? <SkylineCabecera fase={estado.fase.momento} poblado={preferencias.pobladoCabecera} /> : undefined}
           centro={
             estado && (
               <div className="flex min-w-0 items-center gap-2">

@@ -121,7 +121,7 @@ export const BotonesEnCuadro = ({ nombre, onMensaje, conversar, bajoRotulo = fal
     <div
       data-iconos-llamada
       data-visibles={activa && visibles}
-      className={`group/llamada pointer-events-none absolute inset-x-0 ${bajoRotulo ? 'top-5' : 'top-0'} z-20 flex aspect-square justify-center gap-[8%] px-[4%] ${
+      className={`group/llamada pointer-events-none absolute inset-x-0 ${bajoRotulo ? 'top-5' : 'top-0'} z-[25] flex aspect-square justify-center gap-[8%] px-[4%] ${
         abajo ? 'items-end pb-[4%]' : 'items-center'
       }`}
     >

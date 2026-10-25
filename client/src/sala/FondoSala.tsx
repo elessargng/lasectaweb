@@ -5,6 +5,7 @@ import { compressImage } from '../utils/image';
 import { useAriaLive } from './avisosConfig';
 import { botonSecundario } from './estilos';
 import SelectorFondoBiblioteca from './SelectorFondoBiblioteca';
+import { FONDO_LA_SECTA } from './fondos';
 import type { SalaResultado } from './useSala';
 
 /** Cómo se cambia el fondo (ver la acción narrador:cambiarFondo del servidor). */
@@ -18,7 +19,6 @@ interface FondoSalaProps {
 
 /** Lado máximo con el que se sube un fondo: de sobra para una pantalla grande. */
 const LADO_FONDO = 1920;
-const FONDO_PREDETERMINADO = '/fondos/predeterminado.webp';
 
 /**
  * En la pestaña Partida (narradores): el fondo de la sala, para todos. Se ve
@@ -62,7 +62,7 @@ const FondoSala = ({ fondo, onCambiar }: FondoSalaProps) => {
       </h3>
       <div className="flex flex-wrap items-center gap-3">
         <img
-          src={fondo ? urlDelServidor(fondo) : FONDO_PREDETERMINADO}
+          src={fondo ? urlDelServidor(fondo) : FONDO_LA_SECTA}
           alt=""
           className="h-20 w-36 rounded border border-outline-ghost object-cover"
         />

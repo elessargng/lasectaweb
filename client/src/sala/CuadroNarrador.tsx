@@ -68,9 +68,10 @@ const CuadroNarrador = ({
 }: CuadroNarradorProps) => {
   const { todosPorId } = useFichas();
   return (
-  <div className={`group relative rounded ${hablando ? 'sala-habla' : ''}`}>
+  <div className="group relative rounded">
     <CuadroAvatar
       titulo="Narrador"
+      hablando={hablando}
       // Vigilar (para el lector) junto al rótulo «Narrador», arriba; mensaje y conversación, en el cuadro
       junto={contacto?.vigilar && <BotonesContacto nombre={narrador.nombre} {...contacto} />}
       contenido={video ? <VideoPista pista={video} espejo={espejo} /> : undefined}

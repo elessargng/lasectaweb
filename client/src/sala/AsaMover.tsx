@@ -26,7 +26,7 @@ const AsaMover = ({ nombre, numero, cogido, lado = 'izquierda', ...props }: AsaM
     aria-label={`Mover a ${nombre}, asiento ${numero}`}
     aria-pressed={cogido}
     aria-describedby={ID_AYUDA_MOVER}
-    className={`absolute top-1 z-10 ${lado === 'derecha' ? 'right-1' : 'left-1'} flex h-8 w-8 touch-none items-center justify-center rounded-full border border-gold/70 bg-surface text-gold-bright shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
+    className={`absolute top-1 z-[5] ${lado === 'derecha' ? 'right-1' : 'left-1'} flex h-8 w-8 touch-none items-center justify-center rounded-full border border-gold/70 bg-surface text-gold-bright shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
       cogido ? 'cursor-grabbing bg-theme-main text-background' : 'cursor-grab hover:bg-theme-container'
     }`}
   >

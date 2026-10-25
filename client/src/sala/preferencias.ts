@@ -16,6 +16,7 @@ import {
 import { esAtajoValido, type Atajo } from './atajos';
 import { esTonoLlamada, SONIDOS, TONO_LLAMADA_DEFECTO, type SonidosActivos, type TonoLlamada } from './sonidos';
 import { esSalidaAudio, SALIDA_DEFECTO, type SalidaAudio } from './sonidoEnvolvente';
+import { esPreferenciaFondo, FONDO_DEFECTO, type PreferenciaFondo } from './fondos';
 
 /**
  * Preferencias de la sala que solo cambian cómo la ves tú (tamaños, distancias,
@@ -97,8 +98,15 @@ export interface PreferenciasSala {
    * (ver llamadaBotc.ts). Pestaña Interfaz; de entrada, no.
    */
   llamadaBotc: boolean;
+  /**
+   * El fondo que se ve: el del guion o el que pone el narrador (de entrada; si no
+   * hay, el de La Secta), o siempre uno fijo (ver fondos.ts). Pestaña Interfaz.
+   */
+  fondo: PreferenciaFondo;
   /** La ciudad animada de la cabecera (de día y de noche, con su atardecer y su amanecer). Pestaña Interfaz. */
   ciudadCabecera: boolean;
+  /** En esa ciudad, el poblado (las casas y la torre); sin él, solo el cielo. Pestaña Interfaz. */
+  pobladoCabecera: boolean;
   /** Cámara y micrófono elegidos (deviceId); vacío: los del sistema. Pestaña Comunicaciones. */
   idCamara: string;
   idMicrofono: string;
@@ -114,6 +122,7 @@ type ClaveSiNo =
   | 'panelLateralContraido'
   | 'farolesFijados'
   | 'ciudadCabecera'
+  | 'pobladoCabecera'
   | 'llamadaBotc';
 
 /** Los paneles de la columna de la izquierda: uno a la vez, elegido en su barra de iconos. */
@@ -149,6 +158,7 @@ const SI_NO: Record<ClaveSiNo, boolean> = {
   panelLateralContraido: false,
   farolesFijados: false,
   ciudadCabecera: true,
+  pobladoCabecera: true,
   llamadaBotc: false,
 };
 
@@ -192,6 +202,7 @@ export function normalizarPreferencias(datos: unknown): PreferenciasSala {
       return [id, typeof guardado === 'boolean' ? guardado : true];
     }),
   ) as SonidosActivos;
+  preferencias.fondo = esPreferenciaFondo(guardadas.fondo) ? guardadas.fondo : FONDO_DEFECTO;
   preferencias.tonoLlamada = esTonoLlamada(guardadas.tonoLlamada) ? guardadas.tonoLlamada : TONO_LLAMADA_DEFECTO;
   // Los dispositivos: un id del navegador, o vacío (el predeterminado del sistema)
   const idDispositivo = (v: unknown) => (typeof v === 'string' && v.length <= 200 ? v : '');
