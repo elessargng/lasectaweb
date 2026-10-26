@@ -4,7 +4,7 @@ import { Despertar, GuionImportado, PersonajePropio, TIPOS_PERSONAJE, TipoPerson
 
 
 const MAX_TEXTO = 300 * 1024;
-const MAX_ENTRADAS = 80;
+const MAX_ENTRADAS = 300;
 
 const texto = (v: unknown, max: number): string | null =>
   typeof v === 'string' && v.trim().length > 0 && v.trim().length <= max ? v.trim() : null;

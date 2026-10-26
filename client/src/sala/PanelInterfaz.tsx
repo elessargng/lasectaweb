@@ -10,6 +10,8 @@ import type { TamanosMesa } from './Mesa';
 import { RANGOS, type PreferenciasSala } from './preferencias';
 import { FONDOS, rutaFondo } from './fondos';
 import VelaVoto from './VelaVoto';
+import Galaxy from '../components/Galaxy';
+import { COLORES_CIELO, propsGalaxy } from './cielo';
 
 interface ElegirEstiloProps<T extends string> {
   id: string;
@@ -73,6 +75,41 @@ const MuestraAzar = () => (
   <span className="relative block">
     <FichaRedonda />
     <Dices size="55%" strokeWidth={1.5} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-hoja-tinta" />
+  </span>
+);
+
+/** Dónde va cada estrella de la muestra de unos colores del cielo (en %, y su tamaño en px). */
+const ESTRELLAS_MUESTRA = [
+  [14, 30, 3],
+  [32, 68, 2],
+  [50, 22, 4],
+  [66, 58, 2],
+  [82, 32, 3],
+  [24, 84, 2],
+  [74, 82, 3],
+  [44, 48, 2],
+] as const;
+
+/** La muestra de unos colores del cielo: un trozo de noche con estrellas de esos colores. */
+const MuestraColoresCielo = ({ colores }: { colores: readonly string[] }) => (
+  <span className="relative block aspect-[2/1] w-20 overflow-hidden rounded-[3px] bg-[radial-gradient(ellipse_at_center,#141a33,#05060d)]">
+    {ESTRELLAS_MUESTRA.map(([x, y, lado], i) => {
+      const color = colores[i % colores.length];
+      return (
+        <span
+          key={i}
+          className="absolute rounded-full"
+          style={{
+            left: `${x}%`,
+            top: `${y}%`,
+            width: lado,
+            height: lado,
+            background: color,
+            boxShadow: `0 0 ${lado * 2}px ${color}`,
+          }}
+        />
+      );
+    })}
   </span>
 );
 
@@ -280,6 +317,76 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, fondoDeLaSala, onCam
           Las casas y la torre del reloj. Desactivado, solo se ve el cielo, con el sol, la luna y las aves.
         </p>
       </div>
+    )}
+    <div className="flex flex-col gap-1">
+      <Interruptor
+        id="sala-pref-cielo"
+        activo={preferencias.cieloEstrellado}
+        onCambiar={(cieloEstrellado) => onCambiar({ cieloEstrellado })}
+        describedBy="sala-pref-cielo-ayuda"
+        textoClassName="text-sm"
+      >
+        Cielo estrellado de noche
+      </Interruptor>
+      <p id="sala-pref-cielo-ayuda" className="text-xs text-on-surface-muted">
+        Las estrellas que giran detrás de la sala mientras es de noche. Desactivado, no se ven.
+      </p>
+    </div>
+    {/* Solo con el cielo: sin él no hay estrellas que ajustar */}
+    {preferencias.cieloEstrellado && (
+      <>
+        {/* La vista previa: el cielo como se verá de noche */}
+        <div
+          aria-hidden="true"
+          className="h-32 overflow-hidden rounded-[3px] border border-outline-ghost bg-[radial-gradient(ellipse_at_center,#141a33,#05060d)]"
+        >
+          <Galaxy {...propsGalaxy(preferencias)} />
+        </div>
+        <ElegirEstilo
+          id="sala-pref-colores-cielo"
+          leyenda="Colores de las estrellas"
+          estilos={COLORES_CIELO}
+          valor={preferencias.coloresCielo}
+          onCambiar={(coloresCielo) => onCambiar({ coloresCielo })}
+          muestra={(id) => <MuestraColoresCielo colores={COLORES_CIELO.find((c) => c.id === id)?.colores ?? []} />}
+        />
+        <Deslizador
+          id="sala-pref-velocidad-cielo"
+          etiqueta="Velocidad de las estrellas"
+          valor={preferencias.velocidadCielo}
+          rango={RANGOS.velocidadCielo}
+          unidad="%"
+          ayuda="Al 100 %, como de costumbre; al mínimo, quietas: ni giran ni parpadean."
+          onCambiar={(velocidadCielo) => onCambiar({ velocidadCielo })}
+        />
+        <Deslizador
+          id="sala-pref-densidad-cielo"
+          etiqueta="Densidad de estrellas"
+          valor={preferencias.densidadCielo}
+          rango={RANGOS.densidadCielo}
+          unidad="%"
+          ayuda="Al 100 %, como de costumbre; más, un cielo más poblado de estrellas más pequeñas."
+          onCambiar={(densidadCielo) => onCambiar({ densidadCielo })}
+        />
+        <Deslizador
+          id="sala-pref-brillo-cielo"
+          etiqueta="Brillo de las estrellas"
+          valor={preferencias.brilloCielo}
+          rango={RANGOS.brilloCielo}
+          unidad="%"
+          ayuda="Al 100 %, como de costumbre."
+          onCambiar={(brilloCielo) => onCambiar({ brilloCielo })}
+        />
+        <Deslizador
+          id="sala-pref-parpadeo-cielo"
+          etiqueta="Parpadeo de las estrellas"
+          valor={preferencias.parpadeoCielo}
+          rango={RANGOS.parpadeoCielo}
+          unidad="%"
+          ayuda="Al mínimo, no parpadean; al máximo, se apagan y se encienden del todo."
+          onCambiar={(parpadeoCielo) => onCambiar({ parpadeoCielo })}
+        />
+      </>
     )}
   </div>
 );

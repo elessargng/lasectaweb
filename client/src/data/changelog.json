@@ -22,6 +22,7 @@
         "items": [
           "Añadida la elección del fondo de la sala: el del guion, el de botc.app o uno de los de La Secta.",
           "Añadida la opción de quitar el poblado de la ciudad y dejar solo el cielo.",
+          "Añadidos los ajustes del cielo estrellado de la noche: quitarlo, sus colores, la velocidad de las estrellas (hasta dejarlas quietas), su densidad, su brillo y su parpadeo.",
           "Nuevas calaveras: Dibujada (la de por defecto), Punisher y Terminator.",
           "Nueva mano Dibujada, la de por defecto.",
           "Nuevas sillas: Silla de comedor (la de por defecto) y Trono de espadas, en lugar del Trono gótico y el Butacón orejero."

@@ -1710,7 +1710,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       <LlamadaBotcContexto.Provider value={contextoLlamadaBotc}>
       <div className="contents" style={tamanos}>
         {/* De noche, el cielo estrellado detrás de la sala */}
-        <CieloEstrellado activo={esNoche} />
+        <CieloEstrellado activo={esNoche && preferencias.cieloEstrellado} ajustes={preferencias} />
         <Cabecera
           ciudad={estado && preferencias.ciudadCabecera ? <SkylineCabecera fase={estado.fase.momento} poblado={preferencias.pobladoCabecera} /> : undefined}
           centro={
