@@ -497,17 +497,114 @@
   background: rgba(var(--tinta-rgb), 0.55);
 }
 
-/* Quien habla: un aro morado que respira (quieto con menos movimiento) */
-@keyframes sala-habla {
-  0%, 100% {
-    box-shadow: 0 0 0 2px var(--color-grimorio-bright), 0 0 10px 1px rgba(165, 150, 230, 0.45);
-  }
-  50% {
-    box-shadow: 0 0 0 2px var(--color-grimorio-bright), 0 0 18px 4px rgba(165, 150, 230, 0.7);
-  }
+/*
+ * Quien habla (BordeHabla): un aro morado nítido, un halo que crece con el
+ * volumen de su voz (--nivel, de 0 a 1, lo pone BordeHabla), una onda que sale
+ * del marco y, en la esquina, unas barras de volumen. Aparece y se va fundiéndose.
+ */
+@property --nivel {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
 }
 .sala-habla {
-  animation: sala-habla 1.6s ease-in-out infinite;
+  --habla-rgb: 165, 150, 230;
+  --nivel: 0;
+  opacity: 0;
+  transform: scale(0.985);
+  box-shadow:
+    0 0 0 1px rgba(var(--tinta-rgb), 0.85),
+    0 0 0 calc(2px + var(--nivel) * 1px) var(--color-grimorio-bright),
+    0 0 calc(10px + var(--nivel) * 18px) calc(1px + var(--nivel) * 5px) rgba(var(--habla-rgb), calc(0.35 + var(--nivel) * 0.4)),
+    inset 0 0 calc(8px + var(--nivel) * 14px) rgba(var(--habla-rgb), calc(0.12 + var(--nivel) * 0.2));
+  transition:
+    opacity 220ms ease-out,
+    transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    --nivel 140ms ease-out;
+}
+.sala-habla[data-activo='true'] {
+  opacity: 1;
+  transform: scale(1);
+}
+.sala-habla[data-activo='false'] {
+  /* Al callar, se apaga despacio (las pausas entre frases no parpadean) */
+  transition:
+    opacity 600ms ease-in 150ms,
+    transform 600ms ease-in 150ms,
+    --nivel 400ms ease-out;
+}
+/* La onda: un aro que sale del marco y se desvanece; más viva cuanto más fuerte */
+.sala-habla::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1.5px solid rgba(var(--habla-rgb), calc(0.25 + var(--nivel) * 0.55));
+  opacity: 0;
+  pointer-events: none;
+}
+.sala-habla[data-activo='true']::after {
+  animation: sala-habla-onda 1.8s cubic-bezier(0.2, 0.6, 0.35, 1) infinite;
+}
+@keyframes sala-habla-onda {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.14);
+  }
+}
+/* Las barras de volumen, en la esquina de abajo a la derecha */
+.sala-habla-barras {
+  position: absolute;
+  right: 0.3rem;
+  bottom: 0.3rem;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 9999px;
+  background: rgba(var(--tinta-rgb), 0.78);
+  box-shadow:
+    0 0 0 1px rgba(var(--habla-rgb), 0.45),
+    0 2px 6px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+.sala-habla-barras > span {
+  --alto: 0.45;
+  width: 3px;
+  height: 0.65rem;
+  border-radius: 9999px;
+  background: var(--color-grimorio-bright);
+  box-shadow: 0 0 4px rgba(var(--habla-rgb), 0.8);
+  transform-origin: center;
+  transform: scaleY(calc(0.3 + var(--nivel) * 0.7 * var(--alto)));
+}
+.sala-habla-barras > span:nth-child(2) {
+  --alto: 1;
+}
+.sala-habla[data-activo='true'] .sala-habla-barras > span {
+  animation: sala-habla-barra 0.9s ease-in-out infinite alternate;
+}
+.sala-habla[data-activo='true'] .sala-habla-barras > span:nth-child(2) {
+  animation-duration: 0.7s;
+  animation-delay: -0.35s;
+}
+.sala-habla[data-activo='true'] .sala-habla-barras > span:nth-child(3) {
+  animation-duration: 1.05s;
+  animation-delay: -0.6s;
+}
+/* Un vaivén leve encima del volumen, para que las barras se vean vivas entre medidas */
+@keyframes sala-habla-barra {
+  from {
+    transform: scaleY(calc(0.3 + var(--nivel) * 0.7 * var(--alto) * 0.7));
+  }
+  to {
+    transform: scaleY(calc(0.35 + var(--nivel) * 0.65 * min(1, var(--alto) * 1.3)));
+  }
 }
 
 /* A quien se sigue: aro de latón con brillo */
@@ -1333,9 +1430,16 @@
     animation: none;
   }
 
-  .sala-habla {
+  .sala-habla,
+  .sala-habla[data-activo='false'] {
+    transform: none;
+    transition: opacity 200ms linear;
+  }
+  .sala-habla[data-activo='true']::after {
     animation: none;
-    box-shadow: 0 0 0 2px var(--color-grimorio-bright), 0 0 12px 2px rgba(165, 150, 230, 0.55);
+  }
+  .sala-habla[data-activo='true'] .sala-habla-barras > span {
+    animation: none;
   }
 
   .btn-runic,

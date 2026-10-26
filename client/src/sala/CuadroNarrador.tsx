@@ -71,6 +71,7 @@ const CuadroNarrador = ({
   <div className="group relative rounded">
     <CuadroAvatar
       titulo="Narrador"
+      idVoz={narrador.id}
       hablando={hablando}
       // Vigilar (para el lector) junto al rótulo «Narrador», arriba; mensaje y conversación, en el cuadro
       junto={contacto?.vigilar && <BotonesContacto nombre={narrador.nombre} {...contacto} />}

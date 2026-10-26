@@ -26,7 +26,9 @@ interface CuadroAvatarProps {
    * debajo van las fichas) o debajo. Sin esto, va debajo dentro de la caja.
    */
   pieFuera?: 'arriba' | 'abajo';
-  /** Está hablando: un borde eléctrico en el marco (BordeHabla). */
+  /** Su id de participante, para que el aro de quien habla siga su volumen. */
+  idVoz?: string;
+  /** Está hablando: un aro en el marco que sigue su voz (BordeHabla). */
   hablando?: boolean;
 }
 
@@ -37,7 +39,7 @@ interface CuadroAvatarProps {
  *
  * La imagen no se lee (alt vacío): el pie dice de quién es.
  */
-const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, apagado = false, atenuado = false, pieFuera, hablando = false }: CuadroAvatarProps) => (
+const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, apagado = false, atenuado = false, pieFuera, idVoz, hablando = false }: CuadroAvatarProps) => (
   <div className="relative w-[var(--sala-avatar,10rem)]">
     {titulo && (
       <div className="mb-1 text-center leading-none">
@@ -59,7 +61,7 @@ const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, ap
         {contenido ?? (imagen && <ImagenAvatar avatar={imagen} />)}
       </div>
       {/* Encima del marco, fuera de él (que recorta): así no se toca el vídeo al hablar */}
-      <BordeHabla activo={hablando} />
+      <BordeHabla id={idVoz} activo={hablando} />
     </div>
     {pieFuera ? (
       <div className={`absolute left-0 w-full ${pieFuera === 'arriba' ? 'bottom-full' : 'top-full'}`}>{pie}</div>
