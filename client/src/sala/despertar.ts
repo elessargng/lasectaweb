@@ -21,7 +21,7 @@ export const NOMBRE_BANDO: Record<SalaAlineamiento, string> = { bueno: 'Bueno', 
 
 /**
  * Lo que se puede mandar al despertar a alguien de noche. Es el mismo catálogo
- * que el del servidor (server/src/types/sala.ts): las fichas las usan el
+ * que el del servidor (server/src/contrato/sala.ts): las fichas las usan el
  * narrador y el jugador despierto; las tarjetas, solo el narrador.
  */
 

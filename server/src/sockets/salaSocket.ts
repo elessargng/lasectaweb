@@ -1,12 +1,14 @@
 import type { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
-import { farolesVacios, NPC_TOR, limpiarAvatarSala, limpiarNombreSala, SALA_AVATAR_INVITADO, SalaLlegada, SalaService } from '../services/SalaService';
-import { SalaAsiento, SalaEstado, SalaNominacion } from '../types/sala';
+import { SalaService } from '../services/SalaService';
+import { limpiarAvatarSala, limpiarNombreSala, SALA_AVATAR_INVITADO, SalaLlegada } from '../services/partida/Participantes';
+import { VistaPartida } from '../services/partida/VistaPartida';
+import { SalaResultado } from '../contrato/sala';
 import { ChatError, ChatService } from '../services/chat/ChatService';
 import { ConversacionError, ConversacionService } from '../services/conversaciones/ConversacionService';
 import { PaseVideo, VideollamadaError, VideollamadaService } from '../services/videollamada/VideollamadaService';
-import { accionesPermitidas, DependenciasSala, ejecutarAccion, SalaResultado } from './salaAcciones';
+import { accionesPermitidas, DependenciasSala, ejecutarAccion } from './salaAcciones';
 
 /** Bajo /api para que pase por el mismo proxy que el resto de la API. */
 export const SALA_SOCKET_PATH = '/api/socket.io';
@@ -36,39 +38,6 @@ function usuarioDelToken(token: string): { id: string; username: string } | null
  * web o, sin cuenta, el nombre con el que entra; el nombre y el avatar que
  * prefiere mostrar, si los cambió; y su id de cliente para recuperar el sitio si se reconecta. Cada cambio se manda entero a todos.
  */
-/** Una ficha sin su personaje ni su alineamiento: así la ven quienes no son su jugador ni narran. */
-// Lo que un jugador no ve de una ficha: de las ajenas, el personaje y los faroles; de ninguna, los recordatorios ni las notas.
-const sinPersonaje = (a: SalaAsiento): SalaAsiento => ({
-  ...a,
-  personaje: null,
-  alineamiento: null,
-  recordatorios: [],
-  notas: [],
-  faroles: farolesVacios(),
-});
-const sinRecordatorios = (a: SalaAsiento): SalaAsiento => ({ ...a, recordatorios: [], notas: [] });
-
-/**
- * La nominación como la ve quien no ve el grimorio en una votación secreta (Organ
- * Grinder): sin los votos que hacen falta ni el recuento; de lo que vota cada
- * asiento, solo lo suyo (cuánto vale su voto, no por dónde va el recuento).
- */
-const nominacionSecreta = (n: SalaNominacion, miAsiento: string | null): SalaNominacion => {
-  const v = n.votacion;
-  const mio = miAsiento && v && miAsiento in v.resultados ? v.resultados[miAsiento] : undefined;
-  return {
-    ...n,
-    votosNecesarios: 0,
-    votosNecesariosPorDefecto: 0,
-    votacion: v && {
-      ...v,
-      votos: 0,
-      valores: undefined,
-      resultados: mio === undefined ? {} : { [miAsiento!]: mio === null ? null : (v.valores?.[miAsiento!] ?? 1) },
-    },
-  };
-};
-
 export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAvatar, deps: DependenciasSala): void {
   const io = new Server(httpServer, {
     path: SALA_SOCKET_PATH,
@@ -109,137 +78,15 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     // Las conversaciones y el servidor de vídeo, al día con la sala (papeles, fase, quién está)
     conversaciones.depurar();
     videollamada?.sincronizar();
-    const listaConversaciones = conversaciones.lista();
-    const participantes = sala.participantes();
-    const asientos = sala.asientos();
-    const configuracion = sala.configuracion();
-    const nominacion = sala.nominacion();
-    const votaciones = sala.votaciones();
-    const distribucion = sala.distribucion();
-    const revelacion = sala.revelacion();
-    // Las fichas ya reveladas al final de la partida: todos ven su personaje
-    const reveladas = new Set(revelacion?.reveladas ?? []);
-    // Las fichas ajenas, como las ve quien no tiene el grimorio: sin personaje, salvo los
-    // viajeros, que son públicos. Se ve quién es de verdad (un Alcalde con «Is The
-    // Apprentice» se ve como Aprendiz); el alineamiento de un viajero, no.
-    const viajeroDe = (a: SalaAsiento) => {
-      const id = sala.identidad(a);
-      return id && sala.personaje(id)?.tipo === 'traveller' ? id : null;
-    };
-    const comoLaVenTodos = (a: SalaAsiento): SalaAsiento => {
-      const viajero = viajeroDe(a);
-      return viajero ? { ...sinPersonaje(a), personaje: viajero } : sinPersonaje(a);
-    };
-    // Su jugador ve el personaje y el alineamiento que se le entregaron al repartir la
-    // bolsa (lo que el narrador cambie luego es del grimorio: no lo ve), sin recordatorios.
-    // Si es un viajero de verdad, como ese viajero (el Aprendiz: la ficha que sacó de la
-    // bolsa), como los demás. Con Tor, no sabe quién es hasta que muere: la ve como los
-    // demás; muerto, ve quién es de verdad.
-    const tor = sala.npcActivo(NPC_TOR);
-    const comoLaVeSuJugador = (a: SalaAsiento): SalaAsiento => {
-      if (tor && !a.muerto) return comoLaVenTodos(a);
-      // Con Tor, al morir sabe quién es de verdad (un Borracho con ficha de aldeano: Borracho)
-      if (tor) return { ...sinRecordatorios(a), personaje: sala.identidad(a) };
-      const viajero = viajeroDe(a);
-      // Un viajero: quien es lo ve todo el mundo; su alineamiento, como se le dijo (al repartir
-      // o con «Tú eres»), no el que el narrador le ponga en el grimorio
-      return viajero
-        ? { ...sinRecordatorios(a), personaje: viajero, alineamiento: sala.fichaEntregada(a.id).alineamiento }
-        : { ...sinRecordatorios(a), ...sala.fichaEntregada(a.id) };
-    };
-    // Con el Gardener, mientras el narrador no los entregue, nadie ve ningún personaje
-    // (tampoco el suyo ni los viajeros)
-    const retenidas = sala.fichasRetenidas();
-    const bolsa = sala.bolsa();
-    const faroles = sala.faroles();
-    const npcs = sala.npcs();
-    const despertares = sala.despertares();
-    const recordatoriosNoche = sala.recordatoriosNoche();
-    const ahora = Date.now();
-    const noche = sala.fase().momento === 'noche';
-    const senalamiento = sala.senalamiento();
-    // Votación secreta (Organ Grinder): lo que no ve quien no ve el grimorio
-    const secreta = sala.votacionSecreta();
-    const gastadosAlVotar = sala.gastadosAlVotar();
-    for (const { socketId, clave, id } of sala.conexiones()) {
-      const yo = sala.participanteDe(clave)!;
-      const veVotos = yo.rol === 'narrador' || (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido');
-      const ocultarVotos = secreta && !veVotos;
-      const miAsiento = sala.asientoDe(yo.id)?.id ?? null;
-      const estado: SalaEstado = {
-        // Votación secreta, con una nominación abierta: las manos de los demás no se ven
-        participantes:
-          ocultarVotos && nominacion
-            ? participantes.map((p) => (p.id === yo.id ? p : { ...p, manoLevantada: false, dosManos: false }))
-            : participantes,
-        asientos:
-          yo.rol === 'narrador' || (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido')
-            ? asientos
-            : asientos.map((a) => ({
-                // La muerte pendiente (de la noche, por anunciar) es del grimorio: los demás no la ven
-                ...(reveladas.has(a.id)
-                  ? a
-                  : retenidas
-                    ? sinPersonaje(a)
-                    : a.ocupante === yo.id
-                      ? comoLaVeSuJugador(a)
-                      : comoLaVenTodos(a)),
-                muertePendiente: false,
-                // Votación secreta: con cuántos votos se puso la calavera no se sabe, y mientras
-                // se vota, el voto de los muertos ajenos se ve como estaba al empezar
-                ...(ocultarVotos && {
-                  votosMarca: null,
-                  votoGastado: gastadosAlVotar && a.ocupante !== yo.id ? gastadosAlVotar.has(a.id) : a.votoGastado,
-                }),
-              })),
-        configuracion,
-        nominacion: ocultarVotos && nominacion ? nominacionSecreta(nominacion, miAsiento) : nominacion,
-        fase: sala.fase(),
-        distribucion,
-        revelacion,
-        gong: sala.gong(),
-        reloj: sala.reloj(),
-        // De noche, solo quien señala (y quien ve el grimorio)
-        senalamiento: sala.veSenalamiento(yo) ? senalamiento : null,
-        video: !!videollamada,
-        // Los jugadores no saben qué visitantes escuchan las conversaciones; de noche, ni
-        // siquiera que las hay: solo ven aquella en la que están
-        conversaciones:
-          yo.rol === 'jugador'
-            ? listaConversaciones
-                .filter((c) => !noche || c.miembros.includes(yo.id))
-                .map((c) => ({ ...c, oyentes: [] }))
-            : listaConversaciones,
-        invitaciones: conversaciones.invitacionesDe(id),
-        // La bolsa es solo para los narradores (son los personajes de la partida)
-        bolsa: yo.rol === 'narrador' ? bolsa : [],
-        // Los faroles del narrador: también los ven los visitantes (no juegan)
-        faroles: yo.rol === 'jugador' ? farolesVacios() : faroles,
-        npcs,
-        setupAceptado: yo.rol === 'narrador' ? sala.setupAceptado() : null,
-        silencio: sala.silencio(),
-        voudon: sala.voudonVivo(),
-        institutriz: sala.institutrizViva(),
-        bootlegger: sala.bootlegger(),
-        rolStormcatcher: sala.rolStormcatcher(),
-        fichasRetenidas: sala.fichasRetenidas(),
-        ahora,
-        // El registro de votaciones es solo para los narradores.
-        votaciones: yo.rol === 'narrador' ? votaciones : [],
-        recordatoriosNoche: yo.rol === 'narrador' ? recordatoriosNoche : {},
-        // Los despertares: los narradores y los visitantes que ven el grimorio, todos; un
-        // jugador, solo el de su asiento (nadie más sabe a quién se despierta).
-        despertares:
-          yo.rol === 'narrador' || (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido')
-            ? despertares
-            : yo.rol === 'jugador'
-              ? despertares.filter((d) => d.asiento === sala.asientoDespiertoDe(yo.id))
-              : [],
-        grimorioRecibido: yo.rol === 'jugador' ? sala.grimorioRecibidoPor(yo.id) : null,
-        yo: id,
-        acciones: accionesPermitidas(sala, yo),
-      };
-      io.to(socketId).emit('sala:estado', estado);
+    // Cada uno, lo que le toca ver de la partida
+    const vista = new VistaPartida(sala, {
+      conversaciones: conversaciones.lista(),
+      invitacionesDe: (id) => conversaciones.invitacionesDe(id),
+      video: !!videollamada,
+      accionesDe: (yo) => accionesPermitidas(sala, yo),
+    });
+    for (const { socketId, clave } of sala.conexiones()) {
+      io.to(socketId).emit('sala:estado', vista.para(sala.participanteDe(clave)!));
     }
   };
 

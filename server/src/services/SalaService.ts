@@ -18,14 +18,16 @@ import {
   SalaRevelacion,
   SalaRol,
   NUM_FAROLES,
-  SALA_PARTIDAS_NOVATO,
   RECORDATORIO_TEXTO,
   SalaFichaEnviada,
   SalaGrimorioEnviado,
-} from '../types/sala';
+} from '../contrato/sala';
 import { GuionResuelto, PersonajeDeGuion } from '../types/guiones';
 import { repartoPara } from './partida/distribucion';
-import { esAvatarSalaGuardado } from '../utils/salaAvatarStorage';
+import { Participantes, type SalaLlegada } from './partida/Participantes';
+import { RelojSala } from './partida/RelojSala';
+import { Despertares, type HiloDespertar } from './partida/Despertares';
+import { Nominaciones } from './partida/Nominaciones';
 import {
   SeguimientoPartida,
   type FotoJugador,
@@ -33,61 +35,12 @@ import {
   type RegistroPartida,
 } from './estadisticas/SeguimientoPartida';
 
-/** Margen para volver tras una desconexión (recarga, red caída) sin perder el papel. */
-export const SALA_GRACIA_MS = 20_000;
-
-export const SALA_NOMBRE_MAX = 24;
-
-/** Mensajes que se guardan en cada despertar (los más antiguos se descartan). */
-export const SALA_MENSAJES_DESPERTAR_MAX = 300;
 
 /** Asientos de la mesa: con cuántos empieza la sala y cuántos puede tener. */
 export const SALA_ASIENTOS = { inicial: 7, min: 0, max: 20 };
 
-/** Duración de la cuenta atrás de las nominaciones, en segundos. */
-/**
- * La cuenta atrás de las nominaciones: siempre de 3 a 0, un segundo cada número
- * (4 s, lo que dura su sonido en el cliente).
- */
-export const SALA_CUENTA_ATRAS_MS = 4000;
-
-/** El reloj del narrador: cuánto puede durar (segundos) y cuánto se sigue viendo al acabar (ms). */
-export const SALA_RELOJ = { minSegundos: 5, maxSegundos: 60 * 60, mensajeMax: 120 };
-const SALA_RELOJ_TRAS_FIN_MS = 15_000;
-
 /** Lo que tarda la aguja de ficha en ficha al votar, en segundos (de cuarto en cuarto). */
 export const SALA_SEGUNDOS_POR_FICHA = { min: 0.25, max: 2, paso: 0.25, defecto: 1 };
-
-/** Quita espacios de sobra y recorta; cadena vacía si no queda nombre. */
-export function limpiarNombreSala(valor: unknown): string {
-  if (typeof valor !== 'string') return '';
-  return valor.replace(/\s+/g, ' ').trim().slice(0, SALA_NOMBRE_MAX);
-}
-
-/**
- * Avatares que cualquiera puede elegir para la sala, además del de su cuenta.
- * Son los predefinidos de la web (client/public); el cliente tiene la misma lista.
- */
-export const SALA_AVATARES = [
-  '/logo-2.png',
-  '/avatar.png',
-  '/avatars/wizard.png',
-  '/avatars/sorceress.png',
-  '/avatars/rogue.png',
-  '/avatars/noble.png',
-];
-
-/** El que llevan los invitados mientras no elijan otro: el logo de La Secta. */
-export const SALA_AVATAR_INVITADO = '/logo-2.png';
-
-/**
- * El avatar elegido si es uno de los permitidos (predefinido, o una imagen
- * propia subida a la sala); si no, null (el por defecto).
- */
-export function limpiarAvatarSala(valor: unknown): string | null {
-  if (typeof valor !== 'string') return null;
-  return SALA_AVATARES.includes(valor) || esAvatarSalaGuardado(valor) ? valor : null;
-}
 
 /** Un asiento recién puesto: libre, con su ficha viva y sin marca. */
 const asientoNuevo = (): SalaAsiento => ({
@@ -163,52 +116,10 @@ const RECORDATORIOS_EJECUCION: { personaje: string; texto: string; unico: boolea
 ];
 
 /** Las casillas de farol, todas vacías. */
-/** Con cuenta y menos de SALA_PARTIDAS_NOVATO partidas (si no se sabe cuántas, no). */
-const esNovato = (llegada: SalaLlegada) => llegada.partidasJugadas !== null && llegada.partidasJugadas < SALA_PARTIDAS_NOVATO;
 
 export const farolesVacios = (): (string | null)[] => Array.from({ length: NUM_FAROLES }, () => null);
 
-/** Quién se conecta, según el token o el nombre de invitado. */
-export interface SalaLlegada {
-  /** Quién es de verdad: `u:<id de usuario>` con cuenta, `invitado` sin ella. */
-  identidad: string;
-  /** Su nombre de usuario, o el nombre con el que entra el invitado. */
-  nombreBase: string;
-  /** Nombre que prefiere mostrar en la sala (vacío: el base). */
-  alias: string;
-  conCuenta: boolean;
-  /** El que lleva si no elige otro: el de su cuenta en la web (null si no tiene) o, si es invitado, el logo. */
-  avatarPorDefecto: string | null;
-  /** El que eligió para la sala (ver `SALA_AVATARES`); null: el por defecto. */
-  avatarElegido: string | null;
-  /** Con cuenta, las partidas que ha jugado (null si no se sabe, o invitado). */
-  partidasJugadas: number | null;
-}
 
-interface Entrada {
-  participante: SalaParticipante;
-  identidad: string;
-  nombreBase: string;
-  avatarPorDefecto: string | null;
-  /** Conexión activa, o null mientras se espera a que vuelva. */
-  socketId: string | null;
-  expulsion: NodeJS.Timeout | null;
-  /**
-   * Por lo que se le reconoce si sale y vuelve a entrar (para devolverle el
-   * acceso al grimorio): su cuenta o, si es invitado, su navegador.
-   */
-  recuerdo: string;
-}
-
-/**
- * Estado de la sala de juego, en memoria: quién está y con qué papel. Se pierde
- * al reiniciar el servidor, como una sala que se vacía.
- *
- * Cada navegador trae un id de cliente propio y secreto (la «clave»); así, si se
- * recarga la página o se corta la conexión un momento, vuelve con el mismo papel
- * en lugar de entrar de nuevo como visitante. La clave nunca se manda a los demás:
- * en la lista cada uno tiene otro id, público.
- */
 /** La nominación tal como se guarda: los votos que hacen falta se calculan al pedirla. */
 /**
  * Lo que un cambio de fase deja atrás y la máquina del tiempo devuelve: al
@@ -221,30 +132,23 @@ interface PasoDeFase {
   seguimiento: InstantaneaSeguimiento;
   marcas?: { asiento: string; votos: number | null }[];
   maximoDelDia?: number | null;
-  hilos?: { asiento: string; ocupante: string | null; mensajes: MensajeDespertar[] }[];
+  hilos?: HiloDespertar[];
   senalamiento?: SalaSenalamiento | null;
 }
 
 /** Cuántos cambios de fase se recuerdan para volver atrás. */
 const PASOS_DE_FASE_MAX = 20;
 
-type NominacionInterna = Omit<SalaNominacion, 'votosNecesarios' | 'votosNecesariosPorDefecto' | 'privada'> & {
-  /** Los votos que ha fijado el narrador; null: los de por defecto. */
-  votosElegidos: number | null;
-  /** Su entrada del registro, que se completa al terminar la votación. */
-  registro: SalaRegistroVotacion | null;
-  /** Los asientos de muertos que ya no tenían voto al empezar la votación (para la votación secreta). */
-  gastadosAlVotar?: string[];
-  /**
-   * Los votos que hacían falta por defecto cuando terminó su votación: se siguen
-   * enseñando hasta la siguiente nominación (el récord del día que deja esta
-   * votación, la que más tuvo, solo cuenta para las siguientes).
-   */
-  porDefectoAlTerminar?: number;
-};
 
+/**
+ * La sala de juego, en memoria: quién está, la mesa y la partida. Se pierde al
+ * reiniciar el servidor, como una sala que se vacía. Es la fachada de la sala:
+ * las acciones, el chat, las conversaciones y la vista solo hablan con ella, y
+ * ella reparte el trabajo entre sus partes (en services/partida/).
+ */
 export class SalaService {
-  private entradas = new Map<string, Entrada>();
+  /** Quién está en la sala y con qué papel (ver Participantes). */
+  private readonly presentes = new Participantes();
   private mesa: SalaAsiento[] = Array.from({ length: SALA_ASIENTOS.inicial }, () => asientoNuevo());
 
   /**
@@ -267,16 +171,29 @@ export class SalaService {
     fondo: null,
     ocultarCamarasConversacion: true,
   };
-  private nominacionEnCurso: NominacionInterna | null = null;
+  /** Las nominaciones y votaciones del día. */
+  private readonly nominaciones = new Nominaciones({
+    mesa: () => this.mesa,
+    buscar: (id) => this.buscar(id),
+    dia: () => this.faseActual.numero,
+    segundosPorFicha: () => this.ajustes.segundosPorFicha,
+    sinVoto: (id) => this.sinVoto(id),
+    puedeVotarDoble: (id) => this.puedeVotarDoble(id),
+    voudonVivo: () => this.voudonVivo(),
+    valorDelVoto: (asiento, ocupante) => this.valorDelVoto(asiento, ocupante),
+    secreta: () => this.votacionSecreta(),
+    alNominar: (desde, hasta) => this.seguimiento.nomina(this.cuentaDelAsiento(desde), this.cuentaDelAsiento(hasta)),
+    alVotar: (id) => this.seguimiento.vota(this.cuentaDe(id)),
+    alCambiarSola: () => this.alCambiarSola(),
+  });
   private revelacionActual: { ganador: SalaAlineamiento; causas: string[]; reveladas: string[] } | null = null;
-  /** Hora (ms) del último gong del narrador, o null. */
-  private ultimoGong: number | null = null;
-  /** El reloj del narrador (ver SalaEstado.reloj), o null. */
-  private relojActual: SalaReloj | null = null;
-  /** A quién se ha dejado ver el grimorio (por su `recuerdo`), para devolvérselo si sale y vuelve. */
-  private conGrimorio = new Set<string>();
-  /** Los votos de la votación de hoy que más tuvo (de las que llegaron a los necesarios), o null. */
-  private maximoDelDia: number | null = null;
+  /** El gong y el reloj del narrador. */
+  private readonly tiempo = new RelojSala();
+  /** Los despertares de la noche. */
+  private readonly despertados = new Despertares(
+    () => this.mesaAlDia(),
+    () => this.faseActual,
+  );
   private faseActual: SalaFase = { momento: 'preparacion', numero: 0, reinicios: 0 };
   private guionActual: GuionResuelto | null = null;
   /** Sube cada vez que cambia el guion, para mandarlo solo entonces. */
@@ -669,9 +586,6 @@ export class SalaService {
     for (const id of elegidos) resto.splice(resto.indexOf(id), 1);
     return personajes.map((_, i) => (i === x ? elegidos[0] : i === y ? elegidos[1] : resto.shift()!));
   }
-  /** Lo siguiente que toca en la nominación: el fin de la cuenta atrás o el próximo paso de la votación. */
-  private temporizador: NodeJS.Timeout | null = null;
-  private registro: SalaRegistroVotacion[] = [];
 
   /**
    * Se llama cuando la sala cambia sola, sin que nadie pida nada (la votación
@@ -689,9 +603,7 @@ export class SalaService {
 
   /** El id de usuario de un participante con cuenta, o null (invitado, o ya no está). */
   private cuentaDe(participanteId: string | null): string | null {
-    if (!participanteId) return null;
-    const identidad = [...this.entradas.values()].find((e) => e.participante.id === participanteId)?.identidad;
-    return identidad?.startsWith('u:') ? identidad.slice(2) : null;
+    return this.presentes.cuentaDe(participanteId);
   }
 
   private cuentaDelAsiento(asientoId: string): string | null {
@@ -722,7 +634,7 @@ export class SalaService {
 
   /** El registro de nominaciones y votaciones, en el orden en que se nominó. */
   votaciones(): SalaRegistroVotacion[] {
-    return this.registro.map((v) => ({ ...v, votantes: v.votantes && [...v.votantes] }));
+    return this.nominaciones.votaciones();
   }
 
   fase(): SalaFase {
@@ -742,17 +654,17 @@ export class SalaService {
       despues: this.faseActual,
       seguimiento: this.seguimiento.instantanea(),
       marcas: this.mesa.filter((a) => a.marcado).map((a) => ({ asiento: a.id, votos: a.votosMarca })),
-      maximoDelDia: this.maximoDelDia,
+      maximoDelDia: this.nominaciones.recordDelDia(),
     };
     if (momento === 'preparacion' || !this.seguimiento.estaEmpezada()) this.seguimiento.empezar(this.fotosDeCuentas());
     else for (const a of this.mesa.filter((x) => x.marcado)) this.seguimiento.ejecutado(this.cuentaDe(a.ocupante));
     this.faseActual = { momento: 'noche', numero: momento === 'preparacion' ? 1 : numero + 1, reinicios };
     // Lo que se señaló de día no sigue de noche (lo verían otros); el reloj tampoco
     this.senalamientoActual = null;
-    this.relojActual = null;
+    this.tiempo.quitarReloj();
     this.cerrarNominacion();
     this.desmarcar();
-    this.maximoDelDia = null;
+    this.nominaciones.ponerRecordDelDia(null);
     this.recordarPaso({ ...paso, despues: { ...this.faseActual } });
   }
 
@@ -765,16 +677,16 @@ export class SalaService {
       antes: { ...this.faseActual },
       despues: this.faseActual,
       seguimiento: this.seguimiento.instantanea(),
-      hilos: this.hilos.map((h) => ({ ...h, mensajes: [...h.mensajes] })),
+      hilos: this.despertados.instantanea(),
       senalamiento: this.senalamientoActual,
     };
     this.faseActual = { ...this.faseActual, momento: 'dia' };
     // El rol con el que empieza el día cuenta como jugado (los cambios de la noche, no)
     this.seguimiento.anotarRoles(this.fotosDeCuentas());
-    this.hilos = [];
+    this.despertados.cerrarTodos();
     // Lo de la noche no se ve de día (y el reloj se quita)
     this.senalamientoActual = null;
-    this.relojActual = null;
+    this.tiempo.quitarReloj();
     this.recordarPaso({ ...paso, despues: { ...this.faseActual } });
   }
 
@@ -813,17 +725,17 @@ export class SalaService {
     const paso = ultimo && igual(ultimo.despues, this.faseActual) && igual(ultimo.antes, anterior) ? this.pasosDeFase.pop()! : null;
     this.cerrarNominacion();
     this.senalamientoActual = null;
-    this.relojActual = null;
+    this.tiempo.quitarReloj();
     this.faseActual = anterior;
     if (anterior.momento === 'dia') {
       // Al día: sin los despertares de la noche (como al amanecer) y, si se puede, con su calavera
-      this.hilos = [];
-      this.maximoDelDia = paso?.maximoDelDia ?? null;
+      this.despertados.cerrarTodos();
+      this.nominaciones.ponerRecordDelDia(paso?.maximoDelDia ?? null);
       for (const m of paso?.marcas ?? []) this.marcar(m.asiento, true, m.votos);
     } else if (anterior.momento === 'noche') {
       this.desmarcar();
-      this.maximoDelDia = null;
-      if (paso?.hilos) this.hilos = paso.hilos;
+      this.nominaciones.ponerRecordDelDia(null);
+      if (paso?.hilos) this.despertados.restaurar(paso.hilos);
       if (paso?.senalamiento) this.senalamientoActual = paso.senalamiento;
     }
     if (paso) this.seguimiento.restaurar(paso.seguimiento);
@@ -843,53 +755,26 @@ export class SalaService {
     this.recordatorios[id] = activo;
   }
 
-  /**
-   * Los despertares, uno por asiento, con quién estaba sentado al abrirlo (null:
-   * estaba libre; un asiento libre cuenta como un jugador más). Solo los de esta
-   * noche: al amanecer se borran.
-   */
-  private hilos: { asiento: string; ocupante: string | null; mensajes: MensajeDespertar[] }[] = [];
+  // Los despertares: los lleva Despertares
 
-  /**
-   * Se aplica al leer: si el jugador de un asiento se levanta, cambia de asiento,
-   * alguien se sienta en el que estaba libre o el asiento se quita, ese
-   * despertar se cierra (lo dicho era para otro).
-   */
-  private hilosAlDia() {
-    const mesa = this.mesaAlDia();
-    this.hilos = this.hilos.filter((h) => mesa.some((a) => a.id === h.asiento && a.ocupante === h.ocupante));
-    return this.hilos;
-  }
-
-  /** Todos los despertares, en el orden en que se abrieron. */
   despertares(): SalaDespertar[] {
-    return this.hilosAlDia().map((h) => ({ asiento: h.asiento, mensajes: h.mensajes.map((m) => ({ ...m })) }));
+    return this.despertados.despertares();
   }
 
   hayDespertar(asientoId: string): boolean {
-    return this.hilosAlDia().some((h) => h.asiento === asientoId);
+    return this.despertados.hayDespertar(asientoId);
   }
 
-  /** El asiento con despertar de este participante, o null. */
   asientoDespiertoDe(participanteId: string): string | null {
-    return this.hilosAlDia().find((h) => h.ocupante === participanteId)?.asiento ?? null;
+    return this.despertados.asientoDespiertoDe(participanteId);
   }
 
-  /** Abre el despertar de un asiento (si ya lo tiene, no hace nada). Devuelve el error, si lo hay. */
   despertar(asientoId: string): string | null {
-    const asiento = this.mesaAlDia().find((a) => a.id === asientoId);
-    if (!asiento) return 'Ese asiento ya no existe.';
-    if (!this.hayDespertar(asientoId)) this.hilos.push({ asiento: asientoId, ocupante: asiento.ocupante, mensajes: [] });
-    return null;
+    return this.despertados.despertar(asientoId);
   }
 
-  /** Guarda un mensaje en el despertar de un asiento. No valida: lo hace quien lo llama. */
   enviarDespertar(asientoId: string, mensaje: Omit<MensajeDespertar, 'id' | 'hora' | 'fase'>): void {
-    const hilo = this.hilosAlDia().find((h) => h.asiento === asientoId);
-    if (!hilo) return;
-    const { momento, numero } = this.faseActual;
-    hilo.mensajes.push({ ...mensaje, id: randomUUID(), hora: Date.now(), fase: { momento, numero } });
-    if (hilo.mensajes.length > SALA_MENSAJES_DESPERTAR_MAX) hilo.mensajes.shift();
+    this.despertados.enviar(asientoId, mensaje);
   }
 
   /**
@@ -901,14 +786,13 @@ export class SalaService {
   limpiarGrimorio(): void {
     this.cerrarNominacion();
     this.senalamientoActual = null;
-    this.relojActual = null;
+    this.tiempo.quitarReloj();
     this.pasosDeFase = [];
     this.seguimiento.reiniciar();
     // Otra partida: los NPCs del guion, en juego (si alguno se quitó, vuelve); los
     // demás que se pusieron a mano, siguen
     this.npcsActuales = [...this.npcsActuales, ...this.npcsDelGuion().filter((id) => !this.npcsActuales.includes(id))];
-    this.registro = [];
-    this.maximoDelDia = null;
+    this.nominaciones.olvidarTodo();
     for (const a of this.mesa) {
       a.muerto = false;
       a.muertePendiente = false;
@@ -930,127 +814,10 @@ export class SalaService {
     this.retenidas = false;
     this.rolStormcatcherActual = null;
     this.revelacionActual = null;
-    // Es otra partida: quien veía el grimorio deja de verlo (y puede volver a sentarse),
-    // también quien había salido de la sala
-    for (const { participante } of this.entradas.values()) {
-      if (participante.accesoGrimorio === 'concedido') participante.accesoGrimorio = 'ninguno';
-    }
-    this.conGrimorio.clear();
-    this.hilos = [];
+    this.presentes.olvidarGrimorios();
+    this.despertados.cerrarTodos();
     this.recordatorios = {};
     this.faseActual = { momento: 'preparacion', numero: 0, reinicios: this.faseActual.reinicios + 1 };
-  }
-
-  private pararTemporizador(): void {
-    if (this.temporizador) clearTimeout(this.temporizador);
-    this.temporizador = null;
-  }
-
-  /** «asiento 3 (Bea)» o «asiento 3, libre», como lo verá el narrador en el registro. */
-  private describirAsiento(asientoId: string): string {
-    const i = this.mesa.findIndex((a) => a.id === asientoId);
-    const ocupante = this.mesa[i]?.ocupante;
-    const nombre = ocupante ? this.buscar(ocupante)?.nombre : undefined;
-    return nombre ? `asiento ${i + 1} (${nombre})` : `asiento ${i + 1}, libre`;
-  }
-
-  /**
-   * Acaba la cuenta atrás: empieza la votación. La aguja del nominado va al
-   * asiento siguiente (en el sentido de las agujas del reloj) y sigue hasta él.
-   */
-  private empezarVotacion(): void {
-    const n = this.nominacionVigente();
-    if (!n) return;
-    const i = this.mesa.findIndex((a) => a.id === n.hasta);
-    const orden = this.mesa.map((_, k) => this.mesa[(i + 1 + k) % this.mesa.length].id);
-    n.votacion = { orden, paso: 0, resultados: {}, votos: 0, terminada: false };
-    n.gastadosAlVotar = this.mesa.filter((a) => a.votoGastado).map((a) => a.id);
-    this.alCambiarSola();
-    this.temporizador = setTimeout(() => this.avanzarVotacion(), this.ajustes.segundosPorFicha * 1000);
-  }
-
-  /**
-   * La aguja llega a la siguiente ficha: vota si quien se sienta ahí tiene la mano
-   * levantada (y entonces se le baja). Un muerto solo vota si le queda el voto, y
-   * al votar lo gasta.
-   */
-  private avanzarVotacion(): void {
-    const n = this.nominacionVigente();
-    const v = n?.votacion;
-    if (!n || !v || v.terminada) return;
-    const asientoId = v.orden[v.paso];
-    const asiento = this.mesa.find((a) => a.id === asientoId);
-    const ocupante = asiento?.ocupante ? this.buscar(asiento.ocupante) : undefined;
-    // La Banshee con su habilidad, y los muertos con el Voudon vivo, votan sin gastar el
-    // voto de muerto (ni les hace falta); con el Voudon, los vivos no votan (salvo él)
-    const conservaVoto = (!!ocupante && this.puedeVotarDoble(ocupante.id)) || this.voudonVivo();
-    const sinVoto = !ocupante || this.sinVoto(ocupante.id);
-    const vota = ocupante?.rol === 'jugador' && ocupante.manoLevantada && !sinVoto;
-    if (vota) {
-      const valor = this.valorDelVoto(asiento!, ocupante);
-      v.votos += valor;
-      if (valor !== 1) v.valores = { ...v.valores, [asientoId]: valor };
-      this.seguimiento.vota(this.cuentaDe(ocupante.id));
-      // Voto contado: la mano baja sola.
-      ocupante.manoLevantada = false;
-      ocupante.dosManos = false;
-      if (asiento?.muerto && !conservaVoto) asiento.votoGastado = true;
-    }
-    v.resultados[asientoId] = vota ? v.votos : null;
-    v.paso += 1;
-    if (v.paso >= v.orden.length) {
-      v.terminada = true;
-      this.temporizador = null;
-      n.porDefectoAlTerminar = this.votosNecesariosPorDefecto();
-      // Si llega a los necesarios, la siguiente tendrá que superarla (aunque empate y
-      // nadie se quede con la calavera)
-      if (v.votos >= (n.votosElegidos ?? this.votosNecesariosPorDefecto())) {
-        this.maximoDelDia = Math.max(this.maximoDelDia ?? 0, v.votos);
-      }
-      // Se completa su entrada del registro (la que se hizo al nominar)
-      if (n.registro) {
-        n.registro.votantes = v.orden
-          .filter((id) => v.resultados[id] !== null && v.resultados[id] !== undefined)
-          .map((id) => {
-            const o = this.mesa.find((a) => a.id === id)?.ocupante;
-            const nombre = (o && this.buscar(o)?.nombre) || this.describirAsiento(id);
-            const valor = v.valores?.[id];
-            return valor !== undefined ? `${nombre} (${valor} votos)` : nombre;
-          });
-        n.registro.votos = v.votos;
-      }
-    } else {
-      this.temporizador = setTimeout(() => this.avanzarVotacion(), this.ajustes.segundosPorFicha * 1000);
-    }
-    this.alCambiarSola();
-  }
-
-  /** La nominación en curso (la de verdad); se anula sola si alguno de los dos asientos ya no existe. */
-  private nominacionVigente(): NominacionInterna | null {
-    const n = this.nominacionEnCurso;
-    const existe = (id: string) => this.mesa.some((a) => a.id === id);
-    if (n && (!existe(n.desde) || !existe(n.hasta))) {
-      this.nominacionEnCurso = null;
-      this.pararTemporizador();
-    }
-    return this.nominacionEnCurso;
-  }
-
-  /** La nominación en curso (una copia), con los votos que hacen falta. */
-  nominacion(): SalaNominacion | null {
-    const actual = this.nominacionVigente();
-    if (!actual) return null;
-    const { votosElegidos: _, registro: __, porDefectoAlTerminar, ...resto } = actual;
-    const votosElegidos = actual.votosElegidos;
-    // Votada, los de cuando terminó (no cambian al quedar el récord de esta votación)
-    const porDefecto = porDefectoAlTerminar ?? this.votosNecesariosPorDefecto();
-    return {
-      ...resto,
-      votacion: actual.votacion ? { ...actual.votacion, resultados: { ...actual.votacion.resultados } } : null,
-      votosNecesarios: votosElegidos ?? porDefecto,
-      votosNecesariosPorDefecto: porDefecto,
-      privada: this.votacionSecreta(),
-    };
   }
 
   /**
@@ -1063,80 +830,34 @@ export class SalaService {
     return !!og && !og.recordatorios.some((r) => /^drunk$/i.test(r.texto.trim()));
   }
 
-  /**
-   * En la votación en curso, los asientos que ya no tenían voto al empezar (null si
-   * no se está votando): en la votación secreta, a los demás se les manda esto en
-   * lugar de su voto gastado, para que no se sepa qué muertos votan.
-   */
+  // Las nominaciones y votaciones: las lleva Nominaciones
+
+  nominacion(): SalaNominacion | null {
+    return this.nominaciones.nominacion();
+  }
+
   gastadosAlVotar(): Set<string> | null {
-    const n = this.nominacionVigente();
-    return n?.votacion && n.gastadosAlVotar ? new Set(n.gastadosAlVotar) : null;
+    return this.nominaciones.gastadosAlVotar();
   }
 
-  /**
-   * Los votos que hacen falta si el narrador no dice otra cosa: la mitad de las
-   * fichas vivas, redondeando hacia arriba; y si ya ha habido hoy una votación
-   * que llegó a los necesarios, al menos uno más que la que más tuvo. Nunca menos de 1.
-   */
-  private votosNecesariosPorDefecto(): number {
-    const vivos = this.mesa.filter((a) => !a.muerto).length;
-    // Con el Voudon vivo no hace falta la mitad: basta 1 (y superar la que más tuvo hoy)
-    const mayoria = this.voudonVivo() ? 1 : Math.ceil(vivos / 2);
-    return Math.max(1, mayoria, this.maximoDelDia === null ? 0 : this.maximoDelDia + 1);
-  }
-
-  /** El narrador fija los votos que hacen falta en la nominación en curso (null: los de por defecto). */
   elegirVotosNecesarios(votos: number | null): void {
-    const n = this.nominacionVigente();
-    if (n) n.votosElegidos = votos;
+    this.nominaciones.elegirVotosNecesarios(votos);
   }
 
-  /**
-   * Empieza una nominación (sustituye a la que hubiera) y la apunta en el
-   * registro, con su día (si no se llega a votar, queda sin votos). Baja la mano
-   * a los muertos que ya no tienen voto. No comprueba permisos.
-   */
   nominar(desde: string, hasta: string): void {
-    this.pararTemporizador();
-    const registro: SalaRegistroVotacion = {
-      hora: Date.now(),
-      dia: this.faseActual.numero,
-      nomina: this.describirAsiento(desde),
-      nominado: this.describirAsiento(hasta),
-      votantes: null,
-      votos: null,
-    };
-    this.registro.push(registro);
-    this.seguimiento.nomina(this.cuentaDelAsiento(desde), this.cuentaDelAsiento(hasta));
-    this.nominacionEnCurso = { desde, hasta, cuentaAtrasFin: null, votacion: null, votosElegidos: null, registro };
-    // Quien no puede votar (un muerto sin voto; con el Voudon vivo, los vivos que no son
-    // él): si tenía la mano levantada, se le baja
-    for (const a of this.mesa) {
-      if (!a.ocupante || !this.sinVoto(a.ocupante)) continue;
-      const ocupante = this.buscar(a.ocupante);
-      if (ocupante) {
-        ocupante.manoLevantada = false;
-        ocupante.dosManos = false;
-      }
-    }
+    this.nominaciones.nominar(desde, hasta);
   }
 
   cerrarNominacion(): void {
-    this.pararTemporizador();
-    this.nominacionEnCurso = null;
+    this.nominaciones.cerrarNominacion();
   }
 
-  /** Si la nominación en curso está votando (o ha votado ya). */
   hayVotacion(): boolean {
-    return !!this.nominacion()?.votacion;
+    return this.nominaciones.hayVotacion();
   }
 
-  /** Arranca (o reinicia) la cuenta atrás de la nominación en curso; al acabar, se vota. */
   iniciarCuentaAtras(ahora: number): void {
-    if (!this.nominacionEnCurso) return;
-    this.pararTemporizador();
-    this.nominacionEnCurso.cuentaAtrasFin = ahora + SALA_CUENTA_ATRAS_MS;
-    this.temporizador = setTimeout(() => this.empezarVotacion(), SALA_CUENTA_ATRAS_MS);
+    this.nominaciones.iniciarCuentaAtras(ahora);
   }
 
   /** Si existe ese asiento. */
@@ -1234,44 +955,34 @@ export class SalaService {
     if (asiento) asiento.alineamiento = alineamiento;
   }
 
-  /** Hora (ms) del último gong (ver SalaEstado.gong), o null. */
+  // El gong y el reloj: los lleva RelojSala
+
   gong(): number | null {
-    return this.ultimoGong;
+    return this.tiempo.gong();
   }
 
-  /** Suena el gong: todos vuelven a la plaza. No comprueba permisos. */
   sonarGong(): void {
-    this.ultimoGong = Date.now();
+    this.tiempo.sonarGong();
   }
 
-  /**
-   * El reloj del narrador, o null. Acabado, se sigue viendo un rato (con su
-   * «¡Tiempo!»); después ya no se manda, para que no lo vea quien entra.
-   */
   reloj(): SalaReloj | null {
-    if (this.relojActual && Date.now() - this.relojActual.fin > SALA_RELOJ_TRAS_FIN_MS) this.relojActual = null;
-    return this.relojActual;
+    return this.tiempo.reloj();
   }
 
-  /** Pone el reloj: cuenta atrás de `segundos` con su mensaje (sustituye al que hubiera). No comprueba permisos. */
   ponerReloj(segundos: number, mensaje: string): void {
-    const inicio = Date.now();
-    this.relojActual = { inicio, fin: inicio + segundos * 1000, mensaje };
+    this.tiempo.ponerReloj(segundos, mensaje);
   }
 
-  /** El reloj está en marcha (aún no ha acabado). */
   relojEnMarcha(): boolean {
-    return !!this.relojActual && this.relojActual.fin > Date.now();
+    return this.tiempo.relojEnMarcha();
   }
 
-  /** Acaba el reloj ya: suena el gong y se ve «¡Tiempo!», como si se hubiera agotado. No comprueba permisos. */
   terminarReloj(): void {
-    if (this.relojActual && this.relojActual.fin > Date.now()) this.relojActual = { ...this.relojActual, fin: Date.now() };
+    this.tiempo.terminarReloj();
   }
 
-  /** Quita el reloj (sin gong). No comprueba permisos. */
   quitarReloj(): void {
-    this.relojActual = null;
+    this.tiempo.quitarReloj();
   }
 
   /** El señalamiento (ver SalaEstado.senalamiento), o null. */
@@ -1346,7 +1057,7 @@ export class SalaService {
     };
     if (!publico) for (const id of this.senalamientoActual.senaladores) this.despertar(id);
     // Quien lo ve baja la mano (no se puede levantar mientras dure)
-    for (const { participante } of this.entradas.values()) {
+    for (const participante of this.presentes.participantes()) {
       if (participante.manoLevantada && this.veSenalamiento(participante)) this.levantarMano(participante.id, false);
     }
   }
@@ -1438,9 +1149,9 @@ export class SalaService {
       return { id, userId: this.cuentaDe(this.mesa.find((a) => a.id === asiento)?.ocupante ?? null) };
     });
     const jugadores = this.seguimiento.estaEmpezada() ? this.seguimiento.terminar(this.fotosDeCuentas(), ganador, deCadaUno) : [];
-    const narradores = [...this.entradas.values()]
-      .filter((e) => e.participante.rol === 'narrador')
-      .map((e) => this.cuentaDe(e.participante.id))
+    const narradores = this.presentes
+      .narradores()
+      .map((p) => this.cuentaDe(p.id))
       .filter((id): id is string => !!id);
     if (jugadores.length > 0 || narradores.length > 0) {
       // La mesa entera, invitados incluidos, para el historial
@@ -1456,9 +1167,7 @@ export class SalaService {
           muerto: a.muerto,
         };
       });
-      const narradoresNombres = [...this.entradas.values()]
-        .filter((e) => e.participante.rol === 'narrador')
-        .map((e) => e.participante.nombre);
+      const narradoresNombres = this.presentes.narradores().map((p) => p.nombre);
       this.alTerminarPartida({
         mesa,
         narradoresNombres,
@@ -1646,18 +1355,9 @@ export class SalaService {
     this.entregadas = remapear(this.entregadas);
     this.farolesAsientos = remapear(this.farolesAsientos);
     this.grimoriosEnviados = remapear(this.grimoriosEnviados);
-    for (const h of this.hilos) h.asiento = a(h.asiento);
+    this.despertados.remapear(a);
     if (this.revelacionActual) this.revelacionActual.reveladas = this.revelacionActual.reveladas.map(a);
-    const n = this.nominacionEnCurso;
-    if (n) {
-      n.desde = a(n.desde);
-      n.hasta = a(n.hasta);
-      if (n.votacion) {
-        n.votacion.orden = n.votacion.orden.map(a);
-        n.votacion.resultados = Object.fromEntries(Object.entries(n.votacion.resultados).map(([k, v]) => [a(k), v]));
-        if (n.votacion.valores) n.votacion.valores = Object.fromEntries(Object.entries(n.votacion.valores).map(([k, v]) => [a(k), v]));
-      }
-    }
+    this.nominaciones.remapear(a);
   }
 
   /**
@@ -1691,214 +1391,6 @@ export class SalaService {
   levantar(id: string): void {
     for (const asiento of this.mesa) if (asiento.ocupante === id) asiento.ocupante = null;
     this.cambiarRol(id, 'visitante');
-  }
-
-  /**
-   * Alguien se conecta. Devuelve su clave en la sala y, si la tenía otra
-   * conexión viva de su misma cuenta, el socket que hay que expulsar.
-   *
-   * - Con cuenta: es una sola persona. Si ya está en la sala (otra pestaña, otro
-   *   dispositivo o una reconexión), la conexión nueva retoma su sitio y su papel.
-   * - Invitado: solo retoma su sitio si vuelve con el mismo id de cliente tras
-   *   perder la conexión; si no, entra como uno nuevo.
-   */
-  conectar(
-    socketId: string,
-    clienteId: string | null,
-    llegada: SalaLlegada,
-    /** Si una conexión sigue abierta; una entrada con una conexión muerta se puede recuperar. */
-    conexionViva: (socketId: string) => boolean,
-  ): { clave: string; id: string; expulsar: string | null } {
-    const viva = (e: Entrada) => e.socketId !== null && conexionViva(e.socketId);
-
-    if (llegada.conCuenta) {
-      const deLaCuenta = [...this.entradas.entries()].find(([, e]) => e.identidad === llegada.identidad);
-      if (deLaCuenta) {
-        const [clave, entrada] = deLaCuenta;
-        const expulsar = viva(entrada) ? entrada.socketId : null;
-        this.retomar(entrada, socketId, llegada);
-        return { clave, id: entrada.participante.id, expulsar };
-      }
-    }
-
-    const previa = clienteId ? this.entradas.get(clienteId) : undefined;
-    const libre = !!previa && !viva(previa);
-    if (previa && libre && previa.identidad === llegada.identidad) {
-      this.retomar(previa, socketId, llegada);
-      return { clave: clienteId!, id: previa.participante.id, expulsar: null };
-    }
-
-    // Entra como uno nuevo. Si su id de cliente lo tiene otra conexión viva
-    // (pestaña duplicada de un invitado), con otra clave; si lo ocupaba una
-    // entrada sin conexión de otra persona, la sustituye.
-    if (previa && libre && previa.expulsion) clearTimeout(previa.expulsion);
-    const clave = clienteId && (!previa || libre) ? clienteId : socketId;
-    const id = randomUUID();
-    const recuerdo = llegada.conCuenta ? llegada.identidad : `cliente:${clave}`;
-    this.entradas.set(clave, {
-      participante: {
-        id,
-        nombre: llegada.alias || llegada.nombreBase,
-        conCuenta: llegada.conCuenta,
-        usuarioId: llegada.identidad.startsWith('u:') ? llegada.identidad.slice(2) : null,
-        novato: esNovato(llegada),
-        avatar: llegada.avatarElegido ?? llegada.avatarPorDefecto,
-        rol: 'visitante',
-        conectado: true,
-        manoLevantada: false,
-        dosManos: false,
-        // Si ya lo vio y salió de la sala, lo recupera (vuelve como visitante)
-        accesoGrimorio: this.conGrimorio.has(recuerdo) ? 'concedido' : 'ninguno',
-        formaMano: 'palma',
-        estiloMano: 'defecto',
-        sinSonido: false,
-      },
-      identidad: llegada.identidad,
-      nombreBase: llegada.nombreBase,
-      avatarPorDefecto: llegada.avatarPorDefecto,
-      socketId,
-      expulsion: null,
-      recuerdo,
-    });
-    return { clave, id, expulsar: null };
-  }
-
-  /** La conexión nueva se queda con la entrada: mismo participante y papel. */
-  private retomar(entrada: Entrada, socketId: string, llegada: SalaLlegada): void {
-    if (entrada.expulsion) clearTimeout(entrada.expulsion);
-    entrada.expulsion = null;
-    entrada.socketId = socketId;
-    entrada.avatarPorDefecto = llegada.avatarPorDefecto;
-    entrada.participante.avatar = llegada.avatarElegido ?? llegada.avatarPorDefecto;
-    entrada.participante.nombre = llegada.alias || llegada.nombreBase;
-    entrada.participante.novato = esNovato(llegada);
-  }
-
-  /** Al terminar una partida: si con las que lleva ahora sigue siendo novato (ver SALA_PARTIDAS_NOVATO). */
-  cambiarPartidasJugadas(userId: string, partidas: number): void {
-    for (const e of this.entradas.values()) {
-      if (e.identidad === `u:${userId}`) e.participante.novato = partidas < SALA_PARTIDAS_NOVATO;
-    }
-  }
-
-  /** Se va a propósito: sale de la sala sin esperar. */
-  salir(clave: string, socketId: string): void {
-    const entrada = this.entradas.get(clave);
-    if (!entrada || entrada.socketId !== socketId) return;
-    this.entradas.delete(clave);
-  }
-
-  /**
-   * Saca a alguien de la sala (lo expulsa un narrador). Devuelve su conexión
-   * activa, si la tiene, para cerrarla.
-   */
-  expulsar(id: string): string | null {
-    const encontrada = [...this.entradas.entries()].find(([, e]) => e.participante.id === id);
-    if (!encontrada) return null;
-    const [clave, entrada] = encontrada;
-    if (entrada.expulsion) clearTimeout(entrada.expulsion);
-    this.entradas.delete(clave);
-    // Expulsado por un narrador: si vuelve, no recupera el grimorio
-    this.conGrimorio.delete(entrada.recuerdo);
-    return entrada.socketId;
-  }
-
-  /** Se cortó la conexión: se le guarda el sitio un rato y luego `alExpulsar`. */
-  desconectar(clave: string, socketId: string, alExpulsar: () => void): void {
-    const entrada = this.entradas.get(clave);
-    if (!entrada || entrada.socketId !== socketId) return;
-    entrada.socketId = null;
-    entrada.expulsion = setTimeout(() => {
-      this.entradas.delete(clave);
-      alExpulsar();
-    }, SALA_GRACIA_MS);
-  }
-
-  /** El participante de esta conexión, o undefined si ya no está. */
-  participanteDe(clave: string): SalaParticipante | undefined {
-    return this.entradas.get(clave)?.participante;
-  }
-
-  /** Un participante por su id público. */
-  buscar(id: string): SalaParticipante | undefined {
-    return [...this.entradas.values()].find((e) => e.participante.id === id)?.participante;
-  }
-
-  /** Su nombre de usuario (o de entrada, si es invitado), sin alias. */
-  nombreBase(id: string): string | undefined {
-    return [...this.entradas.values()].find((e) => e.participante.id === id)?.nombreBase;
-  }
-
-  /** Si otro participante ya se muestra con ese nombre (sin distinguir mayúsculas). */
-  nombreOcupado(nombre: string, salvoId: string): boolean {
-    const buscado = nombre.toLocaleLowerCase('es');
-    return [...this.entradas.values()].some(
-      (e) => e.participante.id !== salvoId && e.participante.nombre.toLocaleLowerCase('es') === buscado,
-    );
-  }
-
-  /**
-   * Si un invitado puede entrar con ese nombre: no, si ya lo usa otro. Si vuelve
-   * a su propia entrada (mismo id de cliente) tras perder la conexión, siempre.
-   */
-  nombreLibreParaInvitado(nombre: string, clienteId: string | null, conexionViva: (socketId: string) => boolean): boolean {
-    const propia = clienteId ? this.entradas.get(clienteId) : undefined;
-    const vuelve =
-      propia?.identidad === 'invitado' && (propia.socketId === null || !conexionViva(propia.socketId));
-    if (vuelve) return true;
-    const buscado = nombre.toLocaleLowerCase('es');
-    return ![...this.entradas.values()].some((e) => e.participante.nombre.toLocaleLowerCase('es') === buscado);
-  }
-
-  /** `elegido` null: vuelve al por defecto (el de su cuenta, o el logo si es invitado). */
-  cambiarAvatar(id: string, elegido: string | null): void {
-    const entrada = [...this.entradas.values()].find((e) => e.participante.id === id);
-    if (entrada) entrada.participante.avatar = elegido ?? entrada.avatarPorDefecto;
-  }
-
-  renombrar(id: string, nombre: string): void {
-    const participante = this.buscar(id);
-    if (participante) participante.nombre = nombre;
-  }
-
-  hayNarrador(): boolean {
-    return [...this.entradas.values()].some((e) => e.participante.rol === 'narrador');
-  }
-
-  /**
-   * Cambia el papel de alguien. No comprueba permisos: eso lo hace quien lo pide
-   * (ver `salaAcciones`).
-   */
-  cambiarRol(id: string, rol: SalaRol): void {
-    const participante = this.buscar(id);
-    if (!participante) return;
-    // El acceso al grimorio es de los visitantes: al cambiar de papel se pierde (y se vuelve a pedir).
-    if (participante.rol !== rol && participante.accesoGrimorio !== 'ninguno') this.cambiarAccesoGrimorio(id, 'ninguno');
-    const cambia = participante.rol !== rol;
-    participante.rol = rol;
-    // La mano es de jugadores y narradores, y de su papel: quien cambia de papel la baja.
-    if (cambia || rol === 'visitante') {
-      participante.manoLevantada = false;
-      participante.dosManos = false;
-    }
-  }
-
-  /**
-   * Cambia el acceso de un participante al grimorio del narrador. Concedido, se
-   * recuerda aunque salga de la sala. No comprueba permisos.
-   */
-  cambiarAccesoGrimorio(id: string, acceso: SalaAccesoGrimorio): void {
-    const entrada = [...this.entradas.values()].find((e) => e.participante.id === id);
-    if (!entrada) return;
-    entrada.participante.accesoGrimorio = acceso;
-    if (acceso === 'concedido') this.conGrimorio.add(entrada.recuerdo);
-    else this.conGrimorio.delete(entrada.recuerdo);
-  }
-
-  /** Quita o pone el sonido de un participante (si oye a los demás). */
-  cambiarSonido(id: string, sinSonido: boolean): void {
-    const participante = this.buscar(id);
-    if (participante) participante.sinSonido = sinSonido;
   }
 
   /** El jugador está muerto y ya ha gastado su voto: no puede levantar la mano. */
@@ -1944,14 +1436,6 @@ export class SalaService {
     return this.mesa.some((a) => !a.muerto && this.esVoudon(a));
   }
 
-  /** Levanta (una o, con `dos`, las dos) o baja la mano de un jugador. No comprueba permisos. */
-  levantarMano(id: string, levantada: boolean, dos = false): void {
-    const participante = this.buscar(id);
-    if (!participante) return;
-    participante.manoLevantada = levantada;
-    participante.dosManos = levantada && dos;
-  }
-
   /**
    * Lo que vale el voto de quien se sienta en un asiento: las dos manos de la Banshee
    * con su habilidad, ×2; con el recordatorio del Burócrata, ×3; con el del Ladrón, en
@@ -1972,27 +1456,91 @@ export class SalaService {
     return !!asiento?.muerto && asiento.recordatorios.some((r) => r.personaje === 'banshee' && /has ability/i.test(r.texto));
   }
 
+
+  // Quién está en la sala: lo lleva Participantes (ver allí lo que hace cada uno)
+
+  conectar(socketId: string, clienteId: string | null, llegada: SalaLlegada, conexionViva: (socketId: string) => boolean) {
+    return this.presentes.conectar(socketId, clienteId, llegada, conexionViva);
+  }
+
+  cambiarPartidasJugadas(userId: string, partidas: number): void {
+    this.presentes.cambiarPartidasJugadas(userId, partidas);
+  }
+
+  salir(clave: string, socketId: string): void {
+    this.presentes.salir(clave, socketId);
+  }
+
+  expulsar(id: string): string | null {
+    return this.presentes.expulsar(id);
+  }
+
+  desconectar(clave: string, socketId: string, alExpulsar: () => void): void {
+    this.presentes.desconectar(clave, socketId, alExpulsar);
+  }
+
+  participanteDe(clave: string): SalaParticipante | undefined {
+    return this.presentes.participanteDe(clave);
+  }
+
+  buscar(id: string): SalaParticipante | undefined {
+    return this.presentes.buscar(id);
+  }
+
+  nombreBase(id: string): string | undefined {
+    return this.presentes.nombreBase(id);
+  }
+
+  nombreOcupado(nombre: string, salvoId: string): boolean {
+    return this.presentes.nombreOcupado(nombre, salvoId);
+  }
+
+  nombreLibreParaInvitado(nombre: string, clienteId: string | null, conexionViva: (socketId: string) => boolean): boolean {
+    return this.presentes.nombreLibreParaInvitado(nombre, clienteId, conexionViva);
+  }
+
+  cambiarAvatar(id: string, elegido: string | null): void {
+    this.presentes.cambiarAvatar(id, elegido);
+  }
+
+  renombrar(id: string, nombre: string): void {
+    this.presentes.renombrar(id, nombre);
+  }
+
+  hayNarrador(): boolean {
+    return this.presentes.hayNarrador();
+  }
+
+  cambiarRol(id: string, rol: SalaRol): void {
+    this.presentes.cambiarRol(id, rol);
+  }
+
+  cambiarAccesoGrimorio(id: string, acceso: SalaAccesoGrimorio): void {
+    this.presentes.cambiarAccesoGrimorio(id, acceso);
+  }
+
+  cambiarSonido(id: string, sinSonido: boolean): void {
+    this.presentes.cambiarSonido(id, sinSonido);
+  }
+
+  levantarMano(id: string, levantada: boolean, dos = false): void {
+    this.presentes.levantarMano(id, levantada, dos);
+  }
+
   elegirFormaMano(id: string, forma: SalaFormaMano): void {
-    const participante = this.buscar(id);
-    if (participante) participante.formaMano = forma;
+    this.presentes.elegirFormaMano(id, forma);
   }
 
-  /** Cómo se ve su mano para todos (su «skin»). No comprueba que el estilo exista. */
   elegirEstiloMano(id: string, estilo: string): void {
-    const participante = this.buscar(id);
-    if (participante) participante.estiloMano = estilo;
+    this.presentes.elegirEstiloMano(id, estilo);
   }
 
-  /** Los que siguen en la sala, también los que esperan reconexión, por orden de llegada. */
   participantes(): SalaParticipante[] {
-    return [...this.entradas.values()].map((e) => ({ ...e.participante, conectado: e.socketId !== null }));
+    return this.presentes.participantes();
   }
 
-  /** Conexiones activas con la clave y el id de participante de cada una. */
   conexiones(): { socketId: string; clave: string; id: string }[] {
-    return [...this.entradas.entries()]
-      .filter(([, e]) => e.socketId !== null)
-      .map(([clave, e]) => ({ socketId: e.socketId!, clave, id: e.participante.id }));
+    return this.presentes.conexiones();
   }
 }
 

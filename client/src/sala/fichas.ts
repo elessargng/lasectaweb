@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { PersonajeMostrado, Texto } from './guiones';
+import { RECORDATORIO_TEXTO } from '@contrato/sala';
 import type { SalaAlineamiento, SalaAsiento, SalaNota, SalaRecordatorio } from './useSala';
 
 /**
@@ -11,15 +12,14 @@ import type { SalaAlineamiento, SalaAsiento, SalaNota, SalaRecordatorio } from '
 /**
  * Recordatorios con texto propio (sin personaje): su «personaje» es este y su
  * texto, el que se escribió, de hasta RECORDATORIO_TEXTO_MAX (van en redondo en
- * una ficha pequeña). Lo mismo en el servidor (types/sala.ts).
+ * una ficha pequeña). Vienen del contrato con el servidor.
  */
-export const RECORDATORIO_TEXTO = '_texto';
-export const RECORDATORIO_TEXTO_MAX = 14;
+export { RECORDATORIO_TEXTO, SALA_RECORDATORIO_TEXTO_MAX as RECORDATORIO_TEXTO_MAX } from '@contrato/sala';
 export const esRecordatorioTexto = (r: SalaRecordatorio) => r.personaje === RECORDATORIO_TEXTO;
 
 /**
- * Los iconos de un recordatorio con texto propio que no son de un personaje (lo
- * mismo en el servidor, types/sala.ts). El primero es el de por defecto.
+ * Los iconos de un recordatorio con texto propio que no son de un personaje (los
+ * de ICONOS_RECORDATORIO_TEXTO del contrato, con su nombre). El primero es el de por defecto.
  */
 export const ICONOS_LIBRES = [
   { id: '_secta', nombre: 'Logo de La Secta' },
@@ -28,9 +28,8 @@ export const ICONOS_LIBRES = [
 ] as const;
 export const ICONO_LIBRE_INICIAL = ICONOS_LIBRES[0].id;
 
-/** Notas como mucho por asiento, y su largo máximo (como en el servidor). */
-export const NOTAS_MAX = 4;
-export const NOTA_LARGO_MAX = 500;
+/** Notas como mucho por asiento, y su largo máximo. */
+export { SALA_NOTAS_MAX as NOTAS_MAX, SALA_NOTA_LARGO_MAX as NOTA_LARGO_MAX } from '@contrato/sala';
 
 /** Los tipos que pueden ir en la ficha de un jugador (no los legendarios ni los lóricos). */
 export const TIPOS_EN_FICHA = ['townsfolk', 'outsider', 'minion', 'demon', 'traveller'];

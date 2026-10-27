@@ -5,7 +5,7 @@
  * se ve y se lee con el bando ganador.
  *
  * Para añadir uno: aquí (su id, el de la sala: en minúsculas y sin separadores)
- * y en el servidor (CAUSAS_FIN_PARTIDA, types/sala.ts).
+ * y en el servidor (CAUSAS_FIN_PARTIDA, server/src/contrato/sala.ts).
  */
 export const CAUSAS_FINAL: {
   personaje: string;

@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { SalaConversacion, SalaInvitacion, SalaParticipante } from '../../types/sala';
+import { SalaConversacion, SalaInvitacion, SalaParticipante } from '../../contrato/sala';
 import { SalaService } from '../SalaService';
 
 /** Algo que no se puede hacer en una conversación (el mensaje es para quien lo intenta). */

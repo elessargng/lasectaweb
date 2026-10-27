@@ -4,11 +4,12 @@ import {
   CANAL_GENERAL,
   CANAL_VISITANTES,
   canalPrivado,
+  LARGO_MAXIMO_MENSAJE,
   participantesDePrivado,
   SalaMensaje,
   SalaSusurro,
-} from '../../types/chat';
-import { SalaParticipante } from '../../types/sala';
+} from '../../contrato/chat';
+import { SalaParticipante } from '../../contrato/sala';
 import { SalaService } from '../SalaService';
 
 /** Un mensaje que no se puede mandar (el mensaje de error es para quien escribe). */
@@ -18,8 +19,6 @@ export class ChatError extends Error {
     this.name = 'ChatError';
   }
 }
-
-export const LARGO_MAXIMO_MENSAJE = 500;
 
 /** Lo que pasa al mandar un mensaje: el mensaje, a quién le llega y, si es un susurro, las ondas. */
 export interface EnvioMensaje {

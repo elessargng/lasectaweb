@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { DatabaseRepository } from './DatabaseRepository';
 import type { AsientoPartida, RegistroPartida } from '../services/estadisticas/SeguimientoPartida';
-import type { SalaRegistroVotacion } from '../types/sala';
+import type { SalaRegistroVotacion } from '../contrato/sala';
 
 /** Lo que ha hecho alguien en una partida (como jugador o como narrador), con la partida. */
 export interface Participacion {

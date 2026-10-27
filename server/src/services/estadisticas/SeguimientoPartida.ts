@@ -1,4 +1,4 @@
-import { CAUSAS_CON_VICTORIA, type SalaAlineamiento, type SalaRegistroVotacion } from '../../types/sala';
+import { CAUSAS_CON_VICTORIA, type SalaAlineamiento, type SalaRegistroVotacion } from '../../contrato/sala';
 
 /** Una causa de final y, si es de alguien concreto (el esbirro que cazó a la Doncel), su cuenta. */
 export interface CausaFinal {

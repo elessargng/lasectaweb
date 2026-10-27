@@ -2,10 +2,10 @@ import { randomUUID } from 'crypto';
 import { ChatRepository } from '../repositories/ChatRepository';
 import { datosDeDataUrl, guardarFondoSala } from '../utils/salaFondoStorage';
 import { ProveedorVideo } from '../services/videollamada/ProveedorVideo';
-import { MENSAJES_PRIVADOS, SalaMensajesPrivados } from '../types/chat';
+import { MENSAJES_PRIVADOS, SalaMensajesPrivados } from '../contrato/chat';
+import { limpiarAvatarSala, limpiarNombreSala } from '../services/partida/Participantes';
+import { SALA_RELOJ } from '../services/partida/RelojSala';
 import {
-  limpiarAvatarSala,
-  limpiarNombreSala,
   NPC_BOOTLEGGER,
   NPC_FERRYMAN,
   NPC_GARDENER,
@@ -13,11 +13,10 @@ import {
   NPC_SILENCIO,
   NPC_STORMCATCHER,
   SALA_ASIENTOS,
-  SALA_RELOJ,
   SALA_SEGUNDOS_POR_FICHA,
   SalaService,
 } from '../services/SalaService';
-import { SALA_SENALAMIENTO } from '../types/sala';
+import { SALA_SENALAMIENTO, type SalaResultado } from '../contrato/sala';
 import {
   ADJUNTOS_DESPERTAR,
   CAUSAS_DE_ESBIRRO,
@@ -38,14 +37,12 @@ import {
   SalaParticipante,
   TARJETAS_DESPERTAR,
   TarjetaDespertar,
-} from '../types/sala';
+} from '../contrato/sala';
 import { guardarAvatarSala } from '../utils/salaAvatarStorage';
 import { GuionResuelto, TIPOS_NPC, TipoPersonaje } from '../types/guiones';
 import { GuionInvalidoError } from '../services/guiones/errores';
 import type { RegistroPartida } from '../services/estadisticas/SeguimientoPartida';
 
-/** `valor`: lo que la acción devuelve a quien la pidió (p. ej. la ruta del avatar subido). */
-export type SalaResultado = { ok: true; valor?: string } | { ok: false; error: string };
 
 /** Lo que devuelve una acción: el resultado y, si saca a alguien de la sala, qué conexiones cerrar. */
 export type SalaEfecto = SalaResultado & { expulsar?: string[] };

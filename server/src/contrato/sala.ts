@@ -1,4 +1,10 @@
-import { SalaMensajesPrivados } from './chat';
+/**
+ * El contrato de la sala de juego: lo que el servidor manda por el socket y las
+ * constantes que tienen que valer lo mismo en los dos lados. Lo importa también el
+ * cliente (alias @contrato), así que aquí solo van tipos y valores puros: nada de
+ * Node, de la base de datos ni de los servicios, y los imports de tipos con `import type`.
+ */
+import type { SalaMensajesPrivados } from './chat';
 
 /** Papel de cada participante en la sala de juego. Todo el que entra es visitante. */
 export type SalaRol = 'narrador' | 'jugador' | 'visitante';
@@ -557,3 +563,6 @@ export interface SalaEstado {
   /** Acciones que puede usar ahora quien recibe el mensaje (ver `salaAcciones`). */
   acciones: string[];
 }
+
+/** La respuesta a una acción ('sala:accion'). `valor`: lo que devuelve a quien la pidió (p. ej. la ruta del avatar subido). */
+export type SalaResultado = { ok: true; valor?: string } | { ok: false; error: string };

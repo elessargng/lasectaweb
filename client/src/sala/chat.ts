@@ -1,4 +1,16 @@
+import { CANAL_GENERAL, CANAL_VISITANTES, PREFIJO_PRIVADO, type SalaMensaje } from '@contrato/chat';
 import type { SalaEstado, SalaParticipante } from './useSala';
+
+// Los canales, los mensajes y sus límites son del contrato con el servidor (server/src/contrato/chat.ts)
+export {
+  CANAL_GENERAL,
+  CANAL_VISITANTES,
+  canalPrivado,
+  LARGO_MAXIMO_MENSAJE,
+  type SalaMensaje,
+  type SalaMensajesPrivados,
+  type SalaSusurro,
+} from '@contrato/chat';
 
 /**
  * Mensajes de texto de la sala, en el cliente. Las reglas las aplica el
@@ -6,37 +18,12 @@ import type { SalaEstado, SalaParticipante } from './useSala';
  * pueden usar.
  */
 
-export const CANAL_GENERAL = 'general';
-export const CANAL_VISITANTES = 'visitantes';
 /**
  * Pestaña de los narradores con los mensajes privados entre jugadores (todos
  * juntos, solo para leer). No es un canal del servidor: agrupa los privados
  * ajenos que le llegan.
  */
 export const CANAL_SUSURROS = 'susurros';
-const PREFIJO_PRIVADO = 'privado:';
-
-export type SalaMensajesPrivados = 'ninguno' | 'vecinos' | 'todos';
-
-export interface SalaMensaje {
-  id: string;
-  canal: string;
-  autor: string;
-  autorNombre: string;
-  texto: string;
-  hora: number;
-}
-
-/** Las ondas de un mensaje privado entre dos jugadores sentados (de asiento a asiento). */
-export interface SalaSusurro {
-  desde: string;
-  hasta: string;
-  intensidad: 1 | 2 | 3;
-}
-
-export const LARGO_MAXIMO_MENSAJE = 500;
-
-export const canalPrivado = (a: string, b: string) => `${PREFIJO_PRIVADO}${[a, b].sort().join(':')}`;
 export const esPrivado = (canal: string) => canal.startsWith(PREFIJO_PRIVADO);
 
 /** Los dos de un canal privado, o null si no lo es. */

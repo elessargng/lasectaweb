@@ -1,6 +1,6 @@
 import type { EstadisticasRepository, PartidaGuardada, Participacion } from '../../repositories/EstadisticasRepository';
 import type { PersonajeRepository } from '../../repositories/PersonajeRepository';
-import { CAUSAS_CON_VICTORIA } from '../../types/sala';
+import { CAUSAS_CON_VICTORIA } from '../../contrato/sala';
 
 /** Cuántas veces sale algo (un rol, una causa, un guion), de más a menos. */
 interface Conteo {

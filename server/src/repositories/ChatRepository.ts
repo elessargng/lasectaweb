@@ -1,4 +1,4 @@
-import { SalaMensaje } from '../types/chat';
+import { SalaMensaje } from '../contrato/chat';
 
 /**
  * Dónde se guardan los mensajes de la sala. El servicio solo conoce esta

@@ -1,5 +1,5 @@
 /**
- * Mensajes de texto de la sala de juego.
+ * Mensajes de texto de la sala de juego (parte del contrato con el cliente: ver sala.ts).
  *
  * Canales:
  * - «general»: jugadores y narradores.
@@ -27,6 +27,9 @@ export function participantesDePrivado(canal: string): [string, string] | null {
  */
 export type SalaMensajesPrivados = 'ninguno' | 'vecinos' | 'todos';
 export const MENSAJES_PRIVADOS: SalaMensajesPrivados[] = ['ninguno', 'vecinos', 'todos'];
+
+/** Lo más largo que puede ser un mensaje. */
+export const LARGO_MAXIMO_MENSAJE = 500;
 
 export interface SalaMensaje {
   id: string;
