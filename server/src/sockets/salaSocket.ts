@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import { SalaService } from '../services/SalaService';
 import { limpiarAvatarSala, limpiarNombreSala, SALA_AVATAR_INVITADO, SalaLlegada } from '../services/partida/Participantes';
 import { VistaPartida } from '../services/partida/VistaPartida';
+import { EstadisticasPartida } from '../services/estadisticas/EstadisticasPartida';
 import { SalaResultado } from '../contrato/sala';
 import { ChatError, ChatService } from '../services/chat/ChatService';
 import { ConversacionError, ConversacionService } from '../services/conversaciones/ConversacionService';
@@ -46,10 +47,10 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     maxHttpBufferSize: 8 * 1024 * 1024,
   });
   const sala = new SalaService();
-  // Al revelar el grimorio, la partida se guarda (las estadísticas de cada uno)
+  // Las estadísticas escuchan la partida y, al revelar el grimorio, la guardan
   if (deps.guardarPartida) {
     const guardar = deps.guardarPartida;
-    sala.alTerminarPartida = (registro) => {
+    const estadisticas = new EstadisticasPartida((registro) => {
       guardar(registro)
         .then(async () => {
           // Con una partida más, quien deja de ser novato pierde el pulpito
@@ -58,7 +59,8 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
           difundir();
         })
         .catch((err) => console.error('[SALA] No se ha podido guardar la partida:', err));
-    };
+    });
+    sala.suscribir((evento) => estadisticas.registrar(evento));
   }
   const chat = new ChatService(deps.mensajes, sala);
   const conversaciones = new ConversacionService(sala);

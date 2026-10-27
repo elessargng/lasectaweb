@@ -36,18 +36,12 @@ import { Revelacion } from './partida/Revelacion';
 import { Npcs } from './partida/Npcs';
 import { Entregas, type FichaEntregada } from './partida/Entregas';
 import { Bolsa } from './partida/Bolsa';
+import { PASOS_DE_FASE_MAX, type EventoPartida, type FotoAsiento, type OyentePartida } from './partida/eventos';
 import { barajar } from './partida/azar';
 import { Reglas } from './partida/reglas';
 import type { ContextoReglas } from './partida/reglas/ReglaPersonaje';
 import { voudonVivo } from './partida/reglas/voudon';
 import { cuidadorLilmonsta, DEMONIO_LILMONSTA, esbirrosLilmonsta, recordatorioLilmonsta } from './partida/reglas/lilMonsta';
-import {
-  SeguimientoPartida,
-  type FotoJugador,
-  type InstantaneaSeguimiento,
-  type RegistroPartida,
-} from './estadisticas/SeguimientoPartida';
-
 
 /** Asientos de la mesa: con cuántos empieza la sala y cuántos puede tener. */
 export const SALA_ASIENTOS = { inicial: 7, min: 0, max: 20 };
@@ -83,21 +77,16 @@ const esIdentidad = (r: SalaRecordatorio) => r.personaje !== RECORDATORIO_TEXTO 
 /**
  * Lo que un cambio de fase deja atrás y la máquina del tiempo devuelve: al
  * anochecer, la calavera y el récord de votos del día; al amanecer, los
- * despertares y el señalamiento de la noche. Y lo apuntado para las estadísticas.
+ * despertares y el señalamiento de la noche.
  */
 interface PasoDeFase {
   antes: SalaFase;
   despues: SalaFase;
-  seguimiento: InstantaneaSeguimiento;
   marcas?: { asiento: string; votos: number | null }[];
   maximoDelDia?: number | null;
   hilos?: HiloDespertar[];
   senalamiento?: SalaSenalamiento | null;
 }
-
-/** Cuántos cambios de fase se recuerdan para volver atrás. */
-const PASOS_DE_FASE_MAX = 20;
-
 
 /**
  * La sala de juego, en memoria: quién está, la mesa y la partida. Se pierde al
@@ -150,8 +139,9 @@ export class SalaService {
     mayoria: (vivos) => this.reglas.mayoria(vivos),
     valorDelVoto: (asiento, ocupante) => this.reglas.valorDelVoto(asiento, ocupante.dosManos),
     secreta: () => this.votacionSecreta(),
-    alNominar: (desde, hasta) => this.seguimiento.nomina(this.cuentaDelAsiento(desde), this.cuentaDelAsiento(hasta)),
-    alVotar: (id) => this.seguimiento.vota(this.cuentaDe(id)),
+    alNominar: (desde, hasta) =>
+      this.avisar({ tipo: 'nominacion', nomina: this.cuentaDelAsiento(desde), nominado: this.cuentaDelAsiento(hasta) }),
+    alVotar: (id) => this.avisar({ tipo: 'voto', userId: this.cuentaDe(id) }),
     alCambiarSola: () => this.alCambiarSola(),
   });
   /** El gong y el reloj del narrador. */
@@ -433,13 +423,23 @@ export class SalaService {
    */
   alCambiarSola: () => void = () => {};
 
+  /** Quienes escuchan lo que pasa en la partida (ver eventos.ts). */
+  private oyentes: OyentePartida[] = [];
+
   /**
-   * Las estadísticas: lo que se apunta de cada jugador con cuenta durante la
-   * partida (ver SeguimientoPartida) y a quién se le da al terminar, para que lo
-   * guarde (al revelar el grimorio). Sin esto, no se guarda nada.
+   * Para enterarse de lo que pasa en la partida (las estadísticas, por ejemplo).
+   * Hay que suscribirse desde el principio. Devuelve cómo dejar de escuchar.
    */
-  private seguimiento = new SeguimientoPartida();
-  alTerminarPartida: (registro: RegistroPartida) => void = () => {};
+  suscribir(oyente: OyentePartida): () => void {
+    this.oyentes.push(oyente);
+    return () => {
+      this.oyentes = this.oyentes.filter((o) => o !== oyente);
+    };
+  }
+
+  private avisar(evento: EventoPartida): void {
+    for (const oyente of this.oyentes) oyente(evento);
+  }
 
   /** El id de usuario de un participante con cuenta, o null (invitado, o ya no está). */
   private cuentaDe(participanteId: string | null): string | null {
@@ -464,11 +464,19 @@ export class SalaService {
     return null;
   }
 
-  /** Cómo están ahora los jugadores con cuenta sentados (para las estadísticas). */
-  private fotosDeCuentas(): FotoJugador[] {
-    return this.mesaAlDia().flatMap((a) => {
-      const userId = this.cuentaDe(a.ocupante);
-      return userId ? [{ userId, personaje: this.identidad(a), alineamiento: this.alineamientoEfectivo(a), muerto: a.muerto }] : [];
+  /** Cómo está ahora la mesa, asiento a asiento (para quien escucha la partida). */
+  private fotoDeLaMesa(): FotoAsiento[] {
+    return this.mesaAlDia().map((a, i) => {
+      const personaje = this.identidad(a);
+      return {
+        numero: i + 1,
+        nombre: a.ocupante ? (this.buscar(a.ocupante)?.nombre ?? null) : null,
+        userId: this.cuentaDe(a.ocupante),
+        personaje,
+        ficha: a.personaje && a.personaje !== personaje ? a.personaje : null,
+        alineamiento: this.alineamientoEfectivo(a),
+        muerto: a.muerto,
+      };
     });
   }
 
@@ -488,16 +496,19 @@ export class SalaService {
    */
   irANoche(): void {
     const { momento, numero, reinicios } = this.faseActual;
-    // Para poder volver (lo que se quita al anochecer y las estadísticas como estaban)
+    // Para poder volver (lo que se quita al anochecer)
     const paso: PasoDeFase = {
       antes: { ...this.faseActual },
       despues: this.faseActual,
-      seguimiento: this.seguimiento.instantanea(),
       marcas: this.mesa.filter((a) => a.marcado).map((a) => ({ asiento: a.id, votos: a.votosMarca })),
       maximoDelDia: this.nominaciones.recordDelDia(),
     };
-    if (momento === 'preparacion' || !this.seguimiento.estaEmpezada()) this.seguimiento.empezar(this.fotosDeCuentas());
-    else for (const a of this.mesa.filter((x) => x.marcado)) this.seguimiento.ejecutado(this.cuentaDe(a.ocupante));
+    this.avisar({
+      tipo: 'anochece',
+      desdePreparacion: momento === 'preparacion',
+      mesa: this.fotoDeLaMesa(),
+      conCalavera: this.mesa.filter((a) => a.marcado).flatMap((a) => this.cuentaDe(a.ocupante) ?? []),
+    });
     this.faseActual = { momento: 'noche', numero: momento === 'preparacion' ? 1 : numero + 1, reinicios };
     // Lo que se señaló de día no sigue de noche (lo verían otros); el reloj tampoco
     this.senales.terminar();
@@ -516,13 +527,11 @@ export class SalaService {
     const paso: PasoDeFase = {
       antes: { ...this.faseActual },
       despues: this.faseActual,
-      seguimiento: this.seguimiento.instantanea(),
       hilos: this.despertados.instantanea(),
       senalamiento: this.senales.instantanea(),
     };
     this.faseActual = { ...this.faseActual, momento: 'dia' };
-    // El rol con el que empieza el día cuenta como jugado (los cambios de la noche, no)
-    this.seguimiento.anotarRoles(this.fotosDeCuentas());
+    this.avisar({ tipo: 'amanece', mesa: this.fotoDeLaMesa() });
     this.despertados.cerrarTodos();
     // Lo de la noche no se ve de día (y el reloj se quita)
     this.senales.terminar();
@@ -553,8 +562,8 @@ export class SalaService {
    * La máquina del tiempo del narrador: vuelve a la fase anterior (ver faseAnterior),
    * por si se pasó de fase antes de tiempo. Si fue este mismo cambio el que se
    * hizo, devuelve lo que se quitó: al volver al día, la calavera y el récord de
-   * votos; a la noche, sus despertares (con lo que se dijeron) y su señalamiento; y
-   * las estadísticas, como estaban. Lo demás de la partida (muertes, fichas,
+   * votos; a la noche, sus despertares (con lo que se dijeron) y su señalamiento
+   * (y quien escucha la partida deshace lo de ese cambio). Lo demás de la partida (muertes, fichas,
    * recordatorios) se queda como está. Se cierra la nominación abierta. No comprueba permisos.
    */
   volverAtras(): boolean {
@@ -578,8 +587,7 @@ export class SalaService {
       if (paso?.hilos) this.despertados.restaurar(paso.hilos);
       if (paso?.senalamiento) this.senales.restaurar(paso.senalamiento);
     }
-    if (paso) this.seguimiento.restaurar(paso.seguimiento);
-    else if (anterior.momento === 'preparacion') this.seguimiento.reiniciar();
+    this.avisar({ tipo: 'vueltaAtras', deshace: !!paso, aPreparacion: anterior.momento === 'preparacion' });
     return true;
   }
 
@@ -628,7 +636,7 @@ export class SalaService {
     this.senales.terminar();
     this.tiempo.quitarReloj();
     this.pasosDeFase = [];
-    this.seguimiento.reiniciar();
+    this.avisar({ tipo: 'nuevaPartida' });
     this.npcsPartida.nuevaPartida();
     this.nominaciones.olvidarTodo();
     for (const a of this.mesa) {
@@ -902,48 +910,24 @@ export class SalaService {
   empezarRevelacion(ganador: SalaAlineamiento, causas: string[] = [], esbirros: Record<string, string> = {}): void {
     this.cerrarNominacion();
     this.final.empezar(ganador, causas);
-    // Se acaba la partida: se guarda lo de cada uno (si se había empezado a jugar). Las
-    // causas de esbirro (la Doncel cazada), para la cuenta del esbirro que eligió el narrador
-    const deCadaUno = causas.map((id) => {
-      const asiento = esbirros[id];
-      if (!asiento) return { id };
-      return { id, userId: this.cuentaDe(this.mesa.find((a) => a.id === asiento)?.ocupante ?? null) };
+    // Se acaba la partida. Las causas de esbirro (la Doncel cazada), de la cuenta del
+    // esbirro que eligió el narrador
+    this.avisar({
+      tipo: 'partidaTerminada',
+      ganador,
+      causas: causas.map((id) => {
+        const asiento = esbirros[id];
+        if (!asiento) return { id };
+        return { id, userId: this.cuentaDe(this.mesa.find((a) => a.id === asiento)?.ocupante ?? null) };
+      }),
+      mesa: this.fotoDeLaMesa(),
+      narradores: this.presentes.narradores().map((p) => ({ userId: this.cuentaDe(p.id), nombre: p.nombre })),
+      npcs: this.npcs(),
+      votaciones: this.votaciones(),
+      guion: this.guionActual?.nombre ?? null,
+      edicion: this.guionActual?.edicion ?? null,
+      dias: this.faseActual.numero,
     });
-    const jugadores = this.seguimiento.estaEmpezada() ? this.seguimiento.terminar(this.fotosDeCuentas(), ganador, deCadaUno) : [];
-    const narradores = this.presentes
-      .narradores()
-      .map((p) => this.cuentaDe(p.id))
-      .filter((id): id is string => !!id);
-    if (jugadores.length > 0 || narradores.length > 0) {
-      // La mesa entera, invitados incluidos, para el historial
-      const mesa = this.mesaAlDia().map((a, i) => {
-        const personaje = this.identidad(a);
-        return {
-          numero: i + 1,
-          nombre: a.ocupante ? (this.buscar(a.ocupante)?.nombre ?? null) : null,
-          userId: this.cuentaDe(a.ocupante),
-          personaje,
-          ficha: a.personaje && a.personaje !== personaje ? a.personaje : null,
-          alineamiento: this.alineamientoEfectivo(a),
-          muerto: a.muerto,
-        };
-      });
-      const narradoresNombres = this.presentes.narradores().map((p) => p.nombre);
-      this.alTerminarPartida({
-        mesa,
-        narradoresNombres,
-        npcs: this.npcs(),
-        votaciones: this.votaciones(),
-        fecha: new Date(),
-        guion: this.guionActual?.nombre ?? null,
-        edicion: this.guionActual?.edicion ?? null,
-        ganador,
-        dias: this.faseActual.numero,
-        causas,
-        jugadores,
-        narradores,
-      });
-    }
   }
 
   /**
@@ -989,7 +973,7 @@ export class SalaService {
       if (unico) for (const a of this.mesa) a.recordatorios = a.recordatorios.filter((r) => !delPersonaje(r));
       asiento.recordatorios.push({ id: randomUUID(), personaje, indice, texto: this.personaje(personaje)!.recordatorios[indice] });
     }
-    this.seguimiento.ejecutado(this.cuentaDe(asiento.ocupante));
+    this.avisar({ tipo: 'ejecucion', userId: this.cuentaDe(asiento.ocupante) });
     this.cambiarVida(asiento.id, true);
     // Los vivos que quedan: los asientos (también los libres, que cuentan como jugadores)
     // sin muerte, sin contar a los viajeros

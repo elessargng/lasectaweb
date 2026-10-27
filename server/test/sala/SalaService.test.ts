@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { EstadisticasPartida } from '../../src/services/estadisticas/EstadisticasPartida';
 import { SALA_GRACIA_MS } from '../../src/services/partida/Participantes';
 import { SALA_CUENTA_ATRAS_MS } from '../../src/services/partida/Nominaciones';
 import { SalaService } from '../../src/services/SalaService';
@@ -598,7 +599,8 @@ describe('SalaService', () => {
       sala.sentar(id, sala.asientos()[0].id);
       sala.cambiarPersonaje(sala.asientos()[0].id, 'chef');
       const alTerminar = vi.fn();
-      sala.alTerminarPartida = alTerminar;
+      const estadisticas = new EstadisticasPartida(alTerminar);
+      sala.suscribir((evento) => estadisticas.registrar(evento));
       sala.irANoche();
       sala.empezarRevelacion('bueno');
       expect(alTerminar).toHaveBeenCalledOnce();
@@ -611,7 +613,8 @@ describe('SalaService', () => {
     it('sin partida empezada ni nadie con cuenta, no se guarda nada', () => {
       const { sala } = salaConJugadores('Ana');
       const alTerminar = vi.fn();
-      sala.alTerminarPartida = alTerminar;
+      const estadisticas = new EstadisticasPartida(alTerminar);
+      sala.suscribir((evento) => estadisticas.registrar(evento));
       sala.empezarRevelacion('malvado');
       expect(alTerminar).not.toHaveBeenCalled();
     });
