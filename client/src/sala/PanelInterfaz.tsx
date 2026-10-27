@@ -7,7 +7,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { Dices } from 'lucide-react';
 import { carpetaSilla, ESTILOS_CALAVERA, ESTILOS_MANO, ESTILOS_SILLA, ESTILOS_VOTO, MarcasContexto } from './marcas';
 import type { TamanosMesa } from './Mesa';
-import { RANGOS, type PreferenciasSala } from './preferencias';
+import { RANGOS, type ModoCiudad, type PreferenciasSala } from './preferencias';
 import { FONDOS, rutaFondo } from './fondos';
 import VelaVoto from './VelaVoto';
 import Galaxy from '../components/Galaxy';
@@ -69,6 +69,17 @@ function ElegirEstilo<T extends string>({ id, leyenda, estilos, valor, onCambiar
     </fieldset>
   );
 }
+
+/** Cuándo sale la ciudad de la plaza (en el orden de preferencias.ts, MODOS_CIUDAD). */
+const MODOS_CIUDAD_TEXTO: { id: ModoCiudad; etiqueta: string; descripcion: string }[] = [
+  {
+    id: 'cambios',
+    etiqueta: 'Al cambiar de fase',
+    descripcion: 'Aparece al caer la noche y al amanecer, hace el cambio y se desvanece.',
+  },
+  { id: 'siempre', etiqueta: 'Siempre', descripcion: 'Está a la vista todo el rato y cambia con la fase.' },
+  { id: 'nunca', etiqueta: 'Desactivada', descripcion: 'No sale.' },
+];
 
 /** La muestra de «Al azar»: una ficha con unos dados de latón. */
 const MuestraAzar = () => (
@@ -286,23 +297,34 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, fondoDeLaSala, onCam
         )
       }
     />
-    <div className="flex flex-col gap-1">
-      <Interruptor
-        id="sala-pref-ciudad"
-        activo={preferencias.ciudadCabecera}
-        onCambiar={(ciudadCabecera) => onCambiar({ ciudadCabecera })}
-        describedBy="sala-pref-ciudad-ayuda"
-        textoClassName="text-sm"
-      >
-        Ciudad animada en la cabecera
-      </Interruptor>
-      <p id="sala-pref-ciudad-ayuda" className="text-xs text-on-surface-muted">
-        La ciudad con la torre del reloj entre el logo y la fase: de noche y de día, con su atardecer y su amanecer al
-        cambiar. Desactivada, no se ve.
+    <fieldset className="flex flex-col gap-2" aria-describedby="sala-pref-ciudad-ayuda">
+      <legend className="campo-etiqueta">Ciudad animada en la plaza</legend>
+      <p id="sala-pref-ciudad-ayuda" className="-mt-1 text-xs text-on-surface-muted">
+        La ciudad con la torre del reloj en el centro de la mesa, con su atardecer y su amanecer.
       </p>
-    </div>
+      {MODOS_CIUDAD_TEXTO.map((m) => (
+        // El nombre de la opción es solo su etiqueta; lo que hace, su descripción (se lee después)
+        <div key={m.id} className="flex items-start gap-2 text-sm">
+          <input
+            id={`sala-pref-ciudad-${m.id}`}
+            type="radio"
+            name="sala-pref-ciudad"
+            checked={preferencias.ciudad === m.id}
+            onChange={() => onCambiar({ ciudad: m.id })}
+            aria-describedby={`sala-pref-ciudad-${m.id}-ayuda`}
+            className="mt-1 accent-[var(--color-theme-main)]"
+          />
+          <div>
+            <label htmlFor={`sala-pref-ciudad-${m.id}`}>{m.etiqueta}</label>
+            <p id={`sala-pref-ciudad-${m.id}-ayuda`} className="text-xs text-on-surface-muted">
+              {m.descripcion}
+            </p>
+          </div>
+        </div>
+      ))}
+    </fieldset>
     {/* Solo con la ciudad: sin ella no hay poblado que quitar */}
-    {preferencias.ciudadCabecera && (
+    {preferencias.ciudad !== 'nunca' && (
       <div className="flex flex-col gap-1">
         <Interruptor
           id="sala-pref-poblado"

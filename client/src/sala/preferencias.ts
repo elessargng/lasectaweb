@@ -104,9 +104,15 @@ export interface PreferenciasSala {
    * hay, el de La Secta), o siempre uno fijo (ver fondos.ts). Pestaña Interfaz.
    */
   fondo: PreferenciaFondo;
-  /** La ciudad animada de la cabecera (de día y de noche, con su atardecer y su amanecer). Pestaña Interfaz. */
-  ciudadCabecera: boolean;
-  /** En esa ciudad, el poblado (las casas y la torre); sin él, solo el cielo. Pestaña Interfaz. */
+  /**
+   * La ciudad animada en el centro de la mesa (ver CiudadPlaza): solo al atardecer y al
+   * amanecer (de entrada), siempre a la vista o nunca. Pestaña Interfaz.
+   */
+  ciudad: ModoCiudad;
+  /**
+   * En esa ciudad, el poblado (las casas y la torre); sin él, solo el cielo. Se llama así
+   * porque antes la ciudad iba en la cabecera: el nombre se guarda. Pestaña Interfaz.
+   */
   pobladoCabecera: boolean;
   /** El cielo estrellado detrás de la sala de noche (ver CieloEstrellado). Pestaña Interfaz. */
   cieloEstrellado: boolean;
@@ -141,10 +147,13 @@ type ClaveSiNo =
   | 'sonidoEnvolvente'
   | 'panelLateralContraido'
   | 'farolesFijados'
-  | 'ciudadCabecera'
   | 'pobladoCabecera'
   | 'cieloEstrellado'
   | 'llamadaBotc';
+
+/** Cuándo sale la ciudad de la plaza: al cambiar de fase (de entrada), siempre o nunca. */
+export const MODOS_CIUDAD = ['cambios', 'siempre', 'nunca'] as const;
+export type ModoCiudad = (typeof MODOS_CIUDAD)[number];
 
 /** Los paneles de la columna de la izquierda: uno a la vez, elegido en su barra de iconos. */
 export const PANELES_LATERALES = ['mensajes', 'conversaciones', 'npcs', 'faroles'] as const;
@@ -183,7 +192,6 @@ const SI_NO: Record<ClaveSiNo, boolean> = {
   sonidoEnvolvente: false,
   panelLateralContraido: false,
   farolesFijados: false,
-  ciudadCabecera: true,
   pobladoCabecera: true,
   cieloEstrellado: true,
   llamadaBotc: false,
@@ -231,6 +239,12 @@ export function normalizarPreferencias(datos: unknown): PreferenciasSala {
   ) as SonidosActivos;
   preferencias.coloresCielo = esColoresCielo(guardadas.coloresCielo) ? guardadas.coloresCielo : COLORES_CIELO_DEFECTO;
   preferencias.fondo = esPreferenciaFondo(guardadas.fondo) ? guardadas.fondo : FONDO_DEFECTO;
+  // La ciudad: lo de antes (un sí o no, ciudadCabecera) apagado sigue apagado; encendido, de entrada
+  preferencias.ciudad = (MODOS_CIUDAD as readonly unknown[]).includes(guardadas.ciudad)
+    ? (guardadas.ciudad as ModoCiudad)
+    : guardadas.ciudadCabecera === false
+      ? 'nunca'
+      : 'cambios';
   preferencias.tonoLlamada = esTonoLlamada(guardadas.tonoLlamada) ? guardadas.tonoLlamada : TONO_LLAMADA_DEFECTO;
   // Los dispositivos: un id del navegador, o vacío (el predeterminado del sistema)
   const idDispositivo = (v: unknown) => (typeof v === 'string' && v.length <= 200 ? v : '');

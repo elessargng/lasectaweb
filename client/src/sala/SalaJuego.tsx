@@ -16,7 +16,7 @@ import PanelAtajos from './PanelAtajos';
 import { sonVecinos } from './nombresAsiento';
 import { useGestos, useReconocerGestos, type Gesto } from './gestos';
 import PanelInterfaz from './PanelInterfaz';
-import SkylineCabecera from './SkylineCabecera';
+import CiudadPlaza from './CiudadPlaza';
 import PanelSonido from './PanelSonido';
 import PanelPartida from './PanelPartida';
 import PanelUsuario, { type ResultadoPerfil } from './PanelUsuario';
@@ -1726,7 +1726,6 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
         {/* De noche, el cielo estrellado detrás de la sala */}
         <CieloEstrellado activo={esNoche && preferencias.cieloEstrellado} ajustes={preferencias} />
         <Cabecera
-          ciudad={estado && preferencias.ciudadCabecera ? <SkylineCabecera fase={estado.fase.momento} poblado={preferencias.pobladoCabecera} /> : undefined}
           centro={
             estado && (
               <div className="flex min-w-0 items-center gap-2">
@@ -1990,6 +1989,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   contacto={contacto}
                   pistas={video.mesa}
                   ondas={ondas}
+                  ciudad={preferencias.ciudad !== 'nunca' ? <CiudadPlaza fase={estado.fase.momento} poblado={preferencias.pobladoCabecera} siempre={preferencias.ciudad === 'siempre'} /> : undefined}
                   despertares={
                     veoDespertares
                       ? {

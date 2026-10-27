@@ -3,7 +3,7 @@
     "version": "1.4.0",
     "date": "2026-10-27",
     "title": "Notas a la Vista",
-    "description": "Las notas del grimorio pasan a ser un pósit junto a cada asiento, los recordatorios son únicos como en la mesa real y los viajeros abren el orden de la noche.",
+    "description": "Las notas del grimorio pasan a ser un pósit junto a cada asiento, los recordatorios son únicos como en la mesa real y los viajeros abren el orden de la noche. La ciudad se muda al centro de la mesa, donde atardece y amanece al cambiar de fase.",
     "changes": [
       {
         "category": "Grimorio",
@@ -21,13 +21,30 @@
           "Los viajeros en juego salen al principio del orden de cada noche, antes del Crepúsculo.",
           "El reparto muestra cuántos jugadores y viajeros siguen vivos.",
           "Los personajes que pueden ir repetidos en la bolsa (como el Village Idiot) se pueden repetir sin el Pope.",
-          "Al empezar una nominación se bajan todas las manos levantadas."
+          "Al empezar una nominación se bajan todas las manos levantadas.",
+          "Ya se pueden activar los recordatorios de los viajeros y los NPCs."
         ]
       },
       {
         "category": "Sala de Juego",
         "items": [
-          "En las conversaciones privadas, quien habla se ve con el mismo aro que en la plaza, sin tapar la cámara."
+          "La ciudad ilustrada deja la cabecera y pasa al centro de la mesa, vista por una ventana redonda dentro del corro de fichas.",
+          "La ciudad aparece al caer la noche y al amanecer, hace el cambio y se desvanece. Si hay algo en el centro (el reloj, una nominación…), se vela para que se lea.",
+          "La cabecera ya no tiene banda propia: el fondo de la sala sigue por detrás, con un degradado oscuro para leer el logo y los iconos.",
+          "En las conversaciones privadas, quien habla se ve con el mismo aro que en la plaza, sin tapar la cámara.",
+          "La ventana de conversación ya no se desplaza de lado."
+        ]
+      },
+      {
+        "category": "Personalización",
+        "items": [
+          "La ciudad de la plaza se puede ver solo al cambiar de fase, siempre o nunca (Preferencias > Interfaz). Quien la tenía quitada la sigue teniendo quitada."
+        ]
+      },
+      {
+        "category": "Sonido",
+        "items": [
+          "Cuando el narrador te despierta de noche suena como una llamada entrante, con el tono que elijas. Se puede quitar en Preferencias > Sonido."
         ]
       },
       {

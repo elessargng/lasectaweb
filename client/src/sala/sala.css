@@ -140,16 +140,14 @@
    * El fondo de la sala (--sala-fondo, lo pone SalaJuego según el guion, el
    * narrador y la preferencia de cada uno; ver fondos.ts) o el de La Secta,
    * quieto al desplazarse, con un velo de tinta (más oscuro en los bordes, como
-   * a la luz de una vela) para que se lean los textos. Cubre la ventana por
-   * debajo de la cabecera (--sala-cabecera-alto, lo mide Cabecera): así queda
-   * centrado en lo que se ve y la cenefa de arriba no se esconde tras ella.
-   * Por debajo de todo (también del velo de la noche y del cielo).
+   * a la luz de una vela) para que se lean los textos. Cubre toda la ventana,
+   * también tras la cabecera (que no tiene banda propia). Por debajo de todo (también del velo de la noche y del cielo).
    */
   body::after {
     content: '';
     pointer-events: none;
     position: fixed;
-    inset: var(--sala-cabecera-alto, 0px) 0 0;
+    inset: 0;
     z-index: -2;
     background:
       radial-gradient(ellipse at center, rgba(var(--tinta-rgb), 0.15) 40%, rgba(var(--tinta-rgb), 0.7) 100%),
@@ -249,35 +247,19 @@
 @layer components {
 
 /*
- * Cabecera: cristal de tinta con un filo de latón abajo. El cristal (backdrop-filter)
- * va en un pseudo-elemento y no en la cabecera: si no, la cabecera haría de caja de
- * todo lo fijo que lleva dentro (la hoja del guion, que se abre desde ella) y lo
- * dejaría encerrado en su alto.
+ * Cabecera: sin banda propia, como en la página principal. El fondo de la sala sigue
+ * por detrás y solo hay un degradado de tinta desde arriba (que se alarga un poco
+ * por debajo de ella, sin recibir el ratón) para que se lean el logo y los iconos.
  */
 .sala-cabecera {
   isolation: isolate;
-  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.85);
 }
 .sala-cabecera::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: 0 0 -2.5rem;
   z-index: -1;
-  background:
-    linear-gradient(180deg, rgba(var(--grimorio-rgb), 0.18), transparent),
-    rgba(var(--tinta-rgb), 0.88);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2);
-  backdrop-filter: blur(14px) saturate(1.2);
-  pointer-events: none;
-}
-.sala-cabecera::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb), 0.55) 15%, rgba(var(--gold-rgb), 0.55) 85%, transparent);
+  background: linear-gradient(180deg, rgba(var(--tinta-rgb), 0.75), rgba(var(--tinta-rgb), 0.3) 60%, transparent);
   pointer-events: none;
 }
 
@@ -1207,29 +1189,62 @@
   }
 }
 
-/* ───────────────────────── La ciudad de la cabecera ───────────────────────── */
+/* ───────────────────────── La ciudad de la plaza ───────────────────────── */
 
 /*
- * La ciudad entre el logo y la fase (SkylineCabecera): ilustraciones en capas
- * (public/ciudad) que cambian con la fase. Se funde por los lados para no cortarse
- * contra el logo ni contra la fase. Cada capa entra o sale según la fase (data-fase),
- * despacio; al cambiar de fase, data-transicion lanza el atardecer o el amanecer.
- * Las medidas van en cqh/cqw: todo escala con el alto de la cabecera.
+ * La ciudad en el centro de la mesa (CiudadPlaza): ilustraciones en capas
+ * (public/ciudad) que cambian con la fase, vistas por una ventana redonda que llena
+ * la plaza hasta los asientos (las fichas quedan sobre su borde). Cada
+ * capa entra o sale según la fase (data-fase), despacio; al cambiar de fase,
+ * data-transicion lanza el atardecer o el amanecer. Las medidas van en cqh/cqw:
+ * todo escala con la ventana (cuadrada: un cqh es un cqw).
  */
-/* Del ancho de la ciudad (sin cielo vacío a los lados), como mucho el del hueco, pegada
-   a la fase */
+.sala-plaza-ciudad {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(0px, 100% - 2 * var(--sala-avatar, 10rem));
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+/* Con algo en el centro (el reloj, una nominación…), velada: que se lea lo de encima */
+.sala-plaza-ciudad[data-velada] { opacity: 0.3; }
+/* Solo sale al atardecer y al amanecer: aparece, hace el cambio y se desvanece (CiudadPlaza) */
+.sala-ciudad-marco {
+  position: absolute;
+  inset: 0;
+  animation: sala-ciudad-aparece 0.8s ease-out both;
+}
+.sala-ciudad-marco[data-saliendo] { animation: sala-ciudad-se-va 1s ease-in forwards; }
+@keyframes sala-ciudad-aparece {
+  from { opacity: 0; scale: 0.94; }
+  to { opacity: 1; scale: 1; }
+}
+@keyframes sala-ciudad-se-va {
+  from { opacity: 1; scale: 1; }
+  to { opacity: 0; scale: 1.03; }
+}
+/* Un filo de latón alrededor de la ventana, que se funde con la mesa */
+.sala-ciudad-marco::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--gold-rgb), 0.28),
+    0 0 24px 2px rgba(var(--gold-rgb), 0.08);
+}
 .sala-ciudad {
   position: absolute;
-  top: 0;
-  right: 0;
-  height: 100%;
-  aspect-ratio: 759 / 240;
-  max-width: 100%;
+  inset: 0;
   overflow: hidden;
+  border-radius: 9999px;
   pointer-events: none;
   container-type: size;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%);
+  -webkit-mask-image: radial-gradient(closest-side, #000 86%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 86%, transparent 100%);
 }
 .sala-ciudad > *,
 .sala-ciudad .pueblo > * {
@@ -1260,7 +1275,7 @@
 .sala-ciudad[data-transicion='amanecer'] .destello { animation: sala-ciudad-destello 3.4s ease forwards; }
 .sala-ciudad .destello {
   inset: 0;
-  background: radial-gradient(circle at 50% 20%, rgba(255, 242, 196, 0.9) 0, rgba(255, 210, 122, 0.45) 22%, transparent 60%);
+  background: radial-gradient(circle at 50% 35%, rgba(255, 242, 196, 0.9) 0, rgba(255, 210, 122, 0.45) 22%, transparent 60%);
 }
 @keyframes sala-ciudad-ocaso {
   0% { opacity: 0; }
@@ -1293,13 +1308,13 @@
 
 /* La luna y el sol, que suben y bajan detrás de la ciudad */
 .sala-ciudad .astro {
-  top: 5cqh;
-  height: 32cqh;
+  top: 20cqh;
+  height: 13cqh;
   width: auto;
   max-width: none;
 }
 .sala-ciudad .luna {
-  left: 22%;
+  left: 28%;
   filter: drop-shadow(0 0 4px rgba(236, 226, 200, 0.45));
 }
 .sala-ciudad .luna { transform: translateY(110cqh); }
@@ -1323,14 +1338,14 @@
     translate 3s cubic-bezier(0.35, 0, 0.65, 1),
     transform 3s cubic-bezier(0.6, 0, 0.9, 0.55);
 }
-/* De día, en lo alto y hacia el centro (entre 1/3 y 2/3 del ancho; el sol mide ~10cqw) */
+/* De día, en lo alto y hacia el centro (centrado; el sol mide ~13cqw) */
 .sala-ciudad[data-fase='dia'] .sol {
-  translate: 45cqw 0;
+  translate: 43.5cqw 0;
   transform: translateY(0);
 }
 .sala-ciudad[data-fase='preparacion'] .sol {
-  translate: 10cqw 0;
-  transform: translateY(55cqh);
+  translate: 22cqw 0;
+  transform: translateY(24cqh);
 }
 /* Al amanecer: aparece por el este y sube, primero deprisa y luego despacio, hasta lo alto */
 .sala-ciudad[data-transicion='amanecer'] .sol {
@@ -1344,20 +1359,20 @@
   to { rotate: 360deg; }
 }
 @keyframes sala-ciudad-sol-este {
-  from { translate: 95cqw 0; }
-  to { translate: 45cqw 0; }
+  from { translate: 90cqw 0; }
+  to { translate: 43.5cqw 0; }
 }
 @keyframes sala-ciudad-sol-sube {
   from { transform: translateY(110cqh); }
   to { transform: translateY(0); }
 }
 
-/* La ciudad, de la altura de la cabecera y centrada en la torre: si el hueco es más
-   estrecho, se recorta por los lados */
+/* La ciudad, en la mitad de abajo de la ventana y centrada en la torre: el círculo la
+   recorta por los lados */
 .sala-ciudad .pueblo {
   bottom: 0;
   left: 50%;
-  height: 100%;
+  height: 58%;
   aspect-ratio: 759 / 240;
   translate: -50% 0;
 }
@@ -1411,7 +1426,7 @@
   position: absolute;
   left: 0;
   top: 0;
-  height: calc(var(--escala, 1) * 15cqh);
+  height: calc(var(--escala, 1) * 6cqh);
   background: 0 0 / 400% 100% no-repeat;
   animation:
     sala-ciudad-vuelo var(--dur, 18s) linear infinite backwards var(--delay, 0s),
@@ -1512,7 +1527,14 @@
     transition: none;
   }
 
-  /* La ciudad de la cabecera: sin animaciones; al cambiar de fase, solo el cambio de luz, corto */
+  /* Aparece y se va fundiéndose, sin crecer */
+  .sala-ciudad-marco { animation-name: sala-ciudad-funde; }
+  .sala-ciudad-marco[data-saliendo] { animation-name: sala-ciudad-funde; animation-direction: reverse; }
+  @keyframes sala-ciudad-funde {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  /* La ciudad de la plaza: sin animaciones; al cambiar de fase, solo el cambio de luz, corto */
   .sala-ciudad,
   .sala-ciudad * {
     animation: none !important;

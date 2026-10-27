@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { conQuienConversa } from './conversacionDe';
 import Agujas from './Agujas';
 import AnuncioGanador from './AnuncioGanador';
@@ -92,6 +92,8 @@ interface MesaProps {
   pistas: Map<string, PistasParticipante>;
   /** Susurros en curso: ondas de un asiento a otro. */
   ondas: OndaMesa[];
+  /** En la plaza, dentro del corro de fichas y por debajo de todo (la ciudad, CiudadPlaza). */
+  ciudad?: ReactNode;
   /**
    * Narrador (y visitante que ve el grimorio): los asientos con despertar, los que
    * tienen mensajes sin ver y cómo abrir (o crear, de noche: solo el narrador) el
@@ -233,6 +235,7 @@ const Mesa = ({
   contacto,
   pistas,
   ondas,
+  ciudad,
   despertares,
   seguimiento,
   eleccion = null,
@@ -593,6 +596,10 @@ const Mesa = ({
   const pocosParaMezclar = !asientos.some((a) => a.ocupante);
   // Las fichas solo se ven (sin menú, sin seguir ni despertares): el asiento ya dice lo que lleva la suya
   const capaOculta = modoFichas === 'ver' && !seguimiento && !despertares;
+  // Algo en el centro de la mesa (ver abajo): la ciudad se vela para dejarlo leer
+  const centroOcupado = !!(
+    estado.reloj || nominacion?.cuentaAtrasFin || nominar.panel || nominar.cancelar || eleccion || editando || revelacion || estado.fichasRetenidas || senalamiento
+  );
 
   return (
     <div
@@ -602,6 +609,12 @@ const Mesa = ({
       // Los tamaños de la mesa (automáticos o no) para sus asientos y fichas.
       style={{ '--sala-avatar': `${avatar}px`, '--sala-ficha': `${ficha}px` } as CSSProperties}
     >
+      {/* La ciudad, en el hueco que dejan las fichas: la primera, así queda debajo de todo (sala.css, sala-plaza-ciudad) */}
+      {ciudad && (
+        <div className="sala-plaza-ciudad hidden sm:block" data-velada={centroOcupado || undefined}>
+          {ciudad}
+        </div>
+      )}
       {total > 0 ? (
         <ol id="sala-asientos" tabIndex={-1} aria-label="Asientos" className="focus:outline-none">
           {asientos.map((a, i) => {
@@ -953,7 +966,7 @@ const Mesa = ({
 
       {/* El centro de la mesa: el reloj del narrador y la cuenta atrás (todos), el panel
           de la nominación y el de editar asientos (narradores). Por encima de las agujas. */}
-      {(estado.reloj || nominacion?.cuentaAtrasFin || nominar.panel || nominar.cancelar || eleccion || editando || revelacion || estado.fichasRetenidas || senalamiento) && (
+      {centroOcupado && (
         <div className="absolute left-1/2 top-1/2 z-30 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">
           {estado.reloj && (
             <RelojSala
