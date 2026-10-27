@@ -17,11 +17,3 @@ export const NPC_POPE = 'pope';
 export const NPC_STORMCATCHER = 'stormcatcher';
 /** El Barquero: el último día, los muertos recuperan su voto (el narrador lo hace con un botón). */
 export const NPC_FERRYMAN = 'ferryman';
-/** Revolutionary: los dos asientos con su recordatorio reciben, al repartir la bolsa, personajes del mismo alineamiento. */
-export const NPC_REVOLUTIONARY = 'revolutionary';
-/** El Carnicero (viajero): vivo, tras la primera ejecución se puede nominar otra vez (no anochece). */
-export const VIAJERO_BUTCHER = 'butcher';
-/** Lil' Monsta: cada noche los esbirros eligen (señalando) quién lo cuida; ese lleva su «Is The Demon». */
-export const DEMONIO_LILMONSTA = 'lilmonsta';
-/** Organ Grinder: vivo y sin su «Drunk», las votaciones son secretas (ver SalaNominacion.privada). */
-export const ESBIRRO_ORGAN_GRINDER = 'organgrinder';

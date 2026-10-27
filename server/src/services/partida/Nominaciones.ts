@@ -37,10 +37,10 @@ export interface EntornoVotacion {
   segundosPorFicha(): number;
   /** No puede votar (muerto sin voto; con el Voudon vivo, los vivos que no son él). */
   sinVoto(participanteId: string): boolean;
-  /** Vota con las dos manos y sin gastar su voto de muerto (la Banshee con su habilidad). */
-  puedeVotarDoble(participanteId: string): boolean;
-  /** El Voudon está vivo: basta 1 voto y los muertos no gastan el suyo. */
-  voudonVivo(): boolean;
+  /** Un muerto que vota desde este asiento no gasta su voto (la Banshee con su habilidad, el Voudon vivo). */
+  votaSinGastar(asiento: SalaAsiento): boolean;
+  /** Los votos que hacen falta con tantas fichas vivas (la mitad o, con el Voudon vivo, 1). */
+  mayoria(vivos: number): number;
   /** Lo que vale el voto de quien se sienta en un asiento (1, o lo que digan sus recordatorios). */
   valorDelVoto(asiento: SalaAsiento, ocupante: SalaParticipante): number;
   /** La votación es secreta (Organ Grinder). */
@@ -144,7 +144,7 @@ export class Nominaciones {
     const ocupante = asiento?.ocupante ? this.entorno.buscar(asiento.ocupante) : undefined;
     // La Banshee con su habilidad, y los muertos con el Voudon vivo, votan sin gastar el
     // voto de muerto (ni les hace falta); con el Voudon, los vivos no votan (salvo él)
-    const conservaVoto = (!!ocupante && this.entorno.puedeVotarDoble(ocupante.id)) || this.entorno.voudonVivo();
+    const conservaVoto = !!asiento && this.entorno.votaSinGastar(asiento);
     const sinVoto = !ocupante || this.entorno.sinVoto(ocupante.id);
     const vota = ocupante?.rol === 'jugador' && ocupante.manoLevantada && !sinVoto;
     if (vota) {
@@ -232,7 +232,7 @@ export class Nominaciones {
   private votosNecesariosPorDefecto(): number {
     const vivos = this.entorno.mesa().filter((a) => !a.muerto).length;
     // Con el Voudon vivo no hace falta la mitad: basta 1 (y superar la que más tuvo hoy)
-    const mayoria = this.entorno.voudonVivo() ? 1 : Math.ceil(vivos / 2);
+    const mayoria = this.entorno.mayoria(vivos);
     return Math.max(1, mayoria, this.maximoDelDia === null ? 0 : this.maximoDelDia + 1);
   }
 

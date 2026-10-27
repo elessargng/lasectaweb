@@ -1,4 +1,4 @@
-import { randomInt, randomUUID } from 'crypto';
+import { randomUUID } from 'crypto';
 import {
   SalaAccesoGrimorio,
   SalaAlineamiento,
@@ -26,10 +26,6 @@ import { repartoPara } from './partida/distribucion';
 import { Participantes, type SalaLlegada } from './partida/Participantes';
 import {
   NPC_GARDENER,
-  NPC_REVOLUTIONARY,
-  VIAJERO_BUTCHER,
-  DEMONIO_LILMONSTA,
-  ESBIRRO_ORGAN_GRINDER,
 } from './partida/personajesEspeciales';
 import { RelojSala } from './partida/RelojSala';
 import { Despertares, type HiloDespertar } from './partida/Despertares';
@@ -40,6 +36,11 @@ import { Revelacion } from './partida/Revelacion';
 import { Npcs } from './partida/Npcs';
 import { Entregas, type FichaEntregada } from './partida/Entregas';
 import { Bolsa } from './partida/Bolsa';
+import { barajar } from './partida/azar';
+import { Reglas } from './partida/reglas';
+import type { ContextoReglas } from './partida/reglas/ReglaPersonaje';
+import { voudonVivo } from './partida/reglas/voudon';
+import { cuidadorLilmonsta, DEMONIO_LILMONSTA, esbirrosLilmonsta, recordatorioLilmonsta } from './partida/reglas/lilMonsta';
 import {
   SeguimientoPartida,
   type FotoJugador,
@@ -78,32 +79,6 @@ const asientoNuevo = (): SalaAsiento => ({
 export const esRecordatorioDeIdentidad = (texto: string) => /^is the\b/i.test(texto.trim());
 /** Lo mismo con un recordatorio puesto: uno con texto propio nunca lo es (lo escribe el narrador). */
 const esIdentidad = (r: SalaRecordatorio) => r.personaje !== RECORDATORIO_TEXTO && esRecordatorioDeIdentidad(r.texto);
-
-/** Una copia de la lista barajada al azar (Fisher-Yates). */
-const barajar = <T>(lista: readonly T[]): T[] => {
-  const copia = [...lista];
-  for (let i = copia.length - 1; i > 0; i--) {
-    const j = randomInt(i + 1);
-    [copia[i], copia[j]] = [copia[j], copia[i]];
-  }
-  return copia;
-};
-
-
-/**
- * Los recordatorios que se ponen solos en la ficha del ejecutado si su personaje
- * está en juego y vivo: su texto en el original (en el catálogo). `unico`: solo
- * hay uno en la mesa (se quita de donde estuviera); `soloBueno`: solo si el
- * ejecutado es bueno.
- */
-const RECORDATORIOS_EJECUCION: { personaje: string; texto: string; unico: boolean; soloBueno?: boolean }[] = [
-  // Tiene la habilidad del último ejecutado
-  { personaje: 'cannibal', texto: 'Lunch', unico: true },
-  // Esta noche sabe qué personaje fue ejecutado hoy
-  { personaje: 'undertaker', texto: 'Die Today', unico: true },
-  // Si se ejecuta a más de un bueno, gana el mal
-  { personaje: 'leviathan', texto: 'Good Player Executed', unico: false, soloBueno: true },
-];
 
 /**
  * Lo que un cambio de fase deja atrás y la máquina del tiempo devuelve: al
@@ -155,6 +130,15 @@ export class SalaService {
     fondo: null,
     ocultarCamarasConversacion: true,
   };
+  /** Lo que las reglas de los personajes pueden consultar de la partida. */
+  private readonly contextoReglas: ContextoReglas = {
+    mesa: () => this.mesa,
+    identidad: (asiento) => this.identidad(asiento),
+    alineamiento: (asiento) => this.alineamientoEfectivo(asiento),
+    personaje: (id) => this.personaje(id),
+  };
+  /** Las reglas de los personajes (ver reglas/). */
+  private readonly reglas = new Reglas(this.contextoReglas);
   /** Las nominaciones y votaciones del día. */
   private readonly nominaciones = new Nominaciones({
     mesa: () => this.mesa,
@@ -162,9 +146,9 @@ export class SalaService {
     dia: () => this.faseActual.numero,
     segundosPorFicha: () => this.ajustes.segundosPorFicha,
     sinVoto: (id) => this.sinVoto(id),
-    puedeVotarDoble: (id) => this.puedeVotarDoble(id),
-    voudonVivo: () => this.voudonVivo(),
-    valorDelVoto: (asiento, ocupante) => this.valorDelVoto(asiento, ocupante),
+    votaSinGastar: (asiento) => this.reglas.votaSinGastar(asiento),
+    mayoria: (vivos) => this.reglas.mayoria(vivos),
+    valorDelVoto: (asiento, ocupante) => this.reglas.valorDelVoto(asiento, ocupante.dosManos),
     secreta: () => this.votacionSecreta(),
     alNominar: (desde, hasta) => this.seguimiento.nomina(this.cuentaDelAsiento(desde), this.cuentaDelAsiento(hasta)),
     alVotar: (id) => this.seguimiento.vota(this.cuentaDe(id)),
@@ -429,18 +413,11 @@ export class SalaService {
    * asientos; no lo comprueba). El
    * alineamiento vuelve a ser el de su tipo. La bolsa se queda como estaba.
    *
-   * Revolutionary: si exactamente dos de esos asientos llevan su recordatorio,
-   * les tocan dos personajes del mismo alineamiento (ver mismoAlineamiento).
+   * Las reglas pueden cambiar el reparto (el Revolutionary: ver reglas/revolucionario.ts).
    */
   repartirBolsa(): void {
     const asientos = this.mesa.filter((a) => !this.llevaViajero(a));
-    const revolucionarios = asientos.flatMap((a, i) =>
-      a.recordatorios.some((r) => r.personaje === NPC_REVOLUTIONARY) ? [i] : [],
-    );
-    let personajes = barajar(this.bolsaPartida.bolsa());
-    if (revolucionarios.length === 2) {
-      personajes = this.mismoAlineamiento(personajes, revolucionarios[0], revolucionarios[1]);
-    }
+    const personajes = this.reglas.repartir(asientos, barajar(this.bolsaPartida.bolsa()));
     asientos.forEach((a, i) => {
       a.personaje = personajes[i] ?? null;
       a.alineamiento = null;
@@ -448,29 +425,6 @@ export class SalaService {
       a.recordatorios = a.recordatorios.filter((r) => !esIdentidad(r));
       this.identidadAutomatica(a);
     });
-  }
-
-  /**
-   * Los personajes ya barajados, con dos del mismo alineamiento por su tipo en
-   * las posiciones x e y (aldeanos y forasteros, buenos; esbirros y demonios,
-   * malvados; los viajeros no cuentan). El par se elige al azar entre todos los
-   * posibles, así que sale malvado tan a menudo como pares malvados hay. Los
-   * demás siguen en su orden barajado. Sin ningún par posible, los deja igual.
-   */
-  private mismoAlineamiento(personajes: string[], x: number, y: number): string[] {
-    const tipo = (id: string) => this.personaje(id)?.tipo;
-    const buenos = personajes.filter((id) => tipo(id) === 'townsfolk' || tipo(id) === 'outsider');
-    const malvados = personajes.filter((id) => tipo(id) === 'minion' || tipo(id) === 'demon');
-    const pares = (n: number) => (n * (n - 1)) / 2;
-    const total = pares(buenos.length) + pares(malvados.length);
-    if (total === 0) return personajes;
-    const grupo = randomInt(total) < pares(buenos.length) ? buenos : malvados;
-    // Dos distintos del grupo, cada uno a una de las dos posiciones
-    const [primero, segundo] = barajar(grupo.map((_, i) => i)).slice(0, 2);
-    const elegidos = [grupo[primero], grupo[segundo]];
-    const resto = [...personajes];
-    for (const id of elegidos) resto.splice(resto.indexOf(id), 1);
-    return personajes.map((_, i) => (i === x ? elegidos[0] : i === y ? elegidos[1] : resto.shift()!));
   }
 
   /**
@@ -699,14 +653,9 @@ export class SalaService {
     this.faseActual = { momento: 'preparacion', numero: 0, reinicios: this.faseActual.reinicios + 1 };
   }
 
-  /**
-   * Las votaciones son secretas: el Organ Grinder está en juego (de verdad: un
-   * Borracho que se cree Organ Grinder no cuenta), vivo y sin un recordatorio
-   * «Drunk» en su ficha (el suyo, al elegir estar borracho, o el de otro).
-   */
+  /** Las votaciones son secretas (el Organ Grinder, ver reglas/organGrinder.ts). */
   votacionSecreta(): boolean {
-    const og = this.mesaAlDia().find((a) => !a.muerto && this.identidad(a) === ESBIRRO_ORGAN_GRINDER);
-    return !!og && !og.recordatorios.some((r) => /^drunk$/i.test(r.texto.trim()));
+    return this.reglas.votacionSecreta();
   }
 
   // Las nominaciones y votaciones: las lleva Nominaciones
@@ -903,24 +852,19 @@ export class SalaService {
     return error;
   }
 
-  /** Lil' Monsta: si todos los esbirros sentados señalan al mismo, ese lo cuida. */
+  /** Lil' Monsta: si todos los esbirros sentados señalan al mismo, ese lo cuida (ver reglas/lilMonsta.ts). */
   private resolverLilmonsta(): void {
     const s = this.senales.senalamiento();
-    if (!s) return;
-    const sentados = this.mesaAlDia().filter((a) => a.ocupante && s.senaladores.includes(a.id));
-    const elegidos = new Set(sentados.map((a) => s.senales[a.id]));
-    if (sentados.length === 0 || elegidos.size !== 1) return;
-    const [cuidador] = [...elegidos];
+    const cuidador = s && cuidadorLilmonsta(this.contextoReglas, s);
     if (!cuidador) return;
     this.senales.congelar();
     // Su «Is The Demon» pasa al que lo cuida (solo hay uno)
-    const recordatorios = this.personaje(DEMONIO_LILMONSTA)?.recordatorios ?? [];
-    const indice = recordatorios.findIndex((t) => /^is the demon$/i.test(t.trim()));
-    if (indice < 0) return;
+    const r = recordatorioLilmonsta(this.contextoReglas);
+    if (!r) return;
     for (const a of this.mesa) {
-      a.recordatorios = a.recordatorios.filter((r) => !(r.personaje === DEMONIO_LILMONSTA && r.indice === indice));
+      a.recordatorios = a.recordatorios.filter((x) => !(x.personaje === DEMONIO_LILMONSTA && x.indice === r.indice));
     }
-    this.ponerRecordatorio(cuidador, { personaje: DEMONIO_LILMONSTA, indice, texto: recordatorios[indice] });
+    this.ponerRecordatorio(cuidador, { personaje: DEMONIO_LILMONSTA, indice: r.indice, texto: r.texto });
   }
 
   /** Quita el señalamiento. No comprueba permisos. */
@@ -928,21 +872,13 @@ export class SalaService {
     this.senales.terminar();
   }
 
-  /**
-   * Se puede empezar Lil' Monsta: es de noche, el guion lo trae, ninguna ficha
-   * es un demonio y hay un esbirro más de los que tocan (el que hace de demonio).
-   * Devuelve los asientos de los esbirros vivos, o null si no.
-   */
+  /** Se puede empezar Lil' Monsta: los asientos de los esbirros vivos, o null (ver reglas/lilMonsta.ts). */
   esbirrosLilmonsta(): string[] | null {
-    if (this.faseActual.momento !== 'noche' || !this.guionActual?.personajes.some((p) => p.id === DEMONIO_LILMONSTA)) return null;
-    const tipo = (a: SalaAsiento) => (a.personaje ? this.personaje(a.personaje)?.tipo : undefined);
-    const mesa = this.mesaAlDia();
-    if (mesa.some((a) => tipo(a) === 'demon')) return null;
-    const esbirros = mesa.filter((a) => tipo(a) === 'minion');
-    const tocan = this.distribucion().esbirros;
-    if (esbirros.length === 0 || (tocan !== null && esbirros.length <= tocan)) return null;
-    const vivos = esbirros.filter((a) => !a.muerto).map((a) => a.id);
-    return vivos.length ? vivos : null;
+    return esbirrosLilmonsta(this.contextoReglas, {
+      noche: this.faseActual.momento === 'noche',
+      enElGuion: !!this.guionActual?.personajes.some((p) => p.id === DEMONIO_LILMONSTA),
+      esbirrosQueTocan: this.distribucion().esbirros,
+    });
   }
 
   // La revelación del grimorio: la lleva Revelacion
@@ -1034,10 +970,10 @@ export class SalaService {
   }
 
   /**
-   * Ejecuta al de un asiento (el que lleva la calavera): muere como al matarlo y,
-   * por cada personaje que funciona con las ejecuciones (RECORDATORIOS_EJECUCION)
-   * en juego y vivo, se le pone su recordatorio. Luego anochece, salvo con el
-   * Carnicero en juego y vivo (puede haber otra ejecución) o si quedan solo dos
+   * Ejecuta al de un asiento (el que lleva la calavera): muere como al matarlo y
+   * se le ponen los recordatorios de los personajes que funcionan con las
+   * ejecuciones (ver Reglas). Luego anochece, salvo si una regla lo impide (el
+   * Carnicero vivo: puede haber otra ejecución) o si quedan solo dos
    * jugadores vivos (`final`): entonces decide el narrador si se va a la noche o
    * se revela el grimorio. Devuelve si ha anochecido y si quedan dos, o null si
    * el asiento no existe. No comprueba permisos.
@@ -1045,12 +981,8 @@ export class SalaService {
   ejecutar(asientoId: string): { anochece: boolean; final: boolean } | null {
     const asiento = this.mesa.find((a) => a.id === asientoId);
     if (!asiento) return null;
-    const bueno = this.alineamientoEfectivo(asiento) === 'bueno';
-    // En juego y vivo: en la ficha (el Borracho que se cree Enterrador también) o de verdad
-    const vivoEnJuego = (id: string) =>
-      this.mesa.some((a) => a !== asiento && !a.muerto && (a.personaje === id || this.identidad(a) === id));
-    for (const { personaje, texto, unico, soloBueno } of RECORDATORIOS_EJECUCION) {
-      if ((soloBueno && !bueno) || !vivoEnJuego(personaje)) continue;
+    // Los recordatorios de los personajes que funcionan con las ejecuciones (ver Reglas)
+    for (const { personaje, texto, unico } of this.reglas.recordatoriosAlEjecutar(asiento)) {
       const indice = this.personaje(personaje)?.recordatorios.findIndex((t) => t.toLowerCase() === texto.toLowerCase()) ?? -1;
       if (indice < 0) continue;
       const delPersonaje = (r: SalaRecordatorio) => r.personaje === personaje && r.indice === indice;
@@ -1063,7 +995,7 @@ export class SalaService {
     // sin muerte, sin contar a los viajeros
     const vivos = this.mesa.filter((a) => !a.muerto && !a.muertePendiente && !this.llevaViajero(a)).length;
     const final = vivos <= 2;
-    const anochece = !final && !this.mesa.some((a) => !a.muerto && this.identidad(a) === VIAJERO_BUTCHER);
+    const anochece = !final && this.reglas.anocheceTrasEjecutar();
     if (anochece) this.irANoche();
     return { anochece, final };
   }
@@ -1205,22 +1137,18 @@ export class SalaService {
     this.cambiarRol(id, 'visitante');
   }
 
-  /** El jugador está muerto y ya ha gastado su voto: no puede levantar la mano. */
+  /** No puede votar: no está sentado, o las reglas dicen que no (ver Reglas.puedeVotar). */
   sinVoto(participanteId: string): boolean {
     const asiento = this.asientoDe(participanteId);
-    if (!asiento) return true;
-    // Con el Voudon vivo, solo votan él y los muertos (sin voto de muerto)
-    if (this.voudonVivo()) return !asiento.muerto && !this.esVoudon(asiento);
-    // La Banshee con su habilidad vota sin gastar el voto de muerto
-    return asiento.muerto && asiento.votoGastado && !this.puedeVotarDoble(participanteId);
+    return !asiento || !this.reglas.puedeVotar(asiento);
   }
 
   /**
-   * La Institutriz (Matron) está viva en la mesa (su ficha o quien es de verdad): los
-   * jugadores solo pueden conversar en privado con sus vecinos.
+   * Los jugadores solo pueden conversar en privado con sus vecinos (la Institutriz
+   * viva). Se llama así por ella, que es quien lo pide (ver reglas/institutriz.ts).
    */
   institutrizViva(): boolean {
-    return this.mesa.some((a) => !a.muerto && (a.personaje === 'matron' || this.identidad(a) === 'matron'));
+    return this.reglas.soloVecinos();
   }
 
   /**
@@ -1235,39 +1163,16 @@ export class SalaService {
     return [ocupados[(i + 1) % n].ocupante, ocupados[(i - 1 + n) % n].ocupante].includes(otroId);
   }
 
-  /** La ficha es la del Voudon (o lo es de verdad, por su «Is The …»). */
-  private esVoudon(asiento: SalaAsiento): boolean {
-    return asiento.personaje === 'voudon' || this.identidad(asiento) === 'voudon';
-  }
-
-  /**
-   * El Voudon está vivo en la mesa: solo votan él y los muertos, los muertos no
-   * necesitan ni gastan su voto y basta con 1 voto para la calavera.
-   */
+  /** El Voudon está vivo en la mesa (ver reglas/voudon.ts). */
   voudonVivo(): boolean {
-    return this.mesa.some((a) => !a.muerto && this.esVoudon(a));
+    return voudonVivo(this.contextoReglas);
   }
 
-  /**
-   * Lo que vale el voto de quien se sienta en un asiento: las dos manos de la Banshee
-   * con su habilidad, ×2; con el recordatorio del Burócrata, ×3; con el del Ladrón, en
-   * negativo. Se combinan (la Banshee con los dos: −6).
-   */
-  private valorDelVoto(asiento: SalaAsiento, ocupante: SalaParticipante): number {
-    const manos = ocupante.dosManos && this.puedeVotarDoble(ocupante.id) ? 2 : 1;
-    const lleva = (personaje: string) => asiento.recordatorios.some((r) => r.personaje === personaje);
-    return manos * (lleva('bureaucrat') ? 3 : 1) * (lleva('thief') ? -1 : 1);
-  }
-
-  /**
-   * Puede votar con las dos manos (dos votos): la Banshee muerta con su
-   * recordatorio «Has Ability» en la ficha.
-   */
+  /** Puede votar con las dos manos (dos votos): la Banshee con su habilidad (ver reglas/banshee.ts). */
   puedeVotarDoble(participanteId: string): boolean {
     const asiento = this.mesa.find((a) => a.ocupante === participanteId);
-    return !!asiento?.muerto && asiento.recordatorios.some((r) => r.personaje === 'banshee' && /has ability/i.test(r.texto));
+    return !!asiento && this.reglas.votaDoble(asiento);
   }
-
 
   // Quién está en la sala: lo lleva Participantes (ver allí lo que hace cada uno)
 
