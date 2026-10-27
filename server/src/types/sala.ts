@@ -327,6 +327,14 @@ export interface SalaNominacion {
   cuentaAtrasFin: number | null;
   /** La votación, desde que acaba la cuenta atrás. */
   votacion: SalaVotacion | null;
+  /**
+   * El nominado es un viajero: no es una nominación, es una expulsión. Hace falta
+   * la mitad de los votos de la plaza (de todos los asientos, vivos o muertos, sin
+   * mirar otras votaciones), vota cualquiera sin gastar su voto de muerto, cada mano
+   * vale 1 y, si sale, el viajero muere al momento (sin calavera). Nunca es secreta
+   * (el Organ Grinder solo esconde las nominaciones).
+   */
+  expulsion: boolean;
   /** Votos que hacen falta para el nominado: los que ha elegido el narrador o, si no, los de por defecto. */
   votosNecesarios: number;
   /**
@@ -349,9 +357,14 @@ export interface SalaRegistroVotacion {
   hora: number;
   /** El día de la partida en que se nominó. */
   dia: number;
-  /** «asiento 1 (Ana)» o «asiento 1, libre». */
+  /** «Ana» o, si el asiento está libre, «asiento 1». */
   nomina: string;
   nominado: string;
+  /** Los asientos que nominan y que son nominados (no los hay en las partidas guardadas antes). */
+  nominaAsiento?: string;
+  nominadoAsiento?: string;
+  /** Era la expulsión de un viajero (ver SalaNominacion.expulsion), no una nominación. */
+  expulsion?: boolean;
   /** Nombres de quienes votaron, en el orden en que votaron; null si no se llegó a votar. */
   votantes: string[] | null;
   votos: number | null;

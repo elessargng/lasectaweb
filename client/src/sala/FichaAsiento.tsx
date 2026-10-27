@@ -40,13 +40,16 @@ interface FichaAsientoProps {
   onError: (mensaje: string) => void;
   /** El narrador puede abrir una nominación desde esta ficha («Nominar a…»). */
   onNominar?: () => void;
+  /** Ya ha nominado hoy: «Nominar a…» lo avisa (pero deja). */
+  yaNomino?: boolean;
   /**
    * Se está eligiendo a quién nomina una ficha: esta es un botón para elegirla
    * (también la que nomina, que se nominaría a sí misma; se distingue con un aro blanco).
    * También al elegir a alguien en la plaza para el despertar: `accion` es el verbo
-   * del botón («Elegir»; si no, «Nominar»).
+   * del botón («Elegir»; si no, «Nominar»). `yaNominado`: ya la nominaron hoy (sale
+   * apagada y con un rótulo, pero se puede elegir igual).
    */
-  eligiendo?: { papel: 'origen' | 'candidata'; onPulsar: () => void; accion?: string };
+  eligiendo?: { papel: 'origen' | 'candidata'; onPulsar: () => void; accion?: string; yaNominado?: boolean };
   /** En una votación: votos acumulados si votó, null si no; sin definir si aún no le ha tocado. */
   voto?: number | null;
   /**
@@ -54,6 +57,8 @@ interface FichaAsientoProps {
    * el narrador, cómo revelarla (pulsándola; al pasar el ratón la mira antes).
    */
   revelando?: { revelada: boolean; onRevelar?: () => void };
+  /** Al revelarse (no si ya lo estaba): suelta el humo de su bando sobre la ficha. */
+  onHumo?: (ancla: HTMLElement, alineamiento: SalaAlineamiento) => void;
   /** Hay una nominación abierta: la ficha se gira y enseña la esfera del reloj. */
   reloj?: boolean;
   /** Es de noche: matar deja la muerte pendiente y antes se elige quién mata (un recordatorio). */
@@ -115,9 +120,11 @@ const FichaAsiento = ({
   pedir,
   onError,
   onNominar,
+  yaNomino = false,
   eligiendo,
   voto,
   revelando,
+  onHumo,
   deNoche = false,
   reloj = false,
   despertar,
@@ -200,6 +207,20 @@ const FichaAsiento = ({
     };
     // El botón que la contiene cambia con lo que se hace con ella (menú, nominar, revelar)
   }, [conPista, modo, !!eligiendo, !!revelando, !!seguir]);
+
+  // Al revelarse, el humo de su bando (azul o rojo); no las que ya estaban reveladas al
+  // llegar, ni las que no tienen personaje
+  const revelada = !!revelando?.revelada;
+  const reveladaAntes = useRef(revelada);
+  useEffect(() => {
+    if (revelada && !reveladaAntes.current && onHumo && fichaRef.current && personaje) {
+      const bando = alineamientoDe(personaje, contenido.alineamiento);
+      if (bando) onHumo(fichaRef.current, bando);
+    }
+    reveladaAntes.current = revelada;
+    // Solo al cambiar: lo demás se lee tal como está en ese momento
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revelada]);
   const ficha = (
     <span ref={fichaRef} data-resaltada={(resaltada && conPista) || undefined} className="relative block">
       <FichaRedonda
@@ -240,17 +261,30 @@ const FichaAsiento = ({
 
   if (eligiendo) {
     const origen = eligiendo.papel === 'origen';
+    const yaNominado = !!eligiendo.yaNominado;
     return (
       <button
         id={idFichaNominar(asiento.id)}
         type="button"
         onClick={eligiendo.onPulsar}
-        aria-label={`${eligiendo.accion ?? 'Nominar'} al ${describirAsiento(numero, ocupante)}${origen ? ', que es el que nomina' : ''}`}
-        className={`block cursor-pointer rounded-full ring-offset-2 ring-offset-background focus:outline-none focus-visible:ring-4 focus-visible:ring-white ${
-          origen ? 'ring-4 ring-white/80' : 'ring-2 ring-blood-bright'
+        aria-label={`${eligiendo.accion ?? 'Nominar'} al ${describirAsiento(numero, ocupante)}${origen ? ', que es el que nomina' : ''}${
+          yaNominado ? ', ya nominado hoy' : ''
+        }`}
+        title={yaNominado ? 'Ya nominado hoy' : undefined}
+        className={`relative block cursor-pointer rounded-full ring-offset-2 ring-offset-background focus:outline-none focus-visible:ring-4 focus-visible:ring-white ${
+          origen ? 'ring-4 ring-white/80' : yaNominado ? 'ring-2 ring-white/20' : 'ring-2 ring-blood-bright'
         }`}
       >
-        {ficha}
+        {/* Ya nominada hoy: apagada (se aviva al pasar por encima) y con su rótulo */}
+        <span className={yaNominado ? 'block opacity-40 grayscale transition-opacity hover:opacity-100' : 'contents'}>{ficha}</span>
+        {yaNominado && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded border border-outline-ghost bg-surface-container px-1.5 text-[10px] leading-4 text-on-surface-muted"
+          >
+            Ya nominado
+          </span>
+        )}
       </button>
     );
   }
@@ -439,8 +473,9 @@ const FichaAsiento = ({
             : []),
           // De noche no se marca a nadie
           ...(deNoche ? [] : [{ id: 'marca', etiqueta: asiento.marcado ? 'Desmarcar' : 'Marcar', elegir: cambiarMarca }]),
+          // Si ya nominó hoy se avisa en la opción, pero puede volver a nominar
           onNominar
-            ? { id: 'nominar', etiqueta: 'Nominar a…', elegir: onNominar }
+            ? { id: 'nominar', etiqueta: yaNomino ? 'Nominar a… (ya nominó hoy)' : 'Nominar a…', elegir: onNominar }
             : { id: 'nominar', etiqueta: 'Nominar a…', deshabilitada: true, elegir: () => {} },
           ...(hayGuion ? [cambiarFicha] : []),
           // Con el Gardener: lo mismo que arrastrarla sobre otra

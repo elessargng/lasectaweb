@@ -47,6 +47,7 @@ const Agujas = ({ total, desde, hasta, votacion }: AgujasProps) => {
 
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-20">
+      <Esfera lado={larga} />
       {/* De abajo arriba, como en un reloj: horas, minutos y segundos */}
       <Aguja imagen={IMAGENES.horas} estilo={giro(hasta)} />
       <Aguja imagen={IMAGENES.minutos} estilo={giro(hasta + (votacion?.paso ?? 0), votacion?.segundosPorFicha)} />
@@ -54,6 +55,30 @@ const Agujas = ({ total, desde, hasta, votacion }: AgujasProps) => {
     </div>
   );
 };
+
+/**
+ * La esfera del reloj de botc.app (copias locales en public/agujas), bajo las agujas:
+ * detrás, el trazado de círculos y triángulo; encima, los dos engranajes, que dan
+ * la vuelta al eje al revés que el reloj, y sobre ellos el aro con las marcas, que
+ * gira en el sentido del reloj. El grande mete los dientes bajo el borde interior
+ * del aro, como si lo moviera. El aro mide lo que la aguja de los minutos; el
+ * trazado, un 28% más, para que su círculo grande caiga sobre el filete exterior del aro.
+ */
+const Esfera = ({ lado }: { lado: string }) => (
+  <div className="sala-esfera" style={{ '--esfera-lado': lado } as CSSProperties}>
+    <img src="/agujas/fondo.webp" alt="" className="sala-esfera-trazado" />
+    <div className="sala-esfera-engranajes">
+      {/* El grande contra el borde del aro y el pequeño engranado con él, hacia el eje */}
+      <span className="sala-esfera-engranaje sala-esfera-engranaje-grande">
+        <img src="/agujas/engranaje1.webp" alt="" />
+      </span>
+      <span className="sala-esfera-engranaje sala-esfera-engranaje-pequeno">
+        <img src="/agujas/engranaje2.webp" alt="" />
+      </span>
+    </div>
+    <img src="/agujas/aro.webp" alt="" className="sala-esfera-aro" />
+  </div>
+);
 
 /** Una aguja, centrada en el eje de la mesa y girada sobre él. */
 const Aguja = ({ imagen, estilo }: { imagen: string; estilo: CSSProperties }) => (

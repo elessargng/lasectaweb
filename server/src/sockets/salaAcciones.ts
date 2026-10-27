@@ -518,12 +518,30 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
-  /** Arranca (o reinicia) la cuenta atrás de la nominación abierta; al acabar, empieza la votación. */
+  /**
+   * Arranca la cuenta atrás de la nominación abierta; al acabar, empieza la votación.
+   * Una vez arrancada no se puede volver a pulsar (para eso está reiniciarVotacion).
+   */
   'narrador:cuentaAtras': {
-    puede: (sala, yo) => yo.rol === 'narrador' && !!sala.nominacion() && !sala.hayVotacion(),
-    noPuede: (sala) => (sala.hayVotacion() ? 'Esta nominación ya se ha votado.' : 'No hay ninguna nominación abierta.'),
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.nominacion()?.cuentaAtrasFin === null && !sala.hayVotacion(),
+    noPuede: (sala) =>
+      sala.hayVotacion()
+        ? 'Esta nominación ya se ha votado.'
+        : sala.votacionEnMarcha()
+          ? 'La cuenta atrás ya está en marcha.'
+          : 'No hay ninguna nominación abierta.',
     hacer: (sala) => {
       sala.iniciarCuentaAtras(Date.now());
+      return { ok: true };
+    },
+  },
+
+  /** Para la cuenta atrás o la votación en marcha y deja la nominación como recién abierta. */
+  'narrador:reiniciarVotacion': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.votacionEnMarcha(),
+    noPuede: 'No hay ninguna votación en marcha.',
+    hacer: (sala) => {
+      sala.reiniciarVotacion();
       return { ok: true };
     },
   },

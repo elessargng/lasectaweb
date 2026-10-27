@@ -303,7 +303,12 @@ export function avisosDeCambio(
     const sujeto = mayuscula(nominacionDe(nuevo, nomAhora.desde));
     // Votación secreta: no se sabe cuántos votos hacen falta
     const necesarios = votacionOculta(nuevo) ? ' Votación secreta.' : ` ${hacenFalta(nomAhora.votosNecesarios)}.`;
-    if (nomAhora.desde === nomAhora.hasta) {
+    if (nomAhora.expulsion) {
+      // Un viajero: no es una nominación, se pide su expulsión
+      const objeto = nominacionDe(nuevo, nomAhora.hasta).replace(/^el /, 'al ');
+      const quien = nomAhora.desde === nomAhora.hasta ? 'su propia expulsión' : `expulsar ${objeto.startsWith('al ') ? objeto : `a ${objeto}`}`;
+      avisa('nominaciones', `${sujeto} pide ${quien}.${necesarios}`);
+    } else if (nomAhora.desde === nomAhora.hasta) {
       avisa('nominaciones', `${sujeto} se nomina.${necesarios}`);
     } else {
       const objeto = nominacionDe(nuevo, nomAhora.hasta).replace(/^el /, 'al ');
@@ -314,7 +319,7 @@ export function avisosDeCambio(
     avisa('nominaciones', `Ahora ${hacenFalta(nomAhora.votosNecesarios).toLocaleLowerCase('es')}.`);
   } else if (nomAntes && !nomAhora && !seMarca && !cambioFase && !nuevo.asientos.some((a) => antesAsiento.get(a.id)?.marcado && !a.marcado)) {
     // Si se ha cerrado al poner o quitar la calavera, ya se ha dicho eso.
-    avisa('nominaciones', 'Nominación cerrada.');
+    avisa('nominaciones', nomAntes.expulsion ? 'Expulsión cerrada.' : 'Nominación cerrada.');
   }
   const votAntes = nomAntes?.votacion;
   const votAhora = nomAhora?.votacion;

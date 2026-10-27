@@ -211,9 +211,14 @@ export interface SalaRegistroVotacion {
   hora: number;
   /** El día de la partida en que se nominó. */
   dia: number;
-  /** «asiento 1 (Ana)» o «asiento 1, libre». */
+  /** «Ana» o, si el asiento está libre, «asiento 1». */
   nomina: string;
   nominado: string;
+  /** Los asientos que nominan y que son nominados. */
+  nominaAsiento?: string;
+  nominadoAsiento?: string;
+  /** Era la expulsión de un viajero, no una nominación. */
+  expulsion?: boolean;
   /** Quienes votaron, en orden; null si no se llegó a votar. */
   votantes: string[] | null;
   votos: number | null;
@@ -237,6 +242,11 @@ export interface SalaNominacion {
   cuentaAtrasFin: number | null;
   /** La votación, desde que acaba la cuenta atrás. */
   votacion: SalaVotacion | null;
+  /**
+   * El nominado es un viajero: es una expulsión. Hace falta la mitad de la plaza
+   * (vivos y muertos), los muertos votan sin gastar su voto y, si sale, muere al momento.
+   */
+  expulsion: boolean;
   /** Votos que hacen falta para el nominado (los del narrador, o los de por defecto). */
   votosNecesarios: number;
   /** Los de por defecto: la mitad de los vivos y, si hay calavera con votos, uno más que esos. */

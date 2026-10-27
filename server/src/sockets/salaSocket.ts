@@ -165,11 +165,13 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
       const yo = sala.participanteDe(clave)!;
       const veVotos = yo.rol === 'narrador' || (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido');
       const ocultarVotos = secreta && !veVotos;
+      // La votación en curso solo se esconde si es una nominación (las expulsiones, no)
+      const ocultarVotacion = ocultarVotos && !!nominacion?.privada;
       const miAsiento = sala.asientoDe(yo.id)?.id ?? null;
       const estado: SalaEstado = {
         // Votación secreta, con una nominación abierta: las manos de los demás no se ven
         participantes:
-          ocultarVotos && nominacion
+          ocultarVotacion
             ? participantes.map((p) => (p.id === yo.id ? p : { ...p, manoLevantada: false, dosManos: false }))
             : participantes,
         asientos:
@@ -189,11 +191,11 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
                 // se vota, el voto de los muertos ajenos se ve como estaba al empezar
                 ...(ocultarVotos && {
                   votosMarca: null,
-                  votoGastado: gastadosAlVotar && a.ocupante !== yo.id ? gastadosAlVotar.has(a.id) : a.votoGastado,
+                  votoGastado: ocultarVotacion && gastadosAlVotar && a.ocupante !== yo.id ? gastadosAlVotar.has(a.id) : a.votoGastado,
                 }),
               })),
         configuracion,
-        nominacion: ocultarVotos && nominacion ? nominacionSecreta(nominacion, miAsiento) : nominacion,
+        nominacion: ocultarVotacion && nominacion ? nominacionSecreta(nominacion, miAsiento) : nominacion,
         fase: sala.fase(),
         distribucion,
         revelacion,

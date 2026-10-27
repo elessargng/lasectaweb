@@ -21,6 +21,8 @@ import { hacenFalta, votacionOculta } from './avisosSala';
 import CuadroAvatar from './CuadroAvatar';
 import FichaAsiento from './FichaAsiento';
 import FichaRedonda from './FichaRedonda';
+import HumoRevelacion, { type HumoRevelacionHandle } from './HumoRevelacion';
+import { useMenosMovimiento } from './useMenosMovimiento';
 import PersonajeEnFicha from './PersonajeEnFicha';
 import RecordatoriosFicha from './RecordatoriosFicha';
 import VelaVoto from './VelaVoto';
@@ -119,13 +121,22 @@ interface MesaProps {
  * siguiendo como las agujas del reloj, así que el último queda hacia las 11.
  * El centro del cuadro se separa del borde de la mesa medio cuadro (--sala-avatar).
  */
-function posicion(i: number, total: number): CSSProperties {
+function posicion(i: number, total: number, retirado = false): CSSProperties {
   const angulo = anguloAsiento(i, total);
   const x = Math.sin(angulo).toFixed(4);
   const y = (-Math.cos(angulo)).toFixed(4);
-  const radio = '(50% - var(--sala-avatar, 10rem) / 2)';
+  // Retirado: hacia fuera lo que encoge el cuadro, así su borde de fuera no se mueve
+  const atras = retirado ? ` + ${(1 - ESCALA_RETIRO) / 2} * var(--sala-avatar, 10rem)` : '';
+  const radio = `(50% - var(--sala-avatar, 10rem) / 2${atras})`;
   return { left: `calc(50% + ${x} * ${radio})`, top: `calc(50% + ${y} * ${radio})` };
 }
+
+/**
+ * Quien conversa en privado se retira hacia el fondo: su cuadro y su ficha
+ * encogen a esto (sala.css, sala-retiro) como si todo el asiento se alejara
+ * desde el borde de fuera de su cuadro, así que también se van hacia fuera.
+ */
+const ESCALA_RETIRO = 0.72;
 
 /**
  * Dónde va la ficha del asiento `i`: su centro, sobre la línea que va del centro
@@ -138,13 +149,16 @@ function posicion(i: number, total: number): CSSProperties {
  * un círculo perfecto, concéntrico con el de los asientos (en diagonal, al 100%,
  * pueden rozar la esquina del cuadro).
  */
-function posicionFicha(i: number, total: number): CSSProperties {
+function posicionFicha(i: number, total: number, retirado = false): CSSProperties {
   const angulo = anguloAsiento(i, total);
   const x = Math.sin(angulo).toFixed(4);
   const y = (-Math.cos(angulo)).toFixed(4);
   const t = 'var(--sala-ficha-distancia, 0.75)';
+  const dentro = `${t} * (var(--sala-avatar, 10rem) + var(--sala-ficha, 4.5rem)) / 2`;
+  // Retirado: se aleja con su asiento (ver ESCALA_RETIRO), desde el borde de fuera del cuadro
+  const atras = retirado ? ` + ${1 - ESCALA_RETIRO} * (var(--sala-avatar, 10rem) / 2 + ${dentro})` : '';
   // Radio de las fichas: el de los asientos menos el desplazamiento hacia dentro.
-  const radio = `(50% - var(--sala-avatar, 10rem) / 2 - ${t} * (var(--sala-avatar, 10rem) + var(--sala-ficha, 4.5rem)) / 2)`;
+  const radio = `(50% - var(--sala-avatar, 10rem) / 2 - ${dentro}${atras})`;
   return { left: `calc(50% + ${x} * ${radio})`, top: `calc(50% + ${y} * ${radio})` };
 }
 
@@ -478,6 +492,9 @@ const Mesa = ({
     onHecho: (desde, hasta) =>
       onAnuncio('bolsa', `Fichas intercambiadas: ${nombreDeAsiento(estado, desde)} y ${nombreDeAsiento(estado, hasta)}.`),
   });
+  // Cada ficha que se revela suelta el humo de su bando (sin él si se pide menos movimiento)
+  const humoRef = useRef<HumoRevelacionHandle>(null);
+  const menosMovimiento = useMenosMovimiento();
   // Revelando el grimorio (narradores): pulsar una ficha la revela a todos; «Terminar» revela las que quedan
   const puedeRevelar = acciones.includes('narrador:revelarFicha');
   // La ficha revelada deja de ser un botón: el foco va a la siguiente boca abajo (en
@@ -607,7 +624,7 @@ const Mesa = ({
       // isolate: las capas de la mesa (fichas, agujas, centro) no compiten con la cabecera y sus menús
       className="sala-mesa-halo relative isolate mx-auto aspect-square w-full max-w-[calc(100vh-8rem)]"
       // Los tamaños de la mesa (automáticos o no) para sus asientos y fichas.
-      style={{ '--sala-avatar': `${avatar}px`, '--sala-ficha': `${ficha}px` } as CSSProperties}
+      style={{ '--sala-avatar': `${avatar}px`, '--sala-ficha': `${ficha}px`, '--sala-retiro': ESCALA_RETIRO } as CSSProperties}
     >
       {/* La ciudad, en el hueco que dejan las fichas: la primera, así queda debajo de todo (sala.css, sala-plaza-ciudad) */}
       {ciudad && (
@@ -637,6 +654,8 @@ const Mesa = ({
             // La vela del muerto, si se ha elegido (si no, el círculo va en el sudario)
             const conVela = a.muerto && estiloVoto === 'vela';
             const posRecordatorios = posicionRecordatorios(i, total, conVela);
+            // Conversando en privado: el asiento entero se retira hacia el fondo
+            const retirado = !!ocupante && conQuienConversa(estado, ocupante.id) !== undefined;
             return (
               // Cada asiento con su ficha justo después: el lector los lee juntos, asiento a asiento.
               // El li no tiene caja (contents): el asiento y la capa de su ficha se colocan respecto a la mesa.
@@ -644,7 +663,11 @@ const Mesa = ({
                 {/* Centrado en su punto sin transform ni z-index (una caja de 0×0 que centra el asiento): así no
                     forma su propio plano y, dentro, el cuadro queda bajo las fichas mientras la mano y los
                     botones de llamada (z-[25], ver Asiento) pasan por encima de ellas */}
-                <div data-asiento={a.id} className="absolute flex h-0 w-0 items-center justify-center" style={posicion(i, total)}>
+                <div
+                  data-asiento={a.id}
+                  className="absolute flex h-0 w-0 items-center justify-center transition-[left,top] duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none"
+                  style={posicion(i, total, retirado)}
+                >
                   <div className="relative shrink-0">
                     <Asiento
                       id={a.id}
@@ -731,12 +754,14 @@ const Mesa = ({
                     aria-hidden={soloSeVe || undefined}
                     // La ficha con el menú abierto, por encima de las demás (si no, su menú quedaría debajo).
                     // Arrastrándola (Gardener), se queda en tenue; aquella sobre la que se soltaría, resaltada.
-                    className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full has-[[aria-expanded=true]]:z-50 ${soloSeVe ? '' : 'pointer-events-auto'} ${
+                    // Conversando en privado, encoge y se aleja con su asiento (sala-retiro-ficha)
+                    data-retirado={retirado || undefined}
+                    className={`sala-retiro-ficha absolute -translate-x-1/2 -translate-y-1/2 rounded-full has-[[aria-expanded=true]]:z-50 ${soloSeVe ? '' : 'pointer-events-auto'} ${
                       puedeIntercambiar ? 'touch-none' : ''
                     } ${intercambio.arrastre?.desde === a.id ? 'opacity-40' : ''} ${
                       intercambio.arrastre?.hasta === a.id ? 'ring-4 ring-gold-bright ring-offset-2 ring-offset-background' : ''
                     }`}
-                    style={posicionFicha(i, total)}
+                    style={posicionFicha(i, total, retirado)}
                   >
                     <FichaAsiento
                       asiento={a}
@@ -746,6 +771,7 @@ const Mesa = ({
                       pedir={pedir}
                       onError={onError}
                       onNominar={nominar.onNominar?.(a.id)}
+                      yaNomino={nominar.yaNomino(a.id)}
                       eligiendo={eligiendo}
                       voto={nominacion?.votacion?.resultados[a.id]}
                       reloj={!!nominacion && !revelacion}
@@ -778,6 +804,7 @@ const Mesa = ({
                             }
                           : undefined
                       }
+                      onHumo={(ancla, bando) => humoRef.current?.soltar(ancla, bando)}
                     />
                     {a.muertePendiente && acciones.includes('narrador:confirmarMuerte') && !editando && (
                       // La muerte de la noche, por anunciar: el sudario semitransparente es un botón que
@@ -903,6 +930,7 @@ const Mesa = ({
 
       {senalamiento && <ManosSenalamiento estado={estado} senalamiento={senalamiento} miAsiento={miAsiento} />}
 
+      {revelacion && !menosMovimiento && <HumoRevelacion ref={humoRef} />}
       {/* Todas reveladas: el bando ganador, en grande (se anuncia aparte) */}
       {revelacion?.terminada && (
         <AnuncioGanador
@@ -960,6 +988,7 @@ const Mesa = ({
         // Debajo del eje de las agujas: los votos que hacen falta (el narrador lo ve en su panel)
         // (con la votación secreta, no se sabe: solo que lo es)
         <p className="absolute left-1/2 top-[calc(50%+3rem)] z-30 -translate-x-1/2 whitespace-nowrap rounded border border-gold/30 bg-background/80 px-3 py-1 font-ui text-sm font-semibold tracking-wide text-on-surface-bright">
+          {nominacion.expulsion && 'Expulsión · '}
           {secreta ? 'Votación secreta' : hacenFalta(nominacion.votosNecesarios)}
         </p>
       )}

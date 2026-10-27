@@ -3,7 +3,7 @@
     "version": "1.4.0",
     "date": "2026-10-27",
     "title": "Notas a la Vista",
-    "description": "Las notas del grimorio pasan a ser un pósit junto a cada asiento, los recordatorios son únicos como en la mesa real y los viajeros abren el orden de la noche. La ciudad se muda al centro de la mesa, donde atardece y amanece al cambiar de fase.",
+    "description": "Las notas del grimorio pasan a ser un pósit junto a cada asiento, los recordatorios son únicos como en la mesa real y los viajeros abren el orden de la noche. La ciudad se muda al centro de la mesa, donde atardece y amanece al cambiar de fase, y los viajeros se expulsan con su propia votación.",
     "changes": [
       {
         "category": "Grimorio",
@@ -22,7 +22,11 @@
           "El reparto muestra cuántos jugadores y viajeros siguen vivos.",
           "Los personajes que pueden ir repetidos en la bolsa (como el Village Idiot) se pueden repetir sin el Pope.",
           "Al empezar una nominación se bajan todas las manos levantadas.",
-          "Ya se pueden activar los recordatorios de los viajeros y los NPCs."
+          "Ya se pueden activar los recordatorios de los viajeros y los NPCs.",
+          "Nominar a un viajero es pedir su expulsión: hace falta la mitad de la plaza, los muertos votan sin gastar su voto, no hay calavera y, si sale, el viajero muere al momento. El Organ Grinder no la esconde.",
+          "Nuevo botón «Reiniciar» para parar la cuenta atrás o la votación en marcha y dejar la nominación como recién abierta: los muertos recuperan el voto que hubieran gastado.",
+          "Al elegir a quién nominar, las fichas ya nominadas hoy salen apagadas con un rótulo, y «Nominar a…» avisa si ese asiento ya ha nominado. Se puede repetir igual.",
+          "El registro de votaciones pasa a ser una tabla por día: quién nomina, a quién, cuántos votos hubo y quién votó. La hora sale al pasar por encima de la fila."
         ]
       },
       {
@@ -32,7 +36,10 @@
           "La ciudad aparece al caer la noche y al amanecer, hace el cambio y se desvanece. Si hay algo en el centro (el reloj, una nominación…), se vela para que se lea.",
           "La cabecera ya no tiene banda propia: el fondo de la sala sigue por detrás, con un degradado oscuro para leer el logo y los iconos.",
           "En las conversaciones privadas, quien habla se ve con el mismo aro que en la plaza, sin tapar la cámara.",
-          "La ventana de conversación ya no se desplaza de lado."
+          "La ventana de conversación ya no se desplaza de lado.",
+          "El reloj del centro tiene esfera: bajo las agujas giran el aro con las marcas y dos engranajes.",
+          "Al revelar el grimorio, cada ficha suelta un humo del color de su bando, azul o rojo.",
+          "Quien conversa en privado se retira hacia el fondo de la mesa junto con su ficha, y vuelve al acabar."
         ]
       },
       {

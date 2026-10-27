@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ID_CUENTA_ATRAS, idFichaNominar } from './ids';
+import { ID_CUENTA_ATRAS, ID_REINICIAR, idFichaNominar } from './ids';
 import { datosAsiento, describirAsiento } from './nombresAsiento';
 import type { SalaEstado, SalaResultado } from './useSala';
 
@@ -94,16 +94,31 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
 
   const nominado = nominacion ? asientos.find((a) => a.id === nominacion.hasta) : undefined;
 
+  // Las nominaciones de hoy (del registro, que solo tienen los narradores): quién ya
+  // nominó y quién ya fue nominado. Es solo un aviso: el narrador puede repetir.
+  // Las expulsiones de viajeros no son nominaciones: no cuentan.
+  const { fase, votaciones } = estado;
+  const deHoy = fase.momento === 'dia' ? votaciones.filter((v) => v.dia === fase.numero && !v.expulsion) : [];
+  const nominaronHoy = new Set(deHoy.map((v) => v.nominaAsiento));
+  const nominadosHoy = new Set(deHoy.map((v) => v.nominadoAsiento));
+
   return {
     /** Para «Nominar a…» en la ficha de cada asiento (si el servidor deja nominar). */
     onNominar: acciones.includes('narrador:nominar') ? (id: string) => () => empezar(id) : undefined,
+    /** Si el asiento ya ha nominado hoy. */
+    yaNomino: (id: string) => nominaronHoy.has(id),
     /**
      * Si se está eligiendo, cómo es la ficha de ese asiento: la que nomina o
-     * candidata. Todas se pueden elegir, también la que nomina (se nomina a sí misma).
+     * candidata. Todas se pueden elegir, también la que nomina (se nomina a sí misma)
+     * y las que ya fueron nominadas hoy (se avisa, pero se deja).
      */
     eligiendo: (id: string) =>
       desde
-        ? { papel: (id === desde ? 'origen' : 'candidata') as 'origen' | 'candidata', onPulsar: () => nominar(id) }
+        ? {
+            papel: (id === desde ? 'origen' : 'candidata') as 'origen' | 'candidata',
+            onPulsar: () => nominar(id),
+            yaNominado: nominadosHoy.has(id),
+          }
         : undefined,
     /** Se está eligiendo a quién nomina: el centro de la mesa ofrece cancelar. */
     cancelar: desde ? cancelar : null,
@@ -112,6 +127,8 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
       nominacion && acciones.includes('narrador:cerrarNominacion')
         ? {
             marcado: !!nominado?.marcado,
+            // Expulsión de un viajero: sin calavera (si sale, muere al terminar la votación)
+            expulsion: nominacion.expulsion,
             secreta: !!nominacion.privada,
             puedeCuentaAtras: acciones.includes('narrador:cuentaAtras'),
             votos: acciones.includes('narrador:votosNecesarios')
@@ -124,18 +141,30 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
               : null,
             marcaActual: (() => {
               const marcado = asientos.find((a) => a.marcado);
-              if (!marcado) return null;
+              if (!marcado || nominacion.expulsion) return null;
               const { numero, ocupante } = datosAsiento(estado, marcado.id);
               const votos = marcado.votosMarca;
               return `${describirAsiento(numero, ocupante)}${votos === null ? '' : `, ${votos === 1 ? '1 voto' : `${votos} votos`}`}`;
             })(),
             // Desmarcar, como marcar, cierra la nominación: el foco vuelve a la ficha de quien nominaba.
-            onDesmarcar: acciones.includes('narrador:desmarcar')
+            onDesmarcar: acciones.includes('narrador:desmarcar') && !nominacion.expulsion
               ? async () => {
                   if (await actuar('narrador:desmarcar')) focoRef.current = idMenuFicha(nominacion.desde);
                 }
               : null,
-            onCuentaAtras: () => actuar('narrador:cuentaAtras'),
+            // El botón desaparece al arrancarla: el foco pasa a «Reiniciar».
+            onCuentaAtras: async () => {
+              if (await actuar('narrador:cuentaAtras')) focoRef.current = ID_REINICIAR;
+            },
+            // Con la cuenta atrás o la votación en marcha: la deja como recién abierta.
+            onReiniciar: acciones.includes('narrador:reiniciarVotacion')
+              ? async () => {
+                  if (await actuar('narrador:reiniciarVotacion')) {
+                    focoRef.current = ID_CUENTA_ATRAS;
+                    onAnuncio('Votación reiniciada.');
+                  }
+                }
+              : null,
             // Marcar (o desmarcar) cierra la nominación: el foco vuelve a la ficha de quien nominaba.
             onMarca: async () => {
               const ok = await actuar('narrador:marcar', { asientoId: nominacion.hasta, marcado: !nominado?.marcado });

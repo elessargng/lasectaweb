@@ -851,6 +851,98 @@
 @keyframes sala-gong-giro {
   to { transform: rotate(360deg); }
 }
+
+/*
+ * La esfera del reloj bajo las agujas de una nominación (Agujas.tsx). El trazado
+ * (fondo.webp) gira despacio al revés que el reloj; el aro, en su sentido; los engranajes,
+ * debajo del aro, dan la vuelta al eje al revés. En fracciones del aro, cuyo borde
+ * interior (el naranja) queda a un 37,7% del centro: el grande, abajo a la izquierda,
+ * con los dientes bajo ese borde, y el pequeño engranado con él, junto al eje. El
+ * grande gira como el aro que lo engrana; el pequeño, con la mitad de dientes, el
+ * doble de rápido y al revés.
+ */
+.sala-esfera {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--esfera-lado);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  animation: sala-esfera-entrar 700ms ease-out both;
+}
+.sala-esfera-trazado {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 128%;
+  height: 128%;
+  max-width: none;
+  translate: -50% -50%;
+  opacity: 0.75;
+  animation: sala-gong-giro 120s linear infinite reverse;
+}
+.sala-esfera-engranajes {
+  position: absolute;
+  inset: 0;
+  animation: sala-gong-giro 150s linear infinite reverse;
+}
+.sala-esfera-aro {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.7));
+  animation: sala-gong-giro 90s linear infinite;
+}
+.sala-esfera-engranaje {
+  position: absolute;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  /* El disco de cobre del centro, como en botc.app */
+  background: radial-gradient(circle, #9a4a22 0 30%, #5e2410 37%, transparent 39%);
+  border-radius: 50%;
+}
+.sala-esfera-engranaje > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+.sala-esfera-engranaje-grande {
+  left: 29.2%;
+  top: 68.6%;
+  width: 22%;
+}
+.sala-esfera-engranaje-grande > img {
+  animation: sala-gong-giro 24s linear infinite;
+}
+.sala-esfera-engranaje-pequeno {
+  left: 40.5%;
+  top: 58.5%;
+  width: 11%;
+}
+.sala-esfera-engranaje-pequeno > img {
+  animation: sala-gong-giro 12s linear infinite reverse;
+}
+@keyframes sala-esfera-entrar {
+  from { opacity: 0; scale: 0.85; }
+  to { opacity: 1; scale: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sala-esfera,
+  .sala-esfera-trazado,
+  .sala-esfera-engranajes,
+  .sala-esfera-aro,
+  .sala-esfera-engranaje > img {
+    animation: none;
+  }
+}
+@media (forced-colors: active) {
+  .sala-esfera {
+    display: none;
+  }
+}
+
 @media (forced-colors: active) {
   .sala-gong-texto {
     fill: CanvasText;
@@ -1464,6 +1556,30 @@
   to { transform: translateX(100cqw); }
 }
 
+/* Quien se va a conversar en privado se retira hacia el fondo: su cuadro (avatar o
+   cámara) y su ficha se hacen pequeños (--sala-retiro, lo fija Mesa) y, en la mesa,
+   el asiento entero se aleja hacia fuera (Mesa, posicion y posicionFicha); al
+   volver, regresa a su sitio. */
+.sala-retiro {
+  transition:
+    scale 0.7s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.7s ease;
+}
+.sala-retiro[data-retirado] {
+  scale: var(--sala-retiro, 0.72);
+  opacity: 0.85;
+}
+.sala-retiro-ficha {
+  transition:
+    left 0.7s cubic-bezier(0.4, 0, 0.2, 1),
+    top 0.7s cubic-bezier(0.4, 0, 0.2, 1),
+    scale 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* Con su menú abierto, a su tamaño (si no, el menú también encogería) */
+.sala-retiro-ficha[data-retirado]:not(:has([aria-expanded='true'])) {
+  scale: var(--sala-retiro, 0.72);
+}
+
 /* ───────────────────────── Movimiento reducido ───────────────────────── */
 
 /* El señalamiento: el mensaje en latón en el centro de la plaza, con su destello (como el
@@ -1518,6 +1634,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* Quien conversa en privado se queda pequeño y atrás, pero sin el viaje */
+  .sala-retiro,
+  .sala-retiro-ficha {
+    transition: none;
+  }
+
   /* El señalamiento, quieto: las manos y la marca aparecen sin más */
   .sala-senal-rotulo,
   .sala-senal-mensaje,

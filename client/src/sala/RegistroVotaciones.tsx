@@ -16,8 +16,9 @@ function porDias(votaciones: SalaRegistroVotacion[]): { dia: number; votaciones:
 /**
  * En la cabecera, solo para narradores: botón (una urna) que abre el registro de
  * nominaciones y votaciones de la partida, por días (cada día con su título, para
- * ir de uno a otro): quién nomina a quién, quién votó y cuántos votos hubo, o
- * que no se votó. Lo guarda el servidor hasta que se limpia el grimorio.
+ * ir de uno a otro), cada día en una tabla: quién nomina, a quién, cuántos votos
+ * hubo y quién votó, o que no se votó (la hora, al pasar por encima de la fila).
+ * Lo guarda el servidor hasta que se limpia el grimorio.
  */
 const RegistroVotaciones = ({ votaciones }: { votaciones: SalaRegistroVotacion[] }) => {
   const [abierto, setAbierto] = useState(false);
@@ -56,26 +57,41 @@ const RegistroVotaciones = ({ votaciones }: { votaciones: SalaRegistroVotacion[]
                       >
                         Día {dia}
                       </h3>
-                      <ol className="flex flex-col gap-3">
-                        {delDia.map((v) => (
-                          <li key={v.hora} className="rounded border border-outline-ghost p-3">
-                            <p className="text-sm text-on-surface-muted">{hora(v.hora)}</p>
-                            <p>
-                              El {v.nomina} nomina al {v.nominado}.
-                            </p>
-                            {v.votos === null ? (
-                              <p className="text-on-surface-muted">Sin votar.</p>
-                            ) : (
-                              <p className="font-semibold">
-                                {v.votos === 1 ? '1 voto' : `${v.votos} votos`}
-                                {v.votantes && v.votantes.length > 0 && (
-                                  <span className="font-normal">: {v.votantes.join(', ')}</span>
-                                )}
-                              </p>
-                            )}
-                          </li>
-                        ))}
-                      </ol>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse text-left text-sm">
+                          <thead className="text-on-surface-muted">
+                            <tr className="border-b border-outline-ghost">
+                              <th scope="col" className="px-2 py-1 font-semibold">Nomina</th>
+                              <th scope="col" className="px-2 py-1 font-semibold">Nominado</th>
+                              <th scope="col" className="px-2 py-1 text-right font-semibold"># Votos</th>
+                              <th scope="col" className="px-2 py-1 font-semibold">Quién vota</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {delDia.map((v) => (
+                              <tr key={v.hora} title={hora(v.hora)} className="border-b border-outline-ghost align-top">
+                                <td className="px-2 py-2">{v.nomina}</td>
+                                <td className="px-2 py-2">
+                                  {v.nominado}
+                                  {v.expulsion && <span className="text-on-surface-muted"> (expulsión)</span>}
+                                </td>
+                                <td className="px-2 py-2 text-right font-semibold">
+                                  {v.votos === null ? <span className="font-normal text-on-surface-muted">—</span> : v.votos}
+                                </td>
+                                <td className="px-2 py-2">
+                                  {v.votos === null ? (
+                                    <span className="text-on-surface-muted">Sin votar</span>
+                                  ) : v.votantes && v.votantes.length > 0 ? (
+                                    v.votantes.join(', ')
+                                  ) : (
+                                    <span className="text-on-surface-muted">Nadie</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </section>
                   ))}
                 </div>

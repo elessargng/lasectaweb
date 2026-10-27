@@ -1,7 +1,7 @@
 import { Minus, Plus } from 'lucide-react';
 import { hacenFalta } from './avisosSala';
 import { botonPrincipal, botonSecundario } from './estilos';
-import { ID_CUENTA_ATRAS } from './ids';
+import { ID_CUENTA_ATRAS, ID_REINICIAR } from './ids';
 
 /** Los votos que hacen falta, y cómo cambiarlos. */
 export interface VotosNominacion {
@@ -16,6 +16,8 @@ export interface VotosNominacion {
 interface PanelNominacionProps {
   /** El nominado lleva ya la calavera. */
   marcado: boolean;
+  /** Es la expulsión de un viajero: no hay calavera (si sale, muere solo). */
+  expulsion: boolean;
   /** Se puede arrancar la cuenta atrás (no, si ya se está votando o se ha votado). */
   puedeCuentaAtras: boolean;
   /** Los votos que hacen falta (si el servidor deja cambiarlos). */
@@ -27,6 +29,8 @@ interface PanelNominacionProps {
   /** Quitar la calavera a quien la lleve (sale si alguien la lleva). */
   onDesmarcar: (() => void) | null;
   onCuentaAtras: () => void;
+  /** Reiniciar la cuenta atrás o la votación en marcha (sale solo mientras lo están). */
+  onReiniciar: (() => void) | null;
   onMarca: () => void;
   onCerrar: () => void;
 }
@@ -34,16 +38,23 @@ interface PanelNominacionProps {
 /** En el centro de la mesa, para el narrador: lo que se puede hacer con la nominación abierta. */
 const PanelNominacion = ({
   marcado,
+  expulsion,
   puedeCuentaAtras,
   votos,
   marcaActual,
   onDesmarcar,
   onCuentaAtras,
+  onReiniciar,
   onMarca,
   onCerrar,
   secreta,
 }: PanelNominacionProps) => (
-  <div role="group" aria-label="Nominación" className="flex flex-col gap-2">
+  <div role="group" aria-label={expulsion ? 'Expulsión' : 'Nominación'} className="flex flex-col gap-2">
+    {expulsion && (
+      <p className="max-w-56 text-center text-sm text-on-surface-muted">
+        Expulsión de un viajero: si sale, muere al terminar la votación. Los muertos votan sin gastar su voto.
+      </p>
+    )}
     {secreta && (
       <p className="max-w-56 text-center text-sm text-on-surface-muted">
         Votación secreta (<span lang="en">Organ Grinder</span>): los jugadores no ven los votos ni las manos de los demás.
@@ -56,15 +67,22 @@ const PanelNominacion = ({
         Cuenta atrás
       </button>
     )}
+    {onReiniciar && (
+      <button id={ID_REINICIAR} type="button" onClick={onReiniciar} className={`${botonSecundario} w-full`}>
+        Reiniciar
+      </button>
+    )}
     {/* Interruptor: pone o quita la calavera al nominado (y cierra la nominación); pulsado si la lleva */}
-    <button
-      type="button"
-      onClick={onMarca}
-      aria-pressed={marcado}
-      className={`${botonPrincipal} w-full ${marcado ? 'bg-theme-main text-background' : ''}`}
-    >
-      Marca
-    </button>
+    {!expulsion && (
+      <button
+        type="button"
+        onClick={onMarca}
+        aria-pressed={marcado}
+        className={`${botonPrincipal} w-full ${marcado ? 'bg-theme-main text-background' : ''}`}
+      >
+        Marca
+      </button>
+    )}
     {onDesmarcar && (
       <button type="button" onClick={onDesmarcar} className={`${botonSecundario} w-full`}>
         Desmarcar

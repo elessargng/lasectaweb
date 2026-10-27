@@ -50,8 +50,9 @@ const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, ap
         {junto && <JuntoAlTexto>{junto}</JuntoAlTexto>}
       </div>
     )}
-    {/* Un marco de retrato con doble filo de latón (sala-retrato); vacío, discontinuo */}
-    <div className="relative">
+    {/* Un marco de retrato con doble filo de latón (sala-retrato); vacío, discontinuo.
+        Conversando en privado, se retira hacia el fondo (sala-retiro) y vuelve al acabar */}
+    <div className="sala-retiro relative" data-retirado={atenuado || undefined}>
       <div
         data-vacio={vacio}
         className={`sala-retrato flex aspect-square w-full items-center justify-center overflow-hidden rounded-[3px] [&_img]:transition-[filter] [&_img]:duration-700 [&_video]:transition-[filter] [&_video]:duration-700 motion-reduce:[&_img]:transition-none motion-reduce:[&_video]:transition-none ${

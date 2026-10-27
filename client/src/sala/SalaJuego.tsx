@@ -1099,8 +1099,11 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // (la Banshee con su habilidad, que puede levantar las dos, vota sin gastarlo). Con el
   // Voudon vivo, solo votan él y los muertos, sin hacerles falta el voto.
   const soyVoudon = asientoPropio?.personaje === 'voudon';
-  const sinVoto = estado?.voudon
-    ? !!asientoPropio && !asientoPropio.muerto && !soyVoudon
+  // En la expulsión de un viajero vota cualquiera (los muertos, sin gastar su voto).
+  const sinVoto = estado?.nominacion?.expulsion
+    ? false
+    : estado?.voudon
+    ?!!asientoPropio && !asientoPropio.muerto && !soyVoudon
     : !!asientoPropio?.muerto && asientoPropio.votoGastado && !estado?.acciones.includes('sala:levantarDosManos');
   // La Banshee muerta con su habilidad puede levantar las dos manos (vota doble): 0, 1 o 2
   const puedeDosManos = !!estado?.acciones.includes('sala:levantarDosManos');
