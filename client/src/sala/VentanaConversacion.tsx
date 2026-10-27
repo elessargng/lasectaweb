@@ -134,7 +134,7 @@ const VentanaConversacion = ({
       className={`fixed z-40 flex flex-col gap-2 sala-cofre backdrop-blur ${
         minimizada
           ? 'p-2'
-          : 'left-1/2 top-1/2 max-h-[85vh] w-[min(92vw,60rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto p-4'
+          : 'left-1/2 top-1/2 max-h-[85vh] w-[min(92vw,60rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto overflow-x-hidden p-4'
       }`}
     >
       <div className="flex items-center gap-2">

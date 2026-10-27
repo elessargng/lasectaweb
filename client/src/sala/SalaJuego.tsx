@@ -75,7 +75,7 @@ import {
 import { AvisosContexto, useAvisosActivos, type TipoAviso } from './avisosConfig';
 import { avisosDeCambio, manosVigiladas, nombreFase } from './avisosSala';
 import { recibidasDe, reconciliarSlots } from './slotsLlamada';
-import { setSonidosActivos, setTonoLlamada, tocarPrivado, tocarSinVoto, tocarSolicitud, tocarVoto } from './sonidos';
+import { setSonidosActivos, setTonoLlamada, tocarDespertar, tocarPrivado, tocarSinVoto, tocarSolicitud, tocarVoto } from './sonidos';
 import { esTeclaLlamadaBotc, LlamadaBotcContexto } from './llamadaBotc';
 import CieloEstrellado from './CieloEstrellado';
 import DialogoFinal from './DialogoFinal';
@@ -345,6 +345,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       }, 0);
     }
     const veoTodos = nuevo.participantes.some((p) => p.id === nuevo.yo && p.rol === 'visitante');
+    let suenaDespertar = false;
     for (const d of nuevo.despertares) {
       const antes = hilosAntes.get(d.asiento);
       const yaDichos = new Set(antes?.mensajes.map((m) => m.id));
@@ -364,6 +365,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       // (Un «Entendido» del narrador no se la vuelve a abrir: ya está hablado.)
       if (!soyNarrador && (!antes || nuevos.some((m) => m.autor === 'narrador' && m.ficha !== 'entendido'))) {
         setWakeCerradoJugador(false);
+        // Al jugador despertado le suena como una llamada entrante (al visitante no)
+        if (!veoTodos) suenaDespertar = true;
       }
       // «Entendido» cierra el despertar de quien lo manda, y el foco va a la ficha (con el
       // pulgar arriba). El jugador: también al volver a entrar en la sala, si fue lo último
@@ -381,6 +384,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       }
       if (veoTodos && !antes) avisos.push({ tipo: 'despertar', texto: `El narrador despierta a ${nombreDeAsiento(nuevo, d.asiento)}.` });
     }
+    if (suenaDespertar) tocarDespertar();
 
     // Solo los tipos que se quieren oír.
     const textos = avisos.filter((a) => avisosActivos[a.tipo]).map((a) => a.texto);

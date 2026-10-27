@@ -641,8 +641,8 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'Aún no hay guion.' : 'Solo un narrador puede cambiar los recordatorios.'),
     hacer: (sala, _yo, datos) => {
       const { id, activo } = (datos as { id?: unknown; activo?: unknown } | null) ?? {};
-      const valido =
-        typeof id === 'string' && (id === 'esbirros' || id === 'demonios' || !!sala.guion()?.personajes.some((p) => p.id === id));
+      // sala.personaje también encuentra viajeros y NPCs, que no van en guion.personajes
+      const valido = typeof id === 'string' && (id === 'esbirros' || id === 'demonios' || !!sala.personaje(id));
       if (!valido) return { ok: false, error: 'Ese personaje no está en el guion.' };
       if (typeof activo !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
       sala.cambiarRecordatorio(id, activo);

@@ -1,20 +1,31 @@
 import { ChevronLeft, ChevronRight, NotebookPen, Pencil, Pin, PinOff, Trash2 } from 'lucide-react';
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { NOTA_LARGO_MAX } from './fichas';
+
+interface Tamano {
+  ancho: number;
+  alto: number;
+}
+
+/** El tamaño que se le da a la nota con el asa, dentro de unos límites (en px). */
+const limitarTamano = (ancho: number, alto: number): Tamano => ({
+  ancho: Math.round(Math.min(320, Math.max(112, ancho))),
+  alto: Math.round(Math.min(480, window.innerHeight * 0.7, Math.max(56, alto))),
+});
 
 interface NotaAsientoProps {
   asientoId: string;
-  /** «asiento 4 (Ana)», para los nombres del pósit y de sus botones. */
+  /** «asiento 4 (Ana)», para los nombres de la nota y de sus botones. */
   nombre: string;
   /** La nota, o null si no tiene. */
   nota: string | null;
   /** Quien mira puede escribirla, cambiarla y borrarla (si no, solo leerla). */
   editable: boolean;
-  /** Hacia dónde sale el pósit: hacia fuera de la mesa. */
+  /** Hacia dónde sale la nota: hacia fuera de la mesa. */
   lado: 'izquierda' | 'derecha';
   /** Plegada, solo asoma una pestaña con el icono de la nota. */
   plegada: boolean;
-  /** Se está escribiendo (desde el menú de la ficha o con el lápiz del pósit). */
+  /** Se está escribiendo (desde el menú de la ficha o con el lápiz de la nota). */
   editando: boolean;
   onPlegar: (plegada: boolean) => void;
   onEditar: () => void;
@@ -24,21 +35,25 @@ interface NotaAsientoProps {
   onGuardar: (texto: string | null) => Promise<string | null>;
 }
 
-const botonPostit =
-  'rounded p-0.5 text-hoja-cuerpo/70 hover:bg-hoja-tinta/10 hover:text-hoja-tinta focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main';
+const botonNota =
+  'rounded-sm p-1 text-on-surface-muted transition-colors hover:bg-gold/10 hover:text-gold-bright focus:outline-none focus-visible:ring-1 focus-visible:ring-gold/70';
 
 /**
- * La nota sobre un asiento: un pósit pegado al cuadro, por el lado de fuera de la
- * mesa, con el texto entero. Quien puede la cambia (el lápiz, o «Editar nota» en
- * el menú de la ficha) o la borra (pidiendo confirmación); cualquiera que la vea
- * la pliega para que solo asome una pestaña con su icono, y la despliega pulsándola.
- * Sin nota no hay pósit: se escribe desde el menú de la ficha («Escribir nota»).
+ * La nota sobre un asiento: una tarjeta de tinta con filo de latón pegada al
+ * cuadro, por el lado de fuera de la mesa. Quien puede la cambia (el lápiz, o
+ * «Editar nota» en el menú de la ficha) o la borra (pidiendo confirmación);
+ * cualquiera que la vea la pliega para que solo asome una pestaña con su icono, y
+ * la despliega pulsándola. Sin nota no hay tarjeta: se escribe desde el menú de la
+ * ficha («Escribir nota»).
  *
- * El pósit no pasa del alto del cuadro: si la nota no cabe, se desvanece por abajo
+ * La tarjeta no pasa del alto del cuadro: si la nota no cabe, se desvanece por abajo
  * y sale una chincheta que la fija para leerla entera (y la vuelve a recoger).
  *
+ * El asa de la esquina de fuera (abajo) le cambia el tamaño arrastrándola, o con
+ * las flechas si tiene el foco; doble clic (o Inicio) lo devuelve al de siempre.
+ *
  * Escribiendo, Control (o Cmd) + Intro guarda y Escape lo deja como estaba; el
- * foco vuelve al pósit (o a la ficha, si ya no hay nota).
+ * foco vuelve a la tarjeta (o a la ficha, si ya no hay nota).
  */
 const NotaAsiento = ({ asientoId, nombre, nota, editable, lado, plegada, editando, onPlegar, onEditar, onTerminar, onGuardar }: NotaAsientoProps) => {
   const [borrador, setBorrador] = useState('');
@@ -49,9 +64,13 @@ const NotaAsiento = ({ asientoId, nombre, nota, editable, lado, plegada, editand
   const [fijada, setFijada] = useState(false);
   const [cortada, setCortada] = useState(false);
   const textoRef = useRef<HTMLParagraphElement>(null);
+  // El tamaño puesto con el asa (null: el de siempre) y, mientras se arrastra, desde dónde
+  const [tamano, setTamano] = useState<Tamano | null>(null);
+  const tarjetaRef = useRef<HTMLElement>(null);
+  const arrastreRef = useRef<({ x: number; y: number } & Tamano) | null>(null);
   const id = `sala-nota-${asientoId}`;
 
-  // Si el texto no cabe en el pósit recogido (fijado no se mide: ya se ve entero)
+  // Si el texto no cabe en la tarjeta recogida (fijada no se mide: ya se ve entero)
   useLayoutEffect(() => {
     const texto = textoRef.current;
     if (!texto || fijada) return;
@@ -73,7 +92,7 @@ const NotaAsiento = ({ asientoId, nombre, nota, editable, lado, plegada, editand
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editando]);
 
-  const enfocar = (cual: 'pestana' | 'postit' | 'ficha') =>
+  const enfocar = (cual: 'pestana' | 'tarjeta' | 'ficha') =>
     window.setTimeout(() => {
       const destino =
         cual === 'ficha'
@@ -97,12 +116,12 @@ const NotaAsiento = ({ asientoId, nombre, nota, editable, lado, plegada, editand
       return;
     }
     onTerminar();
-    enfocar('postit');
+    enfocar('tarjeta');
   };
 
   const cancelar = () => {
     onTerminar();
-    enfocar(nota ? 'postit' : 'ficha');
+    enfocar(nota ? 'tarjeta' : 'ficha');
   };
 
   const borrar = async () => {
@@ -128,7 +147,46 @@ const NotaAsiento = ({ asientoId, nombre, nota, editable, lado, plegada, editand
 
   const noBorrar = () => {
     setBorrando(false);
-    enfocar('postit');
+    enfocar('tarjeta');
+  };
+
+  // El asa: hacia fuera de la mesa, más ancha; hacia abajo, más alta
+  const haciaFuera = lado === 'derecha' ? 1 : -1;
+
+  const empezarArrastre = (e: PointerEvent<HTMLButtonElement>) => {
+    const tarjeta = tarjetaRef.current;
+    if (!tarjeta || e.button !== 0) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    arrastreRef.current = { x: e.clientX, y: e.clientY, ancho: tarjeta.offsetWidth, alto: tarjeta.offsetHeight };
+  };
+
+  const arrastrar = (e: PointerEvent<HTMLButtonElement>) => {
+    const inicio = arrastreRef.current;
+    if (!inicio) return;
+    setTamano(limitarTamano(inicio.ancho + (e.clientX - inicio.x) * haciaFuera, inicio.alto + e.clientY - inicio.y));
+  };
+
+  const soltar = () => {
+    arrastreRef.current = null;
+  };
+
+  const tamanoConTeclas = (e: KeyboardEvent<HTMLButtonElement>) => {
+    const tarjeta = tarjetaRef.current;
+    if (!tarjeta) return;
+    const paso = e.shiftKey ? 48 : 16;
+    const cambio: Record<string, [number, number]> = {
+      ArrowRight: [paso * haciaFuera, 0],
+      ArrowLeft: [-paso * haciaFuera, 0],
+      ArrowDown: [0, paso],
+      ArrowUp: [0, -paso],
+    };
+    if (e.key === 'Home') setTamano(null);
+    else if (cambio[e.key]) {
+      const [dAncho, dAlto] = cambio[e.key];
+      setTamano(limitarTamano(tarjeta.offsetWidth + dAncho, tarjeta.offsetHeight + dAlto));
+    } else return;
+    e.preventDefault();
   };
 
   // Escape deja lo que se esté haciendo (escribir o confirmar el borrado)
@@ -149,14 +207,14 @@ const NotaAsiento = ({ asientoId, nombre, nota, editable, lado, plegada, editand
         type="button"
         onClick={() => {
           onPlegar(false);
-          enfocar('postit');
+          enfocar('tarjeta');
         }}
         data-lado={lado}
-        className={`sala-nota-pestana absolute top-[10%] z-[5] flex min-h-7 items-center px-1.5 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${fuera} ${
-          lado === 'derecha' ? 'rounded-r-md' : 'rounded-l-md'
+        className={`sala-nota-pestana absolute top-[10%] z-[5] flex min-h-8 items-center px-1.5 py-1.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-gold/70 ${fuera} ${
+          lado === 'derecha' ? 'rounded-r-sm' : 'rounded-l-sm'
         }`}
       >
-        <NotebookPen size={13} aria-hidden="true" />
+        <NotebookPen size={14} strokeWidth={1.75} aria-hidden="true" />
         <span className="sr-only">Ver la nota del {nombre}</span>
       </button>
     );
@@ -165,15 +223,17 @@ const NotaAsiento = ({ asientoId, nombre, nota, editable, lado, plegada, editand
   const Plegar = lado === 'derecha' ? ChevronLeft : ChevronRight;
   return (
     <section
+      ref={tarjetaRef}
       aria-label={`Nota del ${nombre}`}
+      style={tamano && !editando ? { width: tamano.ancho, height: tamano.alto, maxHeight: 'none' } : undefined}
       data-lado={lado}
       data-editando={editando || undefined}
       data-fijada={(fijada && !editando) || undefined}
-      className={`sala-postit absolute top-[4%] z-[15] flex flex-col gap-1 px-2 pb-2 pt-1 font-ui ${lado === 'derecha' ? 'left-full ml-1.5' : 'right-full mr-1.5'}`}
+      className={`sala-nota absolute top-[4%] z-[15] flex flex-col font-ui ${lado === 'derecha' ? 'left-full ml-2' : 'right-full mr-2'}`}
     >
       {editando ? (
-        <>
-          <label htmlFor={`${id}-texto`} className="text-[0.7rem] font-semibold text-hoja-cuerpo">
+        <div className="flex flex-col gap-2 p-2.5">
+          <label htmlFor={`${id}-texto`} className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-gold">
             {nota ? 'Editar nota' : 'Nota nueva'}
           </label>
           <textarea
@@ -190,33 +250,33 @@ const NotaAsiento = ({ asientoId, nombre, nota, editable, lado, plegada, editand
               } else conEscape(cancelar)(e);
             }}
             aria-describedby={`${id}-cuenta`}
-            className="w-full resize-y rounded-sm border border-hoja-tinta/25 bg-white/40 px-1.5 py-1 text-xs text-hoja-tinta focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
+            className="sala-nota-campo w-full resize-y px-2 py-1.5 text-[0.8rem] leading-relaxed"
           />
           <div className="flex items-center justify-between gap-2">
-            <span id={`${id}-cuenta`} className="text-[0.65rem] text-hoja-cuerpo/70">
+            <span id={`${id}-cuenta`} className="text-[0.62rem] tabular-nums tracking-wide text-on-surface-muted">
               {borrador.length}/{NOTA_LARGO_MAX}
               <span className="sr-only">. Control más Intro para guardar.</span>
             </span>
-            <div className="flex gap-1">
-              <button type="button" onClick={cancelar} className={`${botonPostit} px-1.5 text-xs`}>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={cancelar} className={`${botonNota} px-2 text-[0.7rem] font-semibold uppercase tracking-[0.12em]`}>
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={() => void guardar()}
                 aria-disabled={!borrador.trim() || guardando || undefined}
-                className="rounded-sm bg-hoja-tinta px-2 py-0.5 text-xs font-semibold text-hoja-claro hover:bg-hoja-lacre focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+                className="sala-nota-guardar px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.12em] focus:outline-none focus-visible:ring-1 focus-visible:ring-gold-bright"
               >
                 Guardar
               </button>
             </div>
           </div>
-        </>
+        </div>
       ) : (
         <>
-          <div className={`flex items-center gap-0.5 ${lado === 'derecha' ? '' : 'flex-row-reverse'}`}>
-            <button id={`${id}-plegar`} type="button" onClick={plegar} aria-label={`Plegar la nota del ${nombre}`} className={botonPostit}>
-              <Plegar size={14} />
+          <div className={`sala-nota-cabecera flex items-center gap-0.5 px-1 py-0.5 ${lado === 'derecha' ? '' : 'flex-row-reverse'}`}>
+            <button id={`${id}-plegar`} type="button" onClick={plegar} aria-label={`Plegar la nota del ${nombre}`} className={botonNota}>
+              <Plegar size={14} strokeWidth={1.75} />
             </button>
             <span className="flex-1" />
             {(cortada || fijada) && !borrando && (
@@ -226,29 +286,29 @@ const NotaAsiento = ({ asientoId, nombre, nota, editable, lado, plegada, editand
                 aria-pressed={fijada}
                 aria-label={`Fijar la nota del ${nombre} para leerla entera`}
                 title={fijada ? 'Recoger la nota' : 'Fijar la nota para leerla entera'}
-                className={`${botonPostit} ${fijada ? 'text-hoja-lacre' : ''}`}
+                className={`${botonNota} ${fijada ? 'text-gold-bright' : ''}`}
               >
-                {fijada ? <PinOff size={13} /> : <Pin size={13} />}
+                {fijada ? <PinOff size={13} strokeWidth={1.75} /> : <Pin size={13} strokeWidth={1.75} />}
               </button>
             )}
             {editable &&
               (borrando ? (
-                <span className="flex items-center gap-0.5 text-[0.7rem]">
-                  <span>¿Borrar?</span>
-                  <button id={`${id}-borrar`} type="button" onClick={() => void borrar()} onKeyDown={conEscape(noBorrar)} className={`${botonPostit} px-1 font-semibold text-hoja-lacre`}>
+                <span className="flex items-center gap-0.5 text-[0.7rem] text-on-surface-muted">
+                  <span className="px-0.5">¿Borrar?</span>
+                  <button id={`${id}-borrar`} type="button" onClick={() => void borrar()} onKeyDown={conEscape(noBorrar)} className={`${botonNota} px-1.5 font-semibold text-blood-pale hover:bg-blood/20 hover:text-blood-pale`}>
                     Sí<span className="sr-only">, borrar la nota del {nombre}</span>
                   </button>
-                  <button type="button" onClick={noBorrar} onKeyDown={conEscape(noBorrar)} className={`${botonPostit} px-1`}>
+                  <button type="button" onClick={noBorrar} onKeyDown={conEscape(noBorrar)} className={`${botonNota} px-1.5`}>
                     No
                   </button>
                 </span>
               ) : (
                 <>
-                  <button id={`${id}-editar`} type="button" onClick={onEditar} aria-label={`Editar la nota del ${nombre}`} className={botonPostit}>
-                    <Pencil size={13} />
+                  <button id={`${id}-editar`} type="button" onClick={onEditar} aria-label={`Editar la nota del ${nombre}`} className={botonNota}>
+                    <Pencil size={13} strokeWidth={1.75} />
                   </button>
-                  <button type="button" onClick={pedirBorrar} aria-label={`Borrar la nota del ${nombre}`} className={`${botonPostit} hover:text-hoja-lacre`}>
-                    <Trash2 size={13} />
+                  <button type="button" onClick={pedirBorrar} aria-label={`Borrar la nota del ${nombre}`} className={`${botonNota} hover:bg-blood/20 hover:text-blood-pale`}>
+                    <Trash2 size={13} strokeWidth={1.75} />
                   </button>
                 </>
               ))}
@@ -256,14 +316,29 @@ const NotaAsiento = ({ asientoId, nombre, nota, editable, lado, plegada, editand
           <p
             ref={textoRef}
             data-cortada={(cortada && !fijada) || undefined}
-            className={`sala-postit-texto min-h-0 flex-1 whitespace-pre-wrap break-words text-xs leading-snug ${fijada ? 'overflow-y-auto' : 'overflow-hidden'}`}
+            className={`sala-nota-texto min-h-0 flex-1 whitespace-pre-wrap break-words px-2.5 pb-3 pt-2 text-[0.78rem] leading-relaxed text-on-surface ${fijada ? 'overflow-y-auto' : 'overflow-hidden'}`}
           >
             {nota}
           </p>
+          <button
+            type="button"
+            onPointerDown={empezarArrastre}
+            onPointerMove={arrastrar}
+            onPointerUp={soltar}
+            onPointerCancel={soltar}
+            onDoubleClick={() => setTamano(null)}
+            onKeyDown={tamanoConTeclas}
+            data-lado={lado}
+            aria-label={`Cambiar el tamaño de la nota del ${nombre}`}
+            title="Arrastra para cambiar el tamaño (doble clic: el de siempre)"
+            className={`sala-nota-asa absolute bottom-0 focus:outline-none focus-visible:ring-1 focus-visible:ring-gold/70 ${lado === 'derecha' ? 'right-0' : 'left-0'}`}
+          >
+            <span className="sr-only">. Flechas para cambiarlo, Inicio para dejarlo como estaba.</span>
+          </button>
         </>
       )}
       {error && (
-        <p role="alert" className="text-[0.7rem] font-semibold text-hoja-lacre">
+        <p role="alert" className="px-2.5 pb-2 text-[0.7rem] font-semibold text-blood-pale">
           {error}
         </p>
       )}
