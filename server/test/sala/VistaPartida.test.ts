@@ -70,7 +70,7 @@ describe('VistaPartida', () => {
   });
 
   it('de noche, un jugador solo ve la conversación en la que está, y nunca quién escucha', () => {
-    const { sala, ana, vista } = partida();
+    const { sala, ana } = partida();
     const conversaciones = [
       { id: 'c1', miembros: [ana, 'otro'], oyentes: ['vera'] },
       { id: 'c2', miembros: ['x', 'y'], oyentes: [] },

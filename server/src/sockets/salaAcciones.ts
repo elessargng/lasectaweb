@@ -5,6 +5,7 @@ import { ProveedorVideo } from '../services/videollamada/ProveedorVideo';
 import { MENSAJES_PRIVADOS, SalaMensajesPrivados } from '../contrato/chat';
 import { limpiarAvatarSala, limpiarNombreSala } from '../services/partida/Participantes';
 import { SALA_RELOJ } from '../services/partida/RelojSala';
+import { SALA_ASIENTOS, SALA_SEGUNDOS_POR_FICHA, SalaService } from '../services/SalaService';
 import {
   NPC_BOOTLEGGER,
   NPC_FERRYMAN,
@@ -12,10 +13,7 @@ import {
   NPC_POPE,
   NPC_SILENCIO,
   NPC_STORMCATCHER,
-  SALA_ASIENTOS,
-  SALA_SEGUNDOS_POR_FICHA,
-  SalaService,
-} from '../services/SalaService';
+} from '../services/partida/personajesEspeciales';
 import { SALA_SENALAMIENTO, type SalaResultado } from '../contrato/sala';
 import {
   ADJUNTOS_DESPERTAR,

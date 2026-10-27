@@ -6,6 +6,7 @@ import type { SalaAsiento, SalaNominacion, SalaParticipante, SalaRegistroVotacio
  */
 export const SALA_CUENTA_ATRAS_MS = 4000;
 
+/** La nominación tal como se guarda: los votos que hacen falta se calculan al pedirla. */
 type NominacionInterna = Omit<SalaNominacion, 'votosNecesarios' | 'votosNecesariosPorDefecto' | 'privada'> & {
   /** Los votos que ha fijado el narrador; null: los de por defecto. */
   votosElegidos: number | null;

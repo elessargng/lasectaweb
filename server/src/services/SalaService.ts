@@ -17,7 +17,6 @@ import {
   SalaSenalamiento,
   SalaRevelacion,
   SalaRol,
-  NUM_FAROLES,
   RECORDATORIO_TEXTO,
   SalaFichaEnviada,
   SalaGrimorioEnviado,
@@ -25,9 +24,22 @@ import {
 import { GuionResuelto, PersonajeDeGuion } from '../types/guiones';
 import { repartoPara } from './partida/distribucion';
 import { Participantes, type SalaLlegada } from './partida/Participantes';
+import {
+  NPC_GARDENER,
+  NPC_REVOLUTIONARY,
+  VIAJERO_BUTCHER,
+  DEMONIO_LILMONSTA,
+  ESBIRRO_ORGAN_GRINDER,
+} from './partida/personajesEspeciales';
 import { RelojSala } from './partida/RelojSala';
 import { Despertares, type HiloDespertar } from './partida/Despertares';
 import { Nominaciones } from './partida/Nominaciones';
+import { Faroles, farolesVacios } from './partida/Faroles';
+import { Senalamientos } from './partida/Senalamientos';
+import { Revelacion } from './partida/Revelacion';
+import { Npcs } from './partida/Npcs';
+import { Entregas, type FichaEntregada } from './partida/Entregas';
+import { Bolsa } from './partida/Bolsa';
 import {
   SeguimientoPartida,
   type FotoJugador,
@@ -77,28 +89,6 @@ const barajar = <T>(lista: readonly T[]): T[] => {
   return copia;
 };
 
-/** El NPC con el que el narrador puede pedir silencio a todos: el Bibliotecario del Infierno. */
-export const NPC_SILENCIO = 'hellslibrarian';
-/** Tor: los jugadores no saben su personaje (lo ven al morir). */
-export const NPC_TOR = 'tor';
-/** Gardener: el narrador entrega los personajes cuando quiere. */
-export const NPC_GARDENER = 'gardener';
-/** Bootlegger: el guion tiene reglas propias. */
-export const NPC_BOOTLEGGER = 'bootlegger';
-/** Pope: puede haber personajes buenos repetidos (en la bolsa). */
-export const NPC_POPE = 'pope';
-/** Storm Catcher: el narrador nombra un personaje bueno. */
-export const NPC_STORMCATCHER = 'stormcatcher';
-/** El Barquero: el último día, los muertos recuperan su voto (el narrador lo hace con un botón). */
-export const NPC_FERRYMAN = 'ferryman';
-/** Revolutionary: los dos asientos con su recordatorio reciben, al repartir la bolsa, personajes del mismo alineamiento. */
-export const NPC_REVOLUTIONARY = 'revolutionary';
-/** El Carnicero (viajero): vivo, tras la primera ejecución se puede nominar otra vez (no anochece). */
-export const VIAJERO_BUTCHER = 'butcher';
-/** Lil' Monsta: cada noche los esbirros eligen (señalando) quién lo cuida; ese lleva su «Is The Demon». */
-export const DEMONIO_LILMONSTA = 'lilmonsta';
-/** Organ Grinder: vivo y sin su «Drunk», las votaciones son secretas (ver SalaNominacion.privada). */
-export const ESBIRRO_ORGAN_GRINDER = 'organgrinder';
 
 /**
  * Los recordatorios que se ponen solos en la ficha del ejecutado si su personaje
@@ -115,12 +105,6 @@ const RECORDATORIOS_EJECUCION: { personaje: string; texto: string; unico: boolea
   { personaje: 'leviathan', texto: 'Good Player Executed', unico: false, soloBueno: true },
 ];
 
-/** Las casillas de farol, todas vacías. */
-
-export const farolesVacios = (): (string | null)[] => Array.from({ length: NUM_FAROLES }, () => null);
-
-
-/** La nominación tal como se guarda: los votos que hacen falta se calculan al pedirla. */
 /**
  * Lo que un cambio de fase deja atrás y la máquina del tiempo devuelve: al
  * anochecer, la calavera y el récord de votos del día; al amanecer, los
@@ -186,7 +170,6 @@ export class SalaService {
     alVotar: (id) => this.seguimiento.vota(this.cuentaDe(id)),
     alCambiarSola: () => this.alCambiarSola(),
   });
-  private revelacionActual: { ganador: SalaAlineamiento; causas: string[]; reveladas: string[] } | null = null;
   /** El gong y el reloj del narrador. */
   private readonly tiempo = new RelojSala();
   /** Los despertares de la noche. */
@@ -194,6 +177,23 @@ export class SalaService {
     () => this.mesaAlDia(),
     () => this.faseActual,
   );
+  /** Los faroles para el demonio (del narrador y de cada asiento). */
+  private readonly farolesDemonio = new Faroles(() => this.mesaAlDia());
+  /** El final de la partida: qué bando ha ganado y qué fichas se han revelado. */
+  private readonly final = new Revelacion(() => this.mesa);
+  /** Los NPCs en juego y lo que traen (Bootlegger, Storm Catcher, silencio). */
+  private readonly npcsPartida = new Npcs(() => this.guionActual);
+  /** Lo entregado a cada jugador y los grimorios enviados. */
+  private readonly entregas = new Entregas(() => this.mesa);
+  /** Los personajes para repartir. */
+  private readonly bolsaPartida = new Bolsa((id) => this.esViajero(id));
+  /** El señalamiento en curso. */
+  private readonly senales = new Senalamientos({
+    mesa: () => this.mesaAlDia(),
+    fase: () => this.faseActual,
+    asientoDe: (id) => this.asientoDe(id),
+    despertar: (asientoId) => void this.despertar(asientoId),
+  });
   private faseActual: SalaFase = { momento: 'preparacion', numero: 0, reinicios: 0 };
   private guionActual: GuionResuelto | null = null;
   /** Sube cada vez que cambia el guion, para mandarlo solo entonces. */
@@ -218,25 +218,10 @@ export class SalaService {
     this.versionGuionActual += 1;
     // La bolsa, los faroles y los NPCs eran de los personajes del otro guion. Los
     // legendarios y lóricos que trae el guion, en juego desde el principio
-    this.bolsaActual = [];
-    this.npcsActuales = this.npcsDelGuion();
-    this.reglasBootlegger = null;
-    this.rolStormcatcherActual = null;
-    this.retenidas = false;
-    this.farolesNarrador = farolesVacios();
-    this.farolesAsientos.clear();
-  }
-
-  /**
-   * Los NPCs de la partida: legendarios y lóricos que el narrador pone en juego
-   * (ver SalaEstado.npcs). Siguen al limpiar el grimorio: suelen ser los mismos
-   * en la partida siguiente con el mismo guion (y los del guion vuelven si se habían quitado).
-   */
-  private npcsActuales: string[] = [];
-
-  /** Los legendarios y lóricos que trae el guion: en juego desde el principio de cada partida. */
-  private npcsDelGuion(): string[] {
-    return (this.guionActual?.personajes ?? []).filter((p) => p.tipo === 'fabled' || p.tipo === 'loric').map((p) => p.id);
+    this.bolsaPartida.vaciar();
+    this.npcsPartida.alCambiarGuion();
+    this.entregas.retenerFichas(false);
+    this.farolesDemonio.vaciar();
   }
 
   /** El reparto dado por bueno a mano (ver SalaEstado.setupAceptado). */
@@ -250,186 +235,98 @@ export class SalaService {
     this.setupAceptadoActual = firma;
   }
 
+  // Los NPCs y lo que traen: los lleva Npcs
+
   npcs(): string[] {
-    return [...this.npcsActuales];
+    return this.npcsPartida.npcs();
   }
 
   /** Pone en juego un NPC, o lo quita si ya estaba. No comprueba que sea del guion. */
   alternarNpc(personajeId: string): void {
-    this.npcsActuales = this.npcsActuales.includes(personajeId)
-      ? this.npcsActuales.filter((id) => id !== personajeId)
-      : [...this.npcsActuales, personajeId];
+    this.npcsPartida.alternar(personajeId);
     // Sin el Gardener ya no hay nada que retener: los personajes se entregan (como estén ahora)
-    if (this.retenidas && !this.npcActivo(NPC_GARDENER)) this.entregarFichas();
+    if (this.entregas.fichasRetenidas() && !this.npcActivo(NPC_GARDENER)) this.entregarFichas();
   }
 
   npcActivo(id: string): boolean {
-    return this.npcsActuales.includes(id);
+    return this.npcsPartida.activo(id);
   }
 
-  /** Las reglas del Bootlegger que ha escrito el narrador; null: las del guion. */
-  private reglasBootlegger: string[] | null = null;
-
-  /** Las reglas del Bootlegger: las del narrador, si las ha escrito, o las del guion. */
   bootlegger(): string[] {
-    return [...(this.reglasBootlegger ?? this.guionActual?.bootlegger ?? [])];
+    return this.npcsPartida.bootlegger();
   }
 
-  /** Cambia las reglas del Bootlegger (null: vuelven las del guion). No las valida. */
   escribirBootlegger(reglas: string[] | null): void {
-    this.reglasBootlegger = reglas;
+    this.npcsPartida.escribirBootlegger(reglas);
   }
-
-  /** El personaje bueno nombrado con el Storm Catcher, o null. */
-  private rolStormcatcherActual: string | null = null;
 
   rolStormcatcher(): string | null {
-    return this.npcActivo(NPC_STORMCATCHER) ? this.rolStormcatcherActual : null;
+    return this.npcsPartida.rolStormcatcher();
   }
 
   nombrarStormcatcher(personajeId: string | null): void {
-    this.rolStormcatcherActual = personajeId;
+    this.npcsPartida.nombrarStormcatcher(personajeId);
   }
-
-  /**
-   * Lo que se entregó a cada asiento (por su id) al repartir la bolsa: su personaje
-   * y su alineamiento. Es lo único que ve de su ficha quien se sienta ahí; lo que el
-   * narrador cambie después es del grimorio, privado, hasta el próximo reparto.
-   */
-  private entregadas = new Map<string, { personaje: string | null; alineamiento: SalaAlineamiento | null }>();
-
-  /**
-   * Entrega a cada jugador su ficha tal como está ahora: al repartir la bolsa o,
-   * con el Gardener, cuando el narrador la entrega (con lo que haya cambiado
-   * mientras tanto). No comprueba permisos.
-   */
-  entregarFichas(): void {
-    this.entregadas = new Map(this.mesa.map((a) => [a.id, { personaje: a.personaje, alineamiento: a.alineamiento }]));
-    this.retenidas = false;
-  }
-
-  /**
-   * El narrador le dice a un jugador quién es («Tú eres», de noche): su ficha pasa a
-   * ser esa (el personaje, si es uno solo, y el alineamiento, si se le dice). Así
-   * es como se entera de un cambio: lo que el narrador cambie en el grimorio no lo ve.
-   */
-  comunicarFicha(asientoId: string, personajes: string[], alineamiento: SalaAlineamiento | null): void {
-    const antes = this.fichaEntregada(asientoId);
-    this.entregadas.set(asientoId, {
-      personaje: personajes.length === 1 ? personajes[0] : antes.personaje,
-      alineamiento: alineamiento ?? antes.alineamiento,
-    });
-  }
-
-  /** La ficha que se entregó a un asiento en el último reparto (sin reparto, vacía). */
-  fichaEntregada(asientoId: string): { personaje: string | null; alineamiento: SalaAlineamiento | null } {
-    return this.entregadas.get(asientoId) ?? { personaje: null, alineamiento: null };
-  }
-
-  /**
-   * Los grimorios enviados (al Espía, a la Viuda), por asiento: el último, y a
-   * quién estaba sentado entonces (si se sienta otro, no lo ve).
-   */
-  private grimoriosEnviados = new Map<string, { ocupante: string; grimorio: SalaGrimorioEnviado }>();
-
-  /** Envía un grimorio (sus fichas y los faroles) a quien se sienta en un asiento. No comprueba permisos ni las fichas. */
-  enviarGrimorio(asientoId: string, fichas: SalaFichaEnviada[], faroles: string[] = []): void {
-    const ocupante = this.mesa.find((a) => a.id === asientoId)?.ocupante;
-    if (ocupante) this.grimoriosEnviados.set(asientoId, { ocupante, grimorio: { hora: Date.now(), fichas, faroles } });
-  }
-
-  /** El último grimorio enviado a un participante (si sigue en el asiento al que se envió), o null. */
-  grimorioRecibidoPor(participanteId: string): SalaGrimorioEnviado | null {
-    const asiento = this.mesa.find((a) => a.ocupante === participanteId);
-    const enviado = asiento ? this.grimoriosEnviados.get(asiento.id) : undefined;
-    return enviado && enviado.ocupante === participanteId ? enviado.grimorio : null;
-  }
-
-  /** Con el Gardener: los personajes repartidos aún no se han entregado a los jugadores. */
-  private retenidas = false;
-
-  fichasRetenidas(): boolean {
-    return this.retenidas;
-  }
-
-  retenerFichas(retenidas: boolean): void {
-    this.retenidas = retenidas;
-  }
-
-  /**
-   * Cuántas fichas de un personaje hay en la bolsa: quita las de más o añade
-   * las que falten (al final). Con el Pope puede haber más de una; no lo comprueba.
-   */
-  ponerEnBolsa(personajeId: string, cantidad: number): void {
-    const otros = this.bolsaActual.filter((id) => id !== personajeId);
-    const primera = this.bolsaActual.indexOf(personajeId);
-    const suyas = Array.from({ length: cantidad }, () => personajeId);
-    // Se quedan donde estaba la primera (o al final, si no estaba)
-    const donde = primera < 0 ? otros.length : this.bolsaActual.slice(0, primera).filter((id) => id !== personajeId).length;
-    this.bolsaActual = [...otros.slice(0, donde), ...suyas, ...otros.slice(donde)];
-  }
-
-  /**
-   * El silencio que pide el narrador con el Bibliotecario del Infierno en juego
-   * (ver SalaEstado.silencio). Solo vale mientras el NPC siga en juego: si se
-   * quita (o cambia el guion), se acaba solo.
-   */
-  private silencioPedido = false;
 
   silencio(): boolean {
-    return this.silencioPedido && this.npcsActuales.includes(NPC_SILENCIO);
+    return this.npcsPartida.silencio();
   }
 
   pedirSilencio(activo: boolean): void {
-    this.silencioPedido = activo;
+    this.npcsPartida.pedirSilencio(activo);
   }
 
-  /** Los faroles que el narrador prepara para el demonio (ver SalaEstado.faroles). */
-  private farolesNarrador: (string | null)[] = farolesVacios();
+  // Lo entregado a los jugadores y los grimorios enviados: lo lleva Entregas
+
+  entregarFichas(): void {
+    this.entregas.entregarFichas();
+  }
+
+  comunicarFicha(asientoId: string, personajes: string[], alineamiento: SalaAlineamiento | null): void {
+    this.entregas.comunicarFicha(asientoId, personajes, alineamiento);
+  }
+
+  fichaEntregada(asientoId: string): FichaEntregada {
+    return this.entregas.fichaEntregada(asientoId);
+  }
+
+  fichasRetenidas(): boolean {
+    return this.entregas.fichasRetenidas();
+  }
+
+  retenerFichas(retenidas: boolean): void {
+    this.entregas.retenerFichas(retenidas);
+  }
+
+  enviarGrimorio(asientoId: string, fichas: SalaFichaEnviada[], faroles: string[] = []): void {
+    this.entregas.enviarGrimorio(asientoId, fichas, faroles);
+  }
+
+  grimorioRecibidoPor(participanteId: string): SalaGrimorioEnviado | null {
+    return this.entregas.grimorioRecibidoPor(participanteId);
+  }
+
+  // Los faroles: los lleva Faroles
 
   faroles(): (string | null)[] {
-    return [...this.farolesNarrador];
+    return this.farolesDemonio.faroles();
   }
 
-  /**
-   * Pone un personaje en una casilla de farol del narrador (o la vacía, con
-   * null). Si ya estaba en otra casilla, sale de ella. No comprueba el guion.
-   */
   ponerFarol(posicion: number, personajeId: string | null): void {
-    this.farolesNarrador = ponerEnCasilla(this.farolesNarrador, posicion, personajeId);
+    this.farolesDemonio.ponerFarol(posicion, personajeId);
   }
 
-  /**
-   * Los faroles de cada asiento, con quién estaba sentado al ponerlos: si se
-   * sienta otro (o se levanta), dejan de valer, como los despertares.
-   */
-  private farolesAsientos = new Map<string, { ocupante: string | null; faroles: (string | null)[] }>();
-
-  /** Los faroles del asiento, si siguen siendo de quien se sienta en él. */
-  private farolesDeAsiento(asiento: SalaAsiento): (string | null)[] {
-    const f = this.farolesAsientos.get(asiento.id);
-    return f && f.ocupante === asiento.ocupante ? [...f.faroles] : farolesVacios();
-  }
-
-  /** Pone un farol en una casilla de un asiento (o la vacía). No comprueba permisos ni el guion. */
   ponerFarolAsiento(asientoId: string, posicion: number, personajeId: string | null): void {
-    const asiento = this.mesaAlDia().find((a) => a.id === asientoId);
-    if (!asiento) return;
-    const faroles = ponerEnCasilla(this.farolesDeAsiento(asiento), posicion, personajeId);
-    this.farolesAsientos.set(asientoId, { ocupante: asiento.ocupante, faroles });
+    this.farolesDemonio.ponerFarolAsiento(asientoId, posicion, personajeId);
+  }
+
+  copiarFaroles(asientoId: string, personajes: string[]): void {
+    this.farolesDemonio.copiarFaroles(asientoId, personajes);
   }
 
   /** El asiento en el que se sienta un participante, o null. */
   asientoDe(participanteId: string): SalaAsiento | null {
     return this.mesaAlDia().find((a) => a.ocupante === participanteId) ?? null;
-  }
-
-  /** Cambia de una vez los faroles de un asiento (los que le ha enseñado el narrador). */
-  copiarFaroles(asientoId: string, personajes: string[]): void {
-    const asiento = this.mesaAlDia().find((a) => a.id === asientoId);
-    if (!asiento) return;
-    const faroles = farolesVacios().map((_, i) => personajes[i] ?? null);
-    this.farolesAsientos.set(asientoId, { ocupante: asiento.ocupante, faroles });
   }
 
   /**
@@ -442,32 +339,26 @@ export class SalaService {
     return g.personajes.find((p) => p.id === id) ?? g.viajeros?.find((p) => p.id === id) ?? g.npcs?.find((p) => p.id === id);
   }
 
-  /** Los personajes metidos en la bolsa, en el orden en que se metieron. */
-  private bolsaActual: string[] = [];
+  // La bolsa: la lleva Bolsa
 
   bolsa(): string[] {
-    return [...this.bolsaActual];
+    return this.bolsaPartida.bolsa();
   }
 
-  /** Mete un personaje en la bolsa, o lo saca si ya estaba. No comprueba que esté en el guion. */
   alternarEnBolsa(personajeId: string): void {
-    this.bolsaActual = this.bolsaActual.includes(personajeId)
-      ? this.bolsaActual.filter((id) => id !== personajeId)
-      : [...this.bolsaActual, personajeId];
+    this.bolsaPartida.alternar(personajeId);
   }
 
-  /**
-   * Cambia de una vez los aldeanos, forasteros, esbirros y demonios de la bolsa
-   * (al llenarla al azar); los viajeros que hubiera se quedan. No comprueba que
-   * estén en el guion.
-   */
+  ponerEnBolsa(personajeId: string, cantidad: number): void {
+    this.bolsaPartida.poner(personajeId, cantidad);
+  }
+
   reemplazarBolsa(personajes: string[]): void {
-    this.bolsaActual = [...this.bolsaActual.filter((id) => this.esViajero(id)), ...personajes];
+    this.bolsaPartida.reemplazar(personajes);
   }
 
-  /** Vacía la bolsa entera (también los viajeros). No comprueba permisos. */
   vaciarBolsa(): void {
-    this.bolsaActual = [];
+    this.bolsaPartida.vaciar();
   }
 
   private esViajero(id: string): boolean {
@@ -492,7 +383,7 @@ export class SalaService {
    */
   private llevaViajero(asiento: SalaAsiento): boolean {
     const id = this.identidad(asiento);
-    return !!id && this.esViajero(id) && !this.bolsaActual.includes(id);
+    return !!id && this.esViajero(id) && !this.bolsaPartida.contiene(id);
   }
 
   /**
@@ -509,17 +400,12 @@ export class SalaService {
     asiento.recordatorios.push({ id: randomUUID(), personaje: p.id, indice, texto: p.recordatorios[indice] });
   }
 
-  /** Los viajeros metidos en la bolsa: se reparten con los demás, pero no cuentan para el reparto por tipos. */
-  private viajerosEnBolsa(): number {
-    return this.bolsaActual.filter((id) => this.esViajero(id)).length;
-  }
-
   /**
    * El reparto de la partida: los jugadores (asientos, sin los viajeros: los
    * puestos a mano y los de la bolsa) y cuántos de cada tipo (ver repartoPara).
    */
   distribucion(): SalaDistribucion {
-    const viajeros = this.mesa.filter((a) => this.llevaViajero(a)).length + this.viajerosEnBolsa();
+    const viajeros = this.mesa.filter((a) => this.llevaViajero(a)).length + this.bolsaPartida.viajeros();
     const jugadores = Math.max(0, this.mesa.length - viajeros);
     const reparto = repartoPara(jugadores);
     return {
@@ -551,7 +437,7 @@ export class SalaService {
     const revolucionarios = asientos.flatMap((a, i) =>
       a.recordatorios.some((r) => r.personaje === NPC_REVOLUTIONARY) ? [i] : [],
     );
-    let personajes = barajar(this.bolsaActual);
+    let personajes = barajar(this.bolsaPartida.bolsa());
     if (revolucionarios.length === 2) {
       personajes = this.mismoAlineamiento(personajes, revolucionarios[0], revolucionarios[1]);
     }
@@ -660,7 +546,7 @@ export class SalaService {
     else for (const a of this.mesa.filter((x) => x.marcado)) this.seguimiento.ejecutado(this.cuentaDe(a.ocupante));
     this.faseActual = { momento: 'noche', numero: momento === 'preparacion' ? 1 : numero + 1, reinicios };
     // Lo que se señaló de día no sigue de noche (lo verían otros); el reloj tampoco
-    this.senalamientoActual = null;
+    this.senales.terminar();
     this.tiempo.quitarReloj();
     this.cerrarNominacion();
     this.desmarcar();
@@ -678,14 +564,14 @@ export class SalaService {
       despues: this.faseActual,
       seguimiento: this.seguimiento.instantanea(),
       hilos: this.despertados.instantanea(),
-      senalamiento: this.senalamientoActual,
+      senalamiento: this.senales.instantanea(),
     };
     this.faseActual = { ...this.faseActual, momento: 'dia' };
     // El rol con el que empieza el día cuenta como jugado (los cambios de la noche, no)
     this.seguimiento.anotarRoles(this.fotosDeCuentas());
     this.despertados.cerrarTodos();
     // Lo de la noche no se ve de día (y el reloj se quita)
-    this.senalamientoActual = null;
+    this.senales.terminar();
     this.tiempo.quitarReloj();
     this.recordarPaso({ ...paso, despues: { ...this.faseActual } });
   }
@@ -724,7 +610,7 @@ export class SalaService {
     const ultimo = this.pasosDeFase[this.pasosDeFase.length - 1];
     const paso = ultimo && igual(ultimo.despues, this.faseActual) && igual(ultimo.antes, anterior) ? this.pasosDeFase.pop()! : null;
     this.cerrarNominacion();
-    this.senalamientoActual = null;
+    this.senales.terminar();
     this.tiempo.quitarReloj();
     this.faseActual = anterior;
     if (anterior.momento === 'dia') {
@@ -736,7 +622,7 @@ export class SalaService {
       this.desmarcar();
       this.nominaciones.ponerRecordDelDia(null);
       if (paso?.hilos) this.despertados.restaurar(paso.hilos);
-      if (paso?.senalamiento) this.senalamientoActual = paso.senalamiento;
+      if (paso?.senalamiento) this.senales.restaurar(paso.senalamiento);
     }
     if (paso) this.seguimiento.restaurar(paso.seguimiento);
     else if (anterior.momento === 'preparacion') this.seguimiento.reiniciar();
@@ -785,13 +671,11 @@ export class SalaService {
    */
   limpiarGrimorio(): void {
     this.cerrarNominacion();
-    this.senalamientoActual = null;
+    this.senales.terminar();
     this.tiempo.quitarReloj();
     this.pasosDeFase = [];
     this.seguimiento.reiniciar();
-    // Otra partida: los NPCs del guion, en juego (si alguno se quitó, vuelve); los
-    // demás que se pusieron a mano, siguen
-    this.npcsActuales = [...this.npcsActuales, ...this.npcsDelGuion().filter((id) => !this.npcsActuales.includes(id))];
+    this.npcsPartida.nuevaPartida();
     this.nominaciones.olvidarTodo();
     for (const a of this.mesa) {
       a.muerto = false;
@@ -804,16 +688,11 @@ export class SalaService {
       a.recordatorios = [];
       a.notas = [];
     }
-    this.bolsaActual = [];
-    this.entregadas.clear();
-    this.grimoriosEnviados.clear();
-    this.farolesNarrador = farolesVacios();
-    this.farolesAsientos.clear();
+    this.bolsaPartida.vaciar();
+    this.entregas.olvidar();
+    this.farolesDemonio.vaciar();
     this.setupAceptadoActual = null;
-    this.silencioPedido = false;
-    this.retenidas = false;
-    this.rolStormcatcherActual = null;
-    this.revelacionActual = null;
+    this.final.olvidar();
     this.presentes.olvidarGrimorios();
     this.despertados.cerrarTodos();
     this.recordatorios = {};
@@ -985,36 +864,14 @@ export class SalaService {
     this.tiempo.quitarReloj();
   }
 
-  /** El señalamiento (ver SalaEstado.senalamiento), o null. */
-  private senalamientoActual: SalaSenalamiento | null = null;
+  // El señalamiento: lo lleva Senalamientos
 
-  /**
-   * El señalamiento, o null. Al leerlo se pone al día: los asientos que ya no
-   * existen salen, y con la cuenta atrás acabada queda congelado.
-   */
   senalamiento(): SalaSenalamiento | null {
-    const s = this.senalamientoActual;
-    if (!s) return null;
-    const ids = new Set(this.mesaAlDia().map((a) => a.id));
-    s.senaladores = s.senaladores.filter((id) => ids.has(id));
-    s.objetivos = s.objetivos.filter((id) => ids.has(id));
-    for (const [desde, hasta] of Object.entries(s.senales)) if (!ids.has(desde) || !ids.has(hasta)) delete s.senales[desde];
-    if (!s.congelado && s.fin !== null && Date.now() >= s.fin) s.congelado = true;
-    return { ...s, senaladores: [...s.senaladores], objetivos: [...s.objetivos], senales: { ...s.senales } };
+    return this.senales.senalamiento();
   }
 
-  /**
-   * Si este participante ve el señalamiento: de día, todos; de noche, los
-   * narradores, los visitantes que ven el grimorio y los jugadores sentados en
-   * un asiento que señala.
-   */
   veSenalamiento(participante: SalaParticipante): boolean {
-    const s = this.senalamientoActual;
-    if (!s) return false;
-    if (s.publico || participante.rol === 'narrador') return true;
-    if (participante.rol === 'visitante') return participante.accesoGrimorio === 'concedido';
-    const asiento = this.asientoDe(participante.id);
-    return !!asiento && s.senaladores.includes(asiento.id);
+    return this.senales.veSenalamiento(participante);
   }
 
   /**
@@ -1026,36 +883,9 @@ export class SalaService {
     return this.veSenalamiento(participante);
   }
 
-  /**
-   * Empieza un señalamiento (sustituye al que hubiera). Sin asientos que señalan
-   * o que se pueden señalar, todos. De día es público; de noche se despierta a
-   * los que señalan (ver despertar). `segundos` null: sin cuenta atrás. No
-   * valida los datos ni comprueba permisos.
-   */
-  empezarSenalamiento(datos: {
-    tipo?: SalaSenalamiento['tipo'];
-    mensaje: string;
-    segundos: number | null;
-    senaladores: string[];
-    objetivos: string[];
-  }): void {
-    const todos = this.mesaAlDia().map((a) => a.id);
-    const deLaMesa = (ids: string[]) => (ids.length ? todos.filter((id) => ids.includes(id)) : todos);
-    const publico = this.faseActual.momento !== 'noche';
-    const inicio = Date.now();
-    this.senalamientoActual = {
-      id: randomUUID(),
-      tipo: datos.tipo ?? 'normal',
-      mensaje: datos.mensaje,
-      senaladores: deLaMesa(datos.senaladores),
-      objetivos: deLaMesa(datos.objetivos),
-      publico,
-      inicio,
-      fin: datos.segundos === null ? null : inicio + datos.segundos * 1000,
-      congelado: false,
-      senales: {},
-    };
-    if (!publico) for (const id of this.senalamientoActual.senaladores) this.despertar(id);
+  /** Empieza un señalamiento (ver Senalamientos.empezar); quien lo ve baja la mano. No comprueba permisos. */
+  empezarSenalamiento(datos: Parameters<Senalamientos['empezar']>[0]): void {
+    this.senales.empezar(datos);
     // Quien lo ve baja la mano (no se puede levantar mientras dure)
     for (const participante of this.presentes.participantes()) {
       if (participante.manoLevantada && this.veSenalamiento(participante)) this.levantarMano(participante.id, false);
@@ -1068,29 +898,21 @@ export class SalaService {
    * congela y ese lleva su «Is The Demon». Devuelve el error, si lo hay.
    */
   senalar(participanteId: string, objetivo: string | null): string | null {
-    const s = this.senalamiento() && this.senalamientoActual!;
-    if (!s) return 'No hay ningún señalamiento.';
-    if (s.congelado) return 'El señalamiento ya ha terminado.';
-    const asiento = this.asientoDe(participanteId);
-    if (!asiento || !s.senaladores.includes(asiento.id)) return 'No te toca señalar.';
-    if (objetivo === null) {
-      delete s.senales[asiento.id];
-      return null;
-    }
-    if (!s.objetivos.includes(objetivo)) return 'Ese asiento no se puede señalar.';
-    s.senales[asiento.id] = objetivo;
-    if (s.tipo === 'lilmonsta') this.resolverLilmonsta(s);
-    return null;
+    const error = this.senales.senalar(participanteId, objetivo);
+    if (!error && objetivo !== null && this.senales.senalamiento()?.tipo === 'lilmonsta') this.resolverLilmonsta();
+    return error;
   }
 
   /** Lil' Monsta: si todos los esbirros sentados señalan al mismo, ese lo cuida. */
-  private resolverLilmonsta(s: SalaSenalamiento): void {
+  private resolverLilmonsta(): void {
+    const s = this.senales.senalamiento();
+    if (!s) return;
     const sentados = this.mesaAlDia().filter((a) => a.ocupante && s.senaladores.includes(a.id));
     const elegidos = new Set(sentados.map((a) => s.senales[a.id]));
     if (sentados.length === 0 || elegidos.size !== 1) return;
     const [cuidador] = [...elegidos];
     if (!cuidador) return;
-    s.congelado = true;
+    this.senales.congelar();
     // Su «Is The Demon» pasa al que lo cuida (solo hay uno)
     const recordatorios = this.personaje(DEMONIO_LILMONSTA)?.recordatorios ?? [];
     const indice = recordatorios.findIndex((t) => /^is the demon$/i.test(t.trim()));
@@ -1103,7 +925,7 @@ export class SalaService {
 
   /** Quita el señalamiento. No comprueba permisos. */
   terminarSenalamiento(): void {
-    this.senalamientoActual = null;
+    this.senales.terminar();
   }
 
   /**
@@ -1123,15 +945,18 @@ export class SalaService {
     return vivos.length ? vivos : null;
   }
 
-  /** La revelación del grimorio en curso (o acabada), o null. */
+  // La revelación del grimorio: la lleva Revelacion
+
   revelacion(): SalaRevelacion | null {
-    const r = this.revelacionActual;
-    if (!r) return null;
-    // Solo cuentan los asientos que siguen en la mesa
-    const reveladas = r.reveladas.filter((id) => this.mesa.some((a) => a.id === id));
-    const terminada = this.mesa.every((a) => reveladas.includes(a.id));
-    // Lo que ha pasado dice quién estaba en juego: no se cuenta hasta que todo está revelado
-    return { ganador: r.ganador, causas: terminada ? [...r.causas] : [], reveladas, terminada };
+    return this.final.revelacion();
+  }
+
+  revelarFicha(asientoId: string): void {
+    this.final.revelarFicha(asientoId);
+  }
+
+  revelarTodas(): void {
+    this.final.revelarTodas();
   }
 
   /**
@@ -1140,7 +965,7 @@ export class SalaService {
    */
   empezarRevelacion(ganador: SalaAlineamiento, causas: string[] = [], esbirros: Record<string, string> = {}): void {
     this.cerrarNominacion();
-    this.revelacionActual = { ganador, causas, reveladas: [] };
+    this.final.empezar(ganador, causas);
     // Se acaba la partida: se guarda lo de cada uno (si se había empezado a jugar). Las
     // causas de esbirro (la Doncel cazada), para la cuenta del esbirro que eligió el narrador
     const deCadaUno = causas.map((id) => {
@@ -1171,7 +996,7 @@ export class SalaService {
       this.alTerminarPartida({
         mesa,
         narradoresNombres,
-        npcs: [...this.npcsActuales],
+        npcs: this.npcs(),
         votaciones: this.votaciones(),
         fecha: new Date(),
         guion: this.guionActual?.nombre ?? null,
@@ -1183,17 +1008,6 @@ export class SalaService {
         narradores,
       });
     }
-  }
-
-  /** Revela la ficha de un asiento (todos verán su personaje). */
-  revelarFicha(asientoId: string): void {
-    const r = this.revelacionActual;
-    if (r && !r.reveladas.includes(asientoId) && this.mesa.some((a) => a.id === asientoId)) r.reveladas.push(asientoId);
-  }
-
-  /** Revela de una vez las que quedan. */
-  revelarTodas(): void {
-    for (const a of this.mesa) this.revelarFicha(a.id);
   }
 
   /**
@@ -1292,7 +1106,7 @@ export class SalaService {
 
   /** Los asientos, en orden (el primero a las 12, como las agujas del reloj). */
   asientos(): SalaAsiento[] {
-    return this.mesaAlDia().map((a) => ({ ...a, faroles: this.farolesDeAsiento(a) }));
+    return this.mesaAlDia().map((a) => ({ ...a, faroles: this.farolesDemonio.deAsiento(a) }));
   }
 
   /** Añade un asiento al final del círculo. No comprueba el máximo ni permisos. */
@@ -1351,12 +1165,10 @@ export class SalaService {
       const ficha = fichas.get(desde);
       if (asiento && ficha) Object.assign(asiento, ficha);
     }
-    const remapear = <V>(m: Map<string, V>) => new Map([...m].map(([k, v]) => [a(k), v] as const));
-    this.entregadas = remapear(this.entregadas);
-    this.farolesAsientos = remapear(this.farolesAsientos);
-    this.grimoriosEnviados = remapear(this.grimoriosEnviados);
+    this.entregas.remapear(a);
+    this.farolesDemonio.remapear(a);
     this.despertados.remapear(a);
-    if (this.revelacionActual) this.revelacionActual.reveladas = this.revelacionActual.reveladas.map(a);
+    this.final.remapear(a);
     this.nominaciones.remapear(a);
   }
 
@@ -1544,9 +1356,3 @@ export class SalaService {
   }
 }
 
-/** Las casillas con `personajeId` en `posicion` (fuera de cualquier otra en la que estuviera). */
-function ponerEnCasilla(casillas: (string | null)[], posicion: number, personajeId: string | null): (string | null)[] {
-  const nuevas = casillas.map((id) => (personajeId && id === personajeId ? null : id));
-  nuevas[posicion] = personajeId;
-  return nuevas;
-}

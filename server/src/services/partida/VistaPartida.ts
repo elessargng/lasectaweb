@@ -1,4 +1,6 @@
-import { farolesVacios, NPC_TOR, SalaService } from '../SalaService';
+import { SalaService } from '../SalaService';
+import { NPC_TOR } from './personajesEspeciales';
+import { farolesVacios } from './Faroles';
 import type {
   SalaAsiento,
   SalaConversacion,
