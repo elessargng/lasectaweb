@@ -101,7 +101,7 @@ const asientoNuevo = (): SalaAsiento => ({
   personaje: null,
   alineamiento: null,
   recordatorios: [],
-  notas: [],
+  nota: null,
   faroles: farolesVacios(),
 });
 
@@ -605,9 +605,18 @@ export class SalaService {
     const viajeros = this.mesa.filter((a) => this.llevaViajero(a)).length + this.viajerosEnBolsa();
     const jugadores = Math.max(0, this.mesa.length - viajeros);
     const reparto = repartoPara(jugadores);
+    // Los muertos con sudario (público; la muerte pendiente aún no cuenta). Un viajero
+    // de la bolsa aún sin repartir está vivo
+    const muertos = this.mesa.filter((a) => a.muerto);
+    const viajerosMuertos = muertos.filter((a) => {
+      const id = this.identidad(a);
+      return !!id && this.esViajero(id);
+    }).length;
     return {
       jugadores,
+      jugadoresVivos: Math.max(0, jugadores - (muertos.length - viajerosMuertos)),
       viajeros,
+      viajerosVivos: Math.max(0, viajeros - viajerosMuertos),
       aldeanos: reparto?.aldeanos ?? null,
       forasteros: reparto?.forasteros ?? null,
       esbirros: reparto?.esbirros ?? null,
@@ -918,7 +927,7 @@ export class SalaService {
       a.personaje = null;
       a.alineamiento = null;
       a.recordatorios = [];
-      a.notas = [];
+      a.nota = null;
     }
     this.bolsaActual = [];
     this.entregadas.clear();
@@ -1093,8 +1102,8 @@ export class SalaService {
 
   /**
    * Empieza una nominación (sustituye a la que hubiera) y la apunta en el
-   * registro, con su día (si no se llega a votar, queda sin votos). Baja la mano
-   * a los muertos que ya no tienen voto. No comprueba permisos.
+   * registro, con su día (si no se llega a votar, queda sin votos). Baja todas
+   * las manos que hubiera levantadas. No comprueba permisos.
    */
   nominar(desde: string, hasta: string): void {
     this.pararTemporizador();
@@ -1109,15 +1118,10 @@ export class SalaService {
     this.registro.push(registro);
     this.seguimiento.nomina(this.cuentaDelAsiento(desde), this.cuentaDelAsiento(hasta));
     this.nominacionEnCurso = { desde, hasta, cuentaAtrasFin: null, votacion: null, votosElegidos: null, registro };
-    // Quien no puede votar (un muerto sin voto; con el Voudon vivo, los vivos que no son
-    // él): si tenía la mano levantada, se le baja
-    for (const a of this.mesa) {
-      if (!a.ocupante || !this.sinVoto(a.ocupante)) continue;
-      const ocupante = this.buscar(a.ocupante);
-      if (ocupante) {
-        ocupante.manoLevantada = false;
-        ocupante.dosManos = false;
-      }
+    // La nominación empieza con todas las manos bajadas
+    for (const { participante } of this.entradas.values()) {
+      participante.manoLevantada = false;
+      participante.dosManos = false;
     }
   }
 
@@ -1204,28 +1208,32 @@ export class SalaService {
   }
 
   /**
-   * Escribe una nota sobre un asiento: nueva (sin `notaId`) o cambia una que ya
-   * estaba. Devuelve su id, o null si no existe (el asiento o la nota). No
-   * comprueba permisos ni cuántas hay.
+   * Cada recordatorio de un personaje es único: el que hay que quitar al poner
+   * otro igual en un asiento. Si el personaje tiene varios con el mismo texto,
+   * solo cuando ya están todos en la mesa. Antes uno de otro asiento que uno de
+   * este. null: no hay que quitar ninguno.
    */
-  escribirNota(asientoId: string, notaId: string | null, texto: string): string | null {
-    const asiento = this.mesa.find((a) => a.id === asientoId);
-    if (!asiento) return null;
-    if (notaId === null) {
-      const nota = { id: randomUUID(), texto };
-      asiento.notas.push(nota);
-      return nota.id;
-    }
-    const nota = asiento.notas.find((n) => n.id === notaId);
-    if (!nota) return null;
-    nota.texto = texto;
-    return nota.id;
+  recordatorioQueSobra(asientoId: string, personajeId: string, indice: number): { asientoId: string; recordatorioId: string } | null {
+    const textos = this.personaje(personajeId)?.recordatorios ?? [];
+    const texto = textos[indice];
+    if (texto === undefined) return null;
+    const iguales = new Set(textos.flatMap((t, i) => (t === texto ? [i] : [])));
+    const puestos = this.mesa.flatMap((a) =>
+      a.recordatorios.filter((r) => r.personaje === personajeId && iguales.has(r.indice)).map((r) => ({ asientoId: a.id, recordatorioId: r.id })),
+    );
+    if (puestos.length < iguales.size) return null;
+    return puestos.find((p) => p.asientoId !== asientoId) ?? puestos[0];
   }
 
-  /** Borra una nota de un asiento. No comprueba permisos. */
-  borrarNota(asientoId: string, notaId: string): void {
+  /**
+   * Escribe la nota de un asiento (sustituye la que hubiera); con null, la borra.
+   * Devuelve false si el asiento no existe. No comprueba permisos.
+   */
+  escribirNota(asientoId: string, texto: string | null): boolean {
     const asiento = this.mesa.find((a) => a.id === asientoId);
-    if (asiento) asiento.notas = asiento.notas.filter((n) => n.id !== notaId);
+    if (!asiento) return false;
+    asiento.nota = texto;
+    return true;
   }
 
   /** Cambia el alineamiento de la ficha de un asiento. No comprueba permisos. */
@@ -1614,7 +1622,7 @@ export class SalaService {
 
   /**
    * Lleva lo de cada ficha (personaje, alineamiento, muerte, voto, calavera,
-   * recordatorios, notas; y lo que va por asiento: lo entregado, los faroles, el
+   * recordatorios, la nota; y lo que va por asiento: lo entregado, los faroles, el
    * grimorio enviado, los despertares, lo revelado, la nominación) del asiento de
    * cada clave al de su valor. Al cambiar de sitio a los jugadores, su ficha va con
    * ellos: cambian de silla, no de personaje. `destino` es una permutación de la mesa.
@@ -1633,7 +1641,7 @@ export class SalaService {
           personaje: s.personaje,
           alineamiento: s.alineamiento,
           recordatorios: s.recordatorios,
-          notas: s.notas,
+          nota: s.nota,
         },
       ]),
     );

@@ -31,7 +31,6 @@ import {
   SALA_ESTILOS_MANO,
   SALA_FORMAS_MANO,
   SALA_NOTA_LARGO_MAX,
-  SALA_NOTAS_MAX,
   SALA_RECORDATORIO_TEXTO_MAX,
   SalaFichaEnviada,
   SalaFormaMano,
@@ -40,7 +39,7 @@ import {
   TarjetaDespertar,
 } from '../types/sala';
 import { guardarAvatarSala } from '../utils/salaAvatarStorage';
-import { GuionResuelto, TIPOS_NPC, TipoPersonaje } from '../types/guiones';
+import { GuionResuelto, PersonajeDeGuion, TIPOS_NPC, TipoPersonaje } from '../types/guiones';
 import { GuionInvalidoError } from '../services/guiones/errores';
 import type { RegistroPartida } from '../services/estadisticas/SeguimientoPartida';
 
@@ -172,8 +171,16 @@ const esNarrador = (_sala: SalaService, yo: SalaParticipante) => yo.rol === 'nar
  */
 /** Los tipos de personaje que pueden ir en la ficha de un jugador (no los legendarios ni los lóricos). */
 const TIPOS_EN_FICHA: string[] = ['townsfolk', 'outsider', 'minion', 'demon', 'traveller'];
-/** Fichas de un mismo personaje como mucho en la bolsa (con el Pope). */
+/** Fichas de un mismo personaje como mucho en la bolsa (con el Pope, o si es repetible). */
 const MAX_REPETIDOS = 5;
+/**
+ * Si un personaje puede ir repetido en la bolsa: los repetibles («bag-duplicate»,
+ * como el Village Idiot), siempre; los aldeanos y forasteros, con el Pope en juego.
+ */
+const puedeRepetirse = (sala: SalaService, personaje: PersonajeDeGuion): boolean =>
+  !!personaje.repetible ||
+  ((personaje.tipo === 'townsfolk' || personaje.tipo === 'outsider') && sala.npcActivo(NPC_POPE));
+const ERROR_REPETIDOS = 'Solo con el Pope puede haber aldeanos o forasteros repetidos.';
 /** Recordatorios como mucho en una ficha (de sobra para una partida). */
 const MAX_RECORDATORIOS = 20;
 
@@ -527,8 +534,14 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * no (cerrarNominacion: false). datos: { asientoId, marcado: boolean, cerrarNominacion?: boolean }.
    */
   'narrador:marcar': {
-    puede: (sala, yo) => yo.rol === 'narrador' && sala.asientos().length > 0,
-    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador puede marcar una ficha.'),
+    // De noche no se marca a nadie: la calavera es de las ejecuciones del día
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.fase().momento !== 'noche' && sala.asientos().length > 0,
+    noPuede: (sala, yo) =>
+      yo.rol !== 'narrador'
+        ? 'Solo un narrador puede marcar una ficha.'
+        : sala.fase().momento === 'noche'
+          ? 'De noche no se marca a nadie.'
+          : 'La mesa no tiene asientos.',
     hacer: (sala, _yo, datos) => {
       const { asientoId, marcado, cerrarNominacion } =
         (datos as { asientoId?: unknown; marcado?: unknown; cerrarNominacion?: unknown }) ?? {};
@@ -862,8 +875,9 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /**
    * Pone una ficha recordatorio junto a la de un asiento: uno de los recordatorios
-   * de un personaje del guion (esté en juego o no). Se pueden poner las que se quiera.
-   * datos: { asientoId, personajeId, indice }.
+   * de un personaje del guion (esté en juego o no). Cada una es única: si ya
+   * estaba puesta (todas, si el personaje tiene varias iguales), se quita la de
+   * antes (ver recordatorioQueSobra). datos: { asientoId, personajeId, indice }.
    */
   'narrador:ponerRecordatorio': {
     puede: (sala, yo) => yo.rol === 'narrador' && sala.asientos().length > 0,
@@ -876,9 +890,11 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       if (!personaje) return { ok: false, error: 'Ese personaje no está en el guion.' };
       const texto = typeof indice === 'number' && Number.isInteger(indice) ? personaje.recordatorios[indice] : undefined;
       if (texto === undefined) return { ok: false, error: 'Ese recordatorio no existe.' };
-      if (asiento.recordatorios.length >= MAX_RECORDATORIOS) {
+      const sobra = sala.recordatorioQueSobra(asientoId, personaje.id, indice as number);
+      if (asiento.recordatorios.length >= MAX_RECORDATORIOS && sobra?.asientoId !== asientoId) {
         return { ok: false, error: `Una ficha no puede llevar más de ${MAX_RECORDATORIOS} recordatorios.` };
       }
+      if (sobra) sala.quitarRecordatorio(sobra.asientoId, sobra.recordatorioId);
       sala.ponerRecordatorio(asientoId, { personaje: personaje.id, indice: indice as number, texto });
       return { ok: true };
     },
@@ -911,27 +927,20 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   },
 
   /**
-   * Escribe una nota sobre un asiento (texto libre, hasta SALA_NOTAS_MAX por
-   * asiento): nueva o, con `notaId`, cambia esa. Devuelve el id de la nota.
-   * datos: { asientoId, notaId?, texto }.
+   * Escribe la nota de un asiento (texto libre; sustituye la que hubiera).
+   * datos: { asientoId, texto }.
    */
   'narrador:escribirNota': {
     puede: (sala, yo) => yo.rol === 'narrador' && sala.asientos().length > 0,
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador escribe notas.'),
     hacer: (sala, _yo, datos) => {
-      const { asientoId, notaId, texto } = (datos as { asientoId?: unknown; notaId?: unknown; texto?: unknown }) ?? {};
-      const asiento = sala.asientos().find((a) => a.id === asientoId);
-      if (!asiento || typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
-      if (notaId !== undefined && notaId !== null && typeof notaId !== 'string') return { ok: false, error: 'Petición desconocida.' };
+      const { asientoId, texto } = (datos as { asientoId?: unknown; texto?: unknown }) ?? {};
+      if (typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
       // Se respetan los saltos de línea; solo se quitan los espacios de los extremos
       const limpio = typeof texto === 'string' ? texto.replace(/\r\n?/g, '\n').trim() : '';
       if (!limpio) return { ok: false, error: 'La nota está vacía.' };
       if (limpio.length > SALA_NOTA_LARGO_MAX) return { ok: false, error: `Una nota puede tener como mucho ${SALA_NOTA_LARGO_MAX} caracteres.` };
-      if (!notaId && asiento.notas.length >= SALA_NOTAS_MAX) {
-        return { ok: false, error: `Cada asiento puede tener como mucho ${SALA_NOTAS_MAX} notas.` };
-      }
-      const id = sala.escribirNota(asientoId, (notaId as string | undefined) ?? null, limpio);
-      return id ? { ok: true, valor: id } : { ok: false, error: 'Esa nota ya no existe.' };
+      return sala.escribirNota(asientoId, limpio) ? { ok: true } : { ok: false, error: 'Ese asiento ya no existe.' };
     },
   },
 
@@ -986,14 +995,14 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
-  /** Borra una nota de un asiento. datos: { asientoId, notaId }. */
+  /** Borra la nota de un asiento. datos: { asientoId }. */
   'narrador:borrarNota': {
     puede: esNarrador,
     noPuede: 'Solo un narrador borra notas.',
     hacer: (sala, _yo, datos) => {
-      const { asientoId, notaId } = (datos as { asientoId?: unknown; notaId?: unknown }) ?? {};
-      if (typeof asientoId !== 'string' || typeof notaId !== 'string') return { ok: false, error: 'Petición desconocida.' };
-      sala.borrarNota(asientoId, notaId);
+      const { asientoId } = (datos as { asientoId?: unknown }) ?? {};
+      if (typeof asientoId !== 'string') return { ok: false, error: 'Petición desconocida.' };
+      sala.escribirNota(asientoId, null);
       return { ok: true };
     },
   },
@@ -1032,7 +1041,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /**
    * Cuántas fichas de un personaje hay en la bolsa (0 la saca). Más de una, solo
-   * con el Pope en juego y de personajes buenos (aldeanos y forasteros).
+   * si puede repetirse (ver puedeRepetirse).
    * datos: { personajeId, cantidad }.
    */
   'narrador:bolsaCantidad': {
@@ -1045,10 +1054,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       if (typeof cantidad !== 'number' || !Number.isInteger(cantidad) || cantidad < 0 || cantidad > MAX_REPETIDOS) {
         return { ok: false, error: 'Cantidad desconocida.' };
       }
-      const bueno = personaje.tipo === 'townsfolk' || personaje.tipo === 'outsider';
-      if (cantidad > 1 && !(bueno && sala.npcActivo(NPC_POPE))) {
-        return { ok: false, error: 'Solo con el Pope puede haber aldeanos o forasteros repetidos.' };
-      }
+      if (cantidad > 1 && !puedeRepetirse(sala, personaje)) return { ok: false, error: ERROR_REPETIDOS };
       sala.ponerEnBolsa(personaje.id, cantidad);
       return { ok: true };
     },
@@ -1067,7 +1073,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   /**
    * Llena la bolsa de una vez (el narrador la ha llenado al azar): sustituye sus
    * aldeanos, forasteros, esbirros y demonios por estos; los viajeros se quedan.
-   * Repetidos, solo buenos y con el Pope. datos: { personajes: string[] }.
+   * Repetidos, solo los que pueden (ver puedeRepetirse). datos: { personajes: string[] }.
    */
   'narrador:llenarBolsa': {
     puede: (sala, yo) => yo.rol === 'narrador' && !!sala.guion(),
@@ -1083,10 +1089,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
         if (!personaje || personaje.tipo === 'traveller' || !TIPOS_EN_BOLSA.includes(personaje.tipo)) {
           return { ok: false, error: 'En la bolsa al azar solo van aldeanos, forasteros, esbirros y demonios del guion.' };
         }
-        const bueno = personaje.tipo === 'townsfolk' || personaje.tipo === 'outsider';
-        if (vistos.has(id) && !(bueno && sala.npcActivo(NPC_POPE))) {
-          return { ok: false, error: 'Solo con el Pope puede haber aldeanos o forasteros repetidos.' };
-        }
+        if (vistos.has(id) && !puedeRepetirse(sala, personaje)) return { ok: false, error: ERROR_REPETIDOS };
         vistos.add(id);
       }
       sala.reemplazarBolsa(ids as string[]);

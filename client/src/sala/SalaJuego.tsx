@@ -96,7 +96,6 @@ import {
   type SalaDespertar,
   type SalaEstado,
   type SalaParticipante,
-  type SalaNota,
   type SalaRecordatorio,
 } from './useSala';
 
@@ -408,7 +407,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // el grimorio propio del jugador (sus notas: solo en este navegador, mientras está en la sala).
   const [notasGrimorio, setNotasGrimorio] = useState<Record<string, ContenidoFicha>>({});
   const [notasRecordatorios, setNotasRecordatorios] = useState<Record<string, SalaRecordatorio[]>>({});
-  const [notasEscritas, setNotasEscritas] = useState<Record<string, SalaNota[]>>({});
+  const [notasEscritas, setNotasEscritas] = useState<Record<string, string>>({});
   const nombresPersonajesRef = useRef<Map<string, PersonajeMostrado>>(new Map());
   const [wakesAbiertos, setWakesAbiertos] = useState<string[]>([]);
   const [wakeActivo, setWakeActivo] = useState<string | null>(null);
@@ -445,9 +444,14 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     for (const id of porCanibal) automaticos.add(id);
     const cambios = e.recordatoriosNoche;
     const activo = (id: string) => cambios[id] ?? automaticos.has(id);
+    // Los viajeros en juego (vivos o muertos), en el orden de los asientos, sin repetir
+    const viajeros = [
+      ...new Set(e.asientos.flatMap((a) => (a.personaje && tipoDe(a.personaje) === 'traveller' ? [a.personaje] : []))),
+    ];
     return {
       activos: [...new Set([...automaticos, ...Object.keys(cambios)])].filter(activo),
       porCanibal,
+      viajeros,
       onAlternar: (id: string) => {
         void pedirPropio('narrador:recordatorio', { id, activo: !activo(id) }).then((r) => {
           if (!r.ok) setAviso(r.error);
@@ -1030,7 +1034,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     notasRecordatorios,
     anotarRecordatorios: (asientoId, lista) => setNotasRecordatorios((n) => ({ ...n, [asientoId]: lista })),
     notasEscritas,
-    escribirNotas: (asientoId, lista) => setNotasEscritas((n) => ({ ...n, [asientoId]: lista })),
+    escribirNota: (asientoId, nota) =>
+      setNotasEscritas((n) => {
+        const nuevas = { ...n };
+        if (nota === null) delete nuevas[asientoId];
+        else nuevas[asientoId] = nota;
+        return nuevas;
+      }),
   };
 
 

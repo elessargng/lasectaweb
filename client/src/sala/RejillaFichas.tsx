@@ -32,7 +32,7 @@ interface RejillaFichasProps {
   /** Señalar los que alteran la preparación (el Barón…), como en la bolsa. */
   conPreparacion?: boolean;
   /**
-   * Fichas repetidas (la bolsa con el Pope): cuántas hay de un personaje y cómo
+   * Fichas repetidas (la bolsa con el Pope o un repetible): cuántas hay de un personaje y cómo
    * cambiarlo; con alguna, debajo salen «−», el número y «+». null: sin repetidas.
    */
   cantidad?: (p: PersonajeMostrado) => { valor: number; max: number; onCambiar: (n: number) => void } | null;
@@ -101,7 +101,7 @@ const RejillaFichas = ({ idBase, grupos, marca, onPulsar, conPreparacion = false
                       </span>
                     )}
                   </button>
-                  {/* Repetidas (Pope): una menos, cuántas, una más */}
+                  {/* Repetidas (Pope o repetible): una menos, cuántas, una más */}
                   {cuantas && cuantas.valor > 0 && (
                     <div className="flex items-center gap-2">
                       <button

@@ -1,5 +1,44 @@
 [
   {
+    "version": "1.4.0",
+    "date": "2026-10-27",
+    "title": "Notas a la Vista",
+    "description": "Las notas del grimorio pasan a ser un pósit junto a cada asiento, los recordatorios son únicos como en la mesa real y los viajeros abren el orden de la noche.",
+    "changes": [
+      {
+        "category": "Grimorio",
+        "items": [
+          "Cada asiento tiene ahora una sola nota, que se ve como un pósit junto a su cuadro, con el texto entero.",
+          "El pósit se pliega para que solo asome una pestaña, y si la nota es larga se fija con una chincheta para leerla entera.",
+          "En el menú de la ficha, «Editar nota» si el asiento ya tiene una.",
+          "Los recordatorios son únicos: al poner uno que ya estaba en otra ficha, se quita de la otra. Los que se llaman igual salen una sola vez en la lista.",
+          "De noche ya no se puede marcar a nadie con la calavera."
+        ]
+      },
+      {
+        "category": "Narrador",
+        "items": [
+          "Los viajeros en juego salen al principio del orden de cada noche, antes del Crepúsculo.",
+          "El reparto muestra cuántos jugadores y viajeros siguen vivos.",
+          "Los personajes que pueden ir repetidos en la bolsa (como el Village Idiot) se pueden repetir sin el Pope.",
+          "Al empezar una nominación se bajan todas las manos levantadas."
+        ]
+      },
+      {
+        "category": "Sala de Juego",
+        "items": [
+          "En las conversaciones privadas, quien habla se ve con el mismo aro que en la plaza, sin tapar la cámara."
+        ]
+      },
+      {
+        "category": "Guiones",
+        "items": [
+          "Los personajes propios de un guion pueden ir repetidos en la bolsa si lo indican («bag-duplicate»)."
+        ]
+      }
+    ]
+  },
+  {
     "version": "1.3.5",
     "date": "2026-10-26",
     "title": "La Ciudad Ilustrada",

@@ -7,7 +7,7 @@ import { useAriaLive, type TipoAviso } from './avisosConfig';
 import AsaLevantar from './AsaLevantar';
 import AsaMover from './AsaMover';
 import Asiento from './Asiento';
-import NotasAsiento from './NotasAsiento';
+import NotaAsiento from './NotaAsiento';
 import GrimorioRecibido from './GrimorioRecibido';
 import { nombresDeAsientos } from './MiniGrimorio';
 import { BookOpen } from 'lucide-react';
@@ -26,7 +26,7 @@ import RecordatoriosFicha from './RecordatoriosFicha';
 import VelaVoto from './VelaVoto';
 import { useMarcas } from './marcas';
 import { ESCALA_RECORDATORIO } from './FichaRecordatorio';
-import { contarBolsa, describirRecordatorio, identidadDe, NOTAS_MAX, recordatoriosDeFicha, TIPOS_REPARTO, useFichas } from './fichas';
+import { contarBolsa, describirRecordatorio, identidadDe, recordatoriosDeFicha, TIPOS_REPARTO, useFichas } from './fichas';
 import { descuadres } from './comprobarReparto';
 import LunaDespertar from './LunaDespertar';
 import ManoLevantada from './ManoLevantada';
@@ -322,7 +322,7 @@ const Mesa = ({
   const ariaLiveAsientos = useAriaLive('editarAsientos');
   // Lo que lleva cada ficha, para leerlo con el nombre del asiento: el personaje que
   // ve quien mira (el de la partida o, con grimorio, el que ha anotado), la calavera y el sudario.
-  const { porId, notas, anotar, todosPorId, notasRecordatorios, anotarRecordatorios, notasEscritas, escribirNotas } = useFichas();
+  const { porId, notas, anotar, todosPorId, notasRecordatorios, anotarRecordatorios, notasEscritas, escribirNota } = useFichas();
   // Cómo se ve si a un muerto le queda el voto (Preferencias > Interfaz): su vela, o el círculo en el sudario
   const estiloVoto = useMarcas().voto;
   // Con grimorio propio, lo anotado tapa lo que se ve de la partida (también en la propia)
@@ -374,28 +374,27 @@ const Mesa = ({
     }
     window.setTimeout(() => document.getElementById(`sala-ficha-${asientoId}-boton`)?.focus(), 0);
   };
-  // Las notas de cada asiento: las del narrador (a quien ve el grimorio) o, con grimorio
-  // propio, las del jugador (en su navegador). Las escriben el narrador y el jugador con grimorio.
-  const [notasAbiertas, setNotasAbiertas] = useState<{ asientoId: string; nueva: boolean } | null>(null);
-  const notasDe = (a: (typeof asientos)[number]) => (modoFichas === 'grimorio' ? (notasEscritas[a.id] ?? []) : (a.notas ?? []));
+  // La nota de cada asiento: la del narrador (a quien ve el grimorio) o, con grimorio
+  // propio, la del jugador (en su navegador). La escriben el narrador y el jugador con grimorio.
+  // Se ve como un pósit junto al cuadro que cada uno pliega o despliega en su pantalla.
+  const [notaEditando, setNotaEditando] = useState<string | null>(null);
+  const [notasPlegadas, setNotasPlegadas] = useState<ReadonlySet<string>>(() => new Set());
+  const plegarNota = (asientoId: string, plegada: boolean) =>
+    setNotasPlegadas((s) => {
+      const n = new Set(s);
+      if (plegada) n.add(asientoId);
+      else n.delete(asientoId);
+      return n;
+    });
+  const notaDe = (a: (typeof asientos)[number]) => (modoFichas === 'grimorio' ? (notasEscritas[a.id] ?? null) : (a.nota ?? null));
   const escriboNotas = modoFichas === 'narrador' || modoFichas === 'grimorio';
-  const guardarNota = async (asientoId: string, notaId: string | null, texto: string): Promise<string | null> => {
+  // Guarda la nota de un asiento (con null, la borra) y devuelve el error, o null si ha ido bien
+  const guardarNota = async (asientoId: string, texto: string | null): Promise<string | null> => {
     if (modoFichas === 'grimorio') {
-      const lista = notasEscritas[asientoId] ?? [];
-      if (notaId) escribirNotas(asientoId, lista.map((n) => (n.id === notaId ? { ...n, texto } : n)));
-      else if (lista.length >= NOTAS_MAX) return `Cada asiento puede tener como mucho ${NOTAS_MAX} notas.`;
-      else escribirNotas(asientoId, [...lista, { id: crypto.randomUUID(), texto }]);
+      escribirNota(asientoId, texto);
       return null;
     }
-    const r = await pedir('narrador:escribirNota', { asientoId, notaId, texto });
-    return r.ok ? null : r.error;
-  };
-  const borrarNota = async (asientoId: string, notaId: string): Promise<string | null> => {
-    if (modoFichas === 'grimorio') {
-      escribirNotas(asientoId, (notasEscritas[asientoId] ?? []).filter((n) => n.id !== notaId));
-      return null;
-    }
-    const r = await pedir('narrador:borrarNota', { asientoId, notaId });
+    const r = texto === null ? await pedir('narrador:borrarNota', { asientoId }) : await pedir('narrador:escribirNota', { asientoId, texto });
     return r.ok ? null : r.error;
   };
 
@@ -687,20 +686,20 @@ const Mesa = ({
                         )
                       }
                     />
-                    {/* Las notas: una pestaña hacia fuera de la mesa (la izquierda o la derecha del cuadro) */}
+                    {/* La nota: un pósit hacia fuera de la mesa (a la izquierda o a la derecha del cuadro) */}
                     {!editando && (
-                      <NotasAsiento
+                      <NotaAsiento
                         asientoId={a.id}
                         nombre={describirAsiento(i + 1, ocupante)}
-                        notas={notasDe(a)}
+                        nota={notaDe(a)}
                         editable={escriboNotas}
                         lado={Math.sin(anguloAsiento(i, total)) < -0.01 ? 'izquierda' : 'derecha'}
-                        abierto={notasAbiertas?.asientoId === a.id}
-                        nueva={notasAbiertas?.asientoId === a.id && notasAbiertas.nueva}
-                        onAbrir={() => setNotasAbiertas({ asientoId: a.id, nueva: false })}
-                        onCerrar={() => setNotasAbiertas((n) => (n?.asientoId === a.id ? null : n))}
-                        onGuardar={(notaId, texto) => guardarNota(a.id, notaId, texto)}
-                        onBorrar={(notaId) => borrarNota(a.id, notaId)}
+                        plegada={notasPlegadas.has(a.id)}
+                        editando={notaEditando === a.id}
+                        onPlegar={(plegada) => plegarNota(a.id, plegada)}
+                        onEditar={() => setNotaEditando(a.id)}
+                        onTerminar={() => setNotaEditando((n) => (n === a.id ? null : n))}
+                        onGuardar={(texto) => guardarNota(a.id, texto)}
                       />
                     )}
                   </div>
@@ -748,7 +747,15 @@ const Mesa = ({
                           ? () => void pedir('narrador:lilmonsta').then((r) => !r.ok && onError(r.error))
                           : undefined
                       }
-                      onEscribirNota={escriboNotas && !editando ? () => setNotasAbiertas({ asientoId: a.id, nueva: true }) : undefined}
+                      onEscribirNota={
+                        escriboNotas && !editando
+                          ? () => {
+                              plegarNota(a.id, false);
+                              setNotaEditando(a.id);
+                            }
+                          : undefined
+                      }
+                      conNota={!!notaDe(a)}
                       onIntercambiar={puedeIntercambiar ? () => setIntercambiando(a.id) : undefined}
                       revelando={
                         revelacion

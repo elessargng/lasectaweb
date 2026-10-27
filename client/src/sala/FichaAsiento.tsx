@@ -70,8 +70,10 @@ interface FichaAsientoProps {
   enJuego: Set<string>;
   /** Los de `enJuego` que solo lo están probablemente (el Borracho si no cuadran los forasteros…). */
   probables?: Set<string>;
-  /** Abre las notas del asiento con una nueva («Escribir nota»); sin esto, no sale. */
+  /** Abre la nota del asiento para escribirla («Escribir nota», o «Editar nota» si ya la tiene); sin esto, no sale. */
   onEscribirNota?: () => void;
+  /** El asiento ya tiene nota (para quien mira). */
+  conNota?: boolean;
   /** Con el Gardener (narradores): elegir otra ficha con la que intercambiar el personaje; sin esto, no sale. */
   onIntercambiar?: () => void;
   /** En un señalamiento: a quién señala y quién la señala («señala a…, señalada por…»), o null. */
@@ -123,6 +125,7 @@ const FichaAsiento = ({
   enJuego,
   probables,
   onEscribirNota,
+  conNota,
   onIntercambiar,
   senal = null,
   onLilmonsta,
@@ -387,8 +390,16 @@ const FichaAsiento = ({
   // Recordatorios: el narrador los pone en la partida; un jugador, en su grimorio.
   const ponerRecordatorio = async (p: PersonajeMostrado, indice: number) => {
     if (modo !== 'narrador') {
-      const nuevo = { id: crypto.randomUUID(), personaje: p.id, indice, texto: p.recordatorios[indice]?.texto ?? '' };
-      anotarRecordatorios(asiento.id, [...(notasRecordatorios[asiento.id] ?? []), nuevo]);
+      const texto = p.recordatorios[indice]?.texto ?? '';
+      // Únicos, como en la partida: si ya están todos los iguales, se quita uno (antes de otra ficha)
+      const iguales = new Set(p.recordatorios.flatMap((r, i) => (r.texto === texto ? [i] : [])));
+      const puestos = Object.entries(notasRecordatorios).flatMap(([a, lista]) =>
+        lista.filter((r) => r.personaje === p.id && iguales.has(r.indice)).map((r) => ({ asientoId: a, id: r.id })),
+      );
+      const sobra = puestos.length >= iguales.size ? (puestos.find((x) => x.asientoId !== asiento.id) ?? puestos[0]) : undefined;
+      const sin = (a: string) => (notasRecordatorios[a] ?? []).filter((r) => r.id !== sobra?.id);
+      if (sobra && sobra.asientoId !== asiento.id) anotarRecordatorios(sobra.asientoId, sin(sobra.asientoId));
+      anotarRecordatorios(asiento.id, [...sin(asiento.id), { id: crypto.randomUUID(), personaje: p.id, indice, texto }]);
       return;
     }
     const r = await pedir('narrador:ponerRecordatorio', { asientoId: asiento.id, personajeId: p.id, indice });
@@ -410,9 +421,9 @@ const FichaAsiento = ({
     abreDialogo: true,
     elegir: () => setEligiendoRecordatorio(true),
   };
-  // Las notas: el panel va junto al cuadro del asiento (lo abre la mesa)
+  // La nota: un pósit junto al cuadro del asiento (lo abre la mesa)
   const opcionNota: OpcionMenu[] = onEscribirNota
-    ? [{ id: 'nota', etiqueta: 'Escribir nota', abreDialogo: true, elegir: onEscribirNota }]
+    ? [{ id: 'nota', etiqueta: conNota ? 'Editar nota' : 'Escribir nota', abreDialogo: true, elegir: onEscribirNota }]
     : [];
   const quien = ocupante ? 'jugador' : 'ficha';
   const opciones: OpcionMenu[] =
@@ -426,7 +437,8 @@ const FichaAsiento = ({
           ...(asiento.muerto
             ? [{ id: 'voto', etiqueta: asiento.votoGastado ? 'Devolver voto' : 'Quitar voto', elegir: cambiarVoto }]
             : []),
-          { id: 'marca', etiqueta: asiento.marcado ? 'Desmarcar' : 'Marcar', elegir: cambiarMarca },
+          // De noche no se marca a nadie
+          ...(deNoche ? [] : [{ id: 'marca', etiqueta: asiento.marcado ? 'Desmarcar' : 'Marcar', elegir: cambiarMarca }]),
           onNominar
             ? { id: 'nominar', etiqueta: 'Nominar a…', elegir: onNominar }
             : { id: 'nominar', etiqueta: 'Nominar a…', deshabilitada: true, elegir: () => {} },

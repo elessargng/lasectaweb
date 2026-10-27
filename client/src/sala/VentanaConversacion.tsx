@@ -8,6 +8,7 @@ import type { PistasParticipante } from './useVideollamada';
 import VideoPista from './VideoPista';
 import NombresOyentes from './NombresOyentes';
 import ImagenAvatar from './ImagenAvatar';
+import BordeHabla from './BordeHabla';
 
 interface VentanaConversacionProps {
   conversacion: SalaConversacion;
@@ -205,16 +206,20 @@ const VentanaConversacion = ({
           const soyYo = p.id === yo;
           return (
             <li key={p.id} className="flex min-w-0 flex-col items-center gap-1">
-              <span
-                className={`relative block w-full overflow-hidden rounded border bg-background ${
-                  minimizada ? 'aspect-square' : 'aspect-video'
-                } ${suyas?.hablando ? 'border-transparent sala-habla' : 'border-outline-ghost'} ${muertos.has(p.id) ? '[&_img]:grayscale [&_video]:grayscale' : ''}`}
-              >
-                {suyas?.video ? (
-                  <VideoPista pista={suyas.video} espejo={soyYo} />
-                ) : (
-                  p.avatar && <ImagenAvatar avatar={p.avatar} className="h-full w-full object-contain" />
-                )}
+              <span className="relative block w-full">
+                <span
+                  className={`block w-full overflow-hidden rounded-[3px] border border-outline-ghost bg-background ${
+                    minimizada ? 'aspect-square' : 'aspect-video'
+                  } ${muertos.has(p.id) ? '[&_img]:grayscale [&_video]:grayscale' : ''}`}
+                >
+                  {suyas?.video ? (
+                    <VideoPista pista={suyas.video} espejo={soyYo} />
+                  ) : (
+                    p.avatar && <ImagenAvatar avatar={p.avatar} className="h-full w-full object-contain" />
+                  )}
+                </span>
+                {/* El mismo aro que en la plaza, encima del cuadro (fuera de él): no tapa la cámara */}
+                <BordeHabla id={p.id} activo={!!suyas?.hablando} />
               </span>
               <span className={`flex max-w-full items-center gap-1 ${minimizada ? 'text-[0.65rem]' : 'text-sm'}`}>
                 {suyas && !suyas.microfono && (

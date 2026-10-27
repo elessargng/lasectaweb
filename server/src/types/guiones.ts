@@ -62,6 +62,8 @@ export interface PersonajePropio {
   otrasNoches: Despertar;
   /** Altera la preparación de la partida («setup» en el JSON). */
   preparacion: boolean;
+  /** Puede ir repetido en la bolsa (un «bag-duplicate» en su «special»). */
+  repetible: boolean;
   /** Los textos de sus recordatorios («reminders» y, detrás, «remindersGlobal»). */
   recordatorios: string[];
 }
@@ -97,6 +99,11 @@ export interface PersonajeDeGuion {
   recordatorios: string[];
   /** Altera la preparación de la partida (p. ej. el Barón: más forasteros). */
   preparacion: boolean;
+  /**
+   * Puede ir repetido en la bolsa aunque no esté el Pope, pero solo él (p. ej.
+   * el Village Idiot o la Legion: «bag-duplicate»).
+   */
+  repetible: boolean;
   /** Está en el catálogo o es propio del guion; si no, solo se sabe su id. */
   conocido: boolean;
 }
@@ -139,6 +146,12 @@ export interface ReglaDjinn {
   personajes: [string, string];
   texto: string;
 }
+
+/**
+ * El «special» que deja meter un personaje repetido en la bolsa: en el catálogo,
+ * entre los de `especial` (separados por comas); en un JSON, como {name, type}.
+ */
+export const ESPECIAL_REPETIBLE = 'bag-duplicate';
 
 /** Los tipos que van como NPCs de la partida (no se sientan en la mesa). */
 export const TIPOS_NPC: readonly TipoPersonaje[] = ['fabled', 'loric'];

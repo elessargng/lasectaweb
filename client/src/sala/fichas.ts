@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { PersonajeMostrado, Texto } from './guiones';
-import type { SalaAlineamiento, SalaAsiento, SalaNota, SalaRecordatorio } from './useSala';
+import type { SalaAlineamiento, SalaAsiento, SalaRecordatorio } from './useSala';
 
 /**
  * Los personajes en las fichas de la mesa: qué personajes se pueden poner (los
@@ -28,8 +28,7 @@ export const ICONOS_LIBRES = [
 ] as const;
 export const ICONO_LIBRE_INICIAL = ICONOS_LIBRES[0].id;
 
-/** Notas como mucho por asiento, y su largo máximo (como en el servidor). */
-export const NOTAS_MAX = 4;
+/** El largo máximo de la nota de un asiento (como en el servidor). */
 export const NOTA_LARGO_MAX = 500;
 
 /** Los tipos que pueden ir en la ficha de un jugador (no los legendarios ni los lóricos). */
@@ -78,9 +77,10 @@ export interface ContextoFichas {
   /** Los recordatorios que ha puesto el jugador en su grimorio propio, por asiento. */
   notasRecordatorios: Record<string, SalaRecordatorio[]>;
   anotarRecordatorios: (asientoId: string, recordatorios: SalaRecordatorio[]) => void;
-  /** Las notas que ha escrito el jugador en su grimorio propio, por asiento. */
-  notasEscritas: Record<string, SalaNota[]>;
-  escribirNotas: (asientoId: string, notas: SalaNota[]) => void;
+  /** La nota que ha escrito el jugador en su grimorio propio, por asiento. */
+  notasEscritas: Record<string, string>;
+  /** Escribe la nota de un asiento en el grimorio propio; con null, la borra. */
+  escribirNota: (asientoId: string, nota: string | null) => void;
 }
 
 /**
@@ -117,7 +117,7 @@ export const FichasContexto = createContext<ContextoFichas>({
   notasRecordatorios: {},
   anotarRecordatorios: () => {},
   notasEscritas: {},
-  escribirNotas: () => {},
+  escribirNota: () => {},
 });
 
 /**

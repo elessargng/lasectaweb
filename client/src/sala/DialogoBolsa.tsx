@@ -85,7 +85,8 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar 
     if (confirmando) confirmacionRef.current?.focus();
   }, [confirmando]);
 
-  // Con el Pope: aldeanos y forasteros repetidos (− n + debajo de cada uno que esté dentro)
+  // Repetidos (− n + debajo de cada uno que esté dentro): los repetibles (el Village
+  // Idiot…) siempre; con el Pope, también los aldeanos y forasteros
   const pope = npcs.includes('pope');
   const cambiarCantidad = async (personajeId: string, cantidad: number) => {
     setError('');
@@ -93,8 +94,8 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar 
     const r = await pedir('narrador:bolsaCantidad', { personajeId, cantidad });
     if (!r.ok) setError(r.error);
   };
-  const cantidadPope = (p: PersonajeMostrado) =>
-    pope && (p.tipo === 'townsfolk' || p.tipo === 'outsider')
+  const cantidadRepetidos = (p: PersonajeMostrado) =>
+    p.repetible || (pope && (p.tipo === 'townsfolk' || p.tipo === 'outsider'))
       ? {
           valor: bolsa.filter((id) => id === p.id).length,
           max: 5,
@@ -196,6 +197,7 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar 
                   idBase="sala-bolsa"
                   grupos={gruposViajeros(viajeros, personajes).map((g) => ({ ...g, color: 'text-theme-main' }))}
                   marca={(p) => ({ pulsada: bolsa.includes(p.id) })}
+                  cantidad={cantidadRepetidos}
                   onPulsar={(p) => void alternar(p.id)}
                 />
               )
@@ -220,7 +222,7 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar 
                   };
                 })}
                 marca={(p) => ({ pulsada: bolsa.includes(p.id) })}
-                cantidad={cantidadPope}
+                cantidad={cantidadRepetidos}
                 onPulsar={(p) => void alternar(p.id)}
                 conPreparacion
               />

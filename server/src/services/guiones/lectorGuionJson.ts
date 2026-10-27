@@ -1,6 +1,6 @@
 import { normalizarIdPersonaje } from '../personajes/idPersonaje';
 import { GuionInvalidoError } from './errores';
-import { Despertar, GuionImportado, PersonajePropio, TIPOS_PERSONAJE, TipoPersonaje } from '../../types/guiones';
+import { Despertar, ESPECIAL_REPETIBLE, GuionImportado, PersonajePropio, TIPOS_PERSONAJE, TipoPersonaje } from '../../types/guiones';
 
 
 const MAX_TEXTO = 300 * 1024;
@@ -13,6 +13,10 @@ const despertar = (o: unknown, r: unknown): Despertar => ({ orden: orden(o), rec
 /** Una lista de textos cortos (los recordatorios): lo que no sea texto se ignora. */
 const textos = (v: unknown): string[] =>
   Array.isArray(v) ? v.map((x) => texto(x, 60)).filter((x): x is string => !!x).slice(0, 20) : [];
+
+/** Si en su «special» (una lista de {name, type}) está el que lo deja ir repetido en la bolsa. */
+const repetible = (special: unknown): boolean =>
+  Array.isArray(special) && special.some((s) => (s as { name?: unknown } | null)?.name === ESPECIAL_REPETIBLE);
 
 /**
  * Una dirección de imagen que viene de fuera: solo https y sin lo que rompería
@@ -55,6 +59,7 @@ function personajePropio(e: Record<string, unknown>): PersonajePropio | null {
     primeraNoche: despertar(e.firstNight, e.firstNightReminder),
     otrasNoches: despertar(e.otherNight, e.otherNightReminder),
     preparacion: e.setup === true,
+    repetible: repetible(e.special),
     recordatorios: [...textos(e.reminders), ...textos(e.remindersGlobal)],
   };
 }

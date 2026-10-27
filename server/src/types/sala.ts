@@ -109,11 +109,10 @@ export interface SalaAsiento {
    */
   recordatorios: SalaRecordatorio[];
   /**
-   * Las notas del narrador sobre este asiento (hasta SALA_NOTAS_MAX), en el orden
-   * en que se escribieron. Son del grimorio, como los recordatorios: las ven los
-   * narradores y quien ve el grimorio.
+   * La nota del narrador sobre este asiento (texto libre), o null. Es del
+   * grimorio, como los recordatorios: la ven los narradores y quien ve el grimorio.
    */
-  notas: SalaNota[];
+  nota: string | null;
   /**
    * Los faroles que el jugador de este asiento se ha puesto (o ha copiado de
    * los del narrador): siempre 3 casillas, cada una un id de personaje o null.
@@ -147,14 +146,7 @@ export interface SalaGrimorioEnviado {
   faroles: string[];
 }
 
-/** Una nota del narrador sobre un asiento: texto libre. */
-export interface SalaNota {
-  id: string;
-  texto: string;
-}
-
-/** Notas como mucho por asiento, y su largo máximo. */
-export const SALA_NOTAS_MAX = 4;
+/** El largo máximo de la nota de un asiento. */
 export const SALA_NOTA_LARGO_MAX = 500;
 
 /**
@@ -275,7 +267,10 @@ export interface SalaRevelacion {
 export interface SalaDistribucion {
   /** Asientos que no llevan viajero. */
   jugadores: number;
+  /** De ellos, los que no están muertos (con sudario). */
+  jugadoresVivos: number;
   viajeros: number;
+  viajerosVivos: number;
   /** null si hay menos de 5 jugadores (no hay reparto). */
   aldeanos: number | null;
   forasteros: number | null;

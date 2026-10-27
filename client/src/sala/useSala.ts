@@ -60,8 +60,8 @@ export interface SalaAsiento {
   alineamiento: SalaAlineamiento | null;
   /** Las fichas recordatorio junto a la suya; solo llegan a quien ve el grimorio (narradores). */
   recordatorios: SalaRecordatorio[];
-  /** Las notas del narrador sobre el asiento (hasta 4); solo llegan a quien ve el grimorio. */
-  notas: SalaNota[];
+  /** La nota del narrador sobre el asiento, o null; solo llega a quien ve el grimorio. */
+  nota: string | null;
   /** Los faroles del jugador de este asiento (3 casillas, id de personaje o null); solo los ve él y quien ve el grimorio. */
   faroles: (string | null)[];
 }
@@ -81,12 +81,6 @@ export interface SalaGrimorioEnviado {
   fichas: SalaFichaEnviada[];
   /** Los faroles del demonio (ids de personaje). */
   faroles: string[];
-}
-
-/** Una nota sobre un asiento: texto libre (ver NotasAsiento). */
-export interface SalaNota {
-  id: string;
-  texto: string;
 }
 
 /**
@@ -173,7 +167,10 @@ export interface SalaRevelacion {
 /** Cuántos personajes de cada tipo tiene la partida (asientos sin viajero; null con menos de 5). */
 export interface SalaDistribucion {
   jugadores: number;
+  /** De ellos, los que no están muertos (con sudario). */
+  jugadoresVivos: number;
   viajeros: number;
+  viajerosVivos: number;
   aldeanos: number | null;
   forasteros: number | null;
   esbirros: number | null;

@@ -37,16 +37,16 @@ function usuarioDelToken(token: string): { id: string; username: string } | null
  * prefiere mostrar, si los cambió; y su id de cliente para recuperar el sitio si se reconecta. Cada cambio se manda entero a todos.
  */
 /** Una ficha sin su personaje ni su alineamiento: así la ven quienes no son su jugador ni narran. */
-// Lo que un jugador no ve de una ficha: de las ajenas, el personaje y los faroles; de ninguna, los recordatorios ni las notas.
+// Lo que un jugador no ve de una ficha: de las ajenas, el personaje y los faroles; de ninguna, los recordatorios ni la nota.
 const sinPersonaje = (a: SalaAsiento): SalaAsiento => ({
   ...a,
   personaje: null,
   alineamiento: null,
   recordatorios: [],
-  notas: [],
+  nota: null,
   faroles: farolesVacios(),
 });
-const sinRecordatorios = (a: SalaAsiento): SalaAsiento => ({ ...a, recordatorios: [], notas: [] });
+const sinRecordatorios = (a: SalaAsiento): SalaAsiento => ({ ...a, recordatorios: [], nota: null });
 
 /**
  * La nominación como la ve quien no ve el grimorio en una votación secreta (Organ

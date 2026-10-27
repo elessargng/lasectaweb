@@ -882,7 +882,7 @@
 /*
  * La ficha resaltada (ratón encima, foco o un toque): el nombre del personaje pasa
  * de tinta a blanco con un halo oscuro. Su pista (PistaPersonaje) entra con un
- * leve fundido, como el panel de notas.
+ * leve fundido, como el pósit de las notas.
  */
 .sala-ficha-nombre {
   transition:
@@ -898,11 +898,53 @@
 }
 
 /*
- * Las notas de un asiento (NotasAsiento): una pestaña de marcapáginas de papel
- * que asoma por el lado de fuera del cuadro (sin filo por el lado pegado a él) y
- * que se adelanta un poco al pasar el ratón o con el panel abierto; el panel,
- * un cofre con cada nota en su recuadro, entra con un leve fundido.
+ * La nota de un asiento (NotaAsiento): un pósit de papel amarillento junto al
+ * cuadro, por el lado de fuera, un poco torcido (derecho mientras se escribe);
+ * entra con un leve fundido. No pasa del alto del cuadro: si el texto no cabe,
+ * se desvanece por abajo hasta que se fija con la chincheta; fijado, crece hasta
+ * leerse entero (con su barra si aún no cabe), se endereza y se adelanta al resto.
+ * Plegada, una pestaña de marcapáginas que asoma por ese lado (sin filo por el
+ * lado pegado al cuadro) y se adelanta un poco al pasar el ratón.
  */
+.sala-postit {
+  width: clamp(8rem, calc(var(--sala-avatar, 10rem) * 0.95), 12rem);
+  max-height: calc(var(--sala-avatar, 10rem) * 0.92);
+  color: var(--color-hoja-tinta);
+  background: linear-gradient(180deg, #f9efc4, #ecd994);
+  border: 1px solid rgba(var(--gold-rgb), 0.55);
+  border-radius: 2px;
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  animation: sala-notas-entrar 160ms ease-out both;
+  transition:
+    max-height 220ms ease,
+    rotate 220ms ease,
+    box-shadow 220ms ease;
+}
+.sala-postit[data-lado='derecha'] {
+  rotate: 1.5deg;
+}
+.sala-postit[data-lado='izquierda'] {
+  rotate: -1.5deg;
+}
+.sala-postit[data-fijada] {
+  max-height: min(24rem, 60vh);
+  rotate: none;
+  z-index: 16;
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.sala-postit[data-editando] {
+  width: clamp(12rem, calc(var(--sala-avatar, 10rem) * 1.3), 16rem);
+  max-height: none;
+  rotate: none;
+}
+.sala-postit-texto[data-cortada] {
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent);
+}
 .sala-nota-pestana {
   color: #2a1a3a;
   background: linear-gradient(180deg, #f6ead0, #d8c296);
@@ -928,13 +970,6 @@
 .sala-nota-pestana[data-lado='izquierda']:hover,
 .sala-nota-pestana[data-lado='izquierda'][aria-expanded='true'] {
   transform: translateX(-3px);
-}
-.sala-nota {
-  background: rgba(var(--grimorio-rgb), 0.16);
-  border: 1px solid rgba(var(--gold-rgb), 0.16);
-}
-.sala-notas-panel {
-  animation: sala-notas-entrar 160ms ease-out both;
 }
 @keyframes sala-notas-entrar {
   from { opacity: 0; transform: translateY(4px) scale(0.98); }
@@ -1381,7 +1416,7 @@
   }
 
   .sala-nota-pestana,
-  .sala-notas-panel,
+  .sala-postit,
   .sala-pista,
   .sala-ficha-nombre {
     transition: none;
