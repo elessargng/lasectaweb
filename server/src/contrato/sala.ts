@@ -424,6 +424,9 @@ export const FICHAS_DESPERTAR = [
 ] as const;
 export type FichaDespertar = (typeof FICHAS_DESPERTAR)[number];
 
+/** Con lo que contesta el jugador a lo que le manda el despertar guiado (si no le pide que elija). */
+export const FICHAS_RESPUESTA_GUIADA: readonly FichaDespertar[] = ['entendido', 'personalizado'];
+
 export const TARJETAS_DESPERTAR = [
   'habilidad', 'eleccion', 'noEnJuego', 'demonio', 'esbirros', 'tuEres', 'esteJugadorEs', 'teHaElegido',
 ] as const;
@@ -470,6 +473,12 @@ export interface MensajeDespertar {
    * contestar con la ficha «Jugador» y justo esos. null: una elección libre.
    */
   eleccion: SalaEleccionDespertar | null;
+  /**
+   * Lo ha mandado el despertar guiado (la habilidad del que despierta). Si es lo
+   * último del narrador y no le pide que elija, el jugador solo contesta
+   * «Entendido» o con un texto («Personalizado»).
+   */
+  guiado: boolean;
   /** En qué momento de la partida se mandó («Noche 2»). */
   fase: { momento: SalaFase['momento']; numero: number };
   /** ms */
@@ -477,7 +486,7 @@ export interface MensajeDespertar {
 }
 
 /** Lo que se manda en un despertar, sin quién, cuándo ni elección. */
-export type SalaEnvioDespertar = Omit<MensajeDespertar, 'id' | 'autor' | 'fase' | 'hora' | 'eleccion'>;
+export type SalaEnvioDespertar = Omit<MensajeDespertar, 'id' | 'autor' | 'fase' | 'hora' | 'eleccion' | 'guiado'>;
 
 /** La elección que pide una habilidad: a cuántos jugadores y si puede elegirse a sí mismo. */
 export interface SalaEleccionDespertar {
@@ -508,11 +517,13 @@ export type SalaRegistro = 'bueno' | 'malvado' | 'demonio' | 'noDemonio';
  * - sinEfecto: estaba droison al elegir; se le ha contestado sin poner el recordatorio;
  * - protegido: el demonio ha elegido a uno protegido (`asiento`): no muere;
  * - alcalde: el demonio ha elegido al Alcalde (`asiento`): decide el narrador;
- * - elegido: a quién ha elegido (`asientos`).
+ * - elegido: a quién ha elegido (`asientos`);
+ * - pocosJugadores: hay menos de 7 jugadores: los esbirros y el demonio no se despiertan;
+ * - faltanFaroles: el narrador aún no ha puesto los 3 faroles del demonio.
  */
 export type SalaAvisoHabilidad =
   | { tipo: 'faltaRecordatorio'; personaje: string; texto: string }
-  | { tipo: 'envenenado' | 'borracho' | 'muerto' | 'noMuere' | 'sinEfecto' }
+  | { tipo: 'envenenado' | 'borracho' | 'muerto' | 'noMuere' | 'sinEfecto' | 'pocosJugadores' | 'faltanFaroles' }
   | { tipo: 'registro' | 'protegido' | 'alcalde'; asiento: string }
   | { tipo: 'elegido'; asientos: string[] };
 
@@ -526,12 +537,16 @@ export interface SalaOpcionDespertar {
  * El despertar guiado de una fila del orden de noche (solo con el guion Trouble
  * Brewing, de momento): el personaje despierta según su habilidad. Si elige, solo
  * puede elegir lo que ella le deja y el recordatorio se pone solo; si recibe
- * información, se calcula y se manda sola. Uno por personaje con habilidad y ficha en la mesa.
+ * información, se calcula y se manda sola. Uno por personaje con habilidad y ficha en la mesa,
+ * y los de la primera noche para los esbirros y el demonio ('esbirros' y 'demonios').
  */
 export interface SalaHabilidadNoche {
+  /** El personaje, o 'esbirros' / 'demonios'. */
   personaje: string;
-  /** El asiento que despierta (el de la ficha). */
+  /** El asiento que despierta (el de la ficha); con 'esbirros' o 'demonios', el primero. */
   asiento: string;
+  /** Todos los que despiertan: el de la ficha o, con 'esbirros' y 'demonios', cada uno. */
+  asientos: string[];
   estado: SalaEstadoHabilidad;
   avisos: SalaAvisoHabilidad[];
   /** Lo que se propone mandar (revisar: una o varias, la primera es la de verdad). */

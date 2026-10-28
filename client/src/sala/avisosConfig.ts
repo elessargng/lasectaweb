@@ -17,6 +17,7 @@ export type TipoAviso =
   | 'grimorio'
   | 'guion'
   | 'fase'
+  | 'audiodescripcion'
   | 'miPersonaje'
   | 'faroles'
   | 'npcs'
@@ -68,6 +69,7 @@ export const GRUPOS_AVISOS: { grupo: string; tipos: { tipo: TipoAviso; etiqueta:
       { tipo: 'grimorio', etiqueta: 'Grimorio para los jugadores (activado o desactivado)' },
       { tipo: 'guion', etiqueta: 'Cambio de guion' },
       { tipo: 'fase', etiqueta: 'Noche y día (y al limpiar el grimorio)' },
+      { tipo: 'audiodescripcion', etiqueta: 'Audiodescripción: lo que se ve en la ciudad de la plaza al anochecer y al amanecer' },
       { tipo: 'miPersonaje', etiqueta: 'Tu personaje y tu alineamiento, cuando el narrador reparte la bolsa' },
       { tipo: 'faroles', etiqueta: 'Faroles: al cambiarlos o copiarlos' },
       { tipo: 'npcs', etiqueta: 'NPCs: legendarios y lóricos que el narrador pone o quita' },

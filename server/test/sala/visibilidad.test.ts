@@ -164,6 +164,18 @@ describe('lo que ve cada uno', () => {
     expect(vera.estado.despertares).toEqual([]);
   });
 
+  it('la narradora manda lo mismo a varios: despierta a los que aún no lo estaban', async () => {
+    await arnes.accion(narradora, 'narrador:irANoche');
+    await arnes.accion(narradora, 'narrador:despertar', { asientoId: idAsiento(0) });
+    await arnes.accion(narradora, 'despertar:enviar', { asientoIds: [idAsiento(0), idAsiento(1)], tarjeta: 'habilidad' });
+    expect(narradora.estado.despertares.map((d) => d.asiento)).toEqual([idAsiento(0), idAsiento(1)]);
+    for (const c of [ana, bea]) expect(c.estado.despertares[0].mensajes).toMatchObject([{ autor: 'narrador', tarjeta: 'habilidad' }]);
+    expect(vera.estado.despertares).toEqual([]);
+    // A uno solo, solo en su despertar
+    const cerrado = await arnes.intentar(narradora, 'despertar:enviar', { asientoId: idAsiento(2), ficha: 'si' });
+    expect(cerrado).toEqual({ ok: false, error: 'Ese despertar ya no está abierto.' });
+  });
+
   it('de noche, el señalamiento solo lo ven la narradora y quien señala', async () => {
     await arnes.accion(narradora, 'narrador:irANoche');
     await arnes.accion(narradora, 'narrador:senalamiento', { mensaje: '', segundos: null, senaladores: [idAsiento(0)], objetivos: [] });

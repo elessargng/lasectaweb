@@ -72,6 +72,30 @@ export const esEstiloSilla = (v: unknown): v is PreferenciaSilla => ESTILOS_SILL
 export const esEstiloVoto = (v: unknown): v is EstiloVoto => ESTILOS_VOTO.some((e) => e.id === v);
 
 /**
+ * El icono del despertar sobre la ficha (IconoDespertar): la luna de siempre o una
+ * ilustración (public/despertar) que, con algo sin ver, se anima.
+ */
+export const ESTILOS_DESPERTAR = [
+  { id: 'luna', nombre: 'Luna', descripcion: 'Dorada y con un halo si hay algo nuevo' },
+  { id: 'vela', nombre: 'Vela', descripcion: 'Se enciende y su llama titila si hay algo nuevo' },
+  { id: 'ojo', nombre: 'Ojo', descripcion: 'Se abre y brilla si hay algo nuevo' },
+  { id: 'mascara', nombre: 'Máscara', descripcion: 'Le brillan las plumas y los adornos si hay algo nuevo' },
+] as const;
+export type EstiloDespertar = (typeof ESTILOS_DESPERTAR)[number]['id'];
+export const DESPERTAR_DEFECTO: EstiloDespertar = 'vela';
+export const esEstiloDespertar = (v: unknown): v is EstiloDespertar => ESTILOS_DESPERTAR.some((e) => e.id === v);
+
+/** El pulgar arriba que sustituye al icono del despertar cuando el jugador ha contestado «Entendido». */
+export const ESTILOS_ENTENDIDO = [
+  { id: 'guante', nombre: 'Guante', descripcion: 'Un guante de cuero, con su cordón' },
+  { id: 'guantelete', nombre: 'Guantelete', descripcion: 'De armadura, con sus remaches' },
+  { id: 'pulgar', nombre: 'Pulgar', descripcion: 'El dibujo sencillo, como la luna' },
+] as const;
+export type EstiloEntendido = (typeof ESTILOS_ENTENDIDO)[number]['id'];
+export const ENTENDIDO_DEFECTO: EstiloEntendido = 'guante';
+export const esEstiloEntendido = (v: unknown): v is EstiloEntendido => ESTILOS_ENTENDIDO.some((e) => e.id === v);
+
+/**
  * El estilo que se pinta en esta partida: el elegido o, «al azar», uno de los
  * demás según `semilla` (quien mira y el número de partida): el mismo durante
  * toda la partida, también al recargar, y otro (probablemente) en la siguiente.
@@ -88,7 +112,15 @@ export function estiloDePartida<T extends string>(
   return concretos[h % concretos.length];
 }
 
-export const MarcasContexto = createContext<{ calavera: EstiloCalavera; mano: EstiloMano; silla: EstiloSilla; voto: EstiloVoto }>({
+export const MarcasContexto = createContext<{
+  calavera: EstiloCalavera;
+  mano: EstiloMano;
+  silla: EstiloSilla;
+  voto: EstiloVoto;
+  /** El icono del despertar y el de «Entendido» (si no se dicen, los de por defecto). */
+  despertar?: EstiloDespertar;
+  entendido?: EstiloEntendido;
+}>({
   calavera: 'defecto',
   mano: 'defecto',
   silla: 'comedor',

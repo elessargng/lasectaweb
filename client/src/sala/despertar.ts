@@ -72,7 +72,7 @@ export const TARJETAS_DESPERTAR: TarjetaDespertar[] = [
   { id: 'eleccion', texto: 'Haz una elección', Icono: IconoEspadas, fondo: 'from-gold-deep to-blood-deep' },
   { id: 'noEnJuego', texto: 'Estos personajes no están en juego', Icono: IconoSinVer, fondo: 'from-good to-midnight', adjunto: { personajes: true } },
   { id: 'demonio', texto: 'Este es el demonio', Icono: IconoCalavera, fondo: 'from-blood to-blood-deep', adjunto: { jugadores: true } },
-  { id: 'esbirros', texto: 'Estos son tus esbirros', Icono: IconoGente, fondo: 'from-blood to-blood-deep', adjunto: { jugadores: true } },
+  { id: 'esbirros', texto: 'Estos son los esbirros', Icono: IconoGente, fondo: 'from-blood to-blood-deep', adjunto: { jugadores: true } },
   { id: 'tuEres', texto: 'Tú eres', Icono: IconoHuella, fondo: 'from-arcano to-arcano-deep', adjunto: { personajes: true, alineamiento: true } },
   { id: 'esteJugadorEs', texto: 'Este jugador es', Icono: IconoOjo, fondo: 'from-arcano to-arcano-deep', adjunto: { jugadores: true, personajes: true } },
   { id: 'teHaElegido', texto: 'Este personaje te ha elegido', Icono: IconoPalma, fondo: 'from-savia to-savia-deep', adjunto: { personajes: true } },

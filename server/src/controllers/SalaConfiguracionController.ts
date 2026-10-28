@@ -6,17 +6,20 @@ import { SalaConfiguracionRepository } from '../repositories/SalaConfiguracionRe
 const MAX_BYTES = 16 * 1024;
 const MAX_PERFILES = 20;
 const NOMBRE_MAX = 40;
-/** Comunicaciones (cámara y micrófono) e imagen de perfil no se guardan nunca. */
-const CLAVES_EXCLUIDAS = ['idCamara', 'idMicrofono', 'avatar'];
+/** Las comunicaciones (cámara y micrófono) no se guardan nunca. */
+const CLAVES_EXCLUIDAS = ['idCamara', 'idMicrofono'];
+/** El avatar de la sala va en la configuración actual (se recuerda al volver), no en los perfiles. */
+const CLAVES_EXCLUIDAS_PERFIL = [...CLAVES_EXCLUIDAS, 'avatar'];
 
 /** Los datos como JSON listos para guardar, o un error si no valen. */
-function serializar(datos: unknown): string | { error: string } {
+function serializar(datos: unknown, excluidas = CLAVES_EXCLUIDAS): string | { error: string } {
   if (!datos || typeof datos !== 'object' || Array.isArray(datos)) return { error: 'La configuración no es válida.' };
   const limpios = JSON.parse(JSON.stringify(datos)) as Record<string, unknown>;
-  for (const clave of CLAVES_EXCLUIDAS) delete limpios[clave];
+  for (const clave of excluidas) delete limpios[clave];
+  if ('avatar' in limpios && typeof limpios.avatar !== 'string') delete limpios.avatar;
   const preferencias = limpios.preferencias as Record<string, unknown> | undefined;
   if (preferencias && typeof preferencias === 'object') {
-    for (const clave of CLAVES_EXCLUIDAS) delete preferencias[clave];
+    for (const clave of excluidas) delete preferencias[clave];
   }
   const texto = JSON.stringify(limpios);
   if (Buffer.byteLength(texto) > MAX_BYTES) return { error: 'La configuración es demasiado grande.' };
@@ -59,7 +62,7 @@ export class SalaConfiguracionController {
         res.status(400).json({ error: `El nombre del perfil debe tener entre 1 y ${NOMBRE_MAX} caracteres.` });
         return;
       }
-      const datos = serializar(req.body?.datos);
+      const datos = serializar(req.body?.datos, CLAVES_EXCLUIDAS_PERFIL);
       if (typeof datos !== 'string') {
         res.status(400).json(datos);
         return;

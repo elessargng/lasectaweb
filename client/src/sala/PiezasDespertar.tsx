@@ -156,7 +156,7 @@ export const HistorialDespertar = ({ mensajes, estado, personajes, tituloId }: H
 };
 
 /** Lo que se está a punto de mandar y falta por elegir. */
-interface Pendiente {
+export interface Pendiente {
   base: Envio;
   titulo: string;
   adjunto: AdjuntoDespertar;
@@ -176,6 +176,8 @@ interface EditorAdjuntoProps {
   cantidad?: number;
   /** Asientos que no se pueden elegir (el suyo, si su habilidad no le deja elegirse). */
   excluidos?: string[];
+  /** Si no es para mandar algo (elegir a quiénes despertar): el botón y el rótulo de lo elegido. */
+  textos?: { enviar: string; cartas: string };
 }
 
 /**
@@ -189,7 +191,16 @@ interface EditorAdjuntoProps {
  * otro diálogo): al abrirse, el foco va a su título; al cerrarse, vuelve a la
  * ficha que lo abrió.
  */
-export const EditorAdjunto = ({ pendiente, asientos: todos, personajes, onEnviar, onCancelar, cantidad, excluidos = [] }: EditorAdjuntoProps) => {
+export const EditorAdjunto = ({
+  pendiente,
+  asientos: todos,
+  personajes,
+  onEnviar,
+  onCancelar,
+  cantidad,
+  excluidos = [],
+  textos = { enviar: 'Enviar', cartas: 'Se enviará' },
+}: EditorAdjuntoProps) => {
   const asientos = todos.filter((a) => !excluidos.includes(a.id));
   const base = useId();
   const tituloRef = useRef<HTMLHeadingElement>(null);
@@ -311,10 +322,12 @@ export const EditorAdjunto = ({ pendiente, asientos: todos, personajes, onEnviar
         // Lo que se va a enviar, como cartas en el orden en que se añadió; pulsar una la quita
         <div className="flex flex-col gap-2 rounded border border-dashed border-outline-ghost p-3">
           <p id={`${base}-cartas`} className="font-ui text-sm font-semibold text-theme-main">
-            Se enviará
+            {textos.cartas}
           </p>
           {jugadores.length + elegidos.length === 0 ? (
-            <p className="text-sm text-on-surface-muted">Añade abajo un jugador o un personaje.</p>
+            <p className="text-sm text-on-surface-muted">
+              {adjunto.personajes ? (adjunto.jugadores ? 'Añade abajo un jugador o un personaje.' : 'Añade abajo un personaje.') : 'Añade abajo un jugador.'}
+            </p>
           ) : (
             <ul aria-labelledby={`${base}-cartas`} className="flex flex-wrap gap-2">
               {jugadores.map((id) => (
@@ -464,7 +477,7 @@ export const EditorAdjunto = ({ pendiente, asientos: todos, personajes, onEnviar
           aria-describedby={sinAdjunto ? `${base}-titulo` : undefined}
           className={botonPrincipal}
         >
-          Enviar
+          {textos.enviar}
         </button>
         {onCancelar && (
           <button type="button" onClick={onCancelar} className={botonSecundario}>
@@ -496,6 +509,10 @@ interface BotoneraDespertarProps {
    * se propone mandar (ver Propuesta).
    */
   revision?: { personajeId: string; propuestas: Propuesta[] };
+  /** El narrador: otros asientos a los que se manda lo mismo (y se despierta, si aún no lo están). */
+  conjunto?: string[];
+  /** Solo estas fichas (las ids): el jugador, a lo que le manda el despertar guiado. Sin ellas, todas. */
+  soloFichas?: readonly string[];
 }
 
 /** Una respuesta propuesta por el despertar guiado: lo que se manda y por qué (cómo registra alguien), en palabras. */
@@ -524,12 +541,14 @@ export const BotoneraDespertar = ({
   onError,
   onEnviado,
   revision,
+  conjunto = [],
+  soloFichas,
 }: BotoneraDespertarProps) => {
   const base = useId();
   const [pendiente, setPendiente] = useState<Pendiente | null>(null);
 
   // Lo que el narrador ya sabe va puesto: «Tú eres», el personaje y el alineamiento del
-  // despierto; «Este es el demonio» y «Estos son tus esbirros», quiénes lo son.
+  // despierto; «Este es el demonio» y «Estos son los esbirros», quiénes lo son.
   const porId = new Map(personajes.map((p) => [p.id, p]));
   const asientosDeTipo = (tipo: string) =>
     estado.asientos.filter((a) => a.personaje && porId.get(a.personaje)?.tipo === tipo).map((a) => a.id);
@@ -560,9 +579,12 @@ export const BotoneraDespertar = ({
   const mandar = async (envio: Envio, titulo: string) => {
     const r = revision
       ? await pedir('narrador:resolverHabilidad', { ...envio, personajeId: revision.personajeId })
-      : await pedir('despertar:enviar', asientoId ? { ...envio, asientoId } : envio);
+      : await pedir(
+          'despertar:enviar',
+          asientoId ? (conjunto.length ? { ...envio, asientoIds: [asientoId, ...conjunto] } : { ...envio, asientoId }) : envio,
+        );
     if (r.ok) {
-      onEnviado(`Enviado: ${titulo}.`);
+      onEnviado(conjunto.length ? `Enviado a los ${conjunto.length + 1}: ${titulo}.` : `Enviado: ${titulo}.`);
       setPendiente(null);
     } else if (!pendiente) onError(r.error);
     return r;
@@ -638,7 +660,7 @@ export const BotoneraDespertar = ({
         {tituloFichas}
       </h3>
       <ul aria-labelledby={`${base}-fichas`} className="flex flex-wrap justify-center gap-x-2 gap-y-3">
-        {FICHAS_DESPERTAR.map((f) => (
+        {FICHAS_DESPERTAR.filter((f) => !soloFichas || soloFichas.includes(f.id)).map((f) => (
           <li key={f.id}>
             <button
               id={idFicha(f.id)}

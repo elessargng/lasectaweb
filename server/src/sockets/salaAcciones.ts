@@ -20,6 +20,7 @@ import {
   CAUSAS_DE_ESBIRRO,
   CAUSAS_FIN_PARTIDA,
   FICHAS_DESPERTAR,
+  FICHAS_RESPUESTA_GUIADA,
   FichaDespertar,
   ICONOS_RECORDATORIO_TEXTO,
   MensajeDespertar,
@@ -144,6 +145,12 @@ function leerMensajeDespertar(
   };
 }
 /** Si lo elegido no es lo que pide la habilidad (cuántos y si puede elegirse a sí mismo): el error, o null. */
+/** A qué asientos manda el narrador: `asientoIds` (sin repetir) o, si no, `asientoId`. */
+function asientosDelEnvio(datos: unknown): string[] {
+  const { asientoId, asientoIds } = (datos as { asientoId?: unknown; asientoIds?: unknown } | null) ?? {};
+  if (Array.isArray(asientoIds)) return asientoIds.every((id) => typeof id === 'string') ? [...new Set(asientoIds as string[])] : [];
+  return typeof asientoId === 'string' ? [asientoId] : [];
+}
 function errorDeEleccion(pide: SalaEleccionDespertar, mensaje: { ficha: FichaDespertar | null; jugadores: string[] }, asientoId: string): string | null {
   const cuantos = pide.cantidad === 1 ? 'un jugador' : `${pide.cantidad} jugadores`;
   if (mensaje.ficha !== 'jugador' || mensaje.jugadores.length !== pide.cantidad) return `Elige ${cuantos}.`;
@@ -475,7 +482,12 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
-  /** La ficha de un asiento nomina a la de otro (o a sí misma). datos: { desde, hasta } (ids de asiento). */
+  /**
+   * La ficha de un asiento nomina a la de otro (o a sí misma). datos: { desde, hasta
+   * (ids de asiento), comoAldeano? (si quien nomina registra como aldeano: el Espía
+   * que nomina a la Virgen) }. Si hace falta saberlo y no viene, no se nomina: valor
+   * «comoAldeano», para volver a pedirlo con la respuesta.
+   */
   'narrador:nominar': {
     // Solo de día
     puede: (sala, yo) => yo.rol === 'narrador' && sala.fase().momento === 'dia' && sala.asientos().length >= 2,
@@ -486,12 +498,15 @@ export const SALA_ACCIONES: Record<string, Accion> = {
           ? 'Solo se nomina de día.'
           : 'Hacen falta al menos dos asientos.',
     hacer: (sala, _yo, datos) => {
-      const { desde, hasta } = (datos as { desde?: unknown; hasta?: unknown }) ?? {};
+      const { desde, hasta, comoAldeano } = (datos as { desde?: unknown; hasta?: unknown; comoAldeano?: unknown }) ?? {};
       if (typeof desde !== 'string' || typeof hasta !== 'string' || !sala.hayAsiento(desde) || !sala.hayAsiento(hasta)) {
         return { ok: false, error: 'Ese asiento ya no existe.' };
       }
-      sala.nominar(desde, hasta);
-      return { ok: true };
+      // La Virgen: si se ejecuta al momento a quien nomina, «ejecutado» o, si quedan dos vivos, «final» (ver narrador:ejecutar)
+      const resultado = sala.nominar(desde, hasta, typeof comoAldeano === 'boolean' ? { comoAldeano } : {});
+      if (!resultado) return { ok: true };
+      if ('pregunta' in resultado) return { ok: true, valor: resultado.pregunta };
+      return { ok: true, valor: resultado.final ? 'final' : 'ejecutado' };
     },
   },
 
@@ -633,9 +648,10 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /**
    * Un mensaje en un despertar: el narrador manda una ficha o una tarjeta al de un
-   * asiento; el jugador, solo fichas al narrador (en el suyo). datos: { asientoId
-   * (solo el narrador), ficha | tarjeta, jugadores?: asientoId[], personajes?: id[],
-   * texto?, alineamiento? } (según lo que lleve).
+   * asiento (o lo mismo a varios: `asientoIds`, y de noche se despierta a los que aún
+   * no lo estaban); el jugador, solo fichas al narrador (en el suyo). datos: {
+   * asientoId | asientoIds (solo el narrador), ficha | tarjeta, jugadores?:
+   * asientoId[], personajes?: id[], texto?, alineamiento? } (según lo que lleve).
    */
   'despertar:enviar': {
     puede: (sala, yo) =>
@@ -643,24 +659,37 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     noPuede: 'No tienes ningún despertar abierto.',
     hacer: (sala, yo, datos) => {
       const narra = yo.rol === 'narrador';
-      const pedido = (datos as { asientoId?: unknown } | null)?.asientoId;
-      const asientoId = narra ? (typeof pedido === 'string' ? pedido : null) : sala.asientoDespiertoDe(yo.id);
-      if (!asientoId || !sala.hayDespertar(asientoId)) return { ok: false, error: 'Ese despertar ya no está abierto.' };
+      const asientoIds = narra ? asientosDelEnvio(datos) : [sala.asientoDespiertoDe(yo.id)].filter((id): id is string => !!id);
+      if (!asientoIds.length || asientoIds.some((id) => !sala.hayAsiento(id))) return { ok: false, error: 'Ese despertar ya no está abierto.' };
+      // A uno solo, en su despertar; a varios, también a los que aún no están despiertos (de noche)
+      const despiertaMas = asientoIds.length > 1 && sala.fase().momento === 'noche';
+      if (!despiertaMas && asientoIds.some((id) => !sala.hayDespertar(id))) return { ok: false, error: 'Ese despertar ya no está abierto.' };
       const mensaje = leerMensajeDespertar(sala, datos, narra);
       if ('error' in mensaje) return { ok: false, error: mensaje.error };
       // Si su habilidad le ha pedido que elija (el despertar guiado), solo contesta con
       // quienes elige. Por un asiento libre (cuenta como un jugador) elige el narrador.
-      const libre = !sala.asientos().find((a) => a.id === asientoId)?.ocupante;
-      const pide = !narra || libre ? sala.eleccionPendiente(asientoId) : null;
-      const eligiendo = !!pide && (!narra || mensaje.ficha === 'jugador');
-      if (pide && eligiendo) {
-        const error = errorDeEleccion(pide, mensaje, asientoId);
-        if (error) return { ok: false, error };
+      const destinos = asientoIds.map((asientoId) => {
+        const libre = !sala.asientos().find((a) => a.id === asientoId)?.ocupante;
+        const pide = !narra || libre ? sala.eleccionPendiente(asientoId) : null;
+        return { asientoId, pide, eligiendo: !!pide && (!narra || mensaje.ficha === 'jugador') };
+      });
+      for (const { asientoId, pide, eligiendo } of destinos) {
+        if (pide && eligiendo) {
+          const error = errorDeEleccion(pide, mensaje, asientoId);
+          if (error) return { ok: false, error };
+        }
+        // A lo demás del despertar guiado, el jugador solo contesta «Entendido» o con un texto
+        if (!narra && !pide && sala.respuestaGuiada(asientoId) && !(mensaje.ficha && FICHAS_RESPUESTA_GUIADA.includes(mensaje.ficha))) {
+          return { ok: false, error: 'Contesta «Entendido» o escribe un mensaje al narrador.' };
+        }
       }
-      // «Tú eres»: su ficha pasa a ser la que se le dice (con alineamiento, solo si se le dice)
-      if (narra) sala.mandarDelNarrador(asientoId, mensaje);
-      else sala.enviarDespertar(asientoId, { ...mensaje, autor: asientoId });
-      if (eligiendo) sala.alElegirHabilidad(asientoId, mensaje.jugadores);
+      for (const { asientoId, eligiendo } of destinos) {
+        if (!sala.hayDespertar(asientoId)) sala.despertar(asientoId);
+        // «Tú eres»: su ficha pasa a ser la que se le dice (con alineamiento, solo si se le dice)
+        if (narra) sala.mandarDelNarrador(asientoId, mensaje);
+        else sala.enviarDespertar(asientoId, { ...mensaje, autor: asientoId });
+        if (eligiendo) sala.alElegirHabilidad(asientoId, mensaje.jugadores);
+      }
       return { ok: true };
     },
   },

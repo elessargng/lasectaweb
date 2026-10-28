@@ -371,6 +371,23 @@ describe('SalaService', () => {
       expect(asiento(0)).toMatchObject({ muerto: true, muertePendiente: false });
     });
 
+    it('al anunciar la muerte se quita el «Dead» de quien lo mató (y nada más)', () => {
+      const { sala, asiento } = salaConJugadores('Ana', 'Bea');
+      sala.irANoche();
+      for (const a of [asiento(0), asiento(1)]) {
+        sala.ponerRecordatorio(a.id, { personaje: 'imp', indice: 0, texto: 'Dead' });
+        sala.ponerRecordatorio(a.id, { personaje: 'poisoner', indice: 0, texto: 'Poisoned' });
+        sala.cambiarVida(a.id, true);
+      }
+      alDia(sala);
+      sala.confirmarMuerte(asiento(0).id);
+      expect(asiento(0).recordatorios.map((r) => r.texto)).toEqual(['Poisoned']);
+      // También si se da por muerto con el sudario de la ficha (cambiarVida)
+      sala.cambiarVida(asiento(1).id, true);
+      expect(asiento(1)).toMatchObject({ muerto: true, muertePendiente: false });
+      expect(asiento(1).recordatorios.map((r) => r.texto)).toEqual(['Poisoned']);
+    });
+
     it('al morir o revivir se recupera el voto; el Barquero se lo devuelve a todos', () => {
       const { sala, asiento } = salaConJugadores('Ana', 'Bea');
       alDia(sala);

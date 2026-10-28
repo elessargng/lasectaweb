@@ -1,20 +1,35 @@
 import { useCallback, useState } from 'react';
 import {
   CALAVERA_DEFECTO,
+  DESPERTAR_DEFECTO,
+  ENTENDIDO_DEFECTO,
   esEstiloCalavera,
+  esEstiloDespertar,
+  esEstiloEntendido,
   esEstiloMano,
   esEstiloSilla,
   esEstiloVoto,
   MANO_DEFECTO,
   SILLA_DEFECTO,
   VOTO_DEFECTO,
+  type EstiloDespertar,
+  type EstiloEntendido,
   type EstiloVoto,
   type PreferenciaCalavera,
   type PreferenciaMano,
   type PreferenciaSilla,
 } from './marcas';
 import { esAtajoValido, type Atajo } from './atajos';
-import { esTonoLlamada, SONIDOS, TONO_LLAMADA_DEFECTO, type SonidosActivos, type TonoLlamada } from './sonidos';
+import {
+  esTonoDespertar,
+  esTonoLlamada,
+  SONIDOS,
+  TONO_DESPERTAR_DEFECTO,
+  TONO_LLAMADA_DEFECTO,
+  type SonidosActivos,
+  type TonoDespertar,
+  type TonoLlamada,
+} from './sonidos';
 import { esSalidaAudio, SALIDA_DEFECTO, type SalidaAudio } from './sonidoEnvolvente';
 import { esPreferenciaFondo, FONDO_DEFECTO, type PreferenciaFondo } from './fondos';
 import { COLORES_CIELO_DEFECTO, esColoresCielo, type ColoresCielo } from './cielo';
@@ -43,6 +58,8 @@ export interface PreferenciasSala {
   sonidos: SonidosActivos;
   /** Cómo suena una llamada entrante (el de botc.app, la campanilla de antes o un teléfono). Pestaña Sonido. */
   tonoLlamada: TonoLlamada;
+  /** Cómo suena el despertar de noche (uno de los despertadores; de entrada, el pitido digital). Pestaña Sonido. */
+  tonoDespertar: TonoDespertar;
   /**
    * Al quedarte sin nadie más en una conversación privada, salir de ella sin
    * pulsar «Salir». Pestaña Comunicaciones; de entrada, no: se sale a mano.
@@ -93,6 +110,10 @@ export interface PreferenciasSala {
   silla: PreferenciaSilla;
   /** Cómo se ve si a un muerto le queda el voto: su vela o un círculo en el sudario. Pestaña Interfaz. */
   voto: EstiloVoto;
+  /** El icono del despertar sobre la ficha: la luna, la vela, el ojo o la máscara. Pestaña Interfaz. */
+  iconoDespertar: EstiloDespertar;
+  /** El pulgar arriba cuando el jugador contesta «Entendido»: el guante, el guantelete o el dibujo sencillo. Pestaña Interfaz. */
+  iconoEntendido: EstiloEntendido;
   /**
    * La llamada estilo botc.app: llamar y mandar un mensaje no van junto al
    * nombre, sino dentro del cuadro de cada uno, y se ven al pulsar Intro
@@ -228,6 +249,8 @@ export function normalizarPreferencias(datos: unknown): PreferenciasSala {
   preferencias.mano = esEstiloMano(guardadas.mano) ? guardadas.mano : MANO_DEFECTO;
   preferencias.silla = esEstiloSilla(guardadas.silla) ? guardadas.silla : SILLA_DEFECTO;
   preferencias.voto = esEstiloVoto(guardadas.voto) ? guardadas.voto : VOTO_DEFECTO;
+  preferencias.iconoDespertar = esEstiloDespertar(guardadas.iconoDespertar) ? guardadas.iconoDespertar : DESPERTAR_DEFECTO;
+  preferencias.iconoEntendido = esEstiloEntendido(guardadas.iconoEntendido) ? guardadas.iconoEntendido : ENTENDIDO_DEFECTO;
   // Los sonidos: uno a uno. Lo de antes (un sí o no para todos) vale para todos
   const sonidos = guardadas.sonidos;
   const deCada = (sonidos && typeof sonidos === 'object' ? sonidos : {}) as Record<string, unknown>;
@@ -246,6 +269,7 @@ export function normalizarPreferencias(datos: unknown): PreferenciasSala {
       ? 'nunca'
       : 'cambios';
   preferencias.tonoLlamada = esTonoLlamada(guardadas.tonoLlamada) ? guardadas.tonoLlamada : TONO_LLAMADA_DEFECTO;
+  preferencias.tonoDespertar = esTonoDespertar(guardadas.tonoDespertar) ? guardadas.tonoDespertar : TONO_DESPERTAR_DEFECTO;
   // Los dispositivos: un id del navegador, o vacío (el predeterminado del sistema)
   const idDispositivo = (v: unknown) => (typeof v === 'string' && v.length <= 200 ? v : '');
   preferencias.eleccionDespertar = guardadas.eleccionDespertar === 'lista' ? 'lista' : 'plaza';

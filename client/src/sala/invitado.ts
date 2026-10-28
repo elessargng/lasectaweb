@@ -47,25 +47,28 @@ export function setInvitado(nombre: string): void {
 export function clearInvitado(): void {
   escribir(() => sessionStorage, ACTUAL_KEY, null);
   escribir(() => sessionStorage, perfilInvitadoKey('alias'), null);
-  escribir(() => sessionStorage, perfilInvitadoKey('avatar'), null);
 }
 
 /**
  * Lo que alguien prefiere mostrar en la sala: `alias` (nombre en lugar del suyo)
- * o `avatar` (uno de los predefinidos). Con cuenta se recuerda en este navegador
- * (`cuentaId`); como invitado, mientras dure la pestaña. Vacío: lo de siempre.
+ * o `avatar` (uno de los predefinidos o una imagen subida). Con cuenta se
+ * recuerda en este navegador (`cuentaId`; el avatar, además, en la cuenta). Como
+ * invitado, el nombre dura lo que la pestaña y el avatar se recuerda en el
+ * navegador para la próxima vez. Vacío: lo de siempre.
  */
 export function getPerfil(campo: CampoPerfil, cuentaId: string | null): string {
   const valor = cuentaId
     ? leer(() => localStorage, perfilCuentaKey(campo, cuentaId))
-    : leer(() => sessionStorage, perfilInvitadoKey(campo));
+    : leer(almacenInvitado(campo), perfilInvitadoKey(campo));
   return valor ?? '';
 }
 
 export function setPerfil(campo: CampoPerfil, cuentaId: string | null, valor: string): void {
   if (cuentaId) escribir(() => localStorage, perfilCuentaKey(campo, cuentaId), valor || null);
-  else escribir(() => sessionStorage, perfilInvitadoKey(campo), valor || null);
+  else escribir(almacenInvitado(campo), perfilInvitadoKey(campo), valor || null);
 }
+
+const almacenInvitado = (campo: CampoPerfil) => (campo === 'avatar' ? () => localStorage : () => sessionStorage);
 
 /** Quita espacios de sobra; devuelve cadena vacía si no queda nombre. */
 export function limpiarNombre(nombre: string): string {

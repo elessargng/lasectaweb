@@ -44,8 +44,9 @@ const TAMANO = '4.5rem';
 /**
  * Elegir una ficha recordatorio para poner junto a una ficha: de entrada, los
  * recordatorios de los personajes en juego; en la otra pestaña, los del resto
- * del guion. Por personaje (con su nombre de título), cada recordatorio es un
- * botón (los que se llaman igual, uno solo). Elegir uno lo pone y cierra el diálogo.
+ * del guion. Por tipo (aldeanos, forasteros…), todos los recordatorios juntos:
+ * el icono dice de qué personaje es y el lector lo lee con su nombre. Cada uno
+ * es un botón (los que se llaman igual, uno solo). Elegir uno lo pone y cierra el diálogo.
  *
  * Con `onTexto`, una pestaña más para escribir uno propio (corto: va en redondo
  * en una ficha pequeña), con la ficha tal como quedará mientras se escribe, y el
@@ -207,6 +208,12 @@ const DialogoRecordatorio = ({ ficha, enJuego, otros, probables, onElegir, onCer
             </p>
           ) : (
             <div className="flex flex-col gap-5">
+              {pestana === 'enJuego' && lista.some((p) => probables?.has(p.id)) && (
+                <p className="text-xs text-on-surface-muted">
+                  <span aria-hidden="true" className="font-ui">?</span>
+                  <span className="sr-only">Posible</span>: personaje que quizá esté en juego, porque el reparto no cuadra.
+                </p>
+              )}
               {porTipos(lista).map(({ titulo, personajes }) => (
                 <section key={titulo} aria-labelledby={`sala-recordatorio-${pestana}-${titulo}`}>
                   <h3
@@ -215,34 +222,39 @@ const DialogoRecordatorio = ({ ficha, enJuego, otros, probables, onElegir, onCer
                   >
                     {titulo}
                   </h3>
-                  <ul className="flex flex-col gap-3">
-                    {personajes.map((p) => (
-                      <li key={p.id}>
-                        <h4 className="mb-1 text-sm">
-                          <span lang={p.nombre.lang}>{p.nombre.texto}</span>
-                          {pestana === 'enJuego' && probables?.has(p.id) && (
-                            <span className="ml-2 font-ui text-xs text-on-surface-muted">
-                              posible: el reparto no cuadra
-                            </span>
-                          )}
-                        </h4>
-                        <ul className="flex flex-wrap gap-2">
-                          {/* Los iguales (mismo texto), una vez: se ponen de uno en uno */}
-                          {p.recordatorios.map((r, i) => p.recordatorios.findIndex((x) => x.texto === r.texto) === i && (
-                            <li key={i}>
-                              <button
-                                type="button"
-                                onClick={() => elegir(p, i)}
-                                aria-label={`${r.texto}, ${p.nombre.texto}`}
-                                className="block rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main focus-visible:ring-offset-2 focus-visible:ring-offset-surface hover:brightness-125"
-                              >
-                                <FichaRecordatorio personaje={p} texto={r} tamano={TAMANO} />
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </li>
-                    ))}
+                  {/* Todos los del tipo juntos: el icono dice de quién es cada uno (y el nombre, al lector) */}
+                  <ul className="flex flex-wrap gap-2">
+                    {personajes.flatMap((p) =>
+                      // Los iguales (mismo texto), una vez: se ponen de uno en uno
+                      p.recordatorios.map((r, i) => {
+                        if (p.recordatorios.findIndex((x) => x.texto === r.texto) !== i) return null;
+                        const posible = pestana === 'enJuego' && probables?.has(p.id);
+                        return (
+                          <li key={`${p.id}-${i}`}>
+                            <button
+                              type="button"
+                              onClick={() => elegir(p, i)}
+                              className="relative block rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main focus-visible:ring-offset-2 focus-visible:ring-offset-surface hover:brightness-125"
+                            >
+                              <FichaRecordatorio personaje={p} texto={r} tamano={TAMANO} />
+                              {/* El nombre para el lector: el recordatorio y de quién es, cada uno en su idioma */}
+                              <span className="sr-only">
+                                <span lang={r.lang}>{r.texto}</span>, <span lang={p.nombre.lang}>{p.nombre.texto}</span>
+                                {posible && ' (posible)'}
+                              </span>
+                              {posible && (
+                                <span
+                                  aria-hidden="true"
+                                  className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border border-outline-ghost bg-surface font-ui text-xs text-on-surface-muted"
+                                >
+                                  ?
+                                </span>
+                              )}
+                            </button>
+                          </li>
+                        );
+                      }),
+                    )}
                   </ul>
                 </section>
               ))}

@@ -69,41 +69,61 @@ export class DespertarGuiado {
     this.turnos = [...this.turnos.filter((t) => !(t.personaje === turno.personaje && t.asiento === turno.asiento)), turno];
   }
 
+  /** Los que despiertan con una habilidad: el de su ficha o, los esbirros y el demonio, cada uno. */
+  private asientosDe(habilidad: HabilidadNocturna): SalaAsiento[] {
+    if (habilidad.despiertan) return habilidad.despiertan(this.entorno.ctx);
+    const asiento = this.asientoDe(habilidad.personaje);
+    return asiento ? [asiento] : [];
+  }
+
+  /**
+   * Lo que dice una habilidad de todos los que despiertan con ella: lo peor de
+   * cada uno (falta, revisar, listo), con sus avisos sin repetir. Las opciones, las del primero.
+   */
+  private preparar(habilidad: HabilidadNocturna, asientos: SalaAsiento[]): Pick<Resultado, 'estado' | 'avisos' | 'opciones'> {
+    const resultados = asientos.map((a) => habilidad.preparar(this.entorno.ctx, a));
+    const estado = (['falta', 'revisar'] as const).find((e) => resultados.some((r) => r.estado === e)) ?? 'listo';
+    const avisos = [...new Map(resultados.flatMap((r) => r.avisos).map((a) => [JSON.stringify(a), a])).values()];
+    return { estado, avisos, opciones: resultados[0]?.opciones ?? [] };
+  }
+
   /** Cada fila del orden de noche con habilidad y ficha en la mesa: cómo está. Fuera de la noche, ninguna. */
   habilidadesNoche(): SalaHabilidadNoche[] {
     if (!this.entorno.noche()) return [];
     return [...this.entorno.habilidades().values()].flatMap((h): SalaHabilidadNoche[] => {
-      const asiento = this.asientoDe(h.personaje);
-      if (!asiento) return [];
-      const turno = this.turnoDe(h.personaje, asiento.id);
-      if (turno) return [{ personaje: h.personaje, asiento: asiento.id, estado: turno.estado, avisos: turno.avisos, opciones: turno.opciones }];
-      const { estado, avisos, opciones } = h.preparar(this.entorno.ctx, asiento);
-      return [{ personaje: h.personaje, asiento: asiento.id, estado, avisos, opciones }];
+      const asientos = this.asientosDe(h);
+      if (!asientos.length) return [];
+      const fila = { personaje: h.personaje, asiento: asientos[0].id, asientos: asientos.map((a) => a.id) };
+      const turno = this.turnoDe(h.personaje, asientos[0].id);
+      if (turno) return [{ ...fila, estado: turno.estado, avisos: turno.avisos, opciones: turno.opciones }];
+      return [{ ...fila, ...this.preparar(h, asientos) }];
     });
   }
 
   /**
-   * Despierta a un personaje según su habilidad: si elige, se le pide que elija
-   * (otra vez, si aún no lo ha hecho); si no, se le manda lo que sabe. Solo si está
-   * listo. Devuelve el error, si lo hay.
+   * Despierta a un personaje según su habilidad (a los esbirros o al demonio, a
+   * cada uno): si elige, se le pide que elija (otra vez, si aún no lo ha hecho); si
+   * no, se le manda lo que sabe. Solo si está listo. Devuelve el error, si lo hay.
    */
   despertar(personaje: string): string | null {
     const habilidad = this.entorno.habilidades().get(personaje);
     if (!habilidad) return 'Ese personaje no se despierta solo.';
-    const asiento = this.asientoDe(personaje);
-    if (!asiento) return 'Nadie lleva ese personaje.';
-    const turno = this.turnoDe(personaje, asiento.id);
+    const asientos = this.asientosDe(habilidad);
+    if (!asientos.length) return 'Nadie lleva ese personaje.';
+    const turno = this.turnoDe(personaje, asientos[0].id);
     if (turno?.estado === 'hecho') return 'Ya se ha despertado esta noche.';
     if (turno?.estado === 'revisar') return 'Antes hay que revisar lo que se le manda.';
-    const preparado = habilidad.preparar(this.entorno.ctx, asiento);
-    if (preparado.estado === 'falta') return 'Falta algo en el grimorio.';
-    if (preparado.estado === 'revisar') return 'Antes hay que revisar lo que se le manda.';
-    const error = this.entorno.despertar(asiento.id);
-    if (error) return error;
-    if (habilidad.eleccion) {
-      this.entorno.mandar(asiento.id, tarjeta('eleccion'), habilidad.eleccion);
-      this.guardar({ personaje, asiento: asiento.id, estado: 'esperando', avisos: preparado.avisos, opciones: [] });
-    } else this.aplicar(personaje, asiento, preparado);
+    const preparados = asientos.map((a) => habilidad.preparar(this.entorno.ctx, a));
+    if (preparados.some((p) => p.estado === 'falta')) return 'Falta algo en el grimorio.';
+    if (preparados.some((p) => p.estado === 'revisar')) return 'Antes hay que revisar lo que se le manda.';
+    for (const [i, asiento] of asientos.entries()) {
+      const error = this.entorno.despertar(asiento.id);
+      if (error) return error;
+      if (habilidad.eleccion) {
+        this.entorno.mandar(asiento.id, tarjeta('eleccion'), habilidad.eleccion);
+        this.guardar({ personaje, asiento: asiento.id, estado: 'esperando', avisos: preparados[i].avisos, opciones: [] });
+      } else this.aplicar(personaje, asiento, preparados[i]);
+    }
     return null;
   }
 
@@ -118,6 +138,7 @@ export class DespertarGuiado {
     if (efectos.muere) this.entorno.matarDeNoche(efectos.muere);
     if (efectos.grimorio) this.entorno.enviarGrimorio(asiento.id);
     if (efectos.nuevoImp) this.impQueMuere = asiento.id;
+    for (const envio of resultado.previos ?? []) this.entorno.mandar(asiento.id, envio);
     if (opciones[0]) this.entorno.mandar(asiento.id, opciones[0].envio);
     this.guardar({ personaje, asiento: asiento.id, estado: 'hecho', avisos, opciones: [] });
   }

@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { SalaFase } from './useSala';
 
 /** Lo que dura el atardecer o el amanecer (sala.css lo reparte entre el cielo, el sol y las luces). */
@@ -14,6 +14,21 @@ const ESPERA_MS = 1800;
  * cambiando (atardece o amanece y se queda un poco) y saliendo (se desvanece).
  */
 type Paso = 'oculta' | 'entrando' | 'cambiando' | 'saliendo';
+
+/**
+ * La audiodescripción de lo que se ve al cambiar (para el lector: la animación no
+ * está en el árbol de accesibilidad). Sin el poblado, solo el cielo.
+ */
+function describir(transicion: 'atardecer' | 'amanecer', poblado: boolean): string {
+  if (transicion === 'atardecer') {
+    return poblado
+      ? 'En la plaza, anochece sobre el pueblo: el cielo se tiñe de ocaso y oscurece, se encienden la esfera del reloj de la torre, el farol y las ventanas, salen la luna y las estrellas, y cruzan unos cuervos.'
+      : 'En la plaza, anochece: el cielo se tiñe de ocaso y oscurece, salen la luna y las estrellas, y cruzan unos cuervos.';
+  }
+  return poblado
+    ? 'En la plaza, amanece sobre el pueblo: un destello, el sol asoma por el este y sube, el cielo se aclara, se apagan las luces y las casas se iluminan, pasan las nubes y cruzan unas golondrinas.'
+    : 'En la plaza, amanece: un destello, el sol asoma por el este y sube, el cielo se aclara, pasan las nubes y cruzan unas golondrinas.';
+}
 
 /** Las ilustraciones, en public/ciudad (la ciudad de día, de noche y sus luces encajan al píxel). */
 const img = (nombre: string) => `/ciudad/${nombre}.webp`;
@@ -79,19 +94,22 @@ const Ave = ({ clase, y, dur, delay, escala }: Vuelo & { clase: string }) => (
  * (algunas titilan), salen la luna y las estrellas y cruzan cuervos; de día, la
  * ciudad se ilumina y hay sol, nubes y golondrinas (sala.css, sala-ciudad).
  *
- * Solo visual: no recibe el ratón y el lector no la ve. Si la fase cambia con la
- * pestaña oculta, no sale (nadie la vería); con «menos movimiento», sin animaciones
- * (solo el cambio de luz).
+ * Solo visual: no recibe el ratón y el lector no la ve; al empezar el cambio pasa
+ * su audiodescripción a `onDescribir`. Si la fase cambia con la pestaña oculta, no
+ * sale (nadie la vería); con «menos movimiento», sin animaciones (solo el cambio de luz).
  */
 const CiudadPlaza = ({
   fase,
   poblado = true,
   siempre = false,
+  onDescribir,
 }: {
   fase: SalaFase['momento'];
   poblado?: boolean;
   /** Siempre a la vista (Preferencias), no solo al cambiar: atardece y amanece en su sitio. */
   siempre?: boolean;
+  /** La audiodescripción del atardecer o el amanecer, cuando empieza a verse. */
+  onDescribir?: (texto: string) => void;
 }) => {
   // La fase que se pinta: al entrar, aún la de antes; luego, la nueva
   const [faseVista, setFaseVista] = useState(fase);
@@ -145,6 +163,18 @@ const CiudadPlaza = ({
     const t = window.setTimeout(() => setTransicion(null), DURACION_TRANSICION_MS);
     return () => window.clearTimeout(t);
   }, [siempre, transicion, vez]);
+
+  // La audiodescripción, cuando el cambio empieza a verse (no mientras aparece con la fase de antes)
+  const empieza = transicion && (siempre || paso === 'cambiando') ? `${vez}:${transicion}` : null;
+  const onDescribirRef = useRef(onDescribir);
+  useEffect(() => {
+    onDescribirRef.current = onDescribir;
+  });
+  useEffect(() => {
+    if (empieza && transicion) onDescribirRef.current?.(describir(transicion, poblado));
+    // Solo una vez por cambio
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [empieza]);
 
   // Las ilustraciones, cargadas de antemano: cuando sale, ya están
   useEffect(() => {

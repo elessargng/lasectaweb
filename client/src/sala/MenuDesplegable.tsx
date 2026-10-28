@@ -42,6 +42,8 @@ interface MenuDesplegableProps {
   opciones: OpcionMenu[];
   /** Hacia dónde se abre la lista. */
   alinear?: 'izquierda' | 'derecha';
+  /** Controles junto al rótulo de una rejilla (p. ej. cambiar el estilo de las manos), por grupo. */
+  extrasGrupo?: Partial<Record<string, ReactNode>>;
 }
 
 const casillaClass =
@@ -67,6 +69,7 @@ const MenuDesplegable = ({
   botonClassName,
   opciones,
   alinear = 'izquierda',
+  extrasGrupo = {},
 }: MenuDesplegableProps) => {
   const [abierto, setAbierto] = useState(false);
   const botonRef = useRef<HTMLButtonElement>(null);
@@ -161,9 +164,12 @@ const MenuDesplegable = ({
           'grupo' in tramo ? (
             <li key={`grupo-${tramo.opciones[0].id}`} className="px-3 py-1.5">
               {tramo.grupo && (
-                <p id={`${id}-grupo-${tramo.opciones[0].id}`} className="mb-1 font-ui text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-on-surface-muted">
-                  {tramo.grupo}
-                </p>
+                <div className="mb-1 flex items-center gap-2">
+                  <p id={`${id}-grupo-${tramo.opciones[0].id}`} className="font-ui text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-on-surface-muted">
+                    {tramo.grupo}
+                  </p>
+                  {extrasGrupo[tramo.grupo]}
+                </div>
               )}
               <ul
                 aria-labelledby={tramo.grupo ? `${id}-grupo-${tramo.opciones[0].id}` : undefined}

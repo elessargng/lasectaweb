@@ -9,10 +9,13 @@ import type {
   SalaRegistro,
   TarjetaDespertar,
 } from '../../../contrato/sala';
-import { tieneRecordatorio, type ContextoReglas } from '../reglas/ReglaPersonaje';
+import { droison, tieneRecordatorio, type ContextoReglas } from '../reglas/ReglaPersonaje';
 
-/** Lo que una habilidad puede consultar de la partida: lo mismo que las reglas. Tampoco cambia la sala: responde. */
-export type ContextoNoche = ContextoReglas;
+/** Lo que una habilidad puede consultar de la partida: lo mismo que las reglas y los faroles. Tampoco cambia la sala: responde. */
+export interface ContextoNoche extends ContextoReglas {
+  /** Los faroles que el narrador ha preparado para el demonio (casillas vacías: null). */
+  faroles(): (string | null)[];
+}
 
 /** Lo que cambia en la partida al hacerse una habilidad (lo aplica DespertarGuiado). */
 export interface Efectos {
@@ -28,7 +31,7 @@ export interface Efectos {
 
 /**
  * Lo que dice una habilidad, al preparar el despertar o cuando el jugador ya ha elegido:
- * - listo: se hace solo. Se manda la primera opción (sin ninguna, nada) y se aplican los efectos;
+ * - listo: se hace solo. Se manda lo previo, la primera opción (sin ninguna, nada) y se aplican los efectos;
  * - falta: falta algo en el grimorio (los avisos dicen qué);
  * - revisar: el narrador elige entre las opciones o las cambia; los efectos los pone él.
  */
@@ -37,6 +40,8 @@ export interface Resultado {
   avisos: SalaAvisoHabilidad[];
   opciones: SalaOpcionDespertar[];
   efectos: Efectos;
+  /** Listo: lo que se le manda antes de la primera opción (el demonio, sus esbirros antes de los faroles). */
+  previos?: SalaEnvioDespertar[];
 }
 
 /**
@@ -52,6 +57,8 @@ export interface HabilidadNocturna {
   eleccion: SalaEleccionDespertar | null;
   /** Despierta aunque muera esta noche (el Ravenkeeper). */
   despiertaAlMorir: boolean;
+  /** Los que despiertan, si no es el de su ficha (los esbirros, el demonio): cada uno, con su `preparar`. */
+  despiertan?(ctx: ContextoNoche): SalaAsiento[];
   preparar(ctx: ContextoNoche, asiento: SalaAsiento): Resultado;
   alElegir(ctx: ContextoNoche, asiento: SalaAsiento, elegidos: SalaAsiento[]): Resultado;
 }
@@ -90,6 +97,12 @@ export const listo = (envio: SalaEnvioDespertar | null, efectos: Efectos = sinEf
   efectos,
 });
 
+/** Listo, con varios mensajes: se mandan en orden. */
+export const listoVarios = (envios: SalaEnvioDespertar[], avisos: SalaAvisoHabilidad[] = []): Resultado => ({
+  ...listo(envios[envios.length - 1] ?? null, sinEfectos(), avisos),
+  previos: envios.slice(0, -1),
+});
+
 export const falta = (avisos: SalaAvisoHabilidad[]): Resultado => ({ estado: 'falta', avisos, opciones: [], efectos: sinEfectos() });
 
 export const revisar = (opciones: SalaOpcionDespertar[], avisos: SalaAvisoHabilidad[]): Resultado => ({
@@ -101,12 +114,7 @@ export const revisar = (opciones: SalaOpcionDespertar[], avisos: SalaAvisoHabili
 
 // Lo que se consulta
 
-/** Si está envenenado (el recordatorio del Envenenador) o borracho (es el Borracho de verdad); null si está sano. */
-export function droison(ctx: ContextoNoche, asiento: SalaAsiento): 'envenenado' | 'borracho' | null {
-  if (ctx.identidad(asiento) === 'drunk') return 'borracho';
-  if (tieneRecordatorio(asiento, 'poisoner', /^poisoned$/i)) return 'envenenado';
-  return null;
-}
+export { droison };
 
 /** Puede registrar como otra cosa: un Espía o una Reclusa sanos. */
 export const dudoso = (ctx: ContextoNoche, asiento: SalaAsiento): boolean =>

@@ -75,7 +75,7 @@ import {
 import { AvisosContexto, useAvisosActivos, type TipoAviso } from './avisosConfig';
 import { avisosDeCambio, manosVigiladas, nombreFase } from './avisosSala';
 import { recibidasDe, reconciliarSlots } from './slotsLlamada';
-import { setSonidosActivos, setTonoLlamada, tocarDespertar, tocarPrivado, tocarSinVoto, tocarSolicitud, tocarVoto } from './sonidos';
+import { setSonidosActivos, setTonoDespertar, setTonoLlamada, tocarDespertar, tocarPrivado, tocarSinVoto, tocarSolicitud, tocarVoto } from './sonidos';
 import { esTeclaLlamadaBotc, LlamadaBotcContexto } from './llamadaBotc';
 import CieloEstrellado from './CieloEstrellado';
 import DialogoFinal from './DialogoFinal';
@@ -84,7 +84,7 @@ import { idFichaNominar, idPestanaLateral, ID_BOTON_MENU_NARRADOR, ID_SIN_NARRAD
 import { ElegirEnPlazaContexto, type PedidoEleccion } from './elegirEnPlaza';
 import { getPerfil, limpiarNombre, setPerfil } from './invitado';
 import { sinComunicaciones, usePreferencias } from './preferencias';
-import { useConfiguracionCuenta, type ConfiguracionSala, type PerfilConfiguracion } from './configuracion';
+import { sinAvatar, useConfiguracionCuenta, type ConfiguracionSala, type PerfilConfiguracion } from './configuracion';
 import PanelPerfiles from './PanelPerfiles';
 import { tamanoFichaAuto, tamanoNarradorAuto } from './tamanosAutomaticos';
 import { anguloAsiento } from './geometriaMesa';
@@ -101,7 +101,7 @@ import {
 } from './useSala';
 import type { DespertarFila } from './PanelGuion';
 import type { Revision } from './VentanaDespertar';
-import { aEnvio, describirAviso, describirOpcion, ESTADO_HABILIDAD, type ContextoHabilidades } from './habilidadesNoche';
+import { aEnvio, describirAviso, describirOpcion, esFilaFija, ESTADO_HABILIDAD, nombreHabilidad, type ContextoHabilidades } from './habilidadesNoche';
 import DialogoNuevoImp from './DialogoNuevoImp';
 
 interface SalaJuegoProps {
@@ -398,7 +398,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       const c: ContextoHabilidades = { estado: nuevo, porId: personajesGuionRef.current, indiceRecordatorio: () => -1 };
       for (const h of nuevo.habilidadesNoche) {
         if (guiadoAntes.get(h.personaje) !== 'esperando' || h.estado === 'esperando') continue;
-        const nombre = personajesGuionRef.current.get(h.personaje)?.nombre.texto ?? h.personaje;
+        const nombre = nombreHabilidad(personajesGuionRef.current, h.personaje);
         const detalles = h.avisos.filter((a) => a.tipo !== 'elegido').map((a) => describirAviso(c, a));
         avisos.push({ tipo: 'despertar', texto: [`${nombre}: ${ESTADO_HABILIDAD[h.estado].toLocaleLowerCase('es')}.`, ...detalles].join(' ') });
       }
@@ -499,12 +499,17 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     indiceRecordatorio: (personaje, texto) =>
       guion?.personajes.find((p) => p.id === personaje)?.recordatorios.findIndex((t) => t.toLowerCase() === texto.toLowerCase()) ?? -1,
   });
-  // Listo: se hace solo (y se dice qué). Si no, se abre su despertar (para revisarlo o verlo)
+  // Listo: se hace solo (y se dice qué). Si no, se abre su despertar (para revisarlo o verlo;
+  // los esbirros, el de cada uno)
   const despertarHabilidad = async (h: SalaHabilidadNoche) => {
-    if (h.estado !== 'listo') return abrirDespertar(h.asiento);
+    if (h.estado !== 'listo') {
+      for (const asientoId of h.asientos) await abrirDespertar(asientoId);
+      return;
+    }
     const r = await pedirPropio('narrador:despertarHabilidad', { personajeId: h.personaje });
     if (!r.ok) return setAviso(r.error);
-    const nombre = personajesGuionPorId.get(h.personaje)?.nombre.texto ?? h.personaje;
+    const nombre = nombreHabilidad(personajesGuionPorId, h.personaje);
+    if (esFilaFija(h.personaje)) return anunciar('despertar', `${nombre}: ${h.asientos.length === 1 ? 'despertado' : 'despertados'}.`);
     const enviado = h.opciones[0] ? describirMensaje(h.opciones[0].envio, estado!, personajesGuionPorId) : '';
     anunciar('despertar', enviado ? `${nombre}: enviado ${enviado}.` : `${nombre}: despertado.`);
   };
@@ -650,6 +655,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   } = usePreferencias(!!cuenta);
   useEffect(() => setSonidosActivos(preferencias.sonidos), [preferencias.sonidos]);
   useEffect(() => setTonoLlamada(preferencias.tonoLlamada), [preferencias.tonoLlamada]);
+  useEffect(() => setTonoDespertar(preferencias.tonoDespertar), [preferencias.tonoDespertar]);
 
   // El fondo: el de la sala (el del guion o el que ha elegido el narrador; sin él, el
   // de La Secta) o el que ha elegido cada uno en Preferencias > Interfaz (ver fondos.ts)
@@ -1210,13 +1216,27 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     avisos: avisosActivos,
     atajos,
     gestos,
+    avatar: avatarElegido,
   };
+  // El avatar guardado en la cuenta (quizá elegido en otro dispositivo): se le dice a la sala en cuanto haya conexión.
+  const avatarPendienteRef = useRef<string | null>(null);
   const aplicarConfiguracion = (datos: Partial<Record<keyof ConfiguracionSala, unknown>>) => {
     reemplazarPreferencias(datos.preferencias);
     reemplazarAvisos(datos.avisos);
     reemplazarAtajos(datos.atajos);
     reemplazarGestos(datos.gestos);
+    if (typeof datos.avatar === 'string' && datos.avatar !== avatarElegido) {
+      setPerfil('avatar', cuentaId, datos.avatar);
+      setAvatarElegido(datos.avatar);
+      avatarPendienteRef.current = datos.avatar;
+    }
   };
+  useEffect(() => {
+    const pendiente = avatarPendienteRef.current;
+    if (pendiente === null || conexion !== 'conectada') return;
+    avatarPendienteRef.current = null;
+    void pedir('sala:cambiarAvatar', { avatar: pendiente || null });
+  }, [conexion, avatarElegido, pedir]);
   const {
     carga: cargaConfiguracion,
     perfiles,
@@ -1238,11 +1258,11 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // El diálogo de revelar el grimorio: desde el menú del narrador o con su tecla
   const [revelandoGrimorio, setRevelandoGrimorio] = useState(false);
   // Una ejecución que deja solo dos jugadores vivos no anochece sola: quien ejecutó
-  // elige entre la noche y revelar el grimorio (DialogoFinal)
+  // elige entre la noche y revelar el grimorio (DialogoFinal). También al nominar a la Virgen.
   const [decidiendoFinal, setDecidiendoFinal] = useState(false);
   const pedirEnMesa = async (accion: string, datos?: unknown) => {
     const r = await pedirPropio(accion, datos);
-    if (accion === 'narrador:ejecutar' && r.ok && r.valor === 'final') setDecidiendoFinal(true);
+    if ((accion === 'narrador:ejecutar' || accion === 'narrador:nominar') && r.ok && r.valor === 'final') setDecidiendoFinal(true);
     return r;
   };
 
@@ -1514,7 +1534,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           conCuenta={!!cuenta}
           carga={cargaConfiguracion}
           perfiles={perfiles}
-          onGuardar={(nombre) => guardarPerfilConfiguracion(nombre, { ...configuracionActual, alias })}
+          onGuardar={(nombre) => guardarPerfilConfiguracion(nombre, { ...sinAvatar(configuracionActual), alias })}
           onBorrar={borrarPerfilConfiguracion}
           onAplicar={aplicarPerfil}
         />
@@ -1783,6 +1803,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           mano: miEstiloMano,
           silla: estiloDePartida(preferencias.silla, ESTILOS_SILLA, `${semillaPartida}:silla`),
           voto: preferencias.voto,
+          despertar: preferencias.iconoDespertar,
+          entendido: preferencias.iconoEntendido,
         }}
       >
       <FichasContexto.Provider value={contextoFichas}>
@@ -1906,6 +1928,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   onElegirForma={elegirFormaMano}
                   // Los del guion, que conoce todo el mundo (los en juego solo los sabe el narrador)
                   personajes={personajesGuion}
+                  estilo={preferencias.mano}
+                  onEstilo={(mano) => cambiarPreferencias({ mano })}
                 />
               )}
               {/* Solo narradores: el servidor solo les manda a ellos el registro */}
@@ -2059,7 +2083,14 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   contacto={contacto}
                   pistas={video.mesa}
                   ondas={ondas}
-                  ciudad={preferencias.ciudad !== 'nunca' ? <CiudadPlaza fase={estado.fase.momento} poblado={preferencias.pobladoCabecera} siempre={preferencias.ciudad === 'siempre'} /> : undefined}
+                  ciudad={preferencias.ciudad !== 'nunca' ? (
+                      <CiudadPlaza
+                        fase={estado.fase.momento}
+                        poblado={preferencias.pobladoCabecera}
+                        siempre={preferencias.ciudad === 'siempre'}
+                        onDescribir={(texto) => anunciar('audiodescripcion', texto)}
+                      />
+                    ) : undefined}
                   despertares={
                     veoDespertares
                       ? {

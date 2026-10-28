@@ -556,7 +556,7 @@ const OrdenNoche = ({
     recordatorios
       ? { activo: recordatorios.activos.includes(id), onAlternar: () => recordatorios.onAlternar(id) }
       : undefined;
-  // Esbirros y Demonios también llevan recordatorio: no siempre se despiertan
+  // Esbirros y Demonios también llevan recordatorio (no siempre se despiertan) y despertar guiado
   const fija = (nombre: string, icono: ReactNode, t: string, recordatorio?: string) => (
     <Fila
       icono={icono}
@@ -564,6 +564,7 @@ const OrdenNoche = ({
       color="text-hoja-lacre"
       texto={completo ? { texto: t, lang: 'es' } : null}
       recordatorio={recordatorio ? conRecordatorio(recordatorio) : undefined}
+      despertar={recordatorio ? recordatorios?.despertar(recordatorio) : undefined}
     />
   );
   return (

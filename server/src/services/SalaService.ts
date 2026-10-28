@@ -43,7 +43,7 @@ import { Bolsa } from './partida/Bolsa';
 import { PASOS_DE_FASE_MAX, type EventoPartida, type FotoAsiento, type OyentePartida } from './partida/eventos';
 import { barajar } from './partida/azar';
 import { Reglas } from './partida/reglas';
-import type { ContextoReglas } from './partida/reglas/ReglaPersonaje';
+import type { ContextoReglas, RegistroAlNominar } from './partida/reglas/ReglaPersonaje';
 import { voudonVivo } from './partida/reglas/voudon';
 import { cuidadorLilmonsta, DEMONIO_LILMONSTA, esbirrosLilmonsta, recordatorioLilmonsta } from './partida/reglas/lilMonsta';
 
@@ -77,6 +77,14 @@ const asientoNuevo = (): SalaAsiento => ({
 export const esRecordatorioDeIdentidad = (texto: string) => /^is the\b/i.test(texto.trim());
 /** Lo mismo con un recordatorio puesto: uno con texto propio nunca lo es (lo escribe el narrador). */
 const esIdentidad = (r: SalaRecordatorio) => r.personaje !== RECORDATORIO_TEXTO && esRecordatorioDeIdentidad(r.texto);
+
+/**
+ * Al anunciar una muerte de noche, el «Dead» con el que la marcó quien lo mató (el
+ * demonio, el Asesino…) ya no hace falta: se quita (no los de texto propio).
+ */
+function quitarMarcaDeMuerte(asiento: SalaAsiento): void {
+  asiento.recordatorios = asiento.recordatorios.filter((r) => r.personaje === RECORDATORIO_TEXTO || !/^dead$/i.test(r.texto.trim()));
+}
 
 /**
  * Lo que un cambio de fase deja atrás y la máquina del tiempo devuelve: al
@@ -165,11 +173,11 @@ export class SalaService {
   );
   /** El despertar guiado desde el orden de noche (ver DespertarGuiado). */
   private readonly guiado = new DespertarGuiado({
-    ctx: this.contextoReglas,
+    ctx: { ...this.contextoReglas, faroles: () => this.faroles() },
     habilidades: () => habilidadesDelGuion(this.guionActual?.edicion ?? null),
     noche: () => this.faseActual.momento === 'noche',
     despertar: (asientoId) => this.despertar(asientoId),
-    mandar: (asientoId, envio, eleccion) => this.mandarDelNarrador(asientoId, envio, eleccion),
+    mandar: (asientoId, envio, eleccion) => this.mandarDelNarrador(asientoId, envio, { eleccion, guiado: true }),
     ponerRecordatorio: (asientoId, personaje, texto) => this.ponerRecordatorioDe(asientoId, personaje, texto),
     matarDeNoche: (asientoId) => this.cambiarVida(asientoId, true),
     enviarGrimorio: (asientoId) => this.enviarGrimorioDeLaMesa(asientoId),
@@ -660,9 +668,16 @@ export class SalaService {
     this.despertados.enviar(asientoId, mensaje);
   }
 
-  /** Manda algo del narrador a un asiento despierto; con «Tú eres», su ficha pasa a ser la que se le dice. */
-  mandarDelNarrador(asientoId: string, envio: SalaEnvioDespertar, eleccion?: SalaEleccionDespertar): void {
-    this.enviarDespertar(asientoId, { ...envio, autor: 'narrador', ...(eleccion ? { eleccion } : {}) });
+  /**
+   * Manda algo del narrador a un asiento despierto (`guiado`: desde el despertar guiado);
+   * con «Tú eres», su ficha pasa a ser la que se le dice.
+   */
+  mandarDelNarrador(
+    asientoId: string,
+    envio: SalaEnvioDespertar,
+    { eleccion, guiado = false }: { eleccion?: SalaEleccionDespertar; guiado?: boolean } = {},
+  ): void {
+    this.enviarDespertar(asientoId, { ...envio, autor: 'narrador', guiado, ...(eleccion ? { eleccion } : {}) });
     if (envio.tarjeta === 'tuEres') this.comunicarFicha(asientoId, envio.personajes, envio.alineamiento);
   }
 
@@ -678,6 +693,10 @@ export class SalaService {
 
   eleccionPendiente(asientoId: string): SalaEleccionDespertar | null {
     return this.guiado.eleccionPendiente(asientoId);
+  }
+
+  respuestaGuiada(asientoId: string): boolean {
+    return this.despertados.respuestaGuiada(asientoId);
   }
 
   alElegirHabilidad(asientoId: string, elegidos: string[]): void {
@@ -775,8 +794,30 @@ export class SalaService {
     this.nominaciones.elegirVotosNecesarios(votos);
   }
 
-  nominar(desde: string, hasta: string): void {
+  /**
+   * Abre la nominación. Lo que pase al nominar lo dicen las reglas (ver
+   * ReglaPersonaje.alNominar): con la Virgen, su recordatorio y, si toca, la
+   * ejecución al momento de quien nomina (se cierra la nominación). Si depende de
+   * cómo registra quien nomina (el Espía) y `registro` no lo dice, no se nomina:
+   * se devuelve la pregunta, para volver a nominar con la respuesta (y nadie ve
+   * nada hasta entonces). Devuelve la ejecución (ver ejecutar) o null. No comprueba permisos.
+   */
+  nominar(
+    desde: string,
+    hasta: string,
+    registro: RegistroAlNominar = {},
+  ): { pregunta: 'comoAldeano' } | { anochece: boolean; final: boolean } | null {
+    const nominador = this.mesa.find((a) => a.id === desde);
+    const nominado = this.mesa.find((a) => a.id === hasta);
+    // Pedir la expulsión de un viajero no es nominar
+    const efectos = nominador && nominado && !this.llevaViajero(nominado) ? this.reglas.alNominar(nominador, nominado, registro) : null;
+    if (efectos && 'pregunta' in efectos) return efectos;
     this.nominaciones.nominar(desde, hasta);
+    if (!efectos) return null;
+    for (const r of efectos.recordatorios) this.ponerRecordatorioDe(hasta, r.personaje, r.texto);
+    if (!efectos.ejecutaAlNominador) return null;
+    this.cerrarNominacion();
+    return this.ejecutar(desde);
   }
 
   cerrarNominacion(): void {
@@ -1050,6 +1091,7 @@ export class SalaService {
       asiento.muertePendiente = true;
       return;
     }
+    if (muerto && asiento.muertePendiente) quitarMarcaDeMuerte(asiento);
     // Al morir (o revivir) tiene su voto
     if (asiento.muerto !== muerto) asiento.votoGastado = false;
     asiento.muerto = muerto;
@@ -1091,10 +1133,14 @@ export class SalaService {
     return { anochece, final };
   }
 
-  /** Hace efectiva una muerte pendiente (el narrador la anuncia): ya la ven todos. No comprueba permisos. */
+  /**
+   * Hace efectiva una muerte pendiente (el narrador la anuncia): ya la ven todos, y
+   * se le quita el «Dead» de quien lo mató (ya no hace falta). No comprueba permisos.
+   */
   confirmarMuerte(asientoId: string): boolean {
     const asiento = this.mesa.find((a) => a.id === asientoId);
     if (!asiento?.muertePendiente) return false;
+    quitarMarcaDeMuerte(asiento);
     asiento.muertePendiente = false;
     asiento.muerto = true;
     asiento.votoGastado = false;

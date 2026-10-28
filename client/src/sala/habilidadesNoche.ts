@@ -22,6 +22,15 @@ const COMO: Record<SalaRegistro, string> = {
   noDemonio: 'no demonio',
 };
 
+/** Las filas fijas del orden de noche con despertar guiado (no son personajes). */
+const FILAS_FIJAS: Record<string, string> = { esbirros: 'Esbirros', demonios: 'Demonios' };
+
+/** El nombre de una fila del despertar guiado: el de su personaje, o «Esbirros» y «Demonios». */
+export const nombreHabilidad = (porId: Map<string, PersonajeMostrado>, id: string) => FILAS_FIJAS[id] ?? porId.get(id)?.nombre.texto ?? id;
+
+/** Despierta a varios a la vez (los esbirros, el demonio): no se dice lo que se manda a cada uno. */
+export const esFilaFija = (id: string) => id in FILAS_FIJAS;
+
 const nombrePersonaje = (c: ContextoHabilidades, id: string | null | undefined) => (id ? (c.porId.get(id)?.nombre.texto ?? id) : '');
 
 /** «Asiento 3 (Bea), Reclusa»: el asiento y su personaje (el de su ficha). */
@@ -58,6 +67,10 @@ export function describirAviso(c: ContextoHabilidades, aviso: SalaAvisoHabilidad
       return `Ha elegido al Alcalde (${nombreDeAsiento(c.estado, aviso.asiento)}): decide si muere o si muere otro.`;
     case 'elegido':
       return `Ha elegido a ${enumerar(aviso.asientos.map((id) => nombreDeAsiento(c.estado, id)))}.`;
+    case 'pocosJugadores':
+      return 'Hay menos de 7 jugadores: no se despiertan.';
+    case 'faltanFaroles':
+      return 'Faltan los 3 faroles del demonio.';
   }
 }
 

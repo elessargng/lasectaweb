@@ -74,11 +74,25 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
     onAnuncio(`Elige a qué ficha nomina el ${nombreDe(id)} (puede ser la suya): pulsa la ficha. Escape para cancelar.`);
   };
 
+  // El Espía nomina a la Virgen: antes de nominar, el narrador dice si registra como aldeano
+  const [preguntaEspia, setPreguntaEspia] = useState<{ desde: string; hasta: string } | null>(null);
+
   const nominar = async (hasta: string) => {
     if (!desde) return;
     setEligiendoDesde(null);
-    const r = await pedir('narrador:nominar', { desde, hasta });
-    if (r.ok) {
+    await mandar(desde, hasta);
+  };
+
+  const mandar = async (desde: string, hasta: string, comoAldeano?: boolean) => {
+    const r = await pedir('narrador:nominar', comoAldeano === undefined ? { desde, hasta } : { desde, hasta, comoAldeano });
+    if (r.ok && r.valor === 'comoAldeano') {
+      // Aún no se ha nominado (nadie ve nada): se pregunta y se vuelve a pedir con la respuesta
+      setPreguntaEspia({ desde, hasta });
+    } else if (r.ok && r.valor) {
+      // La Virgen: quien nomina se ejecuta al momento (con dos vivos, «final»: el foco va al diálogo de qué hacer)
+      if (r.valor === 'ejecutado') focoRef.current = idMenuFicha(desde);
+      onAnuncio(`La Virgen: ejecutado al momento el ${nombreDe(desde)}.`);
+    } else if (r.ok) {
       focoRef.current = ID_CUENTA_ATRAS;
     } else {
       focoRef.current = idMenuFicha(desde);
@@ -122,6 +136,22 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
         : undefined,
     /** Se está eligiendo a quién nomina: el centro de la mesa ofrece cancelar. */
     cancelar: desde ? cancelar : null,
+    /** El Espía nomina a la Virgen: si registra como aldeano (ver DialogoRegistroEspia), o null. */
+    preguntaEspia: preguntaEspia
+      ? {
+          nomina: nombreDe(preguntaEspia.desde),
+          nominado: nombreDe(preguntaEspia.hasta),
+          onResponder: (comoAldeano: boolean) => {
+            setPreguntaEspia(null);
+            void mandar(preguntaEspia.desde, preguntaEspia.hasta, comoAldeano);
+          },
+          onCancelar: () => {
+            setPreguntaEspia(null);
+            focoRef.current = idMenuFicha(preguntaEspia.desde);
+            onAnuncio('Nominación cancelada.');
+          },
+        }
+      : null,
     /** El panel del centro (solo si el servidor deja manejar la nominación). */
     panel:
       nominacion && acciones.includes('narrador:cerrarNominacion')

@@ -13,6 +13,15 @@ export interface ContextoReglas {
   personaje(id: string): PersonajeDeGuion | undefined;
 }
 
+/** Cómo registra quien nomina, si puede registrar como otra cosa: lo dice el narrador. */
+export interface RegistroAlNominar {
+  /** Registra como aldeano (el Espía); undefined si el narrador no lo ha dicho. */
+  comoAldeano?: boolean;
+}
+
+/** Lo que pasa al nominar según una regla, o lo que hay que preguntar antes al narrador. */
+export type AlNominar = { recordatorio: RecordatorioDeRegla | null; ejecutaAlNominador: boolean } | { pregunta: 'comoAldeano' };
+
 /** Un recordatorio que pone una regla sola: de su personaje, por su texto en el original. */
 export interface RecordatorioDeRegla {
   texto: string;
@@ -50,6 +59,15 @@ export interface ReglaPersonaje {
   /** Los jugadores solo conversan en privado con sus vecinos. */
   soloVecinos?(ctx: ContextoReglas): boolean;
 
+  // Las nominaciones
+  /**
+   * Al nominar `nominador` a `nominado` (no al pedir una expulsión): el recordatorio
+   * que se pone solo en la ficha del nominado y si el nominador se ejecuta al
+   * momento (la Virgen); null si no pasa nada. Si depende de cómo registra el
+   * nominador (el Espía) y el narrador no lo ha dicho en `registro`, la pregunta.
+   */
+  alNominar?(ctx: ContextoReglas, nominador: SalaAsiento, nominado: SalaAsiento, registro: RegistroAlNominar): AlNominar | null;
+
   // Las ejecuciones
   /** El recordatorio que se pone solo en la ficha del ejecutado, o null. */
   alEjecutar?(ctx: ContextoReglas, ejecutado: SalaAsiento): RecordatorioDeRegla | null;
@@ -76,3 +94,10 @@ export const vivoEnJuego = (ctx: ContextoReglas, personajeId: string, salvo?: Sa
 /** El asiento lleva algún recordatorio de ese personaje (y, si se da, con ese texto). */
 export const tieneRecordatorio = (asiento: SalaAsiento, personajeId: string, texto?: RegExp): boolean =>
   asiento.recordatorios.some((r) => r.personaje === personajeId && (!texto || texto.test(r.texto)));
+
+/** Si está envenenado (el recordatorio del Envenenador) o borracho (es el Borracho de verdad); null si está sano. */
+export function droison(ctx: ContextoReglas, asiento: SalaAsiento): 'envenenado' | 'borracho' | null {
+  if (ctx.identidad(asiento) === 'drunk') return 'borracho';
+  if (tieneRecordatorio(asiento, 'poisoner', /^poisoned$/i)) return 'envenenado';
+  return null;
+}

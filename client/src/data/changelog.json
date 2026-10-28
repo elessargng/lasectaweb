@@ -1,5 +1,52 @@
 [
   {
+    "version": "1.5.0",
+    "date": "2026-10-28",
+    "title": "Despertares Guiados",
+    "description": "Las noches de Trouble Brewing se narran con despertares guiados, y el despertar estrena iconos, tonos y nuevas formas de enviarlo.",
+    "changes": [
+      {
+        "category": "Narrador",
+        "items": [
+          "Añadidos los despertares guiados de Trouble Brewing.",
+          "Añadidos los despertares de los esbirros y del demonio.",
+          "Añadida la opción de despertar a varios jugadores a la vez.",
+          "Añadido el aviso para elegir al nuevo Imp.",
+          "Añadida la habilidad de la Virgen, con la pregunta de si el Espía registra como aldeano.",
+          "Al anunciar una muerte de noche se quita su recordatorio «Dead».",
+          "Los recordatorios se eligen agrupados por tipo de personaje."
+        ]
+      },
+      {
+        "category": "Jugadores",
+        "items": [
+          "En los despertares guiados se contesta con «Entendido» o con un mensaje al narrador."
+        ]
+      },
+      {
+        "category": "Personalización",
+        "items": [
+          "Nuevos iconos del despertar: vela, ojo y máscara, que se animan al recibir algo.",
+          "Nuevos iconos de «Entendido»: guante y guantelete.",
+          "Añadidas flechas en el menú de la mano para cambiar su estilo.",
+          "El avatar elegido para la sala se recuerda al volver."
+        ]
+      },
+      {
+        "category": "Sonido",
+        "items": [
+          "Añadidos tres tonos de despertador para el despertar de noche."
+        ]
+      },
+      {
+        "category": "Accesibilidad",
+        "items": [
+          "Añadida la audiodescripción de la ciudad al anochecer y al amanecer."
+        ]
+      }
+    ]
+  },
+  {
     "version": "1.4.0",
     "date": "2026-10-27",
     "title": "Notas a la Vista",

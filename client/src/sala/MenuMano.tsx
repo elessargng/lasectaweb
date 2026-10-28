@@ -1,7 +1,10 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import Mano from './Mano';
 import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { botonIcono } from './estilos';
 import { EMOTICONOS_MANO, FORMAS_MANO, nombreMano } from './formasMano';
+import { ESTILOS_MANO, type PreferenciaMano } from './marcas';
 import type { Atajo } from './atajos';
 import type { PersonajeMostrado } from './guiones';
 import type { FormaMano } from './useSala';
@@ -26,7 +29,15 @@ interface MenuManoProps {
   onElegirForma: (forma: FormaMano) => Promise<boolean>;
   /** Los personajes del guion: la mano también puede ser su icono (van detrás de las formas). */
   personajes?: PersonajeMostrado[];
+  /** El estilo de las manos (Preferencias > Interfaz): las flechas junto a «Manos» lo cambian. */
+  estilo: PreferenciaMano;
+  onEstilo: (estilo: PreferenciaMano) => void;
 }
+
+/** Lo que se espera desde la última flecha para guardar el estilo: aquí se ve al momento, a los demás les llega al dejarlo. */
+const ESPERA_ESTILO = 700;
+/** Los estilos por los que pasan las flechas: los de verdad, sin «Al azar». */
+const ESTILOS_FLECHAS = ESTILOS_MANO.filter((e) => e.id !== 'azar');
 
 /**
  * En la cabecera, para los jugadores y los narradores: botón con el dibujo de su
@@ -34,7 +45,9 @@ interface MenuManoProps {
  * el icono de un personaje del guion. La del narrador no vota.
  * Levantarla también tiene atajo de teclado (Preferencias > Atajos). Un muerto
  * que ya ha gastado su voto no puede levantarla, ni nadie mientras se señala:
- * la opción sale desactivada, con el motivo.
+ * la opción sale desactivada, con el motivo. Junto al rótulo «Manos», unas
+ * flechas pasan por los estilos de las manos; el que se deja queda elegido, como
+ * en Preferencias > Interfaz.
  */
 const MenuMano = ({
   forma,
@@ -49,8 +62,43 @@ const MenuMano = ({
   siguientes,
   onManos,
   personajes = [],
+  estilo,
+  onEstilo,
 }: MenuManoProps) => {
   const porId = new Map(personajes.map((p) => [p.id, p]));
+  // El estilo por el que se va pasando con las flechas, aún sin guardar (null: el elegido)
+  const [vista, setVista] = useState<PreferenciaMano | null>(null);
+  const mostrado = vista ?? estilo;
+  const esperaRef = useRef<number | undefined>(undefined);
+  const pendienteRef = useRef<PreferenciaMano | null>(null);
+  const onEstiloRef = useRef(onEstilo);
+  useEffect(() => {
+    onEstiloRef.current = onEstilo;
+  });
+  // Si se va antes de guardarlo (sale de la sala), se guarda igual
+  useEffect(
+    () => () => {
+      window.clearTimeout(esperaRef.current);
+      if (pendienteRef.current) onEstiloRef.current(pendienteRef.current);
+    },
+    [],
+  );
+  const pasarEstilo = (paso: 1 | -1) => {
+    // «Al azar» no sale en las flechas: desde él, la primera o la última
+    const i = ESTILOS_FLECHAS.findIndex((e) => e.id === mostrado);
+    const desde = i === -1 ? (paso === 1 ? -1 : 0) : i;
+    const nuevo = ESTILOS_FLECHAS[(desde + paso + ESTILOS_FLECHAS.length) % ESTILOS_FLECHAS.length].id;
+    setVista(nuevo);
+    pendienteRef.current = nuevo;
+    window.clearTimeout(esperaRef.current);
+    esperaRef.current = window.setTimeout(() => {
+      pendienteRef.current = null;
+      onEstiloRef.current(nuevo);
+      setVista(null);
+    }, ESPERA_ESTILO);
+  };
+  // «Al azar» se ve con la de esta partida
+  const estiloDibujo = mostrado === 'azar' ? undefined : mostrado;
   // Por qué no se puede levantar ahora (se dice junto a la opción, desactivada), o null
   const bloqueo = senalando ? 'se está señalando' : sinVoto ? 'sin voto' : null;
   // La Banshee con su habilidad: una mano, las dos o bajarlas (la tecla, en la que toca)
@@ -84,7 +132,7 @@ const MenuMano = ({
       etiqueta: nombre,
       marcada: f === forma,
       elegir: () => onElegirForma(f),
-      dibujo: <Mano forma={f} className="h-full w-full" />,
+      dibujo: <Mano forma={f} estilo={estiloDibujo} className="h-full w-full" />,
       grupo: 'Manos',
     })),
     ...EMOTICONOS_MANO.map(({ forma: f, nombre }) => ({
@@ -117,6 +165,22 @@ const MenuMano = ({
       boton={<Mano forma={forma} className={`h-7 w-7 ${levantada ? '' : 'opacity-60'}`} />}
       botonClassName={botonIcono}
       opciones={opciones}
+      extrasGrupo={{
+        Manos: (
+          <div className="ml-auto flex items-center gap-1">
+            <button type="button" aria-label="Estilo anterior" onClick={() => pasarEstilo(-1)} className={`${botonIcono} h-7 w-7`}>
+              <ChevronLeft size={16} />
+            </button>
+            {/* El nombre del estilo, que se anuncia al cambiarlo */}
+            <span aria-live="polite" className="min-w-[5.5rem] text-center text-xs text-on-surface">
+              {ESTILOS_MANO.find((e) => e.id === mostrado)?.nombre}
+            </span>
+            <button type="button" aria-label="Estilo siguiente" onClick={() => pasarEstilo(1)} className={`${botonIcono} h-7 w-7`}>
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        ),
+      }}
     />
   );
 };

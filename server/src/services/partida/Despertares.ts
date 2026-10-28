@@ -64,12 +64,24 @@ export class Despertares {
     return null;
   }
 
-  /** Guarda un mensaje en el despertar de un asiento (sin `eleccion`: una libre). No valida: lo hace quien lo llama. */
-  enviar(asientoId: string, mensaje: Omit<MensajeDespertar, 'id' | 'hora' | 'fase' | 'eleccion'> & Partial<Pick<MensajeDespertar, 'eleccion'>>): void {
+  /**
+   * Lo último que el narrador ha mandado a un asiento lo mandó el despertar guiado
+   * (ver MensajeDespertar.guiado).
+   */
+  respuestaGuiada(asientoId: string): boolean {
+    const hilo = this.alDia().find((h) => h.asiento === asientoId);
+    return !!hilo && !![...hilo.mensajes].reverse().find((m) => m.autor === 'narrador')?.guiado;
+  }
+
+  /** Guarda un mensaje en el despertar de un asiento (sin `eleccion`: una libre; sin `guiado`, no lo es). No valida: lo hace quien lo llama. */
+  enviar(
+    asientoId: string,
+    mensaje: Omit<MensajeDespertar, 'id' | 'hora' | 'fase' | 'eleccion' | 'guiado'> & Partial<Pick<MensajeDespertar, 'eleccion' | 'guiado'>>,
+  ): void {
     const hilo = this.alDia().find((h) => h.asiento === asientoId);
     if (!hilo) return;
     const { momento, numero } = this.fase();
-    hilo.mensajes.push({ eleccion: null, ...mensaje, id: randomUUID(), hora: Date.now(), fase: { momento, numero } });
+    hilo.mensajes.push({ eleccion: null, guiado: false, ...mensaje, id: randomUUID(), hora: Date.now(), fase: { momento, numero } });
     if (hilo.mensajes.length > SALA_MENSAJES_DESPERTAR_MAX) hilo.mensajes.shift();
   }
 

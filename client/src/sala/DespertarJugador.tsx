@@ -9,6 +9,7 @@ import type { PersonajeMostrado } from './guiones';
 import { nombreDeAsiento, textoEleccion } from './despertar';
 import { BotoneraDespertar, EditorAdjunto, HistorialDespertar, MensajeVisto } from './PiezasDespertar';
 import type { SalaDespertar, SalaEstado, SalaResultado } from './useSala';
+import { FICHAS_RESPUESTA_GUIADA } from '@contrato/sala';
 
 interface DespertarJugadorProps {
   estado: SalaEstado;
@@ -59,6 +60,8 @@ const DespertarJugador = ({
   const [copiando, setCopiando] = useState(false);
   // Su habilidad le pide que elija (y aún no ha contestado): solo puede elegir a quienes le deja
   const pide = ultimo?.eleccion && despertar.mensajes[despertar.mensajes.length - 1] === ultimo ? ultimo.eleccion : null;
+  // A lo demás que le manda su habilidad, solo contesta «Entendido» o con un texto
+  const soloFichas = ultimo?.guiado ? FICHAS_RESPUESTA_GUIADA : undefined;
 
   // «Estos personajes no están en juego» al demonio: se los puede copiar a sus faroles
   const aCopiar = faroles && ultimo?.tarjeta === 'noEnJuego' ? ultimo.personajes : null;
@@ -133,6 +136,7 @@ const DespertarJugador = ({
             personajes={personajes}
             conTarjetas={false}
             tituloFichas="Contestar"
+            soloFichas={soloFichas}
             pedir={pedir}
             onError={onError}
             onEnviado={onEnviado}

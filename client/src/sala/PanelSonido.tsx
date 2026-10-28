@@ -2,7 +2,7 @@ import { Volume2 } from 'lucide-react';
 import Interruptor from './Interruptor';
 import { botonIcono, campo } from './estilos';
 import type { PreferenciasSala } from './preferencias';
-import { esTonoLlamada, probarSonido, SONIDOS, TONOS_LLAMADA, type IdSonido } from './sonidos';
+import { esTonoDespertar, esTonoLlamada, probarSonido, SONIDOS, TONOS_DESPERTAR, TONOS_LLAMADA, type IdSonido } from './sonidos';
 
 interface PanelSonidoProps {
   preferencias: PreferenciasSala;
@@ -46,6 +46,30 @@ const PanelSonido = ({ preferencias, onCambiar }: PanelSonidoProps) => {
                     className={`${campo} max-w-xs text-sm`}
                   >
                     {TONOS_LLAMADA.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {id === 'despertar' && (
+                // Como el de las llamadas: al elegirlo, suena
+                <div className="ml-12 mt-2 flex flex-col gap-1">
+                  <label htmlFor="sala-pref-tono-despertar" className="text-xs">
+                    Tono del despertar
+                  </label>
+                  <select
+                    id="sala-pref-tono-despertar"
+                    value={preferencias.tonoDespertar}
+                    onChange={(e) => {
+                      if (!esTonoDespertar(e.target.value)) return;
+                      onCambiar({ tonoDespertar: e.target.value });
+                      probarSonido('despertar', e.target.value);
+                    }}
+                    className={`${campo} max-w-xs text-sm`}
+                  >
+                    {TONOS_DESPERTAR.map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.nombre}
                       </option>

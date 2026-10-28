@@ -2,10 +2,11 @@ import type { SalaAsiento } from '../../../contrato/sala';
 import { banshee } from './banshee';
 import { burocrata } from './burocrata';
 import { canibal, carnicero, enterrador, leviatan } from './ejecuciones';
+import { virgen } from './virgen';
 import { institutriz } from './institutriz';
 import { ladron } from './ladron';
 import { organGrinder } from './organGrinder';
-import type { ContextoReglas, ReglaPersonaje } from './ReglaPersonaje';
+import type { ContextoReglas, RegistroAlNominar, ReglaPersonaje } from './ReglaPersonaje';
 import { revolucionario } from './revolucionario';
 import { voudon } from './voudon';
 
@@ -21,6 +22,7 @@ export const REGLAS: readonly ReglaPersonaje[] = [
   ladron,
   organGrinder,
   institutriz,
+  virgen,
   canibal,
   enterrador,
   leviatan,
@@ -28,7 +30,7 @@ export const REGLAS: readonly ReglaPersonaje[] = [
   revolucionario,
 ];
 
-/** Un recordatorio que hay que poner al ejecutar: de qué personaje y con qué texto. */
+/** Un recordatorio que hay que poner al ejecutar (o al nominar): de qué personaje y con qué texto. */
 export interface RecordatorioAlEjecutar {
   personaje: string;
   texto: string;
@@ -86,6 +88,31 @@ export class Reglas {
 
   soloVecinos(): boolean {
     return this.reglas.some((r) => r.soloVecinos?.(this.ctx));
+  }
+
+  /**
+   * Al nominar: los recordatorios que se ponen solos en la ficha del nominado, en
+   * orden, y si el nominador se ejecuta al momento; o, si alguna regla necesita
+   * saber cómo registra el nominador, la pregunta (ver ReglaPersonaje.alNominar).
+   */
+  alNominar(
+    nominador: SalaAsiento,
+    nominado: SalaAsiento,
+    registro: RegistroAlNominar = {},
+  ): { recordatorios: RecordatorioAlEjecutar[]; ejecutaAlNominador: boolean } | { pregunta: 'comoAldeano' } {
+    const respuestas = this.reglas.flatMap((r) => {
+      const respuesta = r.alNominar?.(this.ctx, nominador, nominado, registro);
+      return respuesta ? [{ personaje: r.personaje, respuesta }] : [];
+    });
+    const efectos = [];
+    for (const { personaje, respuesta } of respuestas) {
+      if ('pregunta' in respuesta) return respuesta;
+      efectos.push({ personaje, ...respuesta });
+    }
+    return {
+      recordatorios: efectos.flatMap((e) => (e.recordatorio ? [{ personaje: e.personaje, ...e.recordatorio }] : [])),
+      ejecutaAlNominador: efectos.some((e) => e.ejecutaAlNominador),
+    };
   }
 
   /** Los recordatorios que se ponen solos en la ficha del ejecutado, en orden. */

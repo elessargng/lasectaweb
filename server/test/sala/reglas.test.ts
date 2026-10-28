@@ -92,6 +92,71 @@ describe('reglas de los personajes', () => {
     });
   });
 
+  describe('nominando', () => {
+    /** Ana (asiento 0) nomina a la Virgen (asiento 1), de día; Ana lleva `nominador`. */
+    const nominaALaVirgen = (nominador: string, preparar?: (sala: SalaService, asiento: (i: number) => SalaAsiento) => void) => {
+      const { sala, asiento } = salaConJugadores('Ana', 'Bea');
+      sala.cambiarPersonaje(asiento(0).id, nominador);
+      sala.cambiarPersonaje(asiento(1).id, 'virgin');
+      preparar?.(sala, asiento);
+      alDia(sala);
+      const ejecucion = sala.nominar(asiento(0).id, asiento(1).id);
+      return { sala, asiento, ejecucion };
+    };
+
+    it('la primera vez que nominan a la Virgen, un aldeano que la nomina se ejecuta al momento', () => {
+      const { sala, asiento, ejecucion } = nominaALaVirgen('chef');
+      expect(ejecucion).toEqual({ anochece: true, final: false });
+      expect(asiento(0).muerto).toBe(true);
+      expect(textos(sala, 1)).toEqual(['No Ability']);
+      expect(sala.nominacion()).toBeNull();
+      expect(sala.fase().momento).toBe('noche');
+    });
+
+    it('si quien nomina no es aldeano de verdad (el Borracho), pierde la habilidad sin ejecutar', () => {
+      const { sala, asiento, ejecucion } = nominaALaVirgen('chef', (s, a) => s.ponerRecordatorio(a(0).id, { personaje: 'drunk', indice: 0, texto: 'Is The Drunk' }));
+      expect(ejecucion).toBeNull();
+      expect(asiento(0).muerto).toBe(false);
+      expect(textos(sala, 1)).toEqual(['No Ability']);
+      expect(sala.nominacion()).not.toBeNull();
+    });
+
+    it('envenenada o siendo el Borracho, la pierde sin ejecutar', () => {
+      const envenenada = nominaALaVirgen('chef', (s, a) => s.ponerRecordatorio(a(1).id, { personaje: 'poisoner', indice: 0, texto: 'Poisoned' }));
+      expect(envenenada.ejecucion).toBeNull();
+      expect(textos(envenenada.sala, 1)).toEqual(['Poisoned', 'No Ability']);
+      const borracha = nominaALaVirgen('chef', (s, a) => s.ponerRecordatorio(a(1).id, { personaje: 'drunk', indice: 0, texto: 'Is The Drunk' }));
+      expect(borracha.ejecucion).toBeNull();
+    });
+
+    it('si nomina un Espía sano, antes el narrador dice si registra como aldeano (sin nominar hasta entonces)', () => {
+      const { sala, asiento, ejecucion } = nominaALaVirgen('spy');
+      expect(ejecucion).toEqual({ pregunta: 'comoAldeano' });
+      expect(sala.nominacion()).toBeNull();
+      expect(textos(sala, 1)).toEqual([]);
+      expect(sala.nominar(asiento(0).id, asiento(1).id, { comoAldeano: true })).toEqual({ anochece: true, final: false });
+      expect(asiento(0).muerto).toBe(true);
+      expect(textos(sala, 1)).toEqual(['No Ability']);
+    });
+
+    it('si el Espía no registra como aldeano, o está envenenado, la Virgen la pierde sin ejecutar', () => {
+      const noRegistra = nominaALaVirgen('spy');
+      expect(noRegistra.sala.nominar(noRegistra.asiento(0).id, noRegistra.asiento(1).id, { comoAldeano: false })).toBeNull();
+      expect(noRegistra.sala.nominacion()).not.toBeNull();
+      expect(textos(noRegistra.sala, 1)).toEqual(['No Ability']);
+      const envenenado = nominaALaVirgen('spy', (s, a) => s.ponerRecordatorio(a(0).id, { personaje: 'poisoner', indice: 0, texto: 'Poisoned' }));
+      expect(envenenado.ejecucion).toBeNull();
+    });
+
+    it('la segunda vez ya no pasa nada', () => {
+      const { sala, asiento } = nominaALaVirgen('poisoner');
+      sala.cerrarNominacion();
+      sala.cambiarPersonaje(asiento(0).id, 'chef');
+      expect(sala.nominar(asiento(0).id, asiento(1).id)).toBeNull();
+      expect(asiento(0).muerto).toBe(false);
+    });
+  });
+
   describe('ejecutando', () => {
     it('con el Caníbal vivo, el ejecutado lleva su «Lunch»', () => {
       const { sala, asiento } = salaConJugadores('Ana');

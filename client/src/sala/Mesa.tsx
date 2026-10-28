@@ -30,7 +30,7 @@ import { useMarcas } from './marcas';
 import { ESCALA_RECORDATORIO } from './FichaRecordatorio';
 import { contarBolsa, describirRecordatorio, identidadDe, recordatoriosDeFicha, TIPOS_REPARTO, useFichas } from './fichas';
 import { descuadres } from './comprobarReparto';
-import LunaDespertar from './LunaDespertar';
+import IconoDespertar from './IconoDespertar';
 import ManoLevantada from './ManoLevantada';
 import PanelNominacion from './PanelNominacion';
 import { ManosSenalamiento, PanelSenalamiento } from './Senalamiento';
@@ -44,6 +44,7 @@ import { useMoverAsientos } from './useMoverAsientos';
 import { useIntercambiarFichas } from './useIntercambiarFichas';
 import { CAUSAS_FINAL } from './causasFinal';
 import DialogoIntercambio from './DialogoIntercambio';
+import DialogoRegistroEspia from './DialogoRegistroEspia';
 import { useNominacion } from './useNominacion';
 import type { SalaEstado, SalaParticipante, SalaRecordatorio, SalaResultado } from './useSala';
 
@@ -833,7 +834,7 @@ const Mesa = ({
                         onClick={() => despertares.onAbrir(a.id)}
                         className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
                       >
-                        <LunaDespertar nueva={despertares.noLeidos.has(a.id)} entendido={despertares.entendidos.has(a.id)} className="w-[72%]" />
+                        <IconoDespertar nueva={despertares.noLeidos.has(a.id)} entendido={despertares.entendidos.has(a.id)} className="w-[72%]" />
                         <span className="sr-only">
                           {a.ocupante === estado.yo ? 'Tu despertar' : `Despertar de ${nombreDeAsiento(estado, a.id)}`}
                           {despertares.entendidos.has(a.id) ? ', entendido' : ''}
@@ -911,6 +912,7 @@ const Mesa = ({
           })()}
         </div>
       )}
+      {nominar.preguntaEspia && <DialogoRegistroEspia {...nominar.preguntaEspia} />}
       {intercambiando && (
         <DialogoIntercambio
           ficha={nombreDeAsiento(estado, intercambiando)}

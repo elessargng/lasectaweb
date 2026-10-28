@@ -5,7 +5,8 @@ import Mano from './Mano';
 import VistaPreviaJugador from './VistaPreviaJugador';
 import type { CSSProperties, ReactNode } from 'react';
 import { Dices } from 'lucide-react';
-import { carpetaSilla, ESTILOS_CALAVERA, ESTILOS_MANO, ESTILOS_SILLA, ESTILOS_VOTO, MarcasContexto } from './marcas';
+import { carpetaSilla, ESTILOS_CALAVERA, ESTILOS_DESPERTAR, ESTILOS_ENTENDIDO, ESTILOS_MANO, ESTILOS_SILLA, ESTILOS_VOTO, MarcasContexto } from './marcas';
+import IconoDespertar from './IconoDespertar';
 import type { TamanosMesa } from './Mesa';
 import { RANGOS, type ModoCiudad, type PreferenciasSala } from './preferencias';
 import { FONDOS, rutaFondo } from './fondos';
@@ -277,6 +278,39 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, fondoDeLaSala, onCam
           </MarcasContexto.Provider>
         )
       }
+    />
+    <ElegirEstilo
+      id="sala-pref-despertar"
+      leyenda="Icono del despertar"
+      ayuda="Sobre la ficha, de noche, cuando el narrador te despierta (y a él, en las de los despertados). Con algo sin ver, se anima; así sale aquí."
+      estilos={ESTILOS_DESPERTAR}
+      valor={preferencias.iconoDespertar}
+      onCambiar={(iconoDespertar) => onCambiar({ iconoDespertar })}
+      muestra={(estilo) => (
+        // Sobre la ficha, como en la mesa, con algo nuevo
+        <span className="relative block">
+          <FichaRedonda />
+          <span className="absolute inset-0 flex items-center justify-center">
+            <IconoDespertar nueva estilo={estilo} className="w-[72%]" />
+          </span>
+        </span>
+      )}
+    />
+    <ElegirEstilo
+      id="sala-pref-entendido"
+      leyenda="Icono de «Entendido»"
+      ayuda="Sustituye al del despertar cuando el jugador contesta «Entendido» (y el narrador aún no le ha vuelto a escribir)."
+      estilos={ESTILOS_ENTENDIDO}
+      valor={preferencias.iconoEntendido}
+      onCambiar={(iconoEntendido) => onCambiar({ iconoEntendido })}
+      muestra={(estilo) => (
+        <span className="relative block">
+          <FichaRedonda />
+          <span className="absolute inset-0 flex items-center justify-center">
+            <IconoDespertar nueva={false} entendido estiloEntendido={estilo} className="w-[72%]" />
+          </span>
+        </span>
+      )}
     />
     <ElegirEstilo
       id="sala-pref-silla"

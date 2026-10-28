@@ -10,8 +10,7 @@ import { KEY_ANTIGUA as KEY_PREFERENCIAS, type PreferenciasGuardables } from './
  * servidor: la que tiene puesta (se guarda sola al cambiarla) y los perfiles con
  * nombre para pasar de una a otra. Los invitados no guardan nada.
  *
- * No incluye las comunicaciones (cámara y micrófono, que son de cada navegador)
- * ni la imagen de perfil.
+ * No incluye las comunicaciones (cámara y micrófono, que son de cada navegador).
  */
 export interface ConfiguracionSala {
   preferencias: PreferenciasGuardables;
@@ -19,11 +18,19 @@ export interface ConfiguracionSala {
   atajos: Record<AccionAtajo, Atajo>;
   /** Los gestos táctiles de los atajos (los que tienen; ver gestos.ts). */
   gestos: GestosAsignados;
+  /** El avatar elegido para la sala (vacío: el de la cuenta), para tenerlo en cualquier dispositivo. */
+  avatar: string;
 }
 
-/** Lo que guarda un perfil: la configuración y, además, el nombre en la sala (vacío: el de la cuenta). */
-export interface DatosPerfil extends ConfiguracionSala {
+/** Lo que guarda un perfil: la configuración (sin el avatar) y, además, el nombre en la sala (vacío: el de la cuenta). */
+export interface DatosPerfil extends Omit<ConfiguracionSala, 'avatar'> {
   alias: string;
+}
+
+/** La configuración que va en un perfil: toda menos el avatar. */
+export function sinAvatar(configuracion: ConfiguracionSala): Omit<ConfiguracionSala, 'avatar'> {
+  const { preferencias, avisos, atajos, gestos } = configuracion;
+  return { preferencias, avisos, atajos, gestos };
 }
 
 export interface PerfilConfiguracion {

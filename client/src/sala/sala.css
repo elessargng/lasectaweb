@@ -1765,3 +1765,89 @@
     );
   }
 }
+
+/*
+ * El icono del despertar ilustrado (IconoDespertar): capas cuadradas de
+ * public/despertar, una encima de otra. En reposo, la vela apagada, el ojo cerrado
+ * y la máscara sencilla; con algo sin ver (data-nueva), se animan.
+ */
+.sala-despertar {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.55));
+}
+.sala-despertar > img,
+.sala-despertar > .halo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.sala-despertar > .halo {
+  opacity: 0;
+  border-radius: 9999px;
+  transition: opacity 0.4s ease;
+}
+.sala-despertar[data-nueva] {
+  filter: drop-shadow(0 0 6px rgba(236, 210, 154, 0.7));
+}
+
+/* La vela: apagada, un poco en penumbra; con algo nuevo, la llama se enciende y titila, con su halo */
+.sala-despertar-vela > img:not(.llama) { filter: brightness(0.82) saturate(0.85); transition: filter 0.4s ease; }
+.sala-despertar-vela[data-nueva] > img:not(.llama) { filter: none; }
+.sala-despertar-vela .llama { opacity: 0; transform-origin: 49.4% 24%; transition: opacity 0.3s ease; }
+.sala-despertar-vela .halo {
+  background: radial-gradient(circle at 49.4% 13%, rgba(255, 214, 140, 0.75) 0, rgba(255, 180, 90, 0.3) 12%, transparent 26%);
+}
+.sala-despertar-vela[data-nueva] .llama { opacity: 1; animation: sala-despertar-llama 1.6s ease-in-out infinite; }
+.sala-despertar-vela[data-nueva] .halo { opacity: 1; animation: sala-despertar-halo 1.6s ease-in-out infinite; }
+@keyframes sala-despertar-llama {
+  0%, 100% { transform: scale(1, 1) skewX(0deg); }
+  20% { transform: scale(0.94, 1.06) skewX(-3deg); }
+  45% { transform: scale(1.04, 0.95) skewX(2deg); }
+  70% { transform: scale(0.97, 1.08) skewX(-1.5deg); }
+}
+@keyframes sala-despertar-halo {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  30% { opacity: 1; transform: scale(1.06); }
+  60% { opacity: 0.7; transform: scale(0.96); }
+}
+.sala-despertar-vela .halo { transform-origin: 49.4% 13%; }
+
+/* El ojo: cerrado; con algo nuevo, se abre, brilla el iris y parpadea de vez en cuando */
+.sala-despertar-ojo .abierto { opacity: 0; transition: opacity 0.35s ease; }
+.sala-despertar-ojo .cerrado { transition: opacity 0.35s ease; }
+.sala-despertar-ojo .halo {
+  background: radial-gradient(circle at 51% 49%, rgba(255, 150, 80, 0.7) 0, rgba(236, 210, 154, 0.35) 14%, transparent 30%);
+}
+.sala-despertar-ojo[data-nueva] .abierto { opacity: 1; animation: sala-despertar-parpadeo 4.5s ease-in-out infinite; }
+.sala-despertar-ojo[data-nueva] .cerrado { opacity: 0; animation: sala-despertar-parpadeo-cerrado 4.5s ease-in-out infinite; }
+.sala-despertar-ojo[data-nueva] .halo { opacity: 1; animation: sala-despertar-brillo 2.25s ease-in-out infinite; }
+@keyframes sala-despertar-parpadeo {
+  0%, 88%, 100% { opacity: 1; }
+  92%, 95% { opacity: 0; }
+}
+@keyframes sala-despertar-parpadeo-cerrado {
+  0%, 88%, 100% { opacity: 0; }
+  92%, 95% { opacity: 1; }
+}
+@keyframes sala-despertar-brillo {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
+/* La máscara: la sencilla; con algo nuevo, encima la de plumas y adornos, que van y vienen */
+.sala-despertar-mascara .adornos { opacity: 0; transition: opacity 0.4s ease; }
+.sala-despertar-mascara[data-nueva] .adornos { opacity: 1; animation: sala-despertar-adornos 2.4s ease-in-out infinite; }
+@keyframes sala-despertar-adornos {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Sin animar: el estado nuevo, quieto */
+  .sala-despertar *,
+  .sala-despertar > img { animation: none !important; transition: none !important; }
+}

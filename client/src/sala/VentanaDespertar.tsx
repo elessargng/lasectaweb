@@ -1,12 +1,12 @@
-import { BookOpen, Maximize2, Minimize2, X } from 'lucide-react';
+import { BookOpen, Maximize2, Minimize2, UserPlus, X } from 'lucide-react';
 import EnviarGrimorio, { PERSONAJES_GRIMORIO } from './EnviarGrimorio';
 import { identidadDe } from './fichas';
-import { useState, type KeyboardEvent } from 'react';
-import { nombreDeAsiento } from './despertar';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { enumerar, nombreDeAsiento } from './despertar';
 import { botonPrincipal, botonSecundario } from './estilos';
 import type { PersonajeMostrado } from './guiones';
 import { ID_TITULO_DESPERTAR } from './ids';
-import { BotoneraDespertar, HistorialDespertar, type Propuesta } from './PiezasDespertar';
+import { BotoneraDespertar, EditorAdjunto, HistorialDespertar, type Propuesta } from './PiezasDespertar';
 import type { SalaDespertar, SalaEstado, SalaResultado } from './useSala';
 
 interface VentanaDespertarProps {
@@ -55,6 +55,9 @@ const ID_PANEL = 'sala-despertar-panel';
  *
  * Un visitante que ve el grimorio la abre igual, pero solo para leer: sin fichas
  * ni tarjetas que mandar.
+ *
+ * «Despertar a más jugadores»: lo que se mande desde un despertar llega también a
+ * los elegidos (a cada uno en el suyo, despertándolo si aún no lo está).
  */
 const VentanaDespertar = ({
   estado,
@@ -85,6 +88,25 @@ const VentanaDespertar = ({
     (PERSONAJES_GRIMORIO.includes(asiento.personaje ?? '') || PERSONAJES_GRIMORIO.includes(identidadDe(asiento).personaje ?? ''));
   const conPestanas = abiertos.length > 1;
   const revision = revisiones?.get(actual.asiento);
+
+  // A quién más se despierta con cada despertar (por su asiento); al revisar un guiado, a nadie
+  const [juntos, setJuntos] = useState<Record<string, string[]>>({});
+  const [eligiendoJuntos, setEligiendoJuntos] = useState(false);
+  const conjunto = revision || soloLectura ? [] : (juntos[actual.asiento] ?? []).filter((id) => estado.asientos.some((a) => a.id === id));
+  // Al dejar de elegir o al quitar a los demás, el foco vuelve a «Despertar a más jugadores»
+  const masRef = useRef<HTMLButtonElement>(null);
+  const focoMasRef = useRef(false);
+  useEffect(() => {
+    if (eligiendoJuntos || !focoMasRef.current) return;
+    focoMasRef.current = false;
+    masRef.current?.focus();
+  });
+  const cambiarJuntos = (ids: string[]) => {
+    setJuntos((j) => ({ ...j, [actual.asiento]: ids }));
+    setEligiendoJuntos(false);
+    focoMasRef.current = true;
+    onEnviado(ids.length ? `Lo que mandes llegará también a ${enumerar(ids.map((id) => nombreDeAsiento(estado, id)))}.` : `Solo a ${nombre}.`);
+  };
 
   // Pestañas: flechas para moverse entre ellas (y activarlas), Inicio y Fin.
   const alTeclear = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
@@ -119,7 +141,7 @@ const VentanaDespertar = ({
           className="min-w-0 flex-1 font-display text-xl text-gold-bright focus:outline-none"
         >
           {soloLectura ? 'Despertar de ' : 'Despierta a '}
-          <strong className="font-normal text-on-surface-bright">{nombre}</strong>
+          <strong className="font-normal text-on-surface-bright">{enumerar([nombre, ...conjunto.map((id) => nombreDeAsiento(estado, id))])}</strong>
         </h2>
         <button type="button" onClick={() => setMinimizada((m) => !m)} className={boton}>
           {minimizada ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
@@ -187,10 +209,42 @@ const VentanaDespertar = ({
               )}
             </div>
           )}
+          {!soloLectura && !revision && !eligiendoJuntos && (
+            <div className="flex flex-wrap gap-2">
+              <button ref={masRef} type="button" onClick={() => setEligiendoJuntos(true)} className={boton}>
+                <UserPlus size={14} />
+                Despertar a más jugadores
+              </button>
+              {conjunto.length > 0 && (
+                <button type="button" onClick={() => cambiarJuntos([])} className={boton}>
+                  Solo a {nombre}
+                </button>
+              )}
+            </div>
+          )}
           {/* key: al cambiar de despertar, lo que se estaba eligiendo no pasa al otro */}
-          {!soloLectura && (
+          {!soloLectura && eligiendoJuntos && (
+            <EditorAdjunto
+              key={actual.asiento}
+              pendiente={{ base: {}, titulo: 'Despertar también a', adjunto: { jugadores: true }, iniciales: { jugadores: conjunto } }}
+              asientos={estado.asientos.map((a) => ({ id: a.id, nombre: nombreDeAsiento(estado, a.id) }))}
+              excluidos={[actual.asiento]}
+              personajes={personajes}
+              textos={{ enviar: 'Aceptar', cartas: 'También despiertan' }}
+              onEnviar={async (envio) => {
+                cambiarJuntos(envio.jugadores ?? []);
+                return { ok: true };
+              }}
+              onCancelar={() => {
+                setEligiendoJuntos(false);
+                focoMasRef.current = true;
+              }}
+            />
+          )}
+          {!soloLectura && !eligiendoJuntos && (
             <BotoneraDespertar
               key={`${actual.asiento}-${revision?.personajeId ?? ''}`}
+              conjunto={conjunto}
               revision={revision ? { personajeId: revision.personajeId, propuestas: revision.propuestas } : undefined}
               estado={estado}
               asientoId={actual.asiento}

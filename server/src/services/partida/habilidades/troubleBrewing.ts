@@ -24,6 +24,7 @@ import {
   type HabilidadNocturna,
   type Resultado,
 } from './HabilidadNocturna';
+import { demonios, esbirros } from './malvados';
 
 /** Las habilidades de noche de Trouble Brewing. */
 
@@ -250,6 +251,8 @@ class MujerEscarlata extends RecibeInformacion {
 export const mujerEscarlata = new MujerEscarlata();
 
 export const HABILIDADES_TROUBLE_BREWING: readonly HabilidadNocturna[] = [
+  esbirros,
+  demonios,
   envenenador,
   monje,
   mayordomo,
