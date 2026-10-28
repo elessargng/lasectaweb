@@ -17,6 +17,7 @@ import { esAtajoValido, type Atajo } from './atajos';
 import { esTonoLlamada, SONIDOS, TONO_LLAMADA_DEFECTO, type SonidosActivos, type TonoLlamada } from './sonidos';
 import { esSalidaAudio, SALIDA_DEFECTO, type SalidaAudio } from './sonidoEnvolvente';
 import { esPreferenciaFondo, FONDO_DEFECTO, type PreferenciaFondo } from './fondos';
+import { COLORES_CIELO_DEFECTO, esColoresCielo, type ColoresCielo } from './cielo';
 
 /**
  * Preferencias de la sala que solo cambian cómo la ves tú (tamaños, distancias,
@@ -103,16 +104,41 @@ export interface PreferenciasSala {
    * hay, el de La Secta), o siempre uno fijo (ver fondos.ts). Pestaña Interfaz.
    */
   fondo: PreferenciaFondo;
-  /** La ciudad animada de la cabecera (de día y de noche, con su atardecer y su amanecer). Pestaña Interfaz. */
-  ciudadCabecera: boolean;
-  /** En esa ciudad, el poblado (las casas y la torre); sin él, solo el cielo. Pestaña Interfaz. */
+  /**
+   * La ciudad animada en el centro de la mesa (ver CiudadPlaza): solo al atardecer y al
+   * amanecer (de entrada), siempre a la vista o nunca. Pestaña Interfaz.
+   */
+  ciudad: ModoCiudad;
+  /**
+   * En esa ciudad, el poblado (las casas y la torre); sin él, solo el cielo. Se llama así
+   * porque antes la ciudad iba en la cabecera: el nombre se guarda. Pestaña Interfaz.
+   */
   pobladoCabecera: boolean;
+  /** El cielo estrellado detrás de la sala de noche (ver CieloEstrellado). Pestaña Interfaz. */
+  cieloEstrellado: boolean;
+  /** Los colores de sus estrellas (ver cielo.ts). Pestaña Interfaz. */
+  coloresCielo: ColoresCielo;
+  /** Lo rápido que se mueven sus estrellas, en % de lo de siempre (0: quietas). Pestaña Interfaz. */
+  velocidadCielo: number;
+  /** Cuántas estrellas hay, en % de lo de siempre. Pestaña Interfaz. */
+  densidadCielo: number;
+  /** Cuánto brillan, en % de lo de siempre. Pestaña Interfaz. */
+  brilloCielo: number;
+  /** Cuánto parpadean, en % (0: nada). Pestaña Interfaz. */
+  parpadeoCielo: number;
   /** Cámara y micrófono elegidos (deviceId); vacío: los del sistema. Pestaña Comunicaciones. */
   idCamara: string;
   idMicrofono: string;
 }
 
-type ClaveNumerica = 'tamanoAvatar' | 'tamanoFicha' | 'distanciaFicha';
+type ClaveNumerica =
+  | 'tamanoAvatar'
+  | 'tamanoFicha'
+  | 'distanciaFicha'
+  | 'velocidadCielo'
+  | 'densidadCielo'
+  | 'brilloCielo'
+  | 'parpadeoCielo';
 type ClaveSiNo =
   | 'avatarAuto'
   | 'fichaAuto'
@@ -121,9 +147,13 @@ type ClaveSiNo =
   | 'sonidoEnvolvente'
   | 'panelLateralContraido'
   | 'farolesFijados'
-  | 'ciudadCabecera'
   | 'pobladoCabecera'
+  | 'cieloEstrellado'
   | 'llamadaBotc';
+
+/** Cuándo sale la ciudad de la plaza: al cambiar de fase (de entrada), siempre o nunca. */
+export const MODOS_CIUDAD = ['cambios', 'siempre', 'nunca'] as const;
+export type ModoCiudad = (typeof MODOS_CIUDAD)[number];
 
 /** Los paneles de la columna de la izquierda: uno a la vez, elegido en su barra de iconos. */
 export const PANELES_LATERALES = ['mensajes', 'conversaciones', 'npcs', 'faroles'] as const;
@@ -146,6 +176,11 @@ export const RANGOS: Record<ClaveNumerica, Rango> = {
   tamanoAvatar: { min: 64, max: 256, paso: 8, defecto: 160 },
   tamanoFicha: { min: 32, max: 160, paso: 4, defecto: 72 },
   distanciaFicha: { min: 0, max: 100, paso: 5, defecto: 75 },
+  // Las del cielo, en % del de siempre (ver cielo.ts)
+  velocidadCielo: { min: 0, max: 150, paso: 10, defecto: 100 },
+  densidadCielo: { min: 50, max: 200, paso: 10, defecto: 100 },
+  brilloCielo: { min: 50, max: 200, paso: 10, defecto: 100 },
+  parpadeoCielo: { min: 0, max: 100, paso: 10, defecto: 50 },
 };
 
 /** Valor inicial de las de sí o no. */
@@ -157,8 +192,8 @@ const SI_NO: Record<ClaveSiNo, boolean> = {
   sonidoEnvolvente: false,
   panelLateralContraido: false,
   farolesFijados: false,
-  ciudadCabecera: true,
   pobladoCabecera: true,
+  cieloEstrellado: true,
   llamadaBotc: false,
 };
 
@@ -202,7 +237,14 @@ export function normalizarPreferencias(datos: unknown): PreferenciasSala {
       return [id, typeof guardado === 'boolean' ? guardado : true];
     }),
   ) as SonidosActivos;
+  preferencias.coloresCielo = esColoresCielo(guardadas.coloresCielo) ? guardadas.coloresCielo : COLORES_CIELO_DEFECTO;
   preferencias.fondo = esPreferenciaFondo(guardadas.fondo) ? guardadas.fondo : FONDO_DEFECTO;
+  // La ciudad: lo de antes (un sí o no, ciudadCabecera) apagado sigue apagado; encendido, de entrada
+  preferencias.ciudad = (MODOS_CIUDAD as readonly unknown[]).includes(guardadas.ciudad)
+    ? (guardadas.ciudad as ModoCiudad)
+    : guardadas.ciudadCabecera === false
+      ? 'nunca'
+      : 'cambios';
   preferencias.tonoLlamada = esTonoLlamada(guardadas.tonoLlamada) ? guardadas.tonoLlamada : TONO_LLAMADA_DEFECTO;
   // Los dispositivos: un id del navegador, o vacío (el predeterminado del sistema)
   const idDispositivo = (v: unknown) => (typeof v === 'string' && v.length <= 200 ? v : '');

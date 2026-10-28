@@ -18,6 +18,7 @@ import {
 } from 'livekit-client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CamaraCompartida } from './camaraCompartida';
+import { fijarNivelVoz } from './nivelVoz';
 import { MezcladorEspacial, type SalidaAudio } from './sonidoEnvolvente';
 import type { PaseVideo } from './useSala';
 
@@ -113,12 +114,32 @@ function pistasDe(room: Room | null): Map<string, PistasParticipante> {
 /**
  * Uno mismo habla según lo que capta su micrófono, aquí mismo: lo que dice el
  * servidor de vídeo llega uno o dos segundos tarde, y ver el propio aro con
- * retraso desconcierta. Volumen (0-1) a partir del que se habla, y cuánto se
- * sigue «hablando» tras callar (las pausas entre palabras no lo apagan).
+ * retraso desconcierta. Volumen (amplitud 0-1, como el audioLevel de LiveKit) a
+ * partir del que se habla: unos -34 dB, cerca del umbral del servidor (-35 dB),
+ * y cuánto se sigue «hablando» tras callar (las pausas entre palabras no lo apagan).
  */
-const UMBRAL_VOZ = 0.05;
+const UMBRAL_VOZ = 0.02;
 const PAUSA_VOZ_MS = 400;
 const CADA_MS = 50;
+
+/**
+ * El volumen de lo que capta el analizador: la amplitud eficaz (RMS) de la onda,
+ * en la misma escala que el audioLevel que manda el servidor de los demás. No
+ * sirve calculateVolume de LiveKit: mide entre -100 y -80 dB (para dibujar
+ * barras) y el ruido de la habitación ya lo llena, así que uno parecía hablar siempre.
+ */
+function volumenDe(analizador: AnalyserNode, muestras: Float32Array<ArrayBuffer>) {
+  analizador.getFloatTimeDomainData(muestras);
+  let suma = 0;
+  for (const m of muestras) suma += m * m;
+  return Math.sqrt(suma / muestras.length);
+}
+
+/**
+ * Del volumen (amplitud 0-1) a lo fuerte que se ve el aro (0-1), en decibelios
+ * como lo oye el oído: de -45 dB (un susurro) a -15 dB (voz alta).
+ */
+const nivelDeVolumen = (volumen: number) => Math.min(1, Math.max(0, (20 * Math.log10(Math.max(volumen, 1e-5)) + 45) / 30));
 
 /**
  * Oír o no a los de una sala, cada uno a su volumen (0 a 1; de entrada, 1). Bajar
@@ -233,6 +254,8 @@ export function useVideollamada({
     ) => {
       const room = crearRoom();
       let cerrada = false;
+      // Los demás que hablaban en esta sala (para su aro)
+      let hablaban = new Set<string>();
       const refrescar = () => !cerrada && alCambiar(pistasDe(room));
       room
         .on(RoomEvent.TrackSubscribed, (track: RemoteTrack, publicacion: RemoteTrackPublication, participante: RemoteParticipant) => {
@@ -256,7 +279,19 @@ export function useVideollamada({
         })
         .on(RoomEvent.TrackMuted, refrescar)
         .on(RoomEvent.TrackUnmuted, refrescar)
-        .on(RoomEvent.ActiveSpeakersChanged, refrescar)
+        .on(RoomEvent.ActiveSpeakersChanged, (quienes: Participant[]) => {
+          // El volumen de los demás, para su aro (el mío se mide aquí). Quien hablaba
+          // en esta sala y ya no, a 0; no se toca a nadie más: puede estar hablando en otra
+          const ahora = new Set<string>();
+          for (const p of quienes) {
+            if (p === room.localParticipant) continue;
+            ahora.add(p.identity);
+            fijarNivelVoz(p.identity, nivelDeVolumen(p.audioLevel));
+          }
+          for (const id of hablaban) if (!ahora.has(id)) fijarNivelVoz(id, 0);
+          hablaban = ahora;
+          refrescar();
+        })
         .on(RoomEvent.ParticipantConnected, refrescar)
         .on(RoomEvent.ParticipantDisconnected, refrescar)
         .on(RoomEvent.LocalTrackPublished, () => {
@@ -279,6 +314,8 @@ export function useVideollamada({
         .on(RoomEvent.Disconnected, () => {
           // Al desconectarse, la sala para sus pistas: su copia de la cámara ya no cuenta
           camaraCompartida.soltar(room);
+          for (const id of hablaban) fijarNivelVoz(id, 0);
+          hablaban = new Set();
           if (ref.current === room) ref.current = null;
           if (!cerrada) alCambiar(new Map());
         })
@@ -473,7 +510,7 @@ export function useVideollamada({
     const publicacion = room?.localParticipant.getTrackPublication(Track.Source.Microphone);
     const pista = publicacion?.track as LocalAudioTrack | undefined;
     // Sin micrófono que medir, callado (la limpieza de la medida anterior ya lo apagó)
-    if (!publicacion || !pista || !microfono || silenciado) return;
+    if (!room || !publicacion || !pista || !microfono || silenciado) return;
     let analizador = createAudioAnalyser(pista, { cloneTrack: true });
     // Al cambiar de micrófono en Preferencias la pista se reinicia: se vuelve a medir la nueva
     const alReiniciar = () => {
@@ -481,17 +518,23 @@ export function useVideollamada({
       analizador = createAudioAnalyser(pista, { cloneTrack: true });
     };
     pista.on(TrackEvent.Restarted, alReiniciar);
+    const id = room.localParticipant.identity;
+    let muestras = new Float32Array(analizador.analyser.fftSize);
     let ultimaVoz = 0;
     const medir = window.setInterval(() => {
       const ahora = Date.now();
-      if (!publicacion.isMuted && analizador.calculateVolume() > UMBRAL_VOZ) ultimaVoz = ahora;
+      if (muestras.length !== analizador.analyser.fftSize) muestras = new Float32Array(analizador.analyser.fftSize);
+      const volumen = publicacion.isMuted ? 0 : volumenDe(analizador.analyser, muestras);
+      if (volumen > UMBRAL_VOZ) ultimaVoz = ahora;
       setYoHablando(ahora - ultimaVoz < PAUSA_VOZ_MS);
+      fijarNivelVoz(id, nivelDeVolumen(volumen));
     }, CADA_MS);
     return () => {
       window.clearInterval(medir);
       pista.off(TrackEvent.Restarted, alReiniciar);
       void analizador.cleanup();
       setYoHablando(false);
+      fijarNivelVoz(id, 0);
     };
   }, [pistasPropias, conectadas, conversacion, hablaEnConversacion, microfono, silenciado]);
 

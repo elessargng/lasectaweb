@@ -24,6 +24,9 @@ export const ID_AYUDA_MOVER = 'sala-mover-ayuda';
 /** El botón «Cuenta atrás» de una nominación: a él va el foco al abrirla. */
 export const ID_CUENTA_ATRAS = 'sala-nominacion-cuenta-atras';
 
+/** El botón «Reiniciar» de una nominación: a él va el foco al arrancar la cuenta atrás (que desaparece). */
+export const ID_REINICIAR = 'sala-nominacion-reiniciar';
+
 /** El botón de la ficha de un jugador cuando se elige a quién nomina (o para cancelarlo). */
 export const idFichaNominar = (participanteId: string) => `sala-ficha-nominar-${participanteId}`;
 

@@ -125,6 +125,12 @@ export class SeguimientoPartida {
     if (userId) this.contar(userId, 'votos');
   }
 
+  /** Se reinicia la votación: el voto que se había contado no vale. */
+  desvota(userId: string | null): void {
+    const s = userId ? this.seguidos.get(userId) : undefined;
+    if (s && s.votos > 0) s.votos -= 1;
+  }
+
   /** Cae la noche con su calavera puesta: lo ha ejecutado la plaza. */
   ejecutado(userId: string | null): void {
     if (userId) this.contar(userId, 'ejecutado');

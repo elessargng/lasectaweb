@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { conQuienConversa } from './conversacionDe';
 import Agujas from './Agujas';
 import AnuncioGanador from './AnuncioGanador';
@@ -7,7 +7,7 @@ import { useAriaLive, type TipoAviso } from './avisosConfig';
 import AsaLevantar from './AsaLevantar';
 import AsaMover from './AsaMover';
 import Asiento from './Asiento';
-import NotasAsiento from './NotasAsiento';
+import NotaAsiento from './NotaAsiento';
 import GrimorioRecibido from './GrimorioRecibido';
 import { nombresDeAsientos } from './MiniGrimorio';
 import { BookOpen } from 'lucide-react';
@@ -21,12 +21,14 @@ import { hacenFalta, votacionOculta } from './avisosSala';
 import CuadroAvatar from './CuadroAvatar';
 import FichaAsiento from './FichaAsiento';
 import FichaRedonda from './FichaRedonda';
+import HumoRevelacion, { type HumoRevelacionHandle } from './HumoRevelacion';
+import { useMenosMovimiento } from './useMenosMovimiento';
 import PersonajeEnFicha from './PersonajeEnFicha';
 import RecordatoriosFicha from './RecordatoriosFicha';
 import VelaVoto from './VelaVoto';
 import { useMarcas } from './marcas';
 import { ESCALA_RECORDATORIO } from './FichaRecordatorio';
-import { contarBolsa, describirRecordatorio, identidadDe, NOTAS_MAX, recordatoriosDeFicha, TIPOS_REPARTO, useFichas } from './fichas';
+import { contarBolsa, describirRecordatorio, identidadDe, recordatoriosDeFicha, TIPOS_REPARTO, useFichas } from './fichas';
 import { descuadres } from './comprobarReparto';
 import LunaDespertar from './LunaDespertar';
 import ManoLevantada from './ManoLevantada';
@@ -92,6 +94,8 @@ interface MesaProps {
   pistas: Map<string, PistasParticipante>;
   /** Susurros en curso: ondas de un asiento a otro. */
   ondas: OndaMesa[];
+  /** En la plaza, dentro del corro de fichas y por debajo de todo (la ciudad, CiudadPlaza). */
+  ciudad?: ReactNode;
   /**
    * Narrador (y visitante que ve el grimorio): los asientos con despertar, los que
    * tienen mensajes sin ver y cómo abrir (o crear, de noche: solo el narrador) el
@@ -117,13 +121,22 @@ interface MesaProps {
  * siguiendo como las agujas del reloj, así que el último queda hacia las 11.
  * El centro del cuadro se separa del borde de la mesa medio cuadro (--sala-avatar).
  */
-function posicion(i: number, total: number): CSSProperties {
+function posicion(i: number, total: number, retirado = false): CSSProperties {
   const angulo = anguloAsiento(i, total);
   const x = Math.sin(angulo).toFixed(4);
   const y = (-Math.cos(angulo)).toFixed(4);
-  const radio = '(50% - var(--sala-avatar, 10rem) / 2)';
+  // Retirado: hacia fuera lo que encoge el cuadro, así su borde de fuera no se mueve
+  const atras = retirado ? ` + ${(1 - ESCALA_RETIRO) / 2} * var(--sala-avatar, 10rem)` : '';
+  const radio = `(50% - var(--sala-avatar, 10rem) / 2${atras})`;
   return { left: `calc(50% + ${x} * ${radio})`, top: `calc(50% + ${y} * ${radio})` };
 }
+
+/**
+ * Quien conversa en privado se retira hacia el fondo: su cuadro y su ficha
+ * encogen a esto (sala.css, sala-retiro) como si todo el asiento se alejara
+ * desde el borde de fuera de su cuadro, así que también se van hacia fuera.
+ */
+const ESCALA_RETIRO = 0.72;
 
 /**
  * Dónde va la ficha del asiento `i`: su centro, sobre la línea que va del centro
@@ -136,13 +149,16 @@ function posicion(i: number, total: number): CSSProperties {
  * un círculo perfecto, concéntrico con el de los asientos (en diagonal, al 100%,
  * pueden rozar la esquina del cuadro).
  */
-function posicionFicha(i: number, total: number): CSSProperties {
+function posicionFicha(i: number, total: number, retirado = false): CSSProperties {
   const angulo = anguloAsiento(i, total);
   const x = Math.sin(angulo).toFixed(4);
   const y = (-Math.cos(angulo)).toFixed(4);
   const t = 'var(--sala-ficha-distancia, 0.75)';
+  const dentro = `${t} * (var(--sala-avatar, 10rem) + var(--sala-ficha, 4.5rem)) / 2`;
+  // Retirado: se aleja con su asiento (ver ESCALA_RETIRO), desde el borde de fuera del cuadro
+  const atras = retirado ? ` + ${1 - ESCALA_RETIRO} * (var(--sala-avatar, 10rem) / 2 + ${dentro})` : '';
   // Radio de las fichas: el de los asientos menos el desplazamiento hacia dentro.
-  const radio = `(50% - var(--sala-avatar, 10rem) / 2 - ${t} * (var(--sala-avatar, 10rem) + var(--sala-ficha, 4.5rem)) / 2)`;
+  const radio = `(50% - var(--sala-avatar, 10rem) / 2 - ${dentro}${atras})`;
   return { left: `calc(50% + ${x} * ${radio})`, top: `calc(50% + ${y} * ${radio})` };
 }
 
@@ -233,6 +249,7 @@ const Mesa = ({
   contacto,
   pistas,
   ondas,
+  ciudad,
   despertares,
   seguimiento,
   eleccion = null,
@@ -322,7 +339,7 @@ const Mesa = ({
   const ariaLiveAsientos = useAriaLive('editarAsientos');
   // Lo que lleva cada ficha, para leerlo con el nombre del asiento: el personaje que
   // ve quien mira (el de la partida o, con grimorio, el que ha anotado), la calavera y el sudario.
-  const { porId, notas, anotar, todosPorId, notasRecordatorios, anotarRecordatorios, notasEscritas, escribirNotas } = useFichas();
+  const { porId, notas, anotar, todosPorId, notasRecordatorios, anotarRecordatorios, notasEscritas, escribirNota } = useFichas();
   // Cómo se ve si a un muerto le queda el voto (Preferencias > Interfaz): su vela, o el círculo en el sudario
   const estiloVoto = useMarcas().voto;
   // Con grimorio propio, lo anotado tapa lo que se ve de la partida (también en la propia)
@@ -374,28 +391,27 @@ const Mesa = ({
     }
     window.setTimeout(() => document.getElementById(`sala-ficha-${asientoId}-boton`)?.focus(), 0);
   };
-  // Las notas de cada asiento: las del narrador (a quien ve el grimorio) o, con grimorio
-  // propio, las del jugador (en su navegador). Las escriben el narrador y el jugador con grimorio.
-  const [notasAbiertas, setNotasAbiertas] = useState<{ asientoId: string; nueva: boolean } | null>(null);
-  const notasDe = (a: (typeof asientos)[number]) => (modoFichas === 'grimorio' ? (notasEscritas[a.id] ?? []) : (a.notas ?? []));
+  // La nota de cada asiento: la del narrador (a quien ve el grimorio) o, con grimorio
+  // propio, la del jugador (en su navegador). La escriben el narrador y el jugador con grimorio.
+  // Se ve como un pósit junto al cuadro que cada uno pliega o despliega en su pantalla.
+  const [notaEditando, setNotaEditando] = useState<string | null>(null);
+  const [notasPlegadas, setNotasPlegadas] = useState<ReadonlySet<string>>(() => new Set());
+  const plegarNota = (asientoId: string, plegada: boolean) =>
+    setNotasPlegadas((s) => {
+      const n = new Set(s);
+      if (plegada) n.add(asientoId);
+      else n.delete(asientoId);
+      return n;
+    });
+  const notaDe = (a: (typeof asientos)[number]) => (modoFichas === 'grimorio' ? (notasEscritas[a.id] ?? null) : (a.nota ?? null));
   const escriboNotas = modoFichas === 'narrador' || modoFichas === 'grimorio';
-  const guardarNota = async (asientoId: string, notaId: string | null, texto: string): Promise<string | null> => {
+  // Guarda la nota de un asiento (con null, la borra) y devuelve el error, o null si ha ido bien
+  const guardarNota = async (asientoId: string, texto: string | null): Promise<string | null> => {
     if (modoFichas === 'grimorio') {
-      const lista = notasEscritas[asientoId] ?? [];
-      if (notaId) escribirNotas(asientoId, lista.map((n) => (n.id === notaId ? { ...n, texto } : n)));
-      else if (lista.length >= NOTAS_MAX) return `Cada asiento puede tener como mucho ${NOTAS_MAX} notas.`;
-      else escribirNotas(asientoId, [...lista, { id: crypto.randomUUID(), texto }]);
+      escribirNota(asientoId, texto);
       return null;
     }
-    const r = await pedir('narrador:escribirNota', { asientoId, notaId, texto });
-    return r.ok ? null : r.error;
-  };
-  const borrarNota = async (asientoId: string, notaId: string): Promise<string | null> => {
-    if (modoFichas === 'grimorio') {
-      escribirNotas(asientoId, (notasEscritas[asientoId] ?? []).filter((n) => n.id !== notaId));
-      return null;
-    }
-    const r = await pedir('narrador:borrarNota', { asientoId, notaId });
+    const r = texto === null ? await pedir('narrador:borrarNota', { asientoId }) : await pedir('narrador:escribirNota', { asientoId, texto });
     return r.ok ? null : r.error;
   };
 
@@ -476,6 +492,9 @@ const Mesa = ({
     onHecho: (desde, hasta) =>
       onAnuncio('bolsa', `Fichas intercambiadas: ${nombreDeAsiento(estado, desde)} y ${nombreDeAsiento(estado, hasta)}.`),
   });
+  // Cada ficha que se revela suelta el humo de su bando (sin él si se pide menos movimiento)
+  const humoRef = useRef<HumoRevelacionHandle>(null);
+  const menosMovimiento = useMenosMovimiento();
   // Revelando el grimorio (narradores): pulsar una ficha la revela a todos; «Terminar» revela las que quedan
   const puedeRevelar = acciones.includes('narrador:revelarFicha');
   // La ficha revelada deja de ser un botón: el foco va a la siguiente boca abajo (en
@@ -594,6 +613,10 @@ const Mesa = ({
   const pocosParaMezclar = !asientos.some((a) => a.ocupante);
   // Las fichas solo se ven (sin menú, sin seguir ni despertares): el asiento ya dice lo que lleva la suya
   const capaOculta = modoFichas === 'ver' && !seguimiento && !despertares;
+  // Algo en el centro de la mesa (ver abajo): la ciudad se vela para dejarlo leer
+  const centroOcupado = !!(
+    estado.reloj || nominacion?.cuentaAtrasFin || nominar.panel || nominar.cancelar || eleccion || editando || revelacion || estado.fichasRetenidas || senalamiento
+  );
 
   return (
     <div
@@ -601,8 +624,14 @@ const Mesa = ({
       // isolate: las capas de la mesa (fichas, agujas, centro) no compiten con la cabecera y sus menús
       className="sala-mesa-halo relative isolate mx-auto aspect-square w-full max-w-[calc(100vh-8rem)]"
       // Los tamaños de la mesa (automáticos o no) para sus asientos y fichas.
-      style={{ '--sala-avatar': `${avatar}px`, '--sala-ficha': `${ficha}px` } as CSSProperties}
+      style={{ '--sala-avatar': `${avatar}px`, '--sala-ficha': `${ficha}px`, '--sala-retiro': ESCALA_RETIRO } as CSSProperties}
     >
+      {/* La ciudad, en el hueco que dejan las fichas: la primera, así queda debajo de todo (sala.css, sala-plaza-ciudad) */}
+      {ciudad && (
+        <div className="sala-plaza-ciudad hidden sm:block" data-velada={centroOcupado || undefined}>
+          {ciudad}
+        </div>
+      )}
       {total > 0 ? (
         <ol id="sala-asientos" tabIndex={-1} aria-label="Asientos" className="focus:outline-none">
           {asientos.map((a, i) => {
@@ -625,6 +654,8 @@ const Mesa = ({
             // La vela del muerto, si se ha elegido (si no, el círculo va en el sudario)
             const conVela = a.muerto && estiloVoto === 'vela';
             const posRecordatorios = posicionRecordatorios(i, total, conVela);
+            // Conversando en privado: el asiento entero se retira hacia el fondo
+            const retirado = !!ocupante && conQuienConversa(estado, ocupante.id) !== undefined;
             return (
               // Cada asiento con su ficha justo después: el lector los lee juntos, asiento a asiento.
               // El li no tiene caja (contents): el asiento y la capa de su ficha se colocan respecto a la mesa.
@@ -632,7 +663,11 @@ const Mesa = ({
                 {/* Centrado en su punto sin transform ni z-index (una caja de 0×0 que centra el asiento): así no
                     forma su propio plano y, dentro, el cuadro queda bajo las fichas mientras la mano y los
                     botones de llamada (z-[25], ver Asiento) pasan por encima de ellas */}
-                <div data-asiento={a.id} className="absolute flex h-0 w-0 items-center justify-center" style={posicion(i, total)}>
+                <div
+                  data-asiento={a.id}
+                  className="absolute flex h-0 w-0 items-center justify-center transition-[left,top] duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none"
+                  style={posicion(i, total, retirado)}
+                >
                   <div className="relative shrink-0">
                     <Asiento
                       id={a.id}
@@ -687,20 +722,20 @@ const Mesa = ({
                         )
                       }
                     />
-                    {/* Las notas: una pestaña hacia fuera de la mesa (la izquierda o la derecha del cuadro) */}
+                    {/* La nota: un pósit hacia fuera de la mesa (a la izquierda o a la derecha del cuadro) */}
                     {!editando && (
-                      <NotasAsiento
+                      <NotaAsiento
                         asientoId={a.id}
                         nombre={describirAsiento(i + 1, ocupante)}
-                        notas={notasDe(a)}
+                        nota={notaDe(a)}
                         editable={escriboNotas}
                         lado={Math.sin(anguloAsiento(i, total)) < -0.01 ? 'izquierda' : 'derecha'}
-                        abierto={notasAbiertas?.asientoId === a.id}
-                        nueva={notasAbiertas?.asientoId === a.id && notasAbiertas.nueva}
-                        onAbrir={() => setNotasAbiertas({ asientoId: a.id, nueva: false })}
-                        onCerrar={() => setNotasAbiertas((n) => (n?.asientoId === a.id ? null : n))}
-                        onGuardar={(notaId, texto) => guardarNota(a.id, notaId, texto)}
-                        onBorrar={(notaId) => borrarNota(a.id, notaId)}
+                        plegada={notasPlegadas.has(a.id)}
+                        editando={notaEditando === a.id}
+                        onPlegar={(plegada) => plegarNota(a.id, plegada)}
+                        onEditar={() => setNotaEditando(a.id)}
+                        onTerminar={() => setNotaEditando((n) => (n === a.id ? null : n))}
+                        onGuardar={(texto) => guardarNota(a.id, texto)}
                       />
                     )}
                   </div>
@@ -719,12 +754,14 @@ const Mesa = ({
                     aria-hidden={soloSeVe || undefined}
                     // La ficha con el menú abierto, por encima de las demás (si no, su menú quedaría debajo).
                     // Arrastrándola (Gardener), se queda en tenue; aquella sobre la que se soltaría, resaltada.
-                    className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full has-[[aria-expanded=true]]:z-50 ${soloSeVe ? '' : 'pointer-events-auto'} ${
+                    // Conversando en privado, encoge y se aleja con su asiento (sala-retiro-ficha)
+                    data-retirado={retirado || undefined}
+                    className={`sala-retiro-ficha absolute -translate-x-1/2 -translate-y-1/2 rounded-full has-[[aria-expanded=true]]:z-50 ${soloSeVe ? '' : 'pointer-events-auto'} ${
                       puedeIntercambiar ? 'touch-none' : ''
                     } ${intercambio.arrastre?.desde === a.id ? 'opacity-40' : ''} ${
                       intercambio.arrastre?.hasta === a.id ? 'ring-4 ring-gold-bright ring-offset-2 ring-offset-background' : ''
                     }`}
-                    style={posicionFicha(i, total)}
+                    style={posicionFicha(i, total, retirado)}
                   >
                     <FichaAsiento
                       asiento={a}
@@ -734,6 +771,7 @@ const Mesa = ({
                       pedir={pedir}
                       onError={onError}
                       onNominar={nominar.onNominar?.(a.id)}
+                      yaNomino={nominar.yaNomino(a.id)}
                       eligiendo={eligiendo}
                       voto={nominacion?.votacion?.resultados[a.id]}
                       reloj={!!nominacion && !revelacion}
@@ -748,7 +786,15 @@ const Mesa = ({
                           ? () => void pedir('narrador:lilmonsta').then((r) => !r.ok && onError(r.error))
                           : undefined
                       }
-                      onEscribirNota={escriboNotas && !editando ? () => setNotasAbiertas({ asientoId: a.id, nueva: true }) : undefined}
+                      onEscribirNota={
+                        escriboNotas && !editando
+                          ? () => {
+                              plegarNota(a.id, false);
+                              setNotaEditando(a.id);
+                            }
+                          : undefined
+                      }
+                      conNota={!!notaDe(a)}
                       onIntercambiar={puedeIntercambiar ? () => setIntercambiando(a.id) : undefined}
                       revelando={
                         revelacion
@@ -758,6 +804,7 @@ const Mesa = ({
                             }
                           : undefined
                       }
+                      onHumo={(ancla, bando) => humoRef.current?.soltar(ancla, bando)}
                     />
                     {a.muertePendiente && acciones.includes('narrador:confirmarMuerte') && !editando && (
                       // La muerte de la noche, por anunciar: el sudario semitransparente es un botón que
@@ -883,6 +930,7 @@ const Mesa = ({
 
       {senalamiento && <ManosSenalamiento estado={estado} senalamiento={senalamiento} miAsiento={miAsiento} />}
 
+      {revelacion && !menosMovimiento && <HumoRevelacion ref={humoRef} />}
       {/* Todas reveladas: el bando ganador, en grande (se anuncia aparte) */}
       {revelacion?.terminada && (
         <AnuncioGanador
@@ -940,13 +988,14 @@ const Mesa = ({
         // Debajo del eje de las agujas: los votos que hacen falta (el narrador lo ve en su panel)
         // (con la votación secreta, no se sabe: solo que lo es)
         <p className="absolute left-1/2 top-[calc(50%+3rem)] z-30 -translate-x-1/2 whitespace-nowrap rounded border border-gold/30 bg-background/80 px-3 py-1 font-ui text-sm font-semibold tracking-wide text-on-surface-bright">
+          {nominacion.expulsion && 'Expulsión · '}
           {secreta ? 'Votación secreta' : hacenFalta(nominacion.votosNecesarios)}
         </p>
       )}
 
       {/* El centro de la mesa: el reloj del narrador y la cuenta atrás (todos), el panel
           de la nominación y el de editar asientos (narradores). Por encima de las agujas. */}
-      {(estado.reloj || nominacion?.cuentaAtrasFin || nominar.panel || nominar.cancelar || eleccion || editando || revelacion || estado.fichasRetenidas || senalamiento) && (
+      {centroOcupado && (
         <div className="absolute left-1/2 top-1/2 z-30 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">
           {estado.reloj && (
             <RelojSala

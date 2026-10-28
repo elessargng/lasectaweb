@@ -22,7 +22,6 @@ export type {
   SalaGrimorioEnviado,
   SalaInvitacion,
   SalaNominacion,
-  SalaNota,
   SalaParticipante,
   SalaRecordatorio,
   SalaRegistroVotacion,

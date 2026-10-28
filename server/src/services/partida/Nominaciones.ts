@@ -14,6 +14,8 @@ type NominacionInterna = Omit<SalaNominacion, 'votosNecesarios' | 'votosNecesari
   registro: SalaRegistroVotacion | null;
   /** Los asientos de muertos que ya no tenían voto al empezar la votación (para la votación secreta). */
   gastadosAlVotar?: string[];
+  /** Las cuentas cuyo voto se ha contado en esta votación (para descontarlo si se reinicia). */
+  votantesContados?: (string | null)[];
   /**
    * Los votos que hacían falta por defecto cuando terminó su votación: se siguen
    * enseñando hasta la siguiente nominación (el récord del día que deja esta
@@ -31,6 +33,12 @@ export interface EntornoVotacion {
   /** La mesa, en orden. */
   mesa(): SalaAsiento[];
   buscar(participanteId: string): SalaParticipante | undefined;
+  /** Baja todas las manos levantadas. */
+  bajarManos(): void;
+  /** La cuenta de un participante, o null (invitado). */
+  cuentaDe(participanteId: string): string | null;
+  /** En el asiento hay un viajero: nominarlo es pedir su expulsión. */
+  llevaViajero(asiento: SalaAsiento): boolean;
   /** El día de la partida (para el registro). */
   dia(): number;
   /** Lo que tarda la aguja en pasar de una ficha a la siguiente. */
@@ -45,9 +53,15 @@ export interface EntornoVotacion {
   valorDelVoto(asiento: SalaAsiento, ocupante: SalaParticipante): number;
   /** La votación es secreta (Organ Grinder). */
   secreta(): boolean;
-  /** Para las estadísticas: alguien ha nominado a alguien, y alguien ha votado. */
+  /**
+   * Para las estadísticas: alguien ha nominado a alguien (no cuenta pedir una
+   * expulsión), alguien con esta cuenta ha votado y, al reiniciar la votación, su voto no vale.
+   */
   alNominar(desdeAsiento: string, hastaAsiento: string): void;
-  alVotar(participanteId: string): void;
+  alVotar(cuenta: string | null): void;
+  alDesvotar(cuenta: string | null): void;
+  /** Sale la expulsión de un viajero: muere al momento. */
+  alExpulsar(asientoId: string): void;
   /** La votación ha avanzado sola (con el tiempo): hay que mandar el estado a todos. */
   alCambiarSola(): void;
 }
@@ -106,12 +120,12 @@ export class Nominaciones {
     this.temporizador = null;
   }
 
-  /** «asiento 3 (Bea)» o «asiento 3, libre», como lo verá el narrador en el registro. */
+  /** «Bea» o, si está libre, «asiento 3», como lo verá el narrador en el registro. */
   private describirAsiento(asientoId: string): string {
     const i = this.entorno.mesa().findIndex((a) => a.id === asientoId);
     const ocupante = this.entorno.mesa()[i]?.ocupante;
     const nombre = ocupante ? this.entorno.buscar(ocupante)?.nombre : undefined;
-    return nombre ? `asiento ${i + 1} (${nombre})` : `asiento ${i + 1}, libre`;
+    return nombre || `asiento ${i + 1}`;
   }
 
   /**
@@ -144,14 +158,17 @@ export class Nominaciones {
     const ocupante = asiento?.ocupante ? this.entorno.buscar(asiento.ocupante) : undefined;
     // La Banshee con su habilidad, y los muertos con el Voudon vivo, votan sin gastar el
     // voto de muerto (ni les hace falta); con el Voudon, los vivos no votan (salvo él)
-    const conservaVoto = !!asiento && this.entorno.votaSinGastar(asiento);
+    // En una expulsión nadie gasta el voto de muerto y cada mano vale 1
+    const conservaVoto = n.expulsion || (!!asiento && this.entorno.votaSinGastar(asiento));
     const sinVoto = !ocupante || this.entorno.sinVoto(ocupante.id);
     const vota = ocupante?.rol === 'jugador' && ocupante.manoLevantada && !sinVoto;
     if (vota) {
-      const valor = this.entorno.valorDelVoto(asiento!, ocupante);
+      const valor = n.expulsion ? 1 : this.entorno.valorDelVoto(asiento!, ocupante);
       v.votos += valor;
       if (valor !== 1) v.valores = { ...v.valores, [asientoId]: valor };
-      this.entorno.alVotar(ocupante.id);
+      const cuenta = this.entorno.cuentaDe(ocupante.id);
+      this.entorno.alVotar(cuenta);
+      n.votantesContados = [...(n.votantesContados ?? []), cuenta];
       // Voto contado: la mano baja sola.
       ocupante.manoLevantada = false;
       ocupante.dosManos = false;
@@ -162,10 +179,14 @@ export class Nominaciones {
     if (v.paso >= v.orden.length) {
       v.terminada = true;
       this.temporizador = null;
-      n.porDefectoAlTerminar = this.votosNecesariosPorDefecto();
-      // Si llega a los necesarios, la siguiente tendrá que superarla (aunque empate y
-      // nadie se quede con la calavera)
-      if (v.votos >= (n.votosElegidos ?? this.votosNecesariosPorDefecto())) {
+      n.porDefectoAlTerminar = this.votosNecesariosPorDefecto(n.expulsion);
+      const sale = v.votos >= (n.votosElegidos ?? n.porDefectoAlTerminar);
+      if (n.expulsion) {
+        // La expulsión no cuenta para las nominaciones: si sale, el viajero muere ya
+        if (sale) this.entorno.alExpulsar(n.hasta);
+      } else if (sale) {
+        // Si llega a los necesarios, la siguiente tendrá que superarla (aunque empate y
+        // nadie se quede con la calavera)
         this.maximoDelDia = Math.max(this.maximoDelDia ?? 0, v.votos);
       }
       // Se completa su entrada del registro (la que se hizo al nominar)
@@ -173,8 +194,7 @@ export class Nominaciones {
         n.registro.votantes = v.orden
           .filter((id) => v.resultados[id] !== null && v.resultados[id] !== undefined)
           .map((id) => {
-            const o = this.entorno.mesa().find((a) => a.id === id)?.ocupante;
-            const nombre = (o && this.entorno.buscar(o)?.nombre) || this.describirAsiento(id);
+            const nombre = this.describirAsiento(id);
             const valor = v.valores?.[id];
             return valor !== undefined ? `${nombre} (${valor} votos)` : nombre;
           });
@@ -204,13 +224,14 @@ export class Nominaciones {
     const { votosElegidos: _, registro: __, porDefectoAlTerminar, ...resto } = actual;
     const votosElegidos = actual.votosElegidos;
     // Votada, los de cuando terminó (no cambian al quedar el récord de esta votación)
-    const porDefecto = porDefectoAlTerminar ?? this.votosNecesariosPorDefecto();
+    const porDefecto = porDefectoAlTerminar ?? this.votosNecesariosPorDefecto(actual.expulsion);
     return {
       ...resto,
       votacion: actual.votacion ? { ...actual.votacion, resultados: { ...actual.votacion.resultados } } : null,
       votosNecesarios: votosElegidos ?? porDefecto,
       votosNecesariosPorDefecto: porDefecto,
-      privada: this.entorno.secreta(),
+      // El Organ Grinder esconde las nominaciones, no las expulsiones
+      privada: this.entorno.secreta() && !actual.expulsion,
     };
   }
 
@@ -228,8 +249,10 @@ export class Nominaciones {
    * Los votos que hacen falta si el narrador no dice otra cosa: la mitad de las
    * fichas vivas, redondeando hacia arriba; y si ya ha habido hoy una votación
    * que llegó a los necesarios, al menos uno más que la que más tuvo. Nunca menos de 1.
+   * En una expulsión, siempre la mitad de los asientos (vivos o muertos), redondeando hacia arriba.
    */
-  private votosNecesariosPorDefecto(): number {
+  private votosNecesariosPorDefecto(expulsion = false): number {
+    if (expulsion) return Math.max(1, Math.ceil(this.entorno.mesa().length / 2));
     const vivos = this.entorno.mesa().filter((a) => !a.muerto).length;
     // Con el Voudon vivo no hace falta la mitad: basta 1 (y superar la que más tuvo hoy)
     const mayoria = this.entorno.mayoria(vivos);
@@ -244,32 +267,31 @@ export class Nominaciones {
 
   /**
    * Empieza una nominación (sustituye a la que hubiera) y la apunta en el
-   * registro, con su día (si no se llega a votar, queda sin votos). Baja la mano
-   * a los muertos que ya no tienen voto. No comprueba permisos.
+   * registro, con su día (si no se llega a votar, queda sin votos). Si el nominado
+   * es un viajero, es una expulsión (ver SalaNominacion.expulsion). Baja todas
+   * las manos que hubiera levantadas. No comprueba permisos.
    */
   nominar(desde: string, hasta: string): void {
     this.pararTemporizador();
+    const nominado = this.entorno.mesa().find((a) => a.id === hasta);
+    const expulsion = !!nominado && this.entorno.llevaViajero(nominado);
     const registro: SalaRegistroVotacion = {
       hora: Date.now(),
       dia: this.entorno.dia(),
       nomina: this.describirAsiento(desde),
       nominado: this.describirAsiento(hasta),
+      nominaAsiento: desde,
+      nominadoAsiento: hasta,
+      ...(expulsion && { expulsion }),
       votantes: null,
       votos: null,
     };
     this.registro.push(registro);
-    this.entorno.alNominar(desde, hasta);
-    this.nominacionEnCurso = { desde, hasta, cuentaAtrasFin: null, votacion: null, votosElegidos: null, registro };
-    // Quien no puede votar (un muerto sin voto; con el Voudon vivo, los vivos que no son
-    // él): si tenía la mano levantada, se le baja
-    for (const a of this.entorno.mesa()) {
-      if (!a.ocupante || !this.entorno.sinVoto(a.ocupante)) continue;
-      const ocupante = this.entorno.buscar(a.ocupante);
-      if (ocupante) {
-        ocupante.manoLevantada = false;
-        ocupante.dosManos = false;
-      }
-    }
+    // Pedir una expulsión no es nominar (no cuenta para las estadísticas)
+    if (!expulsion) this.entorno.alNominar(desde, hasta);
+    this.nominacionEnCurso = { desde, hasta, cuentaAtrasFin: null, votacion: null, expulsion, votosElegidos: null, registro };
+    // La nominación empieza con todas las manos bajadas
+    this.entorno.bajarManos();
   }
 
   cerrarNominacion(): void {
@@ -277,12 +299,44 @@ export class Nominaciones {
     this.nominacionEnCurso = null;
   }
 
+  /** La nominación en curso es la expulsión de un viajero: vota cualquiera (los muertos, sin gastar su voto). */
+  esExpulsion(): boolean {
+    return !!this.nominacionVigente()?.expulsion;
+  }
+
+  /** Si la cuenta atrás o la votación de la nominación en curso están en marcha (sin terminar). */
+  votacionEnMarcha(): boolean {
+    const n = this.nominacionVigente();
+    return !!n && (n.cuentaAtrasFin !== null || !!n.votacion) && !n.votacion?.terminada;
+  }
+
+  /**
+   * Para la cuenta atrás o la votación en marcha y deja la nominación como recién
+   * abierta: los muertos recuperan el voto que hubieran gastado en ella, los votos
+   * ya contados no cuentan para las estadísticas y se bajan todas las manos.
+   */
+  reiniciarVotacion(): void {
+    const n = this.nominacionVigente();
+    if (!n || !this.votacionEnMarcha()) return;
+    this.pararTemporizador();
+    if (n.votacion && n.gastadosAlVotar) {
+      const gastados = new Set(n.gastadosAlVotar);
+      for (const a of this.entorno.mesa()) if (a.muerto && !gastados.has(a.id)) a.votoGastado = false;
+    }
+    for (const cuenta of n.votantesContados ?? []) this.entorno.alDesvotar(cuenta);
+    n.cuentaAtrasFin = null;
+    n.votacion = null;
+    n.gastadosAlVotar = undefined;
+    n.votantesContados = undefined;
+    this.entorno.bajarManos();
+  }
+
   /** Si la nominación en curso está votando (o ha votado ya). */
   hayVotacion(): boolean {
     return !!this.nominacion()?.votacion;
   }
 
-  /** Arranca (o reinicia) la cuenta atrás de la nominación en curso; al acabar, se vota. */
+  /** Arranca la cuenta atrás de la nominación en curso; al acabar, se vota. */
   iniciarCuentaAtras(ahora: number): void {
     if (!this.nominacionEnCurso) return;
     this.pararTemporizador();

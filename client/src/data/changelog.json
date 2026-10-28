@@ -1,5 +1,106 @@
 [
   {
+    "version": "1.4.0",
+    "date": "2026-10-27",
+    "title": "Notas a la Vista",
+    "description": "Las notas del grimorio pasan a ser un pósit junto a cada asiento, los recordatorios son únicos como en la mesa real y los viajeros abren el orden de la noche. La ciudad se muda al centro de la mesa, donde atardece y amanece al cambiar de fase, y los viajeros se expulsan con su propia votación.",
+    "changes": [
+      {
+        "category": "Grimorio",
+        "items": [
+          "Cada asiento tiene ahora una sola nota, que se ve como un pósit junto a su cuadro, con el texto entero.",
+          "El pósit se pliega para que solo asome una pestaña, y si la nota es larga se fija con una chincheta para leerla entera.",
+          "En el menú de la ficha, «Editar nota» si el asiento ya tiene una.",
+          "Los recordatorios son únicos: al poner uno que ya estaba en otra ficha, se quita de la otra. Los que se llaman igual salen una sola vez en la lista.",
+          "De noche ya no se puede marcar a nadie con la calavera."
+        ]
+      },
+      {
+        "category": "Narrador",
+        "items": [
+          "Los viajeros en juego salen al principio del orden de cada noche, antes del Crepúsculo.",
+          "El reparto muestra cuántos jugadores y viajeros siguen vivos.",
+          "Los personajes que pueden ir repetidos en la bolsa (como el Village Idiot) se pueden repetir sin el Pope.",
+          "Al empezar una nominación se bajan todas las manos levantadas.",
+          "Ya se pueden activar los recordatorios de los viajeros y los NPCs.",
+          "Nominar a un viajero es pedir su expulsión: hace falta la mitad de la plaza, los muertos votan sin gastar su voto, no hay calavera y, si sale, el viajero muere al momento. El Organ Grinder no la esconde.",
+          "Nuevo botón «Reiniciar» para parar la cuenta atrás o la votación en marcha y dejar la nominación como recién abierta: los muertos recuperan el voto que hubieran gastado.",
+          "Al elegir a quién nominar, las fichas ya nominadas hoy salen apagadas con un rótulo, y «Nominar a…» avisa si ese asiento ya ha nominado. Se puede repetir igual.",
+          "El registro de votaciones pasa a ser una tabla por día: quién nomina, a quién, cuántos votos hubo y quién votó. La hora sale al pasar por encima de la fila."
+        ]
+      },
+      {
+        "category": "Sala de Juego",
+        "items": [
+          "La ciudad ilustrada deja la cabecera y pasa al centro de la mesa, vista por una ventana redonda dentro del corro de fichas.",
+          "La ciudad aparece al caer la noche y al amanecer, hace el cambio y se desvanece. Si hay algo en el centro (el reloj, una nominación…), se vela para que se lea.",
+          "La cabecera ya no tiene banda propia: el fondo de la sala sigue por detrás, con un degradado oscuro para leer el logo y los iconos.",
+          "En las conversaciones privadas, quien habla se ve con el mismo aro que en la plaza, sin tapar la cámara.",
+          "La ventana de conversación ya no se desplaza de lado.",
+          "El reloj del centro tiene esfera: bajo las agujas giran el aro con las marcas y dos engranajes.",
+          "Al revelar el grimorio, cada ficha suelta un humo del color de su bando, azul o rojo.",
+          "Quien conversa en privado se retira hacia el fondo de la mesa junto con su ficha, y vuelve al acabar."
+        ]
+      },
+      {
+        "category": "Personalización",
+        "items": [
+          "La ciudad de la plaza se puede ver solo al cambiar de fase, siempre o nunca (Preferencias > Interfaz). Quien la tenía quitada la sigue teniendo quitada."
+        ]
+      },
+      {
+        "category": "Sonido",
+        "items": [
+          "Cuando el narrador te despierta de noche suena como una llamada entrante, con el tono que elijas. Se puede quitar en Preferencias > Sonido."
+        ]
+      },
+      {
+        "category": "Guiones",
+        "items": [
+          "Los personajes propios de un guion pueden ir repetidos en la bolsa si lo indican («bag-duplicate»)."
+        ]
+      }
+    ]
+  },
+  {
+    "version": "1.3.5",
+    "date": "2026-10-26",
+    "title": "La Ciudad Ilustrada",
+    "description": "La sala estrena aspecto: una ciudad ilustrada que vive el día y la noche, un nuevo cielo estrellado, fondos a elegir y un indicador de voz que sigue a quien habla.",
+    "changes": [
+      {
+        "category": "Sala de Juego",
+        "items": [
+          "La ciudad de la cabecera es ahora una ilustración: de noche se encienden el reloj, el farol y las ventanas y cruzan cuervos; de día salen el sol, las nubes y las golondrinas.",
+          "Al cambiar de fase, la ciudad atardece o amanece.",
+          "Nuevo cielo estrellado de noche, con estrellas que giran despacio.",
+          "Quien habla se ve con un aro morado que crece con el volumen de su voz y unas barras de volumen en su cuadro.",
+          "La mano levantada sale del cuadro de cada jugador y del narrador.",
+          "Quien no vota en una votación queda tapado por un aspa grande.",
+          "Corregido el propio micrófono, que parecía estar siempre hablando."
+        ]
+      },
+      {
+        "category": "Personalización",
+        "items": [
+          "Añadida la elección del fondo de la sala: el del guion, el de botc.app o uno de los de La Secta.",
+          "Añadida la opción de quitar el poblado de la ciudad y dejar solo el cielo.",
+          "Añadidos los ajustes del cielo estrellado de la noche: quitarlo, sus colores, la velocidad de las estrellas (hasta dejarlas quietas), su densidad, su brillo y su parpadeo.",
+          "Nuevas calaveras: Dibujada (la de por defecto), Punisher y Terminator.",
+          "Nueva mano Dibujada, la de por defecto.",
+          "Nuevas sillas: Silla de comedor (la de por defecto) y Trono de espadas, en lugar del Trono gótico y el Butacón orejero."
+        ]
+      },
+      {
+        "category": "Guiones",
+        "items": [
+          "Si un guion trae su propio fondo, la sala lo usa al cargarlo.",
+          "Los personajes propios de un guion pueden traer su icono de bueno y de malvado."
+        ]
+      }
+    ]
+  },
+  {
     "version": "1.3.4",
     "date": "2026-10-22",
     "title": "Noche Estrellada",

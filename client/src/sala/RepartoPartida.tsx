@@ -46,7 +46,7 @@ const RepartoPartida = ({ distribucion, bolsa, asientos, npcs, setupAceptado, pr
   const tituloRef = useRef<HTMLHeadingElement>(null);
   const [confirmacion, setConfirmacion] = useState('');
   const ariaLive = useAriaLive('bolsa');
-  const { jugadores, viajeros } = distribucion;
+  const { jugadores, jugadoresVivos, viajeros, viajerosVivos } = distribucion;
   const hayReparto = distribucion.aldeanos !== null;
 
   // Lo que se cuenta: lo que hay en juego (si ya hay personajes en la mesa) o la bolsa
@@ -95,9 +95,13 @@ const RepartoPartida = ({ distribucion, bolsa, asientos, npcs, setupAceptado, pr
         Reparto de la partida
       </h2>
       <p className="text-xs text-on-surface-muted">
-        {jugadores === 1 ? '1 jugador' : `${jugadores} jugadores`}
-        {viajeros > 0 && ` y ${viajeros === 1 ? '1 viajero' : `${viajeros} viajeros`}`}
+        {jugadoresVivos}/{jugadores} {jugadores === 1 ? 'jugador vivo' : 'jugadores vivos'}
       </p>
+      {viajeros > 0 && (
+        <p className="text-xs text-on-surface-muted">
+          {viajerosVivos}/{viajeros} {viajeros === 1 ? 'viajero vivo' : 'viajeros vivos'}
+        </p>
+      )}
       {!hayReparto ? (
         <p className="mt-1 text-xs text-on-surface-muted">Hacen falta al menos 5 jugadores.</p>
       ) : cuentas ? (

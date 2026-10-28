@@ -42,6 +42,9 @@ export class EstadisticasPartida {
       case 'voto':
         this.seguimiento.vota(evento.userId);
         return;
+      case 'desvoto':
+        this.seguimiento.desvota(evento.userId);
+        return;
       case 'ejecucion':
         this.seguimiento.ejecutado(evento.userId);
         return;

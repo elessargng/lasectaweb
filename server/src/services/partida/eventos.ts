@@ -34,6 +34,8 @@ export type EventoPartida =
   | { tipo: 'nominacion'; nomina: string | null; nominado: string | null }
   /** Alguien ha votado (su cuenta, o null). */
   | { tipo: 'voto'; userId: string | null }
+  /** Se reinicia la votación: el voto que se había contado de esta cuenta (o null) no vale. */
+  | { tipo: 'desvoto'; userId: string | null }
   /** El narrador ha ejecutado a alguien (su cuenta, o null). */
   | { tipo: 'ejecucion'; userId: string | null }
   /**

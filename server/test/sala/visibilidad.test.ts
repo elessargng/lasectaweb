@@ -81,12 +81,12 @@ describe('lo que ve cada uno', () => {
       expect(ana.miAsiento?.personaje).toBe(entregado);
     });
 
-    it('los recordatorios y las notas no los ve el jugador, ni en su ficha', async () => {
+    it('los recordatorios y la nota no los ve el jugador, ni en su ficha', async () => {
       await arnes.accion(narradora, 'narrador:ponerRecordatorio', { asientoId: idAsiento(0), personajeId: 'poisoner', indice: 0 });
       await arnes.accion(narradora, 'narrador:escribirNota', { asientoId: idAsiento(0), texto: 'Sospechosa' });
       expect(asiento(narradora, 0).recordatorios).toHaveLength(1);
-      expect(asiento(narradora, 0).notas).toHaveLength(1);
-      expect(ana.miAsiento).toMatchObject({ recordatorios: [], notas: [] });
+      expect(asiento(narradora, 0).nota).toBe('Sospechosa');
+      expect(ana.miAsiento).toMatchObject({ recordatorios: [], nota: null });
     });
 
     it('al revelar el grimorio, todos ven las fichas reveladas', async () => {

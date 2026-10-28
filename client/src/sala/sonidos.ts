@@ -17,6 +17,7 @@ export const SONIDOS = [
   { id: 'voto', nombre: 'Cada voto', descripcion: 'Al votar, un sonido por cada mano levantada.' },
   { id: 'sinVoto', nombre: 'Quien no vota', descripcion: 'Un tic cuando la aguja pasa por alguien que no vota.' },
   { id: 'solicitudLlamada', nombre: 'Te solicitan una llamada', descripcion: 'Cuando alguien te pide conversar, con el tono que elijas.' },
+  { id: 'despertar', nombre: 'Te despierta el narrador', descripcion: 'De noche, al despertarte o mostrarte algo: el mismo tono que las llamadas.' },
   { id: 'entrarPrivado', nombre: 'Entras en una conversación privada', descripcion: 'Dos notas que suben.' },
   { id: 'salirPrivado', nombre: 'Sales de una conversación privada', descripcion: 'Dos notas que bajan.' },
   { id: 'saleOtro', nombre: 'Alguien sale de tu conversación privada', descripcion: 'Una nota grave.' },
@@ -46,10 +47,13 @@ const ARCHIVOS = {
 type Archivo = keyof typeof ARCHIVOS;
 /** Los sonidos que son un archivo (su id es el del archivo). */
 type SonidoArchivo = Extract<IdSonido, Archivo>;
+/** Los sonidos que suenan con el tono de llamada elegido. */
+type TonoDe = 'solicitudLlamada' | 'despertar';
 
 /** Las campanillas: notas (Hz) y cuándo suena cada una (s), con su timbre. */
 const CAMPANILLAS: Record<Exclude<IdSonido, SonidoArchivo>, { notas: [number, number][]; onda: OscillatorType; volumen: number; dura: number }> = {
   solicitudLlamada: { notas: [[880, 0]], onda: 'sine', volumen: 0.15, dura: 0.22 },
+  despertar: { notas: [[880, 0]], onda: 'sine', volumen: 0.15, dura: 0.22 },
   entrarPrivado: { notas: [[784, 0], [1047, 0.13]], onda: 'sine', volumen: 0.16, dura: 0.9 },
   salirPrivado: { notas: [[1047, 0], [784, 0.13]], onda: 'sine', volumen: 0.14, dura: 0.8 },
   saleOtro: { notas: [[392, 0]], onda: 'triangle', volumen: 0.16, dura: 0.9 },
@@ -162,8 +166,8 @@ function campanilla(id: Exclude<IdSonido, SonidoArchivo>, forzar = false): void 
  * Un timbre de teléfono: dos repiques, cada uno con dos notas que se alternan
  * muy deprisa (como la campana de un teléfono), con una pausa en medio.
  */
-function timbre(forzar = false): void {
-  const ctx = audio('solicitudLlamada', forzar);
+function timbre(id: TonoDe, forzar = false): void {
+  const ctx = audio(id, forzar);
   if (!ctx) return;
   const ahora = ctx.currentTime;
   const volumen = 0.1;
@@ -184,11 +188,11 @@ function timbre(forzar = false): void {
   }
 }
 
-/** La llamada entrante, con el tono elegido. */
-function tonoDeLlamada(forzar = false, tono = tonoLlamada): void {
-  if (tono === 'botc') sonar('llamadaBotc', undefined, forzar, 'solicitudLlamada');
-  else if (tono === 'telefono') timbre(forzar);
-  else campanilla('solicitudLlamada', forzar);
+/** La llamada entrante (o el despertar de noche, que suena igual), con el tono elegido. */
+function tonoDeLlamada(id: TonoDe, forzar = false, tono = tonoLlamada): void {
+  if (tono === 'botc') sonar('llamadaBotc', undefined, forzar, id);
+  else if (tono === 'telefono') timbre(id, forzar);
+  else campanilla(id, forzar);
 }
 
 /** Alguien vota. */
@@ -221,7 +225,12 @@ export function tocarPrivado(id: 'entrarPrivado' | 'salirPrivado' | 'saleOtro'):
 
 /** Alguien te pide conversar (una llamada entrante): con el tono elegido. */
 export function tocarSolicitud(): void {
-  tonoDeLlamada();
+  tonoDeLlamada('solicitudLlamada');
+}
+
+/** De noche, el narrador te despierta o te muestra algo: como una llamada entrante. */
+export function tocarDespertar(): void {
+  tonoDeLlamada('despertar');
 }
 
 /**
@@ -235,7 +244,7 @@ export function probarSonido(id: IdSonido, tono?: TonoLlamada): void {
   if (!ctx) return;
   void (ctx.state === 'running' ? Promise.resolve() : ctx.resume()).then(() => {
     if (id === 'voto' || id === 'sinVoto' || id === 'gong') sonar(id, undefined, true);
-    else if (id === 'solicitudLlamada') tonoDeLlamada(true, tono);
+    else if (id === 'solicitudLlamada' || id === 'despertar') tonoDeLlamada(id, true, tono);
     else if (id === 'cuentaAtras') {
       const parar = sonar(id, undefined, true);
       window.setTimeout(parar, 3000);

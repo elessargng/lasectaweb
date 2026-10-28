@@ -216,7 +216,7 @@ describe('Reglas (cómo se combinan)', () => {
     personaje: null,
     alineamiento: null,
     recordatorios: [],
-    notas: [],
+    nota: null,
     faroles: [null, null, null],
     ...cambios,
   });

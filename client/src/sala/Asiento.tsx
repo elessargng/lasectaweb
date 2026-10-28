@@ -38,7 +38,7 @@ interface AsientoProps {
   /** Su cámara, si la tiene encendida en la mesa (la propia, en espejo). */
   video?: VideoTrack | null;
   espejo?: boolean;
-  /** Está hablando (un borde eléctrico en el cuadro). */
+  /** Está hablando (un aro en el cuadro que sigue su voz). */
   hablando?: boolean;
   /**
    * Está en una conversación privada (fuera de la mesa): con quién, para el lector
@@ -161,7 +161,8 @@ const Asiento = ({
       )}
       <CuadroAvatar
         pieFuera={nombreAbajo ? 'abajo' : 'arriba'}
-        // Hablando: el borde eléctrico (no mientras se mueve a alguien aquí, que lleva su aro)
+        // Hablando: el aro de la voz (no mientras se mueve a alguien aquí, que lleva su aro)
+        idVoz={ocupante?.id}
         hablando={hablando && !destino}
         // Muerto: su avatar o su cámara, en gris (lo dice su ficha)
         apagado={!!ocupante && !!ficha?.muerto}

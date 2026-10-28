@@ -45,7 +45,7 @@ const TAMANO = '4.5rem';
  * Elegir una ficha recordatorio para poner junto a una ficha: de entrada, los
  * recordatorios de los personajes en juego; en la otra pestaña, los del resto
  * del guion. Por personaje (con su nombre de título), cada recordatorio es un
- * botón. Elegir uno lo pone y cierra el diálogo.
+ * botón (los que se llaman igual, uno solo). Elegir uno lo pone y cierra el diálogo.
  *
  * Con `onTexto`, una pestaña más para escribir uno propio (corto: va en redondo
  * en una ficha pequeña), con la ficha tal como quedará mientras se escribe, y el
@@ -227,7 +227,8 @@ const DialogoRecordatorio = ({ ficha, enJuego, otros, probables, onElegir, onCer
                           )}
                         </h4>
                         <ul className="flex flex-wrap gap-2">
-                          {p.recordatorios.map((r, i) => (
+                          {/* Los iguales (mismo texto), una vez: se ponen de uno en uno */}
+                          {p.recordatorios.map((r, i) => p.recordatorios.findIndex((x) => x.texto === r.texto) === i && (
                             <li key={i}>
                               <button
                                 type="button"

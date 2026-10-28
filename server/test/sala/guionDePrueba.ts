@@ -14,6 +14,7 @@ export const personaje = (id: string, tipo: TipoPersonaje, recordatorios: string
   recordatorioOtrasNoches: null,
   recordatorios,
   preparacion: false,
+  repetible: false,
   conocido: true,
 });
 

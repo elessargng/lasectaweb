@@ -27,6 +27,8 @@ export interface PersonajeDeGuion {
   recordatorios: string[];
   /** Altera la preparación de la partida (p. ej. el Barón). */
   preparacion: boolean;
+  /** Puede ir repetido en la bolsa sin el Pope (p. ej. el Village Idiot). */
+  repetible: boolean;
   conocido: boolean;
 }
 
@@ -203,6 +205,8 @@ export interface PersonajeMostrado {
   iconoMalvado: string | null;
   /** Altera la preparación de la partida. */
   preparacion: boolean;
+  /** Puede ir repetido en la bolsa sin el Pope. */
+  repetible: boolean;
   nombre: Texto;
   habilidad: Texto;
   primeraNoche: Texto | null;
@@ -260,6 +264,8 @@ export function mostrarPersonajes(
     iconoBueno: p.iconoBueno,
     iconoMalvado: p.iconoMalvado,
     preparacion: !!p.preparacion,
+    // (!!: por si el servidor aún no lo manda)
+    repetible: !!p.repetible,
     nombre: elegir(p.id, p.nombre, nombres, 'nombre') ?? { texto: p.id, lang: IDIOMA_ORIGINAL.codigo },
     habilidad: elegir(p.id, p.habilidad, descripciones, 'habilidad') ?? { texto: '', lang: IDIOMA_ORIGINAL.codigo },
     primeraNoche: elegir(p.id, p.recordatorioPrimeraNoche, descripciones, 'recordatorioPrimeraNoche'),

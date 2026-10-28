@@ -21,16 +21,16 @@ export interface ContextoVista {
 }
 
 /** Una ficha sin su personaje ni su alineamiento: así la ven quienes no son su jugador ni narran. */
-// Lo que un jugador no ve de una ficha: de las ajenas, el personaje y los faroles; de ninguna, los recordatorios ni las notas.
+// Lo que un jugador no ve de una ficha: de las ajenas, el personaje y los faroles; de ninguna, los recordatorios ni la nota.
 const sinPersonaje = (a: SalaAsiento): SalaAsiento => ({
   ...a,
   personaje: null,
   alineamiento: null,
   recordatorios: [],
-  notas: [],
+  nota: null,
   faroles: farolesVacios(),
 });
-const sinRecordatorios = (a: SalaAsiento): SalaAsiento => ({ ...a, recordatorios: [], notas: [] });
+const sinRecordatorios = (a: SalaAsiento): SalaAsiento => ({ ...a, recordatorios: [], nota: null });
 
 /**
  * La nominación como la ve quien no ve el grimorio en una votación secreta (Organ
@@ -110,16 +110,18 @@ export class VistaPartida {
     const narra = yo.rol === 'narrador';
     const veGrimorio = narra || (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido');
     const ocultarVotos = this.secreta && !veGrimorio;
+    // La votación en curso solo se esconde si es una nominación (las expulsiones, no)
+    const ocultarVotacion = ocultarVotos && !!this.nominacion?.privada;
     const miAsiento = sala.asientoDe(yo.id)?.id ?? null;
     return {
       // Votación secreta, con una nominación abierta: las manos de los demás no se ven
       participantes:
-        ocultarVotos && this.nominacion
+        ocultarVotacion
           ? this.participantes.map((p) => (p.id === yo.id ? p : { ...p, manoLevantada: false, dosManos: false }))
           : this.participantes,
-      asientos: veGrimorio ? this.asientos : this.asientos.map((a) => this.asientoSinGrimorio(a, yo, ocultarVotos)),
+      asientos: veGrimorio ? this.asientos : this.asientos.map((a) => this.asientoSinGrimorio(a, yo, ocultarVotos, ocultarVotacion)),
       configuracion: comun.configuracion,
-      nominacion: ocultarVotos && this.nominacion ? nominacionSecreta(this.nominacion, miAsiento) : this.nominacion,
+      nominacion: ocultarVotacion && this.nominacion ? nominacionSecreta(this.nominacion, miAsiento) : this.nominacion,
       fase: comun.fase,
       distribucion: comun.distribucion,
       revelacion: this.revelacion,
@@ -167,7 +169,7 @@ export class VistaPartida {
   }
 
   /** Un asiento como lo ve quien no ve el grimorio (un jugador o un visitante sin acceso). */
-  private asientoSinGrimorio(a: SalaAsiento, yo: SalaParticipante, ocultarVotos: boolean): SalaAsiento {
+  private asientoSinGrimorio(a: SalaAsiento, yo: SalaParticipante, ocultarVotos: boolean, ocultarVotacion: boolean): SalaAsiento {
     return {
       // La muerte pendiente (de la noche, por anunciar) es del grimorio: los demás no la ven
       ...(this.reveladas.has(a.id)
@@ -182,7 +184,7 @@ export class VistaPartida {
       // se vota, el voto de los muertos ajenos se ve como estaba al empezar
       ...(ocultarVotos && {
         votosMarca: null,
-        votoGastado: this.gastadosAlVotar && a.ocupante !== yo.id ? this.gastadosAlVotar.has(a.id) : a.votoGastado,
+        votoGastado: ocultarVotacion && this.gastadosAlVotar && a.ocupante !== yo.id ? this.gastadosAlVotar.has(a.id) : a.votoGastado,
       }),
     };
   }

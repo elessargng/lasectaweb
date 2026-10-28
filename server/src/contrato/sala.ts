@@ -115,11 +115,10 @@ export interface SalaAsiento {
    */
   recordatorios: SalaRecordatorio[];
   /**
-   * Las notas del narrador sobre este asiento (hasta SALA_NOTAS_MAX), en el orden
-   * en que se escribieron. Son del grimorio, como los recordatorios: las ven los
-   * narradores y quien ve el grimorio.
+   * La nota del narrador sobre este asiento (texto libre), o null. Es del
+   * grimorio, como los recordatorios: la ven los narradores y quien ve el grimorio.
    */
-  notas: SalaNota[];
+  nota: string | null;
   /**
    * Los faroles que el jugador de este asiento se ha puesto (o ha copiado de
    * los del narrador): siempre 3 casillas, cada una un id de personaje o null.
@@ -153,14 +152,7 @@ export interface SalaGrimorioEnviado {
   faroles: string[];
 }
 
-/** Una nota del narrador sobre un asiento: texto libre. */
-export interface SalaNota {
-  id: string;
-  texto: string;
-}
-
-/** Notas como mucho por asiento, y su largo máximo. */
-export const SALA_NOTAS_MAX = 4;
+/** El largo máximo de la nota de un asiento. */
 export const SALA_NOTA_LARGO_MAX = 500;
 
 /**
@@ -281,7 +273,10 @@ export interface SalaRevelacion {
 export interface SalaDistribucion {
   /** Asientos que no llevan viajero. */
   jugadores: number;
+  /** De ellos, los que no están muertos (con sudario). */
+  jugadoresVivos: number;
   viajeros: number;
+  viajerosVivos: number;
   /** null si hay menos de 5 jugadores (no hay reparto). */
   aldeanos: number | null;
   forasteros: number | null;
@@ -338,6 +333,14 @@ export interface SalaNominacion {
   cuentaAtrasFin: number | null;
   /** La votación, desde que acaba la cuenta atrás. */
   votacion: SalaVotacion | null;
+  /**
+   * El nominado es un viajero: no es una nominación, es una expulsión. Hace falta
+   * la mitad de los votos de la plaza (de todos los asientos, vivos o muertos, sin
+   * mirar otras votaciones), vota cualquiera sin gastar su voto de muerto, cada mano
+   * vale 1 y, si sale, el viajero muere al momento (sin calavera). Nunca es secreta
+   * (el Organ Grinder solo esconde las nominaciones).
+   */
+  expulsion: boolean;
   /** Votos que hacen falta para el nominado: los que ha elegido el narrador o, si no, los de por defecto. */
   votosNecesarios: number;
   /**
@@ -360,9 +363,14 @@ export interface SalaRegistroVotacion {
   hora: number;
   /** El día de la partida en que se nominó. */
   dia: number;
-  /** «asiento 1 (Ana)» o «asiento 1, libre». */
+  /** «Ana» o, si el asiento está libre, «asiento 1». */
   nomina: string;
   nominado: string;
+  /** Los asientos que nominan y que son nominados (no los hay en las partidas guardadas antes). */
+  nominaAsiento?: string;
+  nominadoAsiento?: string;
+  /** Era la expulsión de un viajero (ver SalaNominacion.expulsion), no una nominación. */
+  expulsion?: boolean;
   /** Nombres de quienes votaron, en el orden en que votaron; null si no se llegó a votar. */
   votantes: string[] | null;
   votos: number | null;

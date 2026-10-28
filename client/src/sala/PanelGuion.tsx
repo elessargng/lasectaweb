@@ -44,6 +44,8 @@ export interface RecordatoriosNoche {
    * recordatorio «Lunch»): salen con una nota.
    */
   porCanibal: string[];
+  /** ids de los viajeros en juego: salen al principio de cada noche, antes de todo. */
+  viajeros: string[];
   onAlternar: (personajeId: string) => void;
 }
 
@@ -82,6 +84,8 @@ const PanelGuion = ({ vista, guion, idiomas, recordatorios, nochePorDefecto, onC
   const traduccionesNombres = useTraducciones(idiomas.nombres, idiomas.genero);
   const traduccionesDescripciones = useTraducciones(idiomas.descripciones, idiomas.genero);
   const personajes = mostrarPersonajes(guion.personajes, traduccionesNombres, traduccionesDescripciones);
+  // Los viajeros del catálogo que no trae el guion (para los que estén en juego)
+  const viajerosCatalogo = mostrarPersonajes(guion.viajeros ?? [], traduccionesNombres, traduccionesDescripciones);
   // La noche que toca: la primera hasta que acaba; luego, las demás. Cambia sola con la
   // partida (se puede mirar la otra a mano mientras tanto)
   const [noche, setNoche] = useState<'primera' | 'otras'>(nochePorDefecto);
@@ -288,6 +292,7 @@ const PanelGuion = ({ vista, guion, idiomas, recordatorios, nochePorDefecto, onC
             <OrdenNoche
               guion={guion}
               personajes={personajes}
+              viajerosCatalogo={viajerosCatalogo}
               noche={noche}
               completo={completo}
               recordatorios={recordatorios}
@@ -464,22 +469,31 @@ const TEXTOS_FIJOS = {
   amanecer: 'Espera unos segundos. Llama a todos a despertar.',
 };
 
-/** El orden de una noche: Crepúsculo, (esbirros y demonio la primera), los roles que se despiertan y Amanecer. */
+/**
+ * El orden de una noche: los viajeros en juego (solo el narrador), Crepúsculo, (esbirros y
+ * demonio la primera), los roles que se despiertan y Amanecer.
+ */
 const OrdenNoche = ({
   guion,
   personajes,
+  viajerosCatalogo,
   noche,
   completo,
   recordatorios,
 }: {
   guion: GuionResuelto;
   personajes: PersonajeMostrado[];
+  viajerosCatalogo: PersonajeMostrado[];
   noche: 'primera' | 'otras';
   completo: boolean;
   recordatorios: RecordatoriosNoche | null;
 }) => {
+  // Los viajeros en juego van antes de todo (los del guion y los del catálogo), y ya no en su sitio
+  const enJuego = new Set(recordatorios?.viajeros ?? []);
+  const porId = new Map([...viajerosCatalogo, ...personajes].map((p) => [p.id, p]));
+  const viajeros = [...enJuego].map((id) => porId.get(id)).filter((p): p is PersonajeMostrado => !!p);
   // El orden lo calcula el servidor; aquí solo se pintan
-  const lista = personajesDeNoche(guion, personajes, noche);
+  const lista = personajesDeNoche(guion, personajes, noche).filter((p) => !enJuego.has(p.id));
   const conRecordatorio = (id: string) =>
     recordatorios
       ? { activo: recordatorios.activos.includes(id), onAlternar: () => recordatorios.onAlternar(id) }
@@ -496,6 +510,17 @@ const OrdenNoche = ({
   );
   return (
     <ol className="flex flex-col py-2">
+      {viajeros.map((r) => (
+        <Fila
+          key={r.id}
+          icono={<IconoRol imagen={r.icono} />}
+          nombre={r.nombre}
+          color={colorDe(r.tipo)}
+          // Sin recordatorio para esta noche, su habilidad
+          texto={completo ? ((noche === 'primera' ? r.primeraNoche : r.otrasNoches) ?? r.habilidad) : null}
+          recordatorio={conRecordatorio(r.id)}
+        />
+      ))}
       {fija('Crepúsculo', <IconoNoche imagen="/noche/crepusculo.webp" />, TEXTOS_FIJOS.crepusculo)}
       {noche === 'primera' && (
         <>

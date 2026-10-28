@@ -16,7 +16,7 @@ import PanelAtajos from './PanelAtajos';
 import { sonVecinos } from './nombresAsiento';
 import { useGestos, useReconocerGestos, type Gesto } from './gestos';
 import PanelInterfaz from './PanelInterfaz';
-import SkylineCabecera from './SkylineCabecera';
+import CiudadPlaza from './CiudadPlaza';
 import PanelSonido from './PanelSonido';
 import PanelPartida from './PanelPartida';
 import PanelUsuario, { type ResultadoPerfil } from './PanelUsuario';
@@ -75,7 +75,7 @@ import {
 import { AvisosContexto, useAvisosActivos, type TipoAviso } from './avisosConfig';
 import { avisosDeCambio, manosVigiladas, nombreFase } from './avisosSala';
 import { recibidasDe, reconciliarSlots } from './slotsLlamada';
-import { setSonidosActivos, setTonoLlamada, tocarPrivado, tocarSinVoto, tocarSolicitud, tocarVoto } from './sonidos';
+import { setSonidosActivos, setTonoLlamada, tocarDespertar, tocarPrivado, tocarSinVoto, tocarSolicitud, tocarVoto } from './sonidos';
 import { esTeclaLlamadaBotc, LlamadaBotcContexto } from './llamadaBotc';
 import CieloEstrellado from './CieloEstrellado';
 import DialogoFinal from './DialogoFinal';
@@ -96,7 +96,6 @@ import {
   type SalaDespertar,
   type SalaEstado,
   type SalaParticipante,
-  type SalaNota,
   type SalaRecordatorio,
 } from './useSala';
 
@@ -346,6 +345,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       }, 0);
     }
     const veoTodos = nuevo.participantes.some((p) => p.id === nuevo.yo && p.rol === 'visitante');
+    let suenaDespertar = false;
     for (const d of nuevo.despertares) {
       const antes = hilosAntes.get(d.asiento);
       const yaDichos = new Set(antes?.mensajes.map((m) => m.id));
@@ -365,6 +365,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       // (Un «Entendido» del narrador no se la vuelve a abrir: ya está hablado.)
       if (!soyNarrador && (!antes || nuevos.some((m) => m.autor === 'narrador' && m.ficha !== 'entendido'))) {
         setWakeCerradoJugador(false);
+        // Al jugador despertado le suena como una llamada entrante (al visitante no)
+        if (!veoTodos) suenaDespertar = true;
       }
       // «Entendido» cierra el despertar de quien lo manda, y el foco va a la ficha (con el
       // pulgar arriba). El jugador: también al volver a entrar en la sala, si fue lo último
@@ -382,6 +384,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       }
       if (veoTodos && !antes) avisos.push({ tipo: 'despertar', texto: `El narrador despierta a ${nombreDeAsiento(nuevo, d.asiento)}.` });
     }
+    if (suenaDespertar) tocarDespertar();
 
     // Solo los tipos que se quieren oír.
     const textos = avisos.filter((a) => avisosActivos[a.tipo]).map((a) => a.texto);
@@ -408,7 +411,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // el grimorio propio del jugador (sus notas: solo en este navegador, mientras está en la sala).
   const [notasGrimorio, setNotasGrimorio] = useState<Record<string, ContenidoFicha>>({});
   const [notasRecordatorios, setNotasRecordatorios] = useState<Record<string, SalaRecordatorio[]>>({});
-  const [notasEscritas, setNotasEscritas] = useState<Record<string, SalaNota[]>>({});
+  const [notasEscritas, setNotasEscritas] = useState<Record<string, string>>({});
   const nombresPersonajesRef = useRef<Map<string, PersonajeMostrado>>(new Map());
   const [wakesAbiertos, setWakesAbiertos] = useState<string[]>([]);
   const [wakeActivo, setWakeActivo] = useState<string | null>(null);
@@ -445,9 +448,14 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     for (const id of porCanibal) automaticos.add(id);
     const cambios = e.recordatoriosNoche;
     const activo = (id: string) => cambios[id] ?? automaticos.has(id);
+    // Los viajeros en juego (vivos o muertos), en el orden de los asientos, sin repetir
+    const viajeros = [
+      ...new Set(e.asientos.flatMap((a) => (a.personaje && tipoDe(a.personaje) === 'traveller' ? [a.personaje] : []))),
+    ];
     return {
       activos: [...new Set([...automaticos, ...Object.keys(cambios)])].filter(activo),
       porCanibal,
+      viajeros,
       onAlternar: (id: string) => {
         void pedirPropio('narrador:recordatorio', { id, activo: !activo(id) }).then((r) => {
           if (!r.ok) setAviso(r.error);
@@ -1030,7 +1038,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     notasRecordatorios,
     anotarRecordatorios: (asientoId, lista) => setNotasRecordatorios((n) => ({ ...n, [asientoId]: lista })),
     notasEscritas,
-    escribirNotas: (asientoId, lista) => setNotasEscritas((n) => ({ ...n, [asientoId]: lista })),
+    escribirNota: (asientoId, nota) =>
+      setNotasEscritas((n) => {
+        const nuevas = { ...n };
+        if (nota === null) delete nuevas[asientoId];
+        else nuevas[asientoId] = nota;
+        return nuevas;
+      }),
   };
 
 
@@ -1085,8 +1099,11 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // (la Banshee con su habilidad, que puede levantar las dos, vota sin gastarlo). Con el
   // Voudon vivo, solo votan él y los muertos, sin hacerles falta el voto.
   const soyVoudon = asientoPropio?.personaje === 'voudon';
-  const sinVoto = estado?.voudon
-    ? !!asientoPropio && !asientoPropio.muerto && !soyVoudon
+  // En la expulsión de un viajero vota cualquiera (los muertos, sin gastar su voto).
+  const sinVoto = estado?.nominacion?.expulsion
+    ? false
+    : estado?.voudon
+    ?!!asientoPropio && !asientoPropio.muerto && !soyVoudon
     : !!asientoPropio?.muerto && asientoPropio.votoGastado && !estado?.acciones.includes('sala:levantarDosManos');
   // La Banshee muerta con su habilidad puede levantar las dos manos (vota doble): 0, 1 o 2
   const puedeDosManos = !!estado?.acciones.includes('sala:levantarDosManos');
@@ -1710,9 +1727,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       <LlamadaBotcContexto.Provider value={contextoLlamadaBotc}>
       <div className="contents" style={tamanos}>
         {/* De noche, el cielo estrellado detrás de la sala */}
-        <CieloEstrellado activo={esNoche} />
+        <CieloEstrellado activo={esNoche && preferencias.cieloEstrellado} ajustes={preferencias} />
         <Cabecera
-          ciudad={estado && preferencias.ciudadCabecera ? <SkylineCabecera fase={estado.fase.momento} poblado={preferencias.pobladoCabecera} /> : undefined}
           centro={
             estado && (
               <div className="flex min-w-0 items-center gap-2">
@@ -1976,6 +1992,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   contacto={contacto}
                   pistas={video.mesa}
                   ondas={ondas}
+                  ciudad={preferencias.ciudad !== 'nunca' ? <CiudadPlaza fase={estado.fase.momento} poblado={preferencias.pobladoCabecera} siempre={preferencias.ciudad === 'siempre'} /> : undefined}
                   despertares={
                     veoDespertares
                       ? {

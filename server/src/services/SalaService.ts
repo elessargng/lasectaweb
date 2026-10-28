@@ -61,7 +61,7 @@ const asientoNuevo = (): SalaAsiento => ({
   personaje: null,
   alineamiento: null,
   recordatorios: [],
-  notas: [],
+  nota: null,
   faroles: farolesVacios(),
 });
 
@@ -132,6 +132,12 @@ export class SalaService {
   private readonly nominaciones = new Nominaciones({
     mesa: () => this.mesa,
     buscar: (id) => this.buscar(id),
+    bajarManos: () => this.presentes.bajarManos(),
+    cuentaDe: (id) => this.cuentaDe(id),
+    llevaViajero: (asiento) => {
+      const id = this.identidad(asiento);
+      return !!id && this.esViajero(id);
+    },
     dia: () => this.faseActual.numero,
     segundosPorFicha: () => this.ajustes.segundosPorFicha,
     sinVoto: (id) => this.sinVoto(id),
@@ -141,7 +147,9 @@ export class SalaService {
     secreta: () => this.votacionSecreta(),
     alNominar: (desde, hasta) =>
       this.avisar({ tipo: 'nominacion', nomina: this.cuentaDelAsiento(desde), nominado: this.cuentaDelAsiento(hasta) }),
-    alVotar: (id) => this.avisar({ tipo: 'voto', userId: this.cuentaDe(id) }),
+    alVotar: (cuenta) => this.avisar({ tipo: 'voto', userId: cuenta }),
+    alDesvotar: (cuenta) => this.avisar({ tipo: 'desvoto', userId: cuenta }),
+    alExpulsar: (asientoId) => this.cambiarVida(asientoId, true),
     alCambiarSola: () => this.alCambiarSola(),
   });
   /** El gong y el reloj del narrador. */
@@ -382,9 +390,18 @@ export class SalaService {
     const viajeros = this.mesa.filter((a) => this.llevaViajero(a)).length + this.bolsaPartida.viajeros();
     const jugadores = Math.max(0, this.mesa.length - viajeros);
     const reparto = repartoPara(jugadores);
+    // Los muertos con sudario (público; la muerte pendiente aún no cuenta). Un viajero
+    // de la bolsa aún sin repartir está vivo
+    const muertos = this.mesa.filter((a) => a.muerto);
+    const viajerosMuertos = muertos.filter((a) => {
+      const id = this.identidad(a);
+      return !!id && this.esViajero(id);
+    }).length;
     return {
       jugadores,
+      jugadoresVivos: Math.max(0, jugadores - (muertos.length - viajerosMuertos)),
       viajeros,
+      viajerosVivos: Math.max(0, viajeros - viajerosMuertos),
       aldeanos: reparto?.aldeanos ?? null,
       forasteros: reparto?.forasteros ?? null,
       esbirros: reparto?.esbirros ?? null,
@@ -648,7 +665,7 @@ export class SalaService {
       a.personaje = null;
       a.alineamiento = null;
       a.recordatorios = [];
-      a.notas = [];
+      a.nota = null;
     }
     this.bolsaPartida.vaciar();
     this.entregas.olvidar();
@@ -690,6 +707,14 @@ export class SalaService {
 
   hayVotacion(): boolean {
     return this.nominaciones.hayVotacion();
+  }
+
+  votacionEnMarcha(): boolean {
+    return this.nominaciones.votacionEnMarcha();
+  }
+
+  reiniciarVotacion(): void {
+    this.nominaciones.reiniciarVotacion();
   }
 
   iniciarCuentaAtras(ahora: number): void {
@@ -761,28 +786,32 @@ export class SalaService {
   }
 
   /**
-   * Escribe una nota sobre un asiento: nueva (sin `notaId`) o cambia una que ya
-   * estaba. Devuelve su id, o null si no existe (el asiento o la nota). No
-   * comprueba permisos ni cuántas hay.
+   * Cada recordatorio de un personaje es único: el que hay que quitar al poner
+   * otro igual en un asiento. Si el personaje tiene varios con el mismo texto,
+   * solo cuando ya están todos en la mesa. Antes uno de otro asiento que uno de
+   * este. null: no hay que quitar ninguno.
    */
-  escribirNota(asientoId: string, notaId: string | null, texto: string): string | null {
-    const asiento = this.mesa.find((a) => a.id === asientoId);
-    if (!asiento) return null;
-    if (notaId === null) {
-      const nota = { id: randomUUID(), texto };
-      asiento.notas.push(nota);
-      return nota.id;
-    }
-    const nota = asiento.notas.find((n) => n.id === notaId);
-    if (!nota) return null;
-    nota.texto = texto;
-    return nota.id;
+  recordatorioQueSobra(asientoId: string, personajeId: string, indice: number): { asientoId: string; recordatorioId: string } | null {
+    const textos = this.personaje(personajeId)?.recordatorios ?? [];
+    const texto = textos[indice];
+    if (texto === undefined) return null;
+    const iguales = new Set(textos.flatMap((t, i) => (t === texto ? [i] : [])));
+    const puestos = this.mesa.flatMap((a) =>
+      a.recordatorios.filter((r) => r.personaje === personajeId && iguales.has(r.indice)).map((r) => ({ asientoId: a.id, recordatorioId: r.id })),
+    );
+    if (puestos.length < iguales.size) return null;
+    return puestos.find((p) => p.asientoId !== asientoId) ?? puestos[0];
   }
 
-  /** Borra una nota de un asiento. No comprueba permisos. */
-  borrarNota(asientoId: string, notaId: string): void {
+  /**
+   * Escribe la nota de un asiento (sustituye la que hubiera); con null, la borra.
+   * Devuelve false si el asiento no existe. No comprueba permisos.
+   */
+  escribirNota(asientoId: string, texto: string | null): boolean {
     const asiento = this.mesa.find((a) => a.id === asientoId);
-    if (asiento) asiento.notas = asiento.notas.filter((n) => n.id !== notaId);
+    if (!asiento) return false;
+    asiento.nota = texto;
+    return true;
   }
 
   /** Cambia el alineamiento de la ficha de un asiento. No comprueba permisos. */
@@ -1053,7 +1082,7 @@ export class SalaService {
 
   /**
    * Lleva lo de cada ficha (personaje, alineamiento, muerte, voto, calavera,
-   * recordatorios, notas; y lo que va por asiento: lo entregado, los faroles, el
+   * recordatorios, la nota; y lo que va por asiento: lo entregado, los faroles, el
    * grimorio enviado, los despertares, lo revelado, la nominación) del asiento de
    * cada clave al de su valor. Al cambiar de sitio a los jugadores, su ficha va con
    * ellos: cambian de silla, no de personaje. `destino` es una permutación de la mesa.
@@ -1072,7 +1101,7 @@ export class SalaService {
           personaje: s.personaje,
           alineamiento: s.alineamiento,
           recordatorios: s.recordatorios,
-          notas: s.notas,
+          nota: s.nota,
         },
       ]),
     );
@@ -1124,7 +1153,10 @@ export class SalaService {
   /** No puede votar: no está sentado, o las reglas dicen que no (ver Reglas.puedeVotar). */
   sinVoto(participanteId: string): boolean {
     const asiento = this.asientoDe(participanteId);
-    return !asiento || !this.reglas.puedeVotar(asiento);
+    if (!asiento) return true;
+    // En la expulsión de un viajero vota cualquiera (los muertos, sin gastar su voto)
+    if (this.nominaciones.esExpulsion()) return false;
+    return !this.reglas.puedeVotar(asiento);
   }
 
   /**

@@ -26,7 +26,9 @@ interface CuadroAvatarProps {
    * debajo van las fichas) o debajo. Sin esto, va debajo dentro de la caja.
    */
   pieFuera?: 'arriba' | 'abajo';
-  /** Está hablando: un borde eléctrico en el marco (BordeHabla). */
+  /** Su id de participante, para que el aro de quien habla siga su volumen. */
+  idVoz?: string;
+  /** Está hablando: un aro en el marco que sigue su voz (BordeHabla). */
   hablando?: boolean;
 }
 
@@ -37,7 +39,7 @@ interface CuadroAvatarProps {
  *
  * La imagen no se lee (alt vacío): el pie dice de quién es.
  */
-const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, apagado = false, atenuado = false, pieFuera, hablando = false }: CuadroAvatarProps) => (
+const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, apagado = false, atenuado = false, pieFuera, idVoz, hablando = false }: CuadroAvatarProps) => (
   <div className="relative w-[var(--sala-avatar,10rem)]">
     {titulo && (
       <div className="mb-1 text-center leading-none">
@@ -48,8 +50,9 @@ const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, ap
         {junto && <JuntoAlTexto>{junto}</JuntoAlTexto>}
       </div>
     )}
-    {/* Un marco de retrato con doble filo de latón (sala-retrato); vacío, discontinuo */}
-    <div className="relative">
+    {/* Un marco de retrato con doble filo de latón (sala-retrato); vacío, discontinuo.
+        Conversando en privado, se retira hacia el fondo (sala-retiro) y vuelve al acabar */}
+    <div className="sala-retiro relative" data-retirado={atenuado || undefined}>
       <div
         data-vacio={vacio}
         className={`sala-retrato flex aspect-square w-full items-center justify-center overflow-hidden rounded-[3px] [&_img]:transition-[filter] [&_img]:duration-700 [&_video]:transition-[filter] [&_video]:duration-700 motion-reduce:[&_img]:transition-none motion-reduce:[&_video]:transition-none ${
@@ -59,7 +62,7 @@ const CuadroAvatar = ({ titulo, junto, imagen, contenido, pie, vacio = false, ap
         {contenido ?? (imagen && <ImagenAvatar avatar={imagen} />)}
       </div>
       {/* Encima del marco, fuera de él (que recorta): así no se toca el vídeo al hablar */}
-      <BordeHabla activo={hablando} />
+      <BordeHabla id={idVoz} activo={hablando} />
     </div>
     {pieFuera ? (
       <div className={`absolute left-0 w-full ${pieFuera === 'arriba' ? 'bottom-full' : 'top-full'}`}>{pie}</div>

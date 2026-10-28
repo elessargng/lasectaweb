@@ -184,7 +184,7 @@ describe('SalaService', () => {
     it('con 7 asientos, el reparto es de 5 aldeanos, 0 forasteros, 1 esbirro y 1 demonio', () => {
       const sala = new SalaService();
       sala.cambiarGuion(guionDePrueba());
-      expect(sala.distribucion()).toEqual({ jugadores: 7, viajeros: 0, aldeanos: 5, forasteros: 0, esbirros: 1, demonios: 1 });
+      expect(sala.distribucion()).toEqual({ jugadores: 7, jugadoresVivos: 7, viajeros: 0, viajerosVivos: 0, aldeanos: 5, forasteros: 0, esbirros: 1, demonios: 1 });
     });
 
     it('un viajero puesto a mano no cuenta para el reparto ni para la bolsa', () => {
@@ -422,7 +422,7 @@ describe('SalaService', () => {
       expect(v?.orden[v.orden.length - 1]).toBe(asiento(1).id);
       expect(sala.buscar(ids[0])?.manoLevantada).toBe(false);
       expect(sala.votaciones()).toEqual([
-        expect.objectContaining({ dia: 1, nomina: 'asiento 3 (Ceci)', nominado: 'asiento 2 (Bea)', votantes: ['Ceci', 'Ana'], votos: 2 }),
+        expect.objectContaining({ dia: 1, nomina: 'Ceci', nominado: 'Bea', votantes: ['Ceci', 'Ana'], votos: 2 }),
       ]);
     });
 
@@ -507,6 +507,59 @@ describe('SalaService', () => {
       alDia(sala);
       sala.cambiarVida(asiento(0).id, true);
       expect(sala.votacionSecreta()).toBe(false);
+    });
+
+    it('nominar a un viajero es pedir su expulsión: la mitad de la mesa, votos de 1 y, si sale, muere', () => {
+      const { sala, ids, asiento } = salaConJugadores('Ana', 'Bea', 'Ceci', 'Dani');
+      sala.cambiarPersonaje(asiento(1).id, 'butcher');
+      sala.cambiarPersonaje(asiento(2).id, 'organgrinder');
+      alDia(sala);
+      sala.cambiarVida(asiento(0).id, true);
+      sala.cambiarVida(asiento(3).id, true);
+      sala.nominar(asiento(0).id, asiento(1).id);
+      // 7 asientos, vivos o muertos: hacen falta 4; el Organ Grinder no la esconde
+      expect(sala.nominacion()).toMatchObject({ expulsion: true, votosNecesarios: 4, privada: false });
+      // Los muertos votan sin gastar su voto
+      expect(sala.sinVoto(ids[0])).toBe(false);
+      for (const id of ids) sala.levantarMano(id, true);
+      votar(sala);
+      expect(sala.nominacion()?.votacion?.votos).toBe(4);
+      expect(asiento(0).votoGastado).toBe(false);
+      expect(asiento(1).muerto).toBe(true);
+      expect(sala.votaciones()[0]).toMatchObject({ expulsion: true, nominaAsiento: asiento(0).id, nominadoAsiento: asiento(1).id });
+      // No deja récord para las nominaciones del día: la mitad de los 4 vivos, no 5
+      sala.nominar(asiento(2).id, asiento(2).id);
+      expect(sala.nominacion()?.votosNecesariosPorDefecto).toBe(2);
+    });
+
+    it('al nominar se bajan todas las manos', () => {
+      const { sala, ids, asiento } = salaConJugadores('Ana', 'Bea');
+      alDia(sala);
+      sala.levantarMano(ids[0], true);
+      sala.nominar(asiento(0).id, asiento(1).id);
+      expect(sala.buscar(ids[0])?.manoLevantada).toBe(false);
+    });
+
+    it('reiniciar la votación la deja como recién abierta y devuelve el voto a los muertos', () => {
+      const { sala, ids, asiento } = salaConJugadores('Ana', 'Bea');
+      alDia(sala);
+      sala.cambiarVida(asiento(0).id, true);
+      // Nominado el último asiento, la aguja empieza por Ana
+      sala.nominar(asiento(1).id, asiento(6).id);
+      expect(sala.votacionEnMarcha()).toBe(false);
+      sala.levantarMano(ids[0], true);
+      sala.levantarMano(ids[1], true);
+      sala.iniciarCuentaAtras(Date.now());
+      expect(sala.votacionEnMarcha()).toBe(true);
+      vi.advanceTimersByTime(SALA_CUENTA_ATRAS_MS + sala.configuracion().segundosPorFicha * 1000);
+      // La aguja ha pasado por Ana (muerta): ha gastado su voto
+      expect(asiento(0).votoGastado).toBe(true);
+      expect(sala.votacionEnMarcha()).toBe(true);
+      sala.reiniciarVotacion();
+      expect(sala.nominacion()).toMatchObject({ cuentaAtrasFin: null, votacion: null });
+      expect(asiento(0).votoGastado).toBe(false);
+      expect(sala.buscar(ids[1])?.manoLevantada).toBe(false);
+      expect(sala.votacionEnMarcha()).toBe(false);
     });
   });
 

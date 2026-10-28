@@ -140,16 +140,14 @@
    * El fondo de la sala (--sala-fondo, lo pone SalaJuego según el guion, el
    * narrador y la preferencia de cada uno; ver fondos.ts) o el de La Secta,
    * quieto al desplazarse, con un velo de tinta (más oscuro en los bordes, como
-   * a la luz de una vela) para que se lean los textos. Cubre la ventana por
-   * debajo de la cabecera (--sala-cabecera-alto, lo mide Cabecera): así queda
-   * centrado en lo que se ve y la cenefa de arriba no se esconde tras ella.
-   * Por debajo de todo (también del velo de la noche y del cielo).
+   * a la luz de una vela) para que se lean los textos. Cubre toda la ventana,
+   * también tras la cabecera (que no tiene banda propia). Por debajo de todo (también del velo de la noche y del cielo).
    */
   body::after {
     content: '';
     pointer-events: none;
     position: fixed;
-    inset: var(--sala-cabecera-alto, 0px) 0 0;
+    inset: 0;
     z-index: -2;
     background:
       radial-gradient(ellipse at center, rgba(var(--tinta-rgb), 0.15) 40%, rgba(var(--tinta-rgb), 0.7) 100%),
@@ -249,35 +247,19 @@
 @layer components {
 
 /*
- * Cabecera: cristal de tinta con un filo de latón abajo. El cristal (backdrop-filter)
- * va en un pseudo-elemento y no en la cabecera: si no, la cabecera haría de caja de
- * todo lo fijo que lleva dentro (la hoja del guion, que se abre desde ella) y lo
- * dejaría encerrado en su alto.
+ * Cabecera: sin banda propia, como en la página principal. El fondo de la sala sigue
+ * por detrás y solo hay un degradado de tinta desde arriba (que se alarga un poco
+ * por debajo de ella, sin recibir el ratón) para que se lean el logo y los iconos.
  */
 .sala-cabecera {
   isolation: isolate;
-  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.85);
 }
 .sala-cabecera::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: 0 0 -2.5rem;
   z-index: -1;
-  background:
-    linear-gradient(180deg, rgba(var(--grimorio-rgb), 0.18), transparent),
-    rgba(var(--tinta-rgb), 0.88);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2);
-  backdrop-filter: blur(14px) saturate(1.2);
-  pointer-events: none;
-}
-.sala-cabecera::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb), 0.55) 15%, rgba(var(--gold-rgb), 0.55) 85%, transparent);
+  background: linear-gradient(180deg, rgba(var(--tinta-rgb), 0.75), rgba(var(--tinta-rgb), 0.3) 60%, transparent);
   pointer-events: none;
 }
 
@@ -497,17 +479,114 @@
   background: rgba(var(--tinta-rgb), 0.55);
 }
 
-/* Quien habla: un aro morado que respira (quieto con menos movimiento) */
-@keyframes sala-habla {
-  0%, 100% {
-    box-shadow: 0 0 0 2px var(--color-grimorio-bright), 0 0 10px 1px rgba(165, 150, 230, 0.45);
-  }
-  50% {
-    box-shadow: 0 0 0 2px var(--color-grimorio-bright), 0 0 18px 4px rgba(165, 150, 230, 0.7);
-  }
+/*
+ * Quien habla (BordeHabla): un aro morado nítido, un halo que crece con el
+ * volumen de su voz (--nivel, de 0 a 1, lo pone BordeHabla), una onda que sale
+ * del marco y, en la esquina, unas barras de volumen. Aparece y se va fundiéndose.
+ */
+@property --nivel {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
 }
 .sala-habla {
-  animation: sala-habla 1.6s ease-in-out infinite;
+  --habla-rgb: 165, 150, 230;
+  --nivel: 0;
+  opacity: 0;
+  transform: scale(0.985);
+  box-shadow:
+    0 0 0 1px rgba(var(--tinta-rgb), 0.85),
+    0 0 0 calc(2px + var(--nivel) * 1px) var(--color-grimorio-bright),
+    0 0 calc(10px + var(--nivel) * 18px) calc(1px + var(--nivel) * 5px) rgba(var(--habla-rgb), calc(0.35 + var(--nivel) * 0.4)),
+    inset 0 0 calc(8px + var(--nivel) * 14px) rgba(var(--habla-rgb), calc(0.12 + var(--nivel) * 0.2));
+  transition:
+    opacity 220ms ease-out,
+    transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    --nivel 140ms ease-out;
+}
+.sala-habla[data-activo='true'] {
+  opacity: 1;
+  transform: scale(1);
+}
+.sala-habla[data-activo='false'] {
+  /* Al callar, se apaga despacio (las pausas entre frases no parpadean) */
+  transition:
+    opacity 600ms ease-in 150ms,
+    transform 600ms ease-in 150ms,
+    --nivel 400ms ease-out;
+}
+/* La onda: un aro que sale del marco y se desvanece; más viva cuanto más fuerte */
+.sala-habla::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1.5px solid rgba(var(--habla-rgb), calc(0.25 + var(--nivel) * 0.55));
+  opacity: 0;
+  pointer-events: none;
+}
+.sala-habla[data-activo='true']::after {
+  animation: sala-habla-onda 1.8s cubic-bezier(0.2, 0.6, 0.35, 1) infinite;
+}
+@keyframes sala-habla-onda {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.14);
+  }
+}
+/* Las barras de volumen, en la esquina de abajo a la derecha */
+.sala-habla-barras {
+  position: absolute;
+  right: 0.3rem;
+  bottom: 0.3rem;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 9999px;
+  background: rgba(var(--tinta-rgb), 0.78);
+  box-shadow:
+    0 0 0 1px rgba(var(--habla-rgb), 0.45),
+    0 2px 6px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+.sala-habla-barras > span {
+  --alto: 0.45;
+  width: 3px;
+  height: 0.65rem;
+  border-radius: 9999px;
+  background: var(--color-grimorio-bright);
+  box-shadow: 0 0 4px rgba(var(--habla-rgb), 0.8);
+  transform-origin: center;
+  transform: scaleY(calc(0.3 + var(--nivel) * 0.7 * var(--alto)));
+}
+.sala-habla-barras > span:nth-child(2) {
+  --alto: 1;
+}
+.sala-habla[data-activo='true'] .sala-habla-barras > span {
+  animation: sala-habla-barra 0.9s ease-in-out infinite alternate;
+}
+.sala-habla[data-activo='true'] .sala-habla-barras > span:nth-child(2) {
+  animation-duration: 0.7s;
+  animation-delay: -0.35s;
+}
+.sala-habla[data-activo='true'] .sala-habla-barras > span:nth-child(3) {
+  animation-duration: 1.05s;
+  animation-delay: -0.6s;
+}
+/* Un vaivén leve encima del volumen, para que las barras se vean vivas entre medidas */
+@keyframes sala-habla-barra {
+  from {
+    transform: scaleY(calc(0.3 + var(--nivel) * 0.7 * var(--alto) * 0.7));
+  }
+  to {
+    transform: scaleY(calc(0.35 + var(--nivel) * 0.65 * min(1, var(--alto) * 1.3)));
+  }
 }
 
 /* A quien se sigue: aro de latón con brillo */
@@ -772,6 +851,98 @@
 @keyframes sala-gong-giro {
   to { transform: rotate(360deg); }
 }
+
+/*
+ * La esfera del reloj bajo las agujas de una nominación (Agujas.tsx). El trazado
+ * (fondo.webp) gira despacio al revés que el reloj; el aro, en su sentido; los engranajes,
+ * debajo del aro, dan la vuelta al eje al revés. En fracciones del aro, cuyo borde
+ * interior (el naranja) queda a un 37,7% del centro: el grande, abajo a la izquierda,
+ * con los dientes bajo ese borde, y el pequeño engranado con él, junto al eje. El
+ * grande gira como el aro que lo engrana; el pequeño, con la mitad de dientes, el
+ * doble de rápido y al revés.
+ */
+.sala-esfera {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--esfera-lado);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  animation: sala-esfera-entrar 700ms ease-out both;
+}
+.sala-esfera-trazado {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 128%;
+  height: 128%;
+  max-width: none;
+  translate: -50% -50%;
+  opacity: 0.75;
+  animation: sala-gong-giro 120s linear infinite reverse;
+}
+.sala-esfera-engranajes {
+  position: absolute;
+  inset: 0;
+  animation: sala-gong-giro 150s linear infinite reverse;
+}
+.sala-esfera-aro {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.7));
+  animation: sala-gong-giro 90s linear infinite;
+}
+.sala-esfera-engranaje {
+  position: absolute;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  /* El disco de cobre del centro, como en botc.app */
+  background: radial-gradient(circle, #9a4a22 0 30%, #5e2410 37%, transparent 39%);
+  border-radius: 50%;
+}
+.sala-esfera-engranaje > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+.sala-esfera-engranaje-grande {
+  left: 29.2%;
+  top: 68.6%;
+  width: 22%;
+}
+.sala-esfera-engranaje-grande > img {
+  animation: sala-gong-giro 24s linear infinite;
+}
+.sala-esfera-engranaje-pequeno {
+  left: 40.5%;
+  top: 58.5%;
+  width: 11%;
+}
+.sala-esfera-engranaje-pequeno > img {
+  animation: sala-gong-giro 12s linear infinite reverse;
+}
+@keyframes sala-esfera-entrar {
+  from { opacity: 0; scale: 0.85; }
+  to { opacity: 1; scale: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sala-esfera,
+  .sala-esfera-trazado,
+  .sala-esfera-engranajes,
+  .sala-esfera-aro,
+  .sala-esfera-engranaje > img {
+    animation: none;
+  }
+}
+@media (forced-colors: active) {
+  .sala-esfera {
+    display: none;
+  }
+}
+
 @media (forced-colors: active) {
   .sala-gong-texto {
     fill: CanvasText;
@@ -785,7 +956,7 @@
 /*
  * La ficha resaltada (ratón encima, foco o un toque): el nombre del personaje pasa
  * de tinta a blanco con un halo oscuro. Su pista (PistaPersonaje) entra con un
- * leve fundido, como el panel de notas.
+ * leve fundido, como el pósit de las notas.
  */
 .sala-ficha-nombre {
   transition:
@@ -801,21 +972,174 @@
 }
 
 /*
- * Las notas de un asiento (NotasAsiento): una pestaña de marcapáginas de papel
- * que asoma por el lado de fuera del cuadro (sin filo por el lado pegado a él) y
- * que se adelanta un poco al pasar el ratón o con el panel abierto; el panel,
- * un cofre con cada nota en su recuadro, entra con un leve fundido.
+ * La nota de un asiento (NotaAsiento): una tarjeta de tinta translúcida con filo
+ * de latón junto al cuadro, por el lado de fuera, con un lomo dorado por el lado
+ * pegado a él; entra con un leve fundido. No pasa del alto del cuadro: si el texto
+ * no cabe, se desvanece por abajo hasta que se fija con la chincheta; fijada,
+ * crece hasta leerse entera (con su barra si aún no cabe) y se adelanta al resto.
+ * Plegada, una pestaña que asoma por ese lado (sin filo por el lado pegado al
+ * cuadro) y se adelanta un poco al pasar el ratón.
  */
-.sala-nota-pestana {
-  color: #2a1a3a;
-  background: linear-gradient(180deg, #f6ead0, #d8c296);
-  border: 1px solid rgba(var(--gold-rgb), 0.95);
+.sala-nota {
+  width: clamp(8.5rem, calc(var(--sala-avatar, 10rem) * 0.95), 12.5rem);
+  max-height: calc(var(--sala-avatar, 10rem) * 0.92);
+  color: var(--theme-on-surface);
+  background:
+    linear-gradient(180deg, rgba(var(--grimorio-rgb), 0.22), transparent 3.5rem),
+    rgba(var(--tinta-rgb), 0.94);
+  border: 1px solid rgba(var(--gold-rgb), 0.3);
+  border-radius: 3px;
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.65),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 14px 32px -10px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(var(--gold-rgb), 0.12);
+  -webkit-backdrop-filter: blur(10px) saturate(1.15);
+  backdrop-filter: blur(10px) saturate(1.15);
+  animation: sala-notas-entrar 160ms ease-out both;
+  transition:
+    max-height 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+/* El filo de arriba, que se desvanece a los lados */
+.sala-nota::after {
+  content: "";
+  position: absolute;
+  inset: -1px -1px auto -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb), 0.8), transparent);
+  pointer-events: none;
+}
+/* El lomo, por el lado pegado al cuadro */
+.sala-nota::before {
+  content: "";
+  position: absolute;
+  top: 0.6rem;
+  bottom: 0.6rem;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, rgba(var(--gold-rgb), 0.7), transparent);
+  pointer-events: none;
+}
+.sala-nota[data-lado='derecha']::before {
+  left: -1px;
+}
+.sala-nota[data-lado='izquierda']::before {
+  right: -1px;
+}
+.sala-nota[data-fijada] {
+  max-height: min(24rem, 60vh);
+  z-index: 16;
+  border-color: rgba(var(--gold-rgb), 0.5);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 22px 48px -14px rgba(0, 0, 0, 0.95),
+    0 0 36px rgba(var(--grimorio-rgb), 0.18),
+    inset 0 1px 0 rgba(var(--gold-rgb), 0.18);
+}
+.sala-nota[data-editando] {
+  width: clamp(13rem, calc(var(--sala-avatar, 10rem) * 1.35), 17rem);
+  max-height: none;
+  border-color: rgba(var(--gold-rgb), 0.45);
+}
+.sala-nota-cabecera {
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.12);
+}
+.sala-nota-texto,
+.sala-nota-campo {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--gold-rgb), 0.35) transparent;
+}
+.sala-nota-texto[data-cortada] {
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent);
+}
+
+/* El campo de escribirla y el botón de guardar, a juego con los de la web */
+.sala-nota-campo {
+  color: var(--theme-on-surface);
+  background: rgba(7, 8, 13, 0.6);
+  border: 1px solid rgba(var(--gold-rgb), 0.2);
+  border-radius: 2px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.sala-nota-campo::placeholder {
+  color: rgba(168, 158, 136, 0.55);
+}
+.sala-nota-campo:hover {
+  border-color: rgba(var(--gold-rgb), 0.35);
+}
+.sala-nota-campo:focus {
+  outline: none;
+  border-color: rgba(var(--gold-rgb), 0.6);
+  box-shadow: 0 0 0 3px rgba(var(--gold-rgb), 0.12);
+}
+.sala-nota-guardar {
+  color: #1a1206;
+  background: linear-gradient(180deg, #ebcf91 0%, #d4af6a 50%, #a98039 100%);
+  border-radius: 2px;
+  box-shadow: inset 0 1px 0 rgba(255, 248, 225, 0.55);
+  transition:
+    filter 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.sala-nota-guardar:hover:not([aria-disabled='true']) {
+  filter: brightness(1.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 225, 0.55),
+    0 0 14px rgba(var(--gold-rgb), 0.3);
+}
+.sala-nota-guardar[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/*
+ * El asa de la nota, en su esquina de abajo por el lado de fuera: dos rayas de
+ * latón en diagonal (en espejo por la izquierda), que se encienden al tocarlas.
+ */
+.sala-nota-asa {
+  width: 0.85rem;
+  height: 0.85rem;
+  touch-action: none;
+  opacity: 0.45;
+  background: linear-gradient(
+    135deg,
+    transparent 52%,
+    rgba(var(--gold-rgb), 0.9) 52% 58%,
+    transparent 58% 74%,
+    rgba(var(--gold-rgb), 0.9) 74% 80%,
+    transparent 80%
+  );
+  transition: opacity 150ms ease;
+}
+.sala-nota-asa:hover,
+.sala-nota-asa:focus-visible {
+  opacity: 1;
+}
+.sala-nota-asa[data-lado='derecha'] {
+  cursor: nwse-resize;
+}
+.sala-nota-asa[data-lado='izquierda'] {
+  cursor: nesw-resize;
+  transform: scaleX(-1);
+}
+
+.sala-nota-pestana {
+  color: var(--color-gold);
+  background:
+    linear-gradient(180deg, rgba(var(--grimorio-rgb), 0.35), transparent),
+    rgba(var(--tinta-rgb), 0.94);
+  border: 1px solid rgba(var(--gold-rgb), 0.4);
+  box-shadow:
+    0 4px 12px -2px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(var(--gold-rgb), 0.15);
   transition:
     transform 150ms ease,
-    filter 150ms ease;
+    color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 }
 .sala-nota-pestana[data-lado='derecha'] {
   border-left: none;
@@ -825,19 +1149,17 @@
 }
 .sala-nota-pestana:hover,
 .sala-nota-pestana[aria-expanded='true'] {
-  filter: brightness(1.08);
-  transform: translateX(3px);
+  color: var(--color-gold-bright);
+  border-color: rgba(var(--gold-rgb), 0.7);
+  box-shadow:
+    0 4px 12px -2px rgba(0, 0, 0, 0.8),
+    0 0 12px rgba(var(--gold-rgb), 0.2),
+    inset 0 1px 0 rgba(var(--gold-rgb), 0.2);
+  transform: translateX(2px);
 }
 .sala-nota-pestana[data-lado='izquierda']:hover,
 .sala-nota-pestana[data-lado='izquierda'][aria-expanded='true'] {
-  transform: translateX(-3px);
-}
-.sala-nota {
-  background: rgba(var(--grimorio-rgb), 0.16);
-  border: 1px solid rgba(var(--gold-rgb), 0.16);
-}
-.sala-notas-panel {
-  animation: sala-notas-entrar 160ms ease-out both;
+  transform: translateX(-2px);
 }
 @keyframes sala-notas-entrar {
   from { opacity: 0; transform: translateY(4px) scale(0.98); }
@@ -959,29 +1281,62 @@
   }
 }
 
-/* ───────────────────────── La ciudad de la cabecera ───────────────────────── */
+/* ───────────────────────── La ciudad de la plaza ───────────────────────── */
 
 /*
- * La ciudad entre el logo y la fase (SkylineCabecera): ilustraciones en capas
- * (public/ciudad) que cambian con la fase. Se funde por los lados para no cortarse
- * contra el logo ni contra la fase. Cada capa entra o sale según la fase (data-fase),
- * despacio; al cambiar de fase, data-transicion lanza el atardecer o el amanecer.
- * Las medidas van en cqh/cqw: todo escala con el alto de la cabecera.
+ * La ciudad en el centro de la mesa (CiudadPlaza): ilustraciones en capas
+ * (public/ciudad) que cambian con la fase, vistas por una ventana redonda que llena
+ * la plaza hasta los asientos (las fichas quedan sobre su borde). Cada
+ * capa entra o sale según la fase (data-fase), despacio; al cambiar de fase,
+ * data-transicion lanza el atardecer o el amanecer. Las medidas van en cqh/cqw:
+ * todo escala con la ventana (cuadrada: un cqh es un cqw).
  */
-/* Del ancho de la ciudad (sin cielo vacío a los lados), como mucho el del hueco, pegada
-   a la fase */
+.sala-plaza-ciudad {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(0px, 100% - 2 * var(--sala-avatar, 10rem));
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+/* Con algo en el centro (el reloj, una nominación…), velada: que se lea lo de encima */
+.sala-plaza-ciudad[data-velada] { opacity: 0.3; }
+/* Solo sale al atardecer y al amanecer: aparece, hace el cambio y se desvanece (CiudadPlaza) */
+.sala-ciudad-marco {
+  position: absolute;
+  inset: 0;
+  animation: sala-ciudad-aparece 0.8s ease-out both;
+}
+.sala-ciudad-marco[data-saliendo] { animation: sala-ciudad-se-va 1s ease-in forwards; }
+@keyframes sala-ciudad-aparece {
+  from { opacity: 0; scale: 0.94; }
+  to { opacity: 1; scale: 1; }
+}
+@keyframes sala-ciudad-se-va {
+  from { opacity: 1; scale: 1; }
+  to { opacity: 0; scale: 1.03; }
+}
+/* Un filo de latón alrededor de la ventana, que se funde con la mesa */
+.sala-ciudad-marco::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--gold-rgb), 0.28),
+    0 0 24px 2px rgba(var(--gold-rgb), 0.08);
+}
 .sala-ciudad {
   position: absolute;
-  top: 0;
-  right: 0;
-  height: 100%;
-  aspect-ratio: 759 / 240;
-  max-width: 100%;
+  inset: 0;
   overflow: hidden;
+  border-radius: 9999px;
   pointer-events: none;
   container-type: size;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%);
+  -webkit-mask-image: radial-gradient(closest-side, #000 86%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 86%, transparent 100%);
 }
 .sala-ciudad > *,
 .sala-ciudad .pueblo > * {
@@ -1012,7 +1367,7 @@
 .sala-ciudad[data-transicion='amanecer'] .destello { animation: sala-ciudad-destello 3.4s ease forwards; }
 .sala-ciudad .destello {
   inset: 0;
-  background: radial-gradient(circle at 73% 20%, rgba(255, 242, 196, 0.9) 0, rgba(255, 210, 122, 0.45) 22%, transparent 60%);
+  background: radial-gradient(circle at 50% 35%, rgba(255, 242, 196, 0.9) 0, rgba(255, 210, 122, 0.45) 22%, transparent 60%);
 }
 @keyframes sala-ciudad-ocaso {
   0% { opacity: 0; }
@@ -1045,13 +1400,13 @@
 
 /* La luna y el sol, que suben y bajan detrás de la ciudad */
 .sala-ciudad .astro {
-  top: 5cqh;
-  height: 32cqh;
+  top: 20cqh;
+  height: 13cqh;
   width: auto;
   max-width: none;
 }
 .sala-ciudad .luna {
-  left: 22%;
+  left: 28%;
   filter: drop-shadow(0 0 4px rgba(236, 226, 200, 0.45));
 }
 .sala-ciudad .luna { transform: translateY(110cqh); }
@@ -1075,13 +1430,14 @@
     translate 3s cubic-bezier(0.35, 0, 0.65, 1),
     transform 3s cubic-bezier(0.6, 0, 0.9, 0.55);
 }
+/* De día, en lo alto y hacia el centro (centrado; el sol mide ~13cqw) */
 .sala-ciudad[data-fase='dia'] .sol {
-  translate: 68cqw 0;
+  translate: 43.5cqw 0;
   transform: translateY(0);
 }
 .sala-ciudad[data-fase='preparacion'] .sol {
-  translate: 10cqw 0;
-  transform: translateY(55cqh);
+  translate: 22cqw 0;
+  transform: translateY(24cqh);
 }
 /* Al amanecer: aparece por el este y sube, primero deprisa y luego despacio, hasta lo alto */
 .sala-ciudad[data-transicion='amanecer'] .sol {
@@ -1095,20 +1451,20 @@
   to { rotate: 360deg; }
 }
 @keyframes sala-ciudad-sol-este {
-  from { translate: 92cqw 0; }
-  to { translate: 68cqw 0; }
+  from { translate: 90cqw 0; }
+  to { translate: 43.5cqw 0; }
 }
 @keyframes sala-ciudad-sol-sube {
-  from { transform: translateY(70cqh); }
+  from { transform: translateY(110cqh); }
   to { transform: translateY(0); }
 }
 
-/* La ciudad, de la altura de la cabecera y centrada en la torre: si el hueco es más
-   estrecho, se recorta por los lados */
+/* La ciudad, en la mitad de abajo de la ventana y centrada en la torre: el círculo la
+   recorta por los lados */
 .sala-ciudad .pueblo {
   bottom: 0;
   left: 50%;
-  height: 100%;
+  height: 58%;
   aspect-ratio: 759 / 240;
   translate: -50% 0;
 }
@@ -1162,7 +1518,7 @@
   position: absolute;
   left: 0;
   top: 0;
-  height: calc(var(--escala, 1) * 15cqh);
+  height: calc(var(--escala, 1) * 6cqh);
   background: 0 0 / 400% 100% no-repeat;
   animation:
     sala-ciudad-vuelo var(--dur, 18s) linear infinite backwards var(--delay, 0s),
@@ -1198,6 +1554,30 @@
 @keyframes sala-ciudad-deriva {
   from { transform: translateX(-100%); }
   to { transform: translateX(100cqw); }
+}
+
+/* Quien se va a conversar en privado se retira hacia el fondo: su cuadro (avatar o
+   cámara) y su ficha se hacen pequeños (--sala-retiro, lo fija Mesa) y, en la mesa,
+   el asiento entero se aleja hacia fuera (Mesa, posicion y posicionFicha); al
+   volver, regresa a su sitio. */
+.sala-retiro {
+  transition:
+    scale 0.7s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.7s ease;
+}
+.sala-retiro[data-retirado] {
+  scale: var(--sala-retiro, 0.72);
+  opacity: 0.85;
+}
+.sala-retiro-ficha {
+  transition:
+    left 0.7s cubic-bezier(0.4, 0, 0.2, 1),
+    top 0.7s cubic-bezier(0.4, 0, 0.2, 1),
+    scale 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* Con su menú abierto, a su tamaño (si no, el menú también encogería) */
+.sala-retiro-ficha[data-retirado]:not(:has([aria-expanded='true'])) {
+  scale: var(--sala-retiro, 0.72);
 }
 
 /* ───────────────────────── Movimiento reducido ───────────────────────── */
@@ -1254,6 +1634,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* Quien conversa en privado se queda pequeño y atrás, pero sin el viaje */
+  .sala-retiro,
+  .sala-retiro-ficha {
+    transition: none;
+  }
+
   /* El señalamiento, quieto: las manos y la marca aparecen sin más */
   .sala-senal-rotulo,
   .sala-senal-mensaje,
@@ -1263,7 +1649,14 @@
     transition: none;
   }
 
-  /* La ciudad de la cabecera: sin animaciones; al cambiar de fase, solo el cambio de luz, corto */
+  /* Aparece y se va fundiéndose, sin crecer */
+  .sala-ciudad-marco { animation-name: sala-ciudad-funde; }
+  .sala-ciudad-marco[data-saliendo] { animation-name: sala-ciudad-funde; animation-direction: reverse; }
+  @keyframes sala-ciudad-funde {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  /* La ciudad de la plaza: sin animaciones; al cambiar de fase, solo el cambio de luz, corto */
   .sala-ciudad,
   .sala-ciudad * {
     animation: none !important;
@@ -1284,7 +1677,7 @@
   }
 
   .sala-nota-pestana,
-  .sala-notas-panel,
+  .sala-nota,
   .sala-pista,
   .sala-ficha-nombre {
     transition: none;
@@ -1333,9 +1726,16 @@
     animation: none;
   }
 
-  .sala-habla {
+  .sala-habla,
+  .sala-habla[data-activo='false'] {
+    transform: none;
+    transition: opacity 200ms linear;
+  }
+  .sala-habla[data-activo='true']::after {
     animation: none;
-    box-shadow: 0 0 0 2px var(--color-grimorio-bright), 0 0 12px 2px rgba(165, 150, 230, 0.55);
+  }
+  .sala-habla[data-activo='true'] .sala-habla-barras > span {
+    animation: none;
   }
 
   .btn-runic,

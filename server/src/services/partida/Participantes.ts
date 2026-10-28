@@ -333,6 +333,14 @@ export class Participantes {
     participante.dosManos = levantada && dos;
   }
 
+  /** Baja la mano de todos (al empezar una nominación o reiniciar su votación). */
+  bajarManos(): void {
+    for (const { participante } of this.entradas.values()) {
+      participante.manoLevantada = false;
+      participante.dosManos = false;
+    }
+  }
+
   elegirFormaMano(id: string, forma: SalaFormaMano): void {
     const participante = this.buscar(id);
     if (participante) participante.formaMano = forma;

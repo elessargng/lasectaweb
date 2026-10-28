@@ -69,8 +69,8 @@ describe('estadísticas de la partida', () => {
       npcs: [],
     });
     expect(r.votaciones.map((v) => [v.nomina, v.nominado, v.votos])).toEqual([
-      ['asiento 1 (ana)', 'asiento 2 (bea)', 2],
-      ['asiento 2 (bea)', 'asiento 3 (ceci)', null],
+      ['ana', 'bea', 2],
+      ['bea', 'ceci', null],
     ]);
     expect(r.mesa).toHaveLength(7);
     expect(r.mesa[2]).toEqual({ numero: 3, nombre: 'ceci', userId: '3', personaje: 'empath', ficha: null, alineamiento: 'bueno', muerto: true });
@@ -89,6 +89,24 @@ describe('estadísticas de la partida', () => {
         gano: true, vivo: false, causas: [], nominaciones: 0, nominado: 1, votos: 1, ejecutado: 1,
       },
     ]);
+  });
+
+  it('reiniciar la votación descuenta los votos ya contados; pedir una expulsión no es nominar', () => {
+    const { sala, ids, asiento, registros } = partida();
+    sala.irANoche();
+    sala.amanecer();
+    sala.nominar(asiento(0), asiento(1));
+    sala.levantarMano(ids[0], true);
+    sala.iniciarCuentaAtras(Date.now());
+    vi.advanceTimersByTime(SALA_CUENTA_ATRAS_MS + sala.configuracion().segundosPorFicha * 1000 * 3);
+    sala.reiniciarVotacion();
+    sala.cambiarPersonaje(asiento(2), 'butcher');
+    sala.nominar(asiento(1), asiento(2));
+    sala.empezarRevelacion('bueno');
+    const de = (userId: string) => registros[0].jugadores.find((j) => j.userId === userId);
+    expect(de('1')).toMatchObject({ nominaciones: 1, votos: 0 });
+    expect(de('2')).toMatchObject({ nominaciones: 0, nominado: 1 });
+    expect(de('3')).toMatchObject({ nominado: 0 });
   });
 
   it('la máquina del tiempo también devuelve las estadísticas como estaban', () => {
