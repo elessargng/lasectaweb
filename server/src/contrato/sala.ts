@@ -464,10 +464,78 @@ export interface MensajeDespertar {
   texto: string | null;
   /** «Tú eres»: el alineamiento, si se dice. */
   alineamiento: SalaAlineamiento | null;
+  /**
+   * «Haz una elección» de una habilidad (el despertar guiado, ver SalaHabilidadNoche):
+   * a cuántos jugadores elige y si puede elegirse a sí mismo. El jugador solo puede
+   * contestar con la ficha «Jugador» y justo esos. null: una elección libre.
+   */
+  eleccion: SalaEleccionDespertar | null;
   /** En qué momento de la partida se mandó («Noche 2»). */
   fase: { momento: SalaFase['momento']; numero: number };
   /** ms */
   hora: number;
+}
+
+/** Lo que se manda en un despertar, sin quién, cuándo ni elección. */
+export type SalaEnvioDespertar = Omit<MensajeDespertar, 'id' | 'autor' | 'fase' | 'hora' | 'eleccion'>;
+
+/** La elección que pide una habilidad: a cuántos jugadores y si puede elegirse a sí mismo. */
+export interface SalaEleccionDespertar {
+  cantidad: number;
+  puedeElegirse: boolean;
+}
+
+/**
+ * Cómo está el despertar guiado de una fila del orden de noche:
+ * - listo: se hace solo, con un clic;
+ * - falta: falta algo en el grimorio (ver los avisos) y no se puede;
+ * - revisar: el narrador mira lo propuesto (las opciones) y lo cambia si quiere antes de mandarlo;
+ * - esperando: se le ha pedido que elija y aún no ha contestado;
+ * - hecho: ya está, esta noche.
+ */
+export type SalaEstadoHabilidad = 'listo' | 'falta' | 'revisar' | 'esperando' | 'hecho';
+
+/** Cómo registra un Espía o una Reclusa en una opción: como bueno, malvado, el demonio o no. */
+export type SalaRegistro = 'bueno' | 'malvado' | 'demonio' | 'noDemonio';
+
+/**
+ * Lo que dice el despertar guiado al narrador (el cliente lo pone en palabras):
+ * - faltaRecordatorio: hay que poner antes ese recordatorio (de ese personaje, con ese texto);
+ * - envenenado / borracho: el que despierta está droison;
+ * - muerto: el de la ficha está muerto;
+ * - noMuere: el Ravenkeeper no muere esta noche;
+ * - registro: en lo que se calcula entra un Espía o una Reclusa (`asiento`);
+ * - sinEfecto: estaba droison al elegir; se le ha contestado sin poner el recordatorio;
+ * - protegido: el demonio ha elegido a uno protegido (`asiento`): no muere;
+ * - alcalde: el demonio ha elegido al Alcalde (`asiento`): decide el narrador;
+ * - elegido: a quién ha elegido (`asientos`).
+ */
+export type SalaAvisoHabilidad =
+  | { tipo: 'faltaRecordatorio'; personaje: string; texto: string }
+  | { tipo: 'envenenado' | 'borracho' | 'muerto' | 'noMuere' | 'sinEfecto' }
+  | { tipo: 'registro' | 'protegido' | 'alcalde'; asiento: string }
+  | { tipo: 'elegido'; asientos: string[] };
+
+/** Una respuesta posible: lo que se manda y, con un Espía o una Reclusa, cómo registra cada uno para que salga. */
+export interface SalaOpcionDespertar {
+  envio: SalaEnvioDespertar;
+  registros: { asiento: string; como: SalaRegistro }[];
+}
+
+/**
+ * El despertar guiado de una fila del orden de noche (solo con el guion Trouble
+ * Brewing, de momento): el personaje despierta según su habilidad. Si elige, solo
+ * puede elegir lo que ella le deja y el recordatorio se pone solo; si recibe
+ * información, se calcula y se manda sola. Uno por personaje con habilidad y ficha en la mesa.
+ */
+export interface SalaHabilidadNoche {
+  personaje: string;
+  /** El asiento que despierta (el de la ficha). */
+  asiento: string;
+  estado: SalaEstadoHabilidad;
+  avisos: SalaAvisoHabilidad[];
+  /** Lo que se propone mandar (revisar: una o varias, la primera es la de verdad). */
+  opciones: SalaOpcionDespertar[];
 }
 
 /**
@@ -561,6 +629,13 @@ export interface SalaEstado {
   recordatoriosNoche: Record<string, boolean>;
   /** Los despertares: todos, para los narradores; el de su asiento, para un jugador; ninguno, para los demás. */
   despertares: SalaDespertar[];
+  /** El despertar guiado de cada fila del orden de noche (ver SalaHabilidadNoche). Solo para los narradores. */
+  habilidadesNoche: SalaHabilidadNoche[];
+  /**
+   * El Imp se ha elegido a sí mismo: el narrador tiene que decir quién es el nuevo
+   * (el asiento del que muere), o null. Solo para los narradores.
+   */
+  nuevoImp: string | null;
   /**
    * El grimorio que el narrador ha enviado (el último) a quien recibe el mensaje,
    * si está sentado en el asiento al que se envió (el Espía, la Viuda); si no, null.

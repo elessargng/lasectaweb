@@ -29,6 +29,8 @@ import {
   SALA_FORMAS_MANO,
   SALA_NOTA_LARGO_MAX,
   SALA_RECORDATORIO_TEXTO_MAX,
+  SalaEleccionDespertar,
+  SalaEnvioDespertar,
   SalaFichaEnviada,
   SalaFormaMano,
   SalaParticipante,
@@ -103,7 +105,7 @@ function leerMensajeDespertar(
   sala: SalaService,
   datos: unknown,
   conTarjetas: boolean,
-): { error: string } | Omit<MensajeDespertar, 'id' | 'hora' | 'autor' | 'fase'> {
+): { error: string } | SalaEnvioDespertar {
   const { ficha, tarjeta, jugadores, personajes, texto, alineamiento } =
     (datos as {
       ficha?: unknown;
@@ -140,6 +142,13 @@ function leerMensajeDespertar(
     texto: adjunto.texto ? limpio : null,
     alineamiento: bando,
   };
+}
+/** Si lo elegido no es lo que pide la habilidad (cuántos y si puede elegirse a sí mismo): el error, o null. */
+function errorDeEleccion(pide: SalaEleccionDespertar, mensaje: { ficha: FichaDespertar | null; jugadores: string[] }, asientoId: string): string | null {
+  const cuantos = pide.cantidad === 1 ? 'un jugador' : `${pide.cantidad} jugadores`;
+  if (mensaje.ficha !== 'jugador' || mensaje.jugadores.length !== pide.cantidad) return `Elige ${cuantos}.`;
+  if (!pide.puedeElegirse && mensaje.jugadores.includes(asientoId)) return 'No puedes elegirte a ti.';
+  return null;
 }
 /** Comprueba una casilla de farol: su posición y un personaje del guion (o null, para vaciarla). */
 function leerFarol(sala: SalaService, datos: unknown): { error: string } | { posicion: number; personajeId: string | null } {
@@ -608,7 +617,8 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   /**
    * Abre de noche el despertar de un asiento (también de uno libre: cuenta como un
    * jugador más), para mandarle información y que conteste. Se pueden tener
-   * varios a la vez; si ya lo tiene, no hace nada. datos: { asientoId }.
+   * varios a la vez; si ya lo tiene, no hace nada. El jugador no se entera hasta
+   * que el narrador le manda algo (ver Despertares.asientoDespiertoDe). datos: { asientoId }.
    */
   'narrador:despertar': {
     puede: (sala, yo) => yo.rol === 'narrador' && sala.fase().momento === 'noche',
@@ -638,10 +648,65 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       if (!asientoId || !sala.hayDespertar(asientoId)) return { ok: false, error: 'Ese despertar ya no está abierto.' };
       const mensaje = leerMensajeDespertar(sala, datos, narra);
       if ('error' in mensaje) return { ok: false, error: mensaje.error };
-      sala.enviarDespertar(asientoId, { ...mensaje, autor: narra ? 'narrador' : asientoId });
+      // Si su habilidad le ha pedido que elija (el despertar guiado), solo contesta con
+      // quienes elige. Por un asiento libre (cuenta como un jugador) elige el narrador.
+      const libre = !sala.asientos().find((a) => a.id === asientoId)?.ocupante;
+      const pide = !narra || libre ? sala.eleccionPendiente(asientoId) : null;
+      const eligiendo = !!pide && (!narra || mensaje.ficha === 'jugador');
+      if (pide && eligiendo) {
+        const error = errorDeEleccion(pide, mensaje, asientoId);
+        if (error) return { ok: false, error };
+      }
       // «Tú eres»: su ficha pasa a ser la que se le dice (con alineamiento, solo si se le dice)
-      if (narra && mensaje.tarjeta === 'tuEres') sala.comunicarFicha(asientoId, mensaje.personajes, mensaje.alineamiento);
+      if (narra) sala.mandarDelNarrador(asientoId, mensaje);
+      else sala.enviarDespertar(asientoId, { ...mensaje, autor: asientoId });
+      if (eligiendo) sala.alElegirHabilidad(asientoId, mensaje.jugadores);
       return { ok: true };
+    },
+  },
+
+  /**
+   * El despertar guiado (ver SalaHabilidadNoche): despierta al de una fila del orden
+   * de noche según su habilidad, si está listo. datos: { personajeId }.
+   */
+  'narrador:despertarHabilidad': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.fase().momento === 'noche',
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'Solo se despierta a alguien de noche.' : 'Solo un narrador puede despertar a alguien.'),
+    hacer: (sala, _yo, datos) => {
+      const personajeId = (datos as { personajeId?: unknown } | null)?.personajeId;
+      if (typeof personajeId !== 'string') return { ok: false, error: 'Ese personaje no se despierta solo.' };
+      const error = sala.despertarHabilidad(personajeId);
+      return error ? { ok: false, error } : { ok: true };
+    },
+  },
+
+  /**
+   * El despertar guiado, revisado: el narrador manda lo que ha decidido (una de las
+   * opciones, o cambiada) al de una fila que había que revisar. datos: { personajeId,
+   * ficha | tarjeta, jugadores?, personajes?, texto?, alineamiento? }.
+   */
+  'narrador:resolverHabilidad': {
+    puede: (sala, yo) => yo.rol === 'narrador' && sala.fase().momento === 'noche',
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'Solo se despierta a alguien de noche.' : 'Solo un narrador puede despertar a alguien.'),
+    hacer: (sala, _yo, datos) => {
+      const personajeId = (datos as { personajeId?: unknown } | null)?.personajeId;
+      if (typeof personajeId !== 'string') return { ok: false, error: 'Ese personaje no se despierta solo.' };
+      const mensaje = leerMensajeDespertar(sala, datos, true);
+      if ('error' in mensaje) return { ok: false, error: mensaje.error };
+      const error = sala.resolverHabilidad(personajeId, mensaje);
+      return error ? { ok: false, error } : { ok: true };
+    },
+  },
+
+  /** El Imp se ha elegido a sí mismo: el narrador dice quién es el nuevo. datos: { asientoId }. */
+  'narrador:nuevoImp': {
+    puede: (sala, yo) => yo.rol === 'narrador' && !!sala.nuevoImp(),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'No hay que elegir un nuevo Imp.' : 'Solo un narrador elige al nuevo Imp.'),
+    hacer: (sala, _yo, datos) => {
+      const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
+      if (typeof asientoId !== 'string' || !sala.hayAsiento(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      const error = sala.elegirNuevoImp(asientoId);
+      return error ? { ok: false, error } : { ok: true };
     },
   },
 
@@ -1271,11 +1336,16 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /**
    * Reparte al azar los personajes de la bolsa entre los asientos que no llevan
-   * viajero. Solo si hay en la bolsa tantos como esos asientos.
+   * viajero. Solo en la preparación y si hay en la bolsa tantos como esos asientos.
    */
   'narrador:asignarPersonajes': {
-    puede: (sala, yo) => yo.rol === 'narrador' && !!sala.guion(),
-    noPuede: (sala, yo) => (yo.rol !== 'narrador' ? 'Solo un narrador puede repartir los personajes.' : 'Antes hay que elegir un guion.'),
+    puede: (sala, yo) => yo.rol === 'narrador' && !!sala.guion() && sala.fase().momento === 'preparacion',
+    noPuede: (sala, yo) =>
+      yo.rol !== 'narrador'
+        ? 'Solo un narrador puede repartir los personajes.'
+        : !sala.guion()
+          ? 'Antes hay que elegir un guion.'
+          : 'Los personajes solo se asignan en la preparación.',
     hacer: (sala) => {
       const hacen = sala.fichasParaRepartir();
       const hay = sala.bolsa().length;

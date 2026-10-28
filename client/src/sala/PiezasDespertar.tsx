@@ -11,6 +11,7 @@ import {
   nombreDeAsiento,
   TARJETAS_DESPERTAR,
   tarjetaDespertar,
+  textoEleccion,
   type AdjuntoDespertar,
   type Envio,
   type TarjetaDespertar,
@@ -104,6 +105,7 @@ export const MensajeVisto = ({ mensaje, estado, personajes, grande = false }: Me
         </span>
       )}
       {mensaje.texto && <span className={grande ? 'text-xl' : 'text-sm'}>{mensaje.texto}</span>}
+      {mensaje.eleccion && <span className={grande ? 'text-xl' : 'text-sm'}>{textoEleccion(mensaje.eleccion.cantidad)}</span>}
     </span>
   );
 };
@@ -159,7 +161,7 @@ interface Pendiente {
   titulo: string;
   adjunto: AdjuntoDespertar;
   /** Lo que ya va puesto al abrir (p. ej. «Tú eres»: el personaje y el alineamiento del despierto). */
-  iniciales?: { jugadores?: string[]; personajes?: string[]; alineamiento?: SalaAlineamiento | null };
+  iniciales?: { jugadores?: string[]; personajes?: string[]; alineamiento?: SalaAlineamiento | null; texto?: string };
 }
 
 interface EditorAdjuntoProps {
@@ -168,7 +170,12 @@ interface EditorAdjuntoProps {
   asientos: { id: string; nombre: string }[];
   personajes: PersonajeMostrado[];
   onEnviar: (envio: Envio) => Promise<SalaResultado>;
-  onCancelar: () => void;
+  /** Sin él, no hay «Cancelar» (lo que pide la habilidad del jugador: tiene que elegir). */
+  onCancelar?: () => void;
+  /** Cuántos jugadores hay que elegir, justo (la habilidad del jugador); sin él, al menos uno. */
+  cantidad?: number;
+  /** Asientos que no se pueden elegir (el suyo, si su habilidad no le deja elegirse). */
+  excluidos?: string[];
 }
 
 /**
@@ -182,13 +189,14 @@ interface EditorAdjuntoProps {
  * otro diálogo): al abrirse, el foco va a su título; al cerrarse, vuelve a la
  * ficha que lo abrió.
  */
-const EditorAdjunto = ({ pendiente, asientos, personajes, onEnviar, onCancelar }: EditorAdjuntoProps) => {
+export const EditorAdjunto = ({ pendiente, asientos: todos, personajes, onEnviar, onCancelar, cantidad, excluidos = [] }: EditorAdjuntoProps) => {
+  const asientos = todos.filter((a) => !excluidos.includes(a.id));
   const base = useId();
   const tituloRef = useRef<HTMLHeadingElement>(null);
   const [jugadores, setJugadores] = useState<string[]>(pendiente.iniciales?.jugadores ?? []);
   const [elegidos, setElegidos] = useState<string[]>(pendiente.iniciales?.personajes ?? []);
   const [bando, setBando] = useState<SalaAlineamiento | null>(pendiente.iniciales?.alineamiento ?? null);
-  const [texto, setTexto] = useState('');
+  const [texto, setTexto] = useState(pendiente.iniciales?.texto ?? '');
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
   const ariaLive = useAriaLive('errores');
@@ -211,15 +219,20 @@ const EditorAdjunto = ({ pendiente, asientos, personajes, onEnviar, onCancelar }
     const [lista, poner, nombre] =
       tipo === 'jugador' ? [jugadores, setJugadores, nombreJugador(id)] : [elegidos, setElegidos, nombrePersonaje(id)];
     if (lista.includes(id)) return;
+    if (tipo === 'jugador' && cantidad !== undefined && jugadores.length >= cantidad) {
+      setAviso(`Ya has elegido ${cantidad === 1 ? 'uno' : cantidad}: quita uno para cambiarlo.`);
+      return;
+    }
     poner([...lista, id]);
     setAviso(`Añadido: ${nombre}.`);
   };
   // En la plaza: quien elige ahí avisa al lector (esta ventana estaba escondida y no se oiría)
   const idPlaza = `${base}-plaza`;
+  const completos = cantidad !== undefined && jugadores.length >= cantidad;
   const elegirJugadorEnPlaza = () =>
     elegirEnPlaza?.({
       titulo: pendiente.titulo,
-      excluidos: jugadores,
+      excluidos: [...jugadores, ...excluidos],
       onElegido: (id) => setJugadores((l) => (l.includes(id) ? l : [...l, id])),
       // Al volver, el foco en el botón: para añadir otro o seguir a «Enviar»
       volver: idPlaza,
@@ -255,6 +268,7 @@ const EditorAdjunto = ({ pendiente, asientos, personajes, onEnviar, onCancelar }
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
     if (enviando) return;
+    if (adjunto.jugadores && cantidad !== undefined && jugadores.length !== cantidad) return setError(`${textoEleccion(cantidad)}.`);
     if (adjunto.jugadores && !jugadores.length) return setError('Elige al menos un jugador.');
     if (adjunto.personajes && !elegidos.length) return setError('Elige al menos un personaje.');
     if (adjunto.texto && !texto.trim()) return setError('Escribe el mensaje.');
@@ -352,7 +366,7 @@ const EditorAdjunto = ({ pendiente, asientos, personajes, onEnviar, onCancelar }
             ))}
           </fieldset>
         )}
-        {adjunto.jugadores && elegirEnPlaza && (
+        {adjunto.jugadores && elegirEnPlaza && !completos && (
           <div>
             <button id={idPlaza} type="button" onClick={elegirJugadorEnPlaza} className={`${botonSecundario} flex items-center gap-2`}>
               <MousePointerClick size={16} />
@@ -452,9 +466,11 @@ const EditorAdjunto = ({ pendiente, asientos, personajes, onEnviar, onCancelar }
         >
           Enviar
         </button>
-        <button type="button" onClick={onCancelar} className={botonSecundario}>
-          Cancelar
-        </button>
+        {onCancelar && (
+          <button type="button" onClick={onCancelar} className={botonSecundario}>
+            Cancelar
+          </button>
+        )}
       </div>
     </form>
   );
@@ -474,11 +490,29 @@ interface BotoneraDespertarProps {
   onError: (mensaje: string) => void;
   /** Confirmar al lector lo que se acaba de mandar. */
   onEnviado: (texto: string) => void;
+  /**
+   * El despertar guiado, para revisar (el narrador): lo que se manda va por
+   * 'narrador:resolverHabilidad' con ese personaje, y encima de las fichas, lo que
+   * se propone mandar (ver Propuesta).
+   */
+  revision?: { personajeId: string; propuestas: Propuesta[] };
 }
+
+/** Una respuesta propuesta por el despertar guiado: lo que se manda y por qué (cómo registra alguien), en palabras. */
+export interface Propuesta {
+  envio: Envio;
+  mensaje: string;
+  registros: string;
+}
+
+/** El título de lo que se manda: el de su tarjeta o su ficha. */
+const tituloDe = (envio: Envio) => tarjetaDespertar(envio.tarjeta ?? null)?.texto ?? fichaDespertar(envio.ficha ?? null)?.etiqueta ?? '';
+const adjuntoDe = (envio: Envio) => tarjetaDespertar(envio.tarjeta ?? null)?.adjunto ?? fichaDespertar(envio.ficha ?? null)?.adjunto ?? {};
 
 /**
  * Las fichas (y, para el narrador, las tarjetas) que se pueden mandar. Pulsar
  * una abre el editor: se elige lo que lleve (si lleva algo) y se confirma con «Enviar».
+ * Al revisar un despertar guiado, antes, lo propuesto: se manda tal cual o se cambia antes.
  */
 export const BotoneraDespertar = ({
   estado,
@@ -489,6 +523,7 @@ export const BotoneraDespertar = ({
   pedir,
   onError,
   onEnviado,
+  revision,
 }: BotoneraDespertarProps) => {
   const base = useId();
   const [pendiente, setPendiente] = useState<Pendiente | null>(null);
@@ -523,7 +558,9 @@ export const BotoneraDespertar = ({
   }, [pendiente]);
 
   const mandar = async (envio: Envio, titulo: string) => {
-    const r = await pedir('despertar:enviar', asientoId ? { ...envio, asientoId } : envio);
+    const r = revision
+      ? await pedir('narrador:resolverHabilidad', { ...envio, personajeId: revision.personajeId })
+      : await pedir('despertar:enviar', asientoId ? { ...envio, asientoId } : envio);
     if (r.ok) {
       onEnviado(`Enviado: ${titulo}.`);
       setPendiente(null);
@@ -552,8 +589,51 @@ export const BotoneraDespertar = ({
 
   const idFicha = (id: string) => `${base}-ficha-${id}`;
   const idTarjeta = (id: string) => `${base}-tarjeta-${id}`;
+  const idPropuesta = (i: number) => `${base}-propuesta-${i}`;
   return (
     <div className="flex flex-col gap-3">
+      {revision && revision.propuestas.length > 0 && (
+        <>
+          <h3 id={`${base}-propuestas`} className="font-ui text-sm font-semibold text-theme-main">
+            {revision.propuestas.length === 1 ? 'Lo que se propone mandar' : 'Lo que se puede mandar'}
+          </h3>
+          <ul aria-labelledby={`${base}-propuestas`} className="flex flex-col gap-2">
+            {revision.propuestas.map((p, i) => (
+              <li key={i} className="flex flex-wrap items-center gap-3 rounded border border-gold/30 bg-theme-container/40 px-3 py-2">
+                <p id={idPropuesta(i)} className="min-w-0 flex-1 text-sm">
+                  <span className="text-on-surface-bright">{p.mensaje}</span>
+                  {p.registros && <span className="block text-xs text-on-surface-muted">{p.registros}</span>}
+                </p>
+                <button
+                  type="button"
+                  aria-describedby={idPropuesta(i)}
+                  onClick={() => void mandar(p.envio, tituloDe(p.envio))}
+                  className={`${botonPrincipal} px-3 py-1.5 text-xs`}
+                >
+                  Enviar
+                </button>
+                <button
+                  id={`${idPropuesta(i)}-cambiar`}
+                  type="button"
+                  aria-describedby={idPropuesta(i)}
+                  onClick={() => {
+                    volverRef.current = `${idPropuesta(i)}-cambiar`;
+                    setPendiente({
+                      base: { ficha: p.envio.ficha, tarjeta: p.envio.tarjeta },
+                      titulo: tituloDe(p.envio),
+                      adjunto: adjuntoDe(p.envio),
+                      iniciales: { jugadores: p.envio.jugadores, personajes: p.envio.personajes, alineamiento: p.envio.alineamiento, texto: p.envio.texto },
+                    });
+                  }}
+                  className={`${botonSecundario} px-3 py-1.5 text-xs`}
+                >
+                  Cambiar
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <h3 id={`${base}-fichas`} className="font-ui text-sm font-semibold text-theme-main">
         {tituloFichas}
       </h3>

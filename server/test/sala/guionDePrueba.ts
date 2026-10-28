@@ -74,3 +74,30 @@ export const conCuenta = (userId: string, nombre: string, partidasJugadas: numbe
   avatarElegido: null,
   partidasJugadas,
 });
+
+/** Trouble Brewing, con lo que usan los tests del despertar guiado (los personajes con sus recordatorios). */
+export const guionTroubleBrewing = (): GuionResuelto => ({
+  ...guionDePrueba(),
+  nombre: 'Trouble Brewing',
+  edicion: 'troublebrewing',
+  personajes: [
+    personaje('washerwoman', 'townsfolk', ['Townsfolk', 'Wrong']),
+    personaje('librarian', 'townsfolk', ['Outsider', 'Wrong']),
+    personaje('investigator', 'townsfolk', ['Minion', 'Wrong']),
+    personaje('chef', 'townsfolk'),
+    personaje('empath', 'townsfolk'),
+    personaje('fortuneteller', 'townsfolk', ['Red Herring']),
+    personaje('undertaker', 'townsfolk', ['Die Today']),
+    personaje('monk', 'townsfolk', ['Safe']),
+    personaje('ravenkeeper', 'townsfolk'),
+    personaje('soldier', 'townsfolk'),
+    personaje('mayor', 'townsfolk'),
+    personaje('butler', 'outsider', ['Master']),
+    personaje('drunk', 'outsider', ['Is The Drunk']),
+    personaje('recluse', 'outsider'),
+    personaje('poisoner', 'minion', ['Poisoned']),
+    personaje('spy', 'minion'),
+    personaje('scarletwoman', 'minion', ['Is The Demon']),
+    personaje('imp', 'demon', ['Dead']),
+  ],
+});

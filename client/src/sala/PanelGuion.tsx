@@ -1,6 +1,8 @@
 import { X } from 'lucide-react';
-import { IconoSol } from './IconosJuego';
-import { Fragment, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { IconoLuna, IconoSol } from './IconosJuego';
+import { Fragment, useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { ESTADO_HABILIDAD } from './habilidadesNoche';
+import type { SalaHabilidadNoche } from './useSala';
 import { urlDelServidor } from '../utils/api';
 import SelectorIdioma from './SelectorIdioma';
 import {
@@ -47,6 +49,19 @@ export interface RecordatoriosNoche {
   /** ids de los viajeros en juego: salen al principio de cada noche, antes de todo. */
   viajeros: string[];
   onAlternar: (personajeId: string) => void;
+  /** El despertar guiado de una fila (ver DespertarFila), o undefined si ese personaje no lo tiene. */
+  despertar: (personajeId: string) => DespertarFila | undefined;
+}
+
+/**
+ * El despertar guiado de una fila del orden de noche (solo el narrador, con un
+ * guion que lo tenga): un botón para despertarlo según su habilidad y cómo está.
+ */
+export interface DespertarFila {
+  estado: SalaHabilidadNoche['estado'];
+  /** Lo que avisa el servidor, ya en frases. */
+  avisos: string[];
+  onPulsar: () => void;
 }
 
 /** Ancho inicial (px) en resumido y en completo; y límites al redimensionar. */
@@ -348,6 +363,7 @@ const Fila = ({
   texto,
   recordatorio,
   nota,
+  despertar,
 }: {
   icono: ReactNode;
   nombre: Texto;
@@ -357,45 +373,87 @@ const Fila = ({
   nota?: string;
   /** Orden de noche, para el narrador: si lleva la ficha recordatorio y cómo quitarla o ponerla. */
   recordatorio?: { activo: boolean; onAlternar: () => void };
-}) => (
-  // Sin texto (resumido), el nombre centrado con el icono; con texto, arriba
-  <li className={`flex gap-3 py-1.5 ${texto?.texto ? 'items-start' : 'items-center'}`}>
-    {recordatorio && (
-      // A la izquierda del rol. La ficha recordatorio de noche de botc.app (public/noche/actua.webp). Sin ella, un
-      // hueco punteado donde ponerla. El lector oye «Recordatorio de Imp, presionado» o no.
-      <button
-        type="button"
-        aria-pressed={recordatorio.activo}
-        onClick={recordatorio.onAlternar}
-        className="h-9 w-9 shrink-0 self-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-hoja-lacre focus-visible:ring-offset-2 focus-visible:ring-offset-hoja-crema"
-      >
-        <span className="sr-only">
-          Recordatorio de <span lang={nombre.lang}>{nombre.texto}</span>
-        </span>
-        {recordatorio.activo ? (
-          <img src="/noche/actua.webp" alt="" className="h-9 w-9 drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]" />
-        ) : (
-          <span aria-hidden="true" className="block h-9 w-9 rounded-full border-2 border-dashed border-hoja-lacre/35 hover:border-hoja-lacre/70" />
-        )}
-      </button>
-    )}
-    {icono}
-    <p className="min-w-0 flex-1">
-      <span className={`font-bold tracking-wide ${color}`} lang={nombre.lang}>
-        {nombre.texto}
-      </span>
-      {nota && <span className="ml-2 text-xs italic text-hoja-cuerpo">({nota})</span>}
-      {texto?.texto && (
-        <>
-          <span className="sr-only">: </span>
-          <span className="block text-sm leading-snug text-hoja-cuerpo" lang={texto.lang}>
-            {conMarcas(texto.texto)}
+  /** Orden de noche, para el narrador: el despertar guiado. */
+  despertar?: DespertarFila;
+}) => {
+  const idEstado = useId();
+  // Cómo está (salvo si está listo y no hay nada que decir): debajo del nombre y, para
+  // quien llega con el tabulador, como descripción del botón
+  const estado = despertar && (despertar.estado !== 'listo' || despertar.avisos.length > 0)
+    ? [despertar.estado === 'listo' ? '' : `${ESTADO_HABILIDAD[despertar.estado]}.`, ...despertar.avisos].filter(Boolean).join(' ')
+    : '';
+  const [etiqueta, nombreOculto] =
+    despertar?.estado === 'revisar'
+      ? ['Revisar', ' el despertar de ']
+      : despertar?.estado === 'esperando' || despertar?.estado === 'hecho'
+        ? ['Ver', ' el despertar de ']
+        : ['Despertar', ' a '];
+  return (
+    // Sin texto (resumido), el nombre centrado con el icono; con texto, arriba
+    <li className={`flex gap-3 py-1.5 ${texto?.texto ? 'items-start' : 'items-center'}`}>
+      {recordatorio && (
+        // A la izquierda del rol. La ficha recordatorio de noche de botc.app (public/noche/actua.webp). Sin ella, un
+        // hueco punteado donde ponerla. El lector oye «Recordatorio de Imp, presionado» o no.
+        <button
+          type="button"
+          aria-pressed={recordatorio.activo}
+          onClick={recordatorio.onAlternar}
+          className="h-9 w-9 shrink-0 self-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-hoja-lacre focus-visible:ring-offset-2 focus-visible:ring-offset-hoja-crema"
+        >
+          <span className="sr-only">
+            Recordatorio de <span lang={nombre.lang}>{nombre.texto}</span>
           </span>
-        </>
+          {recordatorio.activo ? (
+            <img src="/noche/actua.webp" alt="" className="h-9 w-9 drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]" />
+          ) : (
+            <span aria-hidden="true" className="block h-9 w-9 rounded-full border-2 border-dashed border-hoja-lacre/35 hover:border-hoja-lacre/70" />
+          )}
+        </button>
       )}
-    </p>
-  </li>
-);
+      {icono}
+      <p className="min-w-0 flex-1">
+        <span className={`font-bold tracking-wide ${color}`} lang={nombre.lang}>
+          {nombre.texto}
+        </span>
+        {nota && <span className="ml-2 text-xs italic text-hoja-cuerpo">({nota})</span>}
+        {texto?.texto && (
+          <>
+            <span className="sr-only">: </span>
+            <span className="block text-sm leading-snug text-hoja-cuerpo" lang={texto.lang}>
+              {conMarcas(texto.texto)}
+            </span>
+          </>
+        )}
+        {estado && (
+          <span
+            id={idEstado}
+            className={`block text-xs leading-snug ${despertar?.estado === 'falta' || despertar?.estado === 'revisar' ? 'font-semibold text-hoja-lacre' : 'italic text-hoja-cuerpo'}`}
+          >
+            <span className="sr-only">. </span>
+            {estado}
+          </span>
+        )}
+      </p>
+      {despertar && (
+        // Sin lo que falta, no se puede: se queda con el foco (para oír qué falta), sin hacer nada
+        <button
+          type="button"
+          aria-disabled={despertar.estado === 'falta' || undefined}
+          aria-describedby={estado ? idEstado : undefined}
+          onClick={despertar.estado === 'falta' ? undefined : despertar.onPulsar}
+          className="flex shrink-0 items-center gap-1 self-center rounded border border-hoja-lacre/60 px-2 py-1 font-ui text-xs font-semibold text-hoja-lacre hover:bg-hoja-lacre/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-hoja-lacre aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-transparent"
+        >
+          <IconoLuna size={14} />
+          {etiqueta}
+          <span className="sr-only">
+            {nombreOculto}
+            <span lang={nombre.lang}>{nombre.texto}</span>
+          </span>
+        </button>
+      )}
+    </li>
+  );
+};
 
 /** La hoja de personajes: los roles por tipos, separados por una línea granate; a dos columnas si cabe. */
 const HojaPersonajes = ({ personajes, completo }: { personajes: PersonajeMostrado[]; completo: boolean }) => (
@@ -537,6 +595,7 @@ const OrdenNoche = ({
           texto={completo ? (noche === 'primera' ? r.primeraNoche : r.otrasNoches) : null}
           recordatorio={conRecordatorio(r.id)}
           nota={recordatorios?.porCanibal.includes(r.id) ? 'lo usa el Caníbal' : undefined}
+          despertar={recordatorios?.despertar(r.id)}
         />
       ))}
       {fija(

@@ -46,9 +46,14 @@ export class Despertares {
     return this.alDia().some((h) => h.asiento === asientoId);
   }
 
-  /** El asiento con despertar de este participante, o null. */
+  /**
+   * El asiento con despertar de este participante, o null. Para el jugador, el
+   * despertar empieza cuando el narrador le manda algo: hasta entonces, ni lo ve ni contesta.
+   */
   asientoDespiertoDe(participanteId: string): string | null {
-    return this.alDia().find((h) => h.ocupante === participanteId)?.asiento ?? null;
+    return (
+      this.alDia().find((h) => h.ocupante === participanteId && h.mensajes.some((m) => m.autor === 'narrador'))?.asiento ?? null
+    );
   }
 
   /** Abre el despertar de un asiento (si ya lo tiene, no hace nada). Devuelve el error, si lo hay. */
@@ -59,12 +64,12 @@ export class Despertares {
     return null;
   }
 
-  /** Guarda un mensaje en el despertar de un asiento. No valida: lo hace quien lo llama. */
-  enviar(asientoId: string, mensaje: Omit<MensajeDespertar, 'id' | 'hora' | 'fase'>): void {
+  /** Guarda un mensaje en el despertar de un asiento (sin `eleccion`: una libre). No valida: lo hace quien lo llama. */
+  enviar(asientoId: string, mensaje: Omit<MensajeDespertar, 'id' | 'hora' | 'fase' | 'eleccion'> & Partial<Pick<MensajeDespertar, 'eleccion'>>): void {
     const hilo = this.alDia().find((h) => h.asiento === asientoId);
     if (!hilo) return;
     const { momento, numero } = this.fase();
-    hilo.mensajes.push({ ...mensaje, id: randomUUID(), hora: Date.now(), fase: { momento, numero } });
+    hilo.mensajes.push({ eleccion: null, ...mensaje, id: randomUUID(), hora: Date.now(), fase: { momento, numero } });
     if (hilo.mensajes.length > SALA_MENSAJES_DESPERTAR_MAX) hilo.mensajes.shift();
   }
 

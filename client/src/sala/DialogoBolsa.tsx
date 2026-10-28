@@ -18,6 +18,8 @@ interface DialogoBolsaProps {
   distribucion: SalaDistribucion;
   /** Los NPCs en juego (el Centinela altera la preparación). */
   npcs: string[];
+  /** Se pueden repartir los personajes (solo en la preparación); si no, no sale «Asignar personajes». */
+  puedeAsignar: boolean;
   pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
   /** Se han repartido los personajes. */
   onRepartido: () => void;
@@ -43,7 +45,8 @@ const ListaNombres = ({ personajes }: { personajes: PersonajeMostrado[] }) => (
  * del guion, por tipos, cada uno un botón que lo mete o lo saca (pulsado, si
  * está dentro). Cada tipo dice cuántos lleva de los que tocan («2/5»), pero no
  * se limita: el narrador mete lo que quiera. Con tantos como jugadores (sin
- * viajeros), «Asignar personajes» los reparte al azar entre los asientos.
+ * viajeros), «Asignar personajes» los reparte al azar entre los asientos (solo
+ * en la preparación: después, ese botón no sale).
  *
  * Los personajes que alteran la preparación (el Barón…) llevan una señal; si hay
  * alguno en la bolsa, abajo sale «¡Setup modificado!». Antes de repartir se pide
@@ -54,7 +57,7 @@ const ListaNombres = ({ personajes }: { personajes: PersonajeMostrado[] }) => (
  * bolsa por unos al azar (ver bolsaAleatoria): si sale el Borracho o la
  * Marioneta, no van y se dice qué falta, para que el narrador ponga su ficha.
  */
-const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar }: DialogoBolsaProps) => {
+const DialogoBolsa = ({ bolsa, distribucion, npcs, puedeAsignar, pedir, onRepartido, onCerrar }: DialogoBolsaProps) => {
   const { personajes, viajeros, porId } = useFichas();
   // Guion (aldeanos… demonios) o Viajeros (todos, del guion o no)
   const [pestana, setPestana] = useState('guion');
@@ -157,7 +160,7 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar 
   };
 
   const asignar = () => {
-    if (!completa || enviando) return;
+    if (!puedeAsignar || !completa || enviando) return;
     if (problemas.length > 0) setConfirmando(true);
     else void repartir();
   };
@@ -269,7 +272,8 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar 
           {error && <p className="pt-3 text-sm text-blood-pale">{error}</p>}
         </div>
 
-        {confirmando ? (
+        {/* Si deja de poderse asignar (ha anochecido) con la confirmación abierta, se vuelve a la bolsa */}
+        {confirmando && puedeAsignar ? (
           <div className="flex flex-col gap-3 sala-cofre-pie px-6 py-3">
             <p ref={confirmacionRef} tabIndex={-1} className="text-sm focus:outline-none">
               La bolsa no cuadra con el reparto de la partida{conPreparacion.length > 0 && (
@@ -320,15 +324,17 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, pedir, onRepartido, onCerrar 
                 Hacen falta al menos 5 jugadores.
               </span>
             )}
-            <button
-              type="button"
-              onClick={asignar}
-              aria-disabled={!completa || enviando}
-              aria-describedby="sala-bolsa-cuenta"
-              className={`${botonPrincipal} aria-disabled:cursor-not-allowed aria-disabled:opacity-50`}
-            >
-              Asignar personajes
-            </button>
+            {puedeAsignar && (
+              <button
+                type="button"
+                onClick={asignar}
+                aria-disabled={!completa || enviando}
+                aria-describedby="sala-bolsa-cuenta"
+                className={`${botonPrincipal} aria-disabled:cursor-not-allowed aria-disabled:opacity-50`}
+              >
+                Asignar personajes
+              </button>
+            )}
           </div>
         )}
       </Dialog>

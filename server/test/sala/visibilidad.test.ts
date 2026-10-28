@@ -155,6 +155,10 @@ describe('lo que ve cada uno', () => {
     await arnes.accion(narradora, 'narrador:irANoche');
     await arnes.accion(narradora, 'narrador:despertar', { asientoId: idAsiento(0) });
     expect(narradora.estado.despertares).toHaveLength(1);
+    // El jugador no se entera hasta que la narradora le manda algo
+    expect(ana.estado.despertares).toEqual([]);
+    expect(ana.estado.acciones).not.toContain('despertar:enviar');
+    await arnes.accion(narradora, 'despertar:enviar', { asientoId: idAsiento(0), ficha: 'entendido' });
     expect(ana.estado.despertares).toHaveLength(1);
     expect(bea.estado.despertares).toEqual([]);
     expect(vera.estado.despertares).toEqual([]);

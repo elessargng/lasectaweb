@@ -95,9 +95,14 @@ import {
   type SalaConfiguracion,
   type SalaDespertar,
   type SalaEstado,
+  type SalaHabilidadNoche,
   type SalaParticipante,
   type SalaRecordatorio,
 } from './useSala';
+import type { DespertarFila } from './PanelGuion';
+import type { Revision } from './VentanaDespertar';
+import { aEnvio, describirAviso, describirOpcion, ESTADO_HABILIDAD, type ContextoHabilidades } from './habilidadesNoche';
+import DialogoNuevoImp from './DialogoNuevoImp';
 
 interface SalaJuegoProps {
   /** Con cuenta: su token, su id de usuario (para recordar su perfil en la sala) y su avatar en la web. */
@@ -331,7 +336,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     }
     // Despertares: lo que manda el narrador (al jugador) o lo que contesta el jugador (a
     // los narradores); lo propio no, ya se confirma al mandarlo. Si el narrador manda
-    // algo (o abre el despertar) al jugador que tenía su ventana cerrada, se le vuelve a abrir.
+    // algo al jugador que tenía su ventana cerrada, se le vuelve a abrir. (Al jugador el
+    // despertar le llega con lo primero que le manda el narrador, no al abrirlo.)
     const soyNarrador = nuevo.participantes.some((p) => p.id === nuevo.yo && p.rol === 'narrador');
     const hilosAntes = new Map(anterior.despertares.map((d) => [d.asiento, d]));
     // Al amanecer se acaban los despertares de la noche: se cierran sus ventanas y, si
@@ -385,6 +391,18 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       if (veoTodos && !antes) avisos.push({ tipo: 'despertar', texto: `El narrador despierta a ${nombreDeAsiento(nuevo, d.asiento)}.` });
     }
     if (suenaDespertar) tocarDespertar();
+    // El despertar guiado: al elegir el jugador, lo que se ha hecho solo o que hay que
+    // revisarlo (a quién ha elegido ya se ha dicho con su mensaje)
+    if (soyNarrador) {
+      const guiadoAntes = new Map(anterior.habilidadesNoche.map((h) => [h.personaje, h.estado]));
+      const c: ContextoHabilidades = { estado: nuevo, porId: personajesGuionRef.current, indiceRecordatorio: () => -1 };
+      for (const h of nuevo.habilidadesNoche) {
+        if (guiadoAntes.get(h.personaje) !== 'esperando' || h.estado === 'esperando') continue;
+        const nombre = personajesGuionRef.current.get(h.personaje)?.nombre.texto ?? h.personaje;
+        const detalles = h.avisos.filter((a) => a.tipo !== 'elegido').map((a) => describirAviso(c, a));
+        avisos.push({ tipo: 'despertar', texto: [`${nombre}: ${ESTADO_HABILIDAD[h.estado].toLocaleLowerCase('es')}.`, ...detalles].join(' ') });
+      }
+    }
 
     // Solo los tipos que se quieren oír.
     const textos = avisos.filter((a) => avisosActivos[a.tipo]).map((a) => a.texto);
@@ -417,6 +435,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const [wakeActivo, setWakeActivo] = useState<string | null>(null);
   const [leidoWake, setLeidoWake] = useState<Record<string, number>>({});
   const [wakeCerradoJugador, setWakeCerradoJugador] = useState(false);
+  // «¿Quién es el nuevo Imp?» aplazado («Ahora no»): el asiento del Imp que muere (vuelve a salir con otro)
+  const [nuevoImpAplazado, setNuevoImpAplazado] = useState<string | null>(null);
   // Recordatorios del orden de noche (narradores, compartidos): los automáticos son
   // los personajes en juego y vivos, y Esbirros y Demonios si hay alguno vivo; lo que
   // los narradores quitan o ponen a mano lo guarda el servidor hasta limpiar el grimorio.
@@ -461,7 +481,49 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           if (!r.ok) setAviso(r.error);
         });
       },
+      despertar: (id: string): DespertarFila | undefined => {
+        const h = e.habilidadesNoche.find((x) => x.personaje === id);
+        if (!h) return undefined;
+        return {
+          estado: h.estado,
+          avisos: h.avisos.map((a) => describirAviso(contextoHabilidades(e), a)),
+          onPulsar: () => void despertarHabilidad(h),
+        };
+      },
     };
+  };
+  // El despertar guiado (ver SalaHabilidadNoche): cómo se dice lo que avisa el servidor
+  const contextoHabilidades = (e: SalaEstado): ContextoHabilidades => ({
+    estado: e,
+    porId: personajesGuionPorId,
+    indiceRecordatorio: (personaje, texto) =>
+      guion?.personajes.find((p) => p.id === personaje)?.recordatorios.findIndex((t) => t.toLowerCase() === texto.toLowerCase()) ?? -1,
+  });
+  // Listo: se hace solo (y se dice qué). Si no, se abre su despertar (para revisarlo o verlo)
+  const despertarHabilidad = async (h: SalaHabilidadNoche) => {
+    if (h.estado !== 'listo') return abrirDespertar(h.asiento);
+    const r = await pedirPropio('narrador:despertarHabilidad', { personajeId: h.personaje });
+    if (!r.ok) return setAviso(r.error);
+    const nombre = personajesGuionPorId.get(h.personaje)?.nombre.texto ?? h.personaje;
+    const enviado = h.opciones[0] ? describirMensaje(h.opciones[0].envio, estado!, personajesGuionPorId) : '';
+    anunciar('despertar', enviado ? `${nombre}: enviado ${enviado}.` : `${nombre}: despertado.`);
+  };
+  // Los despertares guiados que el narrador tiene que revisar, por asiento (ver VentanaDespertar)
+  const revisionesDe = (e: SalaEstado) => {
+    const c = contextoHabilidades(e);
+    return new Map(
+      e.habilidadesNoche
+        .filter((h) => h.estado === 'revisar')
+        .map((h): [string, Revision] => [
+          h.asiento,
+          {
+            personajeId: h.personaje,
+            nombre: personajesGuionPorId.get(h.personaje)?.nombre ?? { texto: h.personaje, lang: 'en' },
+            avisos: h.avisos.map((a) => describirAviso(c, a)),
+            propuestas: h.opciones.map((o) => ({ envio: aEnvio(o.envio), ...describirOpcion(c, o) })),
+          },
+        ]),
+    );
   };
   // Todos los del guion (también los que no van en fichas), para los mensajes al despertar.
   const personajesGuionRef = useRef<Map<string, PersonajeMostrado>>(new Map());
@@ -1757,7 +1819,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   onCambiarIdiomaDescripciones={(idiomaDescripciones) => cambiarPreferencias({ idiomaDescripciones })}
                   bolsa={
                     estado.acciones.includes('narrador:bolsa')
-                      ? { bolsa: estado.bolsa, distribucion: estado.distribucion, npcs: estado.npcs }
+                      ? {
+                          bolsa: estado.bolsa,
+                          distribucion: estado.distribucion,
+                          npcs: estado.npcs,
+                          puedeAsignar: estado.acciones.includes('narrador:asignarPersonajes'),
+                        }
                       : null
                   }
                   onAnuncio={anunciar}
@@ -2072,6 +2139,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             onError={setAviso}
             onEnviado={(t) => anunciar('despertar', t)}
             oculta={!!eleccion}
+            revisiones={narro ? revisionesDe(estado) : undefined}
           />
         )}
         {estado && miDespertar && despiertoYo && (
@@ -2089,6 +2157,17 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             anuncioUrgente={eleccion || senalandoYo ? '' : anuncioUrgente}
             error={aviso}
             oculto={!!eleccion || senalandoYo}
+          />
+        )}
+
+        {estado && narro && estado.nuevoImp && nuevoImpAplazado !== estado.nuevoImp && (
+          <DialogoNuevoImp
+            estado={estado}
+            muere={estado.nuevoImp}
+            porId={personajesGuionPorId}
+            pedir={pedirPropio}
+            onElegido={(t) => anunciar('despertar', t)}
+            onCerrar={() => setNuevoImpAplazado(estado.nuevoImp)}
           />
         )}
 

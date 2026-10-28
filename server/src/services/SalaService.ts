@@ -7,7 +7,6 @@ import {
   SalaConfiguracion,
   SalaDistribucion,
   SalaFase,
-  MensajeDespertar,
   SalaDespertar,
   SalaFormaMano,
   SalaNominacion,
@@ -20,6 +19,9 @@ import {
   RECORDATORIO_TEXTO,
   SalaFichaEnviada,
   SalaGrimorioEnviado,
+  SalaEleccionDespertar,
+  SalaEnvioDespertar,
+  SalaHabilidadNoche,
 } from '../contrato/sala';
 import { GuionResuelto, PersonajeDeGuion } from '../types/guiones';
 import { repartoPara } from './partida/distribucion';
@@ -29,6 +31,8 @@ import {
 } from './partida/personajesEspeciales';
 import { RelojSala } from './partida/RelojSala';
 import { Despertares, type HiloDespertar } from './partida/Despertares';
+import { DespertarGuiado } from './partida/DespertarGuiado';
+import { habilidadesDelGuion } from './partida/habilidades';
 import { Nominaciones } from './partida/Nominaciones';
 import { Faroles, farolesVacios } from './partida/Faroles';
 import { Senalamientos } from './partida/Senalamientos';
@@ -159,6 +163,18 @@ export class SalaService {
     () => this.mesaAlDia(),
     () => this.faseActual,
   );
+  /** El despertar guiado desde el orden de noche (ver DespertarGuiado). */
+  private readonly guiado = new DespertarGuiado({
+    ctx: this.contextoReglas,
+    habilidades: () => habilidadesDelGuion(this.guionActual?.edicion ?? null),
+    noche: () => this.faseActual.momento === 'noche',
+    despertar: (asientoId) => this.despertar(asientoId),
+    mandar: (asientoId, envio, eleccion) => this.mandarDelNarrador(asientoId, envio, eleccion),
+    ponerRecordatorio: (asientoId, personaje, texto) => this.ponerRecordatorioDe(asientoId, personaje, texto),
+    matarDeNoche: (asientoId) => this.cambiarVida(asientoId, true),
+    enviarGrimorio: (asientoId) => this.enviarGrimorioDeLaMesa(asientoId),
+    cambiarPersonaje: (asientoId, personaje) => this.cambiarPersonaje(asientoId, personaje),
+  });
   /** Los faroles para el demonio (del narrador y de cada asiento). */
   private readonly farolesDemonio = new Faroles(() => this.mesaAlDia());
   /** El final de la partida: qué bando ha ganado y qué fichas se han revelado. */
@@ -527,6 +543,8 @@ export class SalaService {
       conCalavera: this.mesa.filter((a) => a.marcado).flatMap((a) => this.cuentaDe(a.ocupante) ?? []),
     });
     this.faseActual = { momento: 'noche', numero: momento === 'preparacion' ? 1 : numero + 1, reinicios };
+    // Otra noche: el despertar guiado empieza de cero
+    this.guiado.olvidar();
     // Lo que se señaló de día no sigue de noche (lo verían otros); el reloj tampoco
     this.senales.terminar();
     this.tiempo.quitarReloj();
@@ -638,8 +656,67 @@ export class SalaService {
     return this.despertados.despertar(asientoId);
   }
 
-  enviarDespertar(asientoId: string, mensaje: Omit<MensajeDespertar, 'id' | 'hora' | 'fase'>): void {
+  enviarDespertar(asientoId: string, mensaje: Parameters<Despertares['enviar']>[1]): void {
     this.despertados.enviar(asientoId, mensaje);
+  }
+
+  /** Manda algo del narrador a un asiento despierto; con «Tú eres», su ficha pasa a ser la que se le dice. */
+  mandarDelNarrador(asientoId: string, envio: SalaEnvioDespertar, eleccion?: SalaEleccionDespertar): void {
+    this.enviarDespertar(asientoId, { ...envio, autor: 'narrador', ...(eleccion ? { eleccion } : {}) });
+    if (envio.tarjeta === 'tuEres') this.comunicarFicha(asientoId, envio.personajes, envio.alineamiento);
+  }
+
+  // El despertar guiado: lo lleva DespertarGuiado
+
+  habilidadesNoche(): SalaHabilidadNoche[] {
+    return this.guiado.habilidadesNoche();
+  }
+
+  despertarHabilidad(personaje: string): string | null {
+    return this.guiado.despertar(personaje);
+  }
+
+  eleccionPendiente(asientoId: string): SalaEleccionDespertar | null {
+    return this.guiado.eleccionPendiente(asientoId);
+  }
+
+  alElegirHabilidad(asientoId: string, elegidos: string[]): void {
+    this.guiado.alElegir(asientoId, elegidos);
+  }
+
+  resolverHabilidad(personaje: string, envio: SalaEnvioDespertar): string | null {
+    return this.guiado.resolver(personaje, envio);
+  }
+
+  nuevoImp(): string | null {
+    return this.guiado.nuevoImp();
+  }
+
+  elegirNuevoImp(asientoId: string): string | null {
+    return this.guiado.elegirNuevoImp(asientoId);
+  }
+
+  /** Pone un recordatorio de un personaje por su texto (en el original), único en la mesa (ver recordatorioQueSobra). */
+  private ponerRecordatorioDe(asientoId: string, personajeId: string, texto: string): void {
+    const textos = this.personaje(personajeId)?.recordatorios ?? [];
+    const indice = textos.findIndex((t) => t.toLowerCase() === texto.toLowerCase());
+    if (indice < 0) return;
+    const sobra = this.recordatorioQueSobra(asientoId, personajeId, indice);
+    if (sobra) this.quitarRecordatorio(sobra.asientoId, sobra.recordatorioId);
+    this.ponerRecordatorio(asientoId, { personaje: personajeId, indice, texto: textos[indice] });
+  }
+
+  /** Envía a quien se sienta en un asiento el grimorio tal como está (el Espía); a un asiento libre, nada. */
+  private enviarGrimorioDeLaMesa(asientoId: string): void {
+    if (!this.mesaAlDia().find((a) => a.id === asientoId)?.ocupante) return;
+    const fichas: SalaFichaEnviada[] = this.mesa.map((a) => ({
+      asientoId: a.id,
+      personaje: a.personaje,
+      alineamiento: a.alineamiento,
+      muerto: a.muerto,
+      recordatorios: a.recordatorios.map((r) => ({ ...r, id: randomUUID() })),
+    }));
+    this.enviarGrimorio(asientoId, fichas);
   }
 
   /**
@@ -674,6 +751,7 @@ export class SalaService {
     this.final.olvidar();
     this.presentes.olvidarGrimorios();
     this.despertados.cerrarTodos();
+    this.guiado.olvidar();
     this.recordatorios = {};
     this.faseActual = { momento: 'preparacion', numero: 0, reinicios: this.faseActual.reinicios + 1 };
   }
@@ -1113,6 +1191,7 @@ export class SalaService {
     this.entregas.remapear(a);
     this.farolesDemonio.remapear(a);
     this.despertados.remapear(a);
+    this.guiado.remapear(a);
     this.final.remapear(a);
     this.nominaciones.remapear(a);
   }

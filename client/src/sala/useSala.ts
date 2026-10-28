@@ -9,6 +9,12 @@ import type { GuionResuelto } from './guiones';
 // Se reexporta aquí para que la sala lo siga importando de useSala.
 export type {
   MensajeDespertar,
+  SalaAvisoHabilidad,
+  SalaEleccionDespertar,
+  SalaEnvioDespertar,
+  SalaHabilidadNoche,
+  SalaOpcionDespertar,
+  SalaRegistro,
   SalaAlineamiento,
   SalaAsiento,
   SalaConfiguracion,

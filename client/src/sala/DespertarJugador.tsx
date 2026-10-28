@@ -6,7 +6,8 @@ import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario } from './estilos';
 import { listaFaroles } from './fichas';
 import type { PersonajeMostrado } from './guiones';
-import { BotoneraDespertar, HistorialDespertar, MensajeVisto } from './PiezasDespertar';
+import { nombreDeAsiento, textoEleccion } from './despertar';
+import { BotoneraDespertar, EditorAdjunto, HistorialDespertar, MensajeVisto } from './PiezasDespertar';
 import type { SalaDespertar, SalaEstado, SalaResultado } from './useSala';
 
 interface DespertarJugadorProps {
@@ -56,6 +57,8 @@ const DespertarJugador = ({
   const ariaLiveErrores = useAriaLive('errores');
   const ultimo = [...despertar.mensajes].reverse().find((m) => m.autor === 'narrador');
   const [copiando, setCopiando] = useState(false);
+  // Su habilidad le pide que elija (y aún no ha contestado): solo puede elegir a quienes le deja
+  const pide = ultimo?.eleccion && despertar.mensajes[despertar.mensajes.length - 1] === ultimo ? ultimo.eleccion : null;
 
   // «Estos personajes no están en juego» al demonio: se los puede copiar a sus faroles
   const aCopiar = faroles && ultimo?.tarjeta === 'noEnJuego' ? ultimo.personajes : null;
@@ -108,16 +111,33 @@ const DespertarJugador = ({
             </button>
           )}
         </div>
-        <BotoneraDespertar
-          estado={estado}
-          asientoId={null}
-          personajes={personajes}
-          conTarjetas={false}
-          tituloFichas="Contestar"
-          pedir={pedir}
-          onError={onError}
-          onEnviado={onEnviado}
-        />
+        {pide ? (
+          // key: una elección nueva empieza de cero
+          <EditorAdjunto
+            key={ultimo!.id}
+            pendiente={{ base: { ficha: 'jugador' }, titulo: textoEleccion(pide.cantidad), adjunto: { jugadores: true } }}
+            asientos={estado.asientos.map((a) => ({ id: a.id, nombre: nombreDeAsiento(estado, a.id) }))}
+            excluidos={pide.puedeElegirse ? [] : [despertar.asiento]}
+            cantidad={pide.cantidad}
+            personajes={personajes}
+            onEnviar={async (envio) => {
+              const r = await pedir('despertar:enviar', envio);
+              if (r.ok) onEnviado(`Enviado: ${(envio.jugadores ?? []).map((id) => nombreDeAsiento(estado, id)).join(', ')}.`);
+              return r;
+            }}
+          />
+        ) : (
+          <BotoneraDespertar
+            estado={estado}
+            asientoId={null}
+            personajes={personajes}
+            conTarjetas={false}
+            tituloFichas="Contestar"
+            pedir={pedir}
+            onError={onError}
+            onEnviado={onEnviado}
+          />
+        )}
         <h3 id="sala-despierto-mensajes" className="font-ui text-sm font-semibold text-theme-main">
           Mensajes
         </h3>

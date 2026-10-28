@@ -23,8 +23,11 @@ interface TituloGuionProps {
   recordatorios: RecordatoriosNoche | null;
   /** La noche que se ve al abrir el orden de noche (ver PanelGuion). */
   nochePorDefecto: 'primera' | 'otras';
-  /** Preparar la bolsa (narradores, con guion): lo que lleva y el reparto; null si no se puede. */
-  bolsa: { bolsa: string[]; distribucion: SalaDistribucion; npcs: string[] } | null;
+  /**
+   * Preparar la bolsa (narradores, con guion): lo que lleva y el reparto; null si no se puede.
+   * `puedeAsignar`: se pueden repartir los personajes (solo en la preparación).
+   */
+  bolsa: { bolsa: string[]; distribucion: SalaDistribucion; npcs: string[]; puedeAsignar: boolean } | null;
   /** Avisa al lector (al repartir los personajes de la bolsa). */
   onAnuncio: (tipo: TipoAviso, texto: string) => void;
   /**
@@ -202,6 +205,7 @@ const TituloGuion = ({
           bolsa={bolsa.bolsa}
           distribucion={bolsa.distribucion}
           npcs={bolsa.npcs}
+          puedeAsignar={bolsa.puedeAsignar}
           pedir={pedir}
           onRepartido={() => onAnuncio('bolsa', 'Personajes repartidos.')}
           onCerrar={() => setPreparandoBolsa(false)}

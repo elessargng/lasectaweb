@@ -606,9 +606,26 @@ describe('SalaService', () => {
       const { sala, ids, asiento } = salaConJugadores('Ana');
       sala.irANoche();
       expect(sala.despertar(asiento(0).id)).toBeNull();
+      sala.enviarDespertar(asiento(0).id, {
+        autor: 'narrador',
+        ficha: 'entendido',
+        tarjeta: null,
+        jugadores: [],
+        personajes: [],
+        texto: null,
+        alineamiento: null,
+      });
       expect(sala.asientoDespiertoDe(ids[0])).toBe(asiento(0).id);
       sala.amanecer();
       expect(sala.despertares()).toEqual([]);
+    });
+
+    it('el jugador no está despierto hasta que el narrador le manda algo', () => {
+      const { sala, ids, asiento } = salaConJugadores('Ana');
+      sala.irANoche();
+      sala.despertar(asiento(0).id);
+      expect(sala.hayDespertar(asiento(0).id)).toBe(true);
+      expect(sala.asientoDespiertoDe(ids[0])).toBeNull();
     });
 
     it('si el jugador se levanta, su despertar se cierra', () => {

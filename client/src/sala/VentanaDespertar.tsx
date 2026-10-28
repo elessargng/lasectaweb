@@ -6,7 +6,7 @@ import { nombreDeAsiento } from './despertar';
 import { botonPrincipal, botonSecundario } from './estilos';
 import type { PersonajeMostrado } from './guiones';
 import { ID_TITULO_DESPERTAR } from './ids';
-import { BotoneraDespertar, HistorialDespertar } from './PiezasDespertar';
+import { BotoneraDespertar, HistorialDespertar, type Propuesta } from './PiezasDespertar';
 import type { SalaDespertar, SalaEstado, SalaResultado } from './useSala';
 
 interface VentanaDespertarProps {
@@ -29,6 +29,17 @@ interface VentanaDespertarProps {
   soloLectura?: boolean;
   /** Escondida mientras se elige a alguien en la plaza (vuelve igual que estaba). */
   oculta?: boolean;
+  /** Los despertares guiados que hay que revisar, por asiento (ver Revision). */
+  revisiones?: Map<string, Revision>;
+}
+
+/** Un despertar guiado para revisar: de qué personaje, por qué y lo que se propone mandar. */
+export interface Revision {
+  personajeId: string;
+  /** Su nombre, en su idioma. */
+  nombre: { texto: string; lang: string };
+  avisos: string[];
+  propuestas: Propuesta[];
 }
 
 const idPestana = (asientoId: string) => `sala-despertar-pestana-${asientoId}`;
@@ -59,6 +70,7 @@ const VentanaDespertar = ({
   onEnviado,
   soloLectura = false,
   oculta = false,
+  revisiones,
 }: VentanaDespertarProps) => {
   const [minimizada, setMinimizada] = useState(false);
   const actual = abiertos.find((d) => d.asiento === activo) ?? abiertos[0];
@@ -72,6 +84,7 @@ const VentanaDespertar = ({
     estado.acciones.includes('narrador:enviarGrimorio') &&
     (PERSONAJES_GRIMORIO.includes(asiento.personaje ?? '') || PERSONAJES_GRIMORIO.includes(identidadDe(asiento).personaje ?? ''));
   const conPestanas = abiertos.length > 1;
+  const revision = revisiones?.get(actual.asiento);
 
   // Pestañas: flechas para moverse entre ellas (y activarlas), Inicio y Fin.
   const alTeclear = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
@@ -157,10 +170,28 @@ const VentanaDespertar = ({
           aria-labelledby={conPestanas ? idPestana(actual.asiento) : undefined}
           className="flex flex-col gap-3"
         >
+          {revision && !soloLectura && (
+            <div className="flex flex-col gap-1 rounded border border-blood/50 bg-blood-deep/20 px-3 py-2">
+              <h3 className="font-ui text-sm font-semibold text-theme-main">
+                Revisa el despertar de <span lang={revision.nombre.lang}>{revision.nombre.texto}</span>
+              </h3>
+              {revision.avisos.length > 0 && (
+                <ul className="list-disc pl-5 text-sm text-on-surface-bright">
+                  {revision.avisos.map((a) => (
+                    <li key={a}>{a}</li>
+                  ))}
+                </ul>
+              )}
+              {revision.propuestas.length === 0 && (
+                <p className="text-sm text-on-surface-muted">Elige abajo qué mandarle.</p>
+              )}
+            </div>
+          )}
           {/* key: al cambiar de despertar, lo que se estaba eligiendo no pasa al otro */}
           {!soloLectura && (
             <BotoneraDespertar
-              key={actual.asiento}
+              key={`${actual.asiento}-${revision?.personajeId ?? ''}`}
+              revision={revision ? { personajeId: revision.personajeId, propuestas: revision.propuestas } : undefined}
               estado={estado}
               asientoId={actual.asiento}
               personajes={personajes}

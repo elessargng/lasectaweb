@@ -473,10 +473,10 @@ const FichaAsiento = ({
             : []),
           // De noche no se marca a nadie
           ...(deNoche ? [] : [{ id: 'marca', etiqueta: asiento.marcado ? 'Desmarcar' : 'Marcar', elegir: cambiarMarca }]),
-          // Si ya nominó hoy se avisa en la opción, pero puede volver a nominar
-          onNominar
-            ? { id: 'nominar', etiqueta: yaNomino ? 'Nominar a… (ya nominó hoy)' : 'Nominar a…', elegir: onNominar }
-            : { id: 'nominar', etiqueta: 'Nominar a…', deshabilitada: true, elegir: () => {} },
+          // Solo cuando se puede nominar; si ya nominó hoy se avisa en la opción, pero puede volver a nominar
+          ...(onNominar
+            ? [{ id: 'nominar', etiqueta: yaNomino ? 'Nominar a… (ya nominó hoy)' : 'Nominar a…', elegir: onNominar }]
+            : []),
           ...(hayGuion ? [cambiarFicha] : []),
           // Con el Gardener: lo mismo que arrastrarla sobre otra
           // Lil' Monsta: en las fichas de esbirro (se despierta a todos los esbirros)

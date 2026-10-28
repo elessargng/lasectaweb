@@ -15,7 +15,7 @@ import {
 import { IconoCalavera, IconoEspadas, IconoGente, IconoHuella, IconoLuna, IconoMascaras, IconoOjo, IconoPalma, type IconoSala, IconoSinVer } from './IconosJuego';
 import type { PersonajeMostrado } from './guiones';
 import { datosAsiento, describirAsiento } from './nombresAsiento';
-import type { MensajeDespertar, SalaAlineamiento, SalaDespertar, SalaEstado } from './useSala';
+import type { MensajeDespertar, SalaAlineamiento, SalaDespertar, SalaEnvioDespertar, SalaEstado } from './useSala';
 
 export const NOMBRE_BANDO: Record<SalaAlineamiento, string> = { bueno: 'Bueno', malvado: 'Malvado' };
 
@@ -91,6 +91,9 @@ export interface Envio {
   alineamiento?: SalaAlineamiento | null;
 }
 
+/** «Elige un jugador», «Elige 2 jugadores» (lo que pide una habilidad). */
+export const textoEleccion = (cantidad: number) => `Elige ${cantidad === 1 ? 'un jugador' : `${cantidad} jugadores`}`;
+
 /** «asiento 3 (Bea)» con mayúscula: así empieza una frase o una línea. */
 export const nombreDeAsiento = (estado: SalaEstado, asientoId: string) => {
   const { numero, ocupante } = datosAsiento(estado, asientoId);
@@ -107,16 +110,19 @@ export const enumerar = (nombres: string[]) =>
  * Imp». (Los nombres en inglés no llevan su idioma aquí: es texto de un aviso.)
  */
 export function describirMensaje(
-  m: MensajeDespertar,
+  m: SalaEnvioDespertar & Partial<Pick<MensajeDespertar, 'eleccion'>>,
   estado: SalaEstado,
   personajes: Map<string, PersonajeMostrado>,
 ): string {
+  // «Haz una elección» de una habilidad: cuántos
+  const cuantos = m.eleccion ? textoEleccion(m.eleccion.cantidad).toLocaleLowerCase('es') : '';
   const titulo = tarjetaDespertar(m.tarjeta)?.texto ?? fichaDespertar(m.ficha)?.etiqueta ?? '';
   const partes = [
     m.jugadores.length ? enumerar(m.jugadores.map((id) => nombreDeAsiento(estado, id))) : '',
     m.personajes.length ? enumerar(m.personajes.map((id) => personajes.get(id)?.nombre.texto ?? id)) : '',
     m.alineamiento ? NOMBRE_BANDO[m.alineamiento] : '',
     m.texto ?? '',
+    cuantos,
   ].filter(Boolean);
   // «Personalizado»: solo su texto
   if (m.ficha === 'personalizado') return m.texto ?? '';
