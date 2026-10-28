@@ -8,6 +8,7 @@ import {
   VolumeX,
   X,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { IconoSilencio } from './IconosJuego';
 import { useAriaLive } from './avisosConfig';
 import { botonIcono, botonPrincipal } from './estilos';
@@ -44,6 +45,8 @@ interface ControlesVideoProps {
 
 const NOMBRES = { camara: 'la cámara', microfono: 'el micrófono' };
 
+const TEXTO_CAMARA_NOCHE = 'De noche no hay cámaras, salvo en las conversaciones privadas.';
+
 /** Qué ha pasado y cómo arreglarlo. */
 function explicacion({ dispositivo, motivo }: ProblemaDispositivo): { titulo: string; texto: string } {
   const cual = NOMBRES[dispositivo];
@@ -78,11 +81,30 @@ const SpeechOff = () => (
 /** Medallón de latón; apagado, de lacre. */
 const boton = (activo: boolean) => `${botonIcono} h-9 w-9 ${activo ? '' : 'sala-boton-apagado'}`;
 
+/**
+ * Lo que hace el botón al pulsarlo, en un rótulo bajo él al pasar el ratón (o al
+ * llegar con el teclado). Solo a la vista: el lector ya oye su nombre, su estado y,
+ * si no se puede usar, por qué.
+ */
+const ConAyuda = ({ texto, children }: { texto: string; children: ReactNode }) => (
+  <span className="group relative inline-flex">
+    {children}
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute right-0 top-full z-50 mt-1.5 w-max max-w-56 rounded-md border border-theme-main/40 bg-surface-highest px-2 py-1 font-ui text-xs text-on-surface opacity-0 shadow-lg transition-opacity delay-300 group-hover:opacity-100 group-has-focus-visible:opacity-100 motion-reduce:transition-none"
+    >
+      {texto}
+    </span>
+  </span>
+);
+
 /** La voz del narrador virtual (o quitarla): un botón que se queda pulsado, como el micrófono. */
 export const BotonVoz = ({ activa, onAlternar }: { activa: boolean; onAlternar: () => void }) => (
-  <button type="button" aria-label="Voz del narrador" aria-pressed={activa} onClick={onAlternar} className={boton(activa)}>
-    {activa ? <Speech size={18} /> : <SpeechOff />}
-  </button>
+  <ConAyuda texto={activa ? 'Quitar la voz del narrador' : 'Oír la voz del narrador'}>
+    <button type="button" aria-label="Voz del narrador" aria-pressed={activa} onClick={onAlternar} className={boton(activa)}>
+      {activa ? <Speech size={18} /> : <SpeechOff />}
+    </button>
+  </ConAyuda>
 );
 
 /**
@@ -125,38 +147,42 @@ const ControlesVideo = ({
       )}
       {puedeEmitir && (
         <>
-          <button
-            type="button"
-            aria-label="Micrófono"
-            aria-pressed={microfono && !silenciado}
-            aria-keyshortcuts={teclaMicrofono}
-            aria-disabled={silenciado}
-            aria-describedby={silenciado ? 'sala-microfono-silencio' : undefined}
-            onClick={silenciado ? undefined : onMicrofono}
-            className={boton(microfono && !silenciado)}
-          >
-            {microfono && !silenciado ? <Mic size={18} /> : <MicOff size={18} />}
-          </button>
+          <ConAyuda texto={silenciado ? motivoSilencio : `${microfono ? 'Silenciar' : 'Activar'} el micrófono (tecla ${teclaMicrofono})`}>
+            <button
+              type="button"
+              aria-label="Micrófono"
+              aria-pressed={microfono && !silenciado}
+              aria-keyshortcuts={teclaMicrofono}
+              aria-disabled={silenciado}
+              aria-describedby={silenciado ? 'sala-microfono-silencio' : undefined}
+              onClick={silenciado ? undefined : onMicrofono}
+              className={boton(microfono && !silenciado)}
+            >
+              {microfono && !silenciado ? <Mic size={18} /> : <MicOff size={18} />}
+            </button>
+          </ConAyuda>
           {silenciado && (
             <span id="sala-microfono-silencio" className="sr-only">
               {motivoSilencio}
             </span>
           )}
-          <button
-            type="button"
-            aria-label="Cámara"
-            aria-pressed={camara && !sinCamaraDeNoche}
-            aria-keyshortcuts={teclaCamara}
-            aria-disabled={sinCamaraDeNoche}
-            aria-describedby={sinCamaraDeNoche ? 'sala-camara-noche' : undefined}
-            onClick={sinCamaraDeNoche ? undefined : onCamara}
-            className={boton(camara && !sinCamaraDeNoche)}
-          >
-            {camara && !sinCamaraDeNoche ? <Video size={18} /> : <VideoOff size={18} />}
-          </button>
+          <ConAyuda texto={sinCamaraDeNoche ? TEXTO_CAMARA_NOCHE : `${camara ? 'Apagar' : 'Encender'} la cámara (tecla ${teclaCamara})`}>
+            <button
+              type="button"
+              aria-label="Cámara"
+              aria-pressed={camara && !sinCamaraDeNoche}
+              aria-keyshortcuts={teclaCamara}
+              aria-disabled={sinCamaraDeNoche}
+              aria-describedby={sinCamaraDeNoche ? 'sala-camara-noche' : undefined}
+              onClick={sinCamaraDeNoche ? undefined : onCamara}
+              className={boton(camara && !sinCamaraDeNoche)}
+            >
+              {camara && !sinCamaraDeNoche ? <Video size={18} /> : <VideoOff size={18} />}
+            </button>
+          </ConAyuda>
           {sinCamaraDeNoche && (
             <span id="sala-camara-noche" className="sr-only">
-              De noche no hay cámaras, salvo en las conversaciones privadas.
+              {TEXTO_CAMARA_NOCHE}
             </span>
           )}
         </>
@@ -164,22 +190,26 @@ const ControlesVideo = ({
       {/* Pedir silencio a todos (narradores, con el Bibliotecario del Infierno): un interruptor;
           pulsado, en sangre (los jugadores no pueden hablar) */}
       {silencio && (
-        <button
-          type="button"
-          aria-label="Pedir silencio"
-          aria-pressed={silencio.activo}
-          onClick={silencio.onAlternar}
-          className={`${botonIcono} h-9 w-9 ${silencio.activo ? 'sala-boton-apagado' : ''}`}
-        >
-          <IconoSilencio size={18} />
-        </button>
+        <ConAyuda texto={silencio.activo ? 'Dejar hablar a todos' : 'Pedir silencio a todos'}>
+          <button
+            type="button"
+            aria-label="Pedir silencio"
+            aria-pressed={silencio.activo}
+            onClick={silencio.onAlternar}
+            className={`${botonIcono} h-9 w-9 ${silencio.activo ? 'sala-boton-apagado' : ''}`}
+          >
+            <IconoSilencio size={18} />
+          </button>
+        </ConAyuda>
       )}
       {/* La voz del narrador virtual (o quitarla): como el micrófono y la cámara */}
       {voz && <BotonVoz {...voz} />}
       {/* Oír a los demás (o dejar de oírlos): para todos */}
-      <button type="button" aria-label="Sonido" aria-pressed={sonido} onClick={onSonido} className={boton(sonido)}>
-        {sonido ? <Volume2 size={18} /> : <VolumeX size={18} />}
-      </button>
+      <ConAyuda texto={sonido ? 'Dejar de oír a los demás' : 'Oír a los demás'}>
+        <button type="button" aria-label="Sonido" aria-pressed={sonido} onClick={onSonido} className={boton(sonido)}>
+          {sonido ? <Volume2 size={18} /> : <VolumeX size={18} />}
+        </button>
+      </ConAyuda>
       {/* Si no se puede usar la cámara o el micrófono: por qué y cómo arreglarlo */}
       <div aria-live={ariaLive} className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)]">
         {info && (

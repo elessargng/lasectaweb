@@ -274,8 +274,8 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   /** Un visitante se sienta en un asiento libre y pasa a jugador. datos: { asientoId }. */
   /** Un visitante pide ver el grimorio del narrador (los narradores lo aceptan o lo rechazan). */
   'sala:solicitarGrimorio': {
-    // Al narrador virtual no se le pide: no hay quien responda
-    puede: (sala, yo) => yo.rol === 'visitante' && yo.accesoGrimorio === 'ninguno' && sala.hayNarrador() && !sala.narradorVirtual(),
+    // Con narrador virtual, lo concede él al momento
+    puede: (sala, yo) => yo.rol === 'visitante' && yo.accesoGrimorio === 'ninguno' && sala.hayNarrador(),
     noPuede: (sala, yo) =>
       yo.rol !== 'visitante'
         ? 'Solo los visitantes piden ver el grimorio.'
@@ -499,7 +499,9 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /** Listo para pasar a la noche (con narrador virtual, en las nominaciones). */
   'jugador:listo': {
-    puede: (sala, yo) => sala.narradorVirtual()?.etapa === 'nominaciones' && !!sala.asientoDe(yo.id) && !sala.narradorVirtual()!.listos.includes(yo.id),
+    // En medio de una nominación, no: se decide al acabarla
+    puede: (sala, yo) =>
+      sala.narradorVirtual()?.etapa === 'nominaciones' && !sala.nominacion() && !!sala.asientoDe(yo.id) && !sala.narradorVirtual()!.listos.includes(yo.id),
     noPuede: 'Ahora no hay que decir si estás listo.',
     hacer: alNarradorVirtual('listo'),
   },
@@ -508,9 +510,15 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   'jugador:seguirNominando': {
     puede: (sala, yo) => {
       const asiento = sala.asientoDe(yo.id);
-      return sala.narradorVirtual()?.etapa === 'nominaciones' && !!asiento && sala.narradorVirtual()!.listos.includes(yo.id) && !nominoHoy(sala, asiento.id);
+      return (
+        sala.narradorVirtual()?.etapa === 'nominaciones' &&
+        !sala.nominacion() &&
+        !!asiento &&
+        sala.narradorVirtual()!.listos.includes(yo.id) &&
+        !nominoHoy(sala, asiento.id)
+      );
     },
-    noPuede: 'Ya has nominado hoy: estás listo.',
+    noPuede: 'Ahora no puedes dejar de estar listo.',
     hacer: alNarradorVirtual('seguirNominando'),
   },
 

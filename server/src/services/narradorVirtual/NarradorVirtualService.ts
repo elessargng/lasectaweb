@@ -153,10 +153,22 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
           return;
         }
         this.vigilarAsientos();
+        await this.concederGrimorios();
         await this.etapa?.alCambiar?.(this.contexto());
       } while (this.otraVez);
     } finally {
       this.revisando = false;
+    }
+  }
+
+  /** A los visitantes que piden ver el grimorio, se lo concede (como haría un narrador). */
+  private async concederGrimorios(): Promise<void> {
+    const narrador = this.sala.narradorVirtual();
+    if (!narrador) return;
+    for (const p of this.sala.participantes()) {
+      if (p.rol === 'visitante' && p.accesoGrimorio === 'solicitado') {
+        await this.mesaDe(narrador.participante).accion('narrador:accesoGrimorio', { participanteId: p.id, conceder: true });
+      }
     }
   }
 

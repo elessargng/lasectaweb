@@ -1,5 +1,6 @@
 import { FRASES } from '../frases';
-import { nombreDeAsiento } from '../mesaDeJuego';
+import type { SalaService } from '../../SalaService';
+import { nombreDeAsiento, vivo } from '../mesaDeJuego';
 import { jugadoresSentados, noPuedeNominar, nominadoHoy } from '../dia/reglasDia';
 import type { AccionJugador, ContextoEtapa, Etapa } from './Etapa';
 import { Noche } from './Noche';
@@ -8,6 +9,11 @@ import { comprobarFinal } from '../final/comprobarFinal';
 
 /** Lo que dura la puesta en común (ms). */
 const PUESTA_EN_COMUN_MS = 60_000;
+/** Lo que dan los privados por cada jugador vivo (ms). */
+const PRIVADOS_POR_VIVO_MS = 30_000;
+
+/** Lo que duran los privados (ms): medio minuto por cada jugador vivo. */
+export const duracionPrivados = (sala: SalaService): number => sala.asientos().filter(vivo).length * PRIVADOS_POR_VIVO_MS;
 
 /** Una etapa que dura un rato con el reloj de la mesa y luego pasa a la siguiente. */
 abstract class EtapaConReloj implements Etapa {
@@ -32,14 +38,13 @@ abstract class EtapaConReloj implements Etapa {
   }
 }
 
-/** Los privados: un minuto por cada dos jugadores para conversar en privado. */
+/** Los privados: medio minuto por cada jugador vivo para conversar en privado. */
 export class Privados extends EtapaConReloj {
   readonly id = 'privados' as const;
   protected mensaje = 'Privados';
 
   protected duracion(ctx: ContextoEtapa): number {
-    const jugadores = ctx.sala.narradorVirtual()?.jugadores ?? ctx.sala.asientos().length;
-    return Math.ceil(jugadores / 2) * 60_000;
+    return duracionPrivados(ctx.sala);
   }
 
   protected async preparar(ctx: ContextoEtapa): Promise<void> {
@@ -111,6 +116,7 @@ export class Nominaciones implements Etapa {
       const nominado = sala.asientos().find((a) => a.id === nominacion.hasta)?.ocupante ?? null;
       sala.actualizarNarradorVirtual({ turno: 'defensa' });
       await ctx.mesa.accion('narrador:darPalabra', { participanteId: nominado });
+      ctx.decir(FRASES.defensa(nombreDeAsiento(sala, nominacion.hasta)));
       return null;
     }
     if (accion === 'voto') {
@@ -167,7 +173,8 @@ export class Nominaciones implements Etapa {
     const { votos } = nominacion.votacion;
     sala.actualizarNarradorVirtual({ turno: null });
     if (votos >= nominacion.votosNecesarios) {
-      await ctx.mesa.accion('narrador:marcar', { asientoId: nominacion.hasta, marcado: true });
+      const r = await ctx.mesa.accion('narrador:marcar', { asientoId: nominacion.hasta, marcado: true });
+      if (r.ok) ctx.decir(FRASES.marcado(nombreDeAsiento(sala, nominacion.hasta)));
     } else if (this.marcaAlVotar !== null && votos === this.marcaAlVotar) {
       // Empata con la marca: nadie queda marcado
       await ctx.mesa.accion('narrador:desmarcar');

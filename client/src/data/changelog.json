@@ -1,5 +1,45 @@
 [
   {
+    "version": "1.6.0",
+    "date": "2026-10-28",
+    "title": "Narrador Virtual",
+    "description": "Llega «Tonto y tú», un narrador virtual que lleva solo una partida de Trouble Brewing, de la noche a la revelación del grimorio.",
+    "changes": [
+      {
+        "category": "Narrador",
+        "items": [
+          "Añadido el narrador virtual «Tonto y tú» para Trouble Brewing.",
+          "La Pitonisa y el Ravenkeeper siempre pasan por la revisión del narrador."
+        ]
+      },
+      {
+        "category": "Jugadores",
+        "items": [
+          "Añadidos los botones de nominar, «Defensa», «Empezar votación» y «Listo» con narrador virtual.",
+          "Añadida la opción de declararse Exterminador y disparar."
+        ]
+      },
+      {
+        "category": "Personalización",
+        "items": [
+          "Añadida la opción de elegir los iconos de la llamada."
+        ]
+      },
+      {
+        "category": "Sonido",
+        "items": [
+          "Añadida la voz del narrador virtual, con su botón para quitarla."
+        ]
+      },
+      {
+        "category": "Comunicaciones",
+        "items": [
+          "Añadida la ayuda al pasar el ratón por los botones de la llamada."
+        ]
+      }
+    ]
+  },
+  {
     "version": "1.5.0",
     "date": "2026-10-28",
     "title": "Despertares Guiados",

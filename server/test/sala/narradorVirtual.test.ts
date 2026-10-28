@@ -71,6 +71,16 @@ describe('narrador virtual', () => {
     expect(ana.estado.acciones).toContain('sala:hacerseNarrador');
   });
 
+  it('a un visitante que pide ver el grimorio se lo concede al momento', async () => {
+    arnes = await conTroubleBrewing();
+    const [ana, vera] = await entran(2);
+    await arnes.accion(ana, 'sala:anadirNarradorVirtual', TONTO);
+    await vera.esperarQue((e) => e.acciones.includes('sala:solicitarGrimorio'));
+    await arnes.accion(vera, 'sala:solicitarGrimorio');
+    await vera.esperarQue((e) => e.participantes.find((p) => p.id === vera.id)?.accesoGrimorio === 'concedido');
+    expect(vera.estado.acciones).not.toContain('sala:sentarse');
+  });
+
   it('con narrador virtual no se puede quitar el grimorio de los jugadores', async () => {
     arnes = await conTroubleBrewing();
     const [ana] = await entran(1);
@@ -274,7 +284,7 @@ describe('narrador virtual', () => {
     expect(ana.estado.narradorVirtual?.listos).not.toContain(ana.id);
     await arnes.accion(ana, 'jugador:exterminar', { asientoId: bea.miAsiento!.id });
     expect(ana.estado.narradorVirtual?.exterminadores).toContain(ana.id);
-    expect(ana.estado.narradorVirtual?.frase).toMatch(/^Jugador1 dispara a Jugador2\. /);
+    expect(ana.estado.narradorVirtual?.frase).toMatch(/^Jugador1 se declara exterminador y dispara a Jugador2\. /);
     expect((await arnes.intentar(ana, 'jugador:exterminar', { asientoId: bea.miAsiento!.id })).ok).toBe(false);
   });
 

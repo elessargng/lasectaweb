@@ -5,7 +5,7 @@ import { nombreDeAsiento, sinEntender, todosHanEntendido, tipoReal, vivo } from 
 import { planificarNoche } from '../noche/planificarNoche';
 import { cumplirRequisitos, ponerFaroles, ponerRecordatorio } from '../noche/requisitos';
 import { resolverRevision } from '../noche/revisiones';
-import { Privados } from './Dia';
+import { duracionPrivados, Privados } from './Dia';
 import { comprobarFinal } from '../final/comprobarFinal';
 import { Revelando } from './Revelando';
 import type { ContextoEtapa, Etapa } from './Etapa';
@@ -178,8 +178,7 @@ export class Noche implements Etapa {
     const nombres = muertos.map((a) => nombreDeAsiento(sala, a.id));
     if (!(await ctx.mesa.accion('narrador:amanecer')).ok) return;
     for (const a of muertos) await ctx.mesa.accion('narrador:confirmarMuerte', { asientoId: a.id });
-    const jugadores = sala.narradorVirtual()?.jugadores ?? sala.asientos().length;
-    const buenosDias = sala.fase().numero === 1 ? FRASES.primerDia(Math.ceil(jugadores / 2)) : FRASES.buenosDias(nombres);
+    const buenosDias = sala.fase().numero === 1 ? FRASES.primerDia(duracionPrivados(sala) / 1000) : FRASES.buenosDias(nombres);
     // Si con las muertes de la noche se acaba la partida, se revela
     const ganador = await comprobarFinal(ctx);
     if (ganador) {

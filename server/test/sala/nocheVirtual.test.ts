@@ -12,6 +12,8 @@ import { comprobarFinal } from '../../src/services/narradorVirtual/final/comprob
 import { Revelando } from '../../src/services/narradorVirtual/etapas/Revelando';
 import { Violinista } from '../../src/services/narradorVirtual/etapas/Violinista';
 import { exterminar } from '../../src/services/narradorVirtual/dia/exterminar';
+import { duracionPrivados } from '../../src/services/narradorVirtual/etapas/Dia';
+import { FRASES } from '../../src/services/narradorVirtual/frases';
 import { invitado } from './guionDePrueba';
 import { contextoNoche } from '../../src/services/narradorVirtual/mesaDeJuego';
 import { ficha, numero, tarjeta } from '../../src/services/partida/habilidades/HabilidadNocturna';
@@ -188,7 +190,7 @@ describe('la noche del narrador virtual', () => {
     const siguiente = await m.noche();
     expect(siguiente.id).toBe('privados');
     expect(m.sala.fase()).toMatchObject({ momento: 'dia', numero: 1 });
-    expect(m.frases).toEqual(['Buenos días plaza, hay un demonio entre vosotros que me ha matado durante la noche, encontradlo y ejecutadlo, tenéis 4 minutos.']);
+    expect(m.frases).toEqual(['Buenos días plaza, hay un demonio entre vosotros que me ha matado durante la noche, encontradlo y ejecutadlo, tenéis 3 minutos y medio.']);
 
     // Los faroles: tres buenos que no están en juego
     const faroles = m.sala.faroles();
@@ -348,5 +350,22 @@ describe('la noche del narrador virtual', () => {
       expect(senalamiento.objetivos[0]).toBe(m.asiento('imp').id);
       expect(m.sala.alineamientoEfectivo(m.sala.asientos().find((a) => a.id === senalamiento.objetivos[1])!)).toBe('bueno');
     });
+  });
+});
+
+describe('los privados del narrador virtual', () => {
+  it('duran medio minuto por cada jugador vivo', () => {
+    const m = mesaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
+    expect(duracionPrivados(m.sala)).toBe(7 * 30_000);
+    m.sala.cambiarVida(m.asiento('chef').id, true);
+    m.sala.cambiarVida(m.asiento('monk').id, true);
+    expect(duracionPrivados(m.sala)).toBe(5 * 30_000);
+  });
+
+  it('el primer día dice el tiempo en minutos y medios', () => {
+    expect(FRASES.primerDia(210)).toMatch(/tenéis 3 minutos y medio\.$/);
+    expect(FRASES.primerDia(240)).toMatch(/tenéis 4 minutos\.$/);
+    expect(FRASES.primerDia(90)).toMatch(/tenéis 1 minuto y medio\.$/);
+    expect(FRASES.primerDia(30)).toMatch(/tenéis medio minuto\.$/);
   });
 });

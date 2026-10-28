@@ -635,7 +635,8 @@ const Mesa = ({
   const capaOculta = modoFichas === 'ver' && !seguimiento && !despertares;
   // Algo en el centro de la mesa (ver abajo): la ciudad se vela para dejarlo leer
   // Con narrador virtual, de día, el jugador sentado tiene su panel (Defensa, Voto, Listo…)
-  const panelDiaVirtual = !!miAsiento && ['privados', 'puestaEnComun', 'nominaciones'].includes(estado.narradorVirtual?.etapa ?? '');
+  // En privados y puesta en común ya lo dice el reloj: el panel, solo en las nominaciones
+  const panelDiaVirtual = !!miAsiento && estado.narradorVirtual?.etapa === 'nominaciones';
   const centroOcupado = !!(
     estado.reloj ||
     nominacion?.cuentaAtrasFin ||
