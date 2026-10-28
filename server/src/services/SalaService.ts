@@ -22,10 +22,12 @@ import {
   SalaEleccionDespertar,
   SalaEnvioDespertar,
   SalaHabilidadNoche,
+  SalaNarradorVirtual,
 } from '../contrato/sala';
 import { GuionResuelto, PersonajeDeGuion } from '../types/guiones';
 import { repartoPara } from './partida/distribucion';
 import { Participantes, type SalaLlegada } from './partida/Participantes';
+import { NarradorVirtualEnMemoria, type NarradorVirtualRepository } from '../repositories/NarradorVirtualRepository';
 import {
   NPC_GARDENER,
 } from './partida/personajesEspeciales';
@@ -109,6 +111,11 @@ interface PasoDeFase {
 export class SalaService {
   /** Quién está en la sala y con qué papel (ver Participantes). */
   private readonly presentes = new Participantes();
+
+  constructor(
+    /** Dónde se guarda el narrador virtual de la sala (ver NarradorVirtualService). */
+    private readonly narradoresVirtuales: NarradorVirtualRepository = new NarradorVirtualEnMemoria(),
+  ) {}
   private mesa: SalaAsiento[] = Array.from({ length: SALA_ASIENTOS.inicial }, () => asientoNuevo());
 
   /**
@@ -536,6 +543,8 @@ export class SalaService {
    * de votos del día.
    */
   irANoche(): void {
+    // De noche no se nomina: la palabra vuelve a ser de todos
+    this.palabraDe = null;
     const { momento, numero, reinicios } = this.faseActual;
     // Para poder volver (lo que se quita al anochecer)
     const paso: PasoDeFase = {
@@ -1368,6 +1377,68 @@ export class SalaService {
   hayNarrador(): boolean {
     return this.presentes.hayNarrador();
   }
+
+  /** El narrador virtual de la sala, si lo hay (y su participante sigue en ella). */
+  narradorVirtual(): SalaNarradorVirtual | null {
+    const narrador = this.narradoresVirtuales.actual();
+    return narrador && this.buscar(narrador.participante) ? narrador : null;
+  }
+
+  /** Entra un narrador virtual (ver Participantes.anadirVirtual) y se guarda quién lo añadió. Devuelve su participante. */
+  anadirNarradorVirtual(
+    datos: Pick<SalaNarradorVirtual, 'id' | 'creador' | 'guion' | 'jugadores'>,
+    nombre: string,
+    avatar: string,
+  ): string {
+    const participante = this.presentes.anadirVirtual(nombre, avatar, datos.id);
+    this.narradoresVirtuales.guardar({
+      ...datos,
+      participante,
+      etapa: 'esperandoJugadores',
+      frase: null,
+      turno: null,
+      listos: [],
+      exterminadores: [],
+    });
+    return participante;
+  }
+
+  /** Cambia lo que lleva el narrador virtual de la partida (su etapa, su frase, el día…). No comprueba permisos. */
+  actualizarNarradorVirtual(cambios: Partial<Omit<SalaNarradorVirtual, 'id' | 'participante' | 'creador' | 'guion' | 'jugadores'>>): void {
+    this.narradoresVirtuales.actualizar(cambios);
+  }
+
+  /** Se va el narrador virtual (su participante sale de la sala): la palabra y los privados vuelven a ser de todos. */
+  quitarNarradorVirtual(): void {
+    const narrador = this.narradoresVirtuales.actual();
+    if (narrador) this.presentes.expulsar(narrador.participante);
+    this.narradoresVirtuales.borrar();
+    this.palabraDe = null;
+    this.privadosAbiertos = true;
+  }
+
+  /** Quien tiene la palabra en la mesa (los demás jugadores callan), o null: hablan todos. */
+  palabra(): string | null {
+    return this.palabraDe;
+  }
+
+  /** Da la palabra a uno (o, con null, a todos). No comprueba permisos. */
+  darPalabra(participanteId: string | null): void {
+    this.palabraDe = participanteId;
+  }
+
+  /** Si se puede conversar en privado (el narrador virtual lo cierra fuera de los privados). */
+  privadosPermitidos(): boolean {
+    return this.privadosAbiertos;
+  }
+
+  /** Abre o cierra las conversaciones privadas (cerrarlas termina las que haya). No comprueba permisos. */
+  permitirPrivados(abiertos: boolean): void {
+    this.privadosAbiertos = abiertos;
+  }
+
+  private palabraDe: string | null = null;
+  private privadosAbiertos = true;
 
   cambiarRol(id: string, rol: SalaRol): void {
     this.presentes.cambiarRol(id, rol);

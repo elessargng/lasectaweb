@@ -14,7 +14,15 @@ import {
   NPC_SILENCIO,
   NPC_STORMCATCHER,
 } from '../services/partida/personajesEspeciales';
-import { SALA_SENALAMIENTO, type SalaResultado } from '../contrato/sala';
+import {
+  GUIONES_NARRADOR_VIRTUAL,
+  JUGADORES_NARRADOR_VIRTUAL,
+  NARRADORES_VIRTUALES,
+  SALA_SENALAMIENTO,
+  type GuionNarradorVirtual,
+  type IdNarradorVirtual,
+  type SalaResultado,
+} from '../contrato/sala';
 import {
   ADJUNTOS_DESPERTAR,
   CAUSAS_DE_ESBIRRO,
@@ -42,6 +50,10 @@ import { guardarAvatarSala } from '../utils/salaAvatarStorage';
 import { GuionResuelto, PersonajeDeGuion, TIPOS_NPC, TipoPersonaje } from '../types/guiones';
 import { GuionInvalidoError } from '../services/guiones/errores';
 import type { RegistroPartida } from '../services/estadisticas/SeguimientoPartida';
+import type { ServicioNarradorVirtual } from '../services/narradorVirtual/NarradorVirtualService';
+import type { Azar, Temporizador } from '../services/narradorVirtual/puertos';
+import type { AccionJugador } from '../services/narradorVirtual/etapas/Etapa';
+import { diaVirtual, noPuedeNominar, nominoHoy } from '../services/narradorVirtual/dia/reglasDia';
 
 
 /** Lo que devuelve una acción: el resultado y, si saca a alguien de la sala, qué conexiones cerrar. */
@@ -70,6 +82,11 @@ export interface DependenciasSala {
   guardarPartida?: (registro: RegistroPartida) => Promise<void>;
   /** Cuántas partidas ha jugado alguien (para el pulpito de novato); sin esto, nadie lo es. */
   contarPartidas?: (userId: string) => Promise<number>;
+  /** El narrador virtual de la sala (lo pone la sala al iniciarse); sin esto, no se puede añadir. */
+  narradorVirtual?: ServicioNarradorVirtual;
+  /** El reloj y el azar del narrador virtual (en los tests, unos que no esperan y con semilla); si no, los de verdad. */
+  relojNarradorVirtual?: Temporizador;
+  azarNarradorVirtual?: Azar;
 }
 
 /**
@@ -171,6 +188,22 @@ function leerFarol(sala: SalaService, datos: unknown): { error: string } | { pos
 }
 const esNarrador = (_sala: SalaService, yo: SalaParticipante) => yo.rol === 'narrador';
 
+/** Lo que pide un jugador al narrador virtual en el día: se lo pasa (ya comprobado que puede). */
+const alNarradorVirtual =
+  (accion: AccionJugador | 'exterminar') =>
+  async (_sala: SalaService, yo: SalaParticipante, datos: unknown, deps: DependenciasSala): Promise<SalaEfecto> => {
+    if (!deps.narradorVirtual) return { ok: false, error: 'Esta sala no tiene narradores virtuales.' };
+    const error = await deps.narradorVirtual.pedir(yo.id, accion, datos);
+    return error ? { ok: false, error } : { ok: true };
+  };
+
+/** El turno de la nominación del narrador virtual en el que está el de ese jugador (quien nomina o el nominado). */
+const enSuTurno = (sala: SalaService, yo: SalaParticipante, turno: 'acusacion' | 'defensa') => {
+  const n = sala.nominacion();
+  const mio = sala.asientoDe(yo.id)?.id;
+  return sala.narradorVirtual()?.turno === turno && !!n && !!mio && (turno === 'acusacion' ? n.desde : n.hasta) === mio;
+};
+
 /**
  * Todo lo que se puede pedir a la sala, con quién puede pedirlo. Las del
  * narrador van con el prefijo `narrador:`.
@@ -241,7 +274,8 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   /** Un visitante se sienta en un asiento libre y pasa a jugador. datos: { asientoId }. */
   /** Un visitante pide ver el grimorio del narrador (los narradores lo aceptan o lo rechazan). */
   'sala:solicitarGrimorio': {
-    puede: (sala, yo) => yo.rol === 'visitante' && yo.accesoGrimorio === 'ninguno' && sala.hayNarrador(),
+    // Al narrador virtual no se le pide: no hay quien responda
+    puede: (sala, yo) => yo.rol === 'visitante' && yo.accesoGrimorio === 'ninguno' && sala.hayNarrador() && !sala.narradorVirtual(),
     noPuede: (sala, yo) =>
       yo.rol !== 'visitante'
         ? 'Solo los visitantes piden ver el grimorio.'
@@ -401,6 +435,122 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
+  /**
+   * En lugar de hacerse narrador, añade un narrador virtual que lleva la partida
+   * solo. datos: { narrador: id de NARRADORES_VIRTUALES (disponible), guion: id de
+   * GUIONES_NARRADOR_VIRTUAL, jugadores: de JUGADORES_NARRADOR_VIRTUAL.min a .max }.
+   */
+  'sala:anadirNarradorVirtual': {
+    puede: (sala, yo) => !sala.hayNarrador() && yo.rol !== 'narrador',
+    noPuede: 'La sala ya tiene narrador.',
+    hacer: async (_sala, yo, datos, { narradorVirtual }) => {
+      if (!narradorVirtual) return { ok: false, error: 'Esta sala no tiene narradores virtuales.' };
+      const { narrador, guion, jugadores } = (datos as Record<string, unknown>) ?? {};
+      if (!NARRADORES_VIRTUALES.some((n) => n.id === narrador && n.disponible)) {
+        return { ok: false, error: 'Ese narrador virtual aún no está disponible.' };
+      }
+      if (!GUIONES_NARRADOR_VIRTUAL.some((g) => g.id === guion)) return { ok: false, error: 'Ese guion aún no se puede jugar con narrador virtual.' };
+      const { min, max } = JUGADORES_NARRADOR_VIRTUAL;
+      if (typeof jugadores !== 'number' || !Number.isInteger(jugadores) || jugadores < min || jugadores > max) {
+        return { ok: false, error: `Tiene que haber de ${min} a ${max} jugadores.` };
+      }
+      const error = await narradorVirtual.anadir(yo.id, {
+        narrador: narrador as IdNarradorVirtual,
+        guion: guion as GuionNarradorVirtual,
+        jugadores,
+      });
+      return error ? { ok: false, error } : { ok: true };
+    },
+  },
+
+  /** Quita el narrador virtual: solo quien lo añadió. */
+  'sala:quitarNarradorVirtual': {
+    puede: (sala, yo) => sala.narradorVirtual()?.creador === yo.id,
+    noPuede: (sala) => (sala.narradorVirtual() ? 'Solo quien añadió al narrador virtual puede quitarlo.' : 'La sala no tiene narrador virtual.'),
+    hacer: (_sala, _yo, _datos, { narradorVirtual }) => {
+      narradorVirtual?.quitar();
+      return { ok: true };
+    },
+  },
+
+  /**
+   * Con narrador virtual, de día: un jugador vivo nomina a otro (una vez al día, y a
+   * cada uno se le nomina una vez). datos: { asientoId } del nominado.
+   */
+  'jugador:nominar': {
+    puede: (sala, yo) => !noPuedeNominar(sala, yo),
+    noPuede: (sala, yo) => noPuedeNominar(sala, yo) ?? '',
+    hacer: alNarradorVirtual('nominar'),
+  },
+
+  /** Quien nomina termina su acusación: le toca hablar al nominado. */
+  'jugador:defensa': {
+    puede: (sala, yo) => enSuTurno(sala, yo, 'acusacion'),
+    noPuede: 'Ahora no te toca acusar.',
+    hacer: alNarradorVirtual('defensa'),
+  },
+
+  /** El nominado termina su defensa: empieza la votación. */
+  'jugador:voto': {
+    puede: (sala, yo) => enSuTurno(sala, yo, 'defensa'),
+    noPuede: 'Ahora no te toca defenderte.',
+    hacer: alNarradorVirtual('voto'),
+  },
+
+  /** Listo para pasar a la noche (con narrador virtual, en las nominaciones). */
+  'jugador:listo': {
+    puede: (sala, yo) => sala.narradorVirtual()?.etapa === 'nominaciones' && !!sala.asientoDe(yo.id) && !sala.narradorVirtual()!.listos.includes(yo.id),
+    noPuede: 'Ahora no hay que decir si estás listo.',
+    hacer: alNarradorVirtual('listo'),
+  },
+
+  /** Ya no está listo: quiere seguir nominando (quien ya ha nominado hoy, no). */
+  'jugador:seguirNominando': {
+    puede: (sala, yo) => {
+      const asiento = sala.asientoDe(yo.id);
+      return sala.narradorVirtual()?.etapa === 'nominaciones' && !!asiento && sala.narradorVirtual()!.listos.includes(yo.id) && !nominoHoy(sala, asiento.id);
+    },
+    noPuede: 'Ya has nominado hoy: estás listo.',
+    hacer: alNarradorVirtual('seguirNominando'),
+  },
+
+  /**
+   * Con narrador virtual, de día: un jugador se declara Exterminador y dispara a
+   * otro (una vez por partida). datos: { asientoId }.
+   */
+  'jugador:exterminar': {
+    puede: (sala, yo) => {
+      const dia = diaVirtual(sala);
+      return !!dia && !!sala.asientoDe(yo.id) && !dia.exterminadores.includes(yo.id) && !sala.nominacion();
+    },
+    noPuede: (sala, yo) => (sala.narradorVirtual()?.exterminadores.includes(yo.id) ? 'Ya has disparado en esta partida.' : 'Ahora no se puede disparar.'),
+    hacer: alNarradorVirtual('exterminar'),
+  },
+
+  /** Da la palabra a un participante (los demás jugadores callan) o, con null, a todos. datos: { participanteId | null }. */
+  'narrador:darPalabra': {
+    puede: esNarrador,
+    noPuede: 'Solo un narrador da la palabra.',
+    hacer: (sala, _yo, datos) => {
+      const id = (datos as { participanteId?: unknown } | null)?.participanteId;
+      if (id !== null && (typeof id !== 'string' || !sala.buscar(id))) return { ok: false, error: 'Esa persona ya no está en la sala.' };
+      sala.darPalabra(id);
+      return { ok: true };
+    },
+  },
+
+  /** Abre o cierra las conversaciones privadas (al cerrarlas se terminan). datos: { abiertos: boolean }. */
+  'narrador:privados': {
+    puede: esNarrador,
+    noPuede: 'Solo un narrador abre o cierra los privados.',
+    hacer: (sala, _yo, datos) => {
+      const abiertos = (datos as { abiertos?: unknown } | null)?.abiertos;
+      if (typeof abiertos !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
+      sala.permitirPrivados(abiertos);
+      return { ok: true };
+    },
+  },
+
   'narrador:dejar': {
     puede: esNarrador,
     noPuede: 'No eres narrador.',
@@ -425,6 +575,8 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       const cambios: Parameters<SalaService['configurar']>[0] = {};
       if (grimorioJugadores !== undefined) {
         if (typeof grimorioJugadores !== 'boolean') return { ok: false, error: 'Ajuste desconocido.' };
+        // Con narrador virtual, los jugadores siempre tienen su grimorio
+        if (!grimorioJugadores && sala.narradorVirtual()) return { ok: false, error: 'Con narrador virtual, los jugadores siempre tienen su grimorio.' };
         cambios.grimorioJugadores = grimorioJugadores;
       }
       if (segundosPorFicha !== undefined) {
@@ -636,7 +788,8 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * que el narrador le manda algo (ver Despertares.asientoDespiertoDe). datos: { asientoId }.
    */
   'narrador:despertar': {
-    puede: (sala, yo) => yo.rol === 'narrador' && sala.fase().momento === 'noche',
+    // De día, solo el narrador virtual con el Violinista (el demonio elige en secreto)
+    puede: (sala, yo) => yo.rol === 'narrador' && (sala.fase().momento === 'noche' || sala.narradorVirtual()?.etapa === 'violinista'),
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'Solo se despierta a alguien de noche.' : 'Solo un narrador puede despertar a alguien.'),
     hacer: (sala, _yo, datos) => {
       const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;

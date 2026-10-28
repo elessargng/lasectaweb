@@ -10,6 +10,9 @@ export class ConversacionError extends Error {
   }
 }
 
+/** Fuera del rato de los privados que da el narrador virtual. */
+const PRIVADOS_CERRADOS = 'Ahora no es el momento de los privados.';
+
 const conversa = (p: SalaParticipante) => p.rol === 'jugador' || p.rol === 'narrador';
 const escucha = (p: SalaParticipante) => p.rol === 'visitante' || p.rol === 'narrador';
 
@@ -119,6 +122,7 @@ export class ConversacionService {
     if (!yo) throw new ConversacionError('Ya no estás en la sala.');
     if (!otro) throw new ConversacionError('Esa persona ya no está en la sala.');
     if (!conversa(yo)) throw new ConversacionError('Solo los jugadores y los narradores conversan en privado.');
+    if (!this.sala.privadosPermitidos()) throw new ConversacionError(PRIVADOS_CERRADOS);
     if (this.sala.fase().momento === 'noche' && yo.rol !== 'narrador') {
       throw new ConversacionError('De noche solo el narrador puede unirse a una conversación.');
     }
@@ -243,6 +247,11 @@ export class ConversacionService {
       }
       this.reiniciosVistos = reinicios;
     }
+    // Fuera de los privados (el narrador virtual los cierra), se terminan todas
+    if (!this.sala.privadosPermitidos()) {
+      this.conversaciones = [];
+      this.invitaciones = [];
+    }
     const sigue = (id: string, puede: (p: SalaParticipante) => boolean) => {
       const p = this.sala.buscar(id);
       return !!p && puede(p);
@@ -283,6 +292,7 @@ export class ConversacionService {
     if (yo.id === otro.id) throw new ConversacionError('No puedes conversar contigo mismo.');
     if (!conversa(yo)) throw new ConversacionError('Solo los jugadores y los narradores invitan a conversar.');
     if (!conversa(otro)) throw new ConversacionError(`${otro.nombre} no está jugando: no puede conversar en privado.`);
+    if (!this.sala.privadosPermitidos()) throw new ConversacionError(PRIVADOS_CERRADOS);
     const noche = this.sala.fase().momento === 'noche';
     if (noche && yo.rol !== 'narrador' && otro.rol !== 'narrador') {
       throw new ConversacionError('De noche solo puedes invitar a conversar al narrador.');

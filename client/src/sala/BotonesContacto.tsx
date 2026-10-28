@@ -46,12 +46,12 @@ const BotonesContacto = ({ nombre, vigilar }: BotonesContactoProps) => {
 };
 
 /** Los iconos de botc.app (de Font Awesome): dos bocadillos, llamar; un sobre, mandar un mensaje. */
-const IconoLlamadaBotc = () => (
+export const IconoLlamadaBotc = () => (
   <svg viewBox="0 -32 576 576" className="h-full w-full" fill="currentColor" aria-hidden="true" focusable="false">
     <path d="M384 144c0 97.2-86 176-192 176-26.7 0-52.1-5-75.2-14L35.2 349.2c-9.3 4.9-20.7 3.2-28.2-4.2s-9.2-18.9-4.2-28.2l35.6-67.2C14.3 220.2 0 183.6 0 144 0 46.8 86-32 192-32S384 46.8 384 144zm0 368c-94.1 0-172.4-62.1-188.8-144 120-1.5 224.3-86.9 235.8-202.7 83.3 19.2 145 88.3 145 170.7 0 39.6-14.3 76.2-38.4 105.6l35.6 67.2c4.9 9.3 3.2 20.7-4.2 28.2s-18.9 9.2-28.2 4.2L459.2 498c-23.1 9-48.5 14-75.2 14z" />
   </svg>
 );
-const IconoMensajeBotc = () => (
+export const IconoMensajeBotc = () => (
   <svg viewBox="0 0 512 512" className="h-full w-full" fill="currentColor" aria-hidden="true" focusable="false">
     <path d="M48 64c-26.5 0-48 21.5-48 48 0 15.1 7.1 29.3 19.2 38.4l208 156c17.1 12.8 40.5 12.8 57.6 0l208-156c12.1-9.1 19.2-23.3 19.2-38.4 0-26.5-21.5-48-48-48L48 64zM0 196L0 384c0 35.3 28.7 64 64 64l384 0c35.3 0 64-28.7 64-64l0-188-198.4 148.8c-34.1 25.6-81.1 25.6-115.2 0L0 196z" />
   </svg>
@@ -78,13 +78,14 @@ interface BotonesEnCuadroProps extends Pick<ContactoParticipante, 'onMensaje' | 
 /**
  * Mandar un mensaje de texto y conversar (voz y vídeo en privado) con alguien,
  * en grande dentro de su cuadro (encima de su retrato o su cámara). Solo salen
- * los que se pueden usar. Se ven al pasar el ratón por su sitio (la clase group
+ * los que se pueden usar, con los iconos elegidos (los de siempre o los de
+ * botc.app, Preferencias > Interfaz). Se ven al pasar el ratón por su sitio (la clase group
  * la pone quien los usa) o, con la llamada estilo botc.app, al pulsar Intro (y
  * al usar uno, se esconden); también con el foco en ellos y, en pantallas
  * táctiles, siempre. Para el lector están siempre, después del nombre.
  */
 export const BotonesEnCuadro = ({ nombre, onMensaje, conversar, bajoRotulo = false, abajo = false }: BotonesEnCuadroProps) => {
-  const { activa, visibles, ocultar } = useLlamadaBotc();
+  const { activa, visibles, ocultar, iconos } = useLlamadaBotc();
   if (!onMensaje && !conversar) return null;
   // Cada icono, siempre del mismo tamaño (haya uno o los dos): los dos con su hueco
   // llenan el ancho del marco (46 + 8 + 46, dentro de los márgenes); uno solo, centrado
@@ -105,7 +106,7 @@ export const BotonesEnCuadro = ({ nombre, onMensaje, conversar, bajoRotulo = fal
       {/* Llamar (voz y vídeo en privado); unirse a la que ya tiene, entrar */}
       {conversar.unirse ? (
         <LogIn className="h-full w-full" strokeWidth={2.25} />
-      ) : activa ? (
+      ) : iconos === 'botc' ? (
         <IconoLlamadaBotc />
       ) : (
         <Phone className="h-full w-full" strokeWidth={2.25} />
@@ -114,7 +115,7 @@ export const BotonesEnCuadro = ({ nombre, onMensaje, conversar, bajoRotulo = fal
   );
   const escribir = onMensaje && (
     <button type="button" onClick={usar(onMensaje)} aria-label={`Mandar un mensaje a ${nombre}`} className={boton}>
-      {activa ? <IconoMensajeBotc /> : <MessageSquare className="h-full w-full" strokeWidth={2.25} />}
+      {iconos === 'botc' ? <IconoMensajeBotc /> : <MessageSquare className="h-full w-full" strokeWidth={2.25} />}
     </button>
   );
   return (

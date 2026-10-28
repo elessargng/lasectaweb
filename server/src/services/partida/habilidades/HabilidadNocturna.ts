@@ -45,6 +45,25 @@ export interface Resultado {
 }
 
 /**
+ * En qué tramo de la noche se resuelve una habilidad, por lo que hace (no por su
+ * nombre: un guion puede mezclar roles de varias ediciones). Un tramo se resuelve
+ * cuando el anterior ya lo está; los del mismo tramo no chocan entre sí:
+ * - malvados: la información de los esbirros y del demonio (la primera noche);
+ * - alteraATodos: los que pueden dejar a cualquiera envenenado o borracho (y entonces su elección no deja recordatorio);
+ * - alteraAlDemonio: los que cambian lo que hará el demonio (proteger a alguien);
+ * - esbirros: el resto de esbirros;
+ * - demonio: el demonio, ya sabiendo quién está protegido;
+ * - informacion: aldeanos y forasteros, después del demonio (alguien puede morir esa noche);
+ * - veTodo: lo último, cuando todos han actuado (el grimorio del Espía).
+ */
+export const TRAMOS_NOCHE = ['malvados', 'alteraATodos', 'alteraAlDemonio', 'esbirros', 'demonio', 'informacion', 'veTodo'] as const;
+export type TramoNoche = (typeof TRAMOS_NOCHE)[number];
+
+/** El tramo de un personaje que no lo dice: por su tipo (los esbirros, el demonio; aldeanos y forasteros, informacion). */
+export const tramoPorTipo = (tipo: string | undefined): TramoNoche =>
+  tipo === 'minion' ? 'esbirros' : tipo === 'demon' ? 'demonio' : 'informacion';
+
+/**
  * La habilidad de noche de un personaje: cómo se le despierta. Si elige
  * (`eleccion`), primero se le pide que elija y luego `alElegir` dice qué pasa; si
  * no, `preparar` ya dice lo que se le manda. Un personaje nuevo es una habilidad
@@ -57,6 +76,16 @@ export interface HabilidadNocturna {
   eleccion: SalaEleccionDespertar | null;
   /** Despierta aunque muera esta noche (el Ravenkeeper). */
   despiertaAlMorir: boolean;
+  /** Su tramo de la noche (ver TRAMOS_NOCHE), si no es el de su tipo. */
+  tramo?: TramoNoche;
+  /**
+   * La forma de la información que da (para inventar una falsa si está droison):
+   * hasta qué número puede salir (el Empático, de 0 a 2) y de qué tipo es el
+   * personaje que enseña (la Lavandera, un aldeano). Sin esto, no da números y
+   * enseña cualquier personaje.
+   */
+  maximoNumero?(ctx: ContextoNoche): number;
+  tipoEnsenado?: string;
   /** Los que despiertan, si no es el de su ficha (los esbirros, el demonio): cada uno, con su `preparar`. */
   despiertan?(ctx: ContextoNoche): SalaAsiento[];
   preparar(ctx: ContextoNoche, asiento: SalaAsiento): Resultado;
@@ -184,13 +213,14 @@ export function segunRegistros(
 /**
  * La información que recibe quien despierta, según esté: droison, con varias
  * respuestas posibles o con alguien que puede registrar como otra cosa, la revisa
- * el narrador; si no, se manda sola.
+ * el narrador; si no, se manda sola. Con `siempreRevisa`, la revisa siempre.
  */
 export function informar(
   ctx: ContextoNoche,
   asiento: SalaAsiento,
   info: { opciones: SalaOpcionDespertar[]; avisos?: SalaAvisoHabilidad[]; efectos?: Efectos },
   previos: SalaAvisoHabilidad[] = [],
+  siempreRevisa = false,
 ): Resultado {
   const estaDroison = droison(ctx, asiento);
   // Con varias respuestas, quién puede registrar como otra cosa (una vez cada uno)
@@ -200,7 +230,7 @@ export function informar(
       : [];
   const avisos = [...previos, ...(estaDroison ? [{ tipo: estaDroison } as SalaAvisoHabilidad] : []), ...(info.avisos ?? []), ...registran];
   const dudas = avisos.some((a) => a.tipo === 'registro');
-  if (estaDroison || dudas || (info.opciones.length !== 1 && !info.efectos)) return revisar(info.opciones, avisos);
+  if (siempreRevisa || estaDroison || dudas || (info.opciones.length !== 1 && !info.efectos)) return revisar(info.opciones, avisos);
   return { estado: 'listo', avisos, opciones: info.opciones, efectos: info.efectos ?? sinEfectos() };
 }
 
@@ -210,6 +240,8 @@ export function informar(
 abstract class Habilidad implements HabilidadNocturna {
   eleccion: SalaEleccionDespertar | null = null;
   despiertaAlMorir = false;
+  tramo?: TramoNoche;
+  tipoEnsenado?: string;
 
   constructor(readonly personaje: string) {}
 
@@ -254,9 +286,10 @@ export class EligeYMarca extends Elige {
     personaje: string,
     /** El texto (en el original) de su recordatorio. */
     protected readonly recordatorio: string,
-    { puedeElegirse }: { puedeElegirse: boolean },
+    { puedeElegirse, tramo }: { puedeElegirse: boolean; tramo?: TramoNoche },
   ) {
     super(personaje, { cantidad: 1, puedeElegirse });
+    this.tramo = tramo;
   }
 
   alElegir(ctx: ContextoNoche, asiento: SalaAsiento, [elegido]: SalaAsiento[]): Resultado {
@@ -272,14 +305,18 @@ export class EligeYMarca extends Elige {
   }
 }
 
-/** Elige y eso le da información (la Adivina, el Ravenkeeper). */
+/**
+ * Elige y eso le da información (la Adivina, el Ravenkeeper). La respuesta la
+ * revisa siempre el narrador: si a veces llegara sola, lo que tarda en llegar
+ * diría si ha tenido que revisarla (si alguien registra como otro o está droison).
+ */
 export abstract class EligeYSabe extends Elige {
   constructor(personaje: string, cantidad: number) {
     super(personaje, { cantidad, puedeElegirse: true });
   }
 
   alElegir(ctx: ContextoNoche, asiento: SalaAsiento, elegidos: SalaAsiento[]): Resultado {
-    return informar(ctx, asiento, this.saber(ctx, asiento, elegidos), [{ tipo: 'elegido', asientos: elegidos.map((a) => a.id) }]);
+    return informar(ctx, asiento, this.saber(ctx, asiento, elegidos), [{ tipo: 'elegido', asientos: elegidos.map((a) => a.id) }], true);
   }
 
   /** Lo que sabe por los que ha elegido. */

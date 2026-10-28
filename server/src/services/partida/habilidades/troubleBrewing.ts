@@ -40,8 +40,8 @@ function esteJugadorEs(ctx: ContextoNoche, jugadores: SalaAsiento[], quien: Sala
 
 // Eligen y cambian el estado de otro
 
-export const envenenador = new EligeYMarca('poisoner', 'Poisoned', { puedeElegirse: true });
-export const monje = new EligeYMarca('monk', 'Safe', { puedeElegirse: false });
+export const envenenador = new EligeYMarca('poisoner', 'Poisoned', { puedeElegirse: true, tramo: 'alteraATodos' });
+export const monje = new EligeYMarca('monk', 'Safe', { puedeElegirse: false, tramo: 'alteraAlDemonio' });
 export const mayordomo = new EligeYMarca('butler', 'Master', { puedeElegirse: false });
 
 /** Protegido del demonio esta noche: con el «Safe» del Monje o un Soldado sano. */
@@ -131,6 +131,7 @@ class SenalaDosJugadores extends RecibeInformacion {
     private readonly tipo: string,
   ) {
     super(personaje);
+    this.tipoEnsenado = tipo;
   }
 
   /** No hay nadie de ese tipo en juego (ni quien pueda registrar como él): se le dice «cero». */
@@ -176,6 +177,11 @@ class Chef extends RecibeInformacion {
     super('chef');
   }
 
+  /** Como mucho, una pareja por cada dos asientos. */
+  maximoNumero(ctx: ContextoNoche): number {
+    return Math.floor(ctx.mesa().length / 2);
+  }
+
   protected informacion(ctx: ContextoNoche) {
     const mesa = ctx.mesa();
     const opciones = segunRegistros(ctx, mesa, (a) => alineamientosPosibles(ctx, a), (registro) => {
@@ -193,6 +199,11 @@ export const chef = new Chef();
 class Empatico extends RecibeInformacion {
   constructor() {
     super('empath');
+  }
+
+  /** Sus dos vecinos. */
+  maximoNumero(): number {
+    return 2;
   }
 
   protected informacion(ctx: ContextoNoche, asiento: SalaAsiento) {
@@ -226,6 +237,7 @@ export const enterrador = new Enterrador();
 class Espia extends RecibeInformacion {
   constructor() {
     super('spy');
+    this.tramo = 'veTodo';
   }
 
   protected informacion() {

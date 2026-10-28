@@ -20,6 +20,7 @@ import {
   type PreferenciaSilla,
 } from './marcas';
 import { esAtajoValido, type Atajo } from './atajos';
+import { esIconosLlamada, type IconosLlamada } from './llamadaBotc';
 import {
   esTonoDespertar,
   esTonoLlamada,
@@ -120,6 +121,10 @@ export interface PreferenciasSala {
    * (ver llamadaBotc.ts). Pestaña Interfaz; de entrada, no.
    */
   llamadaBotc: boolean;
+  /** Oír la voz del narrador virtual (lo que dice también sale escrito). Botón junto al micrófono; de entrada, sí. */
+  vozNarrador: boolean;
+  /** Los iconos de llamar y de mandar un mensaje: los de siempre (de entrada) o los de botc.app. Pestaña Interfaz. */
+  iconosLlamada: IconosLlamada;
   /**
    * El fondo que se ve: el del guion o el que pone el narrador (de entrada; si no
    * hay, el de La Secta), o siempre uno fijo (ver fondos.ts). Pestaña Interfaz.
@@ -170,7 +175,8 @@ type ClaveSiNo =
   | 'farolesFijados'
   | 'pobladoCabecera'
   | 'cieloEstrellado'
-  | 'llamadaBotc';
+  | 'llamadaBotc'
+  | 'vozNarrador';
 
 /** Cuándo sale la ciudad de la plaza: al cambiar de fase (de entrada), siempre o nunca. */
 export const MODOS_CIUDAD = ['cambios', 'siempre', 'nunca'] as const;
@@ -216,6 +222,7 @@ const SI_NO: Record<ClaveSiNo, boolean> = {
   pobladoCabecera: true,
   cieloEstrellado: true,
   llamadaBotc: false,
+  vozNarrador: true,
 };
 
 /** Lo que guardaba antes la sala en el navegador (para llevarlo a la cuenta la primera vez). */
@@ -251,6 +258,7 @@ export function normalizarPreferencias(datos: unknown): PreferenciasSala {
   preferencias.voto = esEstiloVoto(guardadas.voto) ? guardadas.voto : VOTO_DEFECTO;
   preferencias.iconoDespertar = esEstiloDespertar(guardadas.iconoDespertar) ? guardadas.iconoDespertar : DESPERTAR_DEFECTO;
   preferencias.iconoEntendido = esEstiloEntendido(guardadas.iconoEntendido) ? guardadas.iconoEntendido : ENTENDIDO_DEFECTO;
+  preferencias.iconosLlamada = esIconosLlamada(guardadas.iconosLlamada) ? guardadas.iconosLlamada : 'normal';
   // Los sonidos: uno a uno. Lo de antes (un sí o no para todos) vale para todos
   const sonidos = guardadas.sonidos;
   const deCada = (sonidos && typeof sonidos === 'object' ? sonidos : {}) as Record<string, unknown>;

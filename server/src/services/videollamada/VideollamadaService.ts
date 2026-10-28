@@ -48,9 +48,13 @@ export class VideollamadaService {
     private readonly conversaciones: ConversacionService,
   ) {}
 
-  /** Si alguien tiene que callar: un jugador, con el silencio pedido (los narradores siguen hablando). */
+  /**
+   * Si alguien tiene que callar: un jugador, con el silencio pedido o si la palabra
+   * la tiene otro (al nominar con el narrador virtual). Los narradores siguen hablando.
+   */
   private callado(id: string): boolean {
-    return this.sala.silencio() && this.sala.buscar(id)?.rol === 'jugador';
+    const palabra = this.sala.palabra();
+    return (this.sala.silencio() || (palabra !== null && palabra !== id)) && this.sala.buscar(id)?.rol === 'jugador';
   }
 
   /** Los permisos en la mesa de alguien, según su papel, la fase, si conversa en privado y el silencio. */

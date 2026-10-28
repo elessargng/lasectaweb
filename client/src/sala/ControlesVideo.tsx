@@ -1,6 +1,7 @@
 import {
   Mic,
   MicOff,
+  Speech,
   Video,
   VideoOff,
   Volume2,
@@ -31,8 +32,12 @@ interface ControlesVideoProps {
   onCerrarProblema: () => void;
   sonidoBloqueado: boolean;
   onActivarSonido: () => void;
-  /** El narrador ha pedido silencio: el micrófono no se puede usar (y dice por qué). */
+  /** El narrador ha pedido silencio (o la palabra la tiene otro): el micrófono no se puede usar (y dice por qué). */
   silenciado: boolean;
+  /** Por qué no se puede usar el micrófono (para el lector). */
+  motivoSilencio?: string;
+  /** Con narrador virtual: oír su voz o quitarla (lo que dice sigue escrito); null sin él. */
+  voz?: { activa: boolean; onAlternar: () => void } | null;
   /** Narradores, con el Bibliotecario del Infierno en juego: pedir silencio a todos o levantarlo; null si no. */
   silencio: { activo: boolean; onAlternar: () => void } | null;
 }
@@ -62,8 +67,23 @@ function explicacion({ dispositivo, motivo }: ProblemaDispositivo): { titulo: st
   };
 }
 
+/** La voz del narrador quitada: su icono, tachado (como el micrófono cerrado). */
+const SpeechOff = () => (
+  <span className="relative inline-flex">
+    <Speech size={18} />
+    <span className="absolute left-1/2 top-1/2 h-0.5 w-6 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-full bg-current" />
+  </span>
+);
+
 /** Medallón de latón; apagado, de lacre. */
 const boton = (activo: boolean) => `${botonIcono} h-9 w-9 ${activo ? '' : 'sala-boton-apagado'}`;
+
+/** La voz del narrador virtual (o quitarla): un botón que se queda pulsado, como el micrófono. */
+export const BotonVoz = ({ activa, onAlternar }: { activa: boolean; onAlternar: () => void }) => (
+  <button type="button" aria-label="Voz del narrador" aria-pressed={activa} onClick={onAlternar} className={boton(activa)}>
+    {activa ? <Speech size={18} /> : <SpeechOff />}
+  </button>
+);
 
 /**
  * En la cabecera: el micrófono y la cámara (botones que se quedan pulsados), con
@@ -87,6 +107,8 @@ const ControlesVideo = ({
   sonidoBloqueado,
   onActivarSonido,
   silenciado,
+  motivoSilencio = 'El narrador ha pedido silencio.',
+  voz = null,
   silencio,
 }: ControlesVideoProps) => {
   const ariaLive = useAriaLive('errores');
@@ -117,7 +139,7 @@ const ControlesVideo = ({
           </button>
           {silenciado && (
             <span id="sala-microfono-silencio" className="sr-only">
-              El narrador ha pedido silencio.
+              {motivoSilencio}
             </span>
           )}
           <button
@@ -152,6 +174,8 @@ const ControlesVideo = ({
           <IconoSilencio size={18} />
         </button>
       )}
+      {/* La voz del narrador virtual (o quitarla): como el micrófono y la cámara */}
+      {voz && <BotonVoz {...voz} />}
       {/* Oír a los demás (o dejar de oírlos): para todos */}
       <button type="button" aria-label="Sonido" aria-pressed={sonido} onClick={onSonido} className={boton(sonido)}>
         {sonido ? <Volume2 size={18} /> : <VolumeX size={18} />}

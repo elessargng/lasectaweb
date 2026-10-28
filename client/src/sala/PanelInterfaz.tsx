@@ -4,7 +4,9 @@ import FichaRedonda from './FichaRedonda';
 import Mano from './Mano';
 import VistaPreviaJugador from './VistaPreviaJugador';
 import type { CSSProperties, ReactNode } from 'react';
-import { Dices } from 'lucide-react';
+import { Dices, MessageSquare, Phone } from 'lucide-react';
+import { IconoLlamadaBotc, IconoMensajeBotc } from './BotonesContacto';
+import { ICONOS_LLAMADA } from './llamadaBotc';
 import { carpetaSilla, ESTILOS_CALAVERA, ESTILOS_DESPERTAR, ESTILOS_ENTENDIDO, ESTILOS_MANO, ESTILOS_SILLA, ESTILOS_VOTO, MarcasContexto } from './marcas';
 import IconoDespertar from './IconoDespertar';
 import type { TamanosMesa } from './Mesa';
@@ -153,11 +155,34 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, fondoDeLaSala, onCam
         Llamada estilo botc.app
       </Interruptor>
       <p id="sala-pref-llamada-botc-ayuda" className="text-xs text-on-surface-muted">
-        Los botones de llamar y de mandar un mensaje, con los iconos de botc.app, no salen al pasar el ratón por el
+        Los botones de llamar y de mandar un mensaje no salen al pasar el ratón por el
         cuadro de cada uno: pulsa Intro y salen en los cuadros de todos los jugadores y del narrador; vuelve a
         pulsarla, o Escape, para quitarlos.
       </p>
     </div>
+    <ElegirEstilo
+      id="sala-pref-iconos-llamada"
+      leyenda="Iconos de llamar y de mandar un mensaje"
+      estilos={ICONOS_LLAMADA}
+      valor={preferencias.iconosLlamada}
+      onCambiar={(iconosLlamada) => onCambiar({ iconosLlamada })}
+      muestra={(iconos) => (
+        // Los dos, como en los cuadros: en latón
+        <span className="flex items-center gap-2 text-gold-bright">
+          {iconos === 'botc' ? (
+            <>
+              <span className="block h-7 w-7"><IconoLlamadaBotc /></span>
+              <span className="block h-7 w-7"><IconoMensajeBotc /></span>
+            </>
+          ) : (
+            <>
+              <MessageSquare className="h-7 w-7" strokeWidth={2.25} />
+              <Phone className="h-7 w-7" strokeWidth={2.25} />
+            </>
+          )}
+        </span>
+      )}
+    />
     {/* La vista previa, con los tamaños de la mesa (un jugador se ve así) */}
     <div
       style={

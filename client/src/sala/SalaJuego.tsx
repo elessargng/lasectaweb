@@ -37,7 +37,7 @@ import { useSenalamientoCongelado } from './senales';
 import { describirMensaje, esEntendido, nombreDeAsiento } from './despertar';
 import { CAUSAS_FINAL } from './causasFinal';
 import PanelInvitaciones from './PanelInvitaciones';
-import ControlesVideo from './ControlesVideo';
+import ControlesVideo, { BotonVoz } from './ControlesVideo';
 import type { ContactoParticipante } from './BotonesContacto';
 import { useVideollamada } from './useVideollamada';
 import type { OndaMesa } from './Ondas';
@@ -62,6 +62,8 @@ import { ESTILOS_CALAVERA, ESTILOS_MANO, ESTILOS_SILLA, estiloDePartida, MarcasC
 import { FichasContexto, identidadDe, TIPOS_EN_FICHA, type ContenidoFicha, type ContextoFichas } from './fichas';
 import { actuaAlMorir, mostrarPersonajes, tituloDeGuion, useTraducciones, type PersonajeMostrado } from './guiones';
 import ZonaNarradores from './ZonaNarradores';
+import { callarVoz, decirEnVoz } from './vozNarrador';
+import DialogoNarradorVirtual from './DialogoNarradorVirtual';
 import {
   accionCogerLlamada,
   describirAtajo,
@@ -609,6 +611,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       alCambiarGuion: (g) => g && anunciar('guion', `Guion: ${tituloDeGuion(g)}.`),
       alMensaje,
       alSusurro,
+      // La voz del narrador virtual, si no se ha quitado
+      alVoz: (texto) => preferencias.vozNarrador && decirEnVoz(texto),
     },
   );
   const yo = estado?.participantes.find((p) => p.id === estado.yo);
@@ -783,7 +787,18 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const puedeEmitirVideo = yo?.rol === 'jugador' || yo?.rol === 'narrador';
   const noche = estado?.fase.momento === 'noche';
   // Silencio del narrador (Bibliotecario del Infierno): los jugadores no pueden hablar
-  const callado = !!estado?.silencio && yo?.rol === 'jugador';
+  // La voz del narrador virtual: se oye o se quita (al quitarla, calla lo que estuviera diciendo)
+  const controlVoz = estado?.narradorVirtual
+    ? {
+        activa: preferencias.vozNarrador,
+        onAlternar: () => {
+          if (preferencias.vozNarrador) callarVoz();
+          cambiarPreferencias({ vozNarrador: !preferencias.vozNarrador });
+        },
+      }
+    : null;
+  // Callan los jugadores con el silencio pedido o si la palabra la tiene otro (nominando con narrador virtual)
+  const callado = (!!estado?.silencio || (!!estado?.palabra && estado.palabra !== yo?.id)) && yo?.rol === 'jugador';
   // Sonido envolvente: cada voz desde el ángulo de su asiento en la plaza (por id de quien se sienta)
   const asientosSala = estado?.asientos;
   const posicionesVoz = useMemo(() => {
@@ -1010,8 +1025,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [llamadaBotc, iconosLlamada]);
   const contextoLlamadaBotc = useMemo(
-    () => ({ activa: llamadaBotc, visibles: llamadaBotc && iconosLlamada, ocultar: () => setIconosLlamada(false) }),
-    [llamadaBotc, iconosLlamada],
+    () => ({
+      activa: llamadaBotc,
+      visibles: llamadaBotc && iconosLlamada,
+      ocultar: () => setIconosLlamada(false),
+      iconos: preferencias.iconosLlamada,
+    }),
+    [llamadaBotc, iconosLlamada, preferencias.iconosLlamada],
   );
   const contacto = (otro: SalaParticipante): ContactoParticipante | undefined => {
     const onMensaje = mensajePara(otro);
@@ -1155,6 +1175,15 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     return r.ok;
   };
   const puedeHacermeNarrador = !!estado?.acciones.includes('sala:hacerseNarrador');
+  // En lugar de hacerse narrador, uno virtual (ver DialogoNarradorVirtual); quitarlo, solo quien lo añadió
+  const [anadiendoVirtual, setAnadiendoVirtual] = useState(false);
+  const puedeAnadirVirtual = !!estado?.acciones.includes('sala:anadirNarradorVirtual');
+  const puedeQuitarVirtual = !!estado?.acciones.includes('sala:quitarNarradorVirtual');
+  const quitarVirtual = async () => {
+    const r = await pedirPropio('sala:quitarNarradorVirtual');
+    if (!r.ok) setAviso(r.error);
+    return r.ok;
+  };
   const puedeLevantarme = !!estado?.acciones.includes('sala:levantarse');
   const puedeDejarDeNarrar = !!estado?.acciones.includes('narrador:dejar');
   // Levantar o bajar la mano y elegir su forma (jugadores): con el atajo de
@@ -1383,6 +1412,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     ...(puedeHacermeNarrador
       ? [{ id: 'sala:hacerseNarrador', etiqueta: 'Hacerse narrador', elegir: hacermeNarrador }]
       : []),
+    ...(puedeAnadirVirtual
+      ? [{ id: 'sala:anadirNarradorVirtual', etiqueta: 'Añadir narrador virtual', abreDialogo: true, elegir: () => setAnadiendoVirtual(true) }]
+      : []),
+    ...(puedeQuitarVirtual ? [{ id: 'sala:quitarNarradorVirtual', etiqueta: 'Quitar narrador virtual', elegir: quitarVirtual }] : []),
     ...(puedeLevantarme ? [{ id: 'sala:levantarse', etiqueta: 'Levantarse del asiento', elegir: levantarme }] : []),
     ...(puedeDejarDeNarrar ? [{ id: 'narrador:dejar', etiqueta: 'Dejar de ser narrador', elegir: dejarDeNarrar }] : []),
   ];
@@ -1865,6 +1898,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           }
           derecha={
             <div className="flex items-center gap-2">
+              {/* Sin vídeo en la sala, la voz del narrador virtual va sola */}
+              {!estado?.video && controlVoz && <BotonVoz {...controlVoz} />}
               {estado?.video && (
                 <ControlesVideo
                   puedeEmitir={puedeEmitirVideo}
@@ -1882,6 +1917,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   sonidoBloqueado={video.sonidoBloqueado}
                   onActivarSonido={video.activarSonido}
                   silenciado={callado}
+                  motivoSilencio={estado.silencio ? 'El narrador ha pedido silencio.' : 'Ahora tiene la palabra otro jugador.'}
+                  voz={controlVoz}
                   silencio={
                     estado.acciones.includes('narrador:silencio')
                       ? {
@@ -2015,6 +2052,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   lateral ocupa lo que dejan los narradores, sin alargar la página */}
               <div className="flex w-full shrink-0 flex-col gap-4 lg:h-[calc(100vh-8rem)] lg:w-[23rem]">
                 <ZonaNarradores
+                  onAnadirVirtual={() => setAnadiendoVirtual(true)}
                   estado={estado}
                   pedir={pedirPropio}
                   onError={setAviso}
@@ -2213,6 +2251,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           />
         )}
 
+        {anadiendoVirtual && puedeAnadirVirtual && estado && (
+          <DialogoNarradorVirtual
+            sentados={estado.asientos.filter((a) => a.ocupante).length}
+            pedir={pedirPropio}
+            onCerrar={() => setAnadiendoVirtual(false)}
+          />
+        )}
         {preferenciasAbiertas && (
           <DialogoPreferencias pestanas={pestanasPreferencias} onCerrar={() => setPreferenciasAbiertas(false)} />
         )}

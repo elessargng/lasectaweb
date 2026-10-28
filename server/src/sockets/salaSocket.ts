@@ -10,6 +10,8 @@ import { ChatError, ChatService } from '../services/chat/ChatService';
 import { ConversacionError, ConversacionService } from '../services/conversaciones/ConversacionService';
 import { PaseVideo, VideollamadaError, VideollamadaService } from '../services/videollamada/VideollamadaService';
 import { accionesPermitidas, DependenciasSala, ejecutarAccion } from './salaAcciones';
+import { NarradorVirtualService } from '../services/narradorVirtual/NarradorVirtualService';
+import { temporizadorReal, type MesaNarrador } from '../services/narradorVirtual/puertos';
 
 /** Bajo /api para que pase por el mismo proxy que el resto de la API. */
 export const SALA_SOCKET_PATH = '/api/socket.io';
@@ -90,7 +92,36 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     for (const { socketId, clave } of sala.conexiones()) {
       io.to(socketId).emit('sala:estado', vista.para(sala.participanteDe(clave)!));
     }
+    // El narrador virtual mira si, con la sala así, le toca hacer algo
+    narradorVirtual.alCambiarSala();
   };
+
+  // El narrador virtual actúa como un narrador más: con las mismas acciones, y la sala se difunde
+  const mesaVirtual = (participanteId: string): MesaNarrador => ({
+    accion: async (nombre, datos) => {
+      const { expulsar: _expulsar, ...resultado } = await ejecutarAccion(sala, sala.buscar(participanteId), nombre, datos, depsSala);
+      if (resultado.ok) {
+        mandarGuionSiCambia();
+        difundir();
+      }
+      return resultado;
+    },
+  });
+  const narradorVirtual = new NarradorVirtualService(
+    sala,
+    mesaVirtual,
+    {
+      decir: (texto) => {
+        io.emit('sala:voz', { texto });
+        difundir();
+      },
+    },
+    deps.relojNarradorVirtual ?? temporizadorReal,
+    () => difundir(),
+    deps.azarNarradorVirtual,
+  );
+  // Las acciones también lo usan (añadirlo y quitarlo)
+  const depsSala: DependenciasSala = { ...deps, narradorVirtual };
 
   const conexionViva = (socketId: string) => io.sockets.sockets.has(socketId);
 
@@ -234,7 +265,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
         sala.participanteDe(clave),
         nombre,
         peticion?.datos,
-        deps,
+        depsSala,
       );
       if (typeof ack === 'function') ack(resultado);
       // Expulsados por un narrador: se les avisa y se cierra su conexión (sin reintento).

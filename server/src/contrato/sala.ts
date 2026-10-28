@@ -61,6 +61,8 @@ export interface SalaParticipante {
   estiloMano: string;
   /** Ha quitado el sonido: no oye a los demás (los demás lo ven junto a su nombre). */
   sinSonido: boolean;
+  /** Es un narrador virtual (no una persona): cuál. */
+  virtual?: IdNarradorVirtual;
   /**
    * Un visitante puede pedir ver el grimorio del narrador: «solicitado» mientras
    * el narrador responde; «concedido», lo ve como él (todos los personajes) y ya
@@ -565,8 +567,67 @@ export interface SalaDespertar {
   mensajes: MensajeDespertar[];
 }
 
+/**
+ * Los narradores virtuales: llevan la partida solos, sin una persona de narrador.
+ * «Tonto y tú» elige siempre al azar; Jarvis sale, pero aún no se puede elegir.
+ */
+export const NARRADORES_VIRTUALES = [
+  { id: 'tontoYTu', nombre: 'Tonto y tú', descripcion: 'Elige siempre al azar.', disponible: true },
+  { id: 'jarvis', nombre: 'Jarvis', descripcion: 'Próximamente.', disponible: false },
+] as const;
+export type IdNarradorVirtual = (typeof NARRADORES_VIRTUALES)[number]['id'];
+
+/** Los guiones que puede llevar un narrador virtual (los predeterminados, por su id). */
+export const GUIONES_NARRADOR_VIRTUAL = [{ id: 'troublebrewing', nombre: 'Trouble Brewing' }] as const;
+export type GuionNarradorVirtual = (typeof GUIONES_NARRADOR_VIRTUAL)[number]['id'];
+
+/** Cuántos jugadores puede tener una partida con narrador virtual. */
+export const JUGADORES_NARRADOR_VIRTUAL = { min: 7, max: 15 } as const;
+
+/** Por dónde va la partida del narrador virtual. */
+export type EtapaNarradorVirtual =
+  | 'esperandoJugadores'
+  | 'noche'
+  | 'privados'
+  | 'puestaEnComun'
+  | 'nominaciones'
+  | 'violinista'
+  | 'revelando';
+
+/** El narrador virtual de la sala, para todos. */
+export interface SalaNarradorVirtual {
+  id: IdNarradorVirtual;
+  /** Su participante (con `rol: 'narrador'` y `virtual`). */
+  participante: string;
+  /** Quien lo añadió: el único que puede quitarlo. */
+  creador: string;
+  guion: GuionNarradorVirtual;
+  jugadores: number;
+  etapa: EtapaNarradorVirtual;
+  /** Lo último que ha dicho (se oye con la voz y sale escrito junto a su cuadro). */
+  frase: string | null;
+  /**
+   * En una nominación, quién tiene la palabra: el que nomina acusa (y pasa a la
+   * «Defensa»), el nominado se defiende (y pasa al «Voto») y se vota. null sin nominación.
+   */
+  turno: TurnoNominacion | null;
+  /** Los jugadores listos para pasar a la noche (quien ya ha nominado lo está siempre). */
+  listos: string[];
+  /** Quienes ya se han declarado Exterminador y han disparado (una vez por partida). */
+  exterminadores: string[];
+}
+
+export type TurnoNominacion = 'acusacion' | 'defensa' | 'votacion';
+
 /** Lo que el servidor manda a cada cliente cada vez que cambia la sala. */
 export interface SalaEstado {
+  /** El narrador virtual, si lo hay. */
+  narradorVirtual: SalaNarradorVirtual | null;
+  /**
+   * Quien tiene la palabra en la mesa (el narrador virtual, al nominar): los demás
+   * jugadores tienen el micrófono cerrado. null: hablan todos.
+   */
+  palabra: string | null;
   participantes: SalaParticipante[];
   /** Los asientos de la mesa, en orden: el primero a las 12 y siguiendo como las agujas del reloj. */
   asientos: SalaAsiento[];

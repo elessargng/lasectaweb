@@ -42,6 +42,21 @@ export class Cliente {
     return this.estado.asientos.find((a) => a.ocupante === this.id);
   }
 
+  /**
+   * Espera a que el estado cumpla algo (lo que hace solo el narrador virtual llega
+   * cuando llega, no tras una acción de este cliente).
+   */
+  async esperarQue(cumple: (estado: SalaEstado) => boolean, espera = ESPERA_MAX_MS): Promise<void> {
+    const limite = Date.now() + espera;
+    while (!this.ultimo || !cumple(this.ultimo)) {
+      if (Date.now() > limite) throw new Error(`${this.nombre}: el estado no ha llegado a lo esperado a tiempo`);
+      await new Promise<void>((resolver) => {
+        this.avisos.push(resolver);
+        setTimeout(resolver, 50);
+      });
+    }
+  }
+
   /** Espera a haber recibido más de `n` estados. */
   async esperarMasDe(n: number): Promise<void> {
     const limite = Date.now() + ESPERA_MAX_MS;

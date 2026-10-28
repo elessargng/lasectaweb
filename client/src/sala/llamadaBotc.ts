@@ -13,9 +13,19 @@ export interface LlamadaBotc {
   visibles: boolean;
   /** Se esconden (al usar uno de ellos). */
   ocultar: () => void;
+  /** Los iconos de llamar y escribir: los de botc.app o los de siempre (Preferencias > Interfaz, aparte de la llamada). */
+  iconos: IconosLlamada;
 }
 
-export const LlamadaBotcContexto = createContext<LlamadaBotc>({ activa: false, visibles: false, ocultar: () => {} });
+/** Los iconos de llamar y de mandar un mensaje (Preferencias > Interfaz). */
+export const ICONOS_LLAMADA = [
+  { id: 'normal', nombre: 'Teléfono y bocadillo', descripcion: 'Los de siempre' },
+  { id: 'botc', nombre: 'Bocadillos y sobre', descripcion: 'Los de botc.app' },
+] as const;
+export type IconosLlamada = (typeof ICONOS_LLAMADA)[number]['id'];
+export const esIconosLlamada = (v: unknown): v is IconosLlamada => ICONOS_LLAMADA.some((i) => i.id === v);
+
+export const LlamadaBotcContexto = createContext<LlamadaBotc>({ activa: false, visibles: false, ocultar: () => {}, iconos: 'normal' });
 
 export const useLlamadaBotc = () => useContext(LlamadaBotcContexto);
 

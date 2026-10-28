@@ -140,6 +140,12 @@ describe('despertar guiado', () => {
       m.sala.despertarHabilidad('fortuneteller');
       expect(m.ultimo(0)?.eleccion).toEqual({ cantidad: 2, puedeElegirse: true });
       m.elegir(0, 1, 2);
+      // Aunque sea seguro, la revisa el narrador (que no se note por lo que tarda): «Sí», propuesto
+      const f = m.fila('fortuneteller')!;
+      expect(f.estado).toBe('revisar');
+      expect(f.opciones.map((o) => o.envio.ficha)).toEqual(['si']);
+      expect(m.ultimo(0)?.ficha).toBeFalsy();
+      m.sala.resolverHabilidad('fortuneteller', f.opciones[0].envio);
       expect(m.ultimo(0)?.ficha).toBe('si');
     });
 
@@ -162,6 +168,9 @@ describe('despertar guiado', () => {
       expect(m.fila('ravenkeeper')?.estado).toBe('listo');
       m.sala.despertarHabilidad('ravenkeeper');
       m.elegir(0, 2);
+      const f = m.fila('ravenkeeper')!;
+      expect(f.estado).toBe('revisar');
+      m.sala.resolverHabilidad('ravenkeeper', f.opciones[0].envio);
       expect(m.ultimo(0)).toMatchObject({ tarjeta: 'esteJugadorEs', jugadores: [m.asiento(2).id], personajes: ['imp'] });
     });
   });

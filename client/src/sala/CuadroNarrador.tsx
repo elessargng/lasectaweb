@@ -37,6 +37,11 @@ interface CuadroNarradorProps {
    * encima del retrato, apoyada en su borde de abajo. Decorativa: el NPC ya sale en la pestaña NPCs.
    */
   npc?: PersonajeMostrado;
+  /**
+   * Un narrador virtual: lo último que ha dicho (también se oye con la voz), escrito
+   * debajo de su nombre. No va en aria-live: ya lo dice en voz alta.
+   */
+  frase?: string | null;
 }
 
 /**
@@ -65,6 +70,7 @@ const CuadroNarrador = ({
   escuchando = false,
   silenciado = false,
   npc,
+  frase,
 }: CuadroNarradorProps) => {
   const { todosPorId } = useFichas();
   return (
@@ -111,7 +117,13 @@ const CuadroNarrador = ({
               <span className="sr-only"> (en una conversación privada{enConversacion && ` ${enConversacion}`})</span>
             )}
             {escuchando && <span className="sr-only"> (escuchando una conversación)</span>}
+            {narrador.virtual && <span className="block text-xs font-normal italic text-on-surface-muted">narrador virtual</span>}
           </p>
+          {frase && (
+            <p className="mx-auto mt-1 max-w-[var(--sala-avatar)] rounded-[3px] border border-outline-ghost bg-background/70 px-2 py-1 text-center text-xs italic text-on-surface">
+              «{frase}»
+            </p>
+          )}
         </>
       }
     />

@@ -7,6 +7,8 @@ const DURACION_MS = 8000;
 
 /** El texto del aviso: da la vuelta entera a la mesa, con un adorno donde se cierra. */
 export const TEXTO_GONG = '¡Por favor, regresad a la plaza del pueblo YA!';
+/** De noche no se vuelve a la plaza: el gong es para que el despertado atienda (el narrador virtual lo toca si no contesta). */
+export const TEXTO_GONG_NOCHE = '¡Presta atención a tu narrador!';
 
 // El círculo del texto, en las unidades del viewBox (0 0 200 200): empieza arriba y va
 // en el sentido del reloj, así las letras miran hacia fuera, como en la mesa del juego.
@@ -30,13 +32,18 @@ const AvisoGong = ({
   ahora,
   mesaRef,
   onAnuncio,
+  noche = false,
 }: {
   gong: number | null;
   ahora: number;
+  /** Es de noche: el texto es otro (ver TEXTO_GONG_NOCHE). */
+  noche?: boolean;
   mesaRef: RefObject<HTMLDivElement | null>;
   onAnuncio: (mensaje: string) => void;
 }) => {
   const [visible, setVisible] = useState<number | null>(null);
+  // El texto, el de cuando sonó (si amanece con el aviso a la vista, no cambia)
+  const [texto, setTexto] = useState(TEXTO_GONG);
   const [sitio, setSitio] = useState<CSSProperties | null>(null);
   const id = useId();
 
@@ -70,9 +77,11 @@ const AvisoGong = ({
 
   useEffect(() => {
     if (gong === null || ahora - gong > DURACION_MS / 2) return;
+    const elTexto = noche ? TEXTO_GONG_NOCHE : TEXTO_GONG;
     setVisible(gong);
+    setTexto(elTexto);
     tocarGong();
-    onAnuncio(`El narrador ha sonado el gong: ${TEXTO_GONG}`);
+    onAnuncio(`El narrador ha sonado el gong: ${elTexto}`);
     const t = window.setTimeout(() => setVisible(null), DURACION_MS);
     return () => window.clearTimeout(t);
     // Solo al llegar un gong nuevo (ahora cambia con cada mensaje de la sala)
@@ -113,7 +122,7 @@ const AvisoGong = ({
           {[relleno, brillo].map((pintura) => (
             <text key={pintura} className={pintura === brillo ? 'sala-gong-texto sala-gong-destello' : 'sala-gong-texto'} fill={`url(#${pintura})`} dominantBaseline="central">
               <textPath href={`#${camino}`} textLength={VUELTA * 0.985} lengthAdjust="spacing">
-                {TEXTO_GONG.toUpperCase()} ✦
+                {texto.toUpperCase()} ✦
               </textPath>
             </text>
           ))}

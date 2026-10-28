@@ -1,0 +1,141 @@
+import { useState, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  GUIONES_NARRADOR_VIRTUAL,
+  JUGADORES_NARRADOR_VIRTUAL,
+  NARRADORES_VIRTUALES,
+  type GuionNarradorVirtual,
+  type IdNarradorVirtual,
+} from '@contrato/sala';
+import Dialog from '../components/Dialog';
+import { useAriaLive } from './avisosConfig';
+import { botonPrincipal, botonSecundario, campo } from './estilos';
+import type { SalaResultado } from './useSala';
+
+interface DialogoNarradorVirtualProps {
+  /** Cuántos hay ya sentados: no se puede pedir una partida de menos. */
+  sentados: number;
+  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  onCerrar: () => void;
+}
+
+const { min, max } = JUGADORES_NARRADOR_VIRTUAL;
+const NUMEROS = Array.from({ length: max - min + 1 }, (_, i) => min + i);
+
+/**
+ * En lugar de hacerse narrador: añadir un narrador virtual que lleva la partida
+ * solo. Se elige el guion, cuántos jugadores y qué narrador (los que aún no se
+ * pueden elegir salen desactivados, con el motivo). Al añadirlo, prepara la
+ * mesa y espera a que se llene. Al abrirse, el foco va al título.
+ */
+const DialogoNarradorVirtual = ({ sentados, pedir, onCerrar }: DialogoNarradorVirtualProps) => {
+  const [guion, setGuion] = useState<GuionNarradorVirtual>(GUIONES_NARRADOR_VIRTUAL[0].id);
+  const [jugadores, setJugadores] = useState(Math.min(max, Math.max(min, sentados)));
+  const [narrador, setNarrador] = useState<IdNarradorVirtual>(NARRADORES_VIRTUALES.find((n) => n.disponible)!.id);
+  const [error, setError] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const ariaLive = useAriaLive('errores');
+
+  const anadir = async (e: FormEvent) => {
+    e.preventDefault();
+    if (enviando) return;
+    setEnviando(true);
+    setError('');
+    const r = await pedir('sala:anadirNarradorVirtual', { narrador, guion, jugadores });
+    setEnviando(false);
+    if (r.ok) onCerrar();
+    else setError(r.error);
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sala-velo">
+      <Dialog
+        onClose={onCerrar}
+        labelledBy="sala-virtual-titulo"
+        describedBy="sala-virtual-texto"
+        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-y-auto sala-cofre sala-cofre-esquinas p-6"
+      >
+        <form onSubmit={(e) => void anadir(e)} className="flex flex-col gap-4" noValidate>
+          <h2 id="sala-virtual-titulo" className="sala-cofre-titulo">
+            Añadir narrador virtual
+          </h2>
+          <p id="sala-virtual-texto" className="text-sm text-on-surface-muted">
+            Lleva la partida solo: prepara la mesa, espera a que se llene, reparte y narra las noches y los días.
+          </p>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="sala-virtual-guion" className="font-ui text-xs">
+              Guion
+            </label>
+            <select
+              id="sala-virtual-guion"
+              value={guion}
+              onChange={(e) => setGuion(e.target.value as GuionNarradorVirtual)}
+              className={`${campo} text-sm`}
+            >
+              {GUIONES_NARRADOR_VIRTUAL.map((g) => (
+                <option key={g.id} value={g.id} lang="en">
+                  {g.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="sala-virtual-jugadores" className="font-ui text-xs">
+              Jugadores
+            </label>
+            <select
+              id="sala-virtual-jugadores"
+              value={jugadores}
+              onChange={(e) => setJugadores(Number(e.target.value))}
+              aria-describedby={sentados > min ? 'sala-virtual-sentados' : undefined}
+              className={`${campo} text-sm`}
+            >
+              {NUMEROS.map((n) => (
+                <option key={n} value={n} disabled={n < sentados}>
+                  {n}
+                </option>
+              ))}
+            </select>
+            {sentados > min && (
+              <p id="sala-virtual-sentados" className="text-xs text-on-surface-muted">
+                Ya hay {sentados} sentados: como poco, {sentados}.
+              </p>
+            )}
+          </div>
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 font-ui text-xs">Narrador</legend>
+            {NARRADORES_VIRTUALES.map((n) => (
+              <label key={n.id} className={`flex items-start gap-2 text-sm ${n.disponible ? 'cursor-pointer' : 'text-on-surface-muted'}`}>
+                <input
+                  type="radio"
+                  name="sala-virtual-narrador"
+                  value={n.id}
+                  checked={narrador === n.id}
+                  disabled={!n.disponible}
+                  onChange={() => setNarrador(n.id)}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="font-semibold">{n.nombre}</span>
+                  <span className="block text-xs text-on-surface-muted">{n.descripcion}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+          <div aria-live={ariaLive}>{error && <p className="text-sm text-blood-pale">{error}</p>}</div>
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={onCerrar} className={botonSecundario}>
+              Cancelar
+            </button>
+            <button type="submit" aria-disabled={enviando} className={botonPrincipal}>
+              Añadir narrador virtual
+            </button>
+          </div>
+        </form>
+      </Dialog>
+    </div>,
+    document.body,
+  );
+};
+
+export default DialogoNarradorVirtual;

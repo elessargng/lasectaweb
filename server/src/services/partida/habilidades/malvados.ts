@@ -1,5 +1,6 @@
 import { NUM_FAROLES, type SalaAsiento, type SalaEnvioDespertar } from '../../../contrato/sala';
 import { falta, listoVarios, tarjeta, tipoDe, type ContextoNoche, type HabilidadNocturna, type Resultado } from './HabilidadNocturna';
+import type { TramoNoche } from './HabilidadNocturna';
 
 /**
  * La primera noche, los esbirros y el demonio se conocen (filas «Esbirros» y
@@ -19,6 +20,7 @@ const ids = (asientos: SalaAsiento[]) => asientos.map((a) => a.id);
 abstract class InformacionMalvada implements HabilidadNocturna {
   readonly eleccion = null;
   readonly despiertaAlMorir = false;
+  readonly tramo: TramoNoche = 'malvados';
 
   constructor(
     /** La fila del orden de noche (y de su ficha recordatorio). */

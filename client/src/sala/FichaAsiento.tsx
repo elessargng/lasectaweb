@@ -43,6 +43,13 @@ interface FichaAsientoProps {
   /** Ya ha nominado hoy: «Nominar a…» lo avisa (pero deja). */
   yaNomino?: boolean;
   /**
+   * Con narrador virtual, lo que puede hacer un jugador con esta ficha («Nominar»,
+   * «Exterminar jugador»), detrás de lo de su grimorio.
+   */
+  opcionesJugador?: OpcionMenu[];
+  /** Con narrador virtual, de día: su jugador está listo para pasar a la noche (se ve y se dice). */
+  listo?: boolean;
+  /**
    * Se está eligiendo a quién nomina una ficha: esta es un botón para elegirla
    * (también la que nomina, que se nominaría a sí misma; se distingue con un aro blanco).
    * También al elegir a alguien en la plaza para el despertar: `accion` es el verbo
@@ -121,6 +128,8 @@ const FichaAsiento = ({
   onError,
   onNominar,
   yaNomino = false,
+  opcionesJugador = [],
+  listo = false,
   eligiendo,
   voto,
   revelando,
@@ -304,6 +313,7 @@ const FichaAsiento = ({
     recordatorios.length > 0 &&
       `recordatorios: ${recordatorios.map((r) => describirRecordatorio(r, todosPorId.get(r.personaje))).join(', ')}`,
     senal,
+    listo && 'lista para la noche',
     seguir?.siguiendo && 'siguiendo',
   ].filter(Boolean);
   // En el botón de seguir (visitantes) no hace falta: lo dice aria-pressed
@@ -501,7 +511,7 @@ const FichaAsiento = ({
             : []),
         ]
       : // En su grimorio, el jugador solo cambia los personajes (lo demás es de la partida).
-        [cambiarFicha, ...opcionesAlineamiento, opcionRecordatorio, ...opcionNota];
+        [...opcionesJugador, cambiarFicha, ...opcionesAlineamiento, opcionRecordatorio, ...opcionNota];
   if (seguir) {
     opciones.push({
       id: 'seguir',
@@ -527,6 +537,15 @@ const FichaAsiento = ({
         botonClassName="relative block cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         opciones={opciones}
       />
+      {listo && (
+        // Listo para la noche (se dice en su descripción): un rótulo bajo la ficha
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-full border border-gold bg-background px-1.5 font-ui text-[0.6rem] font-semibold uppercase tracking-wider text-gold-bright"
+        >
+          Listo
+        </span>
+      )}
       {eligiendoRecordatorio && (
         <DialogoRecordatorio
           ficha={nombreFicha.replace(/^Ficha del /, '')}

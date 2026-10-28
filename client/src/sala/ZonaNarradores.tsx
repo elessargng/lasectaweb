@@ -6,7 +6,7 @@ import type { PistasParticipante } from './useVideollamada';
 import CuadroAvatar from './CuadroAvatar';
 import CuadroNarrador from './CuadroNarrador';
 import { useFichas } from './fichas';
-import { botonPrincipal } from './estilos';
+import { botonPrincipal, botonSecundario } from './estilos';
 import { ID_SIN_NARRADOR } from './ids';
 import type { SalaEstado, SalaParticipante, SalaResultado } from './useSala';
 
@@ -20,17 +20,20 @@ interface ZonaNarradoresProps {
   contacto?: (participante: SalaParticipante) => ContactoParticipante | undefined;
   /** Lo que se ve y se oye de cada uno en la mesa. */
   pistas?: Map<string, PistasParticipante>;
+  /** Abre el diálogo para añadir un narrador virtual (ver DialogoNarradorVirtual). */
+  onAnadirVirtual: () => void;
 }
 
 /**
  * Arriba a la izquierda: un cuadro por narrador, uno al lado del otro. Sin
  * narrador, un cuadro vacío con «Hacerse narrador» dentro si el servidor lo
- * permite (`estado.acciones`); también está en el menú de usuario. Las opciones
+ * permite (`estado.acciones`), y «Narrador virtual» para añadir uno que lleve la
+ * partida solo; los dos están también en el menú de usuario. Las opciones
  * del narrador van en la cabecera (MenuNarrador).
  *
  * Debajo, para los narradores, quién pide ver el grimorio.
  */
-const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas }: ZonaNarradoresProps) => {
+const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas, onAnadirVirtual }: ZonaNarradoresProps) => {
   // El Deus Ex Fiasco en juego (NPC): su ficha va debajo del retrato del narrador
   const { todosPorId } = useFichas();
   const deusExFiasco = estado.npcs.includes('deusexfiasco') ? todosPorId.get('deusexfiasco') : undefined;
@@ -64,7 +67,9 @@ const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas }: ZonaNarrad
                 narrador={n}
                 esYo={n.id === estado.yo}
                 npc={deusExFiasco}
-                contacto={contacto?.(n)}
+                // El virtual no conversa ni enseña su grimorio: dice lo que va pasando
+                frase={n.virtual ? estado.narradorVirtual?.frase ?? null : undefined}
+                contacto={n.virtual ? undefined : contacto?.(n)}
                 video={pistas?.get(n.id)?.video}
                 espejo={n.id === estado.yo}
                 hablando={pistas?.get(n.id)?.hablando}
@@ -105,6 +110,11 @@ const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas }: ZonaNarrad
                   className={`${botonPrincipal} px-2 py-1 text-xs`}
                 >
                   Hacerse narrador
+                </button>
+              )}
+              {puede('sala:anadirNarradorVirtual') && (
+                <button type="button" onClick={onAnadirVirtual} aria-haspopup="dialog" className={`${botonSecundario} px-2 py-1 text-xs`}>
+                  Narrador virtual
                 </button>
               )}
             </div>

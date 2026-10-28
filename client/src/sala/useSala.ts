@@ -87,6 +87,8 @@ export function useSala(
     alMensaje?: (mensaje: SalaMensaje) => void;
     /** Dos jugadores se han escrito en privado: las ondas de un asiento al otro. */
     alSusurro?: (susurro: SalaSusurro) => void;
+    /** El narrador virtual dice algo (para oírlo con la voz del navegador). */
+    alVoz?: (texto: string) => void;
   } = {},
 ) {
   const [estado, setEstado] = useState<SalaEstado | null>(null);
@@ -140,6 +142,7 @@ export function useSala(
       avisosRef.current.alMensaje?.(mensaje);
     });
     socket.on('sala:susurro', (susurro: SalaSusurro) => avisosRef.current.alSusurro?.(susurro));
+    socket.on('sala:voz', ({ texto }: { texto: string }) => avisosRef.current.alVoz?.(texto));
     socket.on('connect', () => {
       expulsada = false;
       setConexion('conectada');

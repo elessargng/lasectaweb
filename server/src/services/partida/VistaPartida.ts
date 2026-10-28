@@ -165,6 +165,8 @@ export class VistaPartida {
           ? comun.despertares.filter((d) => d.asiento === sala.asientoDespiertoDe(yo.id))
           : [],
       grimorioRecibido: yo.rol === 'jugador' ? sala.grimorioRecibidoPor(yo.id) : null,
+      narradorVirtual: sala.narradorVirtual(),
+      palabra: sala.palabra(),
       yo: yo.id,
       acciones: contexto.accionesDe(yo),
     };

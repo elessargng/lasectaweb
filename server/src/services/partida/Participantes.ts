@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import {
   SALA_PARTIDAS_NOVATO,
+  type IdNarradorVirtual,
   type SalaAccesoGrimorio,
   type SalaFormaMano,
   type SalaParticipante,
@@ -77,6 +78,8 @@ interface Entrada {
    * acceso al grimorio): su cuenta o, si es invitado, su navegador.
    */
   recuerdo: string;
+  /** Un narrador virtual: no tiene conexión, pero está siempre (no se desconecta). */
+  virtual?: boolean;
 }
 
 /**
@@ -185,6 +188,42 @@ export class Participantes {
       recuerdo,
     });
     return { clave, id, expulsar: null };
+  }
+
+  /**
+   * Entra un narrador virtual: un participante narrador sin conexión (no es una
+   * persona, no se desconecta). Sale con `expulsar`. Devuelve su id.
+   */
+  anadirVirtual(nombre: string, avatar: string, virtual: IdNarradorVirtual): string {
+    const id = randomUUID();
+    const clave = `virtual:${id}`;
+    this.entradas.set(clave, {
+      participante: {
+        id,
+        nombre,
+        conCuenta: false,
+        usuarioId: null,
+        novato: false,
+        avatar,
+        rol: 'narrador',
+        conectado: true,
+        manoLevantada: false,
+        dosManos: false,
+        accesoGrimorio: 'ninguno',
+        formaMano: 'palma',
+        estiloMano: 'defecto',
+        sinSonido: false,
+        virtual,
+      },
+      identidad: clave,
+      nombreBase: nombre,
+      avatarPorDefecto: avatar,
+      socketId: null,
+      expulsion: null,
+      recuerdo: clave,
+      virtual: true,
+    });
+    return id;
   }
 
   /** La conexión nueva se queda con la entrada: mismo participante y papel. */
@@ -354,7 +393,7 @@ export class Participantes {
 
   /** Los que siguen en la sala, también los que esperan reconexión, por orden de llegada. */
   participantes(): SalaParticipante[] {
-    return [...this.entradas.values()].map((e) => ({ ...e.participante, conectado: e.socketId !== null }));
+    return [...this.entradas.values()].map((e) => ({ ...e.participante, conectado: e.socketId !== null || !!e.virtual }));
   }
 
   /** Conexiones activas con la clave y el id de participante de cada una. */

@@ -121,6 +121,15 @@ describe('reglas de los personajes', () => {
       expect(sala.nominacion()).not.toBeNull();
     });
 
+    it('a un forastero (el Santo), un esbirro o un demonio que la nomina no lo ejecuta: solo a los aldeanos', () => {
+      for (const nominador of ['saint', 'poisoner', 'imp']) {
+        const { sala, asiento, ejecucion } = nominaALaVirgen(nominador);
+        expect(ejecucion).toBeNull();
+        expect(asiento(0).muerto).toBe(false);
+        expect(sala.nominacion()).not.toBeNull();
+      }
+    });
+
     it('envenenada o siendo el Borracho, la pierde sin ejecutar', () => {
       const envenenada = nominaALaVirgen('chef', (s, a) => s.ponerRecordatorio(a(1).id, { personaje: 'poisoner', indice: 0, texto: 'Poisoned' }));
       expect(envenenada.ejecucion).toBeNull();

@@ -33,6 +33,8 @@ import { descuadres } from './comprobarReparto';
 import IconoDespertar from './IconoDespertar';
 import ManoLevantada from './ManoLevantada';
 import PanelNominacion from './PanelNominacion';
+import PanelDiaVirtual from './PanelDiaVirtual';
+import type { OpcionMenu } from './MenuDesplegable';
 import { ManosSenalamiento, PanelSenalamiento } from './Senalamiento';
 import { resultadoSenalamiento, senalDeFicha, useSenalamientoCongelado } from './senales';
 import { botonPrincipal, botonSecundario } from './estilos';
@@ -271,6 +273,23 @@ const Mesa = ({
   const senalamiento = estado.senalamiento;
   const senalCongelada = useSenalamientoCongelado(senalamiento, desfaseReloj);
   const miAsiento = asientos.find((a) => a.ocupante === yo)?.id ?? null;
+  // Con narrador virtual: lo que un jugador hace desde la ficha de otro (nominarlo, dispararle)
+  const actuarSobre = (accion: string, asientoId: string) => async () => {
+    const r = await pedir(accion, { asientoId });
+    if (!r.ok) onError(r.error);
+    // false: el menú se cierra y el foco vuelve a la ficha
+    return false;
+  };
+  const opcionesJugador = (asientoId: string): OpcionMenu[] =>
+    asientoId === miAsiento
+      ? []
+      : [
+          ...(acciones.includes('jugador:nominar') ? [{ id: 'jugador:nominar', etiqueta: 'Nominar', elegir: actuarSobre('jugador:nominar', asientoId) }] : []),
+          ...(acciones.includes('jugador:exterminar')
+            ? [{ id: 'jugador:exterminar', etiqueta: 'Exterminar jugador', elegir: actuarSobre('jugador:exterminar', asientoId) }]
+            : []),
+        ];
+  const listos = new Set(estado.narradorVirtual?.etapa === 'nominaciones' ? estado.narradorVirtual.listos : []);
   const senalo =
     !!senalamiento && !senalCongelada && !!miAsiento && senalamiento.senaladores.includes(miAsiento) && acciones.includes('jugador:senalar');
   const miSenal = senalamiento && miAsiento ? (senalamiento.senales[miAsiento] ?? null) : null;
@@ -615,8 +634,19 @@ const Mesa = ({
   // Las fichas solo se ven (sin menú, sin seguir ni despertares): el asiento ya dice lo que lleva la suya
   const capaOculta = modoFichas === 'ver' && !seguimiento && !despertares;
   // Algo en el centro de la mesa (ver abajo): la ciudad se vela para dejarlo leer
+  // Con narrador virtual, de día, el jugador sentado tiene su panel (Defensa, Voto, Listo…)
+  const panelDiaVirtual = !!miAsiento && ['privados', 'puestaEnComun', 'nominaciones'].includes(estado.narradorVirtual?.etapa ?? '');
   const centroOcupado = !!(
-    estado.reloj || nominacion?.cuentaAtrasFin || nominar.panel || nominar.cancelar || eleccion || editando || revelacion || estado.fichasRetenidas || senalamiento
+    estado.reloj ||
+    nominacion?.cuentaAtrasFin ||
+    nominar.panel ||
+    nominar.cancelar ||
+    eleccion ||
+    editando ||
+    revelacion ||
+    estado.fichasRetenidas ||
+    senalamiento ||
+    panelDiaVirtual
   );
 
   return (
@@ -773,6 +803,8 @@ const Mesa = ({
                       onError={onError}
                       onNominar={nominar.onNominar?.(a.id)}
                       yaNomino={nominar.yaNomino(a.id)}
+                      opcionesJugador={opcionesJugador(a.id)}
+                      listo={!!ocupante && listos.has(ocupante.id)}
                       eligiendo={eligiendo}
                       voto={nominacion?.votacion?.resultados[a.id]}
                       reloj={!!nominacion && !revelacion}
@@ -966,7 +998,13 @@ const Mesa = ({
       )}
 
       {/* El gong del narrador: el aviso de volver a la plaza, alrededor de la mesa */}
-      <AvisoGong gong={estado.gong} ahora={estado.ahora} mesaRef={mesaRef} onAnuncio={(m) => onAnuncio('gong', m)} />
+      <AvisoGong
+        gong={estado.gong}
+        ahora={estado.ahora}
+        noche={estado.fase.momento === 'noche'}
+        mesaRef={mesaRef}
+        onAnuncio={(m) => onAnuncio('gong', m)}
+      />
 
       {agujas && (
         <Agujas
@@ -1090,6 +1128,11 @@ const Mesa = ({
           {nominar.panel && (
             <div className="sala-cofre p-4">
               <PanelNominacion {...nominar.panel} />
+            </div>
+          )}
+          {panelDiaVirtual && (
+            <div className="sala-cofre p-4">
+              <PanelDiaVirtual estado={estado} pedir={pedir} onError={onError} />
             </div>
           )}
           {editando && (
