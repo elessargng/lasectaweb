@@ -1,44 +1,31 @@
-import { barajar } from '../../../contrato/bolsaAleatoria';
 import type { Azar } from '../puertos';
-import type { EstrategiaNarrador } from './EstrategiaNarrador';
+import type { Decision, EstrategiaNarrador, PreguntaSiONo } from './EstrategiaNarrador';
 
-/** Lo que espera en cada paso de la noche: entre estos ms. */
-const ESPERA_PASO = { min: 2000, max: 6000 };
-/** Las veces que un rol de información droison recibe la de verdad (las demás, una falsa al azar). */
-export const VERDAD_DROISON = 0.1;
-
-/** «Tonto y tú»: elige siempre al azar entre lo que se puede. */
+/**
+ * «Tonto y tú»: elige siempre al azar entre lo que se puede, con el peso que
+ * aconseja la mesa en cada opción, y contesta sí o no con la probabilidad que
+ * aconseja (o a cara o cruz). No mira el grimorio.
+ */
 export class TontoYTu implements EstrategiaNarrador {
   constructor(private readonly sorteo: Azar = Math.random) {}
 
-  azar(): number {
-    return this.sorteo();
+  async elegir<T>({ opciones }: Decision<T>): Promise<T> {
+    return this.elegirAhora(opciones).valor;
   }
 
-  elegirUno<T>(opciones: readonly T[]): T {
+  async siONo({ probabilidad = 0.5 }: PreguntaSiONo): Promise<boolean> {
+    return this.sorteo() < probabilidad;
+  }
+
+  /** Lo mismo, sin esperar (lo usa el respaldo de Jarvis). */
+  elegirAhora<O extends { peso?: number }>(opciones: readonly O[]): O {
     if (opciones.length === 0) throw new Error('No hay nada entre lo que elegir.');
-    return opciones[Math.floor(this.sorteo() * opciones.length)];
-  }
-
-  barajar<T>(opciones: readonly T[]): T[] {
-    return barajar(opciones, this.sorteo);
-  }
-
-  /**
-   * Prefiere aldeanos, con un forastero como mucho: entre los aldeanos libres y uno
-   * solo de los forasteros libres (al azar), van saliendo de uno en uno. Con 5
-   * aldeanos y 2 forasteros, se sacan 3 de 6.
-   */
-  elegirFaroles(aldeanos: readonly string[], forasteros: readonly string[], cuantos: number): string[] {
-    const bolsa = [...aldeanos, ...(forasteros.length ? [this.elegirUno(forasteros)] : [])];
-    return this.barajar(bolsa).slice(0, cuantos);
-  }
-
-  esperaPaso(): number {
-    return ESPERA_PASO.min + Math.floor(this.sorteo() * (ESPERA_PASO.max - ESPERA_PASO.min));
-  }
-
-  droisonDaLaVerdad(): boolean {
-    return this.sorteo() < VERDAD_DROISON;
+    const total = opciones.reduce((s, o) => s + (o.peso ?? 1), 0);
+    let tirada = this.sorteo() * total;
+    for (const o of opciones) {
+      tirada -= o.peso ?? 1;
+      if (tirada < 0) return o;
+    }
+    return opciones[opciones.length - 1];
   }
 }

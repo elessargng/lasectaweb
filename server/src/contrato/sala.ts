@@ -127,6 +127,11 @@ export interface SalaAsiento {
    * Los ven quien se sienta ahí y quien ve el personaje del asiento.
    */
   faroles: (string | null)[];
+  /**
+   * El farol que dice estar usando (uno de `faroles`), o null: el personaje por el
+   * que se hace pasar. Lo ven los mismos que ven sus faroles (y el narrador).
+   */
+  farolEnUso: string | null;
 }
 
 /** Cuántos faroles hay: los del narrador y los de cada asiento. */
@@ -573,7 +578,7 @@ export interface SalaDespertar {
  */
 export const NARRADORES_VIRTUALES = [
   { id: 'tontoYTu', nombre: 'Tonto y tú', descripcion: 'Elige siempre al azar.', disponible: true },
-  { id: 'jarvis', nombre: 'Jarvis', descripcion: 'Próximamente.', disponible: false },
+  { id: 'jarvis', nombre: 'Jarvis', descripcion: 'Decide con el modelo JEV, con tu endpoint y tu key.', disponible: true },
 ] as const;
 export type IdNarradorVirtual = (typeof NARRADORES_VIRTUALES)[number]['id'];
 

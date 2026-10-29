@@ -19,6 +19,8 @@ export interface EntornoDespertarGuiado {
   despertar: (asientoId: string) => string | null;
   /** Manda algo del narrador a un asiento (con `eleccion`, se le pide que elija). */
   mandar: (asientoId: string, envio: SalaEnvioDespertar, eleccion?: SalaEleccionDespertar) => void;
+  /** A lo último que se le ha mandado a un asiento aún le falta el «Entendido» (ver Despertares.porEntender). */
+  porEntender: (asientoId: string) => boolean;
   /** Pone un recordatorio de un personaje (por su texto) en un asiento; único en la mesa. */
   ponerRecordatorio: (asientoId: string, personaje: string, texto: string) => void;
   /** Mata de noche (la muerte queda pendiente). */
@@ -29,6 +31,12 @@ export interface EntornoDespertarGuiado {
 }
 
 /** Lo que ya se ha hecho esta noche con una habilidad. */
+/** Lo que se le manda a un asiento: un despertar. */
+interface Envio {
+  envio: SalaEnvioDespertar;
+  eleccion?: SalaEleccionDespertar;
+}
+
 interface Turno {
   personaje: string;
   asiento: string;
@@ -44,11 +52,18 @@ interface Turno {
  * le responde; si recibe información, se le manda. Cuando algo no está claro
  * (droison, un Espía o una Reclusa, el Alcalde), lo revisa el narrador. Lo de cada
  * noche se olvida al anochecer otra vez. No comprueba permisos.
+ *
+ * Una cosa cada vez: a un jugador no se le manda un despertar mientras no haya
+ * dicho «Entendido» al anterior (o el narrador no le haya contestado «Entendido» a
+ * lo que eligió). Lo que llega mientras tanto espera en la cola de su asiento, en
+ * orden, sea de la habilidad que sea. Un asiento libre no contesta: no espera.
  */
 export class DespertarGuiado {
   private turnos: Turno[] = [];
   /** El asiento del Imp que se ha elegido a sí mismo, hasta que el narrador dice quién es el nuevo. */
   private impQueMuere: string | null = null;
+  /** Lo que espera a que el jugador del asiento diga «Entendido» a lo anterior, por asiento. */
+  private colas = new Map<string, Envio[]>();
 
   constructor(private readonly entorno: EntornoDespertarGuiado) {}
 
@@ -120,15 +135,18 @@ export class DespertarGuiado {
       const error = this.entorno.despertar(asiento.id);
       if (error) return error;
       if (habilidad.eleccion) {
-        this.entorno.mandar(asiento.id, tarjeta('eleccion'), habilidad.eleccion);
+        this.entregar(asiento.id, { envio: tarjeta('eleccion'), eleccion: habilidad.eleccion });
         this.guardar({ personaje, asiento: asiento.id, estado: 'esperando', avisos: preparados[i].avisos, opciones: [] });
       } else this.aplicar(personaje, asiento, preparados[i]);
     }
     return null;
   }
 
-  /** Lo que pasa con lo que dice la habilidad: si está listo, se hace; si no, queda para revisar. */
-  private aplicar(personaje: string, asiento: SalaAsiento, resultado: Resultado): void {
+  /**
+   * Lo que pasa con lo que dice la habilidad: si está listo, se hace; si no, queda para
+   * revisar. `respuesta`: contesta a lo que ha elegido (se le manda ya, sin cola).
+   */
+  private aplicar(personaje: string, asiento: SalaAsiento, resultado: Resultado, respuesta = false): void {
     const { estado, avisos, opciones, efectos } = resultado;
     if (estado !== 'listo') {
       this.guardar({ personaje, asiento: asiento.id, estado: 'revisar', avisos, opciones });
@@ -138,13 +156,46 @@ export class DespertarGuiado {
     if (efectos.muere) this.entorno.matarDeNoche(efectos.muere);
     if (efectos.grimorio) this.entorno.enviarGrimorio(asiento.id);
     if (efectos.nuevoImp) this.impQueMuere = asiento.id;
-    for (const envio of resultado.previos ?? []) this.entorno.mandar(asiento.id, envio);
-    if (opciones[0]) this.entorno.mandar(asiento.id, opciones[0].envio);
+    const enviar = (envio: SalaEnvioDespertar) => (respuesta ? this.entorno.mandar(asiento.id, envio) : this.entregar(asiento.id, { envio }));
+    for (const envio of resultado.previos ?? []) enviar(envio);
+    if (opciones[0]) enviar(opciones[0].envio);
+    // Contestado con «Entendido», ya está: lo siguiente de su cola
+    if (respuesta && opciones[0]?.envio.ficha === 'entendido') this.alEntender(asiento.id);
     this.guardar({ personaje, asiento: asiento.id, estado: 'hecho', avisos, opciones: [] });
   }
 
+  /**
+   * Le manda algo a un asiento o, si aún no ha entendido lo anterior (o hay cola), lo
+   * pone a la cola. El «Entendido» del narrador (a lo que ha elegido) no es un
+   * despertar: va siempre, y cierra lo anterior.
+   */
+  private entregar(asientoId: string, { envio, eleccion }: Envio): void {
+    if (envio.ficha === 'entendido') {
+      this.entorno.mandar(asientoId, envio);
+      this.alEntender(asientoId);
+      return;
+    }
+    const cola = this.colas.get(asientoId) ?? [];
+    const ocupado = !!this.entorno.ctx.mesa().find((a) => a.id === asientoId)?.ocupante;
+    if (ocupado && (cola.length || this.entorno.porEntender(asientoId))) this.colas.set(asientoId, [...cola, { envio, eleccion }]);
+    else this.entorno.mandar(asientoId, envio, eleccion);
+  }
+
+  /** Lo último de un asiento ya está entendido: se le manda lo siguiente de su cola, si hay. */
+  alEntender(asientoId: string): void {
+    const [siguiente, ...resto] = this.colas.get(asientoId) ?? [];
+    if (!siguiente) return;
+    if (resto.length) this.colas.set(asientoId, resto);
+    else this.colas.delete(asientoId);
+    this.entorno.mandar(asientoId, siguiente.envio, siguiente.eleccion);
+  }
+
+
+
   /** Lo que tiene que elegir el de un asiento (se le ha pedido y aún no ha contestado), o null. */
   eleccionPendiente(asientoId: string): SalaEleccionDespertar | null {
+    // Mientras la petición espera en la cola, aún no se le ha pedido
+    if (this.colas.get(asientoId)?.some((e) => e.eleccion)) return null;
     const turno = this.turnos.find((t) => t.asiento === asientoId && t.estado === 'esperando');
     return (turno && this.entorno.habilidades().get(turno.personaje)?.eleccion) ?? null;
   }
@@ -157,7 +208,8 @@ export class DespertarGuiado {
     const asiento = mesa.find((a) => a.id === asientoId);
     if (!turno || !habilidad || !asiento) return;
     const elegidosEnMesa = elegidos.flatMap((id) => mesa.find((a) => a.id === id) ?? []);
-    this.aplicar(turno.personaje, asiento, habilidad.alElegir(this.entorno.ctx, asiento, elegidosEnMesa));
+    // La respuesta a lo que ha elegido es del mismo despertar: no espera en la cola
+    this.aplicar(turno.personaje, asiento, habilidad.alElegir(this.entorno.ctx, asiento, elegidosEnMesa), true);
   }
 
   /**
@@ -174,7 +226,7 @@ export class DespertarGuiado {
     if (preparado.estado !== 'revisar') return 'No hay nada que revisar.';
     const error = this.entorno.despertar(asiento.id);
     if (error) return error;
-    this.entorno.mandar(asiento.id, envio);
+    this.entregar(asiento.id, { envio });
     this.guardar({ personaje, asiento: asiento.id, estado: 'hecho', avisos: preparado.avisos, opciones: [] });
     return null;
   }
@@ -191,7 +243,7 @@ export class DespertarGuiado {
     this.entorno.cambiarPersonaje(asientoId, 'imp');
     const error = this.entorno.despertar(asientoId);
     if (error) return error;
-    this.entorno.mandar(asientoId, tarjeta('tuEres', { personajes: ['imp'], alineamiento: 'malvado' }));
+    this.entregar(asientoId, { envio: tarjeta('tuEres', { personajes: ['imp'], alineamiento: 'malvado' }) });
     this.impQueMuere = null;
     return null;
   }
@@ -200,11 +252,13 @@ export class DespertarGuiado {
   olvidar(): void {
     this.turnos = [];
     this.impQueMuere = null;
+    this.colas.clear();
   }
 
   /** Los asientos han cambiado de sitio (ver SalaService.llevarFichas): cada turno va con el suyo. */
   remapear(a: (asientoId: string) => string): void {
     for (const t of this.turnos) t.asiento = a(t.asiento);
     if (this.impQueMuere) this.impQueMuere = a(this.impQueMuere);
+    this.colas = new Map([...this.colas].map(([asiento, cola]) => [a(asiento), cola]));
   }
 }

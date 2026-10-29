@@ -51,7 +51,7 @@ import { GuionResuelto, PersonajeDeGuion, TIPOS_NPC, TipoPersonaje } from '../ty
 import { GuionInvalidoError } from '../services/guiones/errores';
 import type { RegistroPartida } from '../services/estadisticas/SeguimientoPartida';
 import type { ServicioNarradorVirtual } from '../services/narradorVirtual/NarradorVirtualService';
-import type { Azar, Temporizador } from '../services/narradorVirtual/puertos';
+import type { Azar, ClienteJev, DatosJev, Temporizador } from '../services/narradorVirtual/puertos';
 import type { AccionJugador } from '../services/narradorVirtual/etapas/Etapa';
 import { diaVirtual, noPuedeNominar, nominoHoy } from '../services/narradorVirtual/dia/reglasDia';
 
@@ -87,6 +87,14 @@ export interface DependenciasSala {
   /** El reloj y el azar del narrador virtual (en los tests, unos que no esperan y con semilla); si no, los de verdad. */
   relojNarradorVirtual?: Temporizador;
   azarNarradorVirtual?: Azar;
+  /**
+   * Para Jarvis: el modelo que ha puesto cada usuario (comprobado alguna vez), o
+   * null si no lo tiene; y cómo hablar con él (en los tests, uno falso). Sin esto, no hay Jarvis.
+   */
+  modeloJarvisDe?: (userId: string) => Promise<DatosJev | null>;
+  clienteJev?: (datos: DatosJev) => ClienteJev & { comprobar(): Promise<string | null> };
+  /** Las bolsas del narrador virtual en las últimas partidas de cada usuario; sin esto, no se tienen en cuenta. */
+  bolsasRecientes?: { de(userId: string): Promise<string[][]>; apuntar(userId: string, personajes: string[]): Promise<void> };
 }
 
 /**
@@ -439,10 +447,11 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * En lugar de hacerse narrador, añade un narrador virtual que lleva la partida
    * solo. datos: { narrador: id de NARRADORES_VIRTUALES (disponible), guion: id de
    * GUIONES_NARRADOR_VIRTUAL, jugadores: de JUGADORES_NARRADOR_VIRTUAL.min a .max }.
+   * Solo con cuenta: los invitados, no.
    */
   'sala:anadirNarradorVirtual': {
-    puede: (sala, yo) => !sala.hayNarrador() && yo.rol !== 'narrador',
-    noPuede: 'La sala ya tiene narrador.',
+    puede: (sala, yo) => !sala.hayNarrador() && yo.rol !== 'narrador' && !!yo.usuarioId,
+    noPuede: (sala, yo) => (sala.hayNarrador() || yo.rol === 'narrador' ? 'La sala ya tiene narrador.' : 'Para añadir un narrador virtual necesitas una cuenta.'),
     hacer: async (_sala, yo, datos, { narradorVirtual }) => {
       if (!narradorVirtual) return { ok: false, error: 'Esta sala no tiene narradores virtuales.' };
       const { narrador, guion, jugadores } = (datos as Record<string, unknown>) ?? {};
@@ -514,6 +523,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
         sala.narradorVirtual()?.etapa === 'nominaciones' &&
         !sala.nominacion() &&
         !!asiento &&
+        !asiento.muerto &&
         sala.narradorVirtual()!.listos.includes(yo.id) &&
         !nominoHoy(sala, asiento.id)
       );
@@ -847,9 +857,13 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       for (const { asientoId, eligiendo } of destinos) {
         if (!sala.hayDespertar(asientoId)) sala.despertar(asientoId);
         // «Tú eres»: su ficha pasa a ser la que se le dice (con alineamiento, solo si se le dice)
-        if (narra) sala.mandarDelNarrador(asientoId, mensaje);
+        // Lo que escribe el narrador virtual en un despertar guiado (que diga «Entendido»)
+        // lo sigue siendo: el jugador sigue contestando solo «Entendido» o un texto
+        if (narra) sala.mandarDelNarrador(asientoId, mensaje, { guiado: !!yo.virtual && sala.respuestaGuiada(asientoId) });
         else sala.enviarDespertar(asientoId, { ...mensaje, autor: asientoId });
         if (eligiendo) sala.alElegirHabilidad(asientoId, mensaje.jugadores);
+        // Entendido lo anterior (lo dice el jugador, o el narrador a lo que eligió): le llega lo siguiente de su cola
+        if (mensaje.ficha === 'entendido') sala.alEntenderHabilidad(asientoId);
       }
       return { ok: true };
     },
@@ -1497,6 +1511,23 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       if ('error' in farol) return { ok: false, error: farol.error };
       sala.ponerFarolAsiento(asiento.id, farol.posicion, farol.personajeId);
       return { ok: true };
+    },
+  },
+
+  /**
+   * Un jugador dice cuál de sus faroles está usando (el personaje por el que se
+   * hace pasar), para que lo sepa el narrador; o ninguno. datos: { personajeId: string | null }.
+   */
+  'jugador:usarFarol': {
+    puede: (sala, yo) => yo.rol === 'jugador' && !!sala.asientoDe(yo.id) && !!sala.guion(),
+    noPuede: 'Solo un jugador sentado usa faroles.',
+    hacer: (sala, yo, datos) => {
+      const asiento = sala.asientoDe(yo.id);
+      if (!asiento) return { ok: false, error: 'Ya no estás sentado.' };
+      const personajeId = (datos as { personajeId?: unknown } | null)?.personajeId ?? null;
+      if (personajeId !== null && typeof personajeId !== 'string') return { ok: false, error: 'Personaje desconocido.' };
+      const error = sala.usarFarol(asiento.id, personajeId);
+      return error ? { ok: false, error } : { ok: true };
     },
   },
 

@@ -111,7 +111,16 @@ interface MesaProps {
    * fichas son botones para elegirlo (menos las ya elegidas) y el centro de la mesa
    * dice para qué y ofrece cancelar. null si no se está eligiendo.
    */
-  eleccion?: { titulo: string; excluidos: string[]; onElegir: (asientoId: string) => void; onCancelar: () => void } | null;
+  eleccion?: {
+    /** Lo que se pide («Elige 2 jugadores: pulsa su ficha.»). */
+    texto: string;
+    excluidos: string[];
+    /** Los ya elegidos: marcados y, con `onQuitar`, se quitan al pulsarlos. */
+    elegidos: string[];
+    onElegir: (asientoId: string) => void;
+    onQuitar?: (asientoId: string) => void;
+    onCancelar: () => void;
+  } | null;
   /**
    * Visitantes y narradores: a quién siguen (id) y cómo seguir o dejar de seguir
    * al jugador de una ficha. null si no pueden seguir a nadie.
@@ -671,11 +680,13 @@ const Mesa = ({
             const visible = editando ? mover.ocupanteVisible(a) : a.ocupante;
             const ocupante = participante(visible);
             const real = participante(a.ocupante);
-            // Eligiendo en la plaza para el despertar: todas las fichas salvo las ya elegidas
+            // Eligiendo en la plaza para el despertar: las elegidas, marcadas (se quitan al pulsarlas); el resto, candidatas
             const eligiendo = eleccion
-              ? eleccion.excluidos.includes(a.id)
-                ? undefined
-                : { papel: 'candidata' as const, onPulsar: () => eleccion.onElegir(a.id), accion: 'Elegir' }
+              ? eleccion.elegidos.includes(a.id)
+                ? { papel: 'elegida' as const, onPulsar: () => eleccion.onQuitar?.(a.id), accion: eleccion.onQuitar ? 'Quitar' : 'Elegido' }
+                : eleccion.excluidos.includes(a.id)
+                  ? undefined
+                  : { papel: 'candidata' as const, onPulsar: () => eleccion.onElegir(a.id), accion: 'Elegir' }
               : senalo
                 ? eligiendoSenal(a.id)
                 : nominar.eligiendo(a.id);
@@ -1111,9 +1122,7 @@ const Mesa = ({
           {eleccion && (
             // Eligiendo para el despertar (su ventana está escondida): para qué y cómo volver sin elegir
             <div className="flex max-w-60 flex-col items-center gap-2 sala-cofre p-4 text-center">
-              <p className="text-sm text-on-surface">
-                Elige un jugador para «{eleccion.titulo}»: pulsa su ficha.
-              </p>
+              <p className="text-sm text-on-surface">{eleccion.texto}</p>
               <button type="button" onClick={eleccion.onCancelar} className={botonSecundario}>
                 Cancelar
               </button>

@@ -15,7 +15,91 @@ const tiempo = (segundos: number) => {
   return `${minutos} ${minutos === 1 ? 'minuto' : 'minutos'}${medio ? ' y medio' : ''}`;
 };
 
+/** Los saludos al llegar a la sala: se elige uno al azar. */
+const SALUDOS = [
+  'Buenas noches, forasteros. Sentaos, que esta noche alguien no verá el amanecer.',
+  'Bienvenidos a Ravenswood Bluff. Coged sitio en la plaza, que el demonio no espera.',
+  'Hola a todos, seré vuestro narrador. Sentaos y que nadie se fíe de nadie.',
+  'Saludos, vecinos. Cuando estéis todos sentados, empezamos.',
+  'Buenas noches. Ocupad vuestros asientos, la ciudad tiene un problema y vosotros sois la solución.',
+  'Ya estoy aquí. Sentaos tranquilos, que de momento no muerde nadie.',
+] as const;
+
+/** Lo que el narrador dio a alguien una noche, ya en palabras («un 1», «un sí»…), y si era mentira. */
+export interface InfoRevelada {
+  noche: number;
+  que: string;
+  falsa: boolean;
+}
+
+/** Cómo y cuándo murió alguien (el número del día o de la noche). */
+export interface MuerteRevelada {
+  momento: 'dia' | 'noche';
+  numero: number;
+  causa: 'ejecucion' | 'exterminador' | 'demonio' | 'suicidio' | 'otra';
+}
+
+/** Lo que se cuenta de alguien al revelar su ficha. */
+export interface Revelacion {
+  nombre: string;
+  /** Quien es de verdad (su nombre), o null si no tiene personaje. */
+  personaje: string | null;
+  /** El personaje que creía ser (el Borracho), o null. */
+  creia: string | null;
+  infos: InfoRevelada[];
+  muerte: MuerteRevelada | null;
+  /** Despertaba cada noche con información y murió antes del final: dejó de recibirla. */
+  sinMasInformacion: boolean;
+}
+
+const ORDINALES = ['primer', 'segund', 'tercer', 'cuart', 'quint', 'sext', 'séptim', 'octav', 'noven', 'décim'];
+/** «el segundo día», «el primer día», «el día 12». */
+const elDia = (n: number) => {
+  const raiz = ORDINALES[n - 1];
+  if (!raiz) return `el día ${n}`;
+  return `el ${raiz}${raiz === 'primer' || raiz === 'tercer' ? '' : 'o'} día`;
+};
+/** «la segunda noche», «la noche 12». */
+const laNoche = (n: number) => {
+  const raiz = ORDINALES[n - 1];
+  if (!raiz) return `la noche ${n}`;
+  return `la ${raiz}a noche`;
+};
+
+/** «a, b y c». */
+const listaConY = (partes: string[]) =>
+  partes.length <= 1 ? (partes[0] ?? '') : `${partes.slice(0, -1).join(', ')} y ${partes[partes.length - 1]}`;
+
+function muerteEnPalabras({ momento, numero, causa }: MuerteRevelada): string {
+  const cuando = momento === 'dia' ? elDia(numero) : laNoche(numero);
+  if (causa === 'ejecucion') return `murió en la ejecución del${cuando.slice(2)}`;
+  if (causa === 'exterminador') return `murió por el disparo del Exterminador ${cuando}`;
+  if (causa === 'demonio') return `murió a manos del demonio ${cuando}`;
+  if (causa === 'suicidio') return `se quitó la vida ${cuando}`;
+  return `murió ${cuando}`;
+}
+
+/**
+ * «Pepe era Chef, recibió un 1 y murió en la ejecución del segundo día.»
+ * «Juan creía que era Bibliotecario, pero en realidad era Borracho. Recibió…»
+ */
+function alRevelar({ nombre, personaje, creia, infos, muerte, sinMasInformacion }: Revelacion): string {
+  const inicio = creia && personaje ? `${nombre} creía que era ${creia}, pero en realidad era ${personaje}` : personaje ? `${nombre} era ${personaje}` : nombre;
+  // Con una sola, de la primera noche, no hace falta decir cuándo
+  const conNoche = infos.length > 1 || infos.some((i) => i.noche !== 1);
+  const partes = [
+    infos.length > 0 && `recibió ${listaConY(infos.map((i) => `${i.que}${conNoche ? ` ${laNoche(i.noche)}` : ''}${i.falsa ? ' (era mentira)' : ''}`))}`,
+    muerte && muerteEnPalabras(muerte),
+    sinMasInformacion && 'ya no recibió más su información',
+  ].filter((p): p is string => !!p);
+  if (!partes.length) return `${inicio}.`;
+  const resto = listaConY(partes);
+  return creia ? `${inicio}. ${resto[0].toUpperCase()}${resto.slice(1)}.` : `${inicio}, ${resto}.`;
+}
+
 export const FRASES = {
+  /** Al añadirlo a la sala; `azar` da un número en [0, 1). */
+  saludo: (azar: () => number) => SALUDOS[Math.min(SALUDOS.length - 1, Math.floor(azar() * SALUDOS.length))],
   primeraNoche: () => 'Noche uno, nos vamos a dormir.',
   /** El primer día: lo que duran los privados. */
   primerDia: (segundos: number) =>
@@ -35,10 +119,17 @@ export const FRASES = {
   marcado: (quien: string) => `${quien} queda marcado.`,
   ejecutado: (quien: string) => `${quien} es ejecutada, muere y nos vamos a dormir.`,
   ejecutadoYFinal: (quien: string) => `${quien} es ejecutada, muere, y revelamos grimorio.`,
+  /** Quien nomina a la Virgen es ejecutado al momento (y, si acaba la partida, se revela). */
+  virgen: (quien: string, aQuien: string, final: boolean) =>
+    `${quien} nomina a ${aQuien}, es ejecutada y ${final ? 'revelamos el grimorio' : 'nos vamos a dormir'}.`,
   nadieEjecutado: () => 'Nadie es ejecutado y nos vamos a dormir.',
   nadieEjecutadoYFinal: () => 'Nadie es ejecutado y revelamos el grimorio.',
   /** Alguien se declara Exterminador y dispara: si muere o no pasa nada. */
   disparo: (quien: string, aQuien: string, muere: boolean) => `${quien} se declara exterminador y dispara a ${aQuien}. ${muere ? `${aQuien} muere.` : 'No pasa nada.'}`,
   revelamos: () => 'Revelamos el grimorio.',
+  /** Al revelar cada ficha: quién era, lo que recibió y cómo murió. */
+  alRevelar,
+  /** Jarvis no consigue hablar con su modelo y deja la partida a «Tonto y tú». */
+  jarvisSeVa: () => 'Jarvis tiene que irse; os dejo con Tonto y tú, que seguirá la partida.',
   violinista: () => 'Sale el Violinista: el demonio elige en secreto a un jugador bueno y luego todos señaláis a uno de los dos.',
 } as const;

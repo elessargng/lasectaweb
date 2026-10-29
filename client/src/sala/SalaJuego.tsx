@@ -34,7 +34,7 @@ import VentanaConversacion from './VentanaConversacion';
 import VentanaDespertar from './VentanaDespertar';
 import DespertarJugador from './DespertarJugador';
 import { useSenalamientoCongelado } from './senales';
-import { describirMensaje, esEntendido, nombreDeAsiento } from './despertar';
+import { describirMensaje, esEntendido, nombreDeAsiento, textoEleccion } from './despertar';
 import { CAUSAS_FINAL } from './causasFinal';
 import PanelInvitaciones from './PanelInvitaciones';
 import ControlesVideo, { BotonVoz } from './ControlesVideo';
@@ -64,6 +64,8 @@ import { actuaAlMorir, mostrarPersonajes, tituloDeGuion, useTraducciones, type P
 import ZonaNarradores from './ZonaNarradores';
 import { callarVoz, decirEnVoz } from './vozNarrador';
 import DialogoNarradorVirtual from './DialogoNarradorVirtual';
+import PanelJarvis from './PanelJarvis';
+import { useJarvis } from './jarvis';
 import {
   accionCogerLlamada,
   describirAtajo,
@@ -439,6 +441,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const [wakeCerradoJugador, setWakeCerradoJugador] = useState(false);
   // «¿Quién es el nuevo Imp?» aplazado («Ahora no»): el asiento del Imp que muere (vuelve a salir con otro)
   const [nuevoImpAplazado, setNuevoImpAplazado] = useState<string | null>(null);
+  // La hoja del guion o el orden de noche están abiertos: el reparto va en su cabecera
+  const [hojaAbierta, setHojaAbierta] = useState(false);
   // Recordatorios del orden de noche (narradores, compartidos): los automáticos son
   // los personajes en juego y vivos, y Esbirros y Demonios si hay alguno vivo; lo que
   // los narradores quitan o ponen a mano lo guarda el servidor hasta limpiar el grimorio.
@@ -550,7 +554,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
   const alMensaje = (m: SalaMensaje) => {
     if (!estado) return;
-    // Un privado entre jugadores (solo les llega a los narradores): va a Susurros
+    // Un privado entre jugadores (solo les llega a los narradores y a los visitantes con grimorio): va a Susurros
     const ajeno = esAjeno(m.canal, estado.yo);
     const pestana = ajeno ? CANAL_SUSURROS : m.canal;
     // Leído si llega a la conversación que se está viendo
@@ -622,11 +626,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const canalesChat = yo ? [...canalesComunes(yo), ...privadosChat] : [];
   const canalActual = canalChat && canalesChat.includes(canalChat) ? canalChat : (canalesChat[0] ?? null);
 
-  // Al cambiar de papel cambia lo que se puede leer: se vuelve a pedir el historial
+  // Al cambiar de papel (o de acceso al grimorio) cambia lo que se puede leer: se vuelve a pedir el historial
   const miRol = yo?.rol;
+  const conGrimorio = yo?.accesoGrimorio === 'concedido';
   useEffect(() => {
     if (miRol) pedirHistorial();
-  }, [miRol, pedirHistorial]);
+  }, [miRol, conGrimorio, pedirHistorial]);
 
   // Cambiar de conversación: lo que había en las dos queda leído (hasta su último mensaje)
   const ultimoDe = (canal: string) =>
@@ -739,7 +744,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // Elegir a un jugador del despertar en la plaza (Preferencias > Accesibilidad): la
   // ventana del despertar se esconde, las fichas se pulsan para elegir y, al elegir
   // (o cancelar con Escape o «Cancelar»), vuelve como estaba y el foco, al botón que lo pidió.
-  const [eleccion, setEleccion] = useState<(Omit<PedidoEleccion, 'volver'> & { volver: HTMLElement | null }) | null>(null);
+  // `elegidos`: los marcados; `faltan`: los que quedan por elegir antes de volver
+  const [eleccion, setEleccion] = useState<
+    (Omit<PedidoEleccion, 'volver'> & { volver: HTMLElement | null; elegidos: string[]; faltan: number }) | null
+  >(null);
   const focoEleccionRef = useRef<HTMLElement | string | null>(null);
   useEffect(() => {
     const destino = focoEleccionRef.current;
@@ -750,12 +758,16 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const elegirEnPlaza =
     preferencias.eleccionDespertar === 'plaza' && estado
       ? (pedido: PedidoEleccion) => {
-          const primera = estado.asientos.find((a) => !pedido.excluidos.includes(a.id));
+          const elegidos = pedido.elegidos ?? [];
+          const primera = estado.asientos.find((a) => !pedido.excluidos.includes(a.id) && !elegidos.includes(a.id));
           if (!primera) return anunciar('despertar', 'Ya están elegidos todos los jugadores.');
           const volver = (pedido.volver && document.getElementById(pedido.volver)) || document.activeElement;
-          setEleccion({ ...pedido, volver: volver instanceof HTMLElement ? volver : null });
+          setEleccion({ ...pedido, elegidos, faltan: pedido.cuantos ?? 1, volver: volver instanceof HTMLElement ? volver : null });
           focoEleccionRef.current = idFichaNominar(primera.id);
-          anunciar('despertar', `Elige en la plaza un jugador para «${pedido.titulo}»: pulsa su ficha. Escape para cancelar.`);
+          anunciar(
+            'despertar',
+            pedido.aviso ? `${pedido.aviso}.` : `Elige en la plaza un jugador para «${pedido.titulo}»: pulsa su ficha. Escape para cancelar.`,
+          );
         }
       : null;
   const terminarEleccion = (aviso: string) => {
@@ -764,10 +776,21 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     // Después de que vuelva la ventana (su aviso, si es el del jugador, va en ella)
     window.setTimeout(() => anunciar('despertar', aviso), 100);
   };
+  // Si faltan más, se sigue en la plaza con el elegido marcado (y el foco en su ficha)
   const elegidoEnPlaza = (asientoId: string) => {
     if (!eleccion || !estado) return;
     eleccion.onElegido(asientoId);
-    terminarEleccion(`Añadido: ${nombreDeAsiento(estado, asientoId)}.`);
+    const anadido = `Añadido: ${nombreDeAsiento(estado, asientoId)}.`;
+    const faltan = eleccion.faltan - 1;
+    if (faltan <= 0) return terminarEleccion(anadido);
+    setEleccion({ ...eleccion, elegidos: [...eleccion.elegidos, asientoId], faltan });
+    anunciar('despertar', `${anadido} ${textoEleccion(faltan)}.`);
+  };
+  const quitadoEnPlaza = (asientoId: string) => {
+    if (!eleccion?.onQuitado || !estado) return;
+    eleccion.onQuitado(asientoId);
+    setEleccion({ ...eleccion, elegidos: eleccion.elegidos.filter((id) => id !== asientoId), faltan: eleccion.faltan + 1 });
+    anunciar('despertar', `Quitado: ${nombreDeAsiento(estado, asientoId)}.`);
   };
   const cancelarEleccion = () => terminarEleccion('Elección cancelada.');
   // Escape cancela mientras se elige (el despertar del jugador, escondido, no lo atiende)
@@ -1272,6 +1295,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     guardarPerfil: guardarPerfilConfiguracion,
     borrarPerfil: borrarPerfilConfiguracion,
   } = useConfiguracionCuenta(cuenta?.token ?? null, configuracionActual, aplicarConfiguracion);
+  // El modelo de Jarvis de la cuenta (pestaña Jarvis; sin él comprobado, no se puede añadir)
+  const jarvis = useJarvis(cuenta?.token ?? null);
   // Narradores: ir a la noche (desde la preparación o el día) o amanecer (desde la noche).
   const accionFase = estado?.acciones.includes('narrador:irANoche')
     ? 'narrador:irANoche'
@@ -1296,6 +1321,19 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   };
 
   // El gong del narrador: desde el menú o con su tecla
+  // Con narrador virtual, en las nominaciones: lo que hacen los botones del centro de
+  // la mesa (PanelDiaVirtual), con su tecla; se dice que se ha hecho (el panel puede no tener el foco)
+  const avanceNominacion: [string, string] | null = estado?.acciones.includes('jugador:defensa')
+    ? ['jugador:defensa', 'Defensa.']
+    : estado?.acciones.includes('jugador:voto')
+      ? ['jugador:voto', 'Empieza la votación.']
+      : null;
+  const pasoNominacion = async (accion: string, hecho: string) => {
+    const r = await pedirPropio(accion);
+    if (!r.ok) setAviso(r.error);
+    else anunciar('nominaciones', hecho);
+  };
+
   const sonarGong = async () => {
     const r = await pedirPropio('narrador:sonarGong');
     if (!r.ok) setAviso(r.error);
@@ -1355,6 +1393,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       : []),
     // D: volver a abrir el despertar propio, si se había cerrado
     ...(miDespertar && wakeCerradoJugador ? [['abrirDespertar', () => setWakeCerradoJugador(false)] as [AccionAtajo, () => void]] : []),
+    // L: «Listo» para la noche, con narrador virtual
+    ...(estado?.acciones.includes('jugador:listo')
+      ? [['listo', () => void pasoNominacion('jugador:listo', 'Listo para la noche.')] as [AccionAtajo, () => void]]
+      : []),
+    // A: avanzar la nominación (quien nomina, a la defensa; el nominado, a la votación)
+    ...(avanceNominacion ? [['avanzarNominacion', () => void pasoNominacion(...avanceNominacion)] as [AccionAtajo, () => void]] : []),
     // Teclas de coger llamada: cada llamada entrante, con la tecla de su slot, la acepta
     ...Object.entries(slotsLlamada).map(
       ([id, slot]) => [accionCogerLlamada(slot), () => void responder(id, true)] as [AccionAtajo, () => void],
@@ -1559,6 +1603,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       ),
     },
     {
+      id: 'jarvis',
+      etiqueta: 'Jarvis',
+      conControles: !!cuenta,
+      contenido: <PanelJarvis conCuenta={!!cuenta} jarvis={jarvis} />,
+    },
+    {
       id: 'perfiles',
       etiqueta: 'Perfiles',
       conControles: !!cuenta,
@@ -1600,13 +1650,15 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     return r;
   };
 
-  // Faroles: los del narrador (narradores y visitantes) o, si soy el demonio, los míos.
-  // Soy el demonio si mi ficha lo lleva (o, sin personaje dado, si me lo he anotado).
+  // Faroles: los del narrador (narradores y visitantes) o, si soy el demonio o un esbirro, los míos.
+  // Soy el demonio (o esbirro) si mi ficha lo lleva (o, sin personaje dado, si me lo he anotado).
   const miAsiento = estado?.asientos.find((a) => a.ocupante === estado.yo);
   const miPersonaje = miAsiento ? (miAsiento.personaje ?? notasGrimorio[miAsiento.id]?.personaje ?? null) : null;
   const soyDemonio = yo?.rol === 'jugador' && !!miPersonaje && personajesGuionPorId.get(miPersonaje)?.tipo === 'demon';
-  const modoFaroles = yo?.rol === 'narrador' ? 'narrador' : yo?.rol === 'visitante' ? 'visitante' : soyDemonio ? 'jugador' : null;
-  const farolesVisibles = (modoFaroles === 'jugador' ? miAsiento?.faroles : estado?.faroles) ?? [null, null, null];
+  const soyEsbirro = yo?.rol === 'jugador' && !!miPersonaje && personajesGuionPorId.get(miPersonaje)?.tipo === 'minion';
+  const modoFaroles =
+    yo?.rol === 'narrador' ? 'narrador' : yo?.rol === 'visitante' ? 'visitante' : soyDemonio ? 'jugador' : soyEsbirro ? 'esbirro' : null;
+  const farolesVisibles = (modoFaroles === 'jugador' || modoFaroles === 'esbirro' ? miAsiento?.faroles : estado?.faroles) ?? [null, null, null];
 
   // La columna de la izquierda: Mensajes, Charlas (si hay conversaciones o invitaciones) y Faroles (a quien le tocan)
   // Invitaciones y peticiones que esperan mi respuesta (las peticiones llegan a todos los miembros)
@@ -1825,6 +1877,23 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     '--sala-ficha-distancia': `${preferencias.distanciaFicha / 100}`,
   } as CSSProperties;
 
+  // El reparto de la partida: abajo a la derecha de la sala o, con la hoja del guion o el
+  // orden de noche abiertos (que lo taparían), resumido en la cabecera de la hoja
+  const reparto = (enHoja: boolean) =>
+    estado && (
+      <RepartoPartida
+        distribucion={estado.distribucion}
+        bolsa={estado.acciones.includes('narrador:bolsa') ? estado.bolsa : null}
+        asientos={estado.asientos}
+        npcs={estado.npcs}
+        setupAceptado={estado.setupAceptado}
+        preparacion={estado.fase.momento === 'preparacion'}
+        pedir={pedirPropio}
+        onError={setAviso}
+        resumido={enHoja}
+      />
+    );
+
   return (
     <AvisosContexto.Provider value={avisosActivos}>
       {/* Cómo eligen jugadores las ventanas del despertar: en la plaza o en una lista */}
@@ -1886,6 +1955,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   recordatorios={yo?.rol === 'narrador' ? recordatoriosNoche(estado) : null}
                   // En la preparación y la primera noche, la primera; desde el primer día, las demás
                   nochePorDefecto={estado.fase.momento === 'preparacion' || (estado.fase.momento === 'noche' && estado.fase.numero <= 1) ? 'primera' : 'otras'}
+                  reparto={reparto(true)}
+                  onHojaAbierta={setHojaAbierta}
                   partidaEmpezada={
                     estado.fase.momento !== 'preparacion' ||
                     estado.bolsa.length > 0 ||
@@ -2151,25 +2222,28 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   seguimiento={puedeSeguir ? { siguiendo: sigoA?.id ?? null, onAlternar: alternarSeguir } : null}
                   eleccion={
                     eleccion
-                      ? { titulo: eleccion.titulo, excluidos: eleccion.excluidos, onElegir: elegidoEnPlaza, onCancelar: cancelarEleccion }
+                      ? {
+                          texto: eleccion.aviso
+                            ? `${textoEleccion(eleccion.faltan)}: pulsa su ficha.`
+                            : `Elige un jugador para «${eleccion.titulo}»: pulsa su ficha.`,
+                          excluidos: eleccion.excluidos,
+                          elegidos: eleccion.elegidos,
+                          onElegir: elegidoEnPlaza,
+                          onQuitar: eleccion.onQuitado ? quitadoEnPlaza : undefined,
+                          onCancelar: cancelarEleccion,
+                        }
                       : null
                   }
                 />
               </section>
               {/* Fuera de la mesa, para no tapar sus fichas: en pantallas anchas, abajo
-                  del todo a la derecha (apartándose de la hoja del guion); en estrechas, debajo de la mesa */}
-              <div className="flex flex-wrap items-end gap-3 self-start lg:fixed lg:bottom-4 lg:right-[calc(var(--sala-panel-guion-ancho,0px)+1rem)] lg:z-30">
-                <RepartoPartida
-                  distribucion={estado.distribucion}
-                  bolsa={estado.acciones.includes('narrador:bolsa') ? estado.bolsa : null}
-                  asientos={estado.asientos}
-                  npcs={estado.npcs}
-                  setupAceptado={estado.setupAceptado}
-                  preparacion={estado.fase.momento === 'preparacion'}
-                  pedir={pedirPropio}
-                  onError={setAviso}
-                />
-              </div>
+                  del todo a la derecha; en estrechas, debajo de la mesa. Con la hoja del guion
+                  abierta, en su cabecera (ver TituloGuion) */}
+              {!hojaAbierta && (
+                <div className="flex flex-wrap items-end gap-3 self-start lg:fixed lg:bottom-4 lg:right-4 lg:z-30">
+                  {reparto(false)}
+                </div>
+              )}
             </div>
           )}
         </main>
@@ -2254,6 +2328,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
         {anadiendoVirtual && puedeAnadirVirtual && estado && (
           <DialogoNarradorVirtual
             sentados={estado.asientos.filter((a) => a.ocupante).length}
+            noDisponible={{
+              jarvis: !cuenta
+                ? 'Necesitas una cuenta.'
+                : jarvis.configuracion?.comprobadoEn
+                  ? undefined
+                  : 'Pon y comprueba su modelo en Preferencias, pestaña Jarvis.',
+            }}
             pedir={pedirPropio}
             onCerrar={() => setAnadiendoVirtual(false)}
           />

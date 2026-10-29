@@ -73,6 +73,15 @@ export class Despertares {
     return !!hilo && !![...hilo.mensajes].reverse().find((m) => m.autor === 'narrador')?.guiado;
   }
 
+  /**
+   * A lo último del despertar de un asiento le falta el «Entendido»: es del narrador
+   * y no es un «Entendido» suyo (a lo que ha elegido el jugador). Sin despertar, no.
+   */
+  porEntender(asientoId: string): boolean {
+    const ultimo = this.alDia().find((h) => h.asiento === asientoId)?.mensajes.slice(-1)[0];
+    return !!ultimo && ultimo.autor === 'narrador' && ultimo.ficha !== 'entendido';
+  }
+
   /** Guarda un mensaje en el despertar de un asiento (sin `eleccion`: una libre; sin `guiado`, no lo es). No valida: lo hace quien lo llama. */
   enviar(
     asientoId: string,

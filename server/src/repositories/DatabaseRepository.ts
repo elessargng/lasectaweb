@@ -952,6 +952,42 @@ export class DatabaseRepository {
         ALTER TABLE sala_partidas ADD COLUMN votaciones TEXT;
       `);
     });
+
+    // Migración 030: el modelo que guía al narrador virtual Jarvis
+    //
+    // Cada usuario engancha el suyo (JEV, de TypeSafe): endpoint, modelo y key. La key
+    // va cifrada (ver utils/cifrado) y nunca sale hacia el navegador.
+    await this.applyMigration('030_add_jarvis_configuracion', async (db) => {
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS jarvis_configuracion (
+          userId TEXT PRIMARY KEY,
+          endpoint TEXT NOT NULL,
+          modelo TEXT NOT NULL,
+          apiKey TEXT NOT NULL,
+          comprobadoEn DATETIME,
+          actualizadoEn DATETIME NOT NULL,
+          FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+        );
+      `);
+    });
+
+    // Migración 031: las bolsas recientes del narrador virtual
+    //
+    // Las últimas que ha montado para cada usuario (los personajes, en JSON), para
+    // no repetir siempre la misma partida. Se guardan solo las últimas (ver
+    // BolsasRecientesRepository).
+    await this.applyMigration('031_add_narrador_bolsas_recientes', async (db) => {
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS narrador_bolsas_recientes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          userId TEXT NOT NULL,
+          personajes TEXT NOT NULL,
+          creadaEn DATETIME NOT NULL,
+          FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_narrador_bolsas_recientes_userId ON narrador_bolsas_recientes(userId);
+      `);
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

@@ -1,5 +1,6 @@
 import { esDemonio, type Ganador } from '../final/comprobarFinal';
 import { FRASES } from '../frases';
+import { opcionesDeAsientos } from '../grimorio';
 import type { ContextoEtapa, Etapa } from './Etapa';
 import { Revelando } from './Revelando';
 
@@ -42,7 +43,15 @@ export class Violinista implements Etapa {
     const buenos = sala.asientos().filter((a) => !esDemonio(sala, a) && sala.alineamientoEfectivo(a) !== 'malvado');
     if (!demonio || !buenos.length) return void ctx.pasarA(new Revelando(demonio ? 'malvado' : 'bueno'));
 
-    const bueno = (await this.eligeElDemonio(ctx, demonio.id, buenos.map((a) => a.id))) ?? ctx.estrategia.elegirUno(buenos).id;
+    const bueno =
+      (await this.eligeElDemonio(ctx, demonio.id, buenos.map((a) => a.id))) ??
+      (
+        await ctx.decidir({
+          motivo: 'violinistaBueno',
+          pregunta: 'El Violinista: el jugador bueno que se enfrenta al demonio (el demonio no ha elegido).',
+          opciones: opcionesDeAsientos(ctx.sala, buenos),
+        })
+      ).id;
     if (!this.seguir) return;
     await ctx.mesa.accion('narrador:senalamiento', {
       mensaje: '¿Quién gana? Señala a uno de los dos',
@@ -56,7 +65,7 @@ export class Violinista implements Etapa {
     const alDemonio = senales.filter((s) => s === demonio.id).length;
     const alBueno = senales.filter((s) => s === bueno).length;
     const ganador: Ganador =
-      alDemonio === alBueno ? ctx.estrategia.elegirUno(['bueno', 'malvado'] as const) : alDemonio > alBueno ? 'malvado' : 'bueno';
+      alDemonio === alBueno ? (ctx.azar() < 0.5 ? 'bueno' : 'malvado') : alDemonio > alBueno ? 'malvado' : 'bueno';
     await ctx.pasarA(new Revelando(ganador));
   }
 

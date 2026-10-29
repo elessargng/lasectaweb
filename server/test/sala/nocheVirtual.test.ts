@@ -4,15 +4,24 @@ import { ejecutarAccion, type DependenciasSala } from '../../src/sockets/salaAcc
 import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
 import { habilidadesDelGuion } from '../../src/services/partida/habilidades';
 import { TontoYTu } from '../../src/services/narradorVirtual/estrategias/TontoYTu';
-import type { ContextoEtapa, Etapa } from '../../src/services/narradorVirtual/etapas/Etapa';
+import { decisionesDe, type ContextoEtapa, type Etapa } from '../../src/services/narradorVirtual/etapas/Etapa';
 import { Noche } from '../../src/services/narradorVirtual/etapas/Noche';
 import { planificarNoche } from '../../src/services/narradorVirtual/noche/planificarNoche';
-import { informacionFalsa } from '../../src/services/narradorVirtual/noche/informacionFalsa';
+import { informacionesFalsas } from '../../src/services/narradorVirtual/noche/informacionFalsa';
+import { ponerFaroles } from '../../src/services/narradorVirtual/noche/requisitos';
+import {
+  opcionesFalsas,
+  probabilidadVerdad,
+  recordarDroison,
+  recuerdosNuevos,
+} from '../../src/services/narradorVirtual/noche/criterioDroison';
+import { elegirBolsa, type FueraDeLaBolsa } from '../../src/services/narradorVirtual/preparacion';
+import type { Decision } from '../../src/services/narradorVirtual/estrategias/EstrategiaNarrador';
 import { comprobarFinal } from '../../src/services/narradorVirtual/final/comprobarFinal';
 import { Revelando } from '../../src/services/narradorVirtual/etapas/Revelando';
 import { Violinista } from '../../src/services/narradorVirtual/etapas/Violinista';
 import { exterminar } from '../../src/services/narradorVirtual/dia/exterminar';
-import { duracionPrivados } from '../../src/services/narradorVirtual/etapas/Dia';
+import { duracionPrivados, PuestaEnComun, TRAS_GONG_MS } from '../../src/services/narradorVirtual/etapas/Dia';
 import { FRASES } from '../../src/services/narradorVirtual/frases';
 import { invitado } from './guionDePrueba';
 import { contextoNoche } from '../../src/services/narradorVirtual/mesaDeJuego';
@@ -41,7 +50,7 @@ function conSemilla(semilla: number): () => number {
  * elige el narrador virtual) y el narrador virtual con su contexto: la mesa hace
  * las acciones de verdad y anota cuáles, sin esperas.
  */
-function mesaVirtual(personajes: string[], { semilla = 1, fuera = [] as string[] } = {}) {
+function mesaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDeLaBolsa[] } = {}) {
   const sala = new SalaService();
   sala.cambiarGuion(guion());
   while (sala.asientos().length > personajes.length) sala.quitarAsiento();
@@ -54,6 +63,8 @@ function mesaVirtual(personajes: string[], { semilla = 1, fuera = [] as string[]
     video: null,
     imagenesBiblioteca: { leerPublica: async () => Promise.reject(new Error('Sin Biblioteca')) },
   };
+  const azar = conSemilla(semilla);
+  const estrategia = new TontoYTu(azar);
   const hechas: { accion: string; datos: unknown }[] = [];
   const frases: string[] = [];
   let etapa: Etapa | null = null;
@@ -69,7 +80,8 @@ function mesaVirtual(personajes: string[], { semilla = 1, fuera = [] as string[]
         return r;
       },
     },
-    estrategia: new TontoYTu(conSemilla(semilla)),
+    ...decisionesDe(sala, () => estrategia),
+    azar,
     temporizador: { programar: (_ms, hacer) => {
       const t = setTimeout(hacer, 0);
       return () => clearTimeout(t);
@@ -79,6 +91,7 @@ function mesaVirtual(personajes: string[], { semilla = 1, fuera = [] as string[]
       siguiente = e;
     },
     fueraDeLaBolsa: () => fuera,
+    recuerdos: recuerdosNuevos(),
   };
   /** Corre una noche hasta que amanece (pasa a la etapa siguiente). */
   const noche = async () => {
@@ -128,44 +141,43 @@ describe('la noche del narrador virtual', () => {
     ]);
   });
 
-  it('«Tonto y tú» elige los faroles entre los aldeanos libres y un solo forastero', () => {
-    const tonto = new TontoYTu(conSemilla(7));
-    for (let i = 0; i < 50; i++) {
-      const faroles = tonto.elegirFaroles(['a1', 'a2', 'a3', 'a4', 'a5'], ['f1', 'f2'], 3);
+  it('los faroles del demonio: tres buenos que no están en juego, con un forastero como mucho', async () => {
+    for (let semilla = 1; semilla <= 30; semilla++) {
+      const m = mesaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor'], { semilla });
+      await ponerFaroles(m.ctx);
+      const faroles = m.sala.faroles().filter((f): f is string => !!f);
       expect(faroles).toHaveLength(3);
       expect(new Set(faroles).size).toBe(3);
-      expect(faroles.filter((f) => f.startsWith('f')).length).toBeLessThanOrEqual(1);
+      const enJuego = new Set(m.sala.asientos().map((a) => a.personaje));
+      for (const f of faroles) {
+        expect(enJuego.has(f)).toBe(false);
+        expect(['townsfolk', 'outsider']).toContain(m.sala.personaje(f)?.tipo);
+      }
+      expect(faroles.filter((f) => m.sala.personaje(f)?.tipo === 'outsider').length).toBeLessThanOrEqual(1);
     }
   });
 
   it('la información falsa tiene la forma de la verdadera', () => {
     const m = mesaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
     const habilidades = habilidadesDelGuion('troublebrewing');
-    const falsa = (personaje: string, verdadera: Parameters<typeof informacionFalsa>[0]['verdadera'], semilla = 3) => {
-      const tonto = new TontoYTu(conSemilla(semilla));
-      return informacionFalsa({
-        verdadera,
-        habilidad: habilidades.get(personaje)!,
-        ctx: contextoNoche(m.sala),
-        personajes: m.sala.guion()!.personajes,
-        elegirUno: (o) => tonto.elegirUno(o),
-      });
-    };
-    expect(falsa('fortuneteller', ficha('si'))).toMatchObject({ ficha: 'no' });
-    expect(falsa('fortuneteller', ficha('no'))).toMatchObject({ ficha: 'si' });
-    // El Empático: otro número de 0 a 2
-    for (let semilla = 1; semilla < 30; semilla++) expect(['cero', 'dos']).toContain(falsa('empath', numero(1), semilla)?.ficha);
+    const falsas = (personaje: string, verdadera: Parameters<typeof informacionesFalsas>[0]['verdadera']) =>
+      informacionesFalsas({ verdadera, habilidad: habilidades.get(personaje)!, ctx: contextoNoche(m.sala), personajes: m.sala.guion()!.personajes });
+    expect(falsas('fortuneteller', ficha('si'))).toMatchObject([{ ficha: 'no' }]);
+    expect(falsas('fortuneteller', ficha('no'))).toMatchObject([{ ficha: 'si' }]);
+    // El Empático: los otros números de 0 a 2
+    expect(falsas('empath', numero(1)).map((f) => f.ficha)).toEqual(['cero', 'dos']);
     // La Lavandera: con los mismos jugadores, otro aldeano
     const jugadores = [m.sala.asientos()[0].id, m.sala.asientos()[3].id];
-    for (let semilla = 1; semilla < 30; semilla++) {
-      const f = falsa('washerwoman', tarjeta('esteJugadorEs', { jugadores, personajes: ['chef'] }), semilla)!;
+    const lavandera = falsas('washerwoman', tarjeta('esteJugadorEs', { jugadores, personajes: ['chef'] }));
+    expect(lavandera.length).toBeGreaterThan(0);
+    for (const f of lavandera) {
       expect(f.jugadores).toEqual(jugadores);
       expect(f.personajes[0]).not.toBe('chef');
       expect(m.sala.personaje(f.personajes[0])?.tipo).toBe('townsfolk');
     }
   });
 
-  it('a un Empático envenenado le da la información de verdad una de cada diez veces, más o menos', async () => {
+  it('a un Empático envenenado con un vecino malvado (la verdad le señala al mal) casi nunca le da la de verdad', async () => {
     let deVerdad = 0;
     const veces = 60;
     for (let semilla = 1; semilla <= veces; semilla++) {
@@ -219,8 +231,36 @@ describe('la noche del narrador virtual', () => {
     expect(m.sala.asientos().some((a) => a.recordatorios.some((r) => r.personaje === 'librarian'))).toBe(false);
   });
 
+  it('el Envenenador con jugador: primero ve a su demonio y, cuando dice «Entendido», elige', async () => {
+    const m = mesaVirtual(['poisoner', 'imp', 'washerwoman', 'librarian', 'investigator', 'fortuneteller', 'chef']);
+    const { id } = m.sala.conectar('s-ana', 'c-ana', invitado('Ana'), () => true);
+    const asiento = m.asiento('poisoner').id;
+    expect(m.sala.sentar(id, asiento)).toBeNull();
+    m.sala.irANoche();
+    const noche = new Noche();
+    await noche.alEntrar!(m.ctx);
+    const mensajes = () => m.sala.despertares().find((d) => d.asiento === asiento)?.mensajes ?? [];
+    const hasta = async (cumple: () => boolean) => {
+      const limite = Date.now() + 3000;
+      while (!cumple()) {
+        if (Date.now() > limite) throw new Error('No ha llegado');
+        await new Promise((r) => setTimeout(r, 5));
+      }
+    };
+    await hasta(() => mensajes().some((x) => x.tarjeta === 'demonio'));
+    // Un rato después, sigue sin pedirle que elija: espera a que lo entienda
+    await new Promise((r) => setTimeout(r, 100));
+    expect(mensajes().some((x) => x.eleccion)).toBe(false);
+    expect(await ejecutarAccion(m.sala, m.sala.buscar(id), 'despertar:enviar', { ficha: 'entendido' }, {} as DependenciasSala)).toMatchObject({ ok: true });
+    await noche.alCambiar!();
+    await hasta(() => !!mensajes()[mensajes().length - 1]?.eleccion);
+    // (Mientras esperaba, el recordatorio de «Entendido»: el reloj de la prueba no espera el minuto)
+    expect(mensajes().map((x) => x.tarjeta ?? x.ficha).filter((x) => x !== 'personalizado')).toEqual(['demonio', 'entendido', 'eleccion']);
+    noche.alSalir!();
+  });
+
   it('pone al Borracho la primera noche, si salió en la bolsa', async () => {
-    const m = mesaVirtual(['poisoner', 'imp', 'chef', 'empath', 'washerwoman', 'investigator', 'soldier'], { fuera: ['drunk'] });
+    const m = mesaVirtual(['poisoner', 'imp', 'chef', 'empath', 'washerwoman', 'investigator', 'soldier'], { fuera: [{ personaje: 'drunk', creeSer: null }] });
     m.sala.irANoche();
     await m.noche();
     const borrachos = m.sala.asientos().filter((a) => a.recordatorios.some((r) => r.texto === 'Is The Drunk'));
@@ -368,4 +408,99 @@ describe('los privados del narrador virtual', () => {
     expect(FRASES.primerDia(90)).toMatch(/tenéis 1 minuto y medio\.$/);
     expect(FRASES.primerDia(30)).toMatch(/tenéis medio minuto\.$/);
   });
+
+  it('al acabar suena el gong y, unos segundos después, se cierran', async () => {
+    const m = mesaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
+    const programados: { ms: number; hacer: () => void }[] = [];
+    const ctx = { ...m.ctx, temporizador: { programar: (ms: number, hacer: () => void) => (programados.push({ ms, hacer }), () => {}) } };
+    await new PuestaEnComun().alEntrar(ctx);
+    const acciones = () => m.hechas.map((h) => h.accion);
+    expect(acciones()).toContain('narrador:sonarGong');
+    expect(m.sala.privadosPermitidos()).toBe(true);
+    programados.find((p) => p.ms === TRAS_GONG_MS)!.hacer();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(m.sala.privadosPermitidos()).toBe(false);
+    expect(acciones().indexOf('narrador:privados')).toBeGreaterThan(acciones().indexOf('narrador:sonarGong'));
+  });
 });
+
+describe('droison con criterio', () => {
+  const mesa = () => mesaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'poisoner', 'soldier', 'mayor']);
+
+  it('la verdad que no le cuesta nada al mal se dice más a menudo que la que lo señala', () => {
+    const m = mesa();
+    const empatico = m.asiento('empath').id;
+    const inofensiva = probabilidadVerdad(m.sala, empatico, 'empath', numero(0), recuerdosNuevos());
+    const destapa = probabilidadVerdad(m.sala, empatico, 'empath', numero(1), recuerdosNuevos());
+    expect(inofensiva).toBeGreaterThanOrEqual(0.3);
+    expect(destapa).toBeLessThanOrEqual(0.1);
+    expect(inofensiva).toBeGreaterThan(destapa);
+  });
+
+  it('a lo mismo que otra noche, lo mismo: repite la mentira', () => {
+    const m = mesa();
+    const empatico = m.asiento('empath').id;
+    const recuerdos = recuerdosNuevos();
+    recordarDroison(recuerdos, empatico, 'empath', numero(1), numero(2));
+    expect(probabilidadVerdad(m.sala, empatico, 'empath', numero(1), recuerdos)).toBeLessThanOrEqual(0.05);
+    const opciones = opcionesFalsas(m.sala, empatico, 'empath', numero(1), [numero(0), numero(2)], recuerdos);
+    const pesos = Object.fromEntries(opciones.map((o) => [o.valor.ficha, o.peso ?? 1]));
+    expect(pesos.dos).toBeGreaterThan(pesos.cero * 5);
+    // Y si entonces dijo la verdad, la vuelve a decir
+    recordarDroison(recuerdos, empatico, 'empath', numero(1), numero(1));
+    expect(probabilidadVerdad(m.sala, empatico, 'empath', numero(1), recuerdos)).toBeGreaterThanOrEqual(0.9);
+  });
+
+  it('las mentiras que confirman el farol que usa un malvado pesan más', () => {
+    const m = mesa();
+    const envenenador = m.asiento('poisoner').id;
+    m.sala.ponerFarolAsiento(envenenador, 0, 'monk');
+    expect(m.sala.usarFarol(envenenador, 'monk')).toBeNull();
+    const jugadores = [m.asiento('soldier').id, envenenador];
+    const verdadera = tarjeta('esteJugadorEs', { jugadores, personajes: ['soldier'] });
+    const falsas = ['monk', 'chef'].map((p) => tarjeta('esteJugadorEs', { jugadores, personajes: [p] }));
+    const [monje, chef] = opcionesFalsas(m.sala, m.asiento('washerwoman').id, 'washerwoman', verdadera, falsas, recuerdosNuevos());
+    expect(monje.rasgos).toContain('confirmaFarol');
+    expect(monje.peso!).toBeGreaterThan(chef.peso ?? 1);
+  });
+});
+
+describe('la bolsa que elige el narrador', () => {
+  /** Una estrategia que elige siempre la primera opción, y apunta lo que le preguntan. */
+  const laPrimera = () => {
+    const preguntas: Decision<unknown>[] = [];
+    const decidir = async <T,>(d: Decision<T>): Promise<T> => {
+      preguntas.push(d as Decision<unknown>);
+      return d.opciones[0].valor;
+    };
+    return { decidir, preguntas };
+  };
+
+  it('hueco a hueco: el demonio, los esbirros, los forasteros y los aldeanos que tocan', async () => {
+    const m = mesaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
+    const { decidir, preguntas } = laPrimera();
+    const bolsa = (await elegirBolsa(m.sala.guion()!.personajes, m.sala.distribucion(), decidir))!;
+    const tipos = bolsa.personajes.map((p) => m.sala.personaje(p)?.tipo);
+    expect(tipos.filter((t) => t === 'demon')).toHaveLength(1);
+    expect(tipos.filter((t) => t === 'minion')).toHaveLength(1);
+    expect(bolsa.personajes).toHaveLength(7);
+    expect(preguntas.every((p) => p.motivo === 'bolsa')).toBe(true);
+    // Lo ya elegido va en la pregunta siguiente
+    expect(preguntas[1].pregunta).toMatch(/Ya en la bolsa: imp./);
+  });
+
+  it('sin grimorio: a cada hueco, los personajes del guion y las decisiones anteriores', async () => {
+    const m = mesaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
+    const personajes = m.sala.guion()!.personajes;
+    const { decidir, preguntas } = laPrimera();
+    await elegirBolsa(personajes, m.sala.distribucion(), decidir);
+    const [primera, segunda] = preguntas;
+    expect(primera.sinGrimorio).toMatchObject({ decisionesAnteriores: [] });
+    expect((primera.sinGrimorio!.guion as unknown[]).length).toBe(personajes.length);
+    expect(segunda.sinGrimorio!.decisionesAnteriores).toEqual([
+      { pregunta: primera.pregunta, elegido: { id: 'imp', nombre: expect.any(String), tipo: 'demon' } },
+    ]);
+    expect(preguntas[preguntas.length - 1].sinGrimorio!.decisionesAnteriores).toHaveLength(preguntas.length - 1);
+  });
+});
+

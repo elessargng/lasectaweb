@@ -26,6 +26,8 @@ export type AccionAtajo =
   | 'salirConversacion'
   | 'entendidoDespertar'
   | 'abrirDespertar'
+  | 'listo'
+  | 'avanzarNominacion'
   | 'cogerLlamada1'
   | 'cogerLlamada2'
   | 'cogerLlamada3'
@@ -51,6 +53,8 @@ export const ACCIONES_ATAJO: { accion: AccionAtajo; etiqueta: string }[] = [
   { accion: 'salirConversacion', etiqueta: 'Salir de la conversación privada' },
   { accion: 'entendidoDespertar', etiqueta: 'Mandar «Entendido» en el despertar de noche' },
   { accion: 'abrirDespertar', etiqueta: 'Abrir mi despertar de noche' },
+  { accion: 'listo', etiqueta: 'Listo para la noche (narrador virtual)' },
+  { accion: 'avanzarNominacion', etiqueta: 'Avanzar la nominación: «Defensa» si nominas, «Empezar votación» si te nominan (narrador virtual)' },
   { accion: 'cogerLlamada1', etiqueta: 'Coger la 1.ª llamada entrante' },
   { accion: 'cogerLlamada2', etiqueta: 'Coger la 2.ª llamada entrante' },
   { accion: 'cogerLlamada3', etiqueta: 'Coger la 3.ª llamada entrante' },
@@ -67,6 +71,8 @@ const RETROCESO: Atajo = { code: 'Backspace', key: 'Backspace', ctrl: false, alt
 const E: Atajo = { code: 'KeyE', key: 'e', ctrl: false, alt: false, shift: false, meta: false };
 const D: Atajo = { code: 'KeyD', key: 'd', ctrl: false, alt: false, shift: false, meta: false };
 const Z: Atajo = { code: 'KeyZ', key: 'z', ctrl: false, alt: false, shift: false, meta: false };
+const L: Atajo = { code: 'KeyL', key: 'l', ctrl: false, alt: false, shift: false, meta: false };
+const A: Atajo = { code: 'KeyA', key: 'a', ctrl: false, alt: false, shift: false, meta: false };
 const digito = (n: number): Atajo => ({ code: `Digit${n}`, key: String(n), ctrl: false, alt: false, shift: false, meta: false });
 
 export const ATAJOS_INICIALES: Record<AccionAtajo, Atajo> = {
@@ -80,6 +86,8 @@ export const ATAJOS_INICIALES: Record<AccionAtajo, Atajo> = {
   salirConversacion: RETROCESO,
   entendidoDespertar: E,
   abrirDespertar: D,
+  listo: L,
+  avanzarNominacion: A,
   cogerLlamada1: digito(1),
   cogerLlamada2: digito(2),
   cogerLlamada3: digito(3),

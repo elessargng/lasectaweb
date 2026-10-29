@@ -19,8 +19,8 @@ export {
  */
 
 /**
- * Pestaña de los narradores con los mensajes privados entre jugadores (todos
- * juntos, solo para leer). No es un canal del servidor: agrupa los privados
+ * Pestaña de los narradores (y de los visitantes con el grimorio) con los mensajes
+ * privados entre jugadores (todos juntos, solo para leer). No es un canal del servidor: agrupa los privados
  * ajenos que le llegan.
  */
 export const CANAL_SUSURROS = 'susurros';
@@ -31,7 +31,7 @@ export function participantesDelPrivado(canal: string): string[] | null {
   return esPrivado(canal) ? canal.slice(PREFIJO_PRIVADO.length).split(':') : null;
 }
 
-/** Un privado entre otros (los narradores leen los de los jugadores). */
+/** Un privado entre otros (los narradores y los visitantes con grimorio leen los de los jugadores). */
 export const esAjeno = (canal: string, yo: string) => !!participantesDelPrivado(canal) && !participantesDelPrivado(canal)!.includes(yo);
 
 /** Los mensajes de una pestaña: los de su canal o, en Susurros, todos los privados ajenos. */
@@ -57,6 +57,7 @@ export function otroDelPrivado(canal: string, yo: string): string | null {
 /** Los canales comunes que tiene alguien según su papel. */
 export function canalesComunes(yo: SalaParticipante): string[] {
   if (yo.rol === 'narrador') return [CANAL_GENERAL, CANAL_VISITANTES, CANAL_SUSURROS];
+  if (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido') return [CANAL_VISITANTES, CANAL_SUSURROS];
   return [yo.rol === 'jugador' ? CANAL_GENERAL : CANAL_VISITANTES];
 }
 

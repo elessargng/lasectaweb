@@ -15,6 +15,8 @@ import type { SalaResultado } from './useSala';
 interface DialogoNarradorVirtualProps {
   /** Cuántos hay ya sentados: no se puede pedir una partida de menos. */
   sentados: number;
+  /** Por qué no se puede elegir alguno ahora (Jarvis sin cuenta o sin su modelo comprobado). */
+  noDisponible?: Partial<Record<IdNarradorVirtual, string>>;
   pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
   onCerrar: () => void;
 }
@@ -28,10 +30,11 @@ const NUMEROS = Array.from({ length: max - min + 1 }, (_, i) => min + i);
  * pueden elegir salen desactivados, con el motivo). Al añadirlo, prepara la
  * mesa y espera a que se llene. Al abrirse, el foco va al título.
  */
-const DialogoNarradorVirtual = ({ sentados, pedir, onCerrar }: DialogoNarradorVirtualProps) => {
+const DialogoNarradorVirtual = ({ sentados, noDisponible = {}, pedir, onCerrar }: DialogoNarradorVirtualProps) => {
+  const elegible = (n: (typeof NARRADORES_VIRTUALES)[number]) => n.disponible && !noDisponible[n.id];
   const [guion, setGuion] = useState<GuionNarradorVirtual>(GUIONES_NARRADOR_VIRTUAL[0].id);
   const [jugadores, setJugadores] = useState(Math.min(max, Math.max(min, sentados)));
-  const [narrador, setNarrador] = useState<IdNarradorVirtual>(NARRADORES_VIRTUALES.find((n) => n.disponible)!.id);
+  const [narrador, setNarrador] = useState<IdNarradorVirtual>(NARRADORES_VIRTUALES.find(elegible)!.id);
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
   const ariaLive = useAriaLive('errores');
@@ -104,23 +107,32 @@ const DialogoNarradorVirtual = ({ sentados, pedir, onCerrar }: DialogoNarradorVi
           </div>
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-1 font-ui text-xs">Narrador</legend>
-            {NARRADORES_VIRTUALES.map((n) => (
-              <label key={n.id} className={`flex items-start gap-2 text-sm ${n.disponible ? 'cursor-pointer' : 'text-on-surface-muted'}`}>
-                <input
-                  type="radio"
-                  name="sala-virtual-narrador"
-                  value={n.id}
-                  checked={narrador === n.id}
-                  disabled={!n.disponible}
-                  onChange={() => setNarrador(n.id)}
-                  className="mt-1"
-                />
-                <span>
-                  <span className="font-semibold">{n.nombre}</span>
-                  <span className="block text-xs text-on-surface-muted">{n.descripcion}</span>
-                </span>
-              </label>
-            ))}
+            {NARRADORES_VIRTUALES.map((n) => {
+              const motivo = n.disponible ? noDisponible[n.id] : undefined;
+              return (
+                <label key={n.id} className={`flex items-start gap-2 text-sm ${elegible(n) ? 'cursor-pointer' : 'text-on-surface-muted'}`}>
+                  <input
+                    type="radio"
+                    name="sala-virtual-narrador"
+                    value={n.id}
+                    checked={narrador === n.id}
+                    disabled={!elegible(n)}
+                    aria-describedby={motivo ? `sala-virtual-motivo-${n.id}` : undefined}
+                    onChange={() => setNarrador(n.id)}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="font-semibold">{n.nombre}</span>
+                    <span className="block text-xs text-on-surface-muted">{n.descripcion}</span>
+                    {motivo && (
+                      <span id={`sala-virtual-motivo-${n.id}`} className="block text-xs text-on-surface-muted">
+                        {motivo}
+                      </span>
+                    )}
+                  </span>
+                </label>
+              );
+            })}
           </fieldset>
           <div aria-live={ariaLive}>{error && <p className="text-sm text-blood-pale">{error}</p>}</div>
           <div className="flex justify-end gap-3">

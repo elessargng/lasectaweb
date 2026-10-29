@@ -119,6 +119,29 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     deps.relojNarradorVirtual ?? temporizadorReal,
     () => difundir(),
     deps.azarNarradorVirtual,
+    // Jarvis: con el modelo de la cuenta de quien lo añade
+    deps.modeloJarvisDe && deps.clienteJev
+      ? {
+          modeloDe: async (participanteId) => {
+            const cuenta = sala.buscar(participanteId)?.usuarioId;
+            return cuenta ? deps.modeloJarvisDe!(cuenta) : 'sinCuenta';
+          },
+          cliente: deps.clienteJev,
+        }
+      : null,
+    // Las bolsas recientes, de la cuenta de quien lo añade
+    deps.bolsasRecientes
+      ? {
+          de: async (participanteId) => {
+            const cuenta = sala.buscar(participanteId)?.usuarioId;
+            return cuenta ? deps.bolsasRecientes!.de(cuenta) : [];
+          },
+          apuntar: async (participanteId, personajes) => {
+            const cuenta = sala.buscar(participanteId)?.usuarioId;
+            if (cuenta) await deps.bolsasRecientes!.apuntar(cuenta, personajes);
+          },
+        }
+      : null,
   );
   // Las acciones también lo usan (añadirlo y quitarlo)
   const depsSala: DependenciasSala = { ...deps, narradorVirtual };

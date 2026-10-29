@@ -22,7 +22,7 @@ export class Faroles {
    * Los faroles de cada asiento, con quién estaba sentado al ponerlos: si se
    * sienta otro (o se levanta), dejan de valer, como los despertares.
    */
-  private deAsientos = new Map<string, { ocupante: string | null; faroles: (string | null)[] }>();
+  private deAsientos = new Map<string, { ocupante: string | null; faroles: (string | null)[]; enUso: string | null }>();
 
   constructor(
     /** La mesa como está ahora. */
@@ -47,20 +47,38 @@ export class Faroles {
     return f && f.ocupante === asiento.ocupante ? [...f.faroles] : farolesVacios();
   }
 
-  /** Pone un farol en una casilla de un asiento (o la vacía). */
+  /** El farol que dice usar el asiento, si sigue siendo de quien se sienta en él (y sigue entre sus faroles). */
+  enUso(asiento: SalaAsiento): string | null {
+    const f = this.deAsientos.get(asiento.id);
+    return f && f.ocupante === asiento.ocupante ? f.enUso : null;
+  }
+
+  /** Pone un farol en una casilla de un asiento (o la vacía). Si el que usaba ya no está, deja de usarlo. */
   ponerFarolAsiento(asientoId: string, posicion: number, personajeId: string | null): void {
     const asiento = this.mesa().find((a) => a.id === asientoId);
     if (!asiento) return;
-    const faroles = ponerEnCasilla(this.deAsiento(asiento), posicion, personajeId);
-    this.deAsientos.set(asientoId, { ocupante: asiento.ocupante, faroles });
+    this.guardar(asiento, ponerEnCasilla(this.deAsiento(asiento), posicion, personajeId), this.enUso(asiento));
   }
 
   /** Cambia de una vez los faroles de un asiento (los que le ha enseñado el narrador). */
   copiarFaroles(asientoId: string, personajes: string[]): void {
     const asiento = this.mesa().find((a) => a.id === asientoId);
     if (!asiento) return;
-    const faroles = farolesVacios().map((_, i) => personajes[i] ?? null);
-    this.deAsientos.set(asientoId, { ocupante: asiento.ocupante, faroles });
+    this.guardar(asiento, farolesVacios().map((_, i) => personajes[i] ?? null), this.enUso(asiento));
+  }
+
+  /** El asiento dice usar uno de sus faroles (o ninguno, con null). Devuelve el error, si lo hay. */
+  usarFarol(asientoId: string, personajeId: string | null): string | null {
+    const asiento = this.mesa().find((a) => a.id === asientoId);
+    if (!asiento) return 'Ese asiento ya no existe.';
+    const faroles = this.deAsiento(asiento);
+    if (personajeId !== null && !faroles.includes(personajeId)) return 'Ese personaje no está entre tus faroles.';
+    this.guardar(asiento, faroles, personajeId);
+    return null;
+  }
+
+  private guardar(asiento: SalaAsiento, faroles: (string | null)[], enUso: string | null): void {
+    this.deAsientos.set(asiento.id, { ocupante: asiento.ocupante, faroles, enUso: enUso && faroles.includes(enUso) ? enUso : null });
   }
 
   /** Otra partida (u otro guion): todos vacíos. */

@@ -3,14 +3,18 @@ import { IconoMascaras } from './IconosJuego';
 import { useState } from 'react';
 import DialogoFaroles from './DialogoFaroles';
 import DialogoPersonaje from './DialogoPersonaje';
-import { botonIcono, botonPrincipal } from './estilos';
+import { botonIcono, botonPrincipal, botonSecundario } from './estilos';
 import { useFichas } from './fichas';
 import CasillaFarol from './CasillaFarol';
 import type { SalaEstado, SalaResultado } from './useSala';
 
 interface PanelFarolesProps {
-  /** Narrador: los suyos, con «Asignar faroles». Visitante: los del narrador, solo verlos. Jugador (demonio): los suyos, cada uno se cambia. */
-  modo: 'narrador' | 'visitante' | 'jugador';
+  /**
+   * Narrador: los suyos, con «Asignar faroles». Visitante: los del narrador, solo
+   * verlos. Jugador (demonio) o esbirro: los suyos, cada uno se cambia y se marca
+   * el que está usando.
+   */
+  modo: 'narrador' | 'visitante' | 'jugador' | 'esbirro';
   /** Las 3 casillas (id de personaje o null). */
   faroles: (string | null)[];
   estado: SalaEstado;
@@ -26,7 +30,8 @@ interface PanelFarolesProps {
 const EXPLICACION: Record<PanelFarolesProps['modo'], string> = {
   narrador: 'Saldrán puestos en «Estos personajes no están en juego».',
   visitante: 'Los que el narrador ha preparado para el demonio.',
-  jugador: 'Personajes que no están en juego, para hacerte pasar por ellos.',
+  jugador: 'Personajes que no están en juego, para hacerte pasar por ellos. Marca el que estés usando.',
+  esbirro: 'Personajes por los que hacerte pasar. Marca el que estés usando: lo sabrá el narrador.',
 };
 
 /**
@@ -40,6 +45,15 @@ const PanelFaroles = ({ modo, faroles, estado, pedir, onError, onAnuncio, fijado
   const [asignando, setAsignando] = useState(false);
   // La casilla que el jugador está cambiando (índice), o null
   const [cambiando, setCambiando] = useState<number | null>(null);
+  const propios = modo === 'jugador' || modo === 'esbirro';
+  const enUso = propios ? (estado.asientos.find((a) => a.ocupante === estado.yo)?.farolEnUso ?? null) : null;
+
+  const usar = async (personajeId: string | null) => {
+    const r = await pedir('jugador:usarFarol', { personajeId });
+    if (!r.ok) return onError(r.error);
+    const nombre = personajeId ? todosPorId.get(personajeId)?.nombre.texto : undefined;
+    onAnuncio(nombre ? `Usando el farol ${nombre}.` : 'Sin farol en uso.');
+  };
 
   const ponerMio = async (posicion: number, personajeId: string | null) => {
     const r = await pedir('jugador:farol', { posicion, personajeId });
@@ -75,17 +89,33 @@ const PanelFaroles = ({ modo, faroles, estado, pedir, onError, onAnuncio, fijado
           const personaje = id ? todosPorId.get(id) : undefined;
           return (
             // Las casillas son fijas (la 1, la 2 y la 3): su clave es su posición
-            <li key={i} className="flex min-w-0">
-              {modo === 'jugador' ? (
-                <button
-                  type="button"
-                  onClick={() => setCambiando(i)}
-                  className="group flex w-full min-w-0 rounded-lg p-1 hover:bg-theme-main/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
-                >
-                  <span className="sr-only">Farol {i + 1}: </span>
-                  <CasillaFarol personaje={personaje} />
-                  <span className="sr-only">, cambiar</span>
-                </button>
+            <li key={i} className="flex min-w-0 flex-col items-center gap-1">
+              {propios ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setCambiando(i)}
+                    className="group flex w-full min-w-0 rounded-lg p-1 hover:bg-theme-main/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
+                  >
+                    <span className="sr-only">Farol {i + 1}: </span>
+                    <CasillaFarol personaje={personaje} />
+                    <span className="sr-only">, cambiar</span>
+                  </button>
+                  {/* Cuál está usando: un interruptor por farol (pulsado, ese; solo uno a la vez) */}
+                  {id && personaje && (
+                    <button
+                      type="button"
+                      aria-pressed={enUso === id}
+                      onClick={() => void usar(enUso === id ? null : id)}
+                      className={`${botonSecundario} px-2 py-1 text-[0.65rem] aria-pressed:bg-theme-container aria-pressed:text-theme-main`}
+                    >
+                      <span className="sr-only">
+                        <span lang={personaje.nombre.lang}>{personaje.nombre.texto}</span>:{' '}
+                      </span>
+                      Lo estoy usando
+                    </button>
+                  )}
+                </>
               ) : (
                 <span className="flex w-full min-w-0 p-1">
                   <span className="sr-only">Farol {i + 1}: </span>

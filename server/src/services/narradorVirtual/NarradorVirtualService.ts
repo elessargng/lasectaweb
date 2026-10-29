@@ -3,14 +3,17 @@ import type { SalaService } from '../SalaService';
 import type { EstrategiaNarrador } from './estrategias/EstrategiaNarrador';
 import { TontoYTu } from './estrategias/TontoYTu';
 import { EsperandoJugadores } from './etapas/EsperandoJugadores';
-import type { AccionJugador, ContextoEtapa, Etapa } from './etapas/Etapa';
+import { decisionesDe, type AccionJugador, type ContextoEtapa, type Etapa } from './etapas/Etapa';
 import { exterminar } from './dia/exterminar';
 import { comprobarFinal, esDemonio } from './final/comprobarFinal';
 import { Revelando } from './etapas/Revelando';
 import { Violinista } from './etapas/Violinista';
 import { FRASES } from './frases';
-import { prepararPartida } from './preparacion';
-import type { Azar, MesaNarrador, Temporizador, Voz } from './puertos';
+import { recuerdosNuevos } from './noche/criterioDroison';
+import { prepararPartida, type FueraDeLaBolsa } from './preparacion';
+import type { Azar, BolsasRecientes, MesaNarrador, ModelosJarvis, Temporizador, Voz } from './puertos';
+import { ConRespaldo } from './estrategias/ConRespaldo';
+import { Jarvis } from './estrategias/Jarvis';
 
 /** Lo que se elige al añadir un narrador virtual. */
 export interface OpcionesNarradorVirtual {
@@ -40,12 +43,6 @@ const EN_PARTIDA = ['noche', 'privados', 'puestaEnComun', 'nominaciones'];
 /** Su avatar en la sala (hasta que tenga uno propio). */
 const AVATAR_VIRTUAL = '/logo-2.png';
 
-/** Cada narrador virtual, con su estrategia (null: aún no se puede usar). */
-const ESTRATEGIAS: Record<IdNarradorVirtual, ((azar: Azar) => EstrategiaNarrador) | null> = {
-  tontoYTu: (azar) => new TontoYTu(azar),
-  jarvis: null,
-};
-
 /**
  * El narrador virtual de la sala (servicio de aplicación): lo añade y lo quita, y
  * lleva la partida pasando por sus etapas (patrón Estado). Actúa como un narrador
@@ -56,8 +53,10 @@ const ESTRATEGIAS: Record<IdNarradorVirtual, ((azar: Azar) => EstrategiaNarrador
 export class NarradorVirtualService implements ServicioNarradorVirtual {
   private etapa: Etapa | null = null;
   private estrategia: EstrategiaNarrador | null = null;
-  /** Lo que salió al azar pero no va en la bolsa (el Borracho): se pone la primera noche. */
-  private fuera: string[] = [];
+  /** Lo que salió pero no va en la bolsa (el Borracho, y qué cree ser): se pone la primera noche. */
+  private fuera: FueraDeLaBolsa[] = [];
+  /** Lo que recuerda de la partida (ver ContextoEtapa.recuerdos). */
+  private recuerdos = recuerdosNuevos();
   /** Revisando la sala ahora; `otraVez`: ha vuelto a cambiar mientras tanto. */
   private revisando = false;
   private otraVez = false;
@@ -73,26 +72,74 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     /** Manda la sala a todos (lo que cambia el propio narrador virtual sin pasar por una acción: su etapa). */
     private readonly difundir: () => void,
     private readonly azar: Azar = Math.random,
+    /** Para Jarvis (sin esto, no se puede añadir). */
+    private readonly modelos: ModelosJarvis | null = null,
+    /** Las bolsas de las últimas partidas de quien lo añade (sin esto, no se tienen en cuenta). */
+    private readonly bolsas: BolsasRecientes | null = null,
   ) {}
 
   async anadir(creador: string, { narrador, guion, jugadores }: OpcionesNarradorVirtual): Promise<string | null> {
     const datos = NARRADORES_VIRTUALES.find((n) => n.id === narrador);
-    const crear = ESTRATEGIAS[narrador];
-    if (!datos || !crear) return 'Ese narrador virtual aún no está disponible.';
-    if (this.sala.hayNarrador()) return 'La sala ya tiene narrador.';
-    const sentados = this.sala.asientos().filter((a) => a.ocupante).length;
-    if (sentados > jugadores) return `Ya hay ${sentados} jugadores sentados: elige al menos ${sentados}.`;
+    if (!datos?.disponible) return 'Ese narrador virtual aún no está disponible.';
+    const libre = () => {
+      if (this.sala.hayNarrador()) return 'La sala ya tiene narrador.';
+      const sentados = this.sala.asientos().filter((a) => a.ocupante).length;
+      return sentados > jugadores ? `Ya hay ${sentados} jugadores sentados: elige al menos ${sentados}.` : null;
+    };
+    const ocupada = libre();
+    if (ocupada) return ocupada;
+    const estrategia = narrador === 'jarvis' ? await this.estrategiaJarvis(creador) : new TontoYTu(this.azar);
+    if (typeof estrategia === 'string') return estrategia;
+    // Mientras se comprobaba el modelo, puede haber cambiado la sala
+    const ocupadaYa = libre();
+    if (ocupadaYa) return ocupadaYa;
 
     const participante = this.sala.anadirNarradorVirtual({ id: narrador, creador, guion, jugadores }, datos.nombre, AVATAR_VIRTUAL);
-    this.estrategia = crear(this.azar);
-    const preparada = await prepararPartida(this.sala, this.mesaDe(participante), this.estrategia, { guion, jugadores });
+    this.estrategia = estrategia;
+    // Si no se pueden leer o apuntar las recientes, la partida sigue igual
+    const recientes = (await this.bolsas?.de(creador).catch(() => null)) ?? [];
+    const preparada = await prepararPartida(this.sala, this.mesaDe(participante), (d) => this.contextoDecisiones().decidir(d), {
+      guion,
+      jugadores,
+      azar: this.azar,
+      recientes,
+    });
     if ('error' in preparada) {
       this.quitar();
       return preparada.error;
     }
     this.fuera = preparada.fuera;
+    void this.bolsas?.apuntar(creador, [...preparada.personajes, ...preparada.fuera.map((f) => f.personaje)]).catch(() => undefined);
+    this.recuerdos = recuerdosNuevos();
+    // Saluda al llegar (lo oyen y lo ven todos al pasar a esperar jugadores)
+    this.contexto().decir(FRASES.saludo(this.azar));
     await this.pasarA(new EsperandoJugadores());
     return null;
+  }
+
+  /**
+   * Jarvis, con el modelo de quien lo añade (comprobado ahora) y «Tonto y tú» de
+   * respaldo; si deja de responder del todo, se va y sigue «Tonto y tú». O el error.
+   */
+  private async estrategiaJarvis(creador: string): Promise<EstrategiaNarrador | string> {
+    const datos = await this.modelos?.modeloDe(creador);
+    if (!this.modelos || datos === undefined) return 'Jarvis no está disponible en este servidor.';
+    if (datos === 'sinCuenta') return 'Para añadir a Jarvis necesitas una cuenta.';
+    if (!datos) return 'Para añadir a Jarvis, pon y comprueba su modelo en Preferencias, pestaña Jarvis.';
+    const cliente = this.modelos.cliente(datos);
+    const error = await cliente.comprobar();
+    if (error) return `El modelo de Jarvis no responde: ${error}`;
+    const respaldo = new TontoYTu(this.azar);
+    return new ConRespaldo(new Jarvis(cliente), respaldo, this.temporizador, () => this.jarvisSeVa(respaldo));
+  }
+
+  /** Jarvis no consigue hablar con su modelo: lo dice y sigue la partida «Tonto y tú». */
+  private jarvisSeVa(tonto: EstrategiaNarrador): void {
+    if (!this.sala.narradorVirtual()) return;
+    this.estrategia = tonto;
+    this.sala.relevarNarradorVirtual('tontoYTu', NARRADORES_VIRTUALES.find((n) => n.id === 'tontoYTu')!.nombre);
+    this.contexto().decir(FRASES.jarvisSeVa());
+    this.difundir();
   }
 
   quitar(): void {
@@ -122,8 +169,8 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     return this.etapa.alPedir ? this.etapa.alPedir(this.contexto(), jugador, accion, datos) : 'Ahora no es el momento.';
   }
 
-  /** Lo que salió al azar pero no va en la bolsa (ver `prepararPartida`). */
-  fueraDeLaBolsa(): string[] {
+  /** Lo que salió pero no va en la bolsa (ver `prepararPartida`). */
+  fueraDeLaBolsa(): FueraDeLaBolsa[] {
     return [...this.fuera];
   }
 
@@ -215,7 +262,8 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     return {
       sala: this.sala,
       mesa: this.mesaDe(narrador.participante),
-      estrategia: this.estrategia,
+      ...this.contextoDecisiones(),
+      azar: this.azar,
       temporizador: this.temporizador,
       decir: (texto) => {
         this.sala.actualizarNarradorVirtual({ frase: texto });
@@ -223,7 +271,13 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
       },
       pasarA: (etapa) => this.pasarA(etapa),
       fueraDeLaBolsa: () => this.fueraDeLaBolsa(),
+      recuerdos: this.recuerdos,
     };
+  }
+
+  /** Las decisiones con la estrategia de ahora (si se cambia a media partida, la nueva). */
+  private contextoDecisiones() {
+    return decisionesDe(this.sala, () => this.estrategia ?? new TontoYTu(this.azar));
   }
 
   private async pasarA(etapa: Etapa): Promise<void> {

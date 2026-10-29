@@ -240,11 +240,23 @@ export const EditorAdjunto = ({
   // En la plaza: quien elige ahí avisa al lector (esta ventana estaba escondida y no se oiría)
   const idPlaza = `${base}-plaza`;
   const completos = cantidad !== undefined && jugadores.length >= cantidad;
+  // Completos al volver de la plaza: su botón desaparece y el foco va a «Enviar»
+  const completosAntes = useRef(completos);
+  useEffect(() => {
+    if (completos && !completosAntes.current && elegirEnPlaza) enviarRef.current?.focus();
+    completosAntes.current = completos;
+  }, [completos, elegirEnPlaza]);
+  // Con un número justo (el despertar guiado), se eligen seguidos todos los que faltan
+  const faltan = cantidad !== undefined ? Math.max(1, cantidad - jugadores.length) : 1;
   const elegirJugadorEnPlaza = () =>
     elegirEnPlaza?.({
       titulo: pendiente.titulo,
-      excluidos: [...jugadores, ...excluidos],
+      excluidos,
+      elegidos: jugadores,
+      cuantos: faltan,
+      aviso: cantidad !== undefined ? textoEleccion(faltan) : undefined,
       onElegido: (id) => setJugadores((l) => (l.includes(id) ? l : [...l, id])),
+      onQuitado: (id) => setJugadores((l) => l.filter((x) => x !== id)),
       // Al volver, el foco en el botón: para añadir otro o seguir a «Enviar»
       volver: idPlaza,
     });
@@ -590,8 +602,16 @@ export const BotoneraDespertar = ({
     return r;
   };
 
-  // Todo pasa por «Enviar» (también lo que no lleva nada): así un clic de más no manda nada
+  // «Entendido» se manda al pulsarlo; lo demás pasa por «Enviar» (también lo que no lleva
+  // nada): así un clic de más no manda nada. Mientras se manda, otro clic no lo repite
+  const mandandoRef = useRef(false);
   const pulsar = (envio: Envio, titulo: string, idBoton: string, adjunto?: AdjuntoDespertar) => {
+    if (envio.ficha === 'entendido' && !revision) {
+      if (mandandoRef.current) return;
+      mandandoRef.current = true;
+      void mandar(envio, titulo).finally(() => (mandandoRef.current = false));
+      return;
+    }
     volverRef.current = idBoton;
     setPendiente({ base: envio, titulo, adjunto: adjunto ?? {}, iniciales: iniciales(envio.tarjeta) });
   };

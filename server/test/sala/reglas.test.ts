@@ -292,6 +292,7 @@ describe('Reglas (cómo se combinan)', () => {
     recordatorios: [],
     nota: null,
     faroles: [null, null, null],
+    farolEnUso: null,
     ...cambios,
   });
   const ctx: ContextoReglas = { mesa: () => [], identidad: (a) => a.personaje, alineamiento: () => null, personaje: () => undefined };

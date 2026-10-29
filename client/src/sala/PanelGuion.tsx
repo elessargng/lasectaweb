@@ -31,6 +31,8 @@ interface PanelGuionProps {
   onCerrar: () => void;
   /** La noche que se ve al abrir el orden de noche: la primera hasta que acaba, luego las demás. */
   nochePorDefecto: 'primera' | 'otras';
+  /** El reparto de la partida, resumido bajo el título (abajo a la derecha de la sala lo taparía la hoja). */
+  reparto?: ReactNode;
 }
 
 /**
@@ -94,7 +96,7 @@ const colorDe = (tipo: string) =>
  *
  * Al abrirse el foco va a su título; Escape (con el foco dentro) lo cierra.
  */
-const PanelGuion = ({ vista, guion, idiomas, recordatorios, nochePorDefecto, onCambiarIdiomaDescripciones, onCerrar }: PanelGuionProps) => {
+const PanelGuion = ({ vista, guion, idiomas, recordatorios, nochePorDefecto, onCambiarIdiomaDescripciones, onCerrar, reparto }: PanelGuionProps) => {
   const [completo, setCompleto] = useState(false);
   const traduccionesNombres = useTraducciones(idiomas.nombres, idiomas.genero);
   const traduccionesDescripciones = useTraducciones(idiomas.descripciones, idiomas.genero);
@@ -110,7 +112,7 @@ const PanelGuion = ({ vista, guion, idiomas, recordatorios, nochePorDefecto, onC
   const modo = completo ? 'completo' : 'resumido';
   const maximo = () => Math.max(ANCHO.min, window.innerWidth - 16);
   const ancho = Math.min(anchos[modo], maximo());
-  // Mientras está abierto, su ancho para lo que se aparta de él (la mesa y el reparto)
+  // Mientras está abierto, su ancho para lo que se aparta de él (la mesa)
   useEffect(() => {
     const raiz = document.documentElement;
     raiz.style.setProperty('--sala-panel-guion-ancho', `${ancho}px`);
@@ -229,6 +231,7 @@ const PanelGuion = ({ vista, guion, idiomas, recordatorios, nochePorDefecto, onC
                 {noche === 'primera' ? 'Primera noche' : 'Otras noches'}
               </p>
             )}
+            {reparto}
           </div>
           <button
             type="button"

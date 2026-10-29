@@ -38,3 +38,7 @@ export function noPuedeNominar(sala: SalaService, yo: SalaParticipante): string 
 /** Los jugadores de la partida: los que se sientan (los asientos libres no esperan a nadie). */
 export const jugadoresSentados = (sala: SalaService): string[] =>
   sala.asientos().flatMap((a) => (a.ocupante ? [a.ocupante] : []));
+
+/** Los jugadores muertos: como no nominan, están listos para la noche desde el principio del día. */
+export const muertosSentados = (sala: SalaService): string[] =>
+  sala.asientos().flatMap((a) => (a.ocupante && a.muerto ? [a.ocupante] : []));

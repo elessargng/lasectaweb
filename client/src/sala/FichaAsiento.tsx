@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { Check } from 'lucide-react';
 import DialogoPersonaje from './DialogoPersonaje';
 import DialogoRecordatorio from './DialogoRecordatorio';
 import FichaRedonda from './FichaRedonda';
+import { IconoMascaras } from './IconosJuego';
 import PersonajeEnFicha from './PersonajeEnFicha';
 import PistaPersonaje from './PistaPersonaje';
 import {
@@ -56,7 +58,7 @@ interface FichaAsientoProps {
    * del botón («Elegir»; si no, «Nominar»). `yaNominado`: ya la nominaron hoy (sale
    * apagada y con un rótulo, pero se puede elegir igual).
    */
-  eligiendo?: { papel: 'origen' | 'candidata'; onPulsar: () => void; accion?: string; yaNominado?: boolean };
+  eligiendo?: { papel: 'origen' | 'candidata' | 'elegida'; onPulsar: () => void; accion?: string; yaNominado?: boolean };
   /** En una votación: votos acumulados si votó, null si no; sin definir si aún no le ha tocado. */
   voto?: number | null;
   /**
@@ -270,6 +272,8 @@ const FichaAsiento = ({
 
   if (eligiendo) {
     const origen = eligiendo.papel === 'origen';
+    // Ya elegida en el despertar (eligiendo varias en la plaza): marcada en latón, con su rótulo
+    const elegida = eligiendo.papel === 'elegida';
     const yaNominado = !!eligiendo.yaNominado;
     return (
       <button
@@ -278,10 +282,10 @@ const FichaAsiento = ({
         onClick={eligiendo.onPulsar}
         aria-label={`${eligiendo.accion ?? 'Nominar'} al ${describirAsiento(numero, ocupante)}${origen ? ', que es el que nomina' : ''}${
           yaNominado ? ', ya nominado hoy' : ''
-        }`}
+        }${elegida ? ', elegido' : ''}`}
         title={yaNominado ? 'Ya nominado hoy' : undefined}
         className={`relative block cursor-pointer rounded-full ring-offset-2 ring-offset-background focus:outline-none focus-visible:ring-4 focus-visible:ring-white ${
-          origen ? 'ring-4 ring-white/80' : yaNominado ? 'ring-2 ring-white/20' : 'ring-2 ring-blood-bright'
+          origen ? 'ring-4 ring-white/80' : elegida ? 'ring-4 ring-theme-main' : yaNominado ? 'ring-2 ring-white/20' : 'ring-2 ring-blood-bright'
         }`}
       >
         {/* Ya nominada hoy: apagada (se aviva al pasar por encima) y con su rótulo */}
@@ -294,6 +298,15 @@ const FichaAsiento = ({
             Ya nominado
           </span>
         )}
+        {elegida && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-0.5 whitespace-nowrap rounded border border-theme-main bg-surface-container px-1.5 font-ui text-[10px] font-semibold leading-4 text-theme-main"
+          >
+            <Check size={10} strokeWidth={3} />
+            Elegido
+          </span>
+        )}
       </button>
     );
   }
@@ -301,6 +314,8 @@ const FichaAsiento = ({
   const nombreJugador = ocupante?.nombre ?? '';
   // El alineamiento se dice si no es el de su tipo (o si es un viajero y ya lo tiene)
   const alineamientoDistinto = personaje && contenido.alineamiento && contenido.alineamiento !== alineamientoDeTipo(personaje.tipo);
+  // El farol que dice usar (lo ven quien se sienta ahí y el narrador)
+  const farolEnUso = asiento.farolEnUso ? todosPorId.get(asiento.farolEnUso) : undefined;
   const estado = [
     personaje && `${personaje.nombre.texto}${alineamientoDistinto ? `, ${NOMBRE_ALINEAMIENTO[contenido.alineamiento!]}` : ''}`,
     asiento.muerto && (asiento.votoGastado ? 'muerta, sin voto' : 'muerta, con voto'),
@@ -314,6 +329,7 @@ const FichaAsiento = ({
       `recordatorios: ${recordatorios.map((r) => describirRecordatorio(r, todosPorId.get(r.personaje))).join(', ')}`,
     senal,
     listo && 'lista para la noche',
+    farolEnUso && `se hace pasar por ${farolEnUso.nombre.texto}`,
     seguir?.siguiendo && 'siguiendo',
   ].filter(Boolean);
   // En el botón de seguir (visitantes) no hace falta: lo dice aria-pressed
@@ -544,6 +560,16 @@ const FichaAsiento = ({
           className="pointer-events-none absolute -bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-full border border-gold bg-background px-1.5 font-ui text-[0.6rem] font-semibold uppercase tracking-wider text-gold-bright"
         >
           Listo
+        </span>
+      )}
+      {farolEnUso && (
+        // El farol que usa (se dice en su descripción): un rótulo sobre la ficha
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-2 left-1/2 z-10 flex max-w-[7rem] -translate-x-1/2 items-center gap-1 truncate rounded-full border border-theme-main/60 bg-background px-1.5 font-ui text-[0.6rem] font-semibold text-theme-main"
+        >
+          <IconoMascaras size={10} className="shrink-0" />
+          <span className="truncate">{farolEnUso.nombre.texto}</span>
         </span>
       )}
       {eligiendoRecordatorio && (

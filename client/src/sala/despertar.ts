@@ -92,7 +92,7 @@ export interface Envio {
 }
 
 /** «Elige un jugador», «Elige 2 jugadores» (lo que pide una habilidad). */
-export const textoEleccion = (cantidad: number) => `Elige ${cantidad === 1 ? 'un jugador' : `${cantidad} jugadores`}`;
+export const textoEleccion = (cantidad: number) => `Elige ${cantidad} ${cantidad === 1 ? 'jugador' : 'jugadores'}`;
 
 /** «asiento 3 (Bea)» con mayúscula: así empieza una frase o una línea. */
 export const nombreDeAsiento = (estado: SalaEstado, asientoId: string) => {

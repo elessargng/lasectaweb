@@ -1,5 +1,6 @@
 import type { VideoTrack } from 'livekit-client';
 import { Ear, MicOff, VolumeX } from 'lucide-react';
+import BocadilloNarrador from './BocadilloNarrador';
 import BotonesContacto, { BotonesEnCuadro, type ContactoParticipante } from './BotonesContacto';
 import VideoPista from './VideoPista';
 import CuadroAvatar from './CuadroAvatar';
@@ -38,8 +39,8 @@ interface CuadroNarradorProps {
    */
   npc?: PersonajeMostrado;
   /**
-   * Un narrador virtual: lo último que ha dicho (también se oye con la voz), escrito
-   * debajo de su nombre. No va en aria-live: ya lo dice en voz alta.
+   * Un narrador virtual: lo último que ha dicho (también se oye con la voz), en un
+   * bocadillo junto a su retrato. No va en aria-live: ya lo dice en voz alta.
    */
   frase?: string | null;
 }
@@ -119,11 +120,6 @@ const CuadroNarrador = ({
             {escuchando && <span className="sr-only"> (escuchando una conversación)</span>}
             {narrador.virtual && <span className="block text-xs font-normal italic text-on-surface-muted">narrador virtual</span>}
           </p>
-          {frase && (
-            <p className="mx-auto mt-1 max-w-[var(--sala-avatar)] rounded-[3px] border border-outline-ghost bg-background/70 px-2 py-1 text-center text-xs italic text-on-surface">
-              «{frase}»
-            </p>
-          )}
         </>
       }
     />
@@ -144,6 +140,8 @@ const CuadroNarrador = ({
     <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-5 z-10 aspect-square">
       <ManoLevantada levantada={narrador.manoLevantada} forma={narrador.formaMano} estilo={narrador.estiloMano} enNominacion={false} />
     </div>
+    {/* Lo que dice el virtual: un bocadillo hacia la plaza que se recoge solo (ver BocadilloNarrador) */}
+    {frase && <BocadilloNarrador key={frase} frase={frase} />}
     {/* Llamar y escribir, en grande dentro del cuadro (abajo si está el botón del grimorio) */}
     {contacto && (
       <BotonesEnCuadro nombre={narrador.nombre} onMensaje={contacto.onMensaje} conversar={contacto.conversar} bajoRotulo abajo={!!grimorio} />

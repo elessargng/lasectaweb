@@ -29,6 +29,7 @@ const sinPersonaje = (a: SalaAsiento): SalaAsiento => ({
   recordatorios: [],
   nota: null,
   faroles: farolesVacios(),
+  farolEnUso: null,
 });
 const sinRecordatorios = (a: SalaAsiento): SalaAsiento => ({ ...a, recordatorios: [], nota: null });
 

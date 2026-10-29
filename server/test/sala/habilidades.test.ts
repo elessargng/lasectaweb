@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { SalaService } from '../../src/services/SalaService';
 import type { SalaHabilidadNoche } from '../../src/contrato/sala';
 import { Arnes } from './arnes';
+import { ficha } from '../../src/services/partida/habilidades/HabilidadNocturna';
 import { guionDePrueba, guionTroubleBrewing, invitado } from './guionDePrueba';
 
 /** El despertar guiado desde el orden de noche: cada personaje de Trouble Brewing, según su habilidad. */
@@ -27,8 +28,12 @@ function mesa(...personajes: string[]) {
   const textos = (i: number) => asiento(i).recordatorios.map((r) => r.texto);
   /** Lo último que le ha mandado el narrador al de un asiento. */
   const ultimo = (i: number) => sala.despertares().find((d) => d.asiento === asiento(i).id)?.mensajes.slice(-1)[0];
-  /** El de un asiento elige (como si contestara con «Jugador»). */
-  const elegir = (i: number, ...elegidos: number[]) => sala.alElegirHabilidad(asiento(i).id, elegidos.map((e) => asiento(e).id));
+  /** El de un asiento elige (como el socket: lo que contesta queda en su despertar y luego se hace lo de su habilidad). */
+  const elegir = (i: number, ...elegidos: number[]) => {
+    const jugadores = elegidos.map((e) => asiento(e).id);
+    sala.enviarDespertar(asiento(i).id, { ...ficha('jugador'), jugadores, autor: asiento(i).id });
+    sala.alElegirHabilidad(asiento(i).id, jugadores);
+  };
   return { sala, ids, asiento, fila, recordatorio, textos, ultimo, elegir };
 }
 
@@ -144,7 +149,8 @@ describe('despertar guiado', () => {
       const f = m.fila('fortuneteller')!;
       expect(f.estado).toBe('revisar');
       expect(f.opciones.map((o) => o.envio.ficha)).toEqual(['si']);
-      expect(m.ultimo(0)?.ficha).toBeFalsy();
+      // Aún no se le ha contestado: lo último es lo que eligió
+      expect(m.ultimo(0)?.autor).toBe(m.asiento(0).id);
       m.sala.resolverHabilidad('fortuneteller', f.opciones[0].envio);
       expect(m.ultimo(0)?.ficha).toBe('si');
     });
@@ -268,11 +274,14 @@ describe('despertar guiado', () => {
       expect(m.fila('demonios')).toMatchObject({ estado: 'falta', avisos: [{ tipo: 'pocosJugadores' }] });
     });
 
-    it('cada esbirro ve al demonio y a los esbirros', () => {
+    it('cada esbirro ve al demonio y, cuando dice «Entendido», a los esbirros', () => {
       const m = mesa(...SIETE);
       expect(m.fila('esbirros')).toMatchObject({ estado: 'listo', asiento: m.asiento(1).id, asientos: [m.asiento(1).id, m.asiento(2).id] });
       expect(m.sala.despertarHabilidad('esbirros')).toBeNull();
       for (const i of [1, 2]) {
+        // Una cosa cada vez: lo segundo espera a que entienda lo primero
+        expect(mensajes(m, i)).toMatchObject([{ autor: 'narrador', tarjeta: 'demonio', jugadores: [m.asiento(0).id], guiado: true }]);
+        m.sala.alEntenderHabilidad(m.asiento(i).id);
         expect(mensajes(m, i)).toMatchObject([
           { autor: 'narrador', tarjeta: 'demonio', jugadores: [m.asiento(0).id], guiado: true },
           { autor: 'narrador', tarjeta: 'esbirros', jugadores: [m.asiento(1).id, m.asiento(2).id], guiado: true },
@@ -282,16 +291,39 @@ describe('despertar guiado', () => {
       expect(m.sala.despertares().map((d) => d.asiento)).toEqual([m.asiento(1).id, m.asiento(2).id]);
     });
 
-    it('el demonio, con los 3 faroles, ve a sus esbirros y los faroles', () => {
+    it('el demonio, con los 3 faroles, ve a sus esbirros y, cuando dice «Entendido», los faroles', () => {
       const m = mesa(...SIETE);
       expect(m.fila('demonios')).toMatchObject({ estado: 'falta', avisos: [{ tipo: 'faltanFaroles' }] });
       ['washerwoman', 'librarian', 'mayor'].forEach((id, i) => m.sala.ponerFarol(i, id));
       expect(m.fila('demonios')?.estado).toBe('listo');
       m.sala.despertarHabilidad('demonios');
+      expect(mensajes(m, 0)).toMatchObject([{ tarjeta: 'esbirros', jugadores: [m.asiento(1).id, m.asiento(2).id], guiado: true }]);
+      m.sala.alEntenderHabilidad(m.asiento(0).id);
       expect(mensajes(m, 0)).toMatchObject([
         { tarjeta: 'esbirros', jugadores: [m.asiento(1).id, m.asiento(2).id], guiado: true },
         { tarjeta: 'noEnJuego', personajes: ['washerwoman', 'librarian', 'mayor'], guiado: true },
       ]);
+      // Solo una vez: otro «Entendido» ya no manda nada
+      m.sala.alEntenderHabilidad(m.asiento(0).id);
+      expect(mensajes(m, 0)).toHaveLength(2);
+    });
+
+    it('una cosa cada vez: al Envenenador no se le pide elegir hasta que entiende quién es su demonio', () => {
+      const m = mesa(...SIETE);
+      m.sala.despertarHabilidad('esbirros');
+      m.sala.despertarHabilidad('poisoner');
+      // La petición espera en su cola: aún no se le ha pedido (no puede contestar eligiendo)
+      expect(m.ultimo(1)).toMatchObject({ tarjeta: 'demonio' });
+      expect(m.sala.eleccionPendiente(m.asiento(1).id)).toBeNull();
+      m.sala.alEntenderHabilidad(m.asiento(1).id);
+      expect(m.ultimo(1)).toMatchObject({ tarjeta: 'esbirros' });
+      expect(m.sala.eleccionPendiente(m.asiento(1).id)).toBeNull();
+      m.sala.alEntenderHabilidad(m.asiento(1).id);
+      expect(m.ultimo(1)).toMatchObject({ tarjeta: 'eleccion', eleccion: { cantidad: 1 } });
+      expect(m.sala.eleccionPendiente(m.asiento(1).id)).not.toBeNull();
+      // Elige, y la respuesta (del mismo despertar) le llega ya
+      m.elegir(1, 4);
+      expect(m.ultimo(1)?.ficha).toBe('entendido');
     });
 
     it('los viajeros no cuentan como jugadores', () => {

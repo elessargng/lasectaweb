@@ -1,12 +1,15 @@
 import type { SalaHabilidadNoche } from '../../../contrato/sala';
 import { habilidadesDelGuion } from '../../partida/habilidades';
+import { elegirVarios } from '../estrategias/EstrategiaNarrador';
 import { FRASES } from '../frases';
+import { describirPersonaje, opcionesDeAsientos } from '../grimorio';
 import { nombreDeAsiento, sinEntender, todosHanEntendido, tipoReal, vivo } from '../mesaDeJuego';
 import { planificarNoche } from '../noche/planificarNoche';
 import { cumplirRequisitos, ponerFaroles, ponerRecordatorio } from '../noche/requisitos';
 import { resolverRevision } from '../noche/revisiones';
 import { duracionPrivados, Privados } from './Dia';
 import { comprobarFinal } from '../final/comprobarFinal';
+import { apuntarNoche } from '../final/cronica';
 import { Revelando } from './Revelando';
 import type { ContextoEtapa, Etapa } from './Etapa';
 
@@ -21,6 +24,9 @@ export const RECORDAR_ENTENDIDO = 'Envía «Entendido» para saber que has visto
 
 /** Las vueltas que da una fila como mucho (falta → listo → esperando → revisar → hecho), por si algo no avanza. */
 const VUELTAS_MAX = 12;
+
+/** Lo que espera en cada paso de la hoja de noche, esté o no en juego (ms, al azar): que la duración no delate qué roles hay. */
+const ESPERA_PASO = { min: 2000, max: 6000 };
 
 /**
  * La noche del narrador virtual. Va por tramos (ver planificarNoche): en cada uno,
@@ -92,10 +98,17 @@ export class Noche implements Etapa {
   private async esperarEntendidos(ctx: ContextoEtapa): Promise<void> {
     const { sala } = ctx;
     while (!(await this.hastaComoMucho(ctx, () => todosHanEntendido(sala), ESPERA_ENTENDIDO_MS))) {
-      await ctx.mesa.accion('narrador:sonarGong');
-      for (const asientoId of sinEntender(sala)) {
-        await ctx.mesa.accion('despertar:enviar', { asientoId, ficha: 'personalizado', texto: RECORDAR_ENTENDIDO });
-      }
+      await this.recordarEntendido(ctx, sinEntender(sala));
+    }
+  }
+
+  /** El gong, y a quien no ha dicho «Entendido» (de los `asientos`), que lo diga. */
+  private async recordarEntendido(ctx: ContextoEtapa, asientos: string[]): Promise<void> {
+    const faltan = sinEntender(ctx.sala).filter((id) => asientos.includes(id));
+    if (!faltan.length) return;
+    await ctx.mesa.accion('narrador:sonarGong');
+    for (const asientoId of faltan) {
+      await ctx.mesa.accion('despertar:enviar', { asientoId, ficha: 'personalizado', texto: RECORDAR_ENTENDIDO });
     }
   }
 
@@ -112,7 +125,7 @@ export class Noche implements Etapa {
       tipoDe: (id) => sala.personaje(id)?.tipo,
     });
     for (const { personajes } of plan) {
-      for (let paso = 0; paso < personajes.length; paso++) await this.dormir(ctx, ctx.estrategia.esperaPaso());
+      for (let paso = 0; paso < personajes.length; paso++) await this.dormir(ctx, ESPERA_PASO.min + Math.floor(ctx.azar() * (ESPERA_PASO.max - ESPERA_PASO.min)));
       if (personajes.includes('demonios')) await ponerFaroles(ctx);
       await Promise.all(personajes.map((p) => this.resolverFila(ctx, p)));
       // El Imp que se ha elegido a sí mismo: el nuevo, uno de los esbirros vivos
@@ -123,11 +136,26 @@ export class Noche implements Etapa {
     await this.amanecer(ctx);
   }
 
-  /** La primera noche, si salió el Borracho: «Is The Drunk» a un aldeano al azar. */
+  /**
+   * La primera noche, si salió el Borracho: «Is The Drunk» a quien tiene la ficha
+   * que cree ser (elegida con la bolsa); si no se eligió, a un aldeano que se decide.
+   */
   private async ponerBorracho(ctx: ContextoEtapa): Promise<void> {
-    if (!ctx.fueraDeLaBolsa().includes('drunk')) return;
+    const drunk = ctx.fueraDeLaBolsa().find((f) => f.personaje === 'drunk');
+    if (!drunk) return;
     const aldeanos = ctx.sala.asientos().filter((a) => a.personaje && ctx.sala.personaje(a.personaje)?.tipo === 'townsfolk');
-    if (aldeanos.length) await ponerRecordatorio(ctx, ctx.estrategia.elegirUno(aldeanos).id, 'drunk', 'Is The Drunk');
+    const elQueCreeSer = aldeanos.find((a) => a.personaje === drunk.creeSer);
+    if (elQueCreeSer) {
+      await ponerRecordatorio(ctx, elQueCreeSer.id, 'drunk', 'Is The Drunk');
+      return;
+    }
+    if (!aldeanos.length) return;
+    const borracho = await ctx.decidir({
+      motivo: 'borracho',
+      pregunta: 'El Borracho: el aldeano que en realidad es el Borracho (cree ser ese aldeano).',
+      opciones: opcionesDeAsientos(ctx.sala, aldeanos),
+    });
+    await ponerRecordatorio(ctx, borracho.id, 'drunk', 'Is The Drunk');
   }
 
   private fila(ctx: ContextoEtapa, personaje: string): SalaHabilidadNoche | undefined {
@@ -160,15 +188,35 @@ export class Noche implements Etapa {
     const asiento = ctx.sala.asientos().find((a) => a.id === fila.asiento);
     if (eleccion && asiento && !asiento.ocupante) {
       const posibles = ctx.sala.asientos().filter((a) => eleccion.puedeElegirse || a.id !== asiento.id);
-      const jugadores = ctx.estrategia.barajar(posibles).slice(0, eleccion.cantidad).map((a) => a.id);
+      const elegidos = await elegirVarios(
+        (d) => ctx.decidir(d),
+        {
+          motivo: 'asientoLibre',
+          pregunta: `Lo que elige ${describirPersonaje(ctx.sala, fila.personaje)} en un asiento libre (elige el narrador por él).`,
+          opciones: opcionesDeAsientos(ctx.sala, posibles),
+        },
+        eleccion.cantidad,
+      );
+      const jugadores = elegidos.map((a) => a.id);
       await ctx.mesa.accion('despertar:enviar', { asientoId: asiento.id, ficha: 'jugador', jugadores });
     }
-    await this.hasta(() => this.fila(ctx, fila.personaje)?.estado !== 'esperando');
+    // Si aún no se le ha pedido (espera a que entienda lo anterior: ver DespertarGuiado), se le recuerda
+    const elegido = () => this.fila(ctx, fila.personaje)?.estado !== 'esperando';
+    while (!(await this.hastaComoMucho(ctx, elegido, ESPERA_ENTENDIDO_MS))) {
+      const sinElegir = fila.asientos.filter((id) => !ctx.sala.eleccionPendiente(id));
+      if (sinElegir.length) await this.recordarEntendido(ctx, sinElegir);
+    }
   }
 
   private async elegirNuevoImp(ctx: ContextoEtapa): Promise<void> {
     const esbirros = ctx.sala.asientos().filter((a) => vivo(a) && tipoReal(ctx.sala, a) === 'minion');
-    if (esbirros.length) await ctx.mesa.accion('narrador:nuevoImp', { asientoId: ctx.estrategia.elegirUno(esbirros).id });
+    if (!esbirros.length) return;
+    const nuevo = await ctx.decidir({
+      motivo: 'nuevoImp',
+      pregunta: 'El Imp se ha matado: el esbirro vivo que pasa a ser el nuevo Imp.',
+      opciones: opcionesDeAsientos(ctx.sala, esbirros),
+    });
+    await ctx.mesa.accion('narrador:nuevoImp', { asientoId: nuevo.id });
   }
 
   /** Amanece: se anuncian las muertes de la noche y empiezan los privados. */
@@ -176,6 +224,8 @@ export class Noche implements Etapa {
     const { sala } = ctx;
     const muertos = sala.asientos().filter((a) => a.muertePendiente);
     const nombres = muertos.map((a) => nombreDeAsiento(sala, a.id));
+    // Antes de que se cierren los despertares: lo que se ha dado y quién ha matado a quién
+    apuntarNoche(ctx.recuerdos.cronica, sala);
     if (!(await ctx.mesa.accion('narrador:amanecer')).ok) return;
     for (const a of muertos) await ctx.mesa.accion('narrador:confirmarMuerte', { asientoId: a.id });
     const buenosDias = sala.fase().numero === 1 ? FRASES.primerDia(duracionPrivados(sala) / 1000) : FRASES.buenosDias(nombres);

@@ -226,6 +226,16 @@ export class Participantes {
     return id;
   }
 
+  /** Otro narrador virtual toma el relevo del que hay: el mismo participante, con su nombre. */
+  relevarVirtual(participanteId: string, nombre: string, virtual: IdNarradorVirtual): void {
+    for (const entrada of this.entradas.values()) {
+      if (!entrada.virtual || entrada.participante.id !== participanteId) continue;
+      entrada.participante.nombre = nombre;
+      entrada.participante.virtual = virtual;
+      entrada.nombreBase = nombre;
+    }
+  }
+
   /** La conexión nueva se queda con la entrada: mismo participante y papel. */
   private retomar(entrada: Entrada, socketId: string, llegada: SalaLlegada): void {
     if (entrada.expulsion) clearTimeout(entrada.expulsion);

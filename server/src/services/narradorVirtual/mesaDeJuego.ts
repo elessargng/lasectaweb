@@ -34,8 +34,11 @@ export const contextoNoche = (sala: SalaService): ContextoNoche => ({
 });
 
 /**
- * Los asientos despertados esta noche que aún no han contestado «Entendido» a lo
- * último que les ha mandado el narrador (los asientos libres no contestan).
+ * Los asientos despertados esta noche a los que aún les falta decir «Entendido»
+ * (los asientos libres no contestan). Lo dice quien recibe lo último: si el
+ * narrador le ha dado información, el jugador; si el jugador ha elegido y el
+ * narrador le ha contestado «Entendido» (lo ha visto), ya está, el jugador no
+ * tiene que contestarle a eso.
  */
 export function sinEntender(sala: SalaService): string[] {
   const asientos = sala.asientos();
@@ -44,7 +47,7 @@ export function sinEntender(sala: SalaService): string[] {
     .filter((d) => {
       if (!asientos.find((a) => a.id === d.asiento)?.ocupante) return false;
       const ultimo = d.mensajes[d.mensajes.length - 1];
-      return !!ultimo && !(ultimo.autor !== 'narrador' && ultimo.ficha === 'entendido');
+      return !!ultimo && ultimo.ficha !== 'entendido';
     })
     .map((d) => d.asiento);
 }

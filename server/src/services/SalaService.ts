@@ -68,6 +68,7 @@ const asientoNuevo = (): SalaAsiento => ({
   alineamiento: null,
   recordatorios: [],
   nota: null,
+  farolEnUso: null,
   faroles: farolesVacios(),
 });
 
@@ -185,6 +186,7 @@ export class SalaService {
     noche: () => this.faseActual.momento === 'noche',
     despertar: (asientoId) => this.despertar(asientoId),
     mandar: (asientoId, envio, eleccion) => this.mandarDelNarrador(asientoId, envio, { eleccion, guiado: true }),
+    porEntender: (asientoId) => this.despertados.porEntender(asientoId),
     ponerRecordatorio: (asientoId, personaje, texto) => this.ponerRecordatorioDe(asientoId, personaje, texto),
     matarDeNoche: (asientoId) => this.cambiarVida(asientoId, true),
     enviarGrimorio: (asientoId) => this.enviarGrimorioDeLaMesa(asientoId),
@@ -335,6 +337,11 @@ export class SalaService {
 
   copiarFaroles(asientoId: string, personajes: string[]): void {
     this.farolesDemonio.copiarFaroles(asientoId, personajes);
+  }
+
+  /** El farol que dice usar el jugador de un asiento (uno de los suyos), o null. Devuelve el error, si lo hay. */
+  usarFarol(asientoId: string, personajeId: string | null): string | null {
+    return this.farolesDemonio.usarFarol(asientoId, personajeId);
   }
 
   /** El asiento en el que se sienta un participante, o null. */
@@ -710,6 +717,11 @@ export class SalaService {
 
   alElegirHabilidad(asientoId: string, elegidos: string[]): void {
     this.guiado.alElegir(asientoId, elegidos);
+  }
+
+  /** El jugador de un asiento ha contestado «Entendido» en su despertar: le llega lo siguiente de su cola (ver DespertarGuiado). */
+  alEntenderHabilidad(asientoId: string): void {
+    this.guiado.alEntender(asientoId);
   }
 
   resolverHabilidad(personaje: string, envio: SalaEnvioDespertar): string | null {
@@ -1184,7 +1196,7 @@ export class SalaService {
 
   /** Los asientos, en orden (el primero a las 12, como las agujas del reloj). */
   asientos(): SalaAsiento[] {
-    return this.mesaAlDia().map((a) => ({ ...a, faroles: this.farolesDemonio.deAsiento(a) }));
+    return this.mesaAlDia().map((a) => ({ ...a, faroles: this.farolesDemonio.deAsiento(a), farolEnUso: this.farolesDemonio.enUso(a) }));
   }
 
   /** Añade un asiento al final del círculo. No comprueba el máximo ni permisos. */
@@ -1406,6 +1418,14 @@ export class SalaService {
   /** Cambia lo que lleva el narrador virtual de la partida (su etapa, su frase, el día…). No comprueba permisos. */
   actualizarNarradorVirtual(cambios: Partial<Omit<SalaNarradorVirtual, 'id' | 'participante' | 'creador' | 'guion' | 'jugadores'>>): void {
     this.narradoresVirtuales.actualizar(cambios);
+  }
+
+  /** Otro narrador virtual sigue la partida del que hay (Jarvis deja a «Tonto y tú»): con su id y su nombre. */
+  relevarNarradorVirtual(id: SalaNarradorVirtual['id'], nombre: string): void {
+    const narrador = this.narradoresVirtuales.actual();
+    if (!narrador) return;
+    this.narradoresVirtuales.guardar({ ...narrador, id });
+    this.presentes.relevarVirtual(narrador.participante, nombre, id);
   }
 
   /** Se va el narrador virtual (su participante sale de la sala): la palabra y los privados vuelven a ser de todos. */

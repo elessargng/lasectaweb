@@ -9,6 +9,17 @@
         "category": "Narrador",
         "items": [
           "Añadido el narrador virtual «Tonto y tú» para Trouble Brewing.",
+          "Añadido el bocadillo con lo que dice el narrador virtual.",
+          "Añadido el saludo del narrador virtual al entrar en la sala.",
+          "Renovado el diseño del reparto de la partida.",
+          "Añadidas las frases del narrador virtual al revelar el grimorio.",
+          "Añadida la pestaña Susurros para los visitantes con grimorio.",
+          "Añadidas bolsas variadas del narrador virtual.",
+          "Los narradores virtuales, solo para usuarios registrados.",
+          "Añadida una pausa de 3 segundos entre el gong y el cierre de los privados.",
+          "Añadida la frase del narrador virtual cuando la Virgen ejecuta a quien la nomina.",
+          "Añadidas las teclas de «Listo» y de avanzar la nominación.",
+          "Añadida la elección seguida de varios jugadores en la plaza en los despertares guiados.",
           "La Pitonisa y el Ravenkeeper siempre pasan por la revisión del narrador."
         ]
       },
@@ -16,7 +27,9 @@
         "category": "Jugadores",
         "items": [
           "Añadidos los botones de nominar, «Defensa», «Empezar votación» y «Listo» con narrador virtual.",
-          "Añadida la opción de declararse Exterminador y disparar."
+          "Añadida la opción de declararse Exterminador y disparar.",
+          "«Entendido» se envía al pulsarlo.",
+          "Cada wake de noche espera al «Entendido» del anterior."
         ]
       },
       {

@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import { createServer, type Server as HttpServer } from 'http';
 import type { AddressInfo } from 'net';
 import { io as conectar, type Socket } from 'socket.io-client';
@@ -97,13 +98,17 @@ export class Arnes {
     return new Arnes(http, `http://127.0.0.1:${port}`);
   }
 
-  /** Entra un invitado con ese nombre y espera a que todos tengan el estado nuevo. */
-  async entrar(nombre: string): Promise<Cliente> {
+  /**
+   * Entra un invitado con ese nombre (o, con `cuenta`, ese usuario con su token) y
+   * espera a que todos tengan el estado nuevo.
+   */
+  async entrar(nombre: string, { cuenta }: { cuenta?: string } = {}): Promise<Cliente> {
     const antes = this.recuento();
+    const token = cuenta ? jwt.sign({ id: cuenta, username: nombre }, process.env.JWT_SECRET || 'secret') : undefined;
     const socket = conectar(this.url, {
       path: SALA_SOCKET_PATH,
       transports: ['websocket'],
-      auth: { nombre, clienteId: `cliente-${nombre}` },
+      auth: { nombre, clienteId: `cliente-${nombre}`, ...(token ? { token } : {}) },
       reconnection: false,
     });
     const cliente = new Cliente(nombre, socket);

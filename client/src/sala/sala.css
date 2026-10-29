@@ -480,6 +480,337 @@
 }
 
 /*
+ * El reparto de la partida (RepartoPartida): una placa de tinta con doble filo de
+ * latón y esquinas labradas. Dentro, un arco de piedra por tipo que se abre hacia
+ * una luz del fondo (azul de vidriera, el bien; brasa, el mal), con el número
+ * delante. Con el reparto mal, la placa se tiñe de lacre y el arco que no cuadra
+ * se enciende en rojo.
+ */
+.sala-reparto {
+  position: relative;
+  width: 19rem;
+  max-width: 100%;
+  padding: 0.9rem 0.9rem 0.95rem;
+  border-radius: 4px;
+  background:
+    radial-gradient(130% 70% at 50% 0%, rgba(var(--gold-rgb), 0.09), transparent 60%),
+    linear-gradient(180deg, rgba(28, 32, 48, 0.97), rgba(13, 15, 23, 0.97));
+  border: 1px solid rgba(var(--gold-rgb), 0.55);
+  box-shadow:
+    inset 0 0 0 3px rgba(var(--tinta-rgb), 0.9),
+    inset 0 0 0 4px rgba(var(--gold-rgb), 0.18),
+    0 20px 40px -16px rgba(0, 0, 0, 0.95),
+    0 0 28px -10px rgba(var(--gold-rgb), 0.2);
+  transition: border-color 0.4s ease, box-shadow 0.4s ease;
+}
+.sala-reparto[data-mal] {
+  background:
+    radial-gradient(130% 70% at 50% 0%, rgba(var(--blood-rgb), 0.3), transparent 65%),
+    linear-gradient(180deg, rgba(34, 18, 26, 0.97), rgba(13, 15, 23, 0.97));
+  border-color: rgba(212, 67, 76, 0.7);
+  box-shadow:
+    inset 0 0 0 3px rgba(var(--tinta-rgb), 0.9),
+    inset 0 0 0 4px rgba(212, 67, 76, 0.25),
+    0 20px 40px -16px rgba(0, 0, 0, 0.95),
+    0 0 30px -8px rgba(212, 67, 76, 0.4);
+}
+/* Una esquina labrada: un ángulo de latón con un punto */
+.sala-reparto-esquina {
+  position: absolute;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-top: 1px solid rgba(var(--gold-rgb), 0.75);
+  border-left: 1px solid rgba(var(--gold-rgb), 0.75);
+  pointer-events: none;
+}
+.sala-reparto-esquina::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+  background: rgba(var(--gold-rgb), 0.7);
+}
+.sala-reparto[data-mal] .sala-reparto-esquina { border-color: rgba(212, 67, 76, 0.8); }
+.sala-reparto[data-mal] .sala-reparto-esquina::after { background: rgba(212, 67, 76, 0.8); }
+.sala-reparto-titulo {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--color-gold-bright);
+  text-shadow: 0 0 12px rgba(var(--gold-rgb), 0.35);
+}
+/* Un filete de latón con un rombo en medio, entre los vivos y el reparto */
+.sala-reparto-filete {
+  position: relative;
+  display: block;
+  height: 1px;
+  margin: 0.7rem 0 0.75rem;
+  background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb), 0.55), transparent);
+}
+.sala-reparto-filete::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: var(--color-gold);
+  transform: translate(-50%, -50%) rotate(45deg);
+  box-shadow: 0 0 6px rgba(var(--gold-rgb), 0.6);
+}
+
+/* Cada tipo: el arco, su nombre debajo y (el narrador) lo que toca */
+.sala-reparto-tipo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+.sala-reparto-tipo[data-bando='bien'] {
+  --sala-arco-fondo: url(#sala-reparto-fondo-bien);
+  --sala-reparto-luz: #d6e8ff;
+  --sala-reparto-claro: var(--color-good-bright);
+  --sala-reparto-color: var(--color-good);
+  --sala-reparto-halo: rgba(79, 143, 209, 0.55);
+}
+.sala-reparto-tipo[data-bando='mal'] {
+  --sala-arco-fondo: url(#sala-reparto-fondo-mal);
+  --sala-reparto-luz: #ffd3c9;
+  --sala-reparto-claro: var(--color-blood-pale);
+  --sala-reparto-color: var(--color-blood-bright);
+  --sala-reparto-halo: rgba(212, 67, 76, 0.6);
+}
+/* Sin ninguno: el arco a oscuras y el número apagado */
+.sala-reparto-tipo[data-cero] {
+  --sala-arco-fondo: url(#sala-reparto-fondo-cero);
+  --sala-reparto-luz: #8a8478;
+  --sala-reparto-claro: #8a8478;
+  --sala-reparto-color: #4a463f;
+  --sala-reparto-halo: transparent;
+}
+.sala-reparto-tipo[data-fallo] {
+  /* El que no cuadra: el vano en rojo (también el de un bueno) */
+  --sala-arco-fondo: url(#sala-reparto-fondo-mal);
+  --sala-reparto-luz: #ffd3c9;
+  --sala-reparto-claro: var(--color-blood-pale);
+  --sala-reparto-color: var(--color-blood-bright);
+  --sala-reparto-halo: rgba(212, 67, 76, 0.6);
+}
+.sala-reparto-arco {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 64 / 74;
+}
+.sala-reparto-arco svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.7));
+}
+.sala-reparto-tipo[data-fallo] .sala-reparto-arco svg {
+  animation: sala-reparto-latido 2.4s ease-in-out infinite;
+}
+/* El número, en el vano, delante de la luz: un degradado de luz de su color, no un color plano */
+.sala-reparto-numero {
+  position: absolute;
+  inset: 24% 0 0 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(180deg, var(--sala-reparto-luz) 0%, var(--sala-reparto-claro) 45%, var(--sala-reparto-color) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 8px var(--sala-reparto-halo)) drop-shadow(0 2px 2px #000);
+}
+.sala-reparto-nombre {
+  order: 1;
+  margin-top: 0.35rem;
+  max-width: 100%;
+  font-family: var(--font-ui);
+  font-size: 0.52rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--sala-reparto-claro);
+  overflow-wrap: anywhere;
+}
+.sala-reparto-toca {
+  order: 2;
+  margin-top: 0.15rem;
+  font-family: var(--font-ui);
+  font-size: 0.52rem;
+  letter-spacing: 0.04em;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--theme-on-surface-variant);
+}
+.sala-reparto-toca b {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: normal;
+  color: var(--color-gold-bright);
+}
+.sala-reparto-error {
+  border-top: 1px solid transparent;
+  border-image: linear-gradient(90deg, transparent, rgba(212, 67, 76, 0.8), transparent) 1;
+}
+@keyframes sala-reparto-latido {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(212, 67, 76, 0.6)); }
+  50% { filter: drop-shadow(0 0 13px rgba(212, 67, 76, 0.95)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sala-reparto { transition: none; }
+  .sala-reparto-tipo[data-fallo] .sala-reparto-arco svg {
+    animation: none;
+    filter: drop-shadow(0 0 9px rgba(212, 67, 76, 0.8));
+  }
+}
+@media (forced-colors: active) {
+  .sala-reparto-numero {
+    background: none;
+    color: CanvasText;
+    filter: none;
+  }
+}
+
+/*
+ * Lo que dice el narrador virtual (BocadilloNarrador): un bocadillo de tinta con
+ * filo de latón y cola hacia su retrato. Brota de la cola y se recoge hacia ella;
+ * la línea de abajo se consume mientras queda para recogerse (se para con el
+ * ratón encima o el foco dentro).
+ */
+.sala-bocadillo {
+  --bocadillo-fondo: #1a1d2c;
+  padding: 1rem 0.9rem 1.2rem;
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(var(--gold-rgb), 0.1), transparent 55%),
+    var(--bocadillo-fondo);
+  border: 1px solid rgba(var(--gold-rgb), 0.7);
+  box-shadow:
+    inset 0 0 0 2px rgba(var(--tinta-rgb), 0.85),
+    inset 0 0 0 3px rgba(var(--gold-rgb), 0.2),
+    0 18px 40px -14px rgba(0, 0, 0, 0.95),
+    0 0 24px -6px rgba(var(--gold-rgb), 0.25);
+  transform-origin: -1rem 1.6rem;
+  animation: sala-bocadillo-brota 0.45s cubic-bezier(0.2, 0.9, 0.25, 1.25) both;
+}
+.sala-bocadillo[data-saliendo] {
+  animation: sala-bocadillo-recoge 0.3s cubic-bezier(0.5, 0, 0.75, 0) both;
+}
+/* La cola: un rombo del color del bocadillo con su filo en los dos lados de fuera */
+.sala-bocadillo-cola {
+  position: absolute;
+  top: 1.3rem;
+  left: -0.55rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  background: var(--bocadillo-fondo);
+  border-left: 1px solid rgba(var(--gold-rgb), 0.7);
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.7);
+  border-bottom-left-radius: 0.2rem;
+  transform: rotate(45deg);
+}
+/* Una comilla grande de latón, de adorno, en la esquina */
+.sala-bocadillo-comillas {
+  position: absolute;
+  top: 0.2rem;
+  left: 0.55rem;
+  font-size: 2.4rem;
+  line-height: 1;
+  color: rgba(var(--gold-rgb), 0.55);
+  text-shadow: 0 0 10px rgba(var(--gold-rgb), 0.35);
+  pointer-events: none;
+}
+.sala-bocadillo-cerrar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 9999px;
+  color: var(--theme-on-surface-variant);
+  transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.sala-bocadillo-cerrar:hover,
+.sala-bocadillo-cerrar:focus-visible {
+  color: var(--color-gold-bright);
+  background: rgba(var(--gold-rgb), 0.12);
+  box-shadow: 0 0 0 1px rgba(var(--gold-rgb), 0.45);
+}
+.sala-bocadillo-tiempo {
+  position: absolute;
+  left: 1.1rem;
+  right: 1.1rem;
+  bottom: 0.45rem;
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(var(--gold-rgb), 0.2), rgba(var(--gold-rgb), 0.85));
+  transform-origin: left;
+  animation: sala-bocadillo-tiempo linear both;
+}
+.sala-bocadillo:hover .sala-bocadillo-tiempo,
+.sala-bocadillo:focus-within .sala-bocadillo-tiempo {
+  animation-play-state: paused;
+}
+/* El medallón para volver a verlo, más pequeño que los de la cabecera */
+.sala-bocadillo-medallon {
+  width: 2rem;
+  height: 2rem;
+  color: var(--color-gold);
+  background: radial-gradient(circle at 50% 35%, rgba(var(--grimorio-rgb), 0.55), rgba(var(--tinta-rgb), 0.92) 75%);
+  border-color: rgba(var(--gold-rgb), 0.6);
+  box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.9);
+}
+@keyframes sala-bocadillo-brota {
+  from { opacity: 0; transform: scale(0.55); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes sala-bocadillo-recoge {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.5); }
+}
+@keyframes sala-bocadillo-tiempo {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+@keyframes sala-bocadillo-funde {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes sala-bocadillo-desvanece {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Aparece y se va fundiéndose, sin crecer; la cuenta sigue, pero sin verse */
+  .sala-bocadillo { animation-name: sala-bocadillo-funde; animation-duration: 0.2s; }
+  .sala-bocadillo[data-saliendo] { animation-name: sala-bocadillo-desvanece; }
+  .sala-bocadillo-tiempo { visibility: hidden; }
+}
+@media (forced-colors: active) {
+  .sala-bocadillo,
+  .sala-bocadillo-cola {
+    border-color: CanvasText;
+  }
+}
+
+/*
  * Quien habla (BordeHabla): un aro morado nítido, un halo que crece con el
  * volumen de su voz (--nivel, de 0 a 1, lo pone BordeHabla), una onda que sale
  * del marco y, en la esquina, unas barras de volumen. Aparece y se va fundiéndose.

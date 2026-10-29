@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { FRASES } from '../../src/services/narradorVirtual/frases';
 import { Arnes, type Cliente } from './arnes';
 import { guionTroubleBrewing } from './guionDePrueba';
 
@@ -26,10 +27,10 @@ describe('narrador virtual', () => {
   let arnes: Arnes;
   afterEach(() => arnes?.cerrar());
 
-  /** Entran `n` invitados (Jugador1, Jugador2…). */
+  /** Entran `n` usuarios con cuenta (Jugador1, Jugador2…). */
   const entran = async (n: number): Promise<Cliente[]> => {
     const clientes: Cliente[] = [];
-    for (let i = 1; i <= n; i++) clientes.push(await arnes.entrar(`Jugador${i}`));
+    for (let i = 1; i <= n; i++) clientes.push(await arnes.entrar(`Jugador${i}`, { cuenta: `jugador${i}` }));
     return clientes;
   };
 
@@ -47,6 +48,13 @@ describe('narrador virtual', () => {
     // Ya hay narrador: nadie más puede hacerse narrador ni añadir otro
     expect(ana.estado.acciones).not.toContain('sala:hacerseNarrador');
     expect(ana.estado.acciones).not.toContain('sala:anadirNarradorVirtual');
+  });
+
+  it('un invitado no puede añadirlo: necesita una cuenta', async () => {
+    arnes = await conTroubleBrewing();
+    const vera = await arnes.entrar('Vera');
+    expect(vera.estado.acciones).not.toContain('sala:anadirNarradorVirtual');
+    expect(await arnes.intentar(vera, 'sala:anadirNarradorVirtual', TONTO)).toEqual({ ok: false, error: 'Para añadir un narrador virtual necesitas una cuenta.' });
   });
 
   it('no deja elegir a Jarvis ni un número de jugadores fuera de 7 a 15', async () => {
@@ -87,6 +95,18 @@ describe('narrador virtual', () => {
     await arnes.accion(ana, 'sala:anadirNarradorVirtual', TONTO);
     await ana.esperarQue((e) => e.configuracion.grimorioJugadores);
     expect(ana.estado.acciones).not.toContain('narrador:configurarPartida');
+  });
+
+  it('al añadirlo saluda con una de sus frases de saludo', async () => {
+    arnes = await conTroubleBrewing();
+    const [ana] = await entran(1);
+    const voces: string[] = [];
+    ana.socket.on('sala:voz', ({ texto }: { texto: string }) => voces.push(texto));
+    await arnes.accion(ana, 'sala:anadirNarradorVirtual', TONTO);
+    await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'esperandoJugadores' && !!e.narradorVirtual.frase);
+    const frase = ana.estado.narradorVirtual!.frase!;
+    expect(Array.from({ length: 6 }, (_, i) => FRASES.saludo(() => i / 6))).toContain(frase);
+    await vi.waitFor(() => expect(voces).toContain(frase));
   });
 
   it('al llenarse la mesa reparte los personajes y empieza la primera noche', async () => {
@@ -174,18 +194,40 @@ describe('narrador virtual', () => {
     const eligiendo = jugadores.map(elegir);
     await new Promise((r) => setTimeout(r, 1500));
     expect(ana.estado.fase.momento).toBe('noche');
-    // Pasado el minuto, a quien no lo ha dicho se le escribe (y suena el gong)
-    const recordado = jugadores.find((c) => c.estado.despertares[0]?.mensajes.slice(-1)[0]?.autor === 'narrador')!;
-    expect(recordado.estado.despertares[0].mensajes.slice(-1)[0]).toMatchObject({
-      ficha: 'personalizado',
+    // Pasado el minuto, a quien no lo ha dicho se le escribe (y suena el gong); sigue
+    // siendo guiado: solo contesta «Entendido» o un texto
+    const ultimoDe = (c: Cliente) => c.estado.despertares[0]?.mensajes.slice(-1)[0];
+    const recordado = jugadores.find((c) => ultimoDe(c)?.ficha === 'personalizado')!;
+    expect(ultimoDe(recordado)).toMatchObject({
+      autor: 'narrador',
       texto: 'Envía «Entendido» para saber que has visto el wake de noche.',
+      guiado: true,
     });
     expect(ana.estado.gong).not.toBeNull();
+    // A quien eligió y el narrador contestó «Entendido» (el Envenenador, el demonio…) no se le pide nada
+    for (const c of jugadores) {
+      const mensajes = c.estado.despertares[0]?.mensajes ?? [];
+      const contestado = mensajes.some((m, i) => m.autor === 'narrador' && m.ficha === 'entendido' && i === mensajes.length - 1);
+      if (contestado) expect(mensajes.some((m) => m.texto === 'Envía «Entendido» para saber que has visto el wake de noche.')).toBe(false);
+    }
     seguir = false;
     await Promise.all(eligiendo);
-    // Al contestar todos, amanece
-    for (const c of jugadores) {
-      if (c.estado.despertares[0]?.mensajes.slice(-1)[0]?.autor === 'narrador') await arnes.accion(c, 'despertar:enviar', { ficha: 'entendido' });
+    // Al contestar los que faltan, amanece
+    const faltan = jugadores.filter((c) => ultimoDe(c)?.autor === 'narrador' && ultimoDe(c)?.ficha !== 'entendido');
+    expect(faltan.length).toBeGreaterThan(0);
+    // Visto lo primero, a algunos aún les queda (el Envenenador elige; el demonio ve sus
+    // faroles): se contesta a todo hasta que amanece
+    for (let vuelta = 0; vuelta < 200 && ana.estado.fase.momento === 'noche'; vuelta++) {
+      for (const c of jugadores) {
+        const ultimo = ultimoDe(c);
+        if (ultimo?.autor !== 'narrador' || ultimo.ficha === 'entendido') continue;
+        if (ultimo.eleccion) {
+          const { cantidad, puedeElegirse } = ultimo.eleccion;
+          const elegidos = c.estado.asientos.filter((a) => puedeElegirse || a.ocupante !== c.id).slice(0, cantidad).map((a) => a.id);
+          await arnes.intentar(c, 'despertar:enviar', { ficha: 'jugador', jugadores: elegidos });
+        } else await arnes.intentar(c, 'despertar:enviar', { ficha: 'entendido' });
+      }
+      await new Promise((r) => setTimeout(r, 20));
     }
     await ana.esperarQue((e) => e.fase.momento === 'dia', 5000);
   });
@@ -223,9 +265,10 @@ describe('narrador virtual', () => {
   it('de día: nomina, acusa con la palabra, se defiende, se vota y se marca; todos listos, se ejecuta y anochece', async () => {
     const jugadores = await hastaElDia();
     const [ana] = jugadores;
-    // La nominada no es la Virgen (ejecutaría a Ana al momento): Bea; y otra más, Carla
+    // La nominada no es la Virgen (ejecutaría a Ana al momento) ni el Santo (al ejecutarlo
+    // se acaba): Bea; y otra más, Carla
     const resto = jugadores.slice(1);
-    const bea = resto.find((c) => c.miAsiento?.personaje !== 'virgin')!;
+    const bea = resto.find((c) => !['virgin', 'saint'].includes(c.miAsiento?.personaje ?? ''))!;
     const carla = resto.find((c) => c !== bea)!;
     const voces: string[] = [];
     ana.socket.on('sala:voz', ({ texto }: { texto: string }) => voces.push(texto));
@@ -257,7 +300,8 @@ describe('narrador virtual', () => {
 
     // A Bea ya no se le puede volver a nominar hoy; los demás dicen que están listos
     expect((await arnes.intentar(carla, 'jugador:nominar', { asientoId: asientoDe(bea) })).ok).toBe(false);
-    const eraElDemonio = bea.miAsiento!.personaje === 'imp';
+    // Ejecutado el demonio se acaba, salvo que lo herede la Mujer Escarlata
+    const eraElDemonio = bea.miAsiento!.personaje === 'imp' && !jugadores.some((c) => c.miAsiento?.personaje === 'scarletwoman');
     for (const c of resto) await arnes.accion(c, 'jugador:listo');
     // Si era el demonio, se acaba la partida y se revela; si no, a la noche
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === (eraElDemonio ? 'revelando' : 'noche'));
@@ -311,5 +355,59 @@ describe('narrador virtual', () => {
     const carla = await arnes.entrar('Carla');
     expect(carla.estado.narradorVirtual).toBeNull();
     expect(carla.estado.participantes.some((p) => p.virtual)).toBe(false);
+  });
+});
+
+describe('narrador virtual: la Virgen', () => {
+  it('dice quién nomina a quién al ejecutar a quien nomina a la Virgen', () => {
+    expect(FRASES.virgen('Pepa', 'Teresa', false)).toBe('Pepa nomina a Teresa, es ejecutada y nos vamos a dormir.');
+    expect(FRASES.virgen('Pepa', 'Teresa', true)).toBe('Pepa nomina a Teresa, es ejecutada y revelamos el grimorio.');
+  });
+});
+
+describe('narrador virtual: lo que cuenta al revelar el grimorio', () => {
+  const nadie = { creia: null, infos: [], muerte: null, sinMasInformacion: false };
+
+  it('quién era, lo que recibió y cómo murió', () => {
+    expect(
+      FRASES.alRevelar({
+        ...nadie,
+        nombre: 'Pepe',
+        personaje: 'Chef',
+        infos: [{ noche: 1, que: 'un 1', falsa: false }],
+        muerte: { momento: 'dia', numero: 2, causa: 'ejecucion' },
+      }),
+    ).toBe('Pepe era Chef, recibió un 1 y murió en la ejecución del segundo día.');
+  });
+
+  it('a quien mató el demonio y despertaba cada noche: dejó de recibir su información', () => {
+    expect(
+      FRASES.alRevelar({
+        ...nadie,
+        nombre: 'Luis',
+        personaje: 'Adivino',
+        infos: [{ noche: 1, que: 'un no', falsa: false }],
+        muerte: { momento: 'noche', numero: 2, causa: 'demonio' },
+        sinMasInformacion: true,
+      }),
+    ).toBe('Luis era Adivino, recibió un no, murió a manos del demonio la segunda noche y ya no recibió más su información.');
+  });
+
+  it('el Borracho: lo que creía ser y, por noches, lo que recibió (y si era mentira)', () => {
+    expect(FRASES.alRevelar({ ...nadie, nombre: 'Juan', personaje: 'Borracho', creia: 'Bibliotecario' })).toBe(
+      'Juan creía que era Bibliotecario, pero en realidad era Borracho.',
+    );
+    expect(
+      FRASES.alRevelar({
+        ...nadie,
+        nombre: 'Juan',
+        personaje: 'Borracho',
+        creia: 'Empático',
+        infos: [
+          { noche: 1, que: 'un 0', falsa: false },
+          { noche: 2, que: 'un 2', falsa: true },
+        ],
+      }),
+    ).toBe('Juan creía que era Empático, pero en realidad era Borracho. Recibió un 0 la primera noche y un 2 la segunda noche (era mentira).');
   });
 });

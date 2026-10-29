@@ -1,6 +1,6 @@
 import { IconoLibroHechizos, IconoLuna, IconoPluma } from './IconosJuego';
 import IconoBolsa from './IconoBolsa';
-import { useCallback, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import type { TipoAviso } from './avisosConfig';
 import DialogoBolsa from './DialogoBolsa';
 import DialogoConfirmar from './DialogoConfirmar';
@@ -35,6 +35,10 @@ interface TituloGuionProps {
    * limpia el grimorio, así que antes se pide confirmación.
    */
   partidaEmpezada: boolean;
+  /** El reparto de la partida: va en la cabecera de la hoja mientras está abierta. */
+  reparto: ReactNode;
+  /** Se abre o se cierra la hoja (el reparto deja su sitio de siempre, que la hoja taparía). */
+  onHojaAbierta: (abierta: boolean) => void;
 }
 
 type Vista = 'guion' | 'noche';
@@ -60,12 +64,16 @@ const TituloGuion = ({
   recordatorios,
   nochePorDefecto,
   partidaEmpezada,
+  reparto,
+  onHojaAbierta,
 }: TituloGuionProps) => {
   const [preparandoBolsa, setPreparandoBolsa] = useState(false);
   const predeterminados = usePredeterminados();
   const [vista, setVista] = useState<Vista | null>(null);
   const archivoRef = useRef<HTMLInputElement>(null);
   const aspecto = guion && aspectoDeGuion(guion);
+  const hojaAbierta = !!(vista && guion);
+  useEffect(() => onHojaAbierta(hojaAbierta), [hojaAbierta, onHojaAbierta]);
 
   // Al cerrar, el foco vuelve al botón que lo abrió.
   const cerrar = useCallback(() => {
@@ -222,6 +230,7 @@ const TituloGuion = ({
             nochePorDefecto={nochePorDefecto}
             onCambiarIdiomaDescripciones={onCambiarIdiomaDescripciones}
             onCerrar={cerrar}
+            reparto={reparto}
           />
         </div>
       )}

@@ -36,8 +36,9 @@ export interface EnvioMensaje {
  * - Privados: con un narrador, siempre (en los dos sentidos). Entre jugadores,
  *   según la sala: ninguno, solo con sus vecinos (el más cercano sentado a cada
  *   lado) o con todos. Los visitantes no escriben en privado a los jugadores.
- * - Los narradores leen también los privados entre jugadores (no los de otro
- *   narrador con alguien): les llegan como a ellos, pero no escriben en ellos.
+ * - Los narradores y los visitantes con el grimorio leen también los privados
+ *   entre jugadores (no los de un narrador con alguien): les llegan como a
+ *   ellos, pero no escriben en ellos.
  *
  * Lee la sala (papeles, asientos, ajustes) de SalaService y guarda en el repositorio.
  */
@@ -55,7 +56,8 @@ export class ChatService {
     const participantes = participantesDePrivado(canal);
     if (!participantes) return false;
     if (participantes.includes(yo.id)) return true;
-    return yo.rol === 'narrador' && participantes.every((id) => this.sala.buscar(id)?.rol !== 'narrador');
+    const leeAjenos = yo.rol === 'narrador' || (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido');
+    return leeAjenos && participantes.every((id) => this.sala.buscar(id)?.rol !== 'narrador');
   }
 
   /** Si `yo` puede escribir en privado a `otro`. */
