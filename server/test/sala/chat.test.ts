@@ -15,11 +15,11 @@ const nora = persona('nora', 'narrador');
 const conGrimorio = persona('vera', 'visitante', 'concedido');
 const sinGrimorio = persona('vito', 'visitante');
 const todos = [ana, bea, nora, conGrimorio, sinGrimorio];
-const sala = {
-  buscar: (id: string) => todos.find((p) => p.id === id),
-  accesoGrimorio: (id: string) => todos.find((p) => p.id === id)?.accesoGrimorio ?? 'ninguno',
+const juego = {
+  sala: { participantes: { buscar: (id: string) => todos.find((p) => p.id === id) } },
+  partida: { acceso: { de: (id: string) => todos.find((p) => p.id === id)?.accesoGrimorio ?? 'ninguno' } },
 } as unknown as SalaDeJuego;
-const chat = new ChatService({} as ChatRepository, sala);
+const chat = new ChatService({} as ChatRepository, juego);
 
 describe('quién lee los privados', () => {
   it('los privados entre jugadores: los dos, los narradores y los visitantes con el grimorio', () => {

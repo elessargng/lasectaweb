@@ -1,5 +1,7 @@
 import { ConversacionService } from '../conversaciones/ConversacionService';
-import { SalaDeJuego } from '../SalaDeJuego';
+import type { SalaDeJuego } from '../SalaDeJuego';
+import type { Sala } from '../sala/Sala';
+import type { Partida } from '../partida/Partida';
 import { PermisosVideo, ProveedorVideo } from './ProveedorVideo';
 
 /** No se puede entrar en esa sala de vídeo (el mensaje es para quien lo intenta). */
@@ -42,31 +44,37 @@ export class VideollamadaService {
   /** Los permisos de cada uno en cada conversación («conversación|id»), para cambiarlos cuando cambien. */
   private permisosVistos = new Map<string, string>();
 
+  private readonly sala: Sala;
+  private readonly partida: Partida;
+
   constructor(
     private readonly proveedor: ProveedorVideo,
-    private readonly sala: SalaDeJuego,
+    juego: SalaDeJuego,
     private readonly conversaciones: ConversacionService,
-  ) {}
+  ) {
+    this.sala = juego.sala;
+    this.partida = juego.partida;
+  }
 
   /**
    * Si alguien tiene que callar: un jugador, con el silencio pedido o si la palabra
    * la tiene otro (al nominar con el narrador virtual). Los narradores siguen hablando.
    */
   private callado(id: string): boolean {
-    const palabra = this.sala.palabra();
-    return (this.sala.silencio() || (palabra !== null && palabra !== id)) && this.sala.buscar(id)?.rol === 'jugador';
+    const palabra = this.partida.nominaciones.palabra();
+    return (this.partida.npcs.silencio() || (palabra !== null && palabra !== id)) && this.sala.participantes.buscar(id)?.rol === 'jugador';
   }
 
   /** Los permisos en la mesa de alguien, según su papel, la fase, si conversa en privado y el silencio. */
   private permisosEnMesa(id: string): PermisosVideo {
-    const p = this.sala.buscar(id);
+    const p = this.sala.participantes.buscar(id);
     const puede = !!p && (p.rol === 'jugador' || p.rol === 'narrador');
-    const dia = this.sala.fase().momento !== 'noche';
+    const dia = this.partida.fases.actual().momento !== 'noche';
     // Quien está en una conversación (hablando o escuchando) no emite en la mesa; si
     // el narrador no oculta sus cámaras, los que hablan en ella siguen emitiendo la cámara
     const conversacion = this.conversaciones.deParticipante(id);
     if (!conversacion) return { publicar: puede, camara: dia, microfono: !this.callado(id) };
-    const camara = puede && dia && !this.sala.configuracion().ocultarCamarasConversacion && conversacion.miembros.includes(id);
+    const camara = puede && dia && !this.partida.configuracion.actual().ocultarCamarasConversacion && conversacion.miembros.includes(id);
     return { publicar: camara, camara, microfono: false };
   }
 
@@ -80,7 +88,7 @@ export class VideollamadaService {
    * Lanza VideollamadaError si no puede.
    */
   async pase(participanteId: string, cual: string): Promise<PaseVideo> {
-    const p = this.sala.buscar(participanteId);
+    const p = this.sala.participantes.buscar(participanteId);
     if (!p) throw new VideollamadaError('Ya no estás en la sala.');
     if (cual === SALA_PRINCIPAL) {
       const token = await this.proveedor.token(SALA_VIDEO_PRINCIPAL, p.id, p.nombre, this.permisosEnMesa(p.id));
@@ -100,7 +108,7 @@ export class VideollamadaService {
    * no está en ella, y cerradas las que se han terminado.
    */
   sincronizar(): void {
-    const presentes = new Set(this.sala.participantes().map((p) => p.id));
+    const presentes = new Set(this.sala.participantes.participantes().map((p) => p.id));
     for (const id of presentes) {
       const permisos = this.permisosEnMesa(id);
       const clave = JSON.stringify(permisos);

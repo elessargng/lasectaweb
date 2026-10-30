@@ -1,7 +1,9 @@
 import { randomUUID } from 'crypto';
 import type { Participante } from '../sala/Participantes';
 import { SalaConversacion, SalaInvitacion } from '../../contrato/sala';
-import { SalaDeJuego } from '../SalaDeJuego';
+import type { SalaDeJuego } from '../SalaDeJuego';
+import type { Sala } from '../sala/Sala';
+import type { Partida } from '../partida/Partida';
 
 /** Algo que no se puede hacer en una conversación (el mensaje es para quien lo intenta). */
 export class ConversacionError extends Error {
@@ -57,9 +59,14 @@ export class ConversacionService {
   /** Las veces que se ha limpiado el grimorio, la última vez que se miró. */
   private reiniciosVistos: number;
 
-  constructor(private readonly sala: SalaDeJuego) {
+  private readonly sala: Sala;
+  private readonly partida: Partida;
+
+  constructor(juego: SalaDeJuego) {
+    this.sala = juego.sala;
+    this.partida = juego.partida;
     this.faseVista = this.claveFase();
-    this.reiniciosVistos = this.sala.fase().reinicios;
+    this.reiniciosVistos = this.partida.fases.actual().reinicios;
   }
 
   /** Todas las conversaciones, con sus oyentes. */
@@ -118,13 +125,13 @@ export class ConversacionService {
   /** Pide unirse a la conversación en la que está otro. Lanza ConversacionError si no se puede. */
   pedirUnirse(yoId: string, otroId: string): SalaInvitacion {
     this.depurar();
-    const yo = this.sala.buscar(yoId);
-    const otro = this.sala.buscar(otroId);
+    const yo = this.sala.participantes.buscar(yoId);
+    const otro = this.sala.participantes.buscar(otroId);
     if (!yo) throw new ConversacionError('Ya no estás en la sala.');
     if (!otro) throw new ConversacionError('Esa persona ya no está en la sala.');
     if (!conversa(yo)) throw new ConversacionError('Solo los jugadores y los narradores conversan en privado.');
-    if (!this.sala.privadosPermitidos()) throw new ConversacionError(PRIVADOS_CERRADOS);
-    if (this.sala.fase().momento === 'noche' && yo.rol !== 'narrador') {
+    if (!this.partida.configuracion.privadosPermitidos()) throw new ConversacionError(PRIVADOS_CERRADOS);
+    if (this.partida.fases.actual().momento === 'noche' && yo.rol !== 'narrador') {
       throw new ConversacionError('De noche solo el narrador puede unirse a una conversación.');
     }
     const suya = this.conversaciones.find((c) => c.miembros.includes(otro.id));
@@ -182,7 +189,7 @@ export class ConversacionService {
   /** Un narrador entra en una conversación como miembro (sin invitación). */
   entrar(yoId: string, conversacionId: string): void {
     this.depurar();
-    const yo = this.sala.buscar(yoId);
+    const yo = this.sala.participantes.buscar(yoId);
     if (!yo) throw new ConversacionError('Ya no estás en la sala.');
     if (yo.rol !== 'narrador') throw new ConversacionError('Solo los narradores entran sin invitación.');
     const conversacion = this.conversaciones.find((c) => c.id === conversacionId);
@@ -193,7 +200,7 @@ export class ConversacionService {
 
   /** Alguien entra en una conversación: al aceptarse su petición o, si narra, sin más (si estaba en otra, la deja). */
   private unir(id: string, conversacionId: string): void {
-    const p = this.sala.buscar(id);
+    const p = this.sala.participantes.buscar(id);
     if (!p || !conversa(p)) throw new ConversacionError('Quien lo pedía ya no puede conversar.');
     this.salir(id);
     const conversacion = this.conversaciones.find((c) => c.id === conversacionId);
@@ -210,7 +217,7 @@ export class ConversacionService {
   /** Un visitante o un narrador entra a escuchar una conversación (sin invitación; no le ven los jugadores). */
   escuchar(yoId: string, conversacionId: string): void {
     this.depurar();
-    const yo = this.sala.buscar(yoId);
+    const yo = this.sala.participantes.buscar(yoId);
     if (!yo) throw new ConversacionError('Ya no estás en la sala.');
     if (!escucha(yo)) throw new ConversacionError('Solo los visitantes y los narradores escuchan las conversaciones.');
     if (this.esMiembro(yoId)) throw new ConversacionError('Sal de tu conversación para escuchar otra.');
@@ -241,7 +248,7 @@ export class ConversacionService {
     if (fase !== this.faseVista) {
       this.faseVista = fase;
       // Si el cambio es por limpiar el grimorio, las conversaciones siguen
-      const { reinicios } = this.sala.fase();
+      const { reinicios } = this.partida.fases.actual();
       if (reinicios === this.reiniciosVistos) {
         this.conversaciones = [];
         this.invitaciones = [];
@@ -249,12 +256,12 @@ export class ConversacionService {
       this.reiniciosVistos = reinicios;
     }
     // Fuera de los privados (el narrador virtual los cierra), se terminan todas
-    if (!this.sala.privadosPermitidos()) {
+    if (!this.partida.configuracion.privadosPermitidos()) {
       this.conversaciones = [];
       this.invitaciones = [];
     }
     const sigue = (id: string, puede: (p: Participante) => boolean) => {
-      const p = this.sala.buscar(id);
+      const p = this.sala.participantes.buscar(id);
       return !!p && puede(p);
     };
     for (const c of this.conversaciones) {
@@ -277,8 +284,8 @@ export class ConversacionService {
    * jugadores de `con` (los narradores no cuentan). Lanza ConversacionError si no.
    */
   private comprobarVecinos(quien: string, con: string[]): void {
-    if (!this.sala.institutrizViva()) return;
-    const jugadores = con.filter((id) => id !== quien && this.sala.buscar(id)?.rol === 'jugador');
+    if (!this.partida.institutrizViva()) return;
+    const jugadores = con.filter((id) => id !== quien && this.sala.participantes.buscar(id)?.rol === 'jugador');
     if (jugadores.some((id) => !this.sala.sonVecinos(quien, id))) {
       throw new ConversacionError('Con la Institutriz en juego, solo se puede conversar en privado con los vecinos de mesa.');
     }
@@ -286,15 +293,15 @@ export class ConversacionService {
 
   /** Si `yo` puede invitar a `otro` ahora (o, al aceptar, si sigue pudiendo). */
   private comprobar(yoId: string, otroId: string): { yo: Participante; otro: Participante } {
-    const yo = this.sala.buscar(yoId);
-    const otro = this.sala.buscar(otroId);
+    const yo = this.sala.participantes.buscar(yoId);
+    const otro = this.sala.participantes.buscar(otroId);
     if (!yo) throw new ConversacionError('Quien invitaba ya no está en la sala.');
     if (!otro) throw new ConversacionError('Esa persona ya no está en la sala.');
     if (yo.id === otro.id) throw new ConversacionError('No puedes conversar contigo mismo.');
     if (!conversa(yo)) throw new ConversacionError('Solo los jugadores y los narradores invitan a conversar.');
     if (!conversa(otro)) throw new ConversacionError(`${otro.nombre} no está jugando: no puede conversar en privado.`);
-    if (!this.sala.privadosPermitidos()) throw new ConversacionError(PRIVADOS_CERRADOS);
-    const noche = this.sala.fase().momento === 'noche';
+    if (!this.partida.configuracion.privadosPermitidos()) throw new ConversacionError(PRIVADOS_CERRADOS);
+    const noche = this.partida.fases.actual().momento === 'noche';
     if (noche && yo.rol !== 'narrador' && otro.rol !== 'narrador') {
       throw new ConversacionError('De noche solo puedes invitar a conversar al narrador.');
     }
@@ -313,7 +320,7 @@ export class ConversacionService {
 
   /** Cambia al pasar de día a noche o de noche a día (la preparación cuenta como día). */
   private claveFase(): string {
-    const { momento, numero, reinicios } = this.sala.fase();
+    const { momento, numero, reinicios } = this.partida.fases.actual();
     return `${momento === 'noche' ? 'noche' : 'dia'}:${numero}:${reinicios}`;
   }
 }

@@ -1,4 +1,6 @@
-import { SalaDeJuego } from '../SalaDeJuego';
+import type { SalaDeJuego } from '../SalaDeJuego';
+import type { Partida } from './Partida';
+import { identidadDe } from './Grimorio';
 import type { Participante } from '../sala/Participantes';
 import { NPC_TOR } from './personajesEspeciales';
 import { farolesVacios } from './Faroles';
@@ -78,43 +80,48 @@ export class VistaPartida {
   private readonly gastadosAlVotar;
   private readonly ahora = Date.now();
 
+  private readonly partida: Partida;
+
   constructor(
-    private readonly sala: SalaDeJuego,
+    juego: SalaDeJuego,
     private readonly contexto: ContextoVista,
   ) {
+    const { sala, partida } = juego;
+    this.partida = partida;
     // Con su acceso al grimorio (es de la partida, no del participante)
-    this.participantes = sala.participantes().map((p) => ({ ...p, accesoGrimorio: sala.accesoGrimorio(p.id) }));
-    this.asientos = sala.asientos();
-    this.nominacion = sala.nominacion();
-    this.revelacion = sala.revelacion();
+    this.participantes = sala.participantes.participantes().map((p) => ({ ...p, accesoGrimorio: partida.acceso.de(p.id) }));
+    this.asientos = partida.mesa();
+    this.nominacion = partida.nominaciones.nominacion();
+    this.revelacion = partida.revelacion.revelacion();
     this.reveladas = new Set(this.revelacion?.reveladas ?? []);
-    this.tor = sala.npcActivo(NPC_TOR);
-    this.retenidas = sala.fichasRetenidas();
-    this.secreta = sala.votacionSecreta();
-    this.gastadosAlVotar = sala.gastadosAlVotar();
+    this.tor = partida.npcs.activo(NPC_TOR);
+    this.retenidas = partida.entregas.fichasRetenidas();
+    this.secreta = partida.votacionSecreta();
+    this.gastadosAlVotar = partida.nominaciones.gastadosAlVotar();
     this.comun = {
-      configuracion: sala.configuracion(),
-      fase: sala.fase(),
-      distribucion: sala.distribucion(),
-      bolsa: sala.bolsa(),
-      faroles: sala.faroles(),
-      npcs: sala.npcs(),
-      despertares: sala.despertares(),
-      recordatoriosNoche: sala.recordatoriosNoche(),
-      votaciones: sala.votaciones(),
-      senalamiento: sala.senalamiento(),
+      configuracion: partida.configuracion.actual(),
+      fase: partida.fases.actual(),
+      distribucion: partida.reparto.distribucion(),
+      bolsa: partida.reparto.bolsa.bolsa(),
+      faroles: partida.faroles.faroles(),
+      npcs: partida.npcs.npcs(),
+      despertares: partida.despertares.despertares(),
+      recordatoriosNoche: partida.recordatoriosNoche(),
+      votaciones: partida.nominaciones.votaciones(),
+      senalamiento: partida.senalamientos.senalamiento(),
+      narradorVirtual: juego.narrador.actual(),
     };
   }
 
   /** El estado de la sala tal como lo ve este participante. */
   para(yo: Participante): SalaEstado {
-    const { sala, contexto, comun } = this;
+    const { partida, contexto, comun } = this;
     const narra = yo.rol === 'narrador';
-    const veGrimorio = narra || (yo.rol === 'visitante' && sala.accesoGrimorio(yo.id) === 'concedido');
+    const veGrimorio = narra || (yo.rol === 'visitante' && partida.acceso.de(yo.id) === 'concedido');
     const ocultarVotos = this.secreta && !veGrimorio;
     // La votación en curso solo se esconde si es una nominación (las expulsiones, no)
     const ocultarVotacion = ocultarVotos && !!this.nominacion?.privada;
-    const miAsiento = sala.asientoDe(yo.id)?.id ?? null;
+    const miAsiento = partida.asientoDe(yo.id)?.id ?? null;
     return {
       // Votación secreta, con una nominación abierta: las manos de los demás no se ven
       participantes:
@@ -127,10 +134,10 @@ export class VistaPartida {
       fase: comun.fase,
       distribucion: comun.distribucion,
       revelacion: this.revelacion,
-      gong: sala.gong(),
-      reloj: sala.reloj(),
+      gong: partida.reloj.gong(),
+      reloj: partida.reloj.reloj(),
       // De noche, solo quien señala (y quien ve el grimorio)
-      senalamiento: sala.veSenalamiento(yo) ? comun.senalamiento : null,
+      senalamiento: partida.senalamientos.veSenalamiento(yo) ? comun.senalamiento : null,
       video: contexto.video,
       // Los jugadores no saben qué visitantes escuchan las conversaciones; de noche, ni
       // siquiera que las hay: solo ven aquella en la que están
@@ -146,29 +153,29 @@ export class VistaPartida {
       // Los faroles del narrador: también los ven los visitantes (no juegan)
       faroles: yo.rol === 'jugador' ? farolesVacios() : comun.faroles,
       npcs: comun.npcs,
-      setupAceptado: narra ? sala.setupAceptado() : null,
-      silencio: sala.silencio(),
-      voudon: sala.voudonVivo(),
-      institutriz: sala.institutrizViva(),
-      bootlegger: sala.bootlegger(),
-      rolStormcatcher: sala.rolStormcatcher(),
+      setupAceptado: narra ? partida.reparto.setupAceptado() : null,
+      silencio: partida.npcs.silencio(),
+      voudon: partida.voudonVivo(),
+      institutriz: partida.institutrizViva(),
+      bootlegger: partida.npcs.bootlegger(),
+      rolStormcatcher: partida.npcs.rolStormcatcher(),
       fichasRetenidas: this.retenidas,
       ahora: this.ahora,
       // El registro de votaciones es solo para los narradores.
       votaciones: narra ? comun.votaciones : [],
       recordatoriosNoche: narra ? comun.recordatoriosNoche : {},
-      habilidadesNoche: narra ? sala.habilidadesNoche() : [],
-      nuevoImp: narra ? sala.nuevoImp() : null,
+      habilidadesNoche: narra ? partida.guiado.habilidadesNoche() : [],
+      nuevoImp: narra ? partida.guiado.nuevoImp() : null,
       // Los despertares: los narradores y los visitantes que ven el grimorio, todos; un
       // jugador, solo el de su asiento (nadie más sabe a quién se despierta).
       despertares: veGrimorio
         ? comun.despertares
         : yo.rol === 'jugador'
-          ? comun.despertares.filter((d) => d.asiento === sala.asientoDespiertoDe(yo.id))
+          ? comun.despertares.filter((d) => d.asiento === partida.despertares.asientoDespiertoDe(yo.id))
           : [],
-      grimorioRecibido: yo.rol === 'jugador' ? sala.grimorioRecibidoPor(yo.id) : null,
-      narradorVirtual: sala.narradorVirtual(),
-      palabra: sala.palabra(),
+      grimorioRecibido: yo.rol === 'jugador' ? partida.entregas.grimorioRecibidoPor(yo.id) : null,
+      narradorVirtual: comun.narradorVirtual,
+      palabra: partida.nominaciones.palabra(),
       yo: yo.id,
       acciones: contexto.accionesDe(yo),
     };
@@ -197,8 +204,8 @@ export class VistaPartida {
 
   /** El viajero que es de verdad el de un asiento (los viajeros son públicos), o null. */
   private viajeroDe(a: SalaAsiento): string | null {
-    const id = this.sala.identidad(a);
-    return id && this.sala.personaje(id)?.tipo === 'traveller' ? id : null;
+    const id = identidadDe(a);
+    return id && this.partida.guion.personaje(id)?.tipo === 'traveller' ? id : null;
   }
 
   /**
@@ -221,12 +228,12 @@ export class VistaPartida {
   private comoLaVeSuJugador(a: SalaAsiento): SalaAsiento {
     if (this.tor && !a.muerto) return this.comoLaVenTodos(a);
     // Con Tor, al morir sabe quién es de verdad (un Borracho con ficha de aldeano: Borracho)
-    if (this.tor) return { ...sinRecordatorios(a), personaje: this.sala.identidad(a) };
+    if (this.tor) return { ...sinRecordatorios(a), personaje: identidadDe(a) };
     const viajero = this.viajeroDe(a);
     // Un viajero: quien es lo ve todo el mundo; su alineamiento, como se le dijo (al repartir
     // o con «Tú eres»), no el que el narrador le ponga en el grimorio
     return viajero
-      ? { ...sinRecordatorios(a), personaje: viajero, alineamiento: this.sala.fichaEntregada(a.id).alineamiento }
-      : { ...sinRecordatorios(a), ...this.sala.fichaEntregada(a.id) };
+      ? { ...sinRecordatorios(a), personaje: viajero, alineamiento: this.partida.entregas.fichaEntregada(a.id).alineamiento }
+      : { ...sinRecordatorios(a), ...this.partida.entregas.fichaEntregada(a.id) };
   }
 }
