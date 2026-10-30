@@ -3,7 +3,7 @@ import { ChatRepository } from '../repositories/ChatRepository';
 import { datosDeDataUrl, guardarFondoSala } from '../utils/salaFondoStorage';
 import { ProveedorVideo } from '../services/videollamada/ProveedorVideo';
 import { MENSAJES_PRIVADOS, SalaMensajesPrivados } from '../contrato/chat';
-import { limpiarAvatarSala, limpiarNombreSala } from '../services/partida/Participantes';
+import { limpiarAvatarSala, limpiarNombreSala } from '../services/sala/Participantes';
 import { SALA_RELOJ } from '../services/partida/RelojSala';
 import { SALA_ASIENTOS, SALA_SEGUNDOS_POR_FICHA, SalaService } from '../services/SalaService';
 import {

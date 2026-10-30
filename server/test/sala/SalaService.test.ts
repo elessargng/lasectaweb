@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EstadisticasPartida } from '../../src/services/estadisticas/EstadisticasPartida';
-import { SALA_GRACIA_MS } from '../../src/services/partida/Participantes';
+import { SALA_GRACIA_MS } from '../../src/services/sala/Participantes';
 import { SALA_CUENTA_ATRAS_MS } from '../../src/services/partida/Nominaciones';
 import { SalaService } from '../../src/services/SalaService';
 import { BOLSA_DE_SIETE, conCuenta, guionDePrueba, invitado } from './guionDePrueba';

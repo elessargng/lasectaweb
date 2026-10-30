@@ -2,7 +2,7 @@ import type { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
 import { SalaService } from '../services/SalaService';
-import { limpiarAvatarSala, limpiarNombreSala, SALA_AVATAR_INVITADO, SalaLlegada } from '../services/partida/Participantes';
+import { limpiarAvatarSala, limpiarNombreSala, SALA_AVATAR_INVITADO, SalaLlegada } from '../services/sala/Participantes';
 import { VistaPartida } from '../services/partida/VistaPartida';
 import { EstadisticasPartida } from '../services/estadisticas/EstadisticasPartida';
 import { SalaResultado } from '../contrato/sala';

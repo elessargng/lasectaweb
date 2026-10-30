@@ -26,7 +26,8 @@ import {
 } from '../contrato/sala';
 import { GuionResuelto, PersonajeDeGuion } from '../types/guiones';
 import { repartoPara } from './partida/distribucion';
-import { Participantes, type SalaLlegada } from './partida/Participantes';
+import { type SalaLlegada } from './sala/Participantes';
+import { Sala, SALA_ASIENTOS } from './sala/Sala';
 import { NarradorVirtualEnMemoria, type NarradorVirtualRepository } from '../repositories/NarradorVirtualRepository';
 import {
   NPC_GARDENER,
@@ -50,8 +51,7 @@ import type { ContextoReglas, RegistroAlNominar } from './partida/reglas/ReglaPe
 import { voudonVivo } from './partida/reglas/voudon';
 import { cuidadorLilmonsta, DEMONIO_LILMONSTA, esbirrosLilmonsta, recordatorioLilmonsta } from './partida/reglas/lilMonsta';
 
-/** Asientos de la mesa: con cuántos empieza la sala y cuántos puede tener. */
-export const SALA_ASIENTOS = { inicial: 7, min: 0, max: 20 };
+export { SALA_ASIENTOS };
 
 /** Lo que tarda la aguja de ficha en ficha al votar, en segundos (de cuarto en cuarto). */
 export const SALA_SEGUNDOS_POR_FICHA = { min: 0.25, max: 2, paso: 0.25, defecto: 1 };
@@ -111,25 +111,20 @@ interface PasoDeFase {
  * ella reparte el trabajo entre sus partes (en services/partida/).
  */
 export class SalaService {
-  /** Quién está en la sala y con qué papel (ver Participantes). */
-  private readonly presentes = new Participantes();
+  /** Quién está en la sala y en qué asiento se sienta cada jugador (ver Sala). */
+  private readonly sala = new Sala(asientoNuevo);
 
   constructor(
     /** Dónde se guarda el narrador virtual de la sala (ver NarradorVirtualService). */
     private readonly narradoresVirtuales: NarradorVirtualRepository = new NarradorVirtualEnMemoria(),
-  ) {}
-  private mesa: SalaAsiento[] = Array.from({ length: SALA_ASIENTOS.inicial }, () => asientoNuevo());
+  ) {
+    // Al cambiar de silla, cada jugador se lleva su ficha
+    this.sala.alMover((destino) => this.llevarFichas(destino));
+  }
 
-  /**
-   * Un asiento solo está ocupado por alguien que sigue en la sala y es jugador.
-   * Se aplica al leer la mesa, así se libera sola cuando el jugador sale, se le
-   * acaba la espera de reconexión o cambia de papel.
-   */
-  private mesaAlDia(): SalaAsiento[] {
-    for (const asiento of this.mesa) {
-      if (asiento.ocupante && this.buscar(asiento.ocupante)?.rol !== 'jugador') asiento.ocupante = null;
-    }
-    return this.mesa;
+  /** Los asientos con su ficha (ver Sala.asientos). */
+  private get mesa(): SalaAsiento[] {
+    return this.sala.asientos();
   }
 
   private ajustes: SalaConfiguracion = {
@@ -153,7 +148,7 @@ export class SalaService {
   private readonly nominaciones = new Nominaciones({
     mesa: () => this.mesa,
     buscar: (id) => this.buscar(id),
-    bajarManos: () => this.presentes.bajarManos(),
+    bajarManos: () => this.sala.participantes.bajarManos(),
     cuentaDe: (id) => this.cuentaDe(id),
     llevaViajero: (asiento) => {
       const id = this.identidad(asiento);
@@ -177,7 +172,7 @@ export class SalaService {
   private readonly tiempo = new RelojSala();
   /** Los despertares de la noche. */
   private readonly despertados = new Despertares(
-    () => this.mesaAlDia(),
+    () => this.mesa,
     () => this.faseActual,
   );
   /** El despertar guiado desde el orden de noche (ver DespertarGuiado). */
@@ -194,7 +189,7 @@ export class SalaService {
     cambiarPersonaje: (asientoId, personaje) => this.cambiarPersonaje(asientoId, personaje),
   });
   /** Los faroles para el demonio (del narrador y de cada asiento). */
-  private readonly farolesDemonio = new Faroles(() => this.mesaAlDia());
+  private readonly farolesDemonio = new Faroles(() => this.mesa);
   /** El final de la partida: qué bando ha ganado y qué fichas se han revelado. */
   private readonly final = new Revelacion(() => this.mesa);
   /** Los NPCs en juego y lo que traen (Bootlegger, Storm Catcher, silencio). */
@@ -205,7 +200,7 @@ export class SalaService {
   private readonly bolsaPartida = new Bolsa((id) => this.esViajero(id));
   /** El señalamiento en curso. */
   private readonly senales = new Senalamientos({
-    mesa: () => this.mesaAlDia(),
+    mesa: () => this.mesa,
     fase: () => this.faseActual,
     asientoDe: (id) => this.asientoDe(id),
     despertar: (asientoId) => void this.despertar(asientoId),
@@ -353,7 +348,7 @@ export class SalaService {
 
   /** El asiento en el que se sienta un participante, o null. */
   asientoDe(participanteId: string): SalaAsiento | null {
-    return this.mesaAlDia().find((a) => a.ocupante === participanteId) ?? null;
+    return this.sala.asientoDe(participanteId);
   }
 
   /**
@@ -516,7 +511,7 @@ export class SalaService {
 
   /** Un asiento para el diario: su número y quien se sienta ahora. */
   asientoDiario(asientoId: string): AsientoDiario {
-    const mesa = this.mesaAlDia();
+    const mesa = this.mesa;
     const i = mesa.findIndex((a) => a.id === asientoId);
     const ocupante = mesa[i]?.ocupante;
     return { numero: i + 1, nombre: ocupante ? (this.buscar(ocupante)?.nombre ?? null) : null };
@@ -524,7 +519,7 @@ export class SalaService {
 
   /** El id de usuario de un participante con cuenta, o null (invitado, o ya no está). */
   private cuentaDe(participanteId: string | null): string | null {
-    return this.presentes.cuentaDe(participanteId);
+    return this.sala.participantes.cuentaDe(participanteId);
   }
 
   private cuentaDelAsiento(asientoId: string): string | null {
@@ -547,7 +542,7 @@ export class SalaService {
 
   /** Cómo está ahora la mesa, asiento a asiento (para quien escucha la partida). */
   private fotoDeLaMesa(): FotoAsiento[] {
-    return this.mesaAlDia().map((a, i) => {
+    return this.mesa.map((a, i) => {
       const personaje = this.identidad(a);
       return {
         numero: i + 1,
@@ -787,7 +782,7 @@ export class SalaService {
 
   /** Envía a quien se sienta en un asiento el grimorio tal como está (el Espía); a un asiento libre, nada. */
   private enviarGrimorioDeLaMesa(asientoId: string): void {
-    if (!this.mesaAlDia().find((a) => a.id === asientoId)?.ocupante) return;
+    if (!this.mesa.find((a) => a.id === asientoId)?.ocupante) return;
     const fichas: SalaFichaEnviada[] = this.mesa.map((a) => ({
       asientoId: a.id,
       personaje: a.personaje,
@@ -828,7 +823,7 @@ export class SalaService {
     this.farolesDemonio.vaciar();
     this.setupAceptadoActual = null;
     this.final.olvidar();
-    this.presentes.olvidarGrimorios();
+    this.sala.participantes.olvidarGrimorios();
     this.despertados.cerrarTodos();
     this.guiado.olvidar();
     this.recordatorios = {};
@@ -902,7 +897,7 @@ export class SalaService {
 
   /** Si existe ese asiento. */
   hayAsiento(id: string): boolean {
-    return this.mesa.some((a) => a.id === id);
+    return !!this.sala.asiento(id);
   }
 
   /** Pone o quita la calavera a la ficha de un asiento. Solo puede llevarla una: ponérsela se la quita a las demás. */
@@ -1060,7 +1055,7 @@ export class SalaService {
   empezarSenalamiento(datos: Parameters<Senalamientos['empezar']>[0]): void {
     this.senales.empezar(datos);
     // Quien lo ve baja la mano (no se puede levantar mientras dure)
-    for (const participante of this.presentes.participantes()) {
+    for (const participante of this.sala.participantes.participantes()) {
       if (participante.manoLevantada && this.veSenalamiento(participante)) this.levantarMano(participante.id, false);
     }
   }
@@ -1144,7 +1139,7 @@ export class SalaService {
         return { id, userId: this.cuentaDe(this.mesa.find((a) => a.id === asiento)?.ocupante ?? null) };
       }),
       mesa: this.fotoDeLaMesa(),
-      narradores: this.presentes.narradores().map((p) => ({ userId: this.cuentaDe(p.id), nombre: p.nombre })),
+      narradores: this.sala.participantes.narradores().map((p) => ({ userId: this.cuentaDe(p.id), nombre: p.nombre })),
       npcs: this.npcs(),
       votaciones: this.votaciones(),
       guion: this.guionActual?.nombre ?? null,
@@ -1255,33 +1250,20 @@ export class SalaService {
 
   /** Los asientos, en orden (el primero a las 12, como las agujas del reloj). */
   asientos(): SalaAsiento[] {
-    return this.mesaAlDia().map((a) => ({ ...a, faroles: this.farolesDemonio.deAsiento(a), farolEnUso: this.farolesDemonio.enUso(a) }));
+    return this.mesa.map((a) => ({ ...a, faroles: this.farolesDemonio.deAsiento(a), farolEnUso: this.farolesDemonio.enUso(a) }));
   }
 
-  /** Añade un asiento al final del círculo. No comprueba el máximo ni permisos. */
   anadirAsiento(): void {
-    this.mesa.push(asientoNuevo());
+    this.sala.anadirAsiento();
   }
 
-  /** Quita el último asiento del círculo; quien estuviera sentado vuelve a visitante. */
   quitarAsiento(): void {
-    const quitado = this.mesa.pop();
-    if (quitado?.ocupante) this.cambiarRol(quitado.ocupante, 'visitante');
+    this.sala.quitarAsiento();
   }
 
-  /**
-   * Reparte al azar a quienes están sentados entre todos los asientos (también
-   * los libres). Devuelve cuántos había sentados.
-   */
+  /** Ver Sala.mezclar: cada jugador cambia de silla con su ficha (ver llevarFichas). */
   mezclarAsientos(): number {
-    const mesa = this.mesaAlDia();
-    // Fisher-Yates sobre la mesa entera: los huecos libres también se barajan. Cada
-    // asiento nuevo recibe a quien estaba en el de `orden[i]`, con su ficha
-    const orden = barajar(mesa.map((_, i) => i));
-    const ocupantes = mesa.map((a) => a.ocupante);
-    this.llevarFichas(new Map(orden.map((desde, i) => [mesa[desde].id, mesa[i].id])));
-    mesa.forEach((a, i) => (a.ocupante = ocupantes[orden[i]]));
-    return ocupantes.filter(Boolean).length;
+    return this.sala.mezclar();
   }
 
   /**
@@ -1322,37 +1304,16 @@ export class SalaService {
     this.nominaciones.remapear(a);
   }
 
-  /**
-   * Pasa a quien está en el asiento `desde` al asiento `hasta`; si ahí había
-   * alguien, se intercambian. Devuelve el error, si lo hay.
-   */
   moverOcupante(desde: string, hasta: string): string | null {
-    const mesa = this.mesaAlDia();
-    const origen = mesa.find((a) => a.id === desde);
-    const destino = mesa.find((a) => a.id === hasta);
-    if (!origen || !destino) return 'Ese asiento ya no existe.';
-    if (!origen.ocupante) return 'Ya no hay nadie en ese asiento.';
-    if (origen === destino) return null;
-    // Cambian de silla con su ficha (su personaje, sus recordatorios…)
-    this.llevarFichas(new Map([[origen.id, destino.id], [destino.id, origen.id]]));
-    [origen.ocupante, destino.ocupante] = [destino.ocupante, origen.ocupante];
-    return null;
+    return this.sala.moverOcupante(desde, hasta);
   }
 
-  /** Sienta a alguien en un asiento libre y pasa a jugador. Devuelve el error, si lo hay. */
   sentar(id: string, asientoId: string): string | null {
-    const asiento = this.mesaAlDia().find((a) => a.id === asientoId);
-    if (!asiento) return 'Ese asiento ya no existe.';
-    if (asiento.ocupante) return 'Ese asiento ya está ocupado.';
-    asiento.ocupante = id;
-    this.cambiarRol(id, 'jugador');
-    return null;
+    return this.sala.sentar(id, asientoId);
   }
 
-  /** Se levanta de su asiento y vuelve a visitante. */
   levantar(id: string): void {
-    for (const asiento of this.mesa) if (asiento.ocupante === id) asiento.ocupante = null;
-    this.cambiarRol(id, 'visitante');
+    this.sala.levantar(id);
   }
 
   /** No puede votar: no está sentado, o las reglas dicen que no (ver Reglas.puedeVotar). */
@@ -1372,16 +1333,9 @@ export class SalaService {
     return this.reglas.soloVecinos();
   }
 
-  /**
-   * Si dos participantes son vecinos en la mesa: el asiento ocupado más cercano a
-   * cada lado (los libres se saltan; vivos o muertos, da igual).
-   */
+  /** Ver Sala.sonVecinos. */
   sonVecinos(unoId: string, otroId: string): boolean {
-    const ocupados = this.mesa.filter((a) => a.ocupante);
-    const i = ocupados.findIndex((a) => a.ocupante === unoId);
-    if (i < 0 || ocupados.length < 2) return false;
-    const n = ocupados.length;
-    return [ocupados[(i + 1) % n].ocupante, ocupados[(i - 1 + n) % n].ocupante].includes(otroId);
+    return this.sala.sonVecinos(unoId, otroId);
   }
 
   /** El Voudon está vivo en la mesa (ver reglas/voudon.ts). */
@@ -1398,55 +1352,55 @@ export class SalaService {
   // Quién está en la sala: lo lleva Participantes (ver allí lo que hace cada uno)
 
   conectar(socketId: string, clienteId: string | null, llegada: SalaLlegada, conexionViva: (socketId: string) => boolean) {
-    return this.presentes.conectar(socketId, clienteId, llegada, conexionViva);
+    return this.sala.participantes.conectar(socketId, clienteId, llegada, conexionViva);
   }
 
   cambiarPartidasJugadas(userId: string, partidas: number): void {
-    this.presentes.cambiarPartidasJugadas(userId, partidas);
+    this.sala.participantes.cambiarPartidasJugadas(userId, partidas);
   }
 
   salir(clave: string, socketId: string): void {
-    this.presentes.salir(clave, socketId);
+    this.sala.participantes.salir(clave, socketId);
   }
 
   expulsar(id: string): string | null {
-    return this.presentes.expulsar(id);
+    return this.sala.participantes.expulsar(id);
   }
 
   desconectar(clave: string, socketId: string, alExpulsar: () => void): void {
-    this.presentes.desconectar(clave, socketId, alExpulsar);
+    this.sala.participantes.desconectar(clave, socketId, alExpulsar);
   }
 
   participanteDe(clave: string): SalaParticipante | undefined {
-    return this.presentes.participanteDe(clave);
+    return this.sala.participantes.participanteDe(clave);
   }
 
   buscar(id: string): SalaParticipante | undefined {
-    return this.presentes.buscar(id);
+    return this.sala.participantes.buscar(id);
   }
 
   nombreBase(id: string): string | undefined {
-    return this.presentes.nombreBase(id);
+    return this.sala.participantes.nombreBase(id);
   }
 
   nombreOcupado(nombre: string, salvoId: string): boolean {
-    return this.presentes.nombreOcupado(nombre, salvoId);
+    return this.sala.participantes.nombreOcupado(nombre, salvoId);
   }
 
   nombreLibreParaInvitado(nombre: string, clienteId: string | null, conexionViva: (socketId: string) => boolean): boolean {
-    return this.presentes.nombreLibreParaInvitado(nombre, clienteId, conexionViva);
+    return this.sala.participantes.nombreLibreParaInvitado(nombre, clienteId, conexionViva);
   }
 
   cambiarAvatar(id: string, elegido: string | null): void {
-    this.presentes.cambiarAvatar(id, elegido);
+    this.sala.participantes.cambiarAvatar(id, elegido);
   }
 
   renombrar(id: string, nombre: string): void {
-    this.presentes.renombrar(id, nombre);
+    this.sala.participantes.renombrar(id, nombre);
   }
 
   hayNarrador(): boolean {
-    return this.presentes.hayNarrador();
+    return this.sala.participantes.hayNarrador();
   }
 
   /** El narrador virtual de la sala, si lo hay (y su participante sigue en ella). */
@@ -1461,7 +1415,7 @@ export class SalaService {
     nombre: string,
     avatar: string,
   ): string {
-    const participante = this.presentes.anadirVirtual(nombre, avatar, datos.id);
+    const participante = this.sala.participantes.anadirVirtual(nombre, avatar, datos.id);
     this.narradoresVirtuales.guardar({
       ...datos,
       participante,
@@ -1486,13 +1440,13 @@ export class SalaService {
     const narrador = this.narradoresVirtuales.actual();
     if (!narrador) return;
     this.narradoresVirtuales.guardar({ ...narrador, id });
-    this.presentes.relevarVirtual(narrador.participante, nombre, avatar, id);
+    this.sala.participantes.relevarVirtual(narrador.participante, nombre, avatar, id);
   }
 
   /** Se va el narrador virtual (su participante sale de la sala): la palabra y los privados vuelven a ser de todos. */
   quitarNarradorVirtual(): void {
     const narrador = this.narradoresVirtuales.actual();
-    if (narrador) this.presentes.expulsar(narrador.participante);
+    if (narrador) this.sala.participantes.expulsar(narrador.participante);
     this.narradoresVirtuales.borrar();
     this.palabraDe = null;
     this.privadosAbiertos = true;
@@ -1522,35 +1476,35 @@ export class SalaService {
   private privadosAbiertos = true;
 
   cambiarRol(id: string, rol: SalaRol): void {
-    this.presentes.cambiarRol(id, rol);
+    this.sala.participantes.cambiarRol(id, rol);
   }
 
   cambiarAccesoGrimorio(id: string, acceso: SalaAccesoGrimorio): void {
-    this.presentes.cambiarAccesoGrimorio(id, acceso);
+    this.sala.participantes.cambiarAccesoGrimorio(id, acceso);
   }
 
   cambiarSonido(id: string, sinSonido: boolean): void {
-    this.presentes.cambiarSonido(id, sinSonido);
+    this.sala.participantes.cambiarSonido(id, sinSonido);
   }
 
   levantarMano(id: string, levantada: boolean, dos = false): void {
-    this.presentes.levantarMano(id, levantada, dos);
+    this.sala.participantes.levantarMano(id, levantada, dos);
   }
 
   elegirFormaMano(id: string, forma: SalaFormaMano): void {
-    this.presentes.elegirFormaMano(id, forma);
+    this.sala.participantes.elegirFormaMano(id, forma);
   }
 
   elegirEstiloMano(id: string, estilo: string): void {
-    this.presentes.elegirEstiloMano(id, estilo);
+    this.sala.participantes.elegirEstiloMano(id, estilo);
   }
 
   participantes(): SalaParticipante[] {
-    return this.presentes.participantes();
+    return this.sala.participantes.participantes();
   }
 
   conexiones(): { socketId: string; clave: string; id: string }[] {
-    return this.presentes.conexiones();
+    return this.sala.participantes.conexiones();
   }
 }
 
