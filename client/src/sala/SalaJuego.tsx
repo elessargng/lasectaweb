@@ -64,8 +64,6 @@ import { actuaAlMorir, mostrarPersonajes, tituloDeGuion, useTraducciones, type P
 import ZonaNarradores from './ZonaNarradores';
 import { callarVoz, decirEnVoz } from './vozNarrador';
 import DialogoNarradorVirtual from './DialogoNarradorVirtual';
-import PanelJarvis from './PanelJarvis';
-import { useJarvis } from './jarvis';
 import {
   accionCogerLlamada,
   describirAtajo,
@@ -1295,8 +1293,6 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     guardarPerfil: guardarPerfilConfiguracion,
     borrarPerfil: borrarPerfilConfiguracion,
   } = useConfiguracionCuenta(cuenta?.token ?? null, configuracionActual, aplicarConfiguracion);
-  // El modelo de Jarvis de la cuenta (pestaña Jarvis; sin él comprobado, no se puede añadir)
-  const jarvis = useJarvis(cuenta?.token ?? null);
   // Narradores: ir a la noche (desde la preparación o el día) o amanecer (desde la noche).
   const accionFase = estado?.acciones.includes('narrador:irANoche')
     ? 'narrador:irANoche'
@@ -1601,12 +1597,6 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       contenido: (
         <PanelComunicaciones preferencias={preferencias} onCambiar={cambiarPreferencias} hayVideo={!!estado?.video} />
       ),
-    },
-    {
-      id: 'jarvis',
-      etiqueta: 'Jarvis',
-      conControles: !!cuenta,
-      contenido: <PanelJarvis conCuenta={!!cuenta} jarvis={jarvis} />,
     },
     {
       id: 'perfiles',
@@ -2329,11 +2319,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           <DialogoNarradorVirtual
             sentados={estado.asientos.filter((a) => a.ocupante).length}
             noDisponible={{
-              jarvis: !cuenta
-                ? 'Necesitas una cuenta.'
-                : jarvis.configuracion?.comprobadoEn
-                  ? undefined
-                  : 'Pon y comprueba su modelo en Preferencias, pestaña Jarvis.',
+              jarvis: !cuenta ? 'Necesitas una cuenta.' : undefined,
             }}
             pedir={pedirPropio}
             onCerrar={() => setAnadiendoVirtual(false)}

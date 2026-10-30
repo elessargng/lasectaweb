@@ -581,7 +581,7 @@ export const NARRADORES_VIRTUALES = [
   {
     id: 'jarvis',
     nombre: 'Jarvis',
-    descripcion: 'Decide con el modelo JEV, con tu endpoint y tu key.',
+    descripcion: 'Decide con el modelo JEV.',
     disponible: true,
     avatar: '/narradores/jarvis.webp',
   },

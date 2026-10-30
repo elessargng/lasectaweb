@@ -124,7 +124,7 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     const datos = await this.modelos?.modeloDe(creador);
     if (!this.modelos || datos === undefined) return 'Jarvis no está disponible en este servidor.';
     if (datos === 'sinCuenta') return 'Para añadir a Jarvis necesitas una cuenta.';
-    if (!datos) return 'Para añadir a Jarvis, pon y comprueba su modelo en Preferencias, pestaña Jarvis.';
+    if (!datos) return 'Jarvis no está disponible en este servidor.';
     const cliente = this.modelos.cliente(datos);
     const error = await cliente.comprobar();
     if (error) return `El modelo de Jarvis no responde: ${error}`;

@@ -988,6 +988,13 @@ export class DatabaseRepository {
         CREATE INDEX IF NOT EXISTS idx_narrador_bolsas_recientes_userId ON narrador_bolsas_recientes(userId);
       `);
     });
+
+    // Migración 032: Jarvis ya no lo configura cada usuario
+    //
+    // Decide con el modelo del servidor (JEV_API_KEY): las keys que guardó cada uno, fuera.
+    await this.applyMigration('032_drop_jarvis_configuracion', async (db) => {
+      await db.exec('DROP TABLE IF EXISTS jarvis_configuracion;');
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

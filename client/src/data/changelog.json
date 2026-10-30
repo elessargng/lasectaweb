@@ -43,15 +43,6 @@
         "items": [
           "Añadidas las Reliquias, junto a los logros."
         ]
-      },
-      {
-        "category": "Para usar Jarvis",
-        "items": [
-          "Hace falta una cuenta registrada.",
-          "Cada usuario engancha en Preferencias su modelo JEV de TypeSafe: endpoint (por defecto https://api.typesafe.ai), modelo (por defecto jev-latest) y su API key. Se comprueba que responde antes de poder usarlo.",
-          "El servidor necesita la variable de entorno JARVIS_CIFRADO_KEY (cualquier texto secreto): con ella se guardan las keys cifradas con AES-256-GCM, y sin ella no se puede guardar ninguna.",
-          "Cada decisión es un POST a /v1/systemone con un tope de 15 segundos. Si el modelo falla, reintenta a los 10 segundos y, si vuelve a fallar, decide «Tonto y tú»; tras 5 fallos seguidos, «Tonto y tú» sigue el resto de la partida."
-        ]
       }
     ]
   },

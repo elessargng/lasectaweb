@@ -87,10 +87,8 @@ import { RitualService } from './services/RitualService';
 import { RitualController } from './controllers/RitualController';
 import { SalaConfiguracionRepository } from './repositories/SalaConfiguracionRepository';
 import { SalaConfiguracionController } from './controllers/SalaConfiguracionController';
-import { JarvisConfiguracionRepository } from './repositories/JarvisConfiguracionRepository';
 import { BolsasRecientesRepository } from './repositories/BolsasRecientesRepository';
-import { JarvisConfiguracionController } from './controllers/JarvisConfiguracionController';
-import { ClienteJevHttp } from './services/narradorVirtual/jev/ClienteJevHttp';
+import { ClienteJevHttp, jevPorDefecto } from './services/narradorVirtual/jev/ClienteJevHttp';
 import { EstadisticasController } from './controllers/EstadisticasController';
 import { EstadisticasRepository } from './repositories/EstadisticasRepository';
 import { EstadisticasService } from './services/estadisticas/EstadisticasService';
@@ -217,8 +215,6 @@ const ritualService = new RitualService(ritualRepository, userRepository, villac
 const ritualController = new RitualController(ritualService);
 
 const salaConfiguracionController = new SalaConfiguracionController(new SalaConfiguracionRepository());
-const jarvisConfiguracion = new JarvisConfiguracionRepository();
-const jarvisConfiguracionController = new JarvisConfiguracionController(jarvisConfiguracion);
 
 // Estadísticas de las partidas de la sala (se guardan al revelar el grimorio)
 const estadisticasRepository = new EstadisticasRepository();
@@ -348,11 +344,6 @@ app.get('/api/sala/configuracion', authenticateJWT as express.RequestHandler, sa
 app.put('/api/sala/configuracion', authenticateJWT as express.RequestHandler, salaConfiguracionController.guardarActual as express.RequestHandler);
 app.post('/api/sala/perfiles', authenticateJWT as express.RequestHandler, salaConfiguracionController.guardarPerfil as express.RequestHandler);
 app.delete('/api/sala/perfiles/:id', authenticateJWT as express.RequestHandler, salaConfiguracionController.borrarPerfil as express.RequestHandler);
-// El modelo que guía al narrador virtual Jarvis (cada usuario el suyo; la key nunca vuelve al navegador)
-app.get('/api/narrador-virtual/jarvis', authenticateJWT as express.RequestHandler, jarvisConfiguracionController.get as express.RequestHandler);
-app.put('/api/narrador-virtual/jarvis', authenticateJWT as express.RequestHandler, jarvisConfiguracionController.guardar as express.RequestHandler);
-app.post('/api/narrador-virtual/jarvis/comprobar', authenticateJWT as express.RequestHandler, jarvisConfiguracionController.comprobar as express.RequestHandler);
-app.delete('/api/narrador-virtual/jarvis', authenticateJWT as express.RequestHandler, jarvisConfiguracionController.borrar as express.RequestHandler);
 
 // Rutas de La Biblioteca
 app.get('/api/library/tree', optionalAuthenticateJWT as express.RequestHandler, libraryController.getTree as express.RequestHandler);
@@ -430,11 +421,8 @@ DatabaseRepository.getInstance()
     const httpServer = http.createServer(app);
     iniciarSalaSocket(httpServer, async (id) => (await userRepository.findById(id))?.profilePicture || null, {
       guiones: guionService,
-      // Jarvis: el modelo JEV que ha puesto y comprobado cada usuario en Preferencias
-      modeloJarvisDe: async (userId) => {
-        const c = await jarvisConfiguracion.get(userId);
-        return c?.comprobadoEn ? c : null;
-      },
+      // Jarvis: el modelo JEV del servidor (JEV_API_KEY), el mismo para todos
+      modeloJarvisDe: async () => jevPorDefecto(),
       clienteJev: (datos) => new ClienteJevHttp(datos),
       // Las bolsas del narrador virtual en las últimas partidas de cada usuario
       bolsasRecientes: new BolsasRecientesRepository(),

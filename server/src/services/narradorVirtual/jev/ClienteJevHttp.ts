@@ -15,6 +15,16 @@ export const TOPE_JEV_MS = 15_000;
 export const ENDPOINT_JEV = 'https://api.typesafe.ai';
 export const MODELO_JEV = 'jev-latest';
 
+/**
+ * El modelo con el que decide Jarvis, el del servidor: la key de `JEV_API_KEY`
+ * (y, si se quieren otros, `JEV_ENDPOINT` y `JEV_MODELO`). Sin key, null.
+ */
+export const jevPorDefecto = (): DatosJev | null => {
+  const apiKey = process.env.JEV_API_KEY?.trim();
+  if (!apiKey) return null;
+  return { endpoint: baseJev(process.env.JEV_ENDPOINT?.trim() || ENDPOINT_JEV), modelo: process.env.JEV_MODELO?.trim() || MODELO_JEV, apiKey };
+};
+
 /** Un error de la API en palabras para el usuario. */
 export class ErrorJev extends Error {}
 
