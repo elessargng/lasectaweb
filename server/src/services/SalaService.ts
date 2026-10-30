@@ -16,7 +16,6 @@ import {
   SalaSenalamiento,
   SalaRevelacion,
   SalaRol,
-  RECORDATORIO_TEXTO,
   SalaFichaEnviada,
   SalaGrimorioEnviado,
   SalaEleccionDespertar,
@@ -28,7 +27,7 @@ import { GuionResuelto, PersonajeDeGuion } from '../types/guiones';
 import { repartoPara } from './partida/distribucion';
 import { type SalaLlegada } from './sala/Participantes';
 import { Sala, SALA_ASIENTOS } from './sala/Sala';
-import { Fichas, type Ficha } from './partida/Fichas';
+import { Grimorio, identidadDe } from './partida/Grimorio';
 import { NarradorVirtualEnMemoria, type NarradorVirtualRepository } from '../repositories/NarradorVirtualRepository';
 import {
   NPC_GARDENER,
@@ -58,23 +57,6 @@ export { SALA_ASIENTOS };
 export const SALA_SEGUNDOS_POR_FICHA = { min: 0.25, max: 2, paso: 0.25, defecto: 1 };
 
 /**
- * Un recordatorio «Is The …» (el del Borracho, el Alquimista, el Filósofo, la
- * Marioneta o el Aprendiz): dice quién es de verdad el de esa ficha, aunque
- * lleve otro personaje (el que cree ser, o la habilidad que tiene).
- */
-export const esRecordatorioDeIdentidad = (texto: string) => /^is the\b/i.test(texto.trim());
-/** Lo mismo con un recordatorio puesto: uno con texto propio nunca lo es (lo escribe el narrador). */
-const esIdentidad = (r: SalaRecordatorio) => r.personaje !== RECORDATORIO_TEXTO && esRecordatorioDeIdentidad(r.texto);
-
-/**
- * Al anunciar una muerte de noche, el «Dead» con el que la marcó quien lo mató (el
- * demonio, el Asesino…) ya no hace falta: se quita (no los de texto propio).
- */
-function quitarMarcaDeMuerte(ficha: Ficha): void {
-  ficha.recordatorios = ficha.recordatorios.filter((r) => r.personaje === RECORDATORIO_TEXTO || !/^dead$/i.test(r.texto.trim()));
-}
-
-/**
  * Lo que un cambio de fase deja atrás y la máquina del tiempo devuelve: al
  * anochecer, la calavera y el récord de votos del día; al amanecer, los
  * despertares y el señalamiento de la noche.
@@ -97,8 +79,14 @@ interface PasoDeFase {
 export class SalaService {
   /** Quién está en la sala y en qué asiento se sienta cada jugador (ver Sala). */
   private readonly sala = new Sala();
-  /** La ficha de cada asiento (ver Fichas). */
-  private readonly fichas = new Fichas();
+  /** La ficha de cada asiento y lo que se hace con ellas (ver Grimorio). */
+  private readonly grimorio = new Grimorio({
+    asientos: () => this.sala.asientos(),
+    personaje: (id) => this.personaje(id),
+    noche: () => this.faseActual.momento === 'noche',
+    anotar: (hecho) => this.anotar(hecho),
+    asientoDiario: (asientoId) => this.asientoDiario(asientoId),
+  });
 
   constructor(
     /** Dónde se guarda el narrador virtual de la sala (ver NarradorVirtualService). */
@@ -110,12 +98,12 @@ export class SalaService {
 
   /**
    * Los asientos con su ficha y sus faroles, en orden (ver Sala.asientos). Es una
-   * copia para leer: para cambiar la ficha de un asiento, this.fichas.de(id).
+   * copia para leer: las fichas se cambian en this.grimorio.
    */
   private get mesa(): SalaAsiento[] {
     return this.sala.asientos().map((a) => ({
       ...a,
-      ...this.fichas.de(a.id),
+      ...this.grimorio.ficha(a.id),
       faroles: this.farolesDemonio.deAsiento(a),
       farolEnUso: this.farolesDemonio.enUso(a),
     }));
@@ -382,14 +370,9 @@ export class SalaService {
     return this.personaje(id)?.tipo === 'traveller';
   }
 
-  /**
-   * Quién es de verdad el de un asiento: el personaje de su recordatorio «Is The …»
-   * (el último, si hay varios) o, sin él, el de su ficha. Es lo que cuenta para el
-   * reparto; la ficha, para su habilidad (el orden de noche).
-   */
+  /** Quién es de verdad el de un asiento (ver identidadDe). */
   identidad(asiento: SalaAsiento): string | null {
-    const r = [...asiento.recordatorios].reverse().find(esIdentidad);
-    return r?.personaje ?? asiento.personaje;
+    return identidadDe(asiento);
   }
 
   /**
@@ -403,19 +386,6 @@ export class SalaService {
     return !!id && this.esViajero(id) && !this.bolsaPartida.contiene(id);
   }
 
-  /**
-   * Al poner un viajero que lleva su propio «Is The …» (el Aprendiz), se le pone
-   * solo: luego el narrador le cambia la ficha por la habilidad que gana y sigue
-   * sabiéndose quién es.
-   */
-  private identidadAutomatica(ficha: Ficha): void {
-    const p = ficha.personaje ? this.personaje(ficha.personaje) : undefined;
-    if (!p || p.tipo !== 'traveller') return;
-    const indice = p.recordatorios.findIndex(esRecordatorioDeIdentidad);
-    if (indice < 0) return;
-    if (ficha.recordatorios.some((r) => r.personaje === p.id && r.indice === indice)) return;
-    ficha.recordatorios.push({ id: randomUUID(), personaje: p.id, indice, texto: p.recordatorios[indice] });
-  }
 
   /**
    * El reparto de la partida: los jugadores (asientos, sin los viajeros: los
@@ -460,14 +430,7 @@ export class SalaService {
   repartirBolsa(): void {
     const asientos = this.mesa.filter((a) => !this.llevaViajero(a));
     const personajes = this.reglas.repartir(asientos, barajar(this.bolsaPartida.bolsa()));
-    asientos.forEach((a, i) => {
-      const ficha = this.fichas.de(a.id);
-      ficha.personaje = personajes[i] ?? null;
-      ficha.alineamiento = null;
-      // Un reparto nuevo: quién era cada uno (los «Is The …» del anterior) ya no vale
-      ficha.recordatorios = ficha.recordatorios.filter((r) => !esIdentidad(r));
-      this.identidadAutomatica(ficha);
-    });
+    asientos.forEach((a, i) => this.grimorio.repartir(a.id, personajes[i] ?? null));
   }
 
   /**
@@ -522,18 +485,9 @@ export class SalaService {
     return this.cuentaDe(this.mesa.find((a) => a.id === asientoId)?.ocupante ?? null);
   }
 
-  /**
-   * El alineamiento de un asiento: el que haya puesto el narrador o, si no, el del
-   * tipo de quien es de verdad (aldeanos y forasteros, buenos; esbirros y
-   * demonios, malvados). Un viajero sin alineamiento puesto: null.
-   */
+  /** El alineamiento de un asiento (ver Grimorio.alineamiento). */
   alineamientoEfectivo(asiento: SalaAsiento): SalaAlineamiento | null {
-    if (asiento.alineamiento) return asiento.alineamiento;
-    const id = this.identidad(asiento);
-    const tipo = id ? this.personaje(id)?.tipo : undefined;
-    if (tipo === 'townsfolk' || tipo === 'outsider') return 'bueno';
-    if (tipo === 'minion' || tipo === 'demon') return 'malvado';
-    return null;
+    return this.grimorio.alineamiento(asiento);
   }
 
   /** Cómo está ahora la mesa, asiento a asiento (para quien escucha la partida). */
@@ -803,7 +757,7 @@ export class SalaService {
     this.avisar({ tipo: 'nuevaPartida' });
     this.npcsPartida.nuevaPartida();
     this.nominaciones.olvidarTodo();
-    this.fichas.limpiar();
+    this.grimorio.limpiar();
     this.bolsaPartida.vaciar();
     this.entregas.olvidar();
     this.farolesDemonio.vaciar();
@@ -886,105 +840,46 @@ export class SalaService {
     return !!this.sala.asiento(id);
   }
 
-  /** Pone o quita la calavera a la ficha de un asiento. Solo puede llevarla una: ponérsela se la quita a las demás. */
+  // Las fichas de la mesa: las lleva Grimorio
+
   marcar(asientoId: string, marcado: boolean, votos: number | null = null): void {
-    if (marcado) this.desmarcar();
-    if (!this.hayAsiento(asientoId)) return;
-    const ficha = this.fichas.de(asientoId);
-    ficha.marcado = marcado;
-    ficha.votosMarca = marcado ? votos : null;
+    this.grimorio.marcar(asientoId, marcado, votos);
   }
 
-  /** Quita la calavera a quien la lleve. */
   desmarcar(): void {
-    for (const a of this.sala.asientos()) {
-      const ficha = this.fichas.de(a.id);
-      ficha.marcado = false;
-      ficha.votosMarca = null;
-    }
+    this.grimorio.desmarcar();
   }
 
-  /** Si alguna ficha lleva la calavera. */
   hayMarca(): boolean {
-    return this.mesa.some((a) => a.marcado);
+    return this.grimorio.hayMarca();
   }
 
-  /**
-   * Pone un personaje en la ficha de un asiento (o se lo quita, con null). El
-   * alineamiento vuelve a ser el de su tipo. No comprueba permisos ni que esté en el guion.
-   */
   cambiarPersonaje(asientoId: string, personaje: string | null): void {
-    if (!this.hayAsiento(asientoId)) return;
-    const ficha = this.fichas.de(asientoId);
-    ficha.personaje = personaje;
-    ficha.alineamiento = null;
-    this.identidadAutomatica(ficha);
-    this.anotar({ tipo: 'personaje', asiento: this.asientoDiario(asientoId), personaje });
+    this.grimorio.cambiarPersonaje(asientoId, personaje);
   }
 
-  /**
-   * Intercambia el personaje y el alineamiento de dos fichas (con el Gardener, el
-   * narrador decide quién tiene qué). Lo demás (muerte, calavera, recordatorios)
-   * es del asiento y se queda. No comprueba permisos.
-   */
   intercambiarFichas(desdeId: string, hastaId: string): void {
-    if (!this.hayAsiento(desdeId) || !this.hayAsiento(hastaId) || desdeId === hastaId) return;
-    const desde = this.fichas.de(desdeId);
-    const hasta = this.fichas.de(hastaId);
-    [desde.personaje, hasta.personaje] = [hasta.personaje, desde.personaje];
-    [desde.alineamiento, hasta.alineamiento] = [hasta.alineamiento, desde.alineamiento];
+    this.grimorio.intercambiarFichas(desdeId, hastaId);
   }
 
-  /** Pone una ficha recordatorio junto a la de un asiento. No comprueba permisos. */
   ponerRecordatorio(asientoId: string, recordatorio: Omit<SalaRecordatorio, 'id'>): void {
-    if (!this.hayAsiento(asientoId)) return;
-    this.fichas.de(asientoId).recordatorios.push({ id: randomUUID(), ...recordatorio });
-    this.anotar({ tipo: 'recordatorio', asiento: this.asientoDiario(asientoId), personaje: recordatorio.personaje, texto: recordatorio.texto, quitado: false });
+    this.grimorio.ponerRecordatorio(asientoId, recordatorio);
   }
 
-  /** Quita una ficha recordatorio. No comprueba permisos. */
   quitarRecordatorio(asientoId: string, recordatorioId: string): void {
-    if (!this.hayAsiento(asientoId)) return;
-    const ficha = this.fichas.de(asientoId);
-    const quitado = ficha.recordatorios.find((r) => r.id === recordatorioId);
-    if (!quitado) return;
-    ficha.recordatorios = ficha.recordatorios.filter((r) => r !== quitado);
-    this.anotar({ tipo: 'recordatorio', asiento: this.asientoDiario(asientoId), personaje: quitado.personaje, texto: quitado.texto, quitado: true });
+    this.grimorio.quitarRecordatorio(asientoId, recordatorioId);
   }
 
-  /**
-   * Cada recordatorio de un personaje es único: el que hay que quitar al poner
-   * otro igual en un asiento. Si el personaje tiene varios con el mismo texto,
-   * solo cuando ya están todos en la mesa. Antes uno de otro asiento que uno de
-   * este. null: no hay que quitar ninguno.
-   */
   recordatorioQueSobra(asientoId: string, personajeId: string, indice: number): { asientoId: string; recordatorioId: string } | null {
-    const textos = this.personaje(personajeId)?.recordatorios ?? [];
-    const texto = textos[indice];
-    if (texto === undefined) return null;
-    const iguales = new Set(textos.flatMap((t, i) => (t === texto ? [i] : [])));
-    const puestos = this.mesa.flatMap((a) =>
-      a.recordatorios.filter((r) => r.personaje === personajeId && iguales.has(r.indice)).map((r) => ({ asientoId: a.id, recordatorioId: r.id })),
-    );
-    if (puestos.length < iguales.size) return null;
-    return puestos.find((p) => p.asientoId !== asientoId) ?? puestos[0];
+    return this.grimorio.recordatorioQueSobra(asientoId, personajeId, indice);
   }
 
-  /**
-   * Escribe la nota de un asiento (sustituye la que hubiera); con null, la borra.
-   * Devuelve false si el asiento no existe. No comprueba permisos.
-   */
   escribirNota(asientoId: string, texto: string | null): boolean {
-    if (!this.hayAsiento(asientoId)) return false;
-    this.fichas.de(asientoId).nota = texto;
-    return true;
+    return this.grimorio.escribirNota(asientoId, texto);
   }
 
-  /** Cambia el alineamiento de la ficha de un asiento. No comprueba permisos. */
   cambiarAlineamiento(asientoId: string, alineamiento: SalaAlineamiento): void {
-    if (!this.hayAsiento(asientoId)) return;
-    this.fichas.de(asientoId).alineamiento = alineamiento;
-    this.anotar({ tipo: 'alineamiento', asiento: this.asientoDiario(asientoId), alineamiento });
+    this.grimorio.cambiarAlineamiento(asientoId, alineamiento);
   }
 
   // El gong y el reloj: los lleva RelojSala
@@ -1069,10 +964,7 @@ export class SalaService {
     // Su «Is The Demon» pasa al que lo cuida (solo hay uno)
     const r = recordatorioLilmonsta(this.contextoReglas);
     if (!r) return;
-    for (const a of this.sala.asientos()) {
-      const ficha = this.fichas.de(a.id);
-      ficha.recordatorios = ficha.recordatorios.filter((x) => !(x.personaje === DEMONIO_LILMONSTA && x.indice === r.indice));
-    }
+    this.grimorio.quitarDeTodas(DEMONIO_LILMONSTA, r.indice);
     this.ponerRecordatorio(cuidador, { personaje: DEMONIO_LILMONSTA, indice: r.indice, texto: r.texto });
   }
 
@@ -1134,31 +1026,9 @@ export class SalaService {
     });
   }
 
-  /**
-   * Mata o revive la ficha de un asiento; al morir pierde la calavera. De noche,
-   * la muerte queda pendiente (solo la ven quienes ven el grimorio) hasta que el
-   * narrador la hace efectiva (confirmarMuerte). Revivir quita también la pendiente.
-   * No comprueba permisos.
-   */
-  cambiarVida(asientoId: string, muerto: boolean, { anotar = true }: { anotar?: boolean } = {}): void {
-    if (!this.hayAsiento(asientoId)) return;
-    const ficha = this.fichas.de(asientoId);
-    // Para el diario, muere cuando se le pone la muerte (de noche, aunque se anuncie después)
-    const estabaMuerto = ficha.muerto || ficha.muertePendiente;
-    if (anotar && estabaMuerto !== muerto) this.anotar({ tipo: muerto ? 'muere' : 'revive', asiento: this.asientoDiario(asientoId) });
-    if (muerto && this.faseActual.momento === 'noche' && !ficha.muerto) {
-      ficha.muertePendiente = true;
-      return;
-    }
-    if (muerto && ficha.muertePendiente) quitarMarcaDeMuerte(ficha);
-    // Al morir (o revivir) tiene su voto
-    if (ficha.muerto !== muerto) ficha.votoGastado = false;
-    ficha.muerto = muerto;
-    ficha.muertePendiente = false;
-    if (muerto) {
-      ficha.marcado = false;
-      ficha.votosMarca = null;
-    }
+  /** Ver Grimorio.cambiarVida. */
+  cambiarVida(asientoId: string, muerto: boolean, opciones: { anotar?: boolean } = {}): void {
+    this.grimorio.cambiarVida(asientoId, muerto, opciones);
   }
 
   /**
@@ -1177,14 +1047,8 @@ export class SalaService {
     for (const { personaje, texto, unico } of this.reglas.recordatoriosAlEjecutar(asiento)) {
       const indice = this.personaje(personaje)?.recordatorios.findIndex((t) => t.toLowerCase() === texto.toLowerCase()) ?? -1;
       if (indice < 0) continue;
-      const delPersonaje = (r: SalaRecordatorio) => r.personaje === personaje && r.indice === indice;
-      if (unico) {
-        for (const a of this.sala.asientos()) {
-          const ficha = this.fichas.de(a.id);
-          ficha.recordatorios = ficha.recordatorios.filter((r) => !delPersonaje(r));
-        }
-      }
-      this.fichas.de(asiento.id).recordatorios.push({ id: randomUUID(), personaje, indice, texto: this.personaje(personaje)!.recordatorios[indice] });
+      if (unico) this.grimorio.quitarDeTodas(personaje, indice);
+      this.grimorio.ponerRecordatorio(asiento.id, { personaje, indice, texto: this.personaje(personaje)!.recordatorios[indice] }, { anotar: false });
     }
     this.avisar({ tipo: 'ejecucion', userId: this.cuentaDe(asiento.ocupante) });
     this.anotar({ tipo: 'ejecucion', asiento: this.asientoDiario(asiento.id) });
@@ -1199,37 +1063,16 @@ export class SalaService {
     return { anochece, final };
   }
 
-  /**
-   * Hace efectiva una muerte pendiente (el narrador la anuncia): ya la ven todos, y
-   * se le quita el «Dead» de quien lo mató (ya no hace falta). No comprueba permisos.
-   */
   confirmarMuerte(asientoId: string): boolean {
-    if (!this.hayAsiento(asientoId)) return false;
-    const ficha = this.fichas.de(asientoId);
-    if (!ficha.muertePendiente) return false;
-    quitarMarcaDeMuerte(ficha);
-    ficha.muertePendiente = false;
-    ficha.muerto = true;
-    ficha.votoGastado = false;
-    ficha.marcado = false;
-    ficha.votosMarca = null;
-    return true;
+    return this.grimorio.confirmarMuerte(asientoId);
   }
 
-  /** Quita o devuelve el voto a la ficha de un muerto. Devuelve false si no está muerta. No comprueba permisos. */
   cambiarVoto(asientoId: string, gastado: boolean): boolean {
-    if (!this.hayAsiento(asientoId)) return false;
-    const ficha = this.fichas.de(asientoId);
-    if (!ficha.muerto) return false;
-    ficha.votoGastado = gastado;
-    return true;
+    return this.grimorio.cambiarVoto(asientoId, gastado);
   }
 
-  /** El Barquero: todos los muertos recuperan su voto. Devuelve cuántos lo recuperan. No comprueba permisos. */
   devolverVotos(): number {
-    const sinVoto = this.mesa.filter((a) => a.muerto && a.votoGastado);
-    for (const a of sinVoto) this.fichas.de(a.id).votoGastado = false;
-    return sinVoto.length;
+    return this.grimorio.devolverVotos();
   }
 
   configuracion(): SalaConfiguracion {
@@ -1252,7 +1095,7 @@ export class SalaService {
 
   quitarAsiento(): void {
     const quitado = this.sala.quitarAsiento();
-    if (quitado) this.fichas.olvidar(quitado);
+    if (quitado) this.grimorio.olvidar(quitado);
   }
 
   /** Ver Sala.mezclar: cada jugador cambia de silla con su ficha (ver llevarFichas). */
@@ -1269,7 +1112,7 @@ export class SalaService {
    */
   private llevarFichas(destino: Map<string, string>): void {
     const a = (id: string) => destino.get(id) ?? id;
-    this.fichas.remapear(a);
+    this.grimorio.remapear(a);
     this.entregas.remapear(a);
     this.farolesDemonio.remapear(a);
     this.despertados.remapear(a);
