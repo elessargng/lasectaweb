@@ -11,24 +11,25 @@ import { guionNoGreaterJoy, invitado } from './guionDePrueba';
 
 /** Una mesa de No Greater Joy con esos personajes (uno por asiento, en orden) y sus jugadores, de noche. */
 function mesa(...personajes: string[]) {
-  const sala = new SalaDeJuego();
-  sala.cambiarGuion(guionNoGreaterJoy());
-  while (sala.asientos().length > personajes.length) sala.quitarAsiento();
+  const juego = new SalaDeJuego();
+  const { sala, partida } = juego;
+  partida.cambiarGuion(guionNoGreaterJoy());
+  while (partida.mesa().length > personajes.length) sala.quitarAsiento();
   personajes.forEach((p, i) => {
-    const { id } = sala.conectar(`s-${i}`, `c-${i}`, invitado(`J${i}`), () => true);
-    sala.sentar(id, sala.asientos()[i].id);
-    sala.cambiarPersonaje(sala.asientos()[i].id, p);
+    const { id } = sala.participantes.conectar(`s-${i}`, `c-${i}`, invitado(`J${i}`), () => true);
+    sala.sentar(id, partida.mesa()[i].id);
+    partida.grimorio.cambiarPersonaje(partida.mesa()[i].id, p);
   });
-  sala.irANoche();
-  const asiento = (i: number) => sala.asientos()[i];
-  const fila = (personaje: string): SalaHabilidadNoche | undefined => sala.habilidadesNoche().find((h) => h.personaje === personaje);
-  const ultimo = (i: number) => sala.despertares().find((d) => d.asiento === asiento(i).id)?.mensajes.slice(-1)[0];
+  partida.irANoche();
+  const asiento = (i: number) => partida.mesa()[i];
+  const fila = (personaje: string): SalaHabilidadNoche | undefined => partida.guiado.habilidadesNoche().find((h) => h.personaje === personaje);
+  const ultimo = (i: number) => partida.despertares.despertares().find((d) => d.asiento === asiento(i).id)?.mensajes.slice(-1)[0];
   const elegir = (i: number, ...elegidos: number[]) => {
     const jugadores = elegidos.map((e) => asiento(e).id);
-    sala.enviarDespertar(asiento(i).id, { ...ficha('jugador'), jugadores, autor: asiento(i).id });
-    sala.alElegirHabilidad(asiento(i).id, jugadores);
+    partida.despertares.enviar(asiento(i).id, { ...ficha('jugador'), jugadores, autor: asiento(i).id });
+    partida.guiado.alElegir(asiento(i).id, jugadores);
   };
-  return { sala, asiento, fila, ultimo, elegir };
+  return { juego, asiento, fila, ultimo, elegir };
 }
 
 describe('No Greater Joy', () => {
@@ -45,8 +46,9 @@ describe('No Greater Joy', () => {
 
   it('la Camarera, la última, sabe cuántos de sus dos elegidos han despertado por su habilidad', () => {
     const m = mesa('chambermaid', 'empath', 'imp', 'clockmaker', 'baron', 'sage');
-    expect(m.sala.despertarHabilidad('empath')).toBeNull();
-    expect(m.sala.despertarHabilidad('chambermaid')).toBeNull();
+    const { partida } = m.juego;
+    expect(partida.guiado.despertar('empath')).toBeNull();
+    expect(partida.guiado.despertar('chambermaid')).toBeNull();
     expect(m.ultimo(0)).toMatchObject({ tarjeta: 'eleccion', eleccion: { cantidad: 2, puedeElegirse: false } });
     // El Empático ha despertado; el Barón, no
     m.elegir(0, 1, 4);
@@ -57,10 +59,11 @@ describe('No Greater Joy', () => {
 
   it('el Sabio solo despierta si le mata el demonio, y sabe que es uno de dos', () => {
     const m = mesa('sage', 'imp', 'empath', 'baron', 'clockmaker');
+    const { partida } = m.juego;
     expect(m.fila('sage')).toMatchObject({ estado: 'falta', avisos: [{ tipo: 'noMuere' }] });
-    m.sala.amanecer();
-    m.sala.irANoche();
-    expect(m.sala.despertarHabilidad('imp')).toBeNull();
+    partida.amanecer();
+    partida.irANoche();
+    expect(partida.guiado.despertar('imp')).toBeNull();
     m.elegir(1, 0);
     const f = m.fila('sage')!;
     expect(f.estado).toBe('revisar');
@@ -81,7 +84,7 @@ describe('la pregunta montada del Artista', () => {
 
   it('se contesta con el grimorio: en juego, quiénes son, sillas, entre dos y la inicial', () => {
     const x = m();
-    const c = (p: PreguntaArtista) => contestar(x.sala, cronicaNueva(), p);
+    const c = (p: PreguntaArtista) => contestar(x.juego, cronicaNueva(), p);
     const demonio = { por: 'tipo', tipo: 'demon' } as const;
     expect(c({ tipo: 'enJuego', quien: { por: 'personaje', personaje: 'sage' } })).toBe(true);
     expect(c({ tipo: 'enJuego', quien: { por: 'personaje', personaje: 'artist' } })).toBe(false);
@@ -103,8 +106,8 @@ describe('la pregunta montada del Artista', () => {
     cronica.ultimaNoche = 2;
     cronica.noches.set(x.asiento(1).id, [{ noche: 1, eligio: [[x.asiento(4).id]], infos: [], droison: null }]);
     const malvado = { por: 'alineamiento', alineamiento: 'malvado' } as const;
-    expect(contestar(x.sala, cronica, { tipo: 'eligio', quien: malvado, a: x.asiento(4).id, cuando: 'algunaNoche' })).toBe(true);
-    expect(contestar(x.sala, cronica, { tipo: 'eligio', quien: malvado, a: x.asiento(4).id, cuando: 'anoche' })).toBe(false);
+    expect(contestar(x.juego, cronica, { tipo: 'eligio', quien: malvado, a: x.asiento(4).id, cuando: 'algunaNoche' })).toBe(true);
+    expect(contestar(x.juego, cronica, { tipo: 'eligio', quien: malvado, a: x.asiento(4).id, cuando: 'anoche' })).toBe(false);
   });
 
   it('se lee y se dice en palabras; lo que no vale, no se lee', () => {

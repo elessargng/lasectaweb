@@ -8,53 +8,57 @@ import { conCuenta, guionDePrueba } from './guionDePrueba';
 /** Lo que se guarda de cada partida para las estadísticas (al revelar el grimorio). */
 
 /** Las partidas que se mandan guardar: las estadísticas, escuchando a la sala (como en salaSocket). */
-function guardadas(sala: SalaDeJuego): RegistroPartida[] {
+function guardadas(juego: SalaDeJuego): RegistroPartida[] {
+  const { partida } = juego;
   const registros: RegistroPartida[] = [];
   const estadisticas = new EstadisticasPartida((registro) => registros.push(registro));
-  sala.suscribir((evento) => estadisticas.registrar(evento));
+  partida.suscribir((evento) => estadisticas.registrar(evento));
   return registros;
 }
 
 /** Ana (1), Bea (2) y Ceci (3) sentadas en los asientos 1 a 3 con chef, imp y empath; Nora (9) narra. */
 function partida() {
-  const sala = new SalaDeJuego();
-  sala.cambiarGuion(guionDePrueba());
-  const entra = (userId: string, nombre: string) => sala.conectar(`s-${nombre}`, `c-${nombre}`, conCuenta(userId, nombre), () => true).id;
+  const juego = new SalaDeJuego();
+  const { sala } = juego;
+  juego.partida.cambiarGuion(guionDePrueba());
+  const entra = (userId: string, nombre: string) => sala.participantes.conectar(`s-${nombre}`, `c-${nombre}`, conCuenta(userId, nombre), () => true).id;
   const ids = [entra('1', 'ana'), entra('2', 'bea'), entra('3', 'ceci')];
-  ids.forEach((id, i) => sala.sentar(id, sala.asientos()[i].id));
-  sala.cambiarRol(entra('9', 'nora'), 'narrador');
-  ['chef', 'imp', 'empath'].forEach((p, i) => sala.cambiarPersonaje(sala.asientos()[i].id, p));
-  const asiento = (i: number) => sala.asientos()[i].id;
-  return { sala, ids, asiento, registros: guardadas(sala) };
+  ids.forEach((id, i) => sala.sentar(id, juego.partida.mesa()[i].id));
+  sala.participantes.cambiarRol(entra('9', 'nora'), 'narrador');
+  ['chef', 'imp', 'empath'].forEach((p, i) => juego.partida.grimorio.cambiarPersonaje(juego.partida.mesa()[i].id, p));
+  const asiento = (i: number) => juego.partida.mesa()[i].id;
+  return { juego, ids, asiento, registros: guardadas(juego) };
 }
 
 describe('estadísticas de la partida', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  const votar = (sala: SalaDeJuego) => {
-    sala.iniciarCuentaAtras(Date.now());
-    vi.advanceTimersByTime(SALA_CUENTA_ATRAS_MS + sala.configuracion().segundosPorFicha * 1000 * sala.asientos().length);
+  const votar = (juego: SalaDeJuego) => {
+    const { partida } = juego;
+    partida.nominaciones.iniciarCuentaAtras(Date.now());
+    vi.advanceTimersByTime(SALA_CUENTA_ATRAS_MS + partida.configuracion.actual().segundosPorFicha * 1000 * partida.mesa().length);
   };
 
   it('apunta roles, nominaciones, votos y ejecuciones de cada jugador con cuenta', () => {
-    const { sala, ids, asiento, registros } = partida();
-    sala.irANoche();
+    const { juego, ids, asiento, registros } = partida();
+    const { sala } = juego;
+    juego.partida.irANoche();
     // De noche cambia la ficha de Ana: cuenta, porque empieza el día con ella
-    sala.cambiarPersonaje(asiento(0), 'librarian');
-    sala.amanecer();
+    juego.partida.grimorio.cambiarPersonaje(asiento(0), 'librarian');
+    juego.partida.amanecer();
     // Día 1: Ana nomina a Bea, votan Ana y Ceci; Bea se lleva la calavera y anochece
-    sala.nominar(asiento(0), asiento(1));
-    sala.levantarMano(ids[0], true);
-    sala.levantarMano(ids[2], true);
-    votar(sala);
-    sala.marcar(asiento(1), true, 2);
-    sala.irANoche();
-    sala.amanecer();
+    juego.partida.nominar(asiento(0), asiento(1));
+    sala.participantes.levantarMano(ids[0], true);
+    sala.participantes.levantarMano(ids[2], true);
+    votar(juego);
+    juego.partida.grimorio.marcar(asiento(1), true, 2);
+    juego.partida.irANoche();
+    juego.partida.amanecer();
     // Día 2: Bea nomina a Ceci y se la ejecuta
-    sala.nominar(asiento(1), asiento(2));
-    sala.ejecutar(asiento(2));
-    sala.empezarRevelacion('bueno', ['slayer']);
+    juego.partida.nominar(asiento(1), asiento(2));
+    juego.partida.ejecutar(asiento(2));
+    juego.partida.empezarRevelacion('bueno', ['slayer']);
 
     expect(registros).toHaveLength(1);
     const r = registros[0];
@@ -92,17 +96,18 @@ describe('estadísticas de la partida', () => {
   });
 
   it('reiniciar la votación descuenta los votos ya contados; pedir una expulsión no es nominar', () => {
-    const { sala, ids, asiento, registros } = partida();
-    sala.irANoche();
-    sala.amanecer();
-    sala.nominar(asiento(0), asiento(1));
-    sala.levantarMano(ids[0], true);
-    sala.iniciarCuentaAtras(Date.now());
-    vi.advanceTimersByTime(SALA_CUENTA_ATRAS_MS + sala.configuracion().segundosPorFicha * 1000 * 3);
-    sala.reiniciarVotacion();
-    sala.cambiarPersonaje(asiento(2), 'butcher');
-    sala.nominar(asiento(1), asiento(2));
-    sala.empezarRevelacion('bueno');
+    const { juego, ids, asiento, registros } = partida();
+    const { sala } = juego;
+    juego.partida.irANoche();
+    juego.partida.amanecer();
+    juego.partida.nominar(asiento(0), asiento(1));
+    sala.participantes.levantarMano(ids[0], true);
+    juego.partida.nominaciones.iniciarCuentaAtras(Date.now());
+    vi.advanceTimersByTime(SALA_CUENTA_ATRAS_MS + juego.partida.configuracion.actual().segundosPorFicha * 1000 * 3);
+    juego.partida.nominaciones.reiniciarVotacion();
+    juego.partida.grimorio.cambiarPersonaje(asiento(2), 'butcher');
+    juego.partida.nominar(asiento(1), asiento(2));
+    juego.partida.empezarRevelacion('bueno');
     const de = (userId: string) => registros[0].jugadores.find((j) => j.userId === userId);
     expect(de('1')).toMatchObject({ nominaciones: 1, votos: 0 });
     expect(de('2')).toMatchObject({ nominaciones: 0, nominado: 1 });
@@ -110,82 +115,82 @@ describe('estadísticas de la partida', () => {
   });
 
   it('la máquina del tiempo también devuelve las estadísticas como estaban', () => {
-    const { sala, asiento, registros } = partida();
-    sala.irANoche();
-    sala.amanecer();
-    sala.marcar(asiento(1), true);
-    sala.irANoche();
+    const { juego, asiento, registros } = partida();
+    juego.partida.irANoche();
+    juego.partida.amanecer();
+    juego.partida.grimorio.marcar(asiento(1), true);
+    juego.partida.irANoche();
     // Se había precipitado: vuelve al día (con la calavera) y no anochece
-    sala.volverAtras();
-    sala.desmarcar();
-    sala.empezarRevelacion('malvado');
+    juego.partida.volverAtras();
+    juego.partida.grimorio.desmarcar();
+    juego.partida.empezarRevelacion('malvado');
     expect(registros[0].jugadores.find((j) => j.userId === '2')?.ejecutado).toBe(0);
   });
 
   it('volviendo dos fases atrás, cada una deshace lo suyo', () => {
-    const { sala, asiento, registros } = partida();
-    sala.irANoche();
+    const { juego, asiento, registros } = partida();
+    juego.partida.irANoche();
     // El rol con el que Ana empieza el día 1 cuenta, salvo que se deshaga ese amanecer
-    sala.cambiarPersonaje(asiento(0), 'librarian');
-    sala.amanecer();
-    sala.marcar(asiento(1), true);
-    sala.irANoche();
-    sala.volverAtras();
-    sala.volverAtras();
-    expect(sala.fase()).toMatchObject({ momento: 'noche', numero: 1 });
-    sala.empezarRevelacion('bueno');
+    juego.partida.grimorio.cambiarPersonaje(asiento(0), 'librarian');
+    juego.partida.amanecer();
+    juego.partida.grimorio.marcar(asiento(1), true);
+    juego.partida.irANoche();
+    juego.partida.volverAtras();
+    juego.partida.volverAtras();
+    expect(juego.partida.fases.actual()).toMatchObject({ momento: 'noche', numero: 1 });
+    juego.partida.empezarRevelacion('bueno');
     const ana = registros[0].jugadores.find((j) => j.userId === '1');
     expect(ana).toMatchObject({ roles: ['chef'], rolFinal: 'chef' });
     expect(registros[0].jugadores.find((j) => j.userId === '2')?.ejecutado).toBe(0);
   });
 
   it('volviendo a la preparación, la partida no ha empezado: se guarda sin jugadores', () => {
-    const { sala, registros } = partida();
-    sala.irANoche();
-    sala.volverAtras();
-    sala.empezarRevelacion('bueno');
+    const { juego, registros } = partida();
+    juego.partida.irANoche();
+    juego.partida.volverAtras();
+    juego.partida.empezarRevelacion('bueno');
     expect(registros).toHaveLength(1);
     expect(registros[0].jugadores).toEqual([]);
     expect(registros[0].narradores).toEqual(['9']);
   });
 
   it('una causa de esbirro es de la cuenta del esbirro que eligió el narrador', () => {
-    const { sala, asiento, registros } = partida();
-    sala.cambiarPersonaje(asiento(1), 'poisoner');
-    sala.cambiarPersonaje(asiento(2), 'damsel');
-    sala.irANoche();
-    sala.empezarRevelacion('malvado', ['damsel'], { damsel: asiento(1) });
+    const { juego, asiento, registros } = partida();
+    juego.partida.grimorio.cambiarPersonaje(asiento(1), 'poisoner');
+    juego.partida.grimorio.cambiarPersonaje(asiento(2), 'damsel');
+    juego.partida.irANoche();
+    juego.partida.empezarRevelacion('malvado', ['damsel'], { damsel: asiento(1) });
     const causas = Object.fromEntries(registros[0].jugadores.map((j) => [j.userId, j.causas]));
     expect(causas).toEqual({ '1': [], '2': ['damsel'], '3': [] });
   });
 
   it('limpiar el grimorio empieza otra partida: lo apuntado se olvida', () => {
-    const { sala, asiento, registros } = partida();
-    sala.irANoche();
-    sala.amanecer();
-    sala.nominar(asiento(0), asiento(1));
-    sala.limpiarGrimorio();
-    sala.empezarRevelacion('bueno');
+    const { juego, asiento, registros } = partida();
+    juego.partida.irANoche();
+    juego.partida.amanecer();
+    juego.partida.nominar(asiento(0), asiento(1));
+    juego.partida.limpiarGrimorio();
+    juego.partida.empezarRevelacion('bueno');
     expect(registros[0].jugadores).toEqual([]);
   });
 
   it('el diario apunta, por noches y días, los despertares, las muertes, la ejecución y los faroles', () => {
-    const { sala, asiento, registros } = partida();
+    const { juego, asiento, registros } = partida();
     const envio = { tarjeta: null, personajes: [], texto: null, alineamiento: null };
     // En la preparación, el demonio se pone un farol
-    sala.ponerFarolAsiento(asiento(1), 0, 'empath');
-    sala.irANoche();
+    juego.partida.faroles.ponerFarolAsiento(asiento(1), 0, 'empath');
+    juego.partida.irANoche();
     // Noche 1: el narrador despierta a Bea (el demonio), le pide que elija y elige a Ceci, que muere
-    sala.despertar(asiento(1));
-    sala.mandarDelNarrador(asiento(1), { ...envio, ficha: null, tarjeta: 'eleccion', jugadores: [] });
-    sala.enviarDespertar(asiento(1), { ...envio, autor: asiento(1), ficha: 'jugador', jugadores: [asiento(2)] });
-    sala.cambiarVida(asiento(2), true);
-    sala.amanecer();
-    sala.confirmarMuerte(asiento(2));
-    sala.usarFarol(asiento(1), 'empath');
-    sala.nominar(asiento(0), asiento(1));
-    sala.ejecutar(asiento(1));
-    sala.empezarRevelacion('bueno');
+    juego.partida.despertares.despertar(asiento(1));
+    juego.partida.mandarDelNarrador(asiento(1), { ...envio, ficha: null, tarjeta: 'eleccion', jugadores: [] });
+    juego.partida.despertares.enviar(asiento(1), { ...envio, autor: asiento(1), ficha: 'jugador', jugadores: [asiento(2)] });
+    juego.partida.grimorio.cambiarVida(asiento(2), true);
+    juego.partida.amanecer();
+    juego.partida.grimorio.confirmarMuerte(asiento(2));
+    juego.partida.faroles.usarFarol(asiento(1), 'empath');
+    juego.partida.nominar(asiento(0), asiento(1));
+    juego.partida.ejecutar(asiento(1));
+    juego.partida.empezarRevelacion('bueno');
 
     const resumen = registros[0].diario.map(({ fase, hora, ...h }) => [`${fase.momento} ${fase.numero}`, h]);
     expect(resumen).toEqual([
@@ -205,13 +210,13 @@ describe('estadísticas de la partida', () => {
   });
 
   it('la máquina del tiempo saca del diario lo hecho desde el cambio de fase que deshace', () => {
-    const { sala, asiento, registros } = partida();
-    sala.irANoche();
-    sala.cambiarVida(asiento(2), true);
-    sala.amanecer();
-    sala.cambiarAlineamiento(asiento(0), 'malvado');
-    sala.volverAtras();
-    sala.empezarRevelacion('bueno');
+    const { juego, asiento, registros } = partida();
+    juego.partida.irANoche();
+    juego.partida.grimorio.cambiarVida(asiento(2), true);
+    juego.partida.amanecer();
+    juego.partida.grimorio.cambiarAlineamiento(asiento(0), 'malvado');
+    juego.partida.volverAtras();
+    juego.partida.empezarRevelacion('bueno');
     expect(registros[0].diario.map((e) => e.tipo)).toEqual(['muere']);
   });
 });
