@@ -118,7 +118,7 @@ const CuadroNarrador = ({
               <span className="sr-only"> (en una conversación privada{enConversacion && ` ${enConversacion}`})</span>
             )}
             {escuchando && <span className="sr-only"> (escuchando una conversación)</span>}
-            {narrador.virtual && <span className="block text-xs font-normal italic text-on-surface-muted">narrador virtual</span>}
+            {narrador.persona.tipo === 'virtual' && <span className="block text-xs font-normal italic text-on-surface-muted">narrador virtual</span>}
           </p>
         </>
       }

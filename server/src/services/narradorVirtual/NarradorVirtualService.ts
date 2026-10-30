@@ -229,7 +229,7 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
         this.otraVez = false;
         if (!narrador.actual()) return;
         // Sin nadie en la sala (solo él), se va
-        if (!sala.participantes.participantes().some((p) => !p.virtual)) {
+        if (!sala.participantes.participantes().some((p) => p.persona.tipo !== 'virtual')) {
           this.quitar();
           return;
         }

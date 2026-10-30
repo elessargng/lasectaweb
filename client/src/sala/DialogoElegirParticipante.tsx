@@ -2,13 +2,13 @@ import { useState, type FormEvent } from 'react';
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario, campo } from './estilos';
-import type { SalaResultado } from './useSala';
+import type { Persona, SalaResultado } from './useSala';
 
-/** A quién se puede elegir: un participante o, p. ej., un asiento (sin `conCuenta`). */
+/** A quién se puede elegir: un participante o, p. ej., un asiento (sin `persona`). */
 interface Candidato {
   id: string;
   nombre: string;
-  conCuenta?: boolean;
+  persona?: Persona;
 }
 
 interface DialogoElegirParticipanteProps<C extends Candidato> {
@@ -91,7 +91,7 @@ const DialogoElegirParticipante = <C extends Candidato>({
                 {candidatos.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.nombre}
-                    {p.conCuenta === false ? ' (invitado)' : ''}
+                    {p.persona?.tipo === 'invitado' ? ' (invitado)' : ''}
                     {detalle ? `, ${detalle(p)}` : ''}
                   </option>
                 ))}

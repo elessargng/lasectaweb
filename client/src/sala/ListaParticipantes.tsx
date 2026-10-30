@@ -4,7 +4,7 @@ import { IconoGente, IconoLibroSecreto } from './IconosJuego';
 import ConAyuda from './ConAyuda';
 import { useEffect, useRef, useState } from 'react';
 import { botonIcono } from './estilos';
-import type { SalaParticipante, SalaRol } from './useSala';
+import { usuarioDe, type SalaParticipante, type SalaRol } from './useSala';
 import ImagenAvatar from './ImagenAvatar';
 import VolumenParticipante from './VolumenParticipante';
 
@@ -137,9 +137,10 @@ const ListaParticipantes = ({ participantes, yo, escuchando, volumen = null }: L
                                 {p.id === yo && <span className="sr-only"> (tú)</span>}
                               </>
                             );
-                            return p.usuarioId ? (
+                            const usuarioId = usuarioDe(p.persona);
+                            return usuarioId ? (
                               <a
-                                href={`/perfil/${encodeURIComponent(p.usuarioId)}`}
+                                href={`/perfil/${encodeURIComponent(usuarioId)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className={`min-w-0 truncate rounded underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${color}`}
@@ -153,8 +154,8 @@ const ListaParticipantes = ({ participantes, yo, escuchando, volumen = null }: L
                           })()}
                           {/* Distintivos: a la vista, una pastilla; para el lector, «(invitado)»… */}
                           {/* El pulpito, solo a quien juega (el narrador y los visitantes no juegan) */}
-                          {p.novato && p.rol === 'jugador' && <PulpitoNovato tamano="h-6 w-6" paraLector />}
-                          {!p.conCuenta && <Distintivo>invitado</Distintivo>}
+                          {p.persona.tipo === 'usuario' && p.persona.novato && p.rol === 'jugador' && <PulpitoNovato tamano="h-6 w-6" paraLector />}
+                          {p.persona.tipo === 'invitado' && <Distintivo>invitado</Distintivo>}
                           {!p.conectado && <Distintivo tono="apagado">desconectado</Distintivo>}
                           {escuchando.has(p.id) && <span className="sr-only"> (escuchando una conversación)</span>}
                           {p.accesoGrimorio === 'concedido' && (

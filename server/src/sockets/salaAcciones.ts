@@ -262,7 +262,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (juego, yo, datos) => {
       const { sala } = juego;
       const pedido = limpiarNombreSala((datos as { nombre?: unknown } | null)?.nombre);
-      const nombre = pedido || (yo.conCuenta ? sala.participantes.nombreBase(yo.id) : '');
+      const nombre = pedido || (yo.persona.tipo === 'usuario' ? sala.participantes.nombreBase(yo.id) : '');
       if (!nombre) return { ok: false, error: 'Escribe un nombre.' };
       if (sala.participantes.nombreOcupado(nombre, yo.id)) return { ok: false, error: `Ya hay alguien llamado ${nombre} en la sala.` };
       sala.participantes.renombrar(yo.id, nombre);
@@ -470,7 +470,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * Solo con cuenta: los invitados, no.
    */
   'sala:anadirNarradorVirtual': {
-    puede: ({ sala }, yo) => !sala.participantes.hayNarrador() && yo.rol !== 'narrador' && !!yo.usuarioId,
+    puede: ({ sala }, yo) => !sala.participantes.hayNarrador() && yo.rol !== 'narrador' && yo.persona.tipo === 'usuario',
     noPuede: ({ sala }, yo) => (sala.participantes.hayNarrador() || yo.rol === 'narrador' ? 'La sala ya tiene narrador.' : 'Para añadir un narrador virtual necesitas una cuenta.'),
     hacer: async (_sala, yo, datos, { narradorVirtual }) => {
       if (!narradorVirtual) return { ok: false, error: 'Esta sala no tiene narradores virtuales.' };
@@ -937,7 +937,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
         // «Tú eres»: su ficha pasa a ser la que se le dice (con alineamiento, solo si se le dice)
         // Lo que escribe el narrador virtual en un despertar guiado (que diga «Entendido»)
         // lo sigue siendo: el jugador sigue contestando solo «Entendido» o un texto
-        if (narra) partida.mandarDelNarrador(asientoId, mensaje, { guiado: !!yo.virtual && partida.despertares.respuestaGuiada(asientoId) });
+        if (narra) partida.mandarDelNarrador(asientoId, mensaje, { guiado: yo.persona.tipo === 'virtual' && partida.despertares.respuestaGuiada(asientoId) });
         else partida.despertares.enviar(asientoId, { ...mensaje, autor: asientoId });
         if (eligiendo) partida.guiado.alElegir(asientoId, mensaje.jugadores);
         // Entendido lo anterior (lo dice el jugador, o el narrador a lo que eligió): le llega lo siguiente de su cola

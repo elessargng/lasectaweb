@@ -1,7 +1,9 @@
 import { randomUUID } from 'crypto';
 import {
   SALA_PARTIDAS_NOVATO,
+  usuarioDe,
   type IdNarradorVirtual,
+  type Persona,
   type SalaFormaMano,
   type SalaParticipante,
   type SalaRol,
@@ -44,25 +46,30 @@ export function limpiarAvatarSala(valor: unknown): string | null {
   return SALA_AVATARES.includes(valor) || esAvatarSalaGuardado(valor) ? valor : null;
 }
 
-/** Con cuenta y menos de SALA_PARTIDAS_NOVATO partidas (si no se sabe cuántas, no). */
-const esNovato = (llegada: SalaLlegada) => llegada.partidasJugadas !== null && llegada.partidasJugadas < SALA_PARTIDAS_NOVATO;
-
 /** Quién se conecta, según el token o el nombre de invitado. */
 export interface SalaLlegada {
-  /** Quién es de verdad: `u:<id de usuario>` con cuenta, `invitado` sin ella. */
-  identidad: string;
+  /** Con la que entra (null: invitado), con las partidas que ha jugado (null si no se sabe). */
+  cuenta: { usuarioId: string; partidasJugadas: number | null } | null;
   /** Su nombre de usuario, o el nombre con el que entra el invitado. */
   nombreBase: string;
   /** Nombre que prefiere mostrar en la sala (vacío: el base). */
   alias: string;
-  conCuenta: boolean;
   /** El que lleva si no elige otro: el de su cuenta en la web (null si no tiene) o, si es invitado, el logo. */
   avatarPorDefecto: string | null;
   /** El que eligió para la sala (ver `SALA_AVATARES`); null: el por defecto. */
   avatarElegido: string | null;
-  /** Con cuenta, las partidas que ha jugado (null si no se sabe, o invitado). */
-  partidasJugadas: number | null;
 }
+
+/** Con menos de SALA_PARTIDAS_NOVATO partidas (si no se sabe cuántas, no). */
+const esNovato = (partidas: number | null) => partidas !== null && partidas < SALA_PARTIDAS_NOVATO;
+
+/** Quién es el que llega: un usuario con su cuenta o un invitado. */
+const personaDe = ({ cuenta }: SalaLlegada): Persona =>
+  cuenta ? { tipo: 'usuario', usuarioId: cuenta.usuarioId, novato: esNovato(cuenta.partidasJugadas) } : { tipo: 'invitado' };
+
+/** Si el que llega es la persona de una entrada: el mismo usuario, o los dos invitados. */
+const esLaMisma = (persona: Persona, llegada: SalaLlegada) =>
+  llegada.cuenta ? usuarioDe(persona) === llegada.cuenta.usuarioId : persona.tipo === 'invitado';
 
 /**
  * Un participante, como lo lleva la sala: sin el acceso al grimorio, que es de la
@@ -77,7 +84,6 @@ export type OyenteExpulsion = (participanteId: string, recuerdo: string) => void
 
 interface Entrada {
   participante: Participante;
-  identidad: string;
   nombreBase: string;
   avatarPorDefecto: string | null;
   /** Conexión activa, o null mientras se espera a que vuelva. */
@@ -85,9 +91,10 @@ interface Entrada {
   expulsion: NodeJS.Timeout | null;
   /** Por lo que se le reconoce si sale y vuelve a entrar (ver recuerdoDe). */
   recuerdo: string;
-  /** Un narrador virtual: no tiene conexión, pero está siempre (no se desconecta). */
-  virtual?: boolean;
 }
+
+/** Un narrador virtual no tiene conexión, pero está siempre (no se desconecta). */
+const esVirtual = (e: Entrada) => e.participante.persona.tipo === 'virtual';
 
 /**
  * Quién está en la sala: las conexiones, los papeles (narrador, jugador,
@@ -125,9 +132,8 @@ export class Participantes {
 
   /** El id de usuario de un participante con cuenta, o null (invitado, o ya no está). */
   cuentaDe(participanteId: string | null): string | null {
-    if (!participanteId) return null;
-    const identidad = [...this.entradas.values()].find((e) => e.participante.id === participanteId)?.identidad;
-    return identidad?.startsWith('u:') ? identidad.slice(2) : null;
+    const persona = participanteId ? this.buscar(participanteId)?.persona : undefined;
+    return persona ? usuarioDe(persona) : null;
   }
 
   /** Los narradores que están en la sala. */
@@ -153,8 +159,8 @@ export class Participantes {
   ): { clave: string; id: string; expulsar: string | null } {
     const viva = (e: Entrada) => e.socketId !== null && conexionViva(e.socketId);
 
-    if (llegada.conCuenta) {
-      const deLaCuenta = [...this.entradas.entries()].find(([, e]) => e.identidad === llegada.identidad);
+    if (llegada.cuenta) {
+      const deLaCuenta = [...this.entradas.entries()].find(([, e]) => esLaMisma(e.participante.persona, llegada));
       if (deLaCuenta) {
         const [clave, entrada] = deLaCuenta;
         const expulsar = viva(entrada) ? entrada.socketId : null;
@@ -165,7 +171,7 @@ export class Participantes {
 
     const previa = clienteId ? this.entradas.get(clienteId) : undefined;
     const libre = !!previa && !viva(previa);
-    if (previa && libre && previa.identidad === llegada.identidad) {
+    if (previa && libre && esLaMisma(previa.participante.persona, llegada)) {
       this.retomar(previa, socketId, llegada);
       return { clave: clienteId!, id: previa.participante.id, expulsar: null };
     }
@@ -176,14 +182,12 @@ export class Participantes {
     if (previa && libre && previa.expulsion) clearTimeout(previa.expulsion);
     const clave = clienteId && (!previa || libre) ? clienteId : socketId;
     const id = randomUUID();
-    const recuerdo = llegada.conCuenta ? llegada.identidad : `cliente:${clave}`;
+    const recuerdo = llegada.cuenta ? `u:${llegada.cuenta.usuarioId}` : `cliente:${clave}`;
     this.entradas.set(clave, {
       participante: {
         id,
         nombre: llegada.alias || llegada.nombreBase,
-        conCuenta: llegada.conCuenta,
-        usuarioId: llegada.identidad.startsWith('u:') ? llegada.identidad.slice(2) : null,
-        novato: esNovato(llegada),
+        persona: personaDe(llegada),
         avatar: llegada.avatarElegido ?? llegada.avatarPorDefecto,
         rol: 'visitante',
         conectado: true,
@@ -193,7 +197,6 @@ export class Participantes {
         estiloMano: 'defecto',
         sinSonido: false,
       },
-      identidad: llegada.identidad,
       nombreBase: llegada.nombreBase,
       avatarPorDefecto: llegada.avatarPorDefecto,
       socketId,
@@ -214,9 +217,7 @@ export class Participantes {
       participante: {
         id,
         nombre,
-        conCuenta: false,
-        usuarioId: null,
-        novato: false,
+        persona: { tipo: 'virtual', narrador: virtual },
         avatar,
         rol: 'narrador',
         conectado: true,
@@ -225,15 +226,12 @@ export class Participantes {
         formaMano: 'palma',
         estiloMano: 'defecto',
         sinSonido: false,
-        virtual,
       },
-      identidad: clave,
       nombreBase: nombre,
       avatarPorDefecto: avatar,
       socketId: null,
       expulsion: null,
       recuerdo: clave,
-      virtual: true,
     });
     return id;
   }
@@ -241,11 +239,11 @@ export class Participantes {
   /** Otro narrador virtual toma el relevo del que hay: el mismo participante, con su nombre y su avatar. */
   relevarVirtual(participanteId: string, nombre: string, avatar: string, virtual: IdNarradorVirtual): void {
     for (const entrada of this.entradas.values()) {
-      if (!entrada.virtual || entrada.participante.id !== participanteId) continue;
+      if (!esVirtual(entrada) || entrada.participante.id !== participanteId) continue;
       entrada.participante.nombre = nombre;
       entrada.participante.avatar = avatar;
       entrada.avatarPorDefecto = avatar;
-      entrada.participante.virtual = virtual;
+      entrada.participante.persona = { tipo: 'virtual', narrador: virtual };
       entrada.nombreBase = nombre;
     }
   }
@@ -258,13 +256,14 @@ export class Participantes {
     entrada.avatarPorDefecto = llegada.avatarPorDefecto;
     entrada.participante.avatar = llegada.avatarElegido ?? llegada.avatarPorDefecto;
     entrada.participante.nombre = llegada.alias || llegada.nombreBase;
-    entrada.participante.novato = esNovato(llegada);
+    entrada.participante.persona = personaDe(llegada);
   }
 
   /** Al terminar una partida: si con las que lleva ahora sigue siendo novato (ver SALA_PARTIDAS_NOVATO). */
   cambiarPartidasJugadas(userId: string, partidas: number): void {
     for (const e of this.entradas.values()) {
-      if (e.identidad === `u:${userId}`) e.participante.novato = partidas < SALA_PARTIDAS_NOVATO;
+      const { persona } = e.participante;
+      if (persona.tipo === 'usuario' && persona.usuarioId === userId) persona.novato = esNovato(partidas);
     }
   }
 
@@ -330,7 +329,7 @@ export class Participantes {
   nombreLibreParaInvitado(nombre: string, clienteId: string | null, conexionViva: (socketId: string) => boolean): boolean {
     const propia = clienteId ? this.entradas.get(clienteId) : undefined;
     const vuelve =
-      propia?.identidad === 'invitado' && (propia.socketId === null || !conexionViva(propia.socketId));
+      propia?.participante.persona.tipo === 'invitado' && (propia.socketId === null || !conexionViva(propia.socketId));
     if (vuelve) return true;
     const buscado = nombre.toLocaleLowerCase('es');
     return ![...this.entradas.values()].some((e) => e.participante.nombre.toLocaleLowerCase('es') === buscado);
@@ -403,7 +402,7 @@ export class Participantes {
 
   /** Los que siguen en la sala, también los que esperan reconexión, por orden de llegada. */
   participantes(): Participante[] {
-    return [...this.entradas.values()].map((e) => ({ ...e.participante, conectado: e.socketId !== null || !!e.virtual }));
+    return [...this.entradas.values()].map((e) => ({ ...e.participante, conectado: e.socketId !== null || esVirtual(e) }));
   }
 
   /** Conexiones activas con la clave y el id de participante de cada una. */

@@ -207,7 +207,7 @@ const Asiento = ({
                     {ocupante.nombre}
                   </span>
                   {esYo && <span className="sr-only"> (tú)</span>}
-                  {ocupante.novato && <PulpitoNovato />}
+                  {ocupante.persona.tipo === 'usuario' && ocupante.persona.novato && <PulpitoNovato />}
                   {ocupante.sinSonido && (
                     // Ha quitado el sonido: no oye a la mesa
                     <>

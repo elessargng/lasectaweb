@@ -9,6 +9,7 @@ import type { GuionResuelto } from './guiones';
 // Se reexporta aquí para que la sala lo siga importando de useSala.
 export type {
   MensajeDespertar,
+  Persona,
   SalaAvisoHabilidad,
   SalaEleccionDespertar,
   SalaEnvioDespertar,
@@ -38,7 +39,7 @@ export type {
   SalaSenalamiento,
   SalaVotacion,
 } from '@contrato/sala';
-export { SALA_SENALAMIENTO as SENALAMIENTO } from '@contrato/sala';
+export { SALA_SENALAMIENTO as SENALAMIENTO, usuarioDe } from '@contrato/sala';
 
 /** El pase para conectarse al servidor de vídeo. */
 export type PaseVideo = { ok: true; url: string; token: string } | { ok: false; error: string };

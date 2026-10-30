@@ -58,23 +58,19 @@ export const guionDePrueba = (): GuionResuelto => ({
 export const BOLSA_DE_SIETE = ['washerwoman', 'librarian', 'investigator', 'chef', 'empath', 'poisoner', 'imp'];
 
 export const invitado = (nombre: string): SalaLlegada => ({
-  identidad: 'invitado',
+  cuenta: null,
   nombreBase: nombre,
   alias: '',
-  conCuenta: false,
   avatarPorDefecto: '/logo-2.png',
   avatarElegido: null,
-  partidasJugadas: null,
 });
 
 export const conCuenta = (userId: string, nombre: string, partidasJugadas: number | null = 20): SalaLlegada => ({
-  identidad: `u:${userId}`,
+  cuenta: { usuarioId: userId, partidasJugadas },
   nombreBase: nombre,
   alias: '',
-  conCuenta: true,
   avatarPorDefecto: null,
   avatarElegido: null,
-  partidasJugadas,
 });
 
 /** Trouble Brewing, con lo que usan los tests del despertar guiado (los personajes con sus recordatorios). */

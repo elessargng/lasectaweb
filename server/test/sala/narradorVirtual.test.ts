@@ -42,7 +42,7 @@ describe('narrador virtual', () => {
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'esperandoJugadores');
     const { narradorVirtual, participantes, asientos, configuracion } = ana.estado;
     expect(narradorVirtual).toMatchObject({ id: 'tontoYTu', creador: ana.id, jugadores: 7, guion: 'troublebrewing' });
-    expect(participantes.find((p) => p.id === narradorVirtual!.participante)).toMatchObject({ rol: 'narrador', virtual: 'tontoYTu', nombre: 'Tonto y tú', avatar: '/narradores/tonto-y-tu.webp', conectado: true });
+    expect(participantes.find((p) => p.id === narradorVirtual!.participante)).toMatchObject({ rol: 'narrador', persona: { tipo: 'virtual', narrador: 'tontoYTu' }, nombre: 'Tonto y tú', avatar: '/narradores/tonto-y-tu.webp', conectado: true });
     expect(asientos).toHaveLength(7);
     expect(configuracion.grimorioJugadores).toBe(true);
     // Ya hay narrador: nadie más puede hacerse narrador ni añadir otro
@@ -75,7 +75,7 @@ describe('narrador virtual', () => {
     expect((await arnes.intentar(bea, 'sala:quitarNarradorVirtual')).ok).toBe(false);
     await arnes.accion(ana, 'sala:quitarNarradorVirtual');
     expect(ana.estado.narradorVirtual).toBeNull();
-    expect(ana.estado.participantes.some((p) => p.virtual)).toBe(false);
+    expect(ana.estado.participantes.some((p) => p.persona.tipo === 'virtual')).toBe(false);
     expect(ana.estado.acciones).toContain('sala:hacerseNarrador');
   });
 
@@ -359,7 +359,7 @@ describe('narrador virtual', () => {
     await new Promise((r) => setTimeout(r, 100));
     const carla = await arnes.entrar('Carla');
     expect(carla.estado.narradorVirtual).toBeNull();
-    expect(carla.estado.participantes.some((p) => p.virtual)).toBe(false);
+    expect(carla.estado.participantes.some((p) => p.persona.tipo === 'virtual')).toBe(false);
   });
 });
 

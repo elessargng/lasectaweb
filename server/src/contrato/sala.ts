@@ -30,17 +30,30 @@ export const SALA_FORMAS_MANO: SalaFormaMano[] = [
     'fuego', 'ojos'].map((e) => `emoji-${e}`),
 ];
 
+/**
+ * Quién es un participante, sea cual sea su papel en la sala: un usuario de la web
+ * (entró con su cuenta), un invitado (sin cuenta) o un narrador virtual (no es una persona).
+ */
+export type Persona =
+  | {
+      tipo: 'usuario';
+      /** Su id de usuario de la web (para enlazar a su perfil y para las estadísticas). */
+      usuarioId: string;
+      /** Ha jugado menos de SALA_PARTIDAS_NOVATO partidas (lleva el pulpito junto al nombre). */
+      novato: boolean;
+    }
+  | { tipo: 'invitado' }
+  | { tipo: 'virtual'; narrador: IdNarradorVirtual };
+
+/** Su id de usuario de la web, si entró con su cuenta; si no, null. */
+export const usuarioDe = (persona: Persona): string | null => (persona.tipo === 'usuario' ? persona.usuarioId : null);
+
 export interface SalaParticipante {
   /** Identificador dentro de la sala (no es el id de usuario de la web). */
   id: string;
   nombre: string;
-  /** Entró con su cuenta de la web (si no, es invitado). */
-  conCuenta: boolean;
-  /** Con cuenta, su id de usuario de la web (para enlazar a su perfil); invitado, null. */
-  usuarioId: string | null;
-  /** Con cuenta, ha jugado menos de SALA_PARTIDAS_NOVATO partidas (lleva el pulpito junto al nombre). */
-  novato: boolean;
-  /** Ruta del avatar de su cuenta; null para los invitados. */
+  persona: Persona;
+  /** Ruta del avatar que lleva (el de su cuenta, el elegido para la sala o el logo), o null. */
   avatar: string | null;
   rol: SalaRol;
   /** false mientras se espera a que vuelva tras perder la conexión. */
@@ -61,8 +74,6 @@ export interface SalaParticipante {
   estiloMano: string;
   /** Ha quitado el sonido: no oye a los demás (los demás lo ven junto a su nombre). */
   sinSonido: boolean;
-  /** Es un narrador virtual (no una persona): cuál. */
-  virtual?: IdNarradorVirtual;
   /**
    * Un visitante puede pedir ver el grimorio del narrador: «solicitado» mientras
    * el narrador responde; «concedido», lo ve como él (todos los personajes) y ya

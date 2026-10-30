@@ -124,7 +124,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     deps.modeloJarvisDe && deps.clienteJev
       ? {
           modeloDe: async (participanteId) => {
-            const cuenta = sala.participantes.buscar(participanteId)?.usuarioId;
+            const cuenta = sala.participantes.cuentaDe(participanteId);
             return cuenta ? deps.modeloJarvisDe!(cuenta) : 'sinCuenta';
           },
           cliente: deps.clienteJev,
@@ -134,11 +134,11 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     deps.bolsasRecientes
       ? {
           de: async (participanteId) => {
-            const cuenta = sala.participantes.buscar(participanteId)?.usuarioId;
+            const cuenta = sala.participantes.cuentaDe(participanteId);
             return cuenta ? deps.bolsasRecientes!.de(cuenta) : [];
           },
           apuntar: async (participanteId, personajes) => {
-            const cuenta = sala.participantes.buscar(participanteId)?.usuarioId;
+            const cuenta = sala.participantes.cuentaDe(participanteId);
             if (cuenta) await deps.bolsasRecientes!.apuntar(cuenta, personajes);
           },
         }
@@ -160,25 +160,24 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
       // El cliente reconoce este mensaje y da la sesión por cerrada.
       if (!usuario) return next(new Error('SESION_CADUCADA'));
       llegada = {
-        identidad: `u:${usuario.id}`,
+        cuenta: {
+          usuarioId: usuario.id,
+          partidasJugadas: deps.contarPartidas ? await deps.contarPartidas(usuario.id).catch(() => null) : null,
+        },
         nombreBase: usuario.username,
         alias: limpiarNombreSala(alias),
-        conCuenta: true,
         avatarPorDefecto: await buscarAvatar(usuario.id).catch(() => null),
         avatarElegido: limpiarAvatarSala(avatar),
-        partidasJugadas: deps.contarPartidas ? await deps.contarPartidas(usuario.id).catch(() => null) : null,
       };
     } else {
       const nombreBase = limpiarNombreSala(nombre);
       if (!nombreBase) return next(new Error('SIN_NOMBRE'));
       llegada = {
-        identidad: 'invitado',
+        cuenta: null,
         nombreBase,
         alias: limpiarNombreSala(alias),
-        conCuenta: false,
         avatarPorDefecto: SALA_AVATAR_INVITADO,
         avatarElegido: limpiarAvatarSala(avatar),
-        partidasJugadas: null,
       };
       // Un invitado no puede entrar con un nombre que ya usa otro: el cliente lo
       // devuelve a la pantalla de entrada para que elija otro.

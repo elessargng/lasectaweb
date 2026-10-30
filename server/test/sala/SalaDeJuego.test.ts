@@ -54,7 +54,7 @@ describe('SalaDeJuego', () => {
       const juego = new SalaDeJuego();
       const { sala } = juego;
       const { id } = sala.participantes.conectar('s1', 'c1', invitado('Ana'), siempreViva);
-      expect(sala.participantes.buscar(id)).toMatchObject({ nombre: 'Ana', rol: 'visitante', conCuenta: false, conectado: true });
+      expect(sala.participantes.buscar(id)).toMatchObject({ nombre: 'Ana', rol: 'visitante', persona: { tipo: 'invitado' }, conectado: true });
     });
 
     it('una cuenta que entra otra vez retoma su sitio y echa a la conexión anterior', () => {
@@ -125,9 +125,9 @@ describe('SalaDeJuego', () => {
       const juego = new SalaDeJuego();
       const { sala } = juego;
       const { id } = sala.participantes.conectar('s1', 'c1', conCuenta('7', 'nuevo', 3), siempreViva);
-      expect(sala.participantes.buscar(id)?.novato).toBe(true);
+      expect(sala.participantes.buscar(id)?.persona).toEqual({ tipo: 'usuario', usuarioId: '7', novato: true });
       sala.participantes.cambiarPartidasJugadas('7', 10);
-      expect(sala.participantes.buscar(id)?.novato).toBe(false);
+      expect(sala.participantes.buscar(id)?.persona).toEqual({ tipo: 'usuario', usuarioId: '7', novato: false });
     });
   });
 

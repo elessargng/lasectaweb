@@ -68,8 +68,8 @@ const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas, onAnadirVirt
                 esYo={n.id === estado.yo}
                 npc={deusExFiasco}
                 // El virtual no conversa ni enseña su grimorio: dice lo que va pasando
-                frase={n.virtual ? estado.narradorVirtual?.frase ?? null : undefined}
-                contacto={n.virtual ? undefined : contacto?.(n)}
+                frase={n.persona.tipo === 'virtual' ? estado.narradorVirtual?.frase ?? null : undefined}
+                contacto={n.persona.tipo === 'virtual' ? undefined : contacto?.(n)}
                 video={pistas?.get(n.id)?.video}
                 espejo={n.id === estado.yo}
                 hablando={pistas?.get(n.id)?.hablando}
