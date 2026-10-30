@@ -467,8 +467,6 @@ export class SalaService {
    * de votos del día.
    */
   irANoche(): void {
-    // De noche no se nomina: la palabra vuelve a ser de todos
-    this.palabraDe = null;
     const marcadas = this.mesa.filter((a) => a.marcado);
     this.avisar({
       tipo: 'anochece',
@@ -1180,18 +1178,18 @@ export class SalaService {
     const narrador = this.narradoresVirtuales.actual();
     if (narrador) this.sala.participantes.expulsar(narrador.participante);
     this.narradoresVirtuales.borrar();
-    this.palabraDe = null;
+    this.nominaciones.darPalabra(null);
     this.privadosAbiertos = true;
   }
 
-  /** Quien tiene la palabra en la mesa (los demás jugadores callan), o null: hablan todos. */
+  /** Quien tiene la palabra en la nominación (los demás jugadores callan), o null: hablan todos. */
   palabra(): string | null {
-    return this.palabraDe;
+    return this.nominaciones.palabra();
   }
 
-  /** Da la palabra a uno (o, con null, a todos). No comprueba permisos. */
-  darPalabra(participanteId: string | null): void {
-    this.palabraDe = participanteId;
+  /** Da la palabra a uno en la nominación en curso (o, con null, a todos). Devuelve el error, si lo hay. No comprueba permisos. */
+  darPalabra(participanteId: string | null): string | null {
+    return this.nominaciones.darPalabra(participanteId);
   }
 
   /** Si se puede conversar en privado (el narrador virtual lo cierra fuera de los privados). */
@@ -1204,7 +1202,6 @@ export class SalaService {
     this.privadosAbiertos = abiertos;
   }
 
-  private palabraDe: string | null = null;
   private privadosAbiertos = true;
 
   cambiarRol(id: string, rol: SalaRol): void {

@@ -584,15 +584,15 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
-  /** Da la palabra a un participante (los demás jugadores callan) o, con null, a todos. datos: { participanteId | null }. */
+  /** En la nominación, da la palabra a un participante (los demás jugadores callan) o, con null, a todos. datos: { participanteId | null }. */
   'narrador:darPalabra': {
     puede: esNarrador,
     noPuede: 'Solo un narrador da la palabra.',
     hacer: (sala, _yo, datos) => {
       const id = (datos as { participanteId?: unknown } | null)?.participanteId;
       if (id !== null && (typeof id !== 'string' || !sala.buscar(id))) return { ok: false, error: 'Esa persona ya no está en la sala.' };
-      sala.darPalabra(id);
-      return { ok: true };
+      const error = sala.darPalabra(id);
+      return error ? { ok: false, error } : { ok: true };
     },
   },
 

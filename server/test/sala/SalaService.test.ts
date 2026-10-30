@@ -478,6 +478,34 @@ describe('SalaService', () => {
       vi.advanceTimersByTime(sala.configuracion().segundosPorFicha * 1000 * sala.asientos().length);
     };
 
+    it('la palabra es de la nominación: al cerrarla o empezar otra, vuelven a hablar todos', () => {
+      const { sala, ids, asiento } = salaConJugadores('Ana', 'Bea');
+      alDia(sala);
+      expect(sala.darPalabra(ids[0])).toBe('No hay ninguna nominación.');
+      expect(sala.darPalabra(null)).toBeNull();
+      sala.nominar(asiento(0).id, asiento(1).id);
+      expect(sala.palabra()).toBeNull();
+      expect(sala.darPalabra(ids[0])).toBeNull();
+      expect(sala.palabra()).toBe(ids[0]);
+      sala.nominar(asiento(1).id, asiento(0).id);
+      expect(sala.palabra()).toBeNull();
+      sala.darPalabra(ids[1]);
+      sala.cerrarNominacion();
+      expect(sala.palabra()).toBeNull();
+    });
+
+    it('al anochecer o al irse el narrador virtual, la palabra vuelve a ser de todos', () => {
+      const { sala, ids, asiento } = salaConJugadores('Ana', 'Bea');
+      alDia(sala);
+      sala.nominar(asiento(0).id, asiento(1).id);
+      sala.darPalabra(ids[0]);
+      sala.quitarNarradorVirtual();
+      expect(sala.palabra()).toBeNull();
+      sala.darPalabra(ids[0]);
+      sala.irANoche();
+      expect(sala.palabra()).toBeNull();
+    });
+
     it('hacen falta la mitad de las fichas vivas, redondeando hacia arriba', () => {
       const { sala, asiento } = salaConJugadores('Ana', 'Bea');
       alDia(sala);

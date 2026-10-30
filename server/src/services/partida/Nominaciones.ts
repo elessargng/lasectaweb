@@ -9,6 +9,8 @@ export const SALA_CUENTA_ATRAS_MS = 4000;
 
 /** La nominación tal como se guarda: los votos que hacen falta se calculan al pedirla. */
 type NominacionInterna = Omit<SalaNominacion, 'votosNecesarios' | 'votosNecesariosPorDefecto' | 'privada'> & {
+  /** Quien tiene la palabra (los demás jugadores callan), o null: hablan todos. */
+  palabra: string | null;
   /** Los votos que ha fijado el narrador; null: los de por defecto. */
   votosElegidos: number | null;
   /** Su entrada del registro, que se completa al terminar la votación. */
@@ -224,7 +226,7 @@ export class Nominaciones {
   nominacion(): SalaNominacion | null {
     const actual = this.nominacionVigente();
     if (!actual) return null;
-    const { votosElegidos: _, registro: __, porDefectoAlTerminar, ...resto } = actual;
+    const { votosElegidos: _, registro: __, palabra: ___, porDefectoAlTerminar, ...resto } = actual;
     const votosElegidos = actual.votosElegidos;
     // Votada, los de cuando terminó (no cambian al quedar el récord de esta votación)
     const porDefecto = porDefectoAlTerminar ?? this.votosNecesariosPorDefecto(actual.expulsion);
@@ -292,7 +294,7 @@ export class Nominaciones {
     this.registro.push(registro);
     // Pedir una expulsión no es nominar (no cuenta para las estadísticas)
     if (!expulsion) this.entorno.alNominar(desde, hasta);
-    this.nominacionEnCurso = { desde, hasta, cuentaAtrasFin: null, votacion: null, expulsion, votosElegidos: null, registro };
+    this.nominacionEnCurso = { desde, hasta, cuentaAtrasFin: null, votacion: null, expulsion, votosElegidos: null, registro, palabra: null };
     // La nominación empieza con todas las manos bajadas
     this.entorno.bajarManos();
   }
@@ -300,6 +302,19 @@ export class Nominaciones {
   cerrarNominacion(): void {
     this.pararTemporizador();
     this.nominacionEnCurso = null;
+  }
+
+  /** En la nominación en curso, quien tiene la palabra; null sin nominación o si hablan todos. */
+  palabra(): string | null {
+    return this.nominacionVigente()?.palabra ?? null;
+  }
+
+  /** Da la palabra a uno (o, con null, a todos). Sin nominación, solo se puede devolver a todos. Devuelve el error, si lo hay. */
+  darPalabra(participanteId: string | null): string | null {
+    const n = this.nominacionVigente();
+    if (n) n.palabra = participanteId;
+    else if (participanteId !== null) return 'No hay ninguna nominación.';
+    return null;
   }
 
   /** La nominación en curso es la expulsión de un viajero: vota cualquiera (los muertos, sin gastar su voto). */
