@@ -32,7 +32,7 @@ import {
   NPC_GARDENER,
 } from './partida/personajesEspeciales';
 import { RelojSala } from './partida/RelojSala';
-import { Despertares, type HiloDespertar } from './partida/Despertares';
+import { Despertares } from './partida/Despertares';
 import { DespertarGuiado } from './partida/DespertarGuiado';
 import { habilidadesDelGuion } from './partida/habilidades';
 import { Nominaciones } from './partida/Nominaciones';
@@ -41,10 +41,11 @@ import { Senalamientos } from './partida/Senalamientos';
 import { Revelacion } from './partida/Revelacion';
 import { Npcs } from './partida/Npcs';
 import { Entregas, type FichaEntregada } from './partida/Entregas';
+import { Fases } from './partida/Fases';
 import { Guion } from './partida/Guion';
 import { Reparto } from './partida/Reparto';
 import type { AsientoDiario, HechoDiario } from '../contrato/diario';
-import { PASOS_DE_FASE_MAX, type EventoPartida, type FotoAsiento, type OyentePartida } from './partida/eventos';
+import { type EventoPartida, type FotoAsiento, type OyentePartida } from './partida/eventos';
 import { Reglas } from './partida/reglas';
 import type { ContextoReglas, RegistroAlNominar } from './partida/reglas/ReglaPersonaje';
 import { voudonVivo } from './partida/reglas/voudon';
@@ -54,20 +55,6 @@ export { SALA_ASIENTOS };
 
 /** Lo que tarda la aguja de ficha en ficha al votar, en segundos (de cuarto en cuarto). */
 export const SALA_SEGUNDOS_POR_FICHA = { min: 0.25, max: 2, paso: 0.25, defecto: 1 };
-
-/**
- * Lo que un cambio de fase deja atrás y la máquina del tiempo devuelve: al
- * anochecer, la calavera y el récord de votos del día; al amanecer, los
- * despertares y el señalamiento de la noche.
- */
-interface PasoDeFase {
-  antes: SalaFase;
-  despues: SalaFase;
-  marcas?: { asiento: string; votos: number | null }[];
-  maximoDelDia?: number | null;
-  hilos?: HiloDespertar[];
-  senalamiento?: SalaSenalamiento | null;
-}
 
 /**
  * La sala de juego, en memoria: quién está, la mesa y la partida. Se pierde al
@@ -82,7 +69,7 @@ export class SalaService {
   private readonly grimorio = new Grimorio({
     asientos: () => this.sala.asientos(),
     personaje: (id) => this.personaje(id),
-    noche: () => this.faseActual.momento === 'noche',
+    noche: () => this.fases.actual().momento === 'noche',
     anotar: (hecho) => this.anotar(hecho),
     asientoDiario: (asientoId) => this.asientoDiario(asientoId),
   });
@@ -135,7 +122,7 @@ export class SalaService {
       const id = this.identidad(asiento);
       return !!id && this.esViajero(id);
     },
-    dia: () => this.faseActual.numero,
+    dia: () => this.fases.actual().numero,
     segundosPorFicha: () => this.ajustes.segundosPorFicha,
     sinVoto: (id) => this.sinVoto(id),
     cambiarVoto: (asientoId, gastado) => this.cambiarVoto(asientoId, gastado),
@@ -155,13 +142,13 @@ export class SalaService {
   /** Los despertares de la noche. */
   private readonly despertados = new Despertares(
     () => this.mesa,
-    () => this.faseActual,
+    () => this.fases.actual(),
   );
   /** El despertar guiado desde el orden de noche (ver DespertarGuiado). */
   private readonly guiado = new DespertarGuiado({
     ctx: { ...this.contextoReglas, faroles: () => this.faroles() },
     habilidades: () => habilidadesDelGuion(this.guionPartida.actual()?.edicion ?? null),
-    noche: () => this.faseActual.momento === 'noche',
+    noche: () => this.fases.actual().momento === 'noche',
     despertar: (asientoId) => this.despertar(asientoId),
     mandar: (asientoId, envio, eleccion) => this.mandarDelNarrador(asientoId, envio, { eleccion, guiado: true }),
     porEntender: (asientoId) => this.despertados.porEntender(asientoId),
@@ -190,11 +177,12 @@ export class SalaService {
   /** El señalamiento en curso. */
   private readonly senales = new Senalamientos({
     mesa: () => this.mesa,
-    fase: () => this.faseActual,
+    fase: () => this.fases.actual(),
     asientoDe: (id) => this.asientoDe(id),
     despertar: (asientoId) => void this.despertar(asientoId),
   });
-  private faseActual: SalaFase = { momento: 'preparacion', numero: 0, reinicios: 0 };
+  /** La fase de la partida y la máquina del tiempo. */
+  private readonly fases = new Fases();
 
   /** El guion de la sala (ya resuelto por GuionService), o null. */
   guion(): GuionResuelto | null {
@@ -414,7 +402,7 @@ export class SalaService {
    * En la preparación solo cuentan los faroles; revelado el grimorio, ya nada.
    */
   anotar(hecho: HechoDiario): void {
-    const { momento, numero } = this.faseActual;
+    const { momento, numero } = this.fases.actual();
     if (this.final.revelacion()) return;
     if (momento === 'preparacion' && !['farol', 'copiaFaroles', 'usaFarol'].includes(hecho.tipo)) return;
     this.avisar({ tipo: 'diario', entrada: { ...hecho, fase: { momento, numero }, hora: Date.now() } });
@@ -464,7 +452,7 @@ export class SalaService {
   }
 
   fase(): SalaFase {
-    return { ...this.faseActual };
+    return this.fases.actual();
   }
 
   /**
@@ -475,21 +463,18 @@ export class SalaService {
   irANoche(): void {
     // De noche no se nomina: la palabra vuelve a ser de todos
     this.palabraDe = null;
-    const { momento, numero, reinicios } = this.faseActual;
-    // Para poder volver (lo que se quita al anochecer)
-    const paso: PasoDeFase = {
-      antes: { ...this.faseActual },
-      despues: this.faseActual,
-      marcas: this.mesa.filter((a) => a.marcado).map((a) => ({ asiento: a.id, votos: a.votosMarca })),
-      maximoDelDia: this.nominaciones.recordDelDia(),
-    };
+    const marcadas = this.mesa.filter((a) => a.marcado);
     this.avisar({
       tipo: 'anochece',
-      desdePreparacion: momento === 'preparacion',
+      desdePreparacion: this.fases.actual().momento === 'preparacion',
       mesa: this.fotoDeLaMesa(),
-      conCalavera: this.mesa.filter((a) => a.marcado).flatMap((a) => this.cuentaDe(a.ocupante) ?? []),
+      conCalavera: marcadas.flatMap((a) => this.cuentaDe(a.ocupante) ?? []),
     });
-    this.faseActual = { momento: 'noche', numero: momento === 'preparacion' ? 1 : numero + 1, reinicios };
+    // Para poder volver: lo que se quita al anochecer
+    this.fases.anochecer({
+      marcas: marcadas.map((a) => ({ asiento: a.id, votos: a.votosMarca })),
+      maximoDelDia: this.nominaciones.recordDelDia(),
+    });
     // Otra noche: el despertar guiado empieza de cero
     this.guiado.olvidar();
     // Lo que se señaló de día no sigue de noche (lo verían otros); el reloj tampoco
@@ -498,7 +483,6 @@ export class SalaService {
     this.cerrarNominacion();
     this.desmarcar();
     this.nominaciones.ponerRecordDelDia(null);
-    this.recordarPaso({ ...paso, despues: { ...this.faseActual } });
   }
 
   /**
@@ -506,38 +490,17 @@ export class SalaService {
    * se ven de día y la noche siguiente empieza sin ellos.
    */
   amanecer(): void {
-    const paso: PasoDeFase = {
-      antes: { ...this.faseActual },
-      despues: this.faseActual,
-      hilos: this.despertados.instantanea(),
-      senalamiento: this.senales.instantanea(),
-    };
-    this.faseActual = { ...this.faseActual, momento: 'dia' };
+    this.fases.amanecer({ hilos: this.despertados.instantanea(), senalamiento: this.senales.instantanea() });
     this.avisar({ tipo: 'amanece', mesa: this.fotoDeLaMesa() });
     this.despertados.cerrarTodos();
     // Lo de la noche no se ve de día (y el reloj se quita)
     this.senales.terminar();
     this.tiempo.quitarReloj();
-    this.recordarPaso({ ...paso, despues: { ...this.faseActual } });
   }
 
-  /** Los cambios de fase hechos, para volver atrás (los más antiguos se olvidan). */
-  private pasosDeFase: PasoDeFase[] = [];
-
-  private recordarPaso(paso: PasoDeFase): void {
-    this.pasosDeFase.push(paso);
-    if (this.pasosDeFase.length > PASOS_DE_FASE_MAX) this.pasosDeFase.shift();
-  }
-
-  /**
-   * La fase a la que se volvería con la máquina del tiempo: del día N, la noche N;
-   * de la noche N, el día anterior (de la noche 1, la preparación). null en la preparación.
-   */
+  /** Ver Fases.anterior. */
   faseAnterior(): SalaFase | null {
-    const { momento, numero, reinicios } = this.faseActual;
-    if (momento === 'preparacion') return null;
-    if (momento === 'dia') return { momento: 'noche', numero, reinicios };
-    return numero <= 1 ? { momento: 'preparacion', numero: 0, reinicios } : { momento: 'dia', numero: numero - 1, reinicios };
+    return this.fases.anterior();
   }
 
   /**
@@ -549,15 +512,11 @@ export class SalaService {
    * recordatorios) se queda como está. Se cierra la nominación abierta. No comprueba permisos.
    */
   volverAtras(): boolean {
-    const anterior = this.faseAnterior();
-    if (!anterior) return false;
-    const igual = (a: SalaFase, b: SalaFase) => a.momento === b.momento && a.numero === b.numero && a.reinicios === b.reinicios;
-    const ultimo = this.pasosDeFase[this.pasosDeFase.length - 1];
-    const paso = ultimo && igual(ultimo.despues, this.faseActual) && igual(ultimo.antes, anterior) ? this.pasosDeFase.pop()! : null;
+    if (!this.fases.anterior()) return false;
     this.cerrarNominacion();
     this.senales.terminar();
     this.tiempo.quitarReloj();
-    this.faseActual = anterior;
+    const { fase: anterior, recuerdo: paso } = this.fases.volver()!;
     if (anterior.momento === 'dia') {
       // Al día: sin los despertares de la noche (como al amanecer) y, si se puede, con su calavera
       this.despertados.cerrarTodos();
@@ -705,7 +664,6 @@ export class SalaService {
     this.cerrarNominacion();
     this.senales.terminar();
     this.tiempo.quitarReloj();
-    this.pasosDeFase = [];
     this.avisar({ tipo: 'nuevaPartida' });
     this.npcsPartida.nuevaPartida();
     this.nominaciones.olvidarTodo();
@@ -718,7 +676,7 @@ export class SalaService {
     this.despertados.cerrarTodos();
     this.guiado.olvidar();
     this.recordatorios = {};
-    this.faseActual = { momento: 'preparacion', numero: 0, reinicios: this.faseActual.reinicios + 1 };
+    this.fases.nuevaPartida();
   }
 
   /** Las votaciones son secretas (el Organ Grinder, ver reglas/organGrinder.ts). */
@@ -927,7 +885,7 @@ export class SalaService {
   /** Se puede empezar Lil' Monsta: los asientos de los esbirros vivos, o null (ver reglas/lilMonsta.ts). */
   esbirrosLilmonsta(): string[] | null {
     return esbirrosLilmonsta(this.contextoReglas, {
-      noche: this.faseActual.momento === 'noche',
+      noche: this.fases.actual().momento === 'noche',
       enElGuion: !!this.guionPartida.actual()?.personajes.some((p) => p.id === DEMONIO_LILMONSTA),
       esbirrosQueTocan: this.distribucion().esbirros,
     });
@@ -973,7 +931,7 @@ export class SalaService {
       votaciones: this.votaciones(),
       guion: this.guionPartida.actual()?.nombre ?? null,
       edicion: this.guionPartida.actual()?.edicion ?? null,
-      dias: this.faseActual.numero,
+      dias: this.fases.actual().numero,
     });
   }
 
