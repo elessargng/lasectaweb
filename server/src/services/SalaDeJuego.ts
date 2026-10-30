@@ -639,8 +639,7 @@ export class SalaDeJuego {
 
   /** Quita el último asiento y su ficha. */
   quitarAsiento(): void {
-    const quitado = this.sala.quitarAsiento();
-    if (quitado) this.partida.grimorio.olvidar(quitado);
+    this.sala.quitarAsiento();
   }
 
   /** Ver Sala.mezclar: cada jugador cambia de silla con su ficha (ver Partida.llevarFichas). */

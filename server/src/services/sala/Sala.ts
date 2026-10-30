@@ -17,15 +17,20 @@ const asientoNuevo = (): Asiento => ({ id: randomUUID(), ocupante: null });
 /** Cómo se han movido los ocupantes: del asiento de cada clave al de su valor. */
 export type OyenteMover = (destino: Map<string, string>) => void;
 
+/** Qué asiento se ha quitado de la mesa. */
+export type OyenteQuitar = (asientoId: string) => void;
+
 /**
  * La sala: quién está (narradores, jugadores y visitantes, ver Participantes) y en
  * qué asiento de la mesa se sienta cada jugador. No sabe nada de la partida: al
- * mover a los ocupantes, avisa (alMover) para que la partida lleve sus fichas.
+ * mover a los ocupantes, avisa (alMover) para que la partida lleve sus fichas; al
+ * quitar un asiento (alQuitar), para que olvide lo que tenía.
  */
 export class Sala {
   readonly participantes = new Participantes();
   private readonly mesa: Asiento[] = Array.from({ length: SALA_ASIENTOS.inicial }, () => asientoNuevo());
-  private oyentes: OyenteMover[] = [];
+  private oyentesMover: OyenteMover[] = [];
+  private oyentesQuitar: OyenteQuitar[] = [];
 
   /**
    * Los asientos, en orden: el primero a las 12 y siguiendo las agujas del reloj.
@@ -69,6 +74,7 @@ export class Sala {
   quitarAsiento(): string | null {
     const quitado = this.mesa.pop();
     if (quitado?.ocupante) this.participantes.cambiarRol(quitado.ocupante, 'visitante');
+    if (quitado) for (const oyente of this.oyentesQuitar) oyente(quitado.id);
     return quitado?.id ?? null;
   }
 
@@ -120,10 +126,15 @@ export class Sala {
 
   /** Se apunta a los cambios de sitio de los ocupantes (ver OyenteMover). */
   alMover(oyente: OyenteMover): void {
-    this.oyentes.push(oyente);
+    this.oyentesMover.push(oyente);
+  }
+
+  /** Se apunta a los asientos que se quitan (ver OyenteQuitar). */
+  alQuitar(oyente: OyenteQuitar): void {
+    this.oyentesQuitar.push(oyente);
   }
 
   private avisar(destino: Map<string, string>): void {
-    for (const oyente of this.oyentes) oyente(destino);
+    for (const oyente of this.oyentesMover) oyente(destino);
   }
 }

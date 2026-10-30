@@ -54,6 +54,8 @@ export class Partida {
   ) {
     // Al cambiar de silla, cada jugador se lleva su ficha
     this.sala.alMover((destino) => this.llevarFichas(destino));
+    // Un asiento que se quita se lleva lo que tenía en el grimorio
+    this.sala.alQuitar((asientoId) => this.grimorio.olvidar(asientoId));
     // El acceso al grimorio es de los visitantes: al cambiar de papel se pierde (y se vuelve a pedir)
     this.sala.participantes.alCambiarRol((id) => this.acceso.cambiar(id, 'ninguno'));
     this.sala.participantes.alExpulsar((id, recuerdo) => this.acceso.alExpulsar(id, recuerdo));

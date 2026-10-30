@@ -48,7 +48,8 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     // Un fondo de la sala subido desde el ordenador (data URL) puede pasar de 1 MB
     maxHttpBufferSize: 8 * 1024 * 1024,
   });
-  const sala = new SalaDeJuego();
+  const juego = new SalaDeJuego();
+  const { sala, partida } = juego;
   // Las estadísticas escuchan la partida y, al revelar el grimorio, la guardan
   if (deps.guardarPartida) {
     const guardar = deps.guardarPartida;
@@ -57,25 +58,25 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
         .then(async () => {
           // Con una partida más, quien deja de ser novato pierde el pulpito
           if (!deps.contarPartidas) return;
-          for (const { userId } of registro.jugadores) sala.cambiarPartidasJugadas(userId, await deps.contarPartidas(userId));
+          for (const { userId } of registro.jugadores) sala.participantes.cambiarPartidasJugadas(userId, await deps.contarPartidas(userId));
           difundir();
         })
         .catch((err) => console.error('[SALA] No se ha podido guardar la partida:', err));
     });
-    sala.suscribir((evento) => estadisticas.registrar(evento));
+    partida.suscribir((evento) => estadisticas.registrar(evento));
   }
-  const chat = new ChatService(deps.mensajes, sala);
-  const conversaciones = new ConversacionService(sala);
+  const chat = new ChatService(deps.mensajes, juego);
+  const conversaciones = new ConversacionService(juego);
   // Sin servidor de vídeo configurado, la sala funciona igual, sin cámaras ni micrófonos
-  const videollamada = deps.video ? new VideollamadaService(deps.video, sala, conversaciones) : null;
+  const videollamada = deps.video ? new VideollamadaService(deps.video, juego, conversaciones) : null;
 
   // El guion (resuelto, con todos sus personajes) no va en cada estado: se manda
   // aparte, solo cuando cambia y a quien entra.
-  let versionGuionMandada = sala.versionGuion();
+  let versionGuionMandada = partida.guion.version();
   const mandarGuionSiCambia = () => {
-    if (sala.versionGuion() === versionGuionMandada) return;
-    versionGuionMandada = sala.versionGuion();
-    io.emit('sala:guion', sala.guion());
+    if (partida.guion.version() === versionGuionMandada) return;
+    versionGuionMandada = partida.guion.version();
+    io.emit('sala:guion', partida.guion.actual());
   };
 
   const difundir = () => {
@@ -83,14 +84,14 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     conversaciones.depurar();
     videollamada?.sincronizar();
     // Cada uno, lo que le toca ver de la partida
-    const vista = new VistaPartida(sala, {
+    const vista = new VistaPartida(juego, {
       conversaciones: conversaciones.lista(),
       invitacionesDe: (id) => conversaciones.invitacionesDe(id),
       video: !!videollamada,
-      accionesDe: (yo) => accionesPermitidas(sala, yo),
+      accionesDe: (yo) => accionesPermitidas(juego, yo),
     });
-    for (const { socketId, clave } of sala.conexiones()) {
-      io.to(socketId).emit('sala:estado', vista.para(sala.participanteDe(clave)!));
+    for (const { socketId, clave } of sala.participantes.conexiones()) {
+      io.to(socketId).emit('sala:estado', vista.para(sala.participantes.participanteDe(clave)!));
     }
     // El narrador virtual mira si, con la sala así, le toca hacer algo
     narradorVirtual.alCambiarSala();
@@ -99,7 +100,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
   // El narrador virtual actúa como un narrador más: con las mismas acciones, y la sala se difunde
   const mesaVirtual = (participanteId: string): MesaNarrador => ({
     accion: async (nombre, datos) => {
-      const { expulsar: _expulsar, ...resultado } = await ejecutarAccion(sala, sala.buscar(participanteId), nombre, datos, depsSala);
+      const { expulsar: _expulsar, ...resultado } = await ejecutarAccion(juego, sala.participantes.buscar(participanteId), nombre, datos, depsSala);
       if (resultado.ok) {
         mandarGuionSiCambia();
         difundir();
@@ -108,7 +109,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     },
   });
   const narradorVirtual = new NarradorVirtualService(
-    sala,
+    juego,
     mesaVirtual,
     {
       decir: (texto) => {
@@ -123,7 +124,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     deps.modeloJarvisDe && deps.clienteJev
       ? {
           modeloDe: async (participanteId) => {
-            const cuenta = sala.buscar(participanteId)?.usuarioId;
+            const cuenta = sala.participantes.buscar(participanteId)?.usuarioId;
             return cuenta ? deps.modeloJarvisDe!(cuenta) : 'sinCuenta';
           },
           cliente: deps.clienteJev,
@@ -133,11 +134,11 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     deps.bolsasRecientes
       ? {
           de: async (participanteId) => {
-            const cuenta = sala.buscar(participanteId)?.usuarioId;
+            const cuenta = sala.participantes.buscar(participanteId)?.usuarioId;
             return cuenta ? deps.bolsasRecientes!.de(cuenta) : [];
           },
           apuntar: async (participanteId, personajes) => {
-            const cuenta = sala.buscar(participanteId)?.usuarioId;
+            const cuenta = sala.participantes.buscar(participanteId)?.usuarioId;
             if (cuenta) await deps.bolsasRecientes!.apuntar(cuenta, personajes);
           },
         }
@@ -149,7 +150,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
   const conexionViva = (socketId: string) => io.sockets.sockets.has(socketId);
 
   // La votación avanza sola con el tiempo: cada paso se manda a todos.
-  sala.alCambiarSola = difundir;
+  partida.alCambiarSola = difundir;
 
   io.use(async (socket, next) => {
     const { token, nombre, alias, avatar, clienteId } = socket.handshake.auth ?? {};
@@ -183,7 +184,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
       // devuelve a la pantalla de entrada para que elija otro.
       const nombreFinal = llegada.alias || llegada.nombreBase;
       const cliente = typeof clienteId === 'string' && clienteId ? clienteId.slice(0, 64) : null;
-      if (!sala.nombreLibreParaInvitado(nombreFinal, cliente, conexionViva)) return next(new Error('NOMBRE_OCUPADO'));
+      if (!sala.participantes.nombreLibreParaInvitado(nombreFinal, cliente, conexionViva)) return next(new Error('NOMBRE_OCUPADO'));
     }
     // Aquí solo se identifica: se entra en la sala al completarse la conexión.
     // Si se entrase ya y la conexión se cortara ahora (StrictMode, recarga rápida),
@@ -198,8 +199,8 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
 
   io.on('connection', (socket) => {
     const { llegada, clienteId } = socket.data as DatosSocket;
-    const { clave, expulsar } = sala.conectar(socket.id, clienteId, llegada, conexionViva);
-    socket.emit('sala:guion', sala.guion());
+    const { clave, expulsar } = sala.participantes.conectar(socket.id, clienteId, llegada, conexionViva);
+    socket.emit('sala:guion', partida.guion.actual());
     // Su cuenta ya estaba en la sala desde otra conexión: esa se cierra. El aviso
     // llega antes que el cierre, y el cliente no intenta reconectar.
     if (expulsar) {
@@ -207,7 +208,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
       io.sockets.sockets.get(expulsar)?.disconnect(true);
     }
     difundir();
-    const yo = () => sala.participanteDe(clave);
+    const yo = () => sala.participantes.participanteDe(clave);
     const miHistorial = () => {
       const p = yo();
       if (p) socket.emit('chat:historial', chat.historial(p));
@@ -226,7 +227,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
       try {
         const { mensaje, lectores, susurro } = chat.enviar(p.id, peticion.para, peticion.texto);
         responder({ ok: true });
-        for (const { socketId, id } of sala.conexiones()) {
+        for (const { socketId, id } of sala.participantes.conexiones()) {
           if (lectores.includes(id)) io.to(socketId).emit('chat:mensaje', mensaje);
         }
         if (susurro) io.emit('sala:susurro', susurro);
@@ -284,8 +285,8 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     socket.on('sala:accion', async (peticion: { accion?: unknown; datos?: unknown } | null, ack?: (r: SalaResultado) => void) => {
       const nombre = typeof peticion?.accion === 'string' ? peticion.accion : '';
       const { expulsar: expulsados = [], ...resultado } = await ejecutarAccion(
-        sala,
-        sala.participanteDe(clave),
+        juego,
+        sala.participantes.participanteDe(clave),
         nombre,
         peticion?.datos,
         depsSala,
@@ -305,9 +306,9 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     socket.on('disconnect', (reason) => {
       // El cliente cerró a propósito («Salir»): se va ya. Si no, se le guarda el sitio.
       if (reason === 'client namespace disconnect') {
-        sala.salir(clave, socket.id);
+        sala.participantes.salir(clave, socket.id);
       } else {
-        sala.desconectar(clave, socket.id, difundir);
+        sala.participantes.desconectar(clave, socket.id, difundir);
       }
       difundir();
     });
