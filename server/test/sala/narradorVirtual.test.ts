@@ -42,7 +42,7 @@ describe('narrador virtual', () => {
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'esperandoJugadores');
     const { narradorVirtual, participantes, asientos, configuracion } = ana.estado;
     expect(narradorVirtual).toMatchObject({ id: 'tontoYTu', creador: ana.id, jugadores: 7, guion: 'troublebrewing' });
-    expect(participantes.find((p) => p.id === narradorVirtual!.participante)).toMatchObject({ rol: 'narrador', virtual: 'tontoYTu', nombre: 'Tonto y tú', conectado: true });
+    expect(participantes.find((p) => p.id === narradorVirtual!.participante)).toMatchObject({ rol: 'narrador', virtual: 'tontoYTu', nombre: 'Tonto y tú', avatar: '/narradores/tonto-y-tu.webp', conectado: true });
     expect(asientos).toHaveLength(7);
     expect(configuracion.grimorioJugadores).toBe(true);
     // Ya hay narrador: nadie más puede hacerse narrador ni añadir otro

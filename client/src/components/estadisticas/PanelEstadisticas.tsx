@@ -1,26 +1,29 @@
-import { BarChart3, History, Lock, ScrollText, Trophy, Users } from 'lucide-react';
+import { BarChart3, Gem, History, Lock, ScrollText, Trophy, Users } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { LOGRO_PLATINO, LOGROS, type Logro, type NivelLogro } from '../../data/logros';
+import { reliquiasDe } from '../../data/reliquias';
 import { urlDelServidor } from '../../utils/api';
 import type { ResumenEstadisticas } from '../../utils/estadisticasApi';
 import HistorialPartidas from './HistorialPartidas';
-import Pestanas from './Pestanas';
+import Pestanas, { type Pestana } from './Pestanas';
+import Reliquias from './Reliquias';
 import NombrePersonaje from './NombrePersonaje';
 import TextoLogro from './TextoLogro';
 import { porcentaje, TIPOS, usePersonajes, veces, type DatosPersonajes } from './personajes';
 
 const titulo = 'text-xl font-display text-theme-main flex items-center gap-2 mb-4';
-const PESTANAS = ['general', 'roles', 'logros', 'historial'] as const;
+const PESTANAS = ['general', 'roles', 'logros', 'reliquias', 'historial'] as const;
 
 /**
  * Las estadísticas de alguien, en pestañas: General (las cifras), Roles (los
- * personajes jugados), Logros e Historial (cada partida). La pestaña va en la
+ * personajes jugados), Logros, Reliquias (solo si tiene alguna) e Historial (cada partida). La pestaña va en la
  * dirección (?pestana=historial), así que se puede enlazar y volver a ella.
  */
 const PanelEstadisticas = ({ resumen: r, propias }: { resumen: ResumenEstadisticas; propias: boolean }) => {
   const [params, setParams] = useSearchParams();
   const pedida = params.get('pestana');
-  const activa = PESTANAS.find((p) => p === pedida) ?? 'general';
+  const reliquias = reliquiasDe(r.usuario.username);
+  const activa = PESTANAS.find((p) => p === pedida && (p !== 'reliquias' || reliquias.length > 0)) ?? 'general';
   const personajes = usePersonajes(r);
   const logros = new Map(r.causas.map((x) => [x.id, x.veces]));
   const conseguidos = LOGROS.filter((l) => logros.has(l.id)).length;
@@ -51,6 +54,18 @@ const PanelEstadisticas = ({ resumen: r, propias }: { resumen: ResumenEstadistic
             icono: <Trophy className="h-4 w-4" aria-hidden="true" />,
             contenido: <Logros conseguidos={logros} personajes={personajes} />,
           },
+          ...(reliquias.length > 0
+            ? [
+                {
+                  id: 'reliquias',
+                  titulo: 'Reliquias',
+                  contador: String(reliquias.length),
+                  contadorLector: reliquias.length === 1 ? '1 reliquia' : `${reliquias.length} reliquias`,
+                  icono: <Gem className="h-4 w-4" aria-hidden="true" />,
+                  contenido: <Reliquias reliquias={reliquias} username={r.usuario.username} />,
+                } satisfies Pestana,
+              ]
+            : []),
           {
             id: 'historial',
             titulo: 'Historial',

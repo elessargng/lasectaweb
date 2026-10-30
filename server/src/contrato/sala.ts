@@ -577,8 +577,14 @@ export interface SalaDespertar {
  * «Tonto y tú» elige siempre al azar; Jarvis sale, pero aún no se puede elegir.
  */
 export const NARRADORES_VIRTUALES = [
-  { id: 'tontoYTu', nombre: 'Tonto y tú', descripcion: 'Elige siempre al azar.', disponible: true },
-  { id: 'jarvis', nombre: 'Jarvis', descripcion: 'Decide con el modelo JEV, con tu endpoint y tu key.', disponible: true },
+  { id: 'tontoYTu', nombre: 'Tonto y tú', descripcion: 'Elige siempre al azar.', disponible: true, avatar: '/narradores/tonto-y-tu.webp' },
+  {
+    id: 'jarvis',
+    nombre: 'Jarvis',
+    descripcion: 'Decide con el modelo JEV, con tu endpoint y tu key.',
+    disponible: true,
+    avatar: '/narradores/jarvis.webp',
+  },
 ] as const;
 export type IdNarradorVirtual = (typeof NARRADORES_VIRTUALES)[number]['id'];
 

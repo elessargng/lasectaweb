@@ -91,6 +91,84 @@
 .corner-bl { bottom: 6px; left: 6px; border-width: 0 0 1px 1px; }
 .corner-br { bottom: 6px; right: 6px; border-width: 0 1px 1px 0; }
 
+/*
+ * Una reliquia (Estadísticas > Reliquias): un relicario. La tarjeta, con un halo de
+ * latón detrás del medallón; el medallón, de doble aro con dos engranajes grabados
+ * que giran muy despacio, uno contra otro, y un destello que lo cruza de vez en cuando.
+ */
+.reliquia {
+  background:
+    radial-gradient(60% 120% at 12% 50%, rgba(var(--gold-rgb), 0.1), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0%, transparent 40%),
+    var(--theme-surface);
+  border-color: rgba(var(--gold-rgb), 0.32);
+}
+.reliquia-medallon {
+  position: relative;
+  flex-shrink: 0;
+  width: 8.5rem;
+  height: 8.5rem;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 38%, #2a2438 0%, #15121f 60%, #0b0914 100%);
+  border: 1px solid rgba(var(--gold-rgb), 0.85);
+  box-shadow:
+    inset 0 0 0 4px rgba(11, 9, 20, 0.9),
+    inset 0 0 0 5px rgba(var(--gold-rgb), 0.45),
+    inset 0 -10px 24px rgba(0, 0, 0, 0.7),
+    0 0 0 6px rgba(var(--gold-rgb), 0.06),
+    0 0 36px -6px rgba(var(--gold-rgb), 0.35),
+    0 18px 30px -12px rgba(0, 0, 0, 0.9);
+}
+.reliquia-engranaje {
+  position: absolute;
+  color: var(--color-gold);
+  filter: drop-shadow(0 0 6px rgba(var(--gold-rgb), 0.45)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.9));
+}
+/* Dos engranajes que encajan: el grande gira a un lado y el pequeño al otro, más deprisa */
+.reliquia-engranaje-grande {
+  width: 3.9rem;
+  height: 3.9rem;
+  left: 1.45rem;
+  top: 1.65rem;
+  animation: reliquia-giro 36s linear infinite;
+}
+.reliquia-engranaje-pequeno {
+  width: 2.6rem;
+  height: 2.6rem;
+  left: 4rem;
+  top: 4.1rem;
+  color: var(--color-gold-bright);
+  animation: reliquia-giro 24s linear infinite reverse;
+}
+.reliquia-brillo {
+  position: absolute;
+  inset: -20%;
+  z-index: 1;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 246, 220, 0.22) 50%, transparent 60%);
+  transform: translateX(-110%);
+  animation: reliquia-destello 7s ease-in-out 1.2s infinite;
+  pointer-events: none;
+}
+@keyframes reliquia-giro {
+  to { transform: rotate(360deg); }
+}
+@keyframes reliquia-destello {
+  0%, 70% { transform: translateX(-110%); }
+  100% { transform: translateX(110%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reliquia-engranaje,
+  .reliquia-brillo {
+    animation: none;
+  }
+  .reliquia-brillo { display: none; }
+}
+@media (forced-colors: active) {
+  .reliquia-medallon { border-color: CanvasText; }
+  .reliquia-engranaje { color: CanvasText; filter: none; }
+}
+
 /* Cita: un fragmento de pergamino entre filos dorados */
 .quote-container {
   position: relative;

@@ -226,11 +226,13 @@ export class Participantes {
     return id;
   }
 
-  /** Otro narrador virtual toma el relevo del que hay: el mismo participante, con su nombre. */
-  relevarVirtual(participanteId: string, nombre: string, virtual: IdNarradorVirtual): void {
+  /** Otro narrador virtual toma el relevo del que hay: el mismo participante, con su nombre y su avatar. */
+  relevarVirtual(participanteId: string, nombre: string, avatar: string, virtual: IdNarradorVirtual): void {
     for (const entrada of this.entradas.values()) {
       if (!entrada.virtual || entrada.participante.id !== participanteId) continue;
       entrada.participante.nombre = nombre;
+      entrada.participante.avatar = avatar;
+      entrada.avatarPorDefecto = avatar;
       entrada.participante.virtual = virtual;
       entrada.nombreBase = nombre;
     }

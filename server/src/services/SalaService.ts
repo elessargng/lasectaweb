@@ -1420,12 +1420,12 @@ export class SalaService {
     this.narradoresVirtuales.actualizar(cambios);
   }
 
-  /** Otro narrador virtual sigue la partida del que hay (Jarvis deja a «Tonto y tú»): con su id y su nombre. */
-  relevarNarradorVirtual(id: SalaNarradorVirtual['id'], nombre: string): void {
+  /** Otro narrador virtual sigue la partida del que hay (Jarvis deja a «Tonto y tú»): con su id, su nombre y su avatar. */
+  relevarNarradorVirtual(id: SalaNarradorVirtual['id'], nombre: string, avatar: string): void {
     const narrador = this.narradoresVirtuales.actual();
     if (!narrador) return;
     this.narradoresVirtuales.guardar({ ...narrador, id });
-    this.presentes.relevarVirtual(narrador.participante, nombre, id);
+    this.presentes.relevarVirtual(narrador.participante, nombre, avatar, id);
   }
 
   /** Se va el narrador virtual (su participante sale de la sala): la palabra y los privados vuelven a ser de todos. */

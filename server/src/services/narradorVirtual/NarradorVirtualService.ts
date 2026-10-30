@@ -40,9 +40,6 @@ export const ESPERA_ABANDONO_MS = 120_000;
 /** Las etapas con la partida en marcha (en las que irse de un asiento la deja coja). */
 const EN_PARTIDA = ['noche', 'privados', 'puestaEnComun', 'nominaciones'];
 
-/** Su avatar en la sala (hasta que tenga uno propio). */
-const AVATAR_VIRTUAL = '/logo-2.png';
-
 /**
  * El narrador virtual de la sala (servicio de aplicación): lo añade y lo quita, y
  * lleva la partida pasando por sus etapas (patrón Estado). Actúa como un narrador
@@ -94,7 +91,7 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     const ocupadaYa = libre();
     if (ocupadaYa) return ocupadaYa;
 
-    const participante = this.sala.anadirNarradorVirtual({ id: narrador, creador, guion, jugadores }, datos.nombre, AVATAR_VIRTUAL);
+    const participante = this.sala.anadirNarradorVirtual({ id: narrador, creador, guion, jugadores }, datos.nombre, datos.avatar);
     this.estrategia = estrategia;
     // Si no se pueden leer o apuntar las recientes, la partida sigue igual
     const recientes = (await this.bolsas?.de(creador).catch(() => null)) ?? [];
@@ -137,7 +134,8 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
   private jarvisSeVa(tonto: EstrategiaNarrador): void {
     if (!this.sala.narradorVirtual()) return;
     this.estrategia = tonto;
-    this.sala.relevarNarradorVirtual('tontoYTu', NARRADORES_VIRTUALES.find((n) => n.id === 'tontoYTu')!.nombre);
+    const tontoYTu = NARRADORES_VIRTUALES.find((n) => n.id === 'tontoYTu')!;
+    this.sala.relevarNarradorVirtual('tontoYTu', tontoYTu.nombre, tontoYTu.avatar);
     this.contexto().decir(FRASES.jarvisSeVa());
     this.difundir();
   }

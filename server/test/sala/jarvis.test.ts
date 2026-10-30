@@ -211,7 +211,7 @@ describe('añadir a Jarvis', () => {
     // Al preparar la bolsa ya decide 7 veces: a la quinta, se rinde
     await arnes.accion(ana, 'sala:anadirNarradorVirtual', JARVIS);
     await ana.esperarQue((e) => e.narradorVirtual?.id === 'tontoYTu');
-    expect(ana.estado.participantes.find((p) => p.virtual)?.nombre).toBe('Tonto y tú');
+    expect(ana.estado.participantes.find((p) => p.virtual)).toMatchObject({ nombre: 'Tonto y tú', avatar: '/narradores/tonto-y-tu.webp' });
     expect(voces).toContain('Jarvis tiene que irse; os dejo con Tonto y tú, que seguirá la partida.');
     // Y la partida sigue: la bolsa está llena
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'esperandoJugadores');
