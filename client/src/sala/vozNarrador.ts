@@ -2,8 +2,10 @@
  * La voz del narrador virtual: lo que dice se oye con la síntesis de voz del
  * navegador, en español (si hay una voz de España, esa). Se encola: una frase no
  * corta a la anterior. Sin síntesis en el navegador, no suena (la frase sigue
- * escrita junto a su cuadro).
+ * escrita junto a su cuadro). Los nombres ingleses de los personajes se dicen como
+ * se pronuncian en español (ver pronunciacion.ts); lo escrito no cambia.
  */
+import { paraLaVoz } from './pronunciacion';
 
 const disponible = () => typeof window !== 'undefined' && 'speechSynthesis' in window;
 
@@ -15,7 +17,7 @@ function vozEspanola(): SpeechSynthesisVoice | null {
 
 export function decirEnVoz(texto: string): void {
   if (!disponible() || !texto) return;
-  const frase = new SpeechSynthesisUtterance(texto);
+  const frase = new SpeechSynthesisUtterance(paraLaVoz(texto));
   frase.lang = 'es-ES';
   const voz = vozEspanola();
   if (voz) frase.voice = voz;

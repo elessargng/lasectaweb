@@ -1,5 +1,5 @@
 import { barajar } from '../../../contrato/bolsaAleatoria';
-import { esDemonio, type Ganador } from '../final/comprobarFinal';
+import { escarlataAImp, esDemonio, type Ganador } from '../final/comprobarFinal';
 import { fraseAlRevelar } from '../final/cronica';
 import { duracionFrase, FRASES } from '../frases';
 import type { ContextoEtapa, Etapa } from './Etapa';
@@ -26,6 +26,8 @@ export class Revelando implements Etapa {
 
   async alEntrar(ctx: ContextoEtapa): Promise<void> {
     if (!this.yaDicho) ctx.decir(FRASES.revelamos());
+    // Si acaba antes de la noche en que lo sería, la Mujer Escarlata que ha heredado se revela ya como el Imp
+    await escarlataAImp(ctx);
     if (!(await ctx.mesa.accion('narrador:revelarGrimorio', { ganador: this.ganador })).ok) return;
     const asientos = ctx.sala.asientos();
     const demonios = asientos.filter((a) => esDemonio(ctx.sala, a));

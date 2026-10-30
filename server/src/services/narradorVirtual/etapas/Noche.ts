@@ -8,7 +8,7 @@ import { planificarNoche } from '../noche/planificarNoche';
 import { cumplirRequisitos, ponerFaroles, ponerRecordatorio } from '../noche/requisitos';
 import { resolverRevision } from '../noche/revisiones';
 import { duracionPrivados, Privados } from './Dia';
-import { comprobarFinal } from '../final/comprobarFinal';
+import { comprobarFinal, escarlataAImp } from '../final/comprobarFinal';
 import { apuntarNoche } from '../final/cronica';
 import { Revelando } from './Revelando';
 import type { ContextoEtapa, Etapa } from './Etapa';
@@ -127,6 +127,8 @@ export class Noche implements Etapa {
     for (const { personajes } of plan) {
       for (let paso = 0; paso < personajes.length; paso++) await this.dormir(ctx, ESPERA_PASO.min + Math.floor(ctx.azar() * (ESPERA_PASO.max - ESPERA_PASO.min)));
       if (personajes.includes('demonios')) await ponerFaroles(ctx);
+      // Antes de que despierte el demonio, la Mujer Escarlata que lo ha heredado ya es el Imp
+      if (personajes.some((p) => sala.personaje(p)?.tipo === 'demon')) await escarlataAImp(ctx);
       await Promise.all(personajes.map((p) => this.resolverFila(ctx, p)));
       // El Imp que se ha elegido a sí mismo: el nuevo, uno de los esbirros vivos
       if (sala.nuevoImp()) await this.elegirNuevoImp(ctx);
@@ -216,7 +218,8 @@ export class Noche implements Etapa {
       pregunta: 'El Imp se ha matado: el esbirro vivo que pasa a ser el nuevo Imp.',
       opciones: opcionesDeAsientos(ctx.sala, esbirros),
     });
-    await ctx.mesa.accion('narrador:nuevoImp', { asientoId: nuevo.id });
+    const era = ctx.sala.identidad(nuevo);
+    if ((await ctx.mesa.accion('narrador:nuevoImp', { asientoId: nuevo.id })).ok && era) ctx.recuerdos.cronica.antes.set(nuevo.id, era);
   }
 
   /** Amanece: se anuncian las muertes de la noche y empiezan los privados. */

@@ -73,6 +73,8 @@ export interface Revelacion {
   personaje: string | null;
   /** El personaje que creía ser (el Borracho), o null. */
   creia: string | null;
+  /** El que tenía antes de pasar a ser el que es (la Mujer Escarlata que pasa a ser el Imp), o null. */
+  antes: string | null;
   /** Las noches en que eligió o recibió algo. */
   noches: NocheRevelada[];
   muerte: MuerteRevelada | null;
@@ -139,9 +141,17 @@ function porNoches(noches: NocheRevelada[]): string | null {
  * «Pepe era Chef, recibió un 1 y murió en la ejecución del segundo día.»
  * «Ana era Monje, eligió a Bea la segunda noche y a Luis la tercera noche (envenenado).»
  * «Juan creía que era Bibliotecario, pero en realidad era Borracho. Recibió…»
+ * «Eva era Mujer Escarlata y pasó a ser Imp, eligió a Luis la tercera noche.»
  */
-function alRevelar({ nombre, personaje, creia, noches, muerte, sinMasInformacion }: Revelacion): string {
-  const inicio = creia && personaje ? `${nombre} creía que era ${creia}, pero en realidad era ${personaje}` : personaje ? `${nombre} era ${personaje}` : nombre;
+function alRevelar({ nombre, personaje, creia, antes, noches, muerte, sinMasInformacion }: Revelacion): string {
+  const inicio =
+    creia && personaje
+      ? `${nombre} creía que era ${creia}, pero en realidad era ${personaje}`
+      : antes && personaje
+        ? `${nombre} era ${antes} y pasó a ser ${personaje}`
+        : personaje
+          ? `${nombre} era ${personaje}`
+          : nombre;
   const partes = [
     porNoches(noches),
     muerte && muerteEnPalabras(muerte),

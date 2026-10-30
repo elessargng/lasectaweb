@@ -390,6 +390,40 @@ describe('la noche del narrador virtual', () => {
       expect(await comprobarFinal(pocos.ctx)).toBe('bueno');
     });
 
+    it('la Mujer Escarlata que hereda pasa a ser el Imp esa noche: se le dice y despierta como el Imp', async () => {
+      const m = mesaVirtual(['imp', 'scarletwoman', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
+      m.sala.irANoche();
+      await m.noche();
+      m.sala.amanecer();
+      // De día, muere el Imp: hereda
+      m.sala.cambiarVida(m.asiento('imp').id, true);
+      expect(await comprobarFinal(m.ctx)).toBeNull();
+      const escarlata = m.asiento('scarletwoman').id;
+      m.sala.irANoche();
+      await m.noche();
+      const asiento = m.sala.asientos().find((a) => a.id === escarlata)!;
+      expect(m.sala.identidad(asiento)).toBe('imp');
+      expect(m.ctx.recuerdos.cronica.antes.get(escarlata)).toBe('scarletwoman');
+      // Se le dijo «Tú eres el Imp» y luego despertó como el Imp (a elegir)
+      const despertados = m.despertados();
+      expect(despertados.indexOf('imp')).toBeGreaterThan(despertados.indexOf('scarletwoman'));
+      expect(m.hechas).toContainEqual({ accion: 'narrador:cambiarPersonaje', datos: { asientoId: escarlata, personajeId: 'imp' } });
+    });
+
+    it('si acaba antes de esa noche, al revelar la Mujer Escarlata que ha heredado ya es el Imp', async () => {
+      const m = mesaVirtual(['imp', 'scarletwoman', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
+      m.sala.irANoche();
+      m.sala.amanecer();
+      m.sala.cambiarVida(m.asiento('imp').id, true);
+      expect(await comprobarFinal(m.ctx)).toBeNull();
+      const escarlata = m.asiento('scarletwoman').id;
+      await new Revelando('malvado').alEntrar(m.ctx);
+      expect(m.sala.identidad(m.sala.asientos().find((a) => a.id === escarlata)!)).toBe('imp');
+      const limite = Date.now() + 3000;
+      while (!m.frases.some((f) => / pasó a ser imp/.test(f)) && Date.now() < limite) await new Promise((r) => setTimeout(r, 5));
+      expect(m.frases.find((f) => / pasó a ser imp/.test(f))).toMatch(/^.+ era scarletwoman y pasó a ser imp/);
+    });
+
     it('revela el grimorio ficha a ficha, con el demonio el último', async () => {
       const m = mesaVirtual(['imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
       m.sala.irANoche();

@@ -26,11 +26,13 @@ export interface Cronica {
   /** Las falsas (droison y mentira) de esta noche, por asiento, hasta apuntarlas al amanecer. */
   falsas: Set<string>;
   muertes: Map<string, MuerteRevelada>;
+  /** Por asiento, el personaje que tenía antes de pasar a ser el Imp (la Mujer Escarlata, el esbirro del Imp que se mata). */
+  antes: Map<string, string>;
   /** La última noche que se ha jugado. */
   ultimaNoche: number;
 }
 
-export const cronicaNueva = (): Cronica => ({ noches: new Map(), falsas: new Set(), muertes: new Map(), ultimaNoche: 0 });
+export const cronicaNueva = (): Cronica => ({ noches: new Map(), falsas: new Set(), muertes: new Map(), antes: new Map(), ultimaNoche: 0 });
 
 /** Si un mensaje del narrador es información (un número, un sí o un no, un alineamiento, «Este jugador es»). */
 const esInformacion = (m: SalaEnvioDespertar): boolean =>
@@ -101,6 +103,7 @@ export function fraseAlRevelar(cronica: Cronica, sala: SalaService, asiento: Sal
   const muerte = asiento.muerto ? (cronica.muertes.get(asiento.id) ?? null) : null;
   // Despierta cada noche con su información y murió antes de que acabara: dejó de recibirla
   const ficha = asiento.personaje;
+  const antes = cronica.antes.get(asiento.id);
   const conInformacion = noches.some((n) => n.infos.length > 0);
   const cadaNoche = !!ficha && conInformacion && (sala.guion()?.otrasNoches ?? []).includes(ficha);
   const antesDelFinal = !!muerte && (muerte.momento === 'noche' || muerte.numero < cronica.ultimaNoche);
@@ -108,6 +111,7 @@ export function fraseAlRevelar(cronica: Cronica, sala: SalaService, asiento: Sal
     nombre: nombreDeAsiento(sala, asiento.id),
     personaje: identidad ? nombreP(identidad) : null,
     creia: ficha && identidad && ficha !== identidad ? nombreP(ficha) : null,
+    antes: antes ? nombreP(antes) : null,
     noches,
     muerte,
     sinMasInformacion: cadaNoche && antesDelFinal,

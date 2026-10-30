@@ -367,7 +367,7 @@ describe('narrador virtual: la Virgen', () => {
 });
 
 describe('narrador virtual: lo que cuenta al revelar el grimorio', () => {
-  const nadie = { creia: null, noches: [], muerte: null, sinMasInformacion: false };
+  const nadie = { creia: null, antes: null, noches: [], muerte: null, sinMasInformacion: false };
   /** Una noche: lo que eligió y lo que recibió. */
   const noche = (n: number, { eligio = [] as string[], infos = [] as { que: string; falsa: boolean }[], envenenado = false } = {}) => ({
     noche: n,

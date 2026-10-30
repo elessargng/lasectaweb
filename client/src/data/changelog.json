@@ -24,6 +24,7 @@
           "Añadidas las pausas del narrador virtual al contar el disparo del Exterminador.",
           "Añadido el anuncio del bando ganador al revelar el grimorio.",
           "Añadidas las elecciones de cada noche y el veneno a lo que cuenta el narrador virtual al revelar.",
+          "La Mujer Escarlata que hereda el demonio pasa a ser el Imp con narrador virtual.",
           "La Pitonisa y el Ravenkeeper siempre pasan por la revisión del narrador."
         ]
       },
@@ -34,7 +35,8 @@
           "Añadida la opción de declararse Exterminador y disparar.",
           "«Entendido» se envía al pulsarlo.",
           "Cada wake de noche espera al «Entendido» del anterior.",
-          "Acortadas las pausas del narrador virtual al ejecutar y al disparar."
+          "Acortadas las pausas del narrador virtual al ejecutar y al disparar.",
+          "La voz del narrador virtual pronuncia en español los nombres ingleses de los roles."
         ]
       },
       {
