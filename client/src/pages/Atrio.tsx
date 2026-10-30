@@ -15,6 +15,8 @@ import {
 import Cita from '../components/Cita';
 import StatsWidget from '../components/StatsWidget';
 import PageHeader from '../components/PageHeader';
+import Button from '../components/Button';
+import { RUTA_SALA } from '../components/rituales/salaLaSecta';
 
 // Título de cada bloque del Atrio: rótulo en versalitas con su icono y un filo dorado a la derecha.
 const tituloBloque = 'flex items-center gap-3 font-ui text-sm md:text-base font-semibold tracking-[0.22em] text-theme-main';
@@ -46,6 +48,15 @@ const Atrio: React.FC = () => {
       <div className="max-w-7xl w-full mx-auto px-4 md:px-8 relative z-20 -mt-12 md:-mt-16">
         <div className="max-w-3xl mx-auto">
           <Cita texto="Ven, siéntate al borde del abismo. Contaremos historias sobre los condenados, *y uno de nosotros no mentirá al hacerlo*." />
+        </div>
+
+        {/* La sala de juego se abre siempre en una ventana aparte. rel="opener" para
+            que herede la sesión sin «Recordarme», que vive en sessionStorage */}
+        <div className="flex justify-center mt-8">
+          <Button variant="primary" href={RUTA_SALA} target="_blank" rel="opener" className="px-8 py-3 text-lg">
+            Entrar en la sala de juegos
+            <span className="sr-only"> (se abre en una ventana nueva)</span>
+          </Button>
         </div>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
