@@ -10,7 +10,8 @@ export class EsperandoJugadores implements Etapa {
   readonly id = 'esperandoJugadores' as const;
 
   async alCambiar(ctx: ContextoEtapa): Promise<void> {
-    const asientos = ctx.sala.asientos();
+    const { partida } = ctx.juego;
+    const asientos = partida.mesa();
     if (asientos.length === 0 || asientos.some((a) => !a.ocupante)) return;
     const reparto = await ctx.mesa.accion('narrador:asignarPersonajes');
     if (!reparto.ok) return;

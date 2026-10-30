@@ -25,14 +25,15 @@ export class Revelando implements Etapa {
   ) {}
 
   async alEntrar(ctx: ContextoEtapa): Promise<void> {
+    const { partida, narrador } = ctx.juego;
     if (!this.yaDicho) ctx.decir(FRASES.revelamos());
     // Se acaba la partida: nadie más puede declararse Patoso
-    ctx.sala.actualizarNarradorVirtual({ patosos: [] });
+    narrador.actualizar({ patosos: [] });
     // Si acaba antes de la noche en que lo sería, la Mujer Escarlata que ha heredado se revela ya como el Imp
     await escarlataAImp(ctx);
     if (!(await ctx.mesa.accion('narrador:revelarGrimorio', { ganador: this.ganador })).ok) return;
-    const asientos = ctx.sala.asientos();
-    const demonios = asientos.filter((a) => esDemonio(ctx.sala, a));
+    const asientos = partida.mesa();
+    const demonios = asientos.filter((a) => esDemonio(ctx.juego, a));
     const orden = [...barajar(asientos.filter((a) => !demonios.includes(a)), ctx.azar), ...barajar(demonios, ctx.azar)];
     void this.revelar(ctx, orden.map((a) => a.id));
   }
@@ -44,13 +45,14 @@ export class Revelando implements Etapa {
 
   private async revelar(ctx: ContextoEtapa, orden: string[]): Promise<void> {
     // Tras «Revelamos el grimorio», un respiro antes de la primera
+    const { partida } = ctx.juego;
     let espera = ENTRE_FICHAS_MS;
     for (const asientoId of orden) {
       await new Promise<void>((listo) => (this.cancelar = ctx.temporizador.programar(espera, listo)));
       if (!this.seguir) return;
-      const asiento = ctx.sala.asientos().find((a) => a.id === asientoId);
+      const asiento = partida.mesa().find((a) => a.id === asientoId);
       if (!asiento) continue;
-      const frase = fraseAlRevelar(ctx.recuerdos.cronica, ctx.sala, asiento);
+      const frase = fraseAlRevelar(ctx.recuerdos.cronica, ctx.juego, asiento);
       await ctx.mesa.accion('narrador:revelarFicha', { asientoId });
       ctx.decir(frase);
       espera = Math.max(ENTRE_FICHAS_MS, duracionFrase(frase));

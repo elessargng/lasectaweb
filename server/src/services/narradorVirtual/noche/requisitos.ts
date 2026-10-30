@@ -2,6 +2,7 @@ import { NUM_FAROLES, type SalaAsiento, type SalaHabilidadNoche } from '../../..
 import type { ContextoEtapa } from '../etapas/Etapa';
 import { describirPersonaje, opcionesDeAsientos } from '../grimorio';
 import { indiceRecordatorio, tipoReal } from '../mesaDeJuego';
+import { identidadDe } from '../../partida/Grimorio';
 
 /**
  * Lo que falta en el grimorio antes de despertar a alguien, como lo pondría el
@@ -15,7 +16,7 @@ const TIPO_DEL_CORRECTO: Record<string, string> = { townsfolk: 'townsfolk', outs
 
 /** Pone un recordatorio de un personaje (por su texto) en un asiento. */
 export async function ponerRecordatorio(ctx: ContextoEtapa, asientoId: string, personaje: string, texto: string): Promise<boolean> {
-  const indice = indiceRecordatorio(ctx.sala, personaje, texto);
+  const indice = indiceRecordatorio(ctx.juego, personaje, texto);
   if (indice < 0) return false;
   return (await ctx.mesa.accion('narrador:ponerRecordatorio', { asientoId, personajeId: personaje, indice })).ok;
 }
@@ -26,18 +27,19 @@ export async function ponerRecordatorio(ctx: ContextoEtapa, asientoId: string, p
  * que un aldeano). Lo decide su estrategia.
  */
 export async function ponerFaroles(ctx: ContextoEtapa): Promise<boolean> {
-  if (ctx.sala.faroles().filter(Boolean).length >= NUM_FAROLES) return false;
-  const enJuego = new Set(ctx.sala.asientos().flatMap((a) => [a.personaje, ctx.sala.identidad(a)]).filter(Boolean));
-  const libres = (ctx.sala.guion()?.personajes ?? []).filter((p) => (p.tipo === 'townsfolk' || p.tipo === 'outsider') && !enJuego.has(p.id));
+  const { partida } = ctx.juego;
+  if (partida.faroles.faroles().filter(Boolean).length >= NUM_FAROLES) return false;
+  const enJuego = new Set(partida.mesa().flatMap((a) => [a.personaje, identidadDe(a)]).filter(Boolean));
+  const libres = (partida.guion.actual()?.personajes ?? []).filter((p) => (p.tipo === 'townsfolk' || p.tipo === 'outsider') && !enJuego.has(p.id));
   const forasteros = libres.filter((p) => p.tipo === 'outsider').length;
   const faroles: string[] = [];
   for (let i = 0; i < NUM_FAROLES; i++) {
-    const conForastero = faroles.some((f) => ctx.sala.personaje(f)?.tipo === 'outsider');
+    const conForastero = faroles.some((f) => partida.guion.personaje(f)?.tipo === 'outsider');
     const opciones = libres
       .filter((p) => !faroles.includes(p.id) && !(conForastero && p.tipo === 'outsider'))
       .map((p) => ({
         clave: p.id,
-        descripcion: describirPersonaje(ctx.sala, p.id),
+        descripcion: describirPersonaje(ctx.juego, p.id),
         valor: p.id,
         ...(p.tipo === 'outsider' ? { rasgos: ['forastero' as const], peso: 1 / forasteros } : {}),
       }));
@@ -67,10 +69,11 @@ async function decirCero(ctx: ContextoEtapa, asientoId: string): Promise<false> 
  * (y entonces se vuelve a preparar) o false si no le toca (esa fila no se despierta).
  */
 export async function cumplirRequisitos(ctx: ContextoEtapa, fila: SalaHabilidadNoche): Promise<boolean> {
+  const { partida } = ctx.juego;
   let puesto = false;
   const faltan = fila.avisos.flatMap((a) => (a.tipo === 'faltaRecordatorio' ? [a] : []));
   if (fila.avisos.some((a) => a.tipo === 'faltanFaroles')) puesto = (await ponerFaroles(ctx)) || puesto;
-  const asientos = ctx.sala.asientos();
+  const asientos = partida.mesa();
   const yo = asientos.find((a) => a.id === fila.asiento);
   const otros = asientos.filter((a) => a.id !== fila.asiento);
   // El correcto antes que el «Wrong» (que no puede caer en el mismo)
@@ -80,22 +83,22 @@ export async function cumplirRequisitos(ctx: ContextoEtapa, fila: SalaHabilidadN
     let elegido: SalaAsiento | null = null;
     if (clave === 'red herring') {
       // La Pitonisa: un bueno cualquiera (puede ser ella)
-      const buenos = asientos.filter((a) => ctx.sala.alineamientoEfectivo(a) !== 'malvado');
+      const buenos = asientos.filter((a) => partida.grimorio.alineamiento(a) !== 'malvado');
       elegido = buenos.length
         ? await ctx.decidir({
             motivo: 'redHerring',
             pregunta: 'El Red Herring de la Pitonisa: un jugador bueno que le saldrá como el demonio.',
-            opciones: opcionesDeAsientos(ctx.sala, buenos),
+            opciones: opcionesDeAsientos(ctx.juego, buenos),
           })
         : null;
     } else if (TIPO_DEL_CORRECTO[clave]) {
-      const deEseTipo = otros.filter((a) => tipoReal(ctx.sala, a) === TIPO_DEL_CORRECTO[clave]);
+      const deEseTipo = otros.filter((a) => tipoReal(ctx.juego, a) === TIPO_DEL_CORRECTO[clave]);
       // Nadie de ese tipo (el Bibliotecario sin forasteros, aunque haya un Espía): «cero»
       if (!deEseTipo.length && yo) return decirCero(ctx, yo.id);
       elegido = await ctx.decidir({
         motivo: 'correcto',
-        pregunta: `El jugador de verdad que se le enseña a ${describirPersonaje(ctx.sala, personaje)} («${texto}»).`,
-        opciones: opcionesDeAsientos(ctx.sala, deEseTipo),
+        pregunta: `El jugador de verdad que se le enseña a ${describirPersonaje(ctx.juego, personaje)} («${texto}»).`,
+        opciones: opcionesDeAsientos(ctx.juego, deEseTipo),
       });
       correcto = elegido;
     } else if (clave === 'wrong') {
@@ -103,8 +106,8 @@ export async function cumplirRequisitos(ctx: ContextoEtapa, fila: SalaHabilidadN
       elegido = posibles.length
         ? await ctx.decidir({
             motivo: 'incorrecto',
-            pregunta: `El otro jugador que se le enseña a ${describirPersonaje(ctx.sala, personaje)}, que no es ese personaje («Wrong»).`,
-            opciones: opcionesDeAsientos(ctx.sala, posibles),
+            pregunta: `El otro jugador que se le enseña a ${describirPersonaje(ctx.juego, personaje)}, que no es ese personaje («Wrong»).`,
+            opciones: opcionesDeAsientos(ctx.juego, posibles),
           })
         : null;
     }

@@ -14,6 +14,7 @@ import { esDemonio } from '../final/comprobarFinal';
 import type { Cronica } from '../final/cronica';
 import { contextoNoche, nombreDeAsiento, tipoReal } from '../mesaDeJuego';
 import { ponerRecordatorio } from '../noche/requisitos';
+import { identidadDe } from '../../partida/Grimorio';
 
 /**
  * La pregunta del Artista (una vez por partida y persona, lo sea o no, como el
@@ -28,13 +29,14 @@ export async function preguntarComoArtista(
   jugador: string,
   datos: unknown,
 ): Promise<{ error: string } | { respuesta: RespuestaArtista }> {
-  const { sala } = ctx;
-  const asiento = sala.asientoDe(jugador);
+  const { juego } = ctx;
+  const { partida } = juego;
+  const asiento = partida.asientoDe(jugador);
   if (!asiento) return { error: 'No estás sentado.' };
   const { texto, pregunta } = (datos as { texto?: unknown; pregunta?: unknown } | null) ?? {};
-  const artista = sala.identidad(asiento) === 'artist';
-  const sano = artista && !droison(contextoNoche(sala), asiento);
-  const quien = `${nombreDeAsiento(sala, asiento.id)} (${artista ? (sano ? 'el Artista, sano' : 'el Artista, envenenado o borracho') : `no es el Artista: es ${sala.identidad(asiento) ?? 'nadie'}`})`;
+  const artista = identidadDe(asiento) === 'artist';
+  const sano = artista && !droison(contextoNoche(juego), asiento);
+  const quien = `${nombreDeAsiento(juego, asiento.id)} (${artista ? (sano ? 'el Artista, sano' : 'el Artista, envenenado o borracho') : `no es el Artista: es ${identidadDe(asiento) ?? 'nadie'}`})`;
 
   let respuesta: RespuestaArtista;
   let enPalabras: string;
@@ -56,12 +58,12 @@ export async function preguntarComoArtista(
   } else {
     const leida = leerPreguntaArtista(
       pregunta,
-      sala.asientos().map((a) => a.id),
-      (sala.guion()?.personajes ?? []).map((p) => p.id),
+      partida.mesa().map((a) => a.id),
+      (partida.guion.actual()?.personajes ?? []).map((p) => p.id),
     );
     if (!leida) return { error: 'Esa pregunta no se entiende.' };
-    const verdad = contestar(sala, ctx.recuerdos.cronica, leida);
-    enPalabras = describirPreguntaArtista(leida, { asiento: (id) => nombreDeAsiento(sala, id), personaje: (id) => sala.personaje(id)?.nombre ?? id });
+    const verdad = contestar(juego, ctx.recuerdos.cronica, leida);
+    enPalabras = describirPreguntaArtista(leida, { asiento: (id) => nombreDeAsiento(juego, id), personaje: (id) => partida.guion.personaje(id)?.nombre ?? id });
     const si = sano
       ? verdad
       : await ctx.siONo({
@@ -73,39 +75,41 @@ export async function preguntarComoArtista(
     respuesta = si ? 'si' : 'no';
   }
 
-  sala.anotar({ tipo: 'artista', asiento: sala.asientoDiario(asiento.id), pregunta: enPalabras, respuesta });
+  partida.anotar({ tipo: 'artista', asiento: partida.asientoDiario(asiento.id), pregunta: enPalabras, respuesta });
   if (respuesta === 'reformular') return { respuesta };
   if (artista) await ponerRecordatorio(ctx, asiento.id, 'artist', 'No Ability');
-  const narrador = sala.narradorVirtual();
-  if (narrador) sala.actualizarNarradorVirtual({ artistas: [...narrador.artistas, jugador] });
+  const narrador = juego.narrador.actual();
+  if (narrador) juego.narrador.actualizar({ artistas: [...narrador.artistas, jugador] });
   return { respuesta };
 }
 
 /** Si un asiento es lo que se pregunta: el demonio lo es también la Mujer Escarlata que lo ha heredado. */
-function es(sala: SalaDeJuego, asiento: SalaAsiento, quien: QuienArtista): boolean {
-  if (quien.por === 'personaje') return sala.identidad(asiento) === quien.personaje;
-  if (quien.por === 'tipo') return quien.tipo === 'demon' ? esDemonio(sala, asiento) : tipoReal(sala, asiento) === quien.tipo;
-  return (sala.alineamientoEfectivo(asiento) ?? 'bueno') === quien.alineamiento;
+function es(juego: SalaDeJuego, asiento: SalaAsiento, quien: QuienArtista): boolean {
+  const { partida } = juego;
+  if (quien.por === 'personaje') return identidadDe(asiento) === quien.personaje;
+  if (quien.por === 'tipo') return quien.tipo === 'demon' ? esDemonio(juego, asiento) : tipoReal(juego, asiento) === quien.tipo;
+  return (partida.grimorio.alineamiento(asiento) ?? 'bueno') === quien.alineamiento;
 }
 
 /** Sin tildes ni mayúsculas: para comparar la inicial. */
 const llana = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
 /** La respuesta de verdad a una pregunta montada, con el grimorio y lo apuntado en la crónica (quién eligió a quién). */
-export function contestar(sala: SalaDeJuego, cronica: Cronica, p: PreguntaArtista): boolean {
-  const mesa = sala.asientos();
-  const conQuien = mesa.filter((a) => es(sala, a, p.quien));
+export function contestar(juego: SalaDeJuego, cronica: Cronica, p: PreguntaArtista): boolean {
+  const { sala, partida } = juego;
+  const mesa = partida.mesa();
+  const conQuien = mesa.filter((a) => es(juego, a, p.quien));
   switch (p.tipo) {
     case 'enJuego':
       return conQuien.length > 0;
     case 'es': {
       const de = p.asientos.flatMap((id) => mesa.find((a) => a.id === id) ?? []);
-      return p.todos ? de.every((a) => es(sala, a, p.quien)) : de.some((a) => es(sala, a, p.quien));
+      return p.todos ? de.every((a) => es(juego, a, p.quien)) : de.some((a) => es(juego, a, p.quien));
     }
     case 'inicial':
       // Solo los que se sientan tienen nombre
       return conQuien.some((a) => {
-        const nombre = a.ocupante ? sala.buscar(a.ocupante)?.nombre : undefined;
+        const nombre = a.ocupante ? sala.participantes.buscar(a.ocupante)?.nombre : undefined;
         return !!nombre && llana(nombre).startsWith(llana(p.letra));
       });
     case 'silla':

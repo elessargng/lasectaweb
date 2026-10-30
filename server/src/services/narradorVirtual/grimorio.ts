@@ -3,6 +3,7 @@ import { droison } from '../partida/reglas/ReglaPersonaje';
 import type { Opcion } from './estrategias/EstrategiaNarrador';
 import type { SalaDeJuego } from '../SalaDeJuego';
 import { contextoNoche, nombreDeAsiento, tipoReal, vivo } from './mesaDeJuego';
+import { identidadDe } from '../partida/Grimorio';
 
 /**
  * El grimorio tal como lo ve el narrador, en una foto para decidir: lo que la
@@ -72,24 +73,25 @@ function mensaje(m: MensajeDespertar, numero: Map<string, number>): MensajeGrimo
   };
 }
 
-export function instantaneaGrimorio(sala: SalaDeJuego): Grimorio {
-  const asientos = sala.asientos();
+export function instantaneaGrimorio(juego: SalaDeJuego): Grimorio {
+  const { partida } = juego;
+  const asientos = partida.mesa();
   const numero = numeros(asientos);
-  const noche = contextoNoche(sala);
-  const despertares = sala.despertares();
+  const noche = contextoNoche(juego);
+  const despertares = partida.despertares.despertares();
   return {
-    guion: sala.guion()?.edicion ?? null,
-    fase: { momento: sala.fase().momento, numero: sala.fase().numero },
+    guion: partida.guion.actual()?.edicion ?? null,
+    fase: { momento: partida.fases.actual().momento, numero: partida.fases.actual().numero },
     asientos: asientos.map((a, i) => {
-      const identidad = sala.identidad(a) ?? null;
-      const alineamiento = sala.alineamientoEfectivo(a) ?? null;
+      const identidad = identidadDe(a) ?? null;
+      const alineamiento = partida.grimorio.alineamiento(a) ?? null;
       const malvado = alineamiento === 'malvado';
       return {
         numero: i + 1,
-        nombre: nombreDeAsiento(sala, a.id),
+        nombre: nombreDeAsiento(juego, a.id),
         ocupado: !!a.ocupante,
         personaje: identidad,
-        tipo: tipoReal(sala, a) ?? null,
+        tipo: tipoReal(juego, a) ?? null,
         ...(a.personaje && a.personaje !== identidad ? { ficha: a.personaje } : {}),
         alineamiento,
         vivo: vivo(a),
@@ -100,48 +102,53 @@ export function instantaneaGrimorio(sala: SalaDeJuego): Grimorio {
         despertar: (despertares.find((d) => d.asiento === a.id)?.mensajes ?? []).map((m) => mensaje(m, numero)),
       };
     }),
-    personajes: (sala.guion()?.personajes ?? []).map((p) => ({ id: p.id, nombre: p.nombre, tipo: p.tipo })),
-    farolesDemonio: sala.faroles().filter((f): f is string => !!f),
-    votaciones: sala.votaciones(),
+    personajes: (partida.guion.actual()?.personajes ?? []).map((p) => ({ id: p.id, nombre: p.nombre, tipo: p.tipo })),
+    farolesDemonio: partida.faroles.faroles().filter((f): f is string => !!f),
+    votaciones: partida.nominaciones.votaciones(),
   };
 }
 
 /** Un asiento como opción de una decisión: «Asiento 3: Ana (chef, bueno)». */
-export function describirAsiento(sala: SalaDeJuego, asiento: SalaAsiento): string {
-  const i = sala.asientos().findIndex((a) => a.id === asiento.id);
-  const quien = sala.identidad(asiento);
-  const datos = [quien && (sala.personaje(quien)?.nombre ?? quien), sala.alineamientoEfectivo(asiento), vivo(asiento) ? null : 'muerto'].filter(Boolean);
-  return `Asiento ${i + 1}: ${nombreDeAsiento(sala, asiento.id)}${datos.length ? ` (${datos.join(', ')})` : ''}`;
+export function describirAsiento(juego: SalaDeJuego, asiento: SalaAsiento): string {
+  const { partida } = juego;
+  const i = partida.mesa().findIndex((a) => a.id === asiento.id);
+  const quien = identidadDe(asiento);
+  const datos = [quien && (partida.guion.personaje(quien)?.nombre ?? quien), partida.grimorio.alineamiento(asiento), vivo(asiento) ? null : 'muerto'].filter(Boolean);
+  return `Asiento ${i + 1}: ${nombreDeAsiento(juego, asiento.id)}${datos.length ? ` (${datos.join(', ')})` : ''}`;
 }
 
 /** Un personaje como opción: «Monje (townsfolk)». */
-export function describirPersonaje(sala: SalaDeJuego, id: string): string {
-  const p = sala.personaje(id);
+export function describirPersonaje(juego: SalaDeJuego, id: string): string {
+  const { partida } = juego;
+  const p = partida.guion.personaje(id);
   return p ? `${p.nombre} (${p.tipo})` : id;
 }
 
 /** Unos asientos como opciones de una decisión (la clave, su número: «a3»). */
-export function opcionesDeAsientos(sala: SalaDeJuego, asientos: readonly SalaAsiento[]): Opcion<SalaAsiento>[] {
-  const numero = numeros(sala.asientos());
-  return asientos.map((a) => ({ clave: `a${numero.get(a.id) ?? a.id}`, descripcion: describirAsiento(sala, a), valor: a }));
+export function opcionesDeAsientos(juego: SalaDeJuego, asientos: readonly SalaAsiento[]): Opcion<SalaAsiento>[] {
+  const { partida } = juego;
+  const numero = numeros(partida.mesa());
+  return asientos.map((a) => ({ clave: `a${numero.get(a.id) ?? a.id}`, descripcion: describirAsiento(juego, a), valor: a }));
 }
 
 /** Lo que se le manda a alguien en su despertar, en palabras: «tarjeta esteJugadorEs; ficha dos; jugadores 3 y 5; personajes Chef». */
-export function describirEnvio(sala: SalaDeJuego, envio: SalaEnvioDespertar): string {
-  const numero = numeros(sala.asientos());
+export function describirEnvio(juego: SalaDeJuego, envio: SalaEnvioDespertar): string {
+  const { partida } = juego;
+  const numero = numeros(partida.mesa());
   const partes = [
     envio.tarjeta && `tarjeta ${envio.tarjeta}`,
     envio.ficha && `ficha ${envio.ficha}`,
     envio.jugadores.length > 0 && `jugadores ${envio.jugadores.map((id) => numero.get(id) ?? id).join(' y ')}`,
-    envio.personajes.length > 0 && `personajes ${envio.personajes.map((id) => sala.personaje(id)?.nombre ?? id).join(' y ')}`,
+    envio.personajes.length > 0 && `personajes ${envio.personajes.map((id) => partida.guion.personaje(id)?.nombre ?? id).join(' y ')}`,
     envio.texto && `texto «${envio.texto}»`,
   ];
   return partes.filter(Boolean).join('; ') || 'nada';
 }
 
 /** Una respuesta propuesta de un despertar, con cómo registra cada uno para que salga. */
-export function describirOpcion(sala: SalaDeJuego, { envio, registros }: SalaOpcionDespertar): string {
-  const numero = numeros(sala.asientos());
+export function describirOpcion(juego: SalaDeJuego, { envio, registros }: SalaOpcionDespertar): string {
+  const { partida } = juego;
+  const numero = numeros(partida.mesa());
   const como = registros.map((r) => `el asiento ${numero.get(r.asiento) ?? r.asiento} registra como ${r.como}`);
-  return `${describirEnvio(sala, envio)}${como.length ? ` (${como.join(', ')})` : ''}`;
+  return `${describirEnvio(juego, envio)}${como.length ? ` (${como.join(', ')})` : ''}`;
 }

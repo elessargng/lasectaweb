@@ -72,7 +72,7 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
   private vacios = new Map<string, () => void>();
 
   constructor(
-    private readonly sala: SalaDeJuego,
+    private readonly juego: SalaDeJuego,
     /** La mesa del narrador virtual con ese participante. */
     private readonly mesaDe: (participanteId: string) => MesaNarrador,
     private readonly voz: Voz,
@@ -87,11 +87,12 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
   ) {}
 
   async anadir(creador: string, { narrador, guion, jugadores }: OpcionesNarradorVirtual): Promise<string | null> {
+    const { sala, partida } = this.juego;
     const datos = NARRADORES_VIRTUALES.find((n) => n.id === narrador);
     if (!datos?.disponible) return 'Ese narrador virtual aún no está disponible.';
     const libre = () => {
-      if (this.sala.hayNarrador()) return 'La sala ya tiene narrador.';
-      const sentados = this.sala.asientos().filter((a) => a.ocupante).length;
+      if (sala.participantes.hayNarrador()) return 'La sala ya tiene narrador.';
+      const sentados = partida.mesa().filter((a) => a.ocupante).length;
       return sentados > jugadores ? `Ya hay ${sentados} jugadores sentados: elige al menos ${sentados}.` : null;
     };
     const ocupada = libre();
@@ -102,11 +103,11 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     const ocupadaYa = libre();
     if (ocupadaYa) return ocupadaYa;
 
-    const participante = this.sala.anadirNarradorVirtual({ id: narrador, creador, guion, jugadores }, datos.nombre, datos.avatar);
+    const participante = this.juego.narrador.anadir({ id: narrador, creador, guion, jugadores }, datos.nombre, datos.avatar);
     this.estrategia = estrategia;
     // Si no se pueden leer o apuntar las recientes, la partida sigue igual
     const recientes = (await this.bolsas?.de(creador).catch(() => null)) ?? [];
-    const preparada = await prepararPartida(this.sala, this.mesaDe(participante), (d) => this.contextoDecisiones().decidir(d), {
+    const preparada = await prepararPartida(this.juego, this.mesaDe(participante), (d) => this.contextoDecisiones().decidir(d), {
       guion,
       jugadores,
       azar: this.azar,
@@ -143,37 +144,40 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
 
   /** Jarvis no consigue hablar con su modelo: lo dice y sigue la partida «Tonto y tú». */
   private jarvisSeVa(tonto: EstrategiaNarrador): void {
-    if (!this.sala.narradorVirtual()) return;
+    const { narrador } = this.juego;
+    if (!narrador.actual()) return;
     this.estrategia = tonto;
     const tontoYTu = NARRADORES_VIRTUALES.find((n) => n.id === 'tontoYTu')!;
-    this.sala.relevarNarradorVirtual('tontoYTu', tontoYTu.nombre, tontoYTu.avatar);
+    narrador.relevar('tontoYTu', tontoYTu.nombre, tontoYTu.avatar);
     this.contexto().decir(FRASES.jarvisSeVa());
     this.difundir();
   }
 
   quitar(): void {
+    const { narrador } = this.juego;
     for (const cancelar of this.vacios.values()) cancelar();
     this.vacios.clear();
     this.etapa?.alSalir?.();
     this.etapa = null;
     this.estrategia = null;
     this.fuera = [];
-    this.sala.quitarNarradorVirtual();
+    narrador.quitar();
   }
 
   async pedir(jugador: string, accion: AccionJugador | AccionSuelta, datos: unknown): Promise<string | null> {
-    if (!this.etapa || !this.sala.narradorVirtual()) return 'La sala no tiene narrador virtual.';
+    const { sala, partida, narrador } = this.juego;
+    if (!this.etapa || !narrador.actual()) return 'La sala no tiene narrador virtual.';
     if (accion === 'exterminar' || accion === 'patoso') {
       const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
-      if (typeof asientoId !== 'string' || !this.sala.hayAsiento(asientoId)) return 'Ese asiento ya no existe.';
-      const mio = this.sala.asientoDe(jugador)?.id;
+      if (typeof asientoId !== 'string' || !sala.asiento(asientoId)) return 'Ese asiento ya no existe.';
+      const mio = partida.asientoDe(jugador)?.id;
       if (mio === asientoId) return accion === 'exterminar' ? 'No puedes dispararte a ti.' : 'Elige a otro jugador.';
       if (this.contando) return 'Espera a que el narrador termine de contar lo anterior.';
       const ctx = this.contexto();
       let contar: Promise<Ganador | null>;
       if (accion === 'patoso') {
         if (!mio) return 'No estás sentado.';
-        if (!vivo(this.sala.asientos().find((a) => a.id === asientoId)!)) return 'Elige a un jugador vivo.';
+        if (!vivo(partida.mesa().find((a) => a.id === asientoId)!)) return 'Elige a un jugador vivo.';
         contar = contarPatoso(ctx, mio, asientoId);
       } else {
         const muere = await exterminar(ctx, jugador, asientoId);
@@ -183,7 +187,7 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
       this.contando = true;
       void contar
         .then(async (ganador) => {
-          if (ganador && this.sala.narradorVirtual()) await this.pasarA(new Revelando(ganador));
+          if (ganador && narrador.actual()) await this.pasarA(new Revelando(ganador));
         })
         .finally(() => (this.contando = false));
       return null;
@@ -192,7 +196,8 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
   }
 
   async preguntarArtista(jugador: string, datos: unknown): Promise<{ error: string } | { respuesta: RespuestaArtista }> {
-    if (!this.etapa || !this.sala.narradorVirtual()) return { error: 'La sala no tiene narrador virtual.' };
+    const { narrador } = this.juego;
+    if (!this.etapa || !narrador.actual()) return { error: 'La sala no tiene narrador virtual.' };
     return preguntarComoArtista(this.contexto(), jugador, datos);
   }
 
@@ -206,7 +211,8 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
    * medio de otra revisión: si cambia mientras revisa, vuelve a mirar al acabar.
    */
   alCambiarSala(): void {
-    if (!this.sala.narradorVirtual()) return;
+    const { narrador } = this.juego;
+    if (!narrador.actual()) return;
     if (this.revisando) {
       this.otraVez = true;
       return;
@@ -215,14 +221,15 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
   }
 
   private async revisar(): Promise<void> {
+    const { sala, narrador } = this.juego;
     if (this.revisando) return;
     this.revisando = true;
     try {
       do {
         this.otraVez = false;
-        if (!this.sala.narradorVirtual()) return;
+        if (!narrador.actual()) return;
         // Sin nadie en la sala (solo él), se va
-        if (!this.sala.participantes().some((p) => !p.virtual)) {
+        if (!sala.participantes.participantes().some((p) => !p.virtual)) {
           this.quitar();
           return;
         }
@@ -237,10 +244,11 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
 
   /** A los visitantes que piden ver el grimorio, se lo concede (como haría un narrador). */
   private async concederGrimorios(): Promise<void> {
-    const narrador = this.sala.narradorVirtual();
+    const { sala, partida } = this.juego;
+    const narrador = this.juego.narrador.actual();
     if (!narrador) return;
-    for (const p of this.sala.participantes()) {
-      if (p.rol === 'visitante' && this.sala.accesoGrimorio(p.id) === 'solicitado') {
+    for (const p of sala.participantes.participantes()) {
+      if (p.rol === 'visitante' && partida.acceso.de(p.id) === 'solicitado') {
         await this.mesaDe(narrador.participante).accion('narrador:accesoGrimorio', { participanteId: p.id, conceder: true });
       }
     }
@@ -252,8 +260,9 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
    * quien se fue era el demonio, gana el bando bueno.
    */
   private vigilarAsientos(): void {
+    const { partida } = this.juego;
     const enPartida = !!this.etapa && EN_PARTIDA.includes(this.etapa.id);
-    const asientos = this.sala.asientos();
+    const asientos = partida.mesa();
     for (const [id, cancelar] of this.vacios) {
       if (!enPartida || asientos.find((a) => a.id === id)?.ocupante !== null) {
         cancelar();
@@ -274,9 +283,10 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
   }
 
   private async abandonado(asientoId: string): Promise<void> {
-    const asiento = this.sala.asientos().find((a) => a.id === asientoId);
+    const { partida } = this.juego;
+    const asiento = partida.mesa().find((a) => a.id === asientoId);
     if (!asiento || asiento.ocupante || !this.etapa || !EN_PARTIDA.includes(this.etapa.id)) return;
-    if (esDemonio(this.sala, asiento) && !asiento.muerto) {
+    if (esDemonio(this.juego, asiento) && !asiento.muerto) {
       await this.pasarA(new Revelando('bueno'));
       return;
     }
@@ -284,16 +294,16 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
   }
 
   private contexto(): ContextoEtapa {
-    const narrador = this.sala.narradorVirtual();
+    const narrador = this.juego.narrador.actual();
     if (!narrador || !this.estrategia) throw new Error('No hay narrador virtual.');
     return {
-      sala: this.sala,
+      juego: this.juego,
       mesa: this.mesaDe(narrador.participante),
       ...this.contextoDecisiones(),
       azar: this.azar,
       temporizador: this.temporizador,
       decir: (texto) => {
-        this.sala.actualizarNarradorVirtual({ frase: texto });
+        this.juego.narrador.actualizar({ frase: texto });
         this.voz.decir(texto);
       },
       pasarA: (etapa) => this.pasarA(etapa),
@@ -304,13 +314,14 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
 
   /** Las decisiones con la estrategia de ahora (si se cambia a media partida, la nueva). */
   private contextoDecisiones() {
-    return decisionesDe(this.sala, () => this.estrategia ?? new TontoYTu(this.azar));
+    return decisionesDe(this.juego, () => this.estrategia ?? new TontoYTu(this.azar));
   }
 
   private async pasarA(etapa: Etapa): Promise<void> {
+    const { narrador } = this.juego;
     this.etapa?.alSalir?.();
     this.etapa = etapa;
-    this.sala.actualizarNarradorVirtual({ etapa: etapa.id });
+    narrador.actualizar({ etapa: etapa.id });
     this.difundir();
     await etapa.alEntrar?.(this.contexto());
     // Por si ya le toca algo (la mesa ya estaba llena)

@@ -6,6 +6,7 @@ import type { Ganador } from '../final/comprobarFinal';
 import { duracionFrase, FRASES, PAUSA_MS } from '../frases';
 import { opcionesDeAsientos } from '../grimorio';
 import { contextoNoche, nombreDeAsiento, vivo } from '../mesaDeJuego';
+import { identidadDe } from '../../partida/Grimorio';
 
 /**
  * El Patoso: cuando se entera de que ha muerto (al ejecutarle, o al amanecer
@@ -17,17 +18,17 @@ import { contextoNoche, nombreDeAsiento, vivo } from '../mesaDeJuego';
  */
 
 /** Los muertos que pueden declararse Patoso hasta `hasta` (sin repetir a quien ya puede). */
-export function abrirPatosos(sala: SalaDeJuego, asientos: string[], hasta: SalaPatoso['hasta']): void {
-  const narrador = sala.narradorVirtual();
+export function abrirPatosos(juego: SalaDeJuego, asientos: string[], hasta: SalaPatoso['hasta']): void {
+  const narrador = juego.narrador.actual();
   if (!narrador || !asientos.length) return;
   const nuevos = asientos.filter((id) => !narrador.patosos.some((p) => p.asiento === id)).map((asiento) => ({ asiento, hasta }));
-  if (nuevos.length) sala.actualizarNarradorVirtual({ patosos: [...narrador.patosos, ...nuevos] });
+  if (nuevos.length) juego.narrador.actualizar({ patosos: [...narrador.patosos, ...nuevos] });
 }
 
 /** Ya no puede declararse Patoso (lo ha hecho, o se ha acabado su momento). */
-export function quitarPatoso(sala: SalaDeJuego, asientoId: string): void {
-  const narrador = sala.narradorVirtual();
-  if (narrador) sala.actualizarNarradorVirtual({ patosos: narrador.patosos.filter((p) => p.asiento !== asientoId) });
+export function quitarPatoso(juego: SalaDeJuego, asientoId: string): void {
+  const narrador = juego.narrador.actual();
+  if (narrador) juego.narrador.actualizar({ patosos: narrador.patosos.filter((p) => p.asiento !== asientoId) });
 }
 
 /**
@@ -36,17 +37,18 @@ export function quitarPatoso(sala: SalaDeJuego, asientoId: string): void {
  * estrategia) y se cuenta. Devuelve el ganador si con eso se acaba la partida.
  */
 export async function cerrarPatosos(ctx: ContextoEtapa, hasta: SalaPatoso['hasta']): Promise<Ganador | null> {
-  const { sala } = ctx;
-  const cierran = sala.narradorVirtual()?.patosos.filter((p) => p.hasta === hasta) ?? [];
+  const { juego } = ctx;
+  const { partida, narrador } = juego;
+  const cierran = narrador.actual()?.patosos.filter((p) => p.hasta === hasta) ?? [];
   for (const { asiento } of cierran) {
-    quitarPatoso(sala, asiento);
-    const patoso = sala.asientos().find((a) => a.id === asiento);
-    const vivos = sala.asientos().filter(vivo);
-    if (!patoso || sala.identidad(patoso) !== 'klutz' || !vivos.length) continue;
+    quitarPatoso(juego, asiento);
+    const patoso = partida.mesa().find((a) => a.id === asiento);
+    const vivos = partida.mesa().filter(vivo);
+    if (!patoso || identidadDe(patoso) !== 'klutz' || !vivos.length) continue;
     const elegido = await ctx.decidir({
       motivo: 'patoso',
-      pregunta: `El Patoso (${nombreDeAsiento(sala, asiento)}) no ha elegido: el jugador vivo que elige.`,
-      opciones: opcionesDeAsientos(sala, vivos),
+      pregunta: `El Patoso (${nombreDeAsiento(juego, asiento)}) no ha elegido: el jugador vivo que elige.`,
+      opciones: opcionesDeAsientos(juego, vivos),
     });
     const ganador = await contarPatoso(ctx, asiento, elegido.id, true);
     if (ganador) return ganador;
@@ -61,17 +63,18 @@ export async function cerrarPatosos(ctx: ContextoEtapa, hasta: SalaPatoso['hasta
  * Devuelve el ganador, si lo hay.
  */
 export async function contarPatoso(ctx: ContextoEtapa, patosoId: string, elegidoId: string, porElNarrador = false): Promise<Ganador | null> {
-  const { sala } = ctx;
-  quitarPatoso(sala, patosoId);
-  const patoso = sala.asientos().find((a) => a.id === patosoId);
-  const elegido = sala.asientos().find((a) => a.id === elegidoId);
+  const { juego } = ctx;
+  const { partida } = juego;
+  quitarPatoso(juego, patosoId);
+  const patoso = partida.mesa().find((a) => a.id === patosoId);
+  const elegido = partida.mesa().find((a) => a.id === elegidoId);
   if (!patoso || !elegido) return null;
-  sala.anotar({ tipo: 'patoso', asiento: sala.asientoDiario(patosoId), objetivo: sala.asientoDiario(elegidoId), porElNarrador });
-  const frase = FRASES.patoso(nombreDeAsiento(sala, patosoId), nombreDeAsiento(sala, elegidoId));
+  partida.anotar({ tipo: 'patoso', asiento: partida.asientoDiario(patosoId), objetivo: partida.asientoDiario(elegidoId), porElNarrador });
+  const frase = FRASES.patoso(nombreDeAsiento(juego, patosoId), nombreDeAsiento(juego, elegidoId));
   ctx.decir(frase);
   await new Promise<void>((seguir) => ctx.temporizador.programar(duracionFrase(frase) + PAUSA_MS, seguir));
-  const deVerdad = sala.identidad(patoso) === 'klutz' && !droison(contextoNoche(sala), patoso);
-  if (deVerdad && sala.alineamientoEfectivo(elegido) === 'malvado') return 'malvado';
+  const deVerdad = identidadDe(patoso) === 'klutz' && !droison(contextoNoche(juego), patoso);
+  if (deVerdad && partida.grimorio.alineamiento(elegido) === 'malvado') return 'malvado';
   ctx.decir(FRASES.partidaContinua());
   return null;
 }

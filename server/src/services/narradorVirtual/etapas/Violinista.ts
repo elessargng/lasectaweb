@@ -38,9 +38,10 @@ export class Violinista implements Etapa {
   }
 
   private async correr(ctx: ContextoEtapa): Promise<void> {
-    const { sala } = ctx;
-    const demonio = sala.asientos().find((a) => !a.muerto && esDemonio(sala, a)) ?? sala.asientos().find((a) => esDemonio(sala, a));
-    const buenos = sala.asientos().filter((a) => !esDemonio(sala, a) && sala.alineamientoEfectivo(a) !== 'malvado');
+    const { juego } = ctx;
+    const { partida } = juego;
+    const demonio = partida.mesa().find((a) => !a.muerto && esDemonio(juego, a)) ?? partida.mesa().find((a) => esDemonio(juego, a));
+    const buenos = partida.mesa().filter((a) => !esDemonio(juego, a) && partida.grimorio.alineamiento(a) !== 'malvado');
     if (!demonio || !buenos.length) return void ctx.pasarA(new Revelando(demonio ? 'malvado' : 'bueno'));
 
     const bueno =
@@ -49,7 +50,7 @@ export class Violinista implements Etapa {
         await ctx.decidir({
           motivo: 'violinistaBueno',
           pregunta: 'El Violinista: el jugador bueno que se enfrenta al demonio (el demonio no ha elegido).',
-          opciones: opcionesDeAsientos(ctx.sala, buenos),
+          opciones: opcionesDeAsientos(ctx.juego, buenos),
         })
       ).id;
     if (!this.seguir) return;
@@ -60,7 +61,7 @@ export class Violinista implements Etapa {
     });
     await this.esperar(ctx, SENALAMIENTO_SEGUNDOS * 1000 + 500);
     if (!this.seguir) return;
-    const senales = Object.values(sala.senalamiento()?.senales ?? {});
+    const senales = Object.values(partida.senalamientos.senalamiento()?.senales ?? {});
     await ctx.mesa.accion('narrador:terminarSenalamiento');
     const alDemonio = senales.filter((s) => s === demonio.id).length;
     const alBueno = senales.filter((s) => s === bueno).length;
@@ -71,13 +72,13 @@ export class Violinista implements Etapa {
 
   /** El demonio elige en un despertar: el asiento de un bueno, o null si no está o no contesta a tiempo. */
   private async eligeElDemonio(ctx: ContextoEtapa, demonio: string, buenos: string[]): Promise<string | null> {
-    const { sala } = ctx;
-    if (!sala.asientos().find((a) => a.id === demonio)?.ocupante) return null;
+    const { partida } = ctx.juego;
+    if (!partida.mesa().find((a) => a.id === demonio)?.ocupante) return null;
     if (!(await ctx.mesa.accion('narrador:despertar', { asientoId: demonio })).ok) return null;
     await ctx.mesa.accion('despertar:enviar', { asientoId: demonio, ficha: 'personalizado', texto: PIDE_AL_DEMONIO });
     const limite = Date.now() + ELIGE_EL_DEMONIO_MS;
     for (let vuelta = 0; this.seguir && Date.now() < limite && vuelta < ELIGE_EL_DEMONIO_MS / 250; vuelta++) {
-      const ultimo = sala.despertares().find((d) => d.asiento === demonio)?.mensajes.slice(-1)[0];
+      const ultimo = partida.despertares.despertares().find((d) => d.asiento === demonio)?.mensajes.slice(-1)[0];
       if (ultimo && ultimo.autor !== 'narrador' && ultimo.ficha === 'jugador') {
         const elegido = ultimo.jugadores.find((j) => buenos.includes(j));
         if (elegido) {

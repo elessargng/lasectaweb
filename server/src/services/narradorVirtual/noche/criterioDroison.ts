@@ -34,20 +34,21 @@ const clave = (asiento: string, personaje: string) => `${asiento}:${personaje}`;
 const forma = (e: SalaEnvioDespertar) => JSON.stringify([e.ficha, e.tarjeta, e.jugadores, e.personajes, e.texto]);
 export const mismoEnvio = (a: SalaEnvioDespertar, b: SalaEnvioDespertar) => forma(a) === forma(b);
 
-const tipoMalvado = (sala: SalaDeJuego, personaje: string) => ['minion', 'demon'].includes(sala.personaje(personaje)?.tipo ?? '');
+const tipoMalvado = ({ partida }: SalaDeJuego, personaje: string) => ['minion', 'demon'].includes(partida.guion.personaje(personaje)?.tipo ?? '');
 
 /** Si una información señala al mal: un número mayor que cero, un «Sí», o enseña a un esbirro o un demonio. */
-export function destapaAlMal(sala: SalaDeJuego, envio: SalaEnvioDespertar): boolean {
+export function destapaAlMal(juego: SalaDeJuego, envio: SalaEnvioDespertar): boolean {
   const n = numeroDe(envio);
   if (n !== null) return n > 0;
   if (envio.ficha === 'si' || envio.ficha === 'no') return envio.ficha === 'si';
-  return envio.personajes.some((p) => tipoMalvado(sala, p));
+  return envio.personajes.some((p) => tipoMalvado(juego, p));
 }
 
 /** Cómo va el mal: los malvados vivos sobre los vivos, menos los del principio (positivo: va ganando). */
-export function ventajaDelMal(sala: SalaDeJuego): number {
-  const jugadores = sala.asientos().filter((a) => tipoReal(sala, a) !== 'traveller');
-  const malvado = (a: (typeof jugadores)[number]) => sala.alineamientoEfectivo(a) === 'malvado';
+export function ventajaDelMal(juego: SalaDeJuego): number {
+  const { partida } = juego;
+  const jugadores = partida.mesa().filter((a) => tipoReal(juego, a) !== 'traveller');
+  const malvado = (a: (typeof jugadores)[number]) => partida.grimorio.alineamiento(a) === 'malvado';
   const vivos = jugadores.filter(vivo);
   if (!vivos.length || !jugadores.length) return 0;
   return vivos.filter(malvado).length / vivos.length - jugadores.filter(malvado).length / jugadores.length;
@@ -56,26 +57,27 @@ export function ventajaDelMal(sala: SalaDeJuego): number {
 const entre = (min: number, max: number, x: number) => Math.min(max, Math.max(min, x));
 
 /** La probabilidad de decirle la verdad a quien está droison. */
-export function probabilidadVerdad(sala: SalaDeJuego, asiento: string, personaje: string, verdadera: SalaEnvioDespertar, recuerdos: RecuerdosNarrador): number {
+export function probabilidadVerdad(juego: SalaDeJuego, asiento: string, personaje: string, verdadera: SalaEnvioDespertar, recuerdos: RecuerdosNarrador): number {
   // A lo mismo que otra noche, lo mismo: si entonces fue la verdad, otra vez; si fue mentira, otra vez mentira
   const antes = recuerdos.droison.get(clave(asiento, personaje));
   if (antes && mismoEnvio(antes.verdadera, verdadera)) return mismoEnvio(antes.dada, verdadera) ? 0.95 : 0.05;
-  const ventaja = ventajaDelMal(sala);
-  return destapaAlMal(sala, verdadera) ? entre(0.05, 0.4, 0.05 + Math.max(0, ventaja) * 2) : entre(0.3, 0.7, 0.5 + ventaja);
+  const ventaja = ventajaDelMal(juego);
+  return destapaAlMal(juego, verdadera) ? entre(0.05, 0.4, 0.05 + Math.max(0, ventaja) * 2) : entre(0.3, 0.7, 0.5 + ventaja);
 }
 
 /** Las informaciones falsas como opciones, con sus rasgos y lo que pesan al azar. */
 export function opcionesFalsas(
-  sala: SalaDeJuego,
+  juego: SalaDeJuego,
   asiento: string,
   personaje: string,
   verdadera: SalaEnvioDespertar,
   falsas: SalaEnvioDespertar[],
   recuerdos: RecuerdosNarrador,
 ): Opcion<SalaEnvioDespertar>[] {
+  const { partida } = juego;
   const antes = recuerdos.droison.get(clave(asiento, personaje));
   const n = numeroDe(verdadera);
-  const asientos = sala.asientos();
+  const asientos = partida.mesa();
   return falsas.map((f, i) => {
     const rasgos: RasgoOpcion[] = [];
     let peso = 1;
@@ -91,15 +93,15 @@ export function opcionesFalsas(
     }
     const [ensenado] = f.personajes;
     const jugadores = f.jugadores.flatMap((id) => asientos.find((a) => a.id === id) ?? []);
-    if (ensenado && jugadores.some((a) => sala.alineamientoEfectivo(a) === 'malvado' && a.farolEnUso === ensenado)) {
+    if (ensenado && jugadores.some((a) => partida.grimorio.alineamiento(a) === 'malvado' && a.farolEnUso === ensenado)) {
       rasgos.push('confirmaFarol');
       peso *= 6;
     }
-    if (ensenado && tipoMalvado(sala, ensenado) && jugadores.some((a) => sala.alineamientoEfectivo(a) !== 'malvado')) {
+    if (ensenado && tipoMalvado(juego, ensenado) && jugadores.some((a) => partida.grimorio.alineamiento(a) !== 'malvado')) {
       rasgos.push('inculpaABueno');
       peso *= 2;
     }
-    return { clave: `f${i + 1}`, descripcion: describirEnvio(sala, f), valor: f, peso, ...(rasgos.length ? { rasgos: [...new Set(rasgos)] } : {}) };
+    return { clave: `f${i + 1}`, descripcion: describirEnvio(juego, f), valor: f, peso, ...(rasgos.length ? { rasgos: [...new Set(rasgos)] } : {}) };
   });
 }
 

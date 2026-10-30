@@ -35,20 +35,21 @@ export interface FueraDeLaBolsa {
  * pero no van en ella (el Borracho: lo pone el narrador la primera noche).
  */
 export async function prepararPartida(
-  sala: SalaDeJuego,
+  juego: SalaDeJuego,
   mesa: MesaNarrador,
   decidir: <T>(decision: Decision<T>) => Promise<T>,
   { guion, jugadores, azar, recientes }: { guion: GuionNarradorVirtual; jugadores: number; azar: Azar; recientes: readonly (readonly string[])[] },
 ): Promise<{ error: string } | { personajes: string[]; fuera: FueraDeLaBolsa[] }> {
+  const { partida } = juego;
   const paso = async (accion: string, datos?: unknown) => {
     const r = await mesa.accion(accion, datos);
     if (!r.ok) throw new Error(r.error);
   };
   try {
     await paso('narrador:limpiarGrimorio');
-    while (sala.asientos().length < jugadores) await paso('narrador:asientos', { cambio: 'añadir' });
-    while (sala.asientos().length > jugadores) {
-      const asientos = sala.asientos();
+    while (partida.mesa().length < jugadores) await paso('narrador:asientos', { cambio: 'añadir' });
+    while (partida.mesa().length > jugadores) {
+      const asientos = partida.mesa();
       const ultimo = asientos[asientos.length - 1];
       const libre = asientos.slice(0, -1).find((a) => !a.ocupante);
       if (ultimo.ocupante && libre) await paso('narrador:asientos', { cambio: 'mover', desde: ultimo.id, hasta: libre.id });
@@ -56,8 +57,8 @@ export async function prepararPartida(
     }
     await paso('narrador:cambiarGuion', { predeterminado: guion });
     await paso('narrador:configurarPartida', { grimorioJugadores: true });
-    const personajes = sala.guion()?.personajes ?? [];
-    const bolsa = await elegirBolsa(personajes, sala.distribucion(), decidir, { azar, recientes });
+    const personajes = partida.guion.actual()?.personajes ?? [];
+    const bolsa = await elegirBolsa(personajes, partida.reparto.distribucion(), decidir, { azar, recientes });
     if (!bolsa) return { error: 'No hay reparto para tantos jugadores.' };
     await paso('narrador:llenarBolsa', { personajes: bolsa.personajes });
     return { personajes: bolsa.personajes, fuera: bolsa.fuera };

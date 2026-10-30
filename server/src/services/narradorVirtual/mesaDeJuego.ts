@@ -1,6 +1,7 @@
 import type { SalaAsiento } from '../../contrato/sala';
 import type { ContextoNoche } from '../partida/habilidades/HabilidadNocturna';
 import type { SalaDeJuego } from '../SalaDeJuego';
+import { identidadDe } from '../partida/Grimorio';
 
 /**
  * Consultas a la mesa que usan las etapas del narrador virtual (solo leen; lo que
@@ -8,29 +9,31 @@ import type { SalaDeJuego } from '../SalaDeJuego';
  */
 
 /** El tipo de quien es de verdad el de un asiento. */
-export const tipoReal = (sala: SalaDeJuego, asiento: SalaAsiento): string | undefined => {
-  const id = sala.identidad(asiento);
-  return id ? sala.personaje(id)?.tipo : undefined;
+export const tipoReal = (juego: SalaDeJuego, asiento: SalaAsiento): string | undefined => {
+  const { partida } = juego;
+  const id = identidadDe(asiento);
+  return id ? partida.guion.personaje(id)?.tipo : undefined;
 };
 
 /** Vivo: ni muerto ni muere esta noche. */
 export const vivo = (asiento: SalaAsiento): boolean => !asiento.muerto && !asiento.muertePendiente;
 
 /** Cómo se le nombra en voz alta: quien se sienta o, libre, su asiento. */
-export function nombreDeAsiento(sala: SalaDeJuego, asientoId: string): string {
-  const asientos = sala.asientos();
+export function nombreDeAsiento(juego: SalaDeJuego, asientoId: string): string {
+  const { sala, partida } = juego;
+  const asientos = partida.mesa();
   const i = asientos.findIndex((a) => a.id === asientoId);
   const ocupante = asientos[i]?.ocupante;
-  return (ocupante && sala.buscar(ocupante)?.nombre) || `el asiento ${i + 1}`;
+  return (ocupante && sala.participantes.buscar(ocupante)?.nombre) || `el asiento ${i + 1}`;
 }
 
 /** Lo que consultan las habilidades de noche, desde la sala (para preguntarles como lo haría la sala). */
-export const contextoNoche = (sala: SalaDeJuego): ContextoNoche => ({
-  mesa: () => sala.asientos(),
-  identidad: (asiento) => sala.identidad(asiento),
-  alineamiento: (asiento) => sala.alineamientoEfectivo(asiento),
-  personaje: (id) => sala.personaje(id),
-  faroles: () => sala.faroles(),
+export const contextoNoche = ({ partida }: SalaDeJuego): ContextoNoche => ({
+  mesa: () => partida.mesa(),
+  identidad: (asiento) => identidadDe(asiento),
+  alineamiento: (asiento) => partida.grimorio.alineamiento(asiento),
+  personaje: (id) => partida.guion.personaje(id),
+  faroles: () => partida.faroles.faroles(),
 });
 
 /**
@@ -40,10 +43,10 @@ export const contextoNoche = (sala: SalaDeJuego): ContextoNoche => ({
  * narrador le ha contestado «Entendido» (lo ha visto), ya está, el jugador no
  * tiene que contestarle a eso.
  */
-export function sinEntender(sala: SalaDeJuego): string[] {
-  const asientos = sala.asientos();
-  return sala
-    .despertares()
+export function sinEntender(juego: SalaDeJuego): string[] {
+  const { partida } = juego;
+  const asientos = partida.mesa();
+  return partida.despertares.despertares()
     .filter((d) => {
       if (!asientos.find((a) => a.id === d.asiento)?.ocupante) return false;
       const ultimo = d.mensajes[d.mensajes.length - 1];
@@ -53,8 +56,8 @@ export function sinEntender(sala: SalaDeJuego): string[] {
 }
 
 /** Si todos los despertados de esta noche han contestado «Entendido». */
-export const todosHanEntendido = (sala: SalaDeJuego): boolean => sinEntender(sala).length === 0;
+export const todosHanEntendido = (juego: SalaDeJuego): boolean => sinEntender(juego).length === 0;
 
 /** El índice de un recordatorio de un personaje por su texto (en el original), o -1. */
-export const indiceRecordatorio = (sala: SalaDeJuego, personaje: string, texto: string): number =>
-  sala.personaje(personaje)?.recordatorios.findIndex((t) => t.toLowerCase() === texto.toLowerCase()) ?? -1;
+export const indiceRecordatorio = ({ partida }: SalaDeJuego, personaje: string, texto: string): number =>
+  partida.guion.personaje(personaje)?.recordatorios.findIndex((t) => t.toLowerCase() === texto.toLowerCase()) ?? -1;

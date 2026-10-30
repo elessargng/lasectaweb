@@ -25,10 +25,10 @@ export async function resolverRevision(ctx: ContextoEtapa, fila: SalaHabilidadNo
 function elegirOpcion(ctx: ContextoEtapa, fila: SalaHabilidadNoche): Promise<SalaEnvioDespertar> {
   return ctx.decidir({
     motivo: 'revision',
-    pregunta: `Qué se le dice a ${describirPersonaje(ctx.sala, fila.personaje)}: alguien puede registrar como otro.`,
+    pregunta: `Qué se le dice a ${describirPersonaje(ctx.juego, fila.personaje)}: alguien puede registrar como otro.`,
     opciones: fila.opciones.map((o, i) => ({
       clave: `o${i + 1}`,
-      descripcion: describirOpcion(ctx.sala, o),
+      descripcion: describirOpcion(ctx.juego, o),
       valor: o.envio,
       ...(i === 0 ? { rasgos: ['verdad' as const] } : {}),
     })),
@@ -41,30 +41,32 @@ function elegirOpcion(ctx: ContextoEtapa, fila: SalaHabilidadNoche): Promise<Sal
  * Null si no está droison o no se sabe inventar una falsa.
  */
 async function droison(ctx: ContextoEtapa, fila: SalaHabilidadNoche): Promise<SalaEnvioDespertar | null> {
+  const { partida } = ctx.juego;
   if (!fila.avisos.some((a) => a.tipo === 'envenenado' || a.tipo === 'borracho')) return null;
-  const habilidad = habilidadesDelGuion(ctx.sala.guion()?.edicion ?? null).get(fila.personaje);
+  const habilidad = habilidadesDelGuion(partida.guion.actual()?.edicion ?? null).get(fila.personaje);
   if (!habilidad) return null;
   // La primera opción es la de verdad
   const verdadera = fila.opciones[0].envio;
-  const falsas = informacionesFalsas({ verdadera, habilidad, ctx: contextoNoche(ctx.sala), personajes: ctx.sala.guion()?.personajes ?? [] });
+  const falsas = informacionesFalsas({ verdadera, habilidad, ctx: contextoNoche(ctx.juego), personajes: partida.guion.actual()?.personajes ?? [] });
   if (!falsas.length) return null;
-  const { sala, recuerdos } = ctx;
-  const quien = describirPersonaje(sala, fila.personaje);
+  const { recuerdos } = ctx;
+  const { juego } = ctx;
+  const quien = describirPersonaje(juego, fila.personaje);
   const verdad = await ctx.siONo({
     motivo: 'droisonVerdad',
-    pregunta: `${quien} está envenenado o borracho: ¿se le dice la verdad (${describirEnvio(sala, verdadera)})? ${
-      destapaAlMal(sala, verdadera) ? 'La verdad señala al mal.' : 'La verdad no le cuesta nada al mal.'
+    pregunta: `${quien} está envenenado o borracho: ¿se le dice la verdad (${describirEnvio(juego, verdadera)})? ${
+      destapaAlMal(juego, verdadera) ? 'La verdad señala al mal.' : 'La verdad no le cuesta nada al mal.'
     }`,
     si: 'Recibe la información de verdad.',
     no: 'Recibe una información falsa.',
-    probabilidad: probabilidadVerdad(sala, fila.asiento, fila.personaje, verdadera, recuerdos),
+    probabilidad: probabilidadVerdad(juego, fila.asiento, fila.personaje, verdadera, recuerdos),
   });
   const dada = verdad
     ? verdadera
     : await ctx.decidir({
         motivo: 'informacionFalsa',
-        pregunta: `La información falsa que recibe ${quien} (la de verdad sería: ${describirEnvio(sala, verdadera)}).`,
-        opciones: opcionesFalsas(sala, fila.asiento, fila.personaje, verdadera, falsas, recuerdos),
+        pregunta: `La información falsa que recibe ${quien} (la de verdad sería: ${describirEnvio(juego, verdadera)}).`,
+        opciones: opcionesFalsas(juego, fila.asiento, fila.personaje, verdadera, falsas, recuerdos),
       });
   recordarDroison(recuerdos, fila.asiento, fila.personaje, verdadera, dada);
   return dada;
@@ -72,7 +74,8 @@ async function droison(ctx: ContextoEtapa, fila: SalaHabilidadNoche): Promise<Sa
 
 /** El demonio ataca al Alcalde: muere él o la muerte rebota a otro vivo (no al demonio). */
 async function alcaldeAtacado(ctx: ContextoEtapa, demonio: string, alcaldeId: string): Promise<void> {
-  const otros = ctx.sala.asientos().filter((a) => vivo(a) && a.id !== alcaldeId && a.personaje !== demonio);
+  const { partida } = ctx.juego;
+  const otros = partida.mesa().filter((a) => vivo(a) && a.id !== alcaldeId && a.personaje !== demonio);
   const rebota =
     otros.length > 0 &&
     (await ctx.siONo({
@@ -82,7 +85,7 @@ async function alcaldeAtacado(ctx: ContextoEtapa, demonio: string, alcaldeId: st
       no: 'Muere el Alcalde.',
     }));
   const muere = rebota
-    ? (await ctx.decidir({ motivo: 'alcaldeAQuien', pregunta: 'A quién rebota la muerte del Alcalde.', opciones: opcionesDeAsientos(ctx.sala, otros) })).id
+    ? (await ctx.decidir({ motivo: 'alcaldeAQuien', pregunta: 'A quién rebota la muerte del Alcalde.', opciones: opcionesDeAsientos(ctx.juego, otros) })).id
     : alcaldeId;
   await ponerRecordatorio(ctx, muere, demonio, 'Dead');
   await ctx.mesa.accion('narrador:cambiarVida', { asientoId: muere, muerto: true });

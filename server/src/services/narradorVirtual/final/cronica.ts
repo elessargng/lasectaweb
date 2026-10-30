@@ -4,6 +4,7 @@ import type { SalaDeJuego } from '../../SalaDeJuego';
 import { FRASES, type MuerteRevelada, type NocheRevelada } from '../frases';
 import { contextoNoche, nombreDeAsiento, tipoReal } from '../mesaDeJuego';
 import { numeroDe } from '../noche/informacionFalsa';
+import { identidadDe } from '../../partida/Grimorio';
 
 /** Lo que hizo alguien una noche: a quiénes eligió, lo que le dio el narrador (y si era falso) y si estaba droison. */
 interface NocheApuntada {
@@ -44,12 +45,13 @@ const esInformacion = (m: SalaEnvioDespertar): boolean =>
  * la información que ha dado a los buenos, quién estaba droison y quién ha muerto
  * y por qué (el demonio, si lo ha elegido).
  */
-export function apuntarNoche(cronica: Cronica, sala: SalaDeJuego): void {
-  const noche = sala.fase().numero;
+export function apuntarNoche(cronica: Cronica, juego: SalaDeJuego): void {
+  const { partida } = juego;
+  const noche = partida.fases.actual().numero;
   cronica.ultimaNoche = noche;
-  const asientos = sala.asientos();
-  const despertares = sala.despertares();
-  const ctx = contextoNoche(sala);
+  const asientos = partida.mesa();
+  const despertares = partida.despertares.despertares();
+  const ctx = contextoNoche(juego);
   for (const { asiento, mensajes } of despertares) {
     const a = asientos.find((x) => x.id === asiento);
     if (!a) continue;
@@ -61,7 +63,7 @@ export function apuntarNoche(cronica: Cronica, sala: SalaDeJuego): void {
       if (respuesta) eligio.push(respuesta.jugadores);
     });
     const infos =
-      sala.alineamientoEfectivo(a) === 'malvado'
+      partida.grimorio.alineamiento(a) === 'malvado'
         ? []
         : mensajes
             .filter((m) => m.autor === 'narrador' && !m.eleccion && esInformacion(m))
@@ -76,7 +78,7 @@ export function apuntarNoche(cronica: Cronica, sala: SalaDeJuego): void {
   for (const muerto of asientos.filter((a) => a.muertePendiente)) {
     const demonio = despertares.find((d) => {
       const quien = asientos.find((x) => x.id === d.asiento);
-      return !!quien && tipoReal(sala, quien) === 'demon' && d.mensajes.some((m) => m.ficha === 'jugador' && m.jugadores.includes(muerto.id));
+      return !!quien && tipoReal(juego, quien) === 'demon' && d.mensajes.some((m) => m.ficha === 'jugador' && m.jugadores.includes(muerto.id));
     });
     const causa = !demonio ? 'otra' : demonio.asiento === muerto.id ? 'suicidio' : 'demonio';
     cronica.muertes.set(muerto.id, { momento: 'noche', numero: noche, causa });
@@ -84,21 +86,23 @@ export function apuntarNoche(cronica: Cronica, sala: SalaDeJuego): void {
 }
 
 /** Una muerte de día (ejecución o disparo del Exterminador). */
-export function apuntarMuerteDeDia(cronica: Cronica, sala: SalaDeJuego, asiento: string, causa: 'ejecucion' | 'exterminador'): void {
-  cronica.muertes.set(asiento, { momento: 'dia', numero: sala.fase().numero, causa });
+export function apuntarMuerteDeDia(cronica: Cronica, juego: SalaDeJuego, asiento: string, causa: 'ejecucion' | 'exterminador'): void {
+  const { partida } = juego;
+  cronica.muertes.set(asiento, { momento: 'dia', numero: partida.fases.actual().numero, causa });
 }
 
 /**
  * Lo que se cuenta de un asiento al revelar su ficha. Un demonio, sea cual sea, es
  * siempre «el demonio» (quién era, lo que creía ser, lo que le enseñaron…), nunca su nombre.
  */
-export function fraseAlRevelar(cronica: Cronica, sala: SalaDeJuego, asiento: SalaAsiento): string {
+export function fraseAlRevelar(cronica: Cronica, juego: SalaDeJuego, asiento: SalaAsiento): string {
+  const { partida } = juego;
   const nombreP = (id: string) => {
-    const personaje = sala.personaje(id);
+    const personaje = partida.guion.personaje(id);
     return personaje?.tipo === 'demon' ? 'el demonio' : (personaje?.nombre ?? id);
   };
-  const nombre = (id: string) => nombreDeAsiento(sala, id);
-  const identidad = sala.identidad(asiento) ?? asiento.personaje;
+  const nombre = (id: string) => nombreDeAsiento(juego, id);
+  const identidad = identidadDe(asiento) ?? asiento.personaje;
   const noches: NocheRevelada[] = (cronica.noches.get(asiento.id) ?? []).map((n) => ({
     noche: n.noche,
     eligio: n.eligio.map((ids) => listaConA(ids.map(nombre))),
@@ -111,10 +115,10 @@ export function fraseAlRevelar(cronica: Cronica, sala: SalaDeJuego, asiento: Sal
   const ficha = asiento.personaje;
   const antes = cronica.antes.get(asiento.id);
   const conInformacion = noches.some((n) => n.infos.length > 0);
-  const cadaNoche = !!ficha && conInformacion && (sala.guion()?.otrasNoches ?? []).includes(ficha);
+  const cadaNoche = !!ficha && conInformacion && (partida.guion.actual()?.otrasNoches ?? []).includes(ficha);
   const antesDelFinal = !!muerte && (muerte.momento === 'noche' || muerte.numero < cronica.ultimaNoche);
   return FRASES.alRevelar({
-    nombre: nombreDeAsiento(sala, asiento.id),
+    nombre: nombreDeAsiento(juego, asiento.id),
     personaje: identidad ? nombreP(identidad) : null,
     creia: ficha && identidad && ficha !== identidad ? nombreP(ficha) : null,
     antes: antes ? nombreP(antes) : null,

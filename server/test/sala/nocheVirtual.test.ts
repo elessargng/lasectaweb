@@ -70,7 +70,7 @@ function mesaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDeL
   let etapa: Etapa | null = null;
   let siguiente: Etapa | null = null;
   const ctx: ContextoEtapa = {
-    sala,
+    juego: sala,
     mesa: {
       accion: async (accion, datos) => {
         const r = await ejecutarAccion(sala, sala.buscar(bot), accion, datos, deps);

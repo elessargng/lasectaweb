@@ -11,8 +11,8 @@ export type AccionJugador = 'nominar' | 'defensa' | 'voto' | 'listo' | 'seguirNo
 
 /** Lo que tiene cada etapa a mano para llevar la partida. */
 export interface ContextoEtapa {
-  /** Para leer cómo está la sala (lo que cambia se hace con `mesa`). */
-  readonly sala: SalaDeJuego;
+  /** Para leer cómo están la sala y la partida (lo que cambia se hace con `mesa`). */
+  readonly juego: SalaDeJuego;
   readonly mesa: MesaNarrador;
   /** Lo que decide su estrategia, con el grimorio del momento. */
   decidir<T>(decision: Decision<T>): Promise<T>;
@@ -45,7 +45,7 @@ export interface Etapa {
 }
 
 /** Las decisiones del contexto: las de la estrategia de ahora, cada una con la foto del grimorio. */
-export const decisionesDe = (sala: SalaDeJuego, estrategia: () => EstrategiaNarrador): Pick<ContextoEtapa, 'decidir' | 'siONo'> => ({
-  decidir: (decision) => estrategia().elegir(decision, instantaneaGrimorio(sala)),
-  siONo: (pregunta) => estrategia().siONo(pregunta, instantaneaGrimorio(sala)),
+export const decisionesDe = (juego: SalaDeJuego, estrategia: () => EstrategiaNarrador): Pick<ContextoEtapa, 'decidir' | 'siONo'> => ({
+  decidir: (decision) => estrategia().elegir(decision, instantaneaGrimorio(juego)),
+  siONo: (pregunta) => estrategia().siONo(pregunta, instantaneaGrimorio(juego)),
 });
