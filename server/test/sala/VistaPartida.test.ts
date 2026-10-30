@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SalaService } from '../../src/services/SalaService';
+import { SalaDeJuego } from '../../src/services/SalaDeJuego';
 import { VistaPartida, type ContextoVista } from '../../src/services/partida/VistaPartida';
 import { guionDePrueba, invitado } from './guionDePrueba';
 
@@ -13,7 +13,7 @@ const contexto: ContextoVista = {
 };
 
 function partida() {
-  const sala = new SalaService();
+  const sala = new SalaDeJuego();
   sala.cambiarGuion(guionDePrueba());
   const entra = (nombre: string) => sala.conectar(`s-${nombre}`, `c-${nombre}`, invitado(nombre), () => true).id;
   const narradora = entra('Nora');

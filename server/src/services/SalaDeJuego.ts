@@ -27,6 +27,7 @@ import { Sala, SALA_ASIENTOS } from './sala/Sala';
 import { Partida } from './partida/Partida';
 import { identidadDe } from './partida/Grimorio';
 import { NarradorVirtualEnMemoria, type NarradorVirtualRepository } from '../repositories/NarradorVirtualRepository';
+import { NarradorVirtual } from './narradorVirtual/NarradorVirtual';
 import type { Despertares } from './partida/Despertares';
 import type { Senalamientos } from './partida/Senalamientos';
 import type { FichaEntregada } from './partida/Entregas';
@@ -41,19 +42,23 @@ export { SALA_ASIENTOS, SALA_SEGUNDOS_POR_FICHA };
  * La sala de juego, en memoria: quién está, la mesa y la partida. Se pierde al
  * reiniciar el servidor, como una sala que se vacía. Es la fachada de la sala:
  * las acciones, el chat, las conversaciones y la vista solo hablan con ella, y
- * ella pasa cada cosa a la sala (quién está y dónde se sienta, ver Sala) o a la
- * partida (ver Partida). Lleva además el narrador virtual, que es de las dos.
+ * ella pasa cada cosa a la sala (quién está y dónde se sienta, ver Sala), a la
+ * partida (ver Partida) o al narrador virtual (ver NarradorVirtual), que es de las dos.
  */
-export class SalaService {
+export class SalaDeJuego {
   /** Quién está en la sala y en qué asiento se sienta cada jugador. */
   readonly sala = new Sala();
   /** La partida que se juega en la sala. */
-  readonly partida = new Partida(this.sala, { hayNarradorVirtual: () => !!this.narradorVirtual() });
+  readonly partida = new Partida(this.sala, { hayNarradorVirtual: () => !!this.narrador.actual() });
+  /** El narrador virtual, si lo hay: es de las dos (su participante, de la sala; lo que lleva, de la partida). */
+  readonly narrador: NarradorVirtual;
 
   constructor(
     /** Dónde se guarda el narrador virtual de la sala (ver NarradorVirtualService). */
-    private readonly narradoresVirtuales: NarradorVirtualRepository = new NarradorVirtualEnMemoria(),
-  ) {}
+    narradoresVirtuales: NarradorVirtualRepository = new NarradorVirtualEnMemoria(),
+  ) {
+    this.narrador = new NarradorVirtual(narradoresVirtuales, this.sala, this.partida);
+  }
 
   // El guion
 
@@ -742,54 +747,25 @@ export class SalaService {
     return this.sala.participantes.conexiones();
   }
 
-  // El narrador virtual: su participante es de la sala; lo que lleva de la partida, de aquí
+  // El narrador virtual (ver NarradorVirtual)
 
-  /** El narrador virtual de la sala, si lo hay (y su participante sigue en ella). */
   narradorVirtual(): SalaNarradorVirtual | null {
-    const narrador = this.narradoresVirtuales.actual();
-    return narrador && this.buscar(narrador.participante) ? narrador : null;
+    return this.narrador.actual();
   }
 
-  /** Entra un narrador virtual (ver Participantes.anadirVirtual) y se guarda quién lo añadió. Devuelve su participante. */
-  anadirNarradorVirtual(
-    datos: Pick<SalaNarradorVirtual, 'id' | 'creador' | 'guion' | 'jugadores'>,
-    nombre: string,
-    avatar: string,
-  ): string {
-    const participante = this.sala.participantes.anadirVirtual(nombre, avatar, datos.id);
-    this.narradoresVirtuales.guardar({
-      ...datos,
-      participante,
-      etapa: 'esperandoJugadores',
-      frase: null,
-      turno: null,
-      listos: [],
-      exterminadores: [],
-      artistas: [],
-      patosos: [],
-    });
-    return participante;
+  anadirNarradorVirtual(datos: Pick<SalaNarradorVirtual, 'id' | 'creador' | 'guion' | 'jugadores'>, nombre: string, avatar: string): string {
+    return this.narrador.anadir(datos, nombre, avatar);
   }
 
-  /** Cambia lo que lleva el narrador virtual de la partida (su etapa, su frase, el día…). No comprueba permisos. */
-  actualizarNarradorVirtual(cambios: Partial<Omit<SalaNarradorVirtual, 'id' | 'participante' | 'creador' | 'guion' | 'jugadores'>>): void {
-    this.narradoresVirtuales.actualizar(cambios);
+  actualizarNarradorVirtual(cambios: Parameters<NarradorVirtual['actualizar']>[0]): void {
+    this.narrador.actualizar(cambios);
   }
 
-  /** Otro narrador virtual sigue la partida del que hay (Jarvis deja a «Tonto y tú»): con su id, su nombre y su avatar. */
   relevarNarradorVirtual(id: SalaNarradorVirtual['id'], nombre: string, avatar: string): void {
-    const narrador = this.narradoresVirtuales.actual();
-    if (!narrador) return;
-    this.narradoresVirtuales.guardar({ ...narrador, id });
-    this.sala.participantes.relevarVirtual(narrador.participante, nombre, avatar, id);
+    this.narrador.relevar(id, nombre, avatar);
   }
 
-  /** Se va el narrador virtual (su participante sale de la sala): la palabra y los privados vuelven a ser de todos. */
   quitarNarradorVirtual(): void {
-    const narrador = this.narradoresVirtuales.actual();
-    if (narrador) this.sala.participantes.expulsar(narrador.participante);
-    this.narradoresVirtuales.borrar();
-    this.partida.nominaciones.darPalabra(null);
-    this.partida.configuracion.permitirPrivados(true);
+    this.narrador.quitar();
   }
 }

@@ -1,4 +1,4 @@
-import { SalaService } from '../SalaService';
+import { SalaDeJuego } from '../SalaDeJuego';
 import type { Participante } from '../sala/Participantes';
 import { NPC_TOR } from './personajesEspeciales';
 import { farolesVacios } from './Faroles';
@@ -79,7 +79,7 @@ export class VistaPartida {
   private readonly ahora = Date.now();
 
   constructor(
-    private readonly sala: SalaService,
+    private readonly sala: SalaDeJuego,
     private readonly contexto: ContextoVista,
   ) {
     // Con su acceso al grimorio (es de la partida, no del participante)

@@ -8,7 +8,7 @@ import {
 } from '../../../contrato/artista';
 import type { SalaAsiento } from '../../../contrato/sala';
 import { droison } from '../../partida/reglas/ReglaPersonaje';
-import type { SalaService } from '../../SalaService';
+import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { ContextoEtapa } from '../etapas/Etapa';
 import { esDemonio } from '../final/comprobarFinal';
 import type { Cronica } from '../final/cronica';
@@ -82,7 +82,7 @@ export async function preguntarComoArtista(
 }
 
 /** Si un asiento es lo que se pregunta: el demonio lo es también la Mujer Escarlata que lo ha heredado. */
-function es(sala: SalaService, asiento: SalaAsiento, quien: QuienArtista): boolean {
+function es(sala: SalaDeJuego, asiento: SalaAsiento, quien: QuienArtista): boolean {
   if (quien.por === 'personaje') return sala.identidad(asiento) === quien.personaje;
   if (quien.por === 'tipo') return quien.tipo === 'demon' ? esDemonio(sala, asiento) : tipoReal(sala, asiento) === quien.tipo;
   return (sala.alineamientoEfectivo(asiento) ?? 'bueno') === quien.alineamiento;
@@ -92,7 +92,7 @@ function es(sala: SalaService, asiento: SalaAsiento, quien: QuienArtista): boole
 const llana = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
 /** La respuesta de verdad a una pregunta montada, con el grimorio y lo apuntado en la crónica (quién eligió a quién). */
-export function contestar(sala: SalaService, cronica: Cronica, p: PreguntaArtista): boolean {
+export function contestar(sala: SalaDeJuego, cronica: Cronica, p: PreguntaArtista): boolean {
   const mesa = sala.asientos();
   const conQuien = mesa.filter((a) => es(sala, a, p.quien));
   switch (p.tipo) {

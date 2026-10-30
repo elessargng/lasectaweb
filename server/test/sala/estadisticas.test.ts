@@ -2,13 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EstadisticasPartida } from '../../src/services/estadisticas/EstadisticasPartida';
 import type { RegistroPartida } from '../../src/services/estadisticas/SeguimientoPartida';
 import { SALA_CUENTA_ATRAS_MS } from '../../src/services/partida/Nominaciones';
-import { SalaService } from '../../src/services/SalaService';
+import { SalaDeJuego } from '../../src/services/SalaDeJuego';
 import { conCuenta, guionDePrueba } from './guionDePrueba';
 
 /** Lo que se guarda de cada partida para las estadísticas (al revelar el grimorio). */
 
 /** Las partidas que se mandan guardar: las estadísticas, escuchando a la sala (como en salaSocket). */
-function guardadas(sala: SalaService): RegistroPartida[] {
+function guardadas(sala: SalaDeJuego): RegistroPartida[] {
   const registros: RegistroPartida[] = [];
   const estadisticas = new EstadisticasPartida((registro) => registros.push(registro));
   sala.suscribir((evento) => estadisticas.registrar(evento));
@@ -17,7 +17,7 @@ function guardadas(sala: SalaService): RegistroPartida[] {
 
 /** Ana (1), Bea (2) y Ceci (3) sentadas en los asientos 1 a 3 con chef, imp y empath; Nora (9) narra. */
 function partida() {
-  const sala = new SalaService();
+  const sala = new SalaDeJuego();
   sala.cambiarGuion(guionDePrueba());
   const entra = (userId: string, nombre: string) => sala.conectar(`s-${nombre}`, `c-${nombre}`, conCuenta(userId, nombre), () => true).id;
   const ids = [entra('1', 'ana'), entra('2', 'bea'), entra('3', 'ceci')];
@@ -32,7 +32,7 @@ describe('estadísticas de la partida', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  const votar = (sala: SalaService) => {
+  const votar = (sala: SalaDeJuego) => {
     sala.iniciarCuentaAtras(Date.now());
     vi.advanceTimersByTime(SALA_CUENTA_ATRAS_MS + sala.configuracion().segundosPorFicha * 1000 * sala.asientos().length);
   };

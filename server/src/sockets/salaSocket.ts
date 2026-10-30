@@ -1,7 +1,7 @@
 import type { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
-import { SalaService } from '../services/SalaService';
+import { SalaDeJuego } from '../services/SalaDeJuego';
 import { limpiarAvatarSala, limpiarNombreSala, SALA_AVATAR_INVITADO, SalaLlegada } from '../services/sala/Participantes';
 import { VistaPartida } from '../services/partida/VistaPartida';
 import { EstadisticasPartida } from '../services/estadisticas/EstadisticasPartida';
@@ -48,7 +48,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     // Un fondo de la sala subido desde el ordenador (data URL) puede pasar de 1 MB
     maxHttpBufferSize: 8 * 1024 * 1024,
   });
-  const sala = new SalaService();
+  const sala = new SalaDeJuego();
   // Las estadísticas escuchan la partida y, al revelar el grimorio, la guardan
   if (deps.guardarPartida) {
     const guardar = deps.guardarPartida;

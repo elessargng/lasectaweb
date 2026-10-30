@@ -1,5 +1,5 @@
 import { NARRADORES_VIRTUALES, type GuionNarradorVirtual, type IdNarradorVirtual } from '../../contrato/sala';
-import type { SalaService } from '../SalaService';
+import type { SalaDeJuego } from '../SalaDeJuego';
 import type { EstrategiaNarrador } from './estrategias/EstrategiaNarrador';
 import { TontoYTu } from './estrategias/TontoYTu';
 import { EsperandoJugadores } from './etapas/EsperandoJugadores';
@@ -72,7 +72,7 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
   private vacios = new Map<string, () => void>();
 
   constructor(
-    private readonly sala: SalaService,
+    private readonly sala: SalaDeJuego,
     /** La mesa del narrador virtual con ese participante. */
     private readonly mesaDe: (participanteId: string) => MesaNarrador,
     private readonly voz: Voz,

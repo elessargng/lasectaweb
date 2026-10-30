@@ -3,7 +3,7 @@ import { nombreFase } from './avisosSala';
 import MenuDesplegable from './MenuDesplegable';
 import type { SalaFase } from './useSala';
 
-/** A dónde vuelve la máquina del tiempo (como el servidor, SalaService.faseAnterior): «la noche 1», «el día 1», «la preparación». */
+/** A dónde vuelve la máquina del tiempo (como el servidor, Fases.anterior): «la noche 1», «el día 1», «la preparación». */
 function nombreFaseAnterior({ momento, numero }: SalaFase): string | null {
   if (momento === 'preparacion') return null;
   if (momento === 'dia') return `la noche ${numero}`;

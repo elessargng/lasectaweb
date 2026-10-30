@@ -1,7 +1,7 @@
 import type { MensajeDespertar, SalaAsiento, SalaEnvioDespertar, SalaOpcionDespertar, SalaRegistroVotacion } from '../../contrato/sala';
 import { droison } from '../partida/reglas/ReglaPersonaje';
 import type { Opcion } from './estrategias/EstrategiaNarrador';
-import type { SalaService } from '../SalaService';
+import type { SalaDeJuego } from '../SalaDeJuego';
 import { contextoNoche, nombreDeAsiento, tipoReal, vivo } from './mesaDeJuego';
 
 /**
@@ -72,7 +72,7 @@ function mensaje(m: MensajeDespertar, numero: Map<string, number>): MensajeGrimo
   };
 }
 
-export function instantaneaGrimorio(sala: SalaService): Grimorio {
+export function instantaneaGrimorio(sala: SalaDeJuego): Grimorio {
   const asientos = sala.asientos();
   const numero = numeros(asientos);
   const noche = contextoNoche(sala);
@@ -107,7 +107,7 @@ export function instantaneaGrimorio(sala: SalaService): Grimorio {
 }
 
 /** Un asiento como opción de una decisión: «Asiento 3: Ana (chef, bueno)». */
-export function describirAsiento(sala: SalaService, asiento: SalaAsiento): string {
+export function describirAsiento(sala: SalaDeJuego, asiento: SalaAsiento): string {
   const i = sala.asientos().findIndex((a) => a.id === asiento.id);
   const quien = sala.identidad(asiento);
   const datos = [quien && (sala.personaje(quien)?.nombre ?? quien), sala.alineamientoEfectivo(asiento), vivo(asiento) ? null : 'muerto'].filter(Boolean);
@@ -115,19 +115,19 @@ export function describirAsiento(sala: SalaService, asiento: SalaAsiento): strin
 }
 
 /** Un personaje como opción: «Monje (townsfolk)». */
-export function describirPersonaje(sala: SalaService, id: string): string {
+export function describirPersonaje(sala: SalaDeJuego, id: string): string {
   const p = sala.personaje(id);
   return p ? `${p.nombre} (${p.tipo})` : id;
 }
 
 /** Unos asientos como opciones de una decisión (la clave, su número: «a3»). */
-export function opcionesDeAsientos(sala: SalaService, asientos: readonly SalaAsiento[]): Opcion<SalaAsiento>[] {
+export function opcionesDeAsientos(sala: SalaDeJuego, asientos: readonly SalaAsiento[]): Opcion<SalaAsiento>[] {
   const numero = numeros(sala.asientos());
   return asientos.map((a) => ({ clave: `a${numero.get(a.id) ?? a.id}`, descripcion: describirAsiento(sala, a), valor: a }));
 }
 
 /** Lo que se le manda a alguien en su despertar, en palabras: «tarjeta esteJugadorEs; ficha dos; jugadores 3 y 5; personajes Chef». */
-export function describirEnvio(sala: SalaService, envio: SalaEnvioDespertar): string {
+export function describirEnvio(sala: SalaDeJuego, envio: SalaEnvioDespertar): string {
   const numero = numeros(sala.asientos());
   const partes = [
     envio.tarjeta && `tarjeta ${envio.tarjeta}`,
@@ -140,7 +140,7 @@ export function describirEnvio(sala: SalaService, envio: SalaEnvioDespertar): st
 }
 
 /** Una respuesta propuesta de un despertar, con cómo registra cada uno para que salga. */
-export function describirOpcion(sala: SalaService, { envio, registros }: SalaOpcionDespertar): string {
+export function describirOpcion(sala: SalaDeJuego, { envio, registros }: SalaOpcionDespertar): string {
   const numero = numeros(sala.asientos());
   const como = registros.map((r) => `el asiento ${numero.get(r.asiento) ?? r.asiento} registra como ${r.como}`);
   return `${describirEnvio(sala, envio)}${como.length ? ` (${como.join(', ')})` : ''}`;

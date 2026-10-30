@@ -107,7 +107,7 @@ export class Nominaciones {
     this.maximoDelDia = null;
   }
 
-  /** Los asientos han cambiado de sitio (ver SalaService.llevarFichas): la nominación los sigue. */
+  /** Los asientos han cambiado de sitio (ver Partida.llevarFichas): la nominación los sigue. */
   remapear(a: (asientoId: string) => string): void {
     const n = this.nominacionEnCurso;
     if (!n) return;

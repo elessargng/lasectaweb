@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { SalaService } from '../../src/services/SalaService';
+import { SalaDeJuego } from '../../src/services/SalaDeJuego';
 import type { SalaHabilidadNoche } from '../../src/contrato/sala';
 import { Arnes } from './arnes';
 import { ficha } from '../../src/services/partida/habilidades/HabilidadNocturna';
@@ -9,7 +9,7 @@ import { guionDePrueba, guionTroubleBrewing, invitado } from './guionDePrueba';
 
 /** Una mesa de Trouble Brewing con esos personajes (uno por asiento, en orden) y sus jugadores, de noche. */
 function mesa(...personajes: string[]) {
-  const sala = new SalaService();
+  const sala = new SalaDeJuego();
   sala.cambiarGuion(guionTroubleBrewing());
   while (sala.asientos().length > personajes.length) sala.quitarAsiento();
   const ids = personajes.map((p, i) => {

@@ -1,6 +1,6 @@
 import type { SalaAsiento } from '../../contrato/sala';
 import type { ContextoNoche } from '../partida/habilidades/HabilidadNocturna';
-import type { SalaService } from '../SalaService';
+import type { SalaDeJuego } from '../SalaDeJuego';
 
 /**
  * Consultas a la mesa que usan las etapas del narrador virtual (solo leen; lo que
@@ -8,7 +8,7 @@ import type { SalaService } from '../SalaService';
  */
 
 /** El tipo de quien es de verdad el de un asiento. */
-export const tipoReal = (sala: SalaService, asiento: SalaAsiento): string | undefined => {
+export const tipoReal = (sala: SalaDeJuego, asiento: SalaAsiento): string | undefined => {
   const id = sala.identidad(asiento);
   return id ? sala.personaje(id)?.tipo : undefined;
 };
@@ -17,7 +17,7 @@ export const tipoReal = (sala: SalaService, asiento: SalaAsiento): string | unde
 export const vivo = (asiento: SalaAsiento): boolean => !asiento.muerto && !asiento.muertePendiente;
 
 /** Cómo se le nombra en voz alta: quien se sienta o, libre, su asiento. */
-export function nombreDeAsiento(sala: SalaService, asientoId: string): string {
+export function nombreDeAsiento(sala: SalaDeJuego, asientoId: string): string {
   const asientos = sala.asientos();
   const i = asientos.findIndex((a) => a.id === asientoId);
   const ocupante = asientos[i]?.ocupante;
@@ -25,7 +25,7 @@ export function nombreDeAsiento(sala: SalaService, asientoId: string): string {
 }
 
 /** Lo que consultan las habilidades de noche, desde la sala (para preguntarles como lo haría la sala). */
-export const contextoNoche = (sala: SalaService): ContextoNoche => ({
+export const contextoNoche = (sala: SalaDeJuego): ContextoNoche => ({
   mesa: () => sala.asientos(),
   identidad: (asiento) => sala.identidad(asiento),
   alineamiento: (asiento) => sala.alineamientoEfectivo(asiento),
@@ -40,7 +40,7 @@ export const contextoNoche = (sala: SalaService): ContextoNoche => ({
  * narrador le ha contestado «Entendido» (lo ha visto), ya está, el jugador no
  * tiene que contestarle a eso.
  */
-export function sinEntender(sala: SalaService): string[] {
+export function sinEntender(sala: SalaDeJuego): string[] {
   const asientos = sala.asientos();
   return sala
     .despertares()
@@ -53,8 +53,8 @@ export function sinEntender(sala: SalaService): string[] {
 }
 
 /** Si todos los despertados de esta noche han contestado «Entendido». */
-export const todosHanEntendido = (sala: SalaService): boolean => sinEntender(sala).length === 0;
+export const todosHanEntendido = (sala: SalaDeJuego): boolean => sinEntender(sala).length === 0;
 
 /** El índice de un recordatorio de un personaje por su texto (en el original), o -1. */
-export const indiceRecordatorio = (sala: SalaService, personaje: string, texto: string): number =>
+export const indiceRecordatorio = (sala: SalaDeJuego, personaje: string, texto: string): number =>
   sala.personaje(personaje)?.recordatorios.findIndex((t) => t.toLowerCase() === texto.toLowerCase()) ?? -1;

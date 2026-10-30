@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { Participante } from '../sala/Participantes';
 import { SalaConversacion, SalaInvitacion } from '../../contrato/sala';
-import { SalaService } from '../SalaService';
+import { SalaDeJuego } from '../SalaDeJuego';
 
 /** Algo que no se puede hacer en una conversación (el mensaje es para quien lo intenta). */
 export class ConversacionError extends Error {
@@ -57,7 +57,7 @@ export class ConversacionService {
   /** Las veces que se ha limpiado el grimorio, la última vez que se miró. */
   private reiniciosVistos: number;
 
-  constructor(private readonly sala: SalaService) {
+  constructor(private readonly sala: SalaDeJuego) {
     this.faseVista = this.claveFase();
     this.reiniciosVistos = this.sala.fase().reinicios;
   }

@@ -1,6 +1,6 @@
 import type { SalaAsiento } from '../../../contrato/sala';
 import { droison, tieneRecordatorio } from '../../partida/reglas/ReglaPersonaje';
-import type { SalaService } from '../../SalaService';
+import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { ContextoEtapa } from '../etapas/Etapa';
 import { contextoNoche, tipoReal } from '../mesaDeJuego';
 import { ponerRecordatorio } from '../noche/requisitos';
@@ -11,7 +11,7 @@ const VIVOS_PARA_HEREDAR = 5;
 export type Ganador = 'bueno' | 'malvado';
 
 /** Es un demonio: lo es de verdad o es la Mujer Escarlata que ya lo ha heredado («Is The Demon»). */
-export const esDemonio = (sala: SalaService, asiento: SalaAsiento): boolean =>
+export const esDemonio = (sala: SalaDeJuego, asiento: SalaAsiento): boolean =>
   tipoReal(sala, asiento) === 'demon' || tieneRecordatorio(asiento, 'scarletwoman', /^is the demon$/i);
 
 /**
@@ -34,7 +34,7 @@ export async function escarlataAImp(ctx: ContextoEtapa): Promise<void> {
 }
 
 /** Los vivos que cuentan para el final: sin muerte y sin viajeros. */
-const vivos = (sala: SalaService) => sala.asientos().filter((a) => !a.muerto && !a.muertePendiente && tipoReal(sala, a) !== 'traveller');
+const vivos = (sala: SalaDeJuego) => sala.asientos().filter((a) => !a.muerto && !a.muertePendiente && tipoReal(sala, a) !== 'traveller');
 
 /** Con cuántos vivos gana el Alcalde si el día acaba sin ejecución. */
 const VIVOS_ALCALDE = 3;

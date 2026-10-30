@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SALA_CUENTA_ATRAS_MS } from '../../src/services/partida/Nominaciones';
-import { SalaService } from '../../src/services/SalaService';
+import { SalaDeJuego } from '../../src/services/SalaDeJuego';
 import { Reglas } from '../../src/services/partida/reglas';
 import type { ContextoReglas, ReglaPersonaje } from '../../src/services/partida/reglas/ReglaPersonaje';
 import type { SalaAsiento } from '../../src/contrato/sala';
@@ -9,7 +9,7 @@ import { guionDePrueba, invitado } from './guionDePrueba';
 /** Las reglas de los personajes que cambian la partida, vistas desde fuera (la sala). */
 
 function salaConJugadores(...nombres: string[]) {
-  const sala = new SalaService();
+  const sala = new SalaDeJuego();
   sala.cambiarGuion(guionDePrueba());
   const ids = nombres.map((nombre, i) => {
     const { id } = sala.conectar(`s-${nombre}`, `c-${nombre}`, invitado(nombre), () => true);
@@ -20,19 +20,19 @@ function salaConJugadores(...nombres: string[]) {
   return { sala, ids, asiento };
 }
 
-const alDia = (sala: SalaService) => {
+const alDia = (sala: SalaDeJuego) => {
   sala.irANoche();
   sala.amanecer();
 };
 
-const textos = (sala: SalaService, i: number) => sala.asientos()[i].recordatorios.map((r) => r.texto);
+const textos = (sala: SalaDeJuego, i: number) => sala.asientos()[i].recordatorios.map((r) => r.texto);
 
 describe('reglas de los personajes', () => {
   describe('votando', () => {
     beforeEach(() => vi.useFakeTimers());
     afterEach(() => vi.useRealTimers());
 
-    const votar = (sala: SalaService) => {
+    const votar = (sala: SalaDeJuego) => {
       sala.iniciarCuentaAtras(Date.now());
       vi.advanceTimersByTime(SALA_CUENTA_ATRAS_MS);
       vi.advanceTimersByTime(sala.configuracion().segundosPorFicha * 1000 * sala.asientos().length);
@@ -94,7 +94,7 @@ describe('reglas de los personajes', () => {
 
   describe('nominando', () => {
     /** Ana (asiento 0) nomina a la Virgen (asiento 1), de día; Ana lleva `nominador`. */
-    const nominaALaVirgen = (nominador: string, preparar?: (sala: SalaService, asiento: (i: number) => SalaAsiento) => void) => {
+    const nominaALaVirgen = (nominador: string, preparar?: (sala: SalaDeJuego, asiento: (i: number) => SalaAsiento) => void) => {
       const { sala, asiento } = salaConJugadores('Ana', 'Bea');
       sala.cambiarPersonaje(asiento(0).id, nominador);
       sala.cambiarPersonaje(asiento(1).id, 'virgin');

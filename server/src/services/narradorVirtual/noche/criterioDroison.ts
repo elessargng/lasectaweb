@@ -1,5 +1,5 @@
 import type { SalaEnvioDespertar } from '../../../contrato/sala';
-import type { SalaService } from '../../SalaService';
+import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { Opcion, RasgoOpcion } from '../estrategias/EstrategiaNarrador';
 import { describirEnvio } from '../grimorio';
 import { tipoReal, vivo } from '../mesaDeJuego';
@@ -34,10 +34,10 @@ const clave = (asiento: string, personaje: string) => `${asiento}:${personaje}`;
 const forma = (e: SalaEnvioDespertar) => JSON.stringify([e.ficha, e.tarjeta, e.jugadores, e.personajes, e.texto]);
 export const mismoEnvio = (a: SalaEnvioDespertar, b: SalaEnvioDespertar) => forma(a) === forma(b);
 
-const tipoMalvado = (sala: SalaService, personaje: string) => ['minion', 'demon'].includes(sala.personaje(personaje)?.tipo ?? '');
+const tipoMalvado = (sala: SalaDeJuego, personaje: string) => ['minion', 'demon'].includes(sala.personaje(personaje)?.tipo ?? '');
 
 /** Si una información señala al mal: un número mayor que cero, un «Sí», o enseña a un esbirro o un demonio. */
-export function destapaAlMal(sala: SalaService, envio: SalaEnvioDespertar): boolean {
+export function destapaAlMal(sala: SalaDeJuego, envio: SalaEnvioDespertar): boolean {
   const n = numeroDe(envio);
   if (n !== null) return n > 0;
   if (envio.ficha === 'si' || envio.ficha === 'no') return envio.ficha === 'si';
@@ -45,7 +45,7 @@ export function destapaAlMal(sala: SalaService, envio: SalaEnvioDespertar): bool
 }
 
 /** Cómo va el mal: los malvados vivos sobre los vivos, menos los del principio (positivo: va ganando). */
-export function ventajaDelMal(sala: SalaService): number {
+export function ventajaDelMal(sala: SalaDeJuego): number {
   const jugadores = sala.asientos().filter((a) => tipoReal(sala, a) !== 'traveller');
   const malvado = (a: (typeof jugadores)[number]) => sala.alineamientoEfectivo(a) === 'malvado';
   const vivos = jugadores.filter(vivo);
@@ -56,7 +56,7 @@ export function ventajaDelMal(sala: SalaService): number {
 const entre = (min: number, max: number, x: number) => Math.min(max, Math.max(min, x));
 
 /** La probabilidad de decirle la verdad a quien está droison. */
-export function probabilidadVerdad(sala: SalaService, asiento: string, personaje: string, verdadera: SalaEnvioDespertar, recuerdos: RecuerdosNarrador): number {
+export function probabilidadVerdad(sala: SalaDeJuego, asiento: string, personaje: string, verdadera: SalaEnvioDespertar, recuerdos: RecuerdosNarrador): number {
   // A lo mismo que otra noche, lo mismo: si entonces fue la verdad, otra vez; si fue mentira, otra vez mentira
   const antes = recuerdos.droison.get(clave(asiento, personaje));
   if (antes && mismoEnvio(antes.verdadera, verdadera)) return mismoEnvio(antes.dada, verdadera) ? 0.95 : 0.05;
@@ -66,7 +66,7 @@ export function probabilidadVerdad(sala: SalaService, asiento: string, personaje
 
 /** Las informaciones falsas como opciones, con sus rasgos y lo que pesan al azar. */
 export function opcionesFalsas(
-  sala: SalaService,
+  sala: SalaDeJuego,
   asiento: string,
   personaje: string,
   verdadera: SalaEnvioDespertar,

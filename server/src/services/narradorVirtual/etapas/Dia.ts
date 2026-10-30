@@ -1,5 +1,5 @@
 import { duracionFrase, FRASES, PAUSA_MS } from '../frases';
-import type { SalaService } from '../../SalaService';
+import type { SalaDeJuego } from '../../SalaDeJuego';
 import { nombreDeAsiento, vivo } from '../mesaDeJuego';
 import { jugadoresSentados, muertosSentados, noPuedeNominar, nominadoHoy } from '../dia/reglasDia';
 import type { AccionJugador, ContextoEtapa, Etapa } from './Etapa';
@@ -17,7 +17,7 @@ export const TRAS_GONG_MS = 3_000;
 const PRIVADOS_POR_VIVO_MS = 30_000;
 
 /** Lo que duran los privados (ms): medio minuto por cada jugador vivo. */
-export const duracionPrivados = (sala: SalaService): number => sala.asientos().filter(vivo).length * PRIVADOS_POR_VIVO_MS;
+export const duracionPrivados = (sala: SalaDeJuego): number => sala.asientos().filter(vivo).length * PRIVADOS_POR_VIVO_MS;
 
 /** Una etapa que dura un rato con el reloj de la mesa y luego pasa a la siguiente. */
 abstract class EtapaConReloj implements Etapa {

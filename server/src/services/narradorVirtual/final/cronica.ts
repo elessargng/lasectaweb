@@ -1,6 +1,6 @@
 import type { SalaAsiento, SalaEnvioDespertar } from '../../../contrato/sala';
 import { droison } from '../../partida/reglas/ReglaPersonaje';
-import type { SalaService } from '../../SalaService';
+import type { SalaDeJuego } from '../../SalaDeJuego';
 import { FRASES, type MuerteRevelada, type NocheRevelada } from '../frases';
 import { contextoNoche, nombreDeAsiento, tipoReal } from '../mesaDeJuego';
 import { numeroDe } from '../noche/informacionFalsa';
@@ -44,7 +44,7 @@ const esInformacion = (m: SalaEnvioDespertar): boolean =>
  * la información que ha dado a los buenos, quién estaba droison y quién ha muerto
  * y por qué (el demonio, si lo ha elegido).
  */
-export function apuntarNoche(cronica: Cronica, sala: SalaService): void {
+export function apuntarNoche(cronica: Cronica, sala: SalaDeJuego): void {
   const noche = sala.fase().numero;
   cronica.ultimaNoche = noche;
   const asientos = sala.asientos();
@@ -84,7 +84,7 @@ export function apuntarNoche(cronica: Cronica, sala: SalaService): void {
 }
 
 /** Una muerte de día (ejecución o disparo del Exterminador). */
-export function apuntarMuerteDeDia(cronica: Cronica, sala: SalaService, asiento: string, causa: 'ejecucion' | 'exterminador'): void {
+export function apuntarMuerteDeDia(cronica: Cronica, sala: SalaDeJuego, asiento: string, causa: 'ejecucion' | 'exterminador'): void {
   cronica.muertes.set(asiento, { momento: 'dia', numero: sala.fase().numero, causa });
 }
 
@@ -92,7 +92,7 @@ export function apuntarMuerteDeDia(cronica: Cronica, sala: SalaService, asiento:
  * Lo que se cuenta de un asiento al revelar su ficha. Un demonio, sea cual sea, es
  * siempre «el demonio» (quién era, lo que creía ser, lo que le enseñaron…), nunca su nombre.
  */
-export function fraseAlRevelar(cronica: Cronica, sala: SalaService, asiento: SalaAsiento): string {
+export function fraseAlRevelar(cronica: Cronica, sala: SalaDeJuego, asiento: SalaAsiento): string {
   const nombreP = (id: string) => {
     const personaje = sala.personaje(id);
     return personaje?.tipo === 'demon' ? 'el demonio' : (personaje?.nombre ?? id);

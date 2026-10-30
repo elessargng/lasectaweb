@@ -18,7 +18,7 @@ import {
 } from './bolsa/conceptos';
 import type { Decision } from './estrategias/EstrategiaNarrador';
 import { instruccionesBolsa } from './estrategias/instruccionesJarvis';
-import type { SalaService } from '../SalaService';
+import type { SalaDeJuego } from '../SalaDeJuego';
 import type { Azar, MesaNarrador } from './puertos';
 
 /** Lo que ha salido pero no va en la bolsa (el Borracho) y el aldeano que cree ser (su ficha sí va). */
@@ -35,7 +35,7 @@ export interface FueraDeLaBolsa {
  * pero no van en ella (el Borracho: lo pone el narrador la primera noche).
  */
 export async function prepararPartida(
-  sala: SalaService,
+  sala: SalaDeJuego,
   mesa: MesaNarrador,
   decidir: <T>(decision: Decision<T>) => Promise<T>,
   { guion, jugadores, azar, recientes }: { guion: GuionNarradorVirtual; jugadores: number; azar: Azar; recientes: readonly (readonly string[])[] },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SalaService } from '../../src/services/SalaService';
+import { SalaDeJuego } from '../../src/services/SalaDeJuego';
 import type { SalaHabilidadNoche } from '../../src/contrato/sala';
 import { describirPreguntaArtista, leerPreguntaArtista, type PreguntaArtista } from '../../src/contrato/artista';
 import { ficha } from '../../src/services/partida/habilidades/HabilidadNocturna';
@@ -11,7 +11,7 @@ import { guionNoGreaterJoy, invitado } from './guionDePrueba';
 
 /** Una mesa de No Greater Joy con esos personajes (uno por asiento, en orden) y sus jugadores, de noche. */
 function mesa(...personajes: string[]) {
-  const sala = new SalaService();
+  const sala = new SalaDeJuego();
   sala.cambiarGuion(guionNoGreaterJoy());
   while (sala.asientos().length > personajes.length) sala.quitarAsiento();
   personajes.forEach((p, i) => {

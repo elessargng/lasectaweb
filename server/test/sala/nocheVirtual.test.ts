@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SalaService } from '../../src/services/SalaService';
+import { SalaDeJuego } from '../../src/services/SalaDeJuego';
 import { ejecutarAccion, type DependenciasSala } from '../../src/sockets/salaAcciones';
 import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
 import { habilidadesDelGuion } from '../../src/services/partida/habilidades';
@@ -51,7 +51,7 @@ function conSemilla(semilla: number): () => number {
  * las acciones de verdad y anota cuáles, sin esperas.
  */
 function mesaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDeLaBolsa[] } = {}) {
-  const sala = new SalaService();
+  const sala = new SalaDeJuego();
   sala.cambiarGuion(guion());
   while (sala.asientos().length > personajes.length) sala.quitarAsiento();
   while (sala.asientos().length < personajes.length) sala.anadirAsiento();

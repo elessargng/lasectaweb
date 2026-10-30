@@ -4,7 +4,7 @@ import type { FichaDespertar, SalaAlineamiento, SalaFase, TarjetaDespertar } fro
 /**
  * El diario de la partida: todo lo que se hace en ella, por noches y días, para
  * verlo en el historial al terminar. Lo apunta la sala al pasar (ver
- * SalaService.anotar), con o sin narrador virtual; lo que solo hace el narrador
+ * Partida.anotar), con o sin narrador virtual; lo que solo hace el narrador
  * virtual (el disparo del Exterminador, el Patoso, el Artista) solo sale con él.
  */
 

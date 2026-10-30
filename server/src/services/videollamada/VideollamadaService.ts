@@ -1,5 +1,5 @@
 import { ConversacionService } from '../conversaciones/ConversacionService';
-import { SalaService } from '../SalaService';
+import { SalaDeJuego } from '../SalaDeJuego';
 import { PermisosVideo, ProveedorVideo } from './ProveedorVideo';
 
 /** No se puede entrar en esa sala de vídeo (el mensaje es para quien lo intenta). */
@@ -44,7 +44,7 @@ export class VideollamadaService {
 
   constructor(
     private readonly proveedor: ProveedorVideo,
-    private readonly sala: SalaService,
+    private readonly sala: SalaDeJuego,
     private readonly conversaciones: ConversacionService,
   ) {}
 

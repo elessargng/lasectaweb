@@ -3,7 +3,7 @@ import { canalPrivado } from '../../src/contrato/chat';
 import type { SalaParticipante } from '../../src/contrato/sala';
 import type { ChatRepository } from '../../src/repositories/ChatRepository';
 import { ChatService } from '../../src/services/chat/ChatService';
-import type { SalaService } from '../../src/services/SalaService';
+import type { SalaDeJuego } from '../../src/services/SalaDeJuego';
 
 /** Solo lo que mira `puedeLeer`: el papel y el acceso al grimorio. */
 const persona = (id: string, rol: SalaParticipante['rol'], accesoGrimorio: SalaParticipante['accesoGrimorio'] = 'ninguno') =>
@@ -18,7 +18,7 @@ const todos = [ana, bea, nora, conGrimorio, sinGrimorio];
 const sala = {
   buscar: (id: string) => todos.find((p) => p.id === id),
   accesoGrimorio: (id: string) => todos.find((p) => p.id === id)?.accesoGrimorio ?? 'ninguno',
-} as unknown as SalaService;
+} as unknown as SalaDeJuego;
 const chat = new ChatService({} as ChatRepository, sala);
 
 describe('quién lee los privados', () => {

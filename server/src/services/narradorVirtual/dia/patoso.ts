@@ -1,6 +1,6 @@
 import type { SalaPatoso } from '../../../contrato/sala';
 import { droison } from '../../partida/reglas/ReglaPersonaje';
-import type { SalaService } from '../../SalaService';
+import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { ContextoEtapa } from '../etapas/Etapa';
 import type { Ganador } from '../final/comprobarFinal';
 import { duracionFrase, FRASES, PAUSA_MS } from '../frases';
@@ -17,7 +17,7 @@ import { contextoNoche, nombreDeAsiento, vivo } from '../mesaDeJuego';
  */
 
 /** Los muertos que pueden declararse Patoso hasta `hasta` (sin repetir a quien ya puede). */
-export function abrirPatosos(sala: SalaService, asientos: string[], hasta: SalaPatoso['hasta']): void {
+export function abrirPatosos(sala: SalaDeJuego, asientos: string[], hasta: SalaPatoso['hasta']): void {
   const narrador = sala.narradorVirtual();
   if (!narrador || !asientos.length) return;
   const nuevos = asientos.filter((id) => !narrador.patosos.some((p) => p.asiento === id)).map((asiento) => ({ asiento, hasta }));
@@ -25,7 +25,7 @@ export function abrirPatosos(sala: SalaService, asientos: string[], hasta: SalaP
 }
 
 /** Ya no puede declararse Patoso (lo ha hecho, o se ha acabado su momento). */
-export function quitarPatoso(sala: SalaService, asientoId: string): void {
+export function quitarPatoso(sala: SalaDeJuego, asientoId: string): void {
   const narrador = sala.narradorVirtual();
   if (narrador) sala.actualizarNarradorVirtual({ patosos: narrador.patosos.filter((p) => p.asiento !== asientoId) });
 }

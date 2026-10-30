@@ -2,12 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EstadisticasPartida } from '../../src/services/estadisticas/EstadisticasPartida';
 import { SALA_GRACIA_MS } from '../../src/services/sala/Participantes';
 import { SALA_CUENTA_ATRAS_MS } from '../../src/services/partida/Nominaciones';
-import { SalaService } from '../../src/services/SalaService';
+import { SalaDeJuego } from '../../src/services/SalaDeJuego';
 import { BOLSA_DE_SIETE, conCuenta, guionDePrueba, invitado } from './guionDePrueba';
 
 /**
  * Tests de caracterización: fijan cómo se comporta hoy la sala, para poder
- * partir SalaService sin cambiar lo que hace. Si uno falla tras un refactor, o
+ * partir SalaDeJuego sin cambiar lo que hace. Si uno falla tras un refactor, o
  * se ha roto algo o el cambio de comportamiento era a propósito (y el test se cambia).
  */
 
@@ -15,7 +15,7 @@ const siempreViva = () => true;
 
 /** Una sala con guion y los jugadores dados sentados en los primeros asientos, en orden. */
 function salaConJugadores(...nombres: string[]) {
-  const sala = new SalaService();
+  const sala = new SalaDeJuego();
   sala.cambiarGuion(guionDePrueba());
   const ids = nombres.map((nombre, i) => {
     const { id } = sala.conectar(`socket-${nombre}`, `cliente-${nombre}`, invitado(nombre), siempreViva);
@@ -27,15 +27,15 @@ function salaConJugadores(...nombres: string[]) {
 }
 
 /** Pasa al día 1 (noche 1 y amanecer). */
-function alDia(sala: SalaService) {
+function alDia(sala: SalaDeJuego) {
   sala.irANoche();
   sala.amanecer();
 }
 
-describe('SalaService', () => {
+describe('SalaDeJuego', () => {
   describe('una sala nueva', () => {
     it('empieza en la preparación, con 7 asientos libres y sin nadie', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       expect(sala.fase()).toEqual({ momento: 'preparacion', numero: 0, reinicios: 0 });
       expect(sala.asientos()).toHaveLength(7);
       expect(sala.asientos().every((a) => a.ocupante === null && !a.muerto && a.personaje === null)).toBe(true);
@@ -47,13 +47,13 @@ describe('SalaService', () => {
 
   describe('conexiones', () => {
     it('quien entra es visitante', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       const { id } = sala.conectar('s1', 'c1', invitado('Ana'), siempreViva);
       expect(sala.buscar(id)).toMatchObject({ nombre: 'Ana', rol: 'visitante', conCuenta: false, conectado: true });
     });
 
     it('una cuenta que entra otra vez retoma su sitio y echa a la conexión anterior', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       const primera = sala.conectar('s1', 'c1', conCuenta('42', 'ana'), siempreViva);
       sala.sentar(primera.id, sala.asientos()[0].id);
       const segunda = sala.conectar('s2', 'c2', conCuenta('42', 'ana'), siempreViva);
@@ -64,14 +64,14 @@ describe('SalaService', () => {
     });
 
     it('un invitado que vuelve con su id de cliente tras perder la conexión retoma su sitio', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       const antes = sala.conectar('s1', 'c1', invitado('Ana'), siempreViva);
       const despues = sala.conectar('s2', 'c1', invitado('Ana'), () => false);
       expect(despues.id).toBe(antes.id);
     });
 
     it('un invitado con otro id de cliente entra como uno nuevo', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       const a = sala.conectar('s1', 'c1', invitado('Ana'), siempreViva);
       const b = sala.conectar('s2', 'c2', invitado('Bea'), siempreViva);
       expect(b.id).not.toBe(a.id);
@@ -83,7 +83,7 @@ describe('SalaService', () => {
       afterEach(() => vi.useRealTimers());
 
       it('al perder la conexión se le guarda el sitio un rato y después sale', () => {
-        const sala = new SalaService();
+        const sala = new SalaDeJuego();
         const { clave, id } = sala.conectar('s1', 'c1', invitado('Ana'), siempreViva);
         const alExpulsar = vi.fn();
         sala.desconectar(clave, 's1', alExpulsar);
@@ -97,21 +97,21 @@ describe('SalaService', () => {
     });
 
     it('quien sale a propósito se va enseguida', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       const { clave, id } = sala.conectar('s1', 'c1', invitado('Ana'), siempreViva);
       sala.salir(clave, 's1');
       expect(sala.buscar(id)).toBeUndefined();
     });
 
     it('un invitado no puede usar un nombre que ya tiene otro (sin distinguir mayúsculas)', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       sala.conectar('s1', 'c1', invitado('Ana'), siempreViva);
       expect(sala.nombreLibreParaInvitado('ANA', 'c2', siempreViva)).toBe(false);
       expect(sala.nombreLibreParaInvitado('Bea', 'c2', siempreViva)).toBe(true);
     });
 
     it('con cuenta y menos de 10 partidas es novato', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       const { id } = sala.conectar('s1', 'c1', conCuenta('7', 'nuevo', 3), siempreViva);
       expect(sala.buscar(id)?.novato).toBe(true);
       sala.cambiarPartidasJugadas('7', 10);
@@ -120,10 +120,10 @@ describe('SalaService', () => {
   });
 
   describe('acceso al grimorio', () => {
-    const acceso = (sala: SalaService, id: string) => sala.accesoGrimorio(id);
+    const acceso = (sala: SalaDeJuego, id: string) => sala.accesoGrimorio(id);
 
     it('concedido, se recupera al salir y volver (invitado, con el mismo navegador)', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       const { clave, id } = sala.conectar('s1', 'c1', invitado('Vera'), siempreViva);
       sala.cambiarAccesoGrimorio(id, 'concedido');
       sala.salir(clave, 's1');
@@ -133,7 +133,7 @@ describe('SalaService', () => {
     });
 
     it('concedido, se recupera al volver con la misma cuenta', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       const { clave, id } = sala.conectar('s1', 'c1', conCuenta('9', 'vera'), siempreViva);
       sala.cambiarAccesoGrimorio(id, 'concedido');
       sala.salir(clave, 's1');
@@ -141,7 +141,7 @@ describe('SalaService', () => {
     });
 
     it('solicitado, se pierde al salir', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       const { clave, id } = sala.conectar('s1', 'c1', invitado('Vera'), siempreViva);
       sala.cambiarAccesoGrimorio(id, 'solicitado');
       expect(acceso(sala, id)).toBe('solicitado');
@@ -150,7 +150,7 @@ describe('SalaService', () => {
     });
 
     it('se pierde al cambiar de papel (al sentarse) y no vuelve al levantarse', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       const { id } = sala.conectar('s1', 'c1', invitado('Vera'), siempreViva);
       sala.cambiarAccesoGrimorio(id, 'concedido');
       sala.sentar(id, sala.asientos()[0].id);
@@ -160,7 +160,7 @@ describe('SalaService', () => {
     });
 
     it('expulsado por un narrador, al volver no lo recupera', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       const { id } = sala.conectar('s1', 'c1', invitado('Vera'), siempreViva);
       sala.cambiarAccesoGrimorio(id, 'concedido');
       sala.expulsar(id);
@@ -168,7 +168,7 @@ describe('SalaService', () => {
     });
 
     it('otra partida: lo pierde quien lo tenía (también quien había salido); lo solicitado sigue', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       const vera = sala.conectar('s1', 'c1', invitado('Vera'), siempreViva);
       const { id: luis } = sala.conectar('s2', 'c2', invitado('Luis'), siempreViva);
       const { id: eva } = sala.conectar('s3', 'c3', invitado('Eva'), siempreViva);
@@ -207,7 +207,7 @@ describe('SalaService', () => {
     });
 
     it('al quitar el último asiento, quien estaba sentado vuelve a visitante', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       const { id } = sala.conectar('s1', 'c1', invitado('Ana'), siempreViva);
       sala.sentar(id, sala.asientos()[6].id);
       sala.quitarAsiento();
@@ -233,7 +233,7 @@ describe('SalaService', () => {
     });
 
     it('dos jugadores son vecinos si no hay nadie sentado entre ellos (los libres se saltan)', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       const [a, b, c] = ['Ana', 'Bea', 'Ceci'].map((n) => sala.conectar(`s-${n}`, `c-${n}`, invitado(n), siempreViva).id);
       sala.sentar(a, sala.asientos()[0].id);
       sala.sentar(b, sala.asientos()[3].id);
@@ -246,13 +246,13 @@ describe('SalaService', () => {
 
   describe('fichas, bolsa y reparto', () => {
     it('con 7 asientos, el reparto es de 5 aldeanos, 0 forasteros, 1 esbirro y 1 demonio', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       sala.cambiarGuion(guionDePrueba());
       expect(sala.distribucion()).toEqual({ jugadores: 7, jugadoresVivos: 7, viajeros: 0, viajerosVivos: 0, aldeanos: 5, forasteros: 0, esbirros: 1, demonios: 1 });
     });
 
     it('un viajero puesto a mano no cuenta para el reparto ni para la bolsa', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       sala.cambiarGuion(guionDePrueba());
       sala.cambiarPersonaje(sala.asientos()[0].id, 'voudon');
       expect(sala.distribucion()).toMatchObject({ jugadores: 6, viajeros: 1, aldeanos: 3, forasteros: 1 });
@@ -260,7 +260,7 @@ describe('SalaService', () => {
     });
 
     it('repartir la bolsa da un personaje de la bolsa a cada asiento y la bolsa se queda igual', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       sala.cambiarGuion(guionDePrueba());
       BOLSA_DE_SIETE.forEach((id) => sala.alternarEnBolsa(id));
       sala.repartirBolsa();
@@ -271,7 +271,7 @@ describe('SalaService', () => {
     });
 
     it('meter dos veces un personaje en la bolsa lo saca', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       sala.alternarEnBolsa('chef');
       sala.alternarEnBolsa('chef');
       expect(sala.bolsa()).toEqual([]);
@@ -326,7 +326,7 @@ describe('SalaService', () => {
     });
 
     it('los NPCs del guion están en juego desde el principio; los del catálogo, al ponerlos', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       sala.cambiarGuion(guionDePrueba());
       expect(sala.npcs()).toEqual([]);
       sala.alternarNpc('gardener');
@@ -334,7 +334,7 @@ describe('SalaService', () => {
     });
 
     it('el silencio solo vale con el Bibliotecario del Infierno en juego', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       sala.cambiarGuion(guionDePrueba());
       sala.pedirSilencio(true);
       expect(sala.silencio()).toBe(false);
@@ -355,7 +355,7 @@ describe('SalaService', () => {
 
   describe('fases', () => {
     it('preparación → noche 1 → día 1 → noche 2', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       sala.irANoche();
       expect(sala.fase()).toEqual({ momento: 'noche', numero: 1, reinicios: 0 });
       sala.amanecer();
@@ -472,7 +472,7 @@ describe('SalaService', () => {
     afterEach(() => vi.useRealTimers());
 
     /** Cuenta atrás y la aguja por todas las fichas. */
-    const votar = (sala: SalaService) => {
+    const votar = (sala: SalaDeJuego) => {
       sala.iniciarCuentaAtras(Date.now());
       vi.advanceTimersByTime(SALA_CUENTA_ATRAS_MS);
       vi.advanceTimersByTime(sala.configuracion().segundosPorFicha * 1000 * sala.asientos().length);
@@ -785,7 +785,7 @@ describe('SalaService', () => {
     });
 
     it('al revelar el grimorio se guarda la partida de quien tiene cuenta', () => {
-      const sala = new SalaService();
+      const sala = new SalaDeJuego();
       sala.cambiarGuion(guionDePrueba());
       const { id } = sala.conectar('s1', 'c1', conCuenta('42', 'ana'), siempreViva);
       sala.sentar(id, sala.asientos()[0].id);

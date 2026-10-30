@@ -8,7 +8,7 @@ export interface CausaFinal {
   userId?: string | null;
 }
 
-/** Cómo está un jugador con cuenta en un momento de la partida (ver SalaService.fotosDeCuentas). */
+/** Cómo está un jugador con cuenta en un momento de la partida (ver Partida.fotoDeLaMesa). */
 export interface FotoJugador {
   userId: string;
   /** Quien es de verdad (su «Is The …»), o null sin personaje. */

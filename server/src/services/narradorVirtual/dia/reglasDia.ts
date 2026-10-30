@@ -1,6 +1,6 @@
 import type { EtapaNarradorVirtual } from '../../../contrato/sala';
 import type { Participante } from '../../sala/Participantes';
-import type { SalaService } from '../../SalaService';
+import type { SalaDeJuego } from '../../SalaDeJuego';
 
 /**
  * Lo que puede hacer cada jugador en el día del narrador virtual (lo consultan las
@@ -11,22 +11,22 @@ import type { SalaService } from '../../SalaService';
 export const ETAPAS_DIA: readonly EtapaNarradorVirtual[] = ['privados', 'puestaEnComun', 'nominaciones'];
 
 /** Las nominaciones de hoy (no las expulsiones de viajeros). */
-const deHoy = (sala: SalaService) => sala.votaciones().filter((v) => v.dia === sala.fase().numero && !v.expulsion);
+const deHoy = (sala: SalaDeJuego) => sala.votaciones().filter((v) => v.dia === sala.fase().numero && !v.expulsion);
 
 /** Si el de ese asiento ya ha nominado hoy. */
-export const nominoHoy = (sala: SalaService, asientoId: string): boolean => deHoy(sala).some((v) => v.nominaAsiento === asientoId);
+export const nominoHoy = (sala: SalaDeJuego, asientoId: string): boolean => deHoy(sala).some((v) => v.nominaAsiento === asientoId);
 
 /** Si el de ese asiento ya ha sido nominado hoy. */
-export const nominadoHoy = (sala: SalaService, asientoId: string): boolean => deHoy(sala).some((v) => v.nominadoAsiento === asientoId);
+export const nominadoHoy = (sala: SalaDeJuego, asientoId: string): boolean => deHoy(sala).some((v) => v.nominadoAsiento === asientoId);
 
 /** El día del narrador virtual (en alguna etapa del día), o null. */
-export function diaVirtual(sala: SalaService) {
+export function diaVirtual(sala: SalaDeJuego) {
   const narrador = sala.narradorVirtual();
   return narrador && ETAPAS_DIA.includes(narrador.etapa) ? narrador : null;
 }
 
 /** Por qué no puede nominar ahora (o null, si puede): vivo, sentado, sin haber nominado hoy y sin otra nominación. */
-export function noPuedeNominar(sala: SalaService, yo: Participante): string | null {
+export function noPuedeNominar(sala: SalaDeJuego, yo: Participante): string | null {
   if (sala.narradorVirtual()?.etapa !== 'nominaciones') return 'Ahora no es el momento de nominar.';
   const asiento = sala.asientoDe(yo.id);
   if (yo.rol !== 'jugador' || !asiento) return 'Solo nominan los jugadores sentados.';
@@ -37,9 +37,9 @@ export function noPuedeNominar(sala: SalaService, yo: Participante): string | nu
 }
 
 /** Los jugadores de la partida: los que se sientan (los asientos libres no esperan a nadie). */
-export const jugadoresSentados = (sala: SalaService): string[] =>
+export const jugadoresSentados = (sala: SalaDeJuego): string[] =>
   sala.asientos().flatMap((a) => (a.ocupante ? [a.ocupante] : []));
 
 /** Los jugadores muertos: como no nominan, están listos para la noche desde el principio del día. */
-export const muertosSentados = (sala: SalaService): string[] =>
+export const muertosSentados = (sala: SalaDeJuego): string[] =>
   sala.asientos().flatMap((a) => (a.ocupante && a.muerto ? [a.ocupante] : []));

@@ -10,7 +10,7 @@ import {
   SalaMensaje,
   SalaSusurro,
 } from '../../contrato/chat';
-import { SalaService } from '../SalaService';
+import { SalaDeJuego } from '../SalaDeJuego';
 
 /** Un mensaje que no se puede mandar (el mensaje de error es para quien escribe). */
 export class ChatError extends Error {
@@ -40,12 +40,12 @@ export interface EnvioMensaje {
  *   entre jugadores (no los de un narrador con alguien): les llegan como a
  *   ellos, pero no escriben en ellos.
  *
- * Lee la sala (papeles, asientos, ajustes) de SalaService y guarda en el repositorio.
+ * Lee la sala (papeles, asientos, ajustes) de SalaDeJuego y guarda en el repositorio.
  */
 export class ChatService {
   constructor(
     private readonly repositorio: ChatRepository,
-    private readonly sala: SalaService,
+    private readonly sala: SalaDeJuego,
     private readonly ahora: () => number = () => Date.now(),
   ) {}
 

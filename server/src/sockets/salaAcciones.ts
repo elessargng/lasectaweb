@@ -5,7 +5,7 @@ import { ProveedorVideo } from '../services/videollamada/ProveedorVideo';
 import { MENSAJES_PRIVADOS, SalaMensajesPrivados } from '../contrato/chat';
 import { limpiarAvatarSala, limpiarNombreSala, type Participante } from '../services/sala/Participantes';
 import { SALA_RELOJ } from '../services/partida/RelojSala';
-import { SALA_ASIENTOS, SALA_SEGUNDOS_POR_FICHA, SalaService } from '../services/SalaService';
+import { SALA_ASIENTOS, SALA_SEGUNDOS_POR_FICHA, SalaDeJuego } from '../services/SalaDeJuego';
 import {
   NPC_BOOTLEGGER,
   NPC_FERRYMAN,
@@ -107,11 +107,11 @@ export interface ImagenesBiblioteca {
 
 interface Accion {
   /** Si quien la pide puede hacerla ahora. Es la única comprobación de permisos. */
-  puede: (sala: SalaService, yo: Participante) => boolean;
+  puede: (sala: SalaDeJuego, yo: Participante) => boolean;
   /** Mensaje cuando no puede. */
-  noPuede: string | ((sala: SalaService, yo: Participante) => string);
+  noPuede: string | ((sala: SalaDeJuego, yo: Participante) => string);
   /** La ejecuta; solo valida los datos que recibe, no los permisos. */
-  hacer: (sala: SalaService, yo: Participante, datos: unknown, deps: DependenciasSala) => SalaEfecto | Promise<SalaEfecto>;
+  hacer: (sala: SalaDeJuego, yo: Participante, datos: unknown, deps: DependenciasSala) => SalaEfecto | Promise<SalaEfecto>;
 }
 
 const cualquiera = () => true;
@@ -127,7 +127,7 @@ export const SALA_TEXTO_DESPERTAR_MAX = 200;
  * narrador, una tarjeta) con justo lo que lleva. Devuelve el mensaje limpio o el error.
  */
 function leerMensajeDespertar(
-  sala: SalaService,
+  sala: SalaDeJuego,
   datos: unknown,
   conTarjetas: boolean,
 ): { error: string } | SalaEnvioDespertar {
@@ -182,7 +182,7 @@ function errorDeEleccion(pide: SalaEleccionDespertar, mensaje: { ficha: FichaDes
   return null;
 }
 /** Comprueba una casilla de farol: su posición y un personaje del guion (o null, para vaciarla). */
-function leerFarol(sala: SalaService, datos: unknown): { error: string } | { posicion: number; personajeId: string | null } {
+function leerFarol(sala: SalaDeJuego, datos: unknown): { error: string } | { posicion: number; personajeId: string | null } {
   const { posicion, personajeId } = (datos as { posicion?: unknown; personajeId?: unknown } | null) ?? {};
   if (typeof posicion !== 'number' || !Number.isInteger(posicion) || posicion < 0 || posicion >= NUM_FAROLES) {
     return { error: 'Esa casilla de farol no existe.' };
@@ -193,19 +193,19 @@ function leerFarol(sala: SalaService, datos: unknown): { error: string } | { pos
   }
   return { posicion, personajeId };
 }
-const esNarrador = (_sala: SalaService, yo: Participante) => yo.rol === 'narrador';
+const esNarrador = (_sala: SalaDeJuego, yo: Participante) => yo.rol === 'narrador';
 
 /** Lo que pide un jugador al narrador virtual en el día: se lo pasa (ya comprobado que puede). */
 const alNarradorVirtual =
   (accion: AccionJugador | AccionSuelta) =>
-  async (_sala: SalaService, yo: Participante, datos: unknown, deps: DependenciasSala): Promise<SalaEfecto> => {
+  async (_sala: SalaDeJuego, yo: Participante, datos: unknown, deps: DependenciasSala): Promise<SalaEfecto> => {
     if (!deps.narradorVirtual) return { ok: false, error: 'Esta sala no tiene narradores virtuales.' };
     const error = await deps.narradorVirtual.pedir(yo.id, accion, datos);
     return error ? { ok: false, error } : { ok: true };
   };
 
 /** El turno de la nominación del narrador virtual en el que está el de ese jugador (quien nomina o el nominado). */
-const enSuTurno = (sala: SalaService, yo: Participante, turno: 'acusacion' | 'defensa') => {
+const enSuTurno = (sala: SalaDeJuego, yo: Participante, turno: 'acusacion' | 'defensa') => {
   const n = sala.nominacion();
   const mio = sala.asientoDe(yo.id)?.id;
   return sala.narradorVirtual()?.turno === turno && !!n && !!mio && (turno === 'acusacion' ? n.desde : n.hasta) === mio;
@@ -228,7 +228,7 @@ const MAX_REPETIDOS = 5;
  * Si un personaje puede ir repetido en la bolsa: los repetibles («bag-duplicate»,
  * como el Village Idiot), siempre; los aldeanos y forasteros, con el Pope en juego.
  */
-const puedeRepetirse = (sala: SalaService, personaje: PersonajeDeGuion): boolean =>
+const puedeRepetirse = (sala: SalaDeJuego, personaje: PersonajeDeGuion): boolean =>
   !!personaje.repetible ||
   ((personaje.tipo === 'townsfolk' || personaje.tipo === 'outsider') && sala.npcActivo(NPC_POPE));
 const ERROR_REPETIDOS = 'Solo con el Pope puede haber aldeanos o forasteros repetidos.';
@@ -239,7 +239,7 @@ const MAX_RECORDATORIOS = 20;
  * El icono de un recordatorio con texto propio: uno de los fijos o un personaje del
  * guion. Sin icono, null (el de por defecto); undefined si no vale.
  */
-function leerIconoRecordatorio(sala: SalaService, icono: unknown): string | null | undefined {
+function leerIconoRecordatorio(sala: SalaDeJuego, icono: unknown): string | null | undefined {
   if (icono === undefined || icono === null) return null;
   if (typeof icono !== 'string') return undefined;
   return ICONOS_RECORDATORIO_TEXTO.includes(icono) || sala.personaje(icono) ? icono : undefined;
@@ -629,7 +629,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     noPuede: 'Solo un narrador puede cambiar los ajustes de la partida.',
     hacer: (sala, _yo, datos) => {
       const { grimorioJugadores, segundosPorFicha, mensajes, ocultarCamarasConversacion } = (datos as Record<string, unknown>) ?? {};
-      const cambios: Parameters<SalaService['configurar']>[0] = {};
+      const cambios: Parameters<SalaDeJuego['configurar']>[0] = {};
       if (grimorioJugadores !== undefined) {
         if (typeof grimorioJugadores !== 'boolean') return { ok: false, error: 'Ajuste desconocido.' };
         // Con narrador virtual, los jugadores siempre tienen su grimorio
@@ -830,7 +830,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   /**
    * La máquina del tiempo: vuelve a la fase anterior (del día N a la noche N, de la
    * noche N al día anterior o, de la noche 1, a la preparación), por si el narrador
-   * se ha precipitado. Ver SalaService.volverAtras.
+   * se ha precipitado. Ver Partida.volverAtras.
    */
   'narrador:volverAtras': {
     puede: (sala, yo) => yo.rol === 'narrador' && !!sala.faseAnterior(),
@@ -1081,7 +1081,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   /**
    * Lil' Monsta (de noche, con él en el guion, sin demonio y con un esbirro de más):
    * despierta a los esbirros vivos y señalan, sin cuenta atrás, hasta que todos
-   * eligen al mismo (ese lo cuida: ver SalaService.senalar).
+   * eligen al mismo (ese lo cuida: ver Partida.senalar).
    */
   'narrador:lilmonsta': {
     puede: (sala, yo) => yo.rol === 'narrador' && !!sala.esbirrosLilmonsta(),
@@ -1738,7 +1738,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /**
    * Mata o revive la ficha de un asiento (haya alguien sentado o no). De noche, matar
-   * deja la muerte pendiente (ver SalaService.cambiarVida). datos: { asientoId, muerto: boolean }.
+   * deja la muerte pendiente (ver Grimorio.cambiarVida). datos: { asientoId, muerto: boolean }.
    */
   'narrador:cambiarVida': {
     puede: (sala, yo) => yo.rol === 'narrador' && sala.asientos().length > 0,
@@ -1755,7 +1755,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   /**
    * Ejecuta al que lleva la calavera: muere, se le ponen los recordatorios de los
    * personajes que funcionan con las ejecuciones y anochece (salvo con el Carnicero
-   * vivo). Ver SalaService.ejecutar. datos: { asientoId }.
+   * vivo). Ver Partida.ejecutar. datos: { asientoId }.
    */
   'narrador:ejecutar': {
     puede: (sala, yo) => yo.rol === 'narrador' && sala.hayMarca(),
@@ -1894,7 +1894,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 };
 
 /** Las acciones que este participante puede usar ahora mismo. */
-export function accionesPermitidas(sala: SalaService, yo: Participante): string[] {
+export function accionesPermitidas(sala: SalaDeJuego, yo: Participante): string[] {
   return Object.entries(SALA_ACCIONES)
     .filter(([, accion]) => accion.puede(sala, yo))
     .map(([nombre]) => nombre);
@@ -1902,7 +1902,7 @@ export function accionesPermitidas(sala: SalaService, yo: Participante): string[
 
 /** Ejecuta una acción si existe y quien la pide tiene permiso. */
 export async function ejecutarAccion(
-  sala: SalaService,
+  sala: SalaDeJuego,
   yo: Participante | undefined,
   nombre: string,
   datos: unknown,
