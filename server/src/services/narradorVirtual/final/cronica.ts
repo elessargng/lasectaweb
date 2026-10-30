@@ -88,9 +88,15 @@ export function apuntarMuerteDeDia(cronica: Cronica, sala: SalaService, asiento:
   cronica.muertes.set(asiento, { momento: 'dia', numero: sala.fase().numero, causa });
 }
 
-/** Lo que se cuenta de un asiento al revelar su ficha. */
+/**
+ * Lo que se cuenta de un asiento al revelar su ficha. Un demonio, sea cual sea, es
+ * siempre «el demonio» (quién era, lo que creía ser, lo que le enseñaron…), nunca su nombre.
+ */
 export function fraseAlRevelar(cronica: Cronica, sala: SalaService, asiento: SalaAsiento): string {
-  const nombreP = (id: string) => sala.personaje(id)?.nombre ?? id;
+  const nombreP = (id: string) => {
+    const personaje = sala.personaje(id);
+    return personaje?.tipo === 'demon' ? 'el demonio' : (personaje?.nombre ?? id);
+  };
   const nombre = (id: string) => nombreDeAsiento(sala, id);
   const identidad = sala.identidad(asiento) ?? asiento.personaje;
   const noches: NocheRevelada[] = (cronica.noches.get(asiento.id) ?? []).map((n) => ({

@@ -1077,7 +1077,10 @@ export class SalaService {
    * CAUSAS_FIN_PARTIDA) y todas las fichas se dan la vuelta.
    */
   empezarRevelacion(ganador: SalaAlineamiento, causas: string[] = [], esbirros: Record<string, string> = {}): void {
+    // Se acaba todo lo que corre: la nominación (y su cuenta atrás o votación), el reloj y el señalamiento
     this.cerrarNominacion();
+    this.quitarReloj();
+    this.terminarSenalamiento();
     this.final.empezar(ganador, causas);
     // Se acaba la partida. Las causas de esbirro (la Doncel cazada), de la cuenta del
     // esbirro que eligió el narrador

@@ -25,6 +25,7 @@
           "Añadido el anuncio del bando ganador al revelar el grimorio.",
           "Añadidas las elecciones de cada noche y el veneno a lo que cuenta el narrador virtual al revelar.",
           "La Mujer Escarlata que hereda el demonio pasa a ser el Imp con narrador virtual.",
+          "Al revelar el grimorio se paran el reloj, las votaciones y los señalamientos.",
           "La Pitonisa y el Ravenkeeper siempre pasan por la revisión del narrador."
         ]
       },
@@ -36,7 +37,8 @@
           "«Entendido» se envía al pulsarlo.",
           "Cada wake de noche espera al «Entendido» del anterior.",
           "Acortadas las pausas del narrador virtual al ejecutar y al disparar.",
-          "La voz del narrador virtual pronuncia en español los nombres ingleses de los roles."
+          "La voz del narrador virtual pronuncia en español los nombres ingleses de los roles.",
+          "Al revelar el grimorio, el narrador virtual llama «el demonio» a cualquier demonio."
         ]
       },
       {

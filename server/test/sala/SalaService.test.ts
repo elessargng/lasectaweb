@@ -679,6 +679,19 @@ describe('SalaService', () => {
   });
 
   describe('fin de la partida', () => {
+    it('al revelar el grimorio se acaba todo lo que corre: la nominación, el reloj y el señalamiento', () => {
+      const { sala } = salaConJugadores('Ana', 'Bea');
+      alDia(sala);
+      const [a, b] = sala.asientos();
+      sala.nominar(a.id, b.id);
+      sala.ponerReloj(60, 'Privados');
+      sala.empezarSenalamiento({ mensaje: '¿Quién?', segundos: 10, senaladores: [], objetivos: [] });
+      sala.empezarRevelacion('bueno');
+      expect(sala.nominacion()).toBeNull();
+      expect(sala.reloj()).toBeNull();
+      expect(sala.senalamiento()).toBeNull();
+    });
+
     it('al revelar el grimorio se guarda la partida de quien tiene cuenta', () => {
       const sala = new SalaService();
       sala.cambiarGuion(guionDePrueba());

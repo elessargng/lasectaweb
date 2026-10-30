@@ -420,8 +420,9 @@ describe('la noche del narrador virtual', () => {
       await new Revelando('malvado').alEntrar(m.ctx);
       expect(m.sala.identidad(m.sala.asientos().find((a) => a.id === escarlata)!)).toBe('imp');
       const limite = Date.now() + 3000;
-      while (!m.frases.some((f) => / pasó a ser imp/.test(f)) && Date.now() < limite) await new Promise((r) => setTimeout(r, 5));
-      expect(m.frases.find((f) => / pasó a ser imp/.test(f))).toMatch(/^.+ era scarletwoman y pasó a ser imp/);
+      while (!m.frases.some((f) => / pasó a ser el demonio/.test(f)) && Date.now() < limite) await new Promise((r) => setTimeout(r, 5));
+      // El demonio, sin su nombre
+      expect(m.frases.find((f) => / pasó a ser el demonio/.test(f))).toMatch(/^.+ era scarletwoman y pasó a ser el demonio/);
     });
 
     it('revela el grimorio ficha a ficha, con el demonio el último', async () => {
