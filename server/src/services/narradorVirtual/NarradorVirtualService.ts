@@ -4,7 +4,7 @@ import type { EstrategiaNarrador } from './estrategias/EstrategiaNarrador';
 import { TontoYTu } from './estrategias/TontoYTu';
 import { EsperandoJugadores } from './etapas/EsperandoJugadores';
 import { decisionesDe, type AccionJugador, type ContextoEtapa, type Etapa } from './etapas/Etapa';
-import { exterminar } from './dia/exterminar';
+import { contarDisparo, exterminar } from './dia/exterminar';
 import { comprobarFinal, esDemonio } from './final/comprobarFinal';
 import { Revelando } from './etapas/Revelando';
 import { Violinista } from './etapas/Violinista';
@@ -54,6 +54,8 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
   private fuera: FueraDeLaBolsa[] = [];
   /** Lo que recuerda de la partida (ver ContextoEtapa.recuerdos). */
   private recuerdos = recuerdosNuevos();
+  /** Contando un disparo del Exterminador (con sus pausas): hasta que acaba, no se dispara otra vez. */
+  private contandoDisparo = false;
   /** Revisando la sala ahora; `otraVez`: ha vuelto a cambiar mientras tanto. */
   private revisando = false;
   private otraVez = false;
@@ -156,12 +158,16 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
       const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
       if (typeof asientoId !== 'string' || !this.sala.hayAsiento(asientoId)) return 'Ese asiento ya no existe.';
       if (this.sala.asientoDe(jugador)?.id === asientoId) return 'No puedes dispararte a ti.';
+      if (this.contandoDisparo) return 'Espera a que el narrador termine de contar el disparo.';
       const ctx = this.contexto();
-      if (await exterminar(ctx, jugador, asientoId)) {
-        // Si ha caído el demonio, se acaba
-        const ganador = await comprobarFinal(ctx);
-        if (ganador) await this.pasarA(new Revelando(ganador));
-      }
+      const muere = await exterminar(ctx, jugador, asientoId);
+      // Se cuenta con pausas (sin hacer esperar a quien dispara); si ha caído el demonio, se acaba
+      this.contandoDisparo = true;
+      void contarDisparo(ctx, jugador, asientoId, muere)
+        .then(async (ganador) => {
+          if (ganador && this.sala.narradorVirtual()) await this.pasarA(new Revelando(ganador));
+        })
+        .finally(() => (this.contandoDisparo = false));
       return null;
     }
     return this.etapa.alPedir ? this.etapa.alPedir(this.contexto(), jugador, accion, datos) : 'Ahora no es el momento.';

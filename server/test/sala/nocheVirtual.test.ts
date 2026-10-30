@@ -20,7 +20,7 @@ import type { Decision } from '../../src/services/narradorVirtual/estrategias/Es
 import { comprobarFinal } from '../../src/services/narradorVirtual/final/comprobarFinal';
 import { Revelando } from '../../src/services/narradorVirtual/etapas/Revelando';
 import { Violinista } from '../../src/services/narradorVirtual/etapas/Violinista';
-import { exterminar } from '../../src/services/narradorVirtual/dia/exterminar';
+import { contarDisparo, exterminar } from '../../src/services/narradorVirtual/dia/exterminar';
 import { duracionPrivados, PuestaEnComun, TRAS_GONG_MS } from '../../src/services/narradorVirtual/etapas/Dia';
 import { FRASES } from '../../src/services/narradorVirtual/frases';
 import { invitado } from './guionDePrueba';
@@ -336,19 +336,47 @@ describe('la noche del narrador virtual', () => {
         m.sala.irANoche();
         m.sala.amanecer();
         const muere = await exterminar(m.ctx, id, m.asiento(objetivo).id);
-        return { muere, muerto: m.asiento(objetivo).muerto, m };
+        // La muerte se pone al contarlo
+        const ganador = await contarDisparo(m.ctx, id, m.asiento(objetivo).id, muere);
+        return { muere, muerto: m.asiento(objetivo).muerto, ganador, m };
       };
-      expect(await dispara('slayer', 'imp')).toMatchObject({ muere: true, muerto: true });
+      expect(await dispara('slayer', 'imp')).toMatchObject({ muere: true, muerto: true, ganador: 'bueno' });
       expect(await dispara('slayer', 'saint')).toMatchObject({ muere: false, muerto: false });
       expect(await dispara('slayer', 'chef')).toMatchObject({ muere: false, muerto: false });
       // Quien no es el Exterminador no mata ni al demonio
       expect(await dispara('chef', 'imp')).toMatchObject({ muere: false, muerto: false });
-      // La Reclusa: según registre (al azar), unas veces sí y otras no
+      // La Reclusa: según registre (al azar), unas veces sí y otras no; si muere, la partida sigue (el demonio vive)
       const reclusa = await Promise.all([1, 2, 3, 4, 5, 6, 7, 8].map((s) => dispara('slayer', 'recluse', s)));
       expect(reclusa.some((r) => r.muere)).toBe(true);
       expect(reclusa.some((r) => !r.muere)).toBe(true);
+      expect(reclusa.every((r) => r.ganador === null)).toBe(true);
       // El Exterminador de verdad pierde su habilidad al disparar
       expect((await dispara('slayer', 'saint')).m.textos('slayer')).toEqual(['No Ability']);
+    });
+
+    it('el disparo se cuenta con pausas: «… y…», «X muere.» y si sigue la partida o se revela', async () => {
+      const m = mesaVirtual(['slayer', 'imp', 'scarletwoman', 'chef', 'empath', 'monk', 'mayor']);
+      const { id } = m.sala.conectar('s-t', 'c-t', invitado('Tiradora'), () => true);
+      m.sala.sentar(id, m.asiento('slayer').id);
+      m.sala.irANoche();
+      m.sala.amanecer();
+      const imp = m.asiento('imp').id;
+      const muere = await exterminar(m.ctx, id, imp);
+      // Aún no está muerto: se pone al decirlo
+      expect(m.asiento('imp').muerto).toBe(false);
+      // Con la Mujer Escarlata y siete vivos, hereda: la partida sigue
+      expect(await contarDisparo(m.ctx, id, imp, muere)).toBeNull();
+      expect(m.textos('scarletwoman')).toEqual(['Is The Demon']);
+      expect(m.frases.slice(-3)).toEqual([
+        expect.stringMatching(/ se declara exterminador y dispara a .+ y…$/),
+        expect.stringMatching(/ muere\.$/),
+        'La partida continúa.',
+      ]);
+      // Sin morir nadie: «… y…» y la partida continúa
+      const chef = m.asiento('chef').id;
+      expect(await contarDisparo(m.ctx, id, chef, false)).toBeNull();
+      expect(m.frases.slice(-2)).toEqual([expect.stringMatching(/ y…$/), 'La partida continúa.']);
+      expect(m.asiento('chef').muerto).toBe(false);
     });
 
     it('la Mujer Escarlata hereda el demonio con cinco vivos o más (contando al que muere)', async () => {

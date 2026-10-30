@@ -306,7 +306,8 @@ describe('narrador virtual', () => {
     // Si era el demonio, se acaba la partida y se revela; si no, a la noche
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === (eraElDemonio ? 'revelando' : 'noche'));
     expect(ana.estado.asientos.find((a) => a.id === asientoDe(bea))?.muerto).toBe(true);
-    expect(voces).toContain(eraElDemonio ? `${bea.nombre} es ejecutada, muere, y revelamos grimorio.` : `${bea.nombre} es ejecutada, muere y nos vamos a dormir.`);
+    expect(voces).toContain(`${bea.nombre} es ejecutada y muere…`);
+    expect(voces).toContain(eraElDemonio ? 'Y revelamos el grimorio.' : 'Y nos vamos a la noche.');
     if (eraElDemonio) expect(ana.estado.revelacion?.ganador).toBe('bueno');
   }, 30_000);
 
@@ -315,7 +316,7 @@ describe('narrador virtual', () => {
     const [ana] = jugadores;
     for (const c of jugadores) await arnes.accion(c, 'jugador:listo');
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'noche');
-    expect(ana.estado.narradorVirtual?.frase).toBe('Nadie es ejecutado y nos vamos a dormir.');
+    expect(ana.estado.narradorVirtual?.frase).toBe('Y nos vamos a la noche.');
     // «Seguir nominando» deshace el listo (antes de que lo estén todos)
   });
 
@@ -328,7 +329,8 @@ describe('narrador virtual', () => {
     expect(ana.estado.narradorVirtual?.listos).not.toContain(ana.id);
     await arnes.accion(ana, 'jugador:exterminar', { asientoId: bea.miAsiento!.id });
     expect(ana.estado.narradorVirtual?.exterminadores).toContain(ana.id);
-    expect(ana.estado.narradorVirtual?.frase).toMatch(/^Jugador1 se declara exterminador y dispara a Jugador2\. /);
+    // Lo cuenta con pausas y acaba en que la partida continúa o, si era el demonio, en el grimorio
+    await ana.esperarQue((e) => e.narradorVirtual?.frase === 'La partida continúa.' || e.narradorVirtual?.etapa === 'revelando', 5000);
     expect((await arnes.intentar(ana, 'jugador:exterminar', { asientoId: bea.miAsiento!.id })).ok).toBe(false);
   });
 
@@ -360,8 +362,7 @@ describe('narrador virtual', () => {
 
 describe('narrador virtual: la Virgen', () => {
   it('dice quién nomina a quién al ejecutar a quien nomina a la Virgen', () => {
-    expect(FRASES.virgen('Pepa', 'Teresa', false)).toBe('Pepa nomina a Teresa, es ejecutada y nos vamos a dormir.');
-    expect(FRASES.virgen('Pepa', 'Teresa', true)).toBe('Pepa nomina a Teresa, es ejecutada y revelamos el grimorio.');
+    expect(FRASES.virgen('Pepa', 'Teresa')).toBe('Pepa nomina a Teresa y es ejecutada…');
   });
 });
 

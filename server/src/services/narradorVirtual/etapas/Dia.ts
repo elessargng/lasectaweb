@@ -1,11 +1,11 @@
-import { FRASES } from '../frases';
+import { duracionFrase, FRASES, PAUSA_MS } from '../frases';
 import type { SalaService } from '../../SalaService';
 import { nombreDeAsiento, vivo } from '../mesaDeJuego';
 import { jugadoresSentados, muertosSentados, noPuedeNominar, nominadoHoy } from '../dia/reglasDia';
 import type { AccionJugador, ContextoEtapa, Etapa } from './Etapa';
 import { Noche } from './Noche';
 import { Revelando } from './Revelando';
-import { comprobarFinal } from '../final/comprobarFinal';
+import { comprobarFinal, type Ganador } from '../final/comprobarFinal';
 import { apuntarMuerteDeDia } from '../final/cronica';
 
 /** Lo que dura la puesta en común (ms). */
@@ -107,6 +107,14 @@ export class Nominaciones implements Etapa {
   readonly id = 'nominaciones' as const;
   /** Los votos de la marca al empezar la votación en curso (para saber si empata), o null sin marca. */
   private marcaAlVotar: number | null = null;
+  /** Ya se acaba el día (está diciendo cómo): no se atiende nada más. */
+  private terminando = false;
+  private cancelarEspera: (() => void) | null = null;
+
+  alSalir(): void {
+    this.cancelarEspera?.();
+    this.cancelarEspera = null;
+  }
 
   async alEntrar(ctx: ContextoEtapa): Promise<void> {
     await ctx.mesa.accion('narrador:privados', { abiertos: false });
@@ -114,6 +122,7 @@ export class Nominaciones implements Etapa {
 
   async alPedir(ctx: ContextoEtapa, jugador: string, accion: AccionJugador, datos: unknown): Promise<string | null> {
     const { sala } = ctx;
+    if (this.terminando) return 'El día ya ha terminado.';
     const narrador = sala.narradorVirtual();
     const yo = sala.buscar(jugador);
     const miAsiento = sala.asientoDe(jugador);
@@ -174,8 +183,7 @@ export class Nominaciones implements Etapa {
     const quien = nombreDeAsiento(sala, desde);
     // La Virgen: quien la nomina es ejecutado al momento (y se dice quién nominó a quién)
     if (r.valor === 'ejecutado' || r.valor === 'final') {
-      const aQuien = nombreDeAsiento(sala, hasta);
-      await this.trasEjecutar(ctx, quien, desde, (final) => FRASES.virgen(quien, aQuien, final));
+      await this.trasEjecutar(ctx, desde, FRASES.virgen(quien, nombreDeAsiento(sala, hasta)));
       return null;
     }
     const narrador = sala.narradorVirtual()!;
@@ -188,7 +196,7 @@ export class Nominaciones implements Etapa {
   async alCambiar(ctx: ContextoEtapa): Promise<void> {
     const { sala } = ctx;
     const narrador = sala.narradorVirtual();
-    if (!narrador || narrador.turno === null) return;
+    if (this.terminando || !narrador || narrador.turno === null) return;
     const nominacion = sala.nominacion();
     if (!nominacion) {
       sala.actualizarNarradorVirtual({ turno: null });
@@ -214,41 +222,52 @@ export class Nominaciones implements Etapa {
   private async quizaAnochece(ctx: ContextoEtapa): Promise<void> {
     const { sala } = ctx;
     const narrador = sala.narradorVirtual();
-    if (!narrador || narrador.turno !== null || sala.nominacion()) return;
+    if (this.terminando || !narrador || narrador.turno !== null || sala.nominacion()) return;
     const muertos = muertosSentados(sala);
     if (!jugadoresSentados(sala).every((id) => narrador.listos.includes(id) || muertos.includes(id))) return;
     const marcado = sala.asientos().find((a) => a.marcado);
     if (!marcado) {
       // Sin ejecución: con el Alcalde y tres vivos, se acaba
-      const ganador = await comprobarFinal(ctx, { sinEjecucion: true });
-      if (ganador) {
-        ctx.decir(FRASES.nadieEjecutadoYFinal());
-        await ctx.pasarA(new Revelando(ganador, true));
-        return;
-      }
-      ctx.decir(FRASES.nadieEjecutado());
-      await ctx.mesa.accion('narrador:irANoche');
-      await ctx.pasarA(new Noche());
+      await this.terminarDia(ctx, FRASES.nadieEjecutado(), await comprobarFinal(ctx, { sinEjecucion: true }));
       return;
     }
     const quien = nombreDeAsiento(sala, marcado.id);
-    if ((await ctx.mesa.accion('narrador:ejecutar', { asientoId: marcado.id })).ok) await this.trasEjecutar(ctx, quien, marcado.id);
+    if ((await ctx.mesa.accion('narrador:ejecutar', { asientoId: marcado.id })).ok) await this.trasEjecutar(ctx, marcado.id, FRASES.ejecutado(quien));
+  }
+
+  /** Tras una ejecución (`frase`: cómo se cuenta): si se acaba la partida (también por el Santo), se revela; si no, a la noche. */
+  private async trasEjecutar(ctx: ContextoEtapa, ejecutado: string, frase: string): Promise<void> {
+    apuntarMuerteDeDia(ctx.recuerdos.cronica, ctx.sala, ejecutado, 'ejecucion');
+    await this.terminarDia(ctx, frase, await comprobarFinal(ctx, { ejecutado }));
   }
 
   /**
-   * Tras una ejecución: si se acaba la partida (también por el Santo), se revela; si no, a la noche.
-   * `frase`: lo que se dice, si no es lo de siempre (la Virgen); `final`, si se acaba la partida.
+   * Se acaba el día, dicho en dos partes con una pausa («Pepe es ejecutada y muere…»,
+   * «Y nos vamos a la noche» o «Y revelamos el grimorio»). Hasta que no acaba de
+   * decirlo no se va a la noche ni se revela; mientras, no se atiende a nadie.
    */
-  private async trasEjecutar(ctx: ContextoEtapa, quien: string, ejecutado: string, frase?: (final: boolean) => string): Promise<void> {
-    apuntarMuerteDeDia(ctx.recuerdos.cronica, ctx.sala, ejecutado, 'ejecucion');
-    const ganador = await comprobarFinal(ctx, { ejecutado });
+  private async terminarDia(ctx: ContextoEtapa, frase: string, ganador: Ganador | null): Promise<void> {
+    this.terminando = true;
+    ctx.decir(frase);
+    await this.esperar(ctx, duracionFrase(frase) + PAUSA_MS);
+    const despues = FRASES.trasEjecucion(!!ganador);
+    ctx.decir(despues);
+    await this.esperar(ctx, duracionFrase(despues));
     if (ganador) {
-      ctx.decir(frase ? frase(true) : FRASES.ejecutadoYFinal(quien));
       await ctx.pasarA(new Revelando(ganador, true));
       return;
     }
-    ctx.decir(frase ? frase(false) : FRASES.ejecutado(quien));
     if (ctx.sala.fase().momento !== 'noche') await ctx.mesa.accion('narrador:irANoche');
     await ctx.pasarA(new Noche());
+  }
+
+  /** Espera con el reloj de la mesa (si se sale de la etapa antes, no sigue). */
+  private esperar(ctx: ContextoEtapa, ms: number): Promise<void> {
+    return new Promise((seguir) => {
+      this.cancelarEspera = ctx.temporizador.programar(ms, () => {
+        this.cancelarEspera = null;
+        seguir();
+      });
+    });
   }
 }

@@ -1149,7 +1149,8 @@ export class SalaService {
     // sin muerte, sin contar a los viajeros
     const vivos = this.mesa.filter((a) => !a.muerto && !a.muertePendiente && !this.llevaViajero(a)).length;
     const final = vivos <= 2;
-    const anochece = !final && this.reglas.anocheceTrasEjecutar();
+    // Con narrador virtual, anochece él cuando acaba de decirlo (o revela, si se acaba la partida)
+    const anochece = !final && !this.narradorVirtual() && this.reglas.anocheceTrasEjecutar();
     if (anochece) this.irANoche();
     return { anochece, final };
   }

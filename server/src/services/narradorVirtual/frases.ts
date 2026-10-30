@@ -97,6 +97,15 @@ function alRevelar({ nombre, personaje, creia, infos, muerte, sinMasInformacion 
   return creia ? `${inicio}. ${resto[0].toUpperCase()}${resto.slice(1)}.` : `${inicio}, ${resto}.`;
 }
 
+/** Lo que se tarda en decir cada letra (ms), para esperar a que acabe una frase. */
+const POR_LETRA_MS = 70;
+
+/** La pausa con suspense entre una parte y otra de lo que dice (al ejecutar, al disparar…) (ms). */
+export const PAUSA_MS = 1_500;
+
+/** Lo que se tarda en decir una frase (ms), más o menos. */
+export const duracionFrase = (frase: string): number => frase.length * POR_LETRA_MS;
+
 export const FRASES = {
   /** Al añadirlo a la sala; `azar` da un número en [0, 1). */
   saludo: (azar: () => number) => SALUDOS[Math.min(SALUDOS.length - 1, Math.floor(azar() * SALUDOS.length))],
@@ -117,15 +126,17 @@ export const FRASES = {
     `Hacen falta ${votos} votos para marcar a ${aQuien}${hayMarca ? `, ${votos - 1} votos empatarían la votación anterior` : ''}.`,
   /** La votación llega a los votos y supera la marca. */
   marcado: (quien: string) => `${quien} queda marcado.`,
-  ejecutado: (quien: string) => `${quien} es ejecutada, muere y nos vamos a dormir.`,
-  ejecutadoYFinal: (quien: string) => `${quien} es ejecutada, muere, y revelamos grimorio.`,
-  /** Quien nomina a la Virgen es ejecutado al momento (y, si acaba la partida, se revela). */
-  virgen: (quien: string, aQuien: string, final: boolean) =>
-    `${quien} nomina a ${aQuien}, es ejecutada y ${final ? 'revelamos el grimorio' : 'nos vamos a dormir'}.`,
-  nadieEjecutado: () => 'Nadie es ejecutado y nos vamos a dormir.',
-  nadieEjecutadoYFinal: () => 'Nadie es ejecutado y revelamos el grimorio.',
-  /** Alguien se declara Exterminador y dispara: si muere o no pasa nada. */
-  disparo: (quien: string, aQuien: string, muere: boolean) => `${quien} se declara exterminador y dispara a ${aQuien}. ${muere ? `${aQuien} muere.` : 'No pasa nada.'}`,
+  /** Se acaba el día, en dos partes con una pausa: «Pepe es ejecutada y muere…» y, después, `trasEjecucion`. */
+  ejecutado: (quien: string) => `${quien} es ejecutada y muere…`,
+  /** Quien nomina a la Virgen es ejecutado al momento. */
+  virgen: (quien: string, aQuien: string) => `${quien} nomina a ${aQuien} y es ejecutada…`,
+  nadieEjecutado: () => 'Nadie es ejecutado…',
+  /** Lo que sigue a la pausa: a la noche o, si se acaba la partida, al grimorio. */
+  trasEjecucion: (final: boolean) => (final ? 'Y revelamos el grimorio.' : 'Y nos vamos a la noche.'),
+  /** Alguien se declara Exterminador y dispara (luego, tras una pausa, si muere y si sigue la partida). */
+  disparo: (quien: string, aQuien: string) => `${quien} se declara exterminador y dispara a ${aQuien} y…`,
+  muere: (quien: string) => `${quien} muere.`,
+  partidaContinua: () => 'La partida continúa.',
   revelamos: () => 'Revelamos el grimorio.',
   /** Al revelar cada ficha: quién era, lo que recibió y cómo murió. */
   alRevelar,

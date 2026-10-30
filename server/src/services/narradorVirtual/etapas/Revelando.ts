@@ -1,19 +1,17 @@
 import { barajar } from '../../../contrato/bolsaAleatoria';
 import { esDemonio, type Ganador } from '../final/comprobarFinal';
 import { fraseAlRevelar } from '../final/cronica';
-import { FRASES } from '../frases';
+import { duracionFrase, FRASES } from '../frases';
 import type { ContextoEtapa, Etapa } from './Etapa';
 
 /** Lo que espera entre ficha y ficha al revelar (ms), como poco: más si la frase es larga. */
 const ENTRE_FICHAS_MS = 2500;
-/** Lo que se tarda en decir cada letra de la frase (ms). */
-const POR_LETRA_MS = 70;
 
 /**
  * Se acaba la partida: revela el grimorio con el bando que gana, ficha a ficha en
  * un orden al azar, con los demonios los últimos, y de cada uno cuenta quién era,
  * lo que recibió y cómo murió (ver cronica). Si aún no lo
- * ha dicho (al ejecutar ya dice «…y revelamos grimorio»), dice «Revelamos el grimorio».
+ * ha dicho (al ejecutar ya dice «…y revelamos el grimorio»), dice «Revelamos el grimorio».
  */
 export class Revelando implements Etapa {
   readonly id = 'revelando' as const;
@@ -50,7 +48,7 @@ export class Revelando implements Etapa {
       const frase = fraseAlRevelar(ctx.recuerdos.cronica, ctx.sala, asiento);
       await ctx.mesa.accion('narrador:revelarFicha', { asientoId });
       ctx.decir(frase);
-      espera = Math.max(ENTRE_FICHAS_MS, frase.length * POR_LETRA_MS);
+      espera = Math.max(ENTRE_FICHAS_MS, duracionFrase(frase));
     }
   }
 }
