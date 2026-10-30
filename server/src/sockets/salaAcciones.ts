@@ -3,7 +3,7 @@ import { ChatRepository } from '../repositories/ChatRepository';
 import { datosDeDataUrl, guardarFondoSala } from '../utils/salaFondoStorage';
 import { ProveedorVideo } from '../services/videollamada/ProveedorVideo';
 import { MENSAJES_PRIVADOS, SalaMensajesPrivados } from '../contrato/chat';
-import { limpiarAvatarSala, limpiarNombreSala } from '../services/sala/Participantes';
+import { limpiarAvatarSala, limpiarNombreSala, type Participante } from '../services/sala/Participantes';
 import { SALA_RELOJ } from '../services/partida/RelojSala';
 import { SALA_ASIENTOS, SALA_SEGUNDOS_POR_FICHA, SalaService } from '../services/SalaService';
 import {
@@ -42,7 +42,6 @@ import {
   SalaEnvioDespertar,
   SalaFichaEnviada,
   SalaFormaMano,
-  SalaParticipante,
   TARJETAS_DESPERTAR,
   TarjetaDespertar,
 } from '../contrato/sala';
@@ -108,11 +107,11 @@ export interface ImagenesBiblioteca {
 
 interface Accion {
   /** Si quien la pide puede hacerla ahora. Es la única comprobación de permisos. */
-  puede: (sala: SalaService, yo: SalaParticipante) => boolean;
+  puede: (sala: SalaService, yo: Participante) => boolean;
   /** Mensaje cuando no puede. */
-  noPuede: string | ((sala: SalaService, yo: SalaParticipante) => string);
+  noPuede: string | ((sala: SalaService, yo: Participante) => string);
   /** La ejecuta; solo valida los datos que recibe, no los permisos. */
-  hacer: (sala: SalaService, yo: SalaParticipante, datos: unknown, deps: DependenciasSala) => SalaEfecto | Promise<SalaEfecto>;
+  hacer: (sala: SalaService, yo: Participante, datos: unknown, deps: DependenciasSala) => SalaEfecto | Promise<SalaEfecto>;
 }
 
 const cualquiera = () => true;
@@ -194,19 +193,19 @@ function leerFarol(sala: SalaService, datos: unknown): { error: string } | { pos
   }
   return { posicion, personajeId };
 }
-const esNarrador = (_sala: SalaService, yo: SalaParticipante) => yo.rol === 'narrador';
+const esNarrador = (_sala: SalaService, yo: Participante) => yo.rol === 'narrador';
 
 /** Lo que pide un jugador al narrador virtual en el día: se lo pasa (ya comprobado que puede). */
 const alNarradorVirtual =
   (accion: AccionJugador | AccionSuelta) =>
-  async (_sala: SalaService, yo: SalaParticipante, datos: unknown, deps: DependenciasSala): Promise<SalaEfecto> => {
+  async (_sala: SalaService, yo: Participante, datos: unknown, deps: DependenciasSala): Promise<SalaEfecto> => {
     if (!deps.narradorVirtual) return { ok: false, error: 'Esta sala no tiene narradores virtuales.' };
     const error = await deps.narradorVirtual.pedir(yo.id, accion, datos);
     return error ? { ok: false, error } : { ok: true };
   };
 
 /** El turno de la nominación del narrador virtual en el que está el de ese jugador (quien nomina o el nominado). */
-const enSuTurno = (sala: SalaService, yo: SalaParticipante, turno: 'acusacion' | 'defensa') => {
+const enSuTurno = (sala: SalaService, yo: Participante, turno: 'acusacion' | 'defensa') => {
   const n = sala.nominacion();
   const mio = sala.asientoDe(yo.id)?.id;
   return sala.narradorVirtual()?.turno === turno && !!n && !!mio && (turno === 'acusacion' ? n.desde : n.hasta) === mio;
@@ -283,12 +282,12 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   /** Un visitante pide ver el grimorio del narrador (los narradores lo aceptan o lo rechazan). */
   'sala:solicitarGrimorio': {
     // Con narrador virtual, lo concede él al momento
-    puede: (sala, yo) => yo.rol === 'visitante' && yo.accesoGrimorio === 'ninguno' && sala.hayNarrador(),
+    puede: (sala, yo) => yo.rol === 'visitante' && sala.accesoGrimorio(yo.id) === 'ninguno' && sala.hayNarrador(),
     noPuede: (sala, yo) =>
       yo.rol !== 'visitante'
         ? 'Solo los visitantes piden ver el grimorio.'
-        : yo.accesoGrimorio !== 'ninguno'
-          ? yo.accesoGrimorio === 'concedido'
+        : sala.accesoGrimorio(yo.id) !== 'ninguno'
+          ? sala.accesoGrimorio(yo.id) === 'concedido'
             ? 'Ya ves el grimorio.'
             : 'Ya lo has pedido.'
           : 'La sala no tiene narrador.',
@@ -311,7 +310,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       const quien = typeof participanteId === 'string' ? sala.buscar(participanteId) : undefined;
       if (!quien || quien.rol !== 'visitante') return { ok: false, error: 'Esa persona ya no es visitante de la sala.' };
       if (typeof conceder !== 'boolean') return { ok: false, error: 'Respuesta desconocida.' };
-      if (quien.accesoGrimorio !== 'solicitado') return { ok: false, error: 'Esa persona ya no lo está pidiendo.' };
+      if (sala.accesoGrimorio(quien.id) !== 'solicitado') return { ok: false, error: 'Esa persona ya no lo está pidiendo.' };
       sala.cambiarAccesoGrimorio(quien.id, conceder ? 'concedido' : 'ninguno');
       return { ok: true };
     },
@@ -319,7 +318,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   // Quien ve el grimorio del narrador no puede jugar: sabría los personajes de todos.
   'sala:sentarse': {
-    puede: (_sala, yo) => yo.rol === 'visitante' && yo.accesoGrimorio !== 'concedido',
+    puede: (sala, yo) => yo.rol === 'visitante' && sala.accesoGrimorio(yo.id) !== 'concedido',
     noPuede: (_sala, yo) =>
       yo.rol === 'jugador'
         ? 'Ya estás sentado.'
@@ -1895,7 +1894,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 };
 
 /** Las acciones que este participante puede usar ahora mismo. */
-export function accionesPermitidas(sala: SalaService, yo: SalaParticipante): string[] {
+export function accionesPermitidas(sala: SalaService, yo: Participante): string[] {
   return Object.entries(SALA_ACCIONES)
     .filter(([, accion]) => accion.puede(sala, yo))
     .map(([nombre]) => nombre);
@@ -1904,7 +1903,7 @@ export function accionesPermitidas(sala: SalaService, yo: SalaParticipante): str
 /** Ejecuta una acción si existe y quien la pide tiene permiso. */
 export async function ejecutarAccion(
   sala: SalaService,
-  yo: SalaParticipante | undefined,
+  yo: Participante | undefined,
   nombre: string,
   datos: unknown,
   deps: DependenciasSala,

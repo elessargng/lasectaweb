@@ -2,7 +2,6 @@ import { randomUUID } from 'crypto';
 import {
   SALA_PARTIDAS_NOVATO,
   type IdNarradorVirtual,
-  type SalaAccesoGrimorio,
   type SalaFormaMano,
   type SalaParticipante,
   type SalaRol,
@@ -65,18 +64,26 @@ export interface SalaLlegada {
   partidasJugadas: number | null;
 }
 
+/**
+ * Un participante, como lo lleva la sala: sin el acceso al grimorio, que es de la
+ * partida (ver AccesoGrimorio; VistaPartida lo añade al mandarlo).
+ */
+export type Participante = Omit<SalaParticipante, 'accesoGrimorio'>;
+
+/** Un participante ha cambiado de papel. */
+export type OyenteRol = (participanteId: string) => void;
+/** Un narrador ha sacado a alguien de la sala (con su recuerdo, ver recuerdoDe). */
+export type OyenteExpulsion = (participanteId: string, recuerdo: string) => void;
+
 interface Entrada {
-  participante: SalaParticipante;
+  participante: Participante;
   identidad: string;
   nombreBase: string;
   avatarPorDefecto: string | null;
   /** Conexión activa, o null mientras se espera a que vuelva. */
   socketId: string | null;
   expulsion: NodeJS.Timeout | null;
-  /**
-   * Por lo que se le reconoce si sale y vuelve a entrar (para devolverle el
-   * acceso al grimorio): su cuenta o, si es invitado, su navegador.
-   */
+  /** Por lo que se le reconoce si sale y vuelve a entrar (ver recuerdoDe). */
   recuerdo: string;
   /** Un narrador virtual: no tiene conexión, pero está siempre (no se desconecta). */
   virtual?: boolean;
@@ -84,8 +91,8 @@ interface Entrada {
 
 /**
  * Quién está en la sala: las conexiones, los papeles (narrador, jugador,
- * visitante), el acceso al grimorio y las manos. No sabe de la mesa ni de la
- * partida (eso es de SalaService); por eso no comprueba permisos.
+ * visitante) y las manos. No sabe de la mesa ni de la partida; por eso no
+ * comprueba permisos.
  *
  * Cada navegador trae un id de cliente propio y secreto (la «clave»); así, si se
  * recarga la página o se corta la conexión un momento, vuelve con el mismo papel
@@ -94,8 +101,27 @@ interface Entrada {
  */
 export class Participantes {
   private entradas = new Map<string, Entrada>();
-  /** A quién se ha dejado ver el grimorio (por su `recuerdo`), para devolvérselo si sale y vuelve. */
-  private conGrimorio = new Set<string>();
+  private oyentesRol: OyenteRol[] = [];
+  private oyentesExpulsion: OyenteExpulsion[] = [];
+
+  /** Se apunta a los cambios de papel. */
+  alCambiarRol(oyente: OyenteRol): void {
+    this.oyentesRol.push(oyente);
+  }
+
+  /** Se apunta a las expulsiones (ver expulsar). */
+  alExpulsar(oyente: OyenteExpulsion): void {
+    this.oyentesExpulsion.push(oyente);
+  }
+
+  /**
+   * Por lo que se reconoce a un participante si sale y vuelve a entrar: su cuenta
+   * o, si es invitado, su navegador. Es secreto (lleva la clave): no se manda a nadie.
+   * null si no está.
+   */
+  recuerdoDe(participanteId: string): string | null {
+    return [...this.entradas.values()].find((e) => e.participante.id === participanteId)?.recuerdo ?? null;
+  }
 
   /** El id de usuario de un participante con cuenta, o null (invitado, o ya no está). */
   cuentaDe(participanteId: string | null): string | null {
@@ -105,19 +131,8 @@ export class Participantes {
   }
 
   /** Los narradores que están en la sala. */
-  narradores(): SalaParticipante[] {
+  narradores(): Participante[] {
     return [...this.entradas.values()].filter((e) => e.participante.rol === 'narrador').map((e) => e.participante);
-  }
-
-  /**
-   * Otra partida: quien veía el grimorio deja de verlo (y puede volver a sentarse),
-   * también quien había salido de la sala.
-   */
-  olvidarGrimorios(): void {
-    for (const { participante } of this.entradas.values()) {
-      if (participante.accesoGrimorio === 'concedido') participante.accesoGrimorio = 'ninguno';
-    }
-    this.conGrimorio.clear();
   }
 
   /**
@@ -174,8 +189,6 @@ export class Participantes {
         conectado: true,
         manoLevantada: false,
         dosManos: false,
-        // Si ya lo vio y salió de la sala, lo recupera (vuelve como visitante)
-        accesoGrimorio: this.conGrimorio.has(recuerdo) ? 'concedido' : 'ninguno',
         formaMano: 'palma',
         estiloMano: 'defecto',
         sinSonido: false,
@@ -209,7 +222,6 @@ export class Participantes {
         conectado: true,
         manoLevantada: false,
         dosManos: false,
-        accesoGrimorio: 'ninguno',
         formaMano: 'palma',
         estiloMano: 'defecto',
         sinSonido: false,
@@ -273,8 +285,7 @@ export class Participantes {
     const [clave, entrada] = encontrada;
     if (entrada.expulsion) clearTimeout(entrada.expulsion);
     this.entradas.delete(clave);
-    // Expulsado por un narrador: si vuelve, no recupera el grimorio
-    this.conGrimorio.delete(entrada.recuerdo);
+    for (const oyente of this.oyentesExpulsion) oyente(id, entrada.recuerdo);
     return entrada.socketId;
   }
 
@@ -290,12 +301,12 @@ export class Participantes {
   }
 
   /** El participante de esta conexión, o undefined si ya no está. */
-  participanteDe(clave: string): SalaParticipante | undefined {
+  participanteDe(clave: string): Participante | undefined {
     return this.entradas.get(clave)?.participante;
   }
 
   /** Un participante por su id público. */
-  buscar(id: string): SalaParticipante | undefined {
+  buscar(id: string): Participante | undefined {
     return [...this.entradas.values()].find((e) => e.participante.id === id)?.participante;
   }
 
@@ -347,27 +358,14 @@ export class Participantes {
   cambiarRol(id: string, rol: SalaRol): void {
     const participante = this.buscar(id);
     if (!participante) return;
-    // El acceso al grimorio es de los visitantes: al cambiar de papel se pierde (y se vuelve a pedir).
-    if (participante.rol !== rol && participante.accesoGrimorio !== 'ninguno') this.cambiarAccesoGrimorio(id, 'ninguno');
     const cambia = participante.rol !== rol;
     participante.rol = rol;
+    if (cambia) for (const oyente of this.oyentesRol) oyente(id);
     // La mano es de jugadores y narradores, y de su papel: quien cambia de papel la baja.
     if (cambia || rol === 'visitante') {
       participante.manoLevantada = false;
       participante.dosManos = false;
     }
-  }
-
-  /**
-   * Cambia el acceso de un participante al grimorio del narrador. Concedido, se
-   * recuerda aunque salga de la sala. No comprueba permisos.
-   */
-  cambiarAccesoGrimorio(id: string, acceso: SalaAccesoGrimorio): void {
-    const entrada = [...this.entradas.values()].find((e) => e.participante.id === id);
-    if (!entrada) return;
-    entrada.participante.accesoGrimorio = acceso;
-    if (acceso === 'concedido') this.conGrimorio.add(entrada.recuerdo);
-    else this.conGrimorio.delete(entrada.recuerdo);
   }
 
   /** Quita o pone el sonido de un participante (si oye a los demás). */
@@ -404,7 +402,7 @@ export class Participantes {
   }
 
   /** Los que siguen en la sala, también los que esperan reconexión, por orden de llegada. */
-  participantes(): SalaParticipante[] {
+  participantes(): Participante[] {
     return [...this.entradas.values()].map((e) => ({ ...e.participante, conectado: e.socketId !== null || !!e.virtual }));
   }
 

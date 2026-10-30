@@ -240,7 +240,7 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     const narrador = this.sala.narradorVirtual();
     if (!narrador) return;
     for (const p of this.sala.participantes()) {
-      if (p.rol === 'visitante' && p.accesoGrimorio === 'solicitado') {
+      if (p.rol === 'visitante' && this.sala.accesoGrimorio(p.id) === 'solicitado') {
         await this.mesaDe(narrador.participante).accion('narrador:accesoGrimorio', { participanteId: p.id, conceder: true });
       }
     }

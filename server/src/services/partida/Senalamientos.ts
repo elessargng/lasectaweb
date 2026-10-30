@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
-import type { SalaAsiento, SalaFase, SalaParticipante, SalaSenalamiento } from '../../contrato/sala';
+import type { Participante } from '../sala/Participantes';
+import type { SalaAsiento, SalaFase, SalaSenalamiento } from '../../contrato/sala';
 
 /** Lo que el señalamiento necesita saber de la sala. */
 export interface EntornoSenalamiento {
@@ -8,6 +9,8 @@ export interface EntornoSenalamiento {
   fase(): SalaFase;
   /** El asiento en el que se sienta un participante, o null. */
   asientoDe(participanteId: string): SalaAsiento | null;
+  /** Un visitante ve el grimorio del narrador. */
+  veGrimorio(participanteId: string): boolean;
   /** Despierta a un asiento (de noche, los que señalan). */
   despertar(asientoId: string): void;
 }
@@ -43,11 +46,11 @@ export class Senalamientos {
    * narradores, los visitantes que ven el grimorio y los jugadores sentados en
    * un asiento que señala.
    */
-  veSenalamiento(participante: SalaParticipante): boolean {
+  veSenalamiento(participante: Participante): boolean {
     const s = this.actual;
     if (!s) return false;
     if (s.publico || participante.rol === 'narrador') return true;
-    if (participante.rol === 'visitante') return participante.accesoGrimorio === 'concedido';
+    if (participante.rol === 'visitante') return this.entorno.veGrimorio(participante.id);
     const asiento = this.entorno.asientoDe(participante.id);
     return !!asiento && s.senaladores.includes(asiento.id);
   }

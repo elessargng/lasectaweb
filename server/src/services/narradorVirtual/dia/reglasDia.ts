@@ -1,4 +1,5 @@
-import type { EtapaNarradorVirtual, SalaParticipante } from '../../../contrato/sala';
+import type { EtapaNarradorVirtual } from '../../../contrato/sala';
+import type { Participante } from '../../sala/Participantes';
 import type { SalaService } from '../../SalaService';
 
 /**
@@ -25,7 +26,7 @@ export function diaVirtual(sala: SalaService) {
 }
 
 /** Por qué no puede nominar ahora (o null, si puede): vivo, sentado, sin haber nominado hoy y sin otra nominación. */
-export function noPuedeNominar(sala: SalaService, yo: SalaParticipante): string | null {
+export function noPuedeNominar(sala: SalaService, yo: Participante): string | null {
   if (sala.narradorVirtual()?.etapa !== 'nominaciones') return 'Ahora no es el momento de nominar.';
   const asiento = sala.asientoDe(yo.id);
   if (yo.rol !== 'jugador' || !asiento) return 'Solo nominan los jugadores sentados.';

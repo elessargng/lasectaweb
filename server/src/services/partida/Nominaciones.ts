@@ -1,4 +1,5 @@
-import type { SalaAsiento, SalaNominacion, SalaParticipante, SalaRegistroVotacion } from '../../contrato/sala';
+import type { SalaAsiento, SalaNominacion, SalaRegistroVotacion } from '../../contrato/sala';
+import type { Participante } from '../sala/Participantes';
 
 /**
  * La cuenta atrás de las nominaciones: siempre de 3 a 0, un segundo cada número
@@ -32,7 +33,7 @@ type NominacionInterna = Omit<SalaNominacion, 'votosNecesarios' | 'votosNecesari
 export interface EntornoVotacion {
   /** La mesa, en orden. */
   mesa(): SalaAsiento[];
-  buscar(participanteId: string): SalaParticipante | undefined;
+  buscar(participanteId: string): Participante | undefined;
   /** Baja todas las manos levantadas. */
   bajarManos(): void;
   /** La cuenta de un participante, o null (invitado). */
@@ -52,7 +53,7 @@ export interface EntornoVotacion {
   /** Los votos que hacen falta con tantas fichas vivas (la mitad o, con el Voudon vivo, 1). */
   mayoria(vivos: number): number;
   /** Lo que vale el voto de quien se sienta en un asiento (1, o lo que digan sus recordatorios). */
-  valorDelVoto(asiento: SalaAsiento, ocupante: SalaParticipante): number;
+  valorDelVoto(asiento: SalaAsiento, ocupante: Participante): number;
   /** La votación es secreta (Organ Grinder). */
   secreta(): boolean;
   /**

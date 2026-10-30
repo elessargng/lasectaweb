@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
-import { SalaConversacion, SalaInvitacion, SalaParticipante } from '../../contrato/sala';
+import type { Participante } from '../sala/Participantes';
+import { SalaConversacion, SalaInvitacion } from '../../contrato/sala';
 import { SalaService } from '../SalaService';
 
 /** Algo que no se puede hacer en una conversación (el mensaje es para quien lo intenta). */
@@ -13,8 +14,8 @@ export class ConversacionError extends Error {
 /** Fuera del rato de los privados que da el narrador virtual. */
 const PRIVADOS_CERRADOS = 'Ahora no es el momento de los privados.';
 
-const conversa = (p: SalaParticipante) => p.rol === 'jugador' || p.rol === 'narrador';
-const escucha = (p: SalaParticipante) => p.rol === 'visitante' || p.rol === 'narrador';
+const conversa = (p: Participante) => p.rol === 'jugador' || p.rol === 'narrador';
+const escucha = (p: Participante) => p.rol === 'visitante' || p.rol === 'narrador';
 
 /**
  * Las conversaciones privadas de la sala (por voz y vídeo), aparte de la mesa.
@@ -252,7 +253,7 @@ export class ConversacionService {
       this.conversaciones = [];
       this.invitaciones = [];
     }
-    const sigue = (id: string, puede: (p: SalaParticipante) => boolean) => {
+    const sigue = (id: string, puede: (p: Participante) => boolean) => {
       const p = this.sala.buscar(id);
       return !!p && puede(p);
     };
@@ -284,7 +285,7 @@ export class ConversacionService {
   }
 
   /** Si `yo` puede invitar a `otro` ahora (o, al aceptar, si sigue pudiendo). */
-  private comprobar(yoId: string, otroId: string): { yo: SalaParticipante; otro: SalaParticipante } {
+  private comprobar(yoId: string, otroId: string): { yo: Participante; otro: Participante } {
     const yo = this.sala.buscar(yoId);
     const otro = this.sala.buscar(otroId);
     if (!yo) throw new ConversacionError('Quien invitaba ya no está en la sala.');

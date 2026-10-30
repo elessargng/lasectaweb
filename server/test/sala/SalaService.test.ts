@@ -119,6 +119,70 @@ describe('SalaService', () => {
     });
   });
 
+  describe('acceso al grimorio', () => {
+    const acceso = (sala: SalaService, id: string) => sala.accesoGrimorio(id);
+
+    it('concedido, se recupera al salir y volver (invitado, con el mismo navegador)', () => {
+      const sala = new SalaService();
+      const { clave, id } = sala.conectar('s1', 'c1', invitado('Vera'), siempreViva);
+      sala.cambiarAccesoGrimorio(id, 'concedido');
+      sala.salir(clave, 's1');
+      const vuelta = sala.conectar('s2', 'c1', invitado('Vera'), siempreViva);
+      expect(vuelta.id).not.toBe(id);
+      expect(acceso(sala, vuelta.id)).toBe('concedido');
+    });
+
+    it('concedido, se recupera al volver con la misma cuenta', () => {
+      const sala = new SalaService();
+      const { clave, id } = sala.conectar('s1', 'c1', conCuenta('9', 'vera'), siempreViva);
+      sala.cambiarAccesoGrimorio(id, 'concedido');
+      sala.salir(clave, 's1');
+      expect(acceso(sala, sala.conectar('s2', 'c2', conCuenta('9', 'vera'), siempreViva).id)).toBe('concedido');
+    });
+
+    it('solicitado, se pierde al salir', () => {
+      const sala = new SalaService();
+      const { clave, id } = sala.conectar('s1', 'c1', invitado('Vera'), siempreViva);
+      sala.cambiarAccesoGrimorio(id, 'solicitado');
+      expect(acceso(sala, id)).toBe('solicitado');
+      sala.salir(clave, 's1');
+      expect(acceso(sala, sala.conectar('s2', 'c1', invitado('Vera'), siempreViva).id)).toBe('ninguno');
+    });
+
+    it('se pierde al cambiar de papel (al sentarse) y no vuelve al levantarse', () => {
+      const sala = new SalaService();
+      const { id } = sala.conectar('s1', 'c1', invitado('Vera'), siempreViva);
+      sala.cambiarAccesoGrimorio(id, 'concedido');
+      sala.sentar(id, sala.asientos()[0].id);
+      expect(acceso(sala, id)).toBe('ninguno');
+      sala.levantar(id);
+      expect(acceso(sala, id)).toBe('ninguno');
+    });
+
+    it('expulsado por un narrador, al volver no lo recupera', () => {
+      const sala = new SalaService();
+      const { id } = sala.conectar('s1', 'c1', invitado('Vera'), siempreViva);
+      sala.cambiarAccesoGrimorio(id, 'concedido');
+      sala.expulsar(id);
+      expect(acceso(sala, sala.conectar('s2', 'c1', invitado('Vera'), siempreViva).id)).toBe('ninguno');
+    });
+
+    it('otra partida: lo pierde quien lo tenía (también quien había salido); lo solicitado sigue', () => {
+      const sala = new SalaService();
+      const vera = sala.conectar('s1', 'c1', invitado('Vera'), siempreViva);
+      const { id: luis } = sala.conectar('s2', 'c2', invitado('Luis'), siempreViva);
+      const { id: eva } = sala.conectar('s3', 'c3', invitado('Eva'), siempreViva);
+      sala.cambiarAccesoGrimorio(vera.id, 'concedido');
+      sala.cambiarAccesoGrimorio(luis, 'concedido');
+      sala.cambiarAccesoGrimorio(eva, 'solicitado');
+      sala.salir(vera.clave, 's1');
+      sala.limpiarGrimorio();
+      expect(acceso(sala, luis)).toBe('ninguno');
+      expect(acceso(sala, eva)).toBe('solicitado');
+      expect(acceso(sala, sala.conectar('s4', 'c1', invitado('Vera'), siempreViva).id)).toBe('ninguno');
+    });
+  });
+
   describe('la mesa', () => {
     it('al sentarse pasa a jugador; al levantarse, a visitante', () => {
       const { sala, ids, asiento } = salaConJugadores('Ana');

@@ -15,7 +15,10 @@ const nora = persona('nora', 'narrador');
 const conGrimorio = persona('vera', 'visitante', 'concedido');
 const sinGrimorio = persona('vito', 'visitante');
 const todos = [ana, bea, nora, conGrimorio, sinGrimorio];
-const sala = { buscar: (id: string) => todos.find((p) => p.id === id) } as unknown as SalaService;
+const sala = {
+  buscar: (id: string) => todos.find((p) => p.id === id),
+  accesoGrimorio: (id: string) => todos.find((p) => p.id === id)?.accesoGrimorio ?? 'ninguno',
+} as unknown as SalaService;
 const chat = new ChatService({} as ChatRepository, sala);
 
 describe('quién lee los privados', () => {

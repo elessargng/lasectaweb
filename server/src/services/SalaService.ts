@@ -10,7 +10,6 @@ import {
   SalaDespertar,
   SalaFormaMano,
   SalaNominacion,
-  SalaParticipante,
   SalaRegistroVotacion,
   SalaReloj,
   SalaSenalamiento,
@@ -24,7 +23,8 @@ import {
   SalaNarradorVirtual,
 } from '../contrato/sala';
 import { GuionResuelto, PersonajeDeGuion } from '../types/guiones';
-import { type SalaLlegada } from './sala/Participantes';
+import { type Participante, type SalaLlegada } from './sala/Participantes';
+import { AccesoGrimorio } from './partida/AccesoGrimorio';
 import { Sala, SALA_ASIENTOS } from './sala/Sala';
 import { Grimorio, identidadDe } from './partida/Grimorio';
 import { NarradorVirtualEnMemoria, type NarradorVirtualRepository } from '../repositories/NarradorVirtualRepository';
@@ -65,6 +65,8 @@ export const SALA_SEGUNDOS_POR_FICHA = { min: 0.25, max: 2, paso: 0.25, defecto:
 export class SalaService {
   /** Quién está en la sala y en qué asiento se sienta cada jugador (ver Sala). */
   private readonly sala = new Sala();
+  /** Quién ha pedido ver el grimorio y a quién se le ha concedido. */
+  private readonly acceso = new AccesoGrimorio((id) => this.sala.participantes.recuerdoDe(id));
   /** La ficha de cada asiento y lo que se hace con ellas (ver Grimorio). */
   private readonly grimorio = new Grimorio({
     asientos: () => this.sala.asientos(),
@@ -80,6 +82,9 @@ export class SalaService {
   ) {
     // Al cambiar de silla, cada jugador se lleva su ficha
     this.sala.alMover((destino) => this.llevarFichas(destino));
+    // El acceso al grimorio es de los visitantes: al cambiar de papel se pierde (y se vuelve a pedir)
+    this.sala.participantes.alCambiarRol((id) => this.acceso.cambiar(id, 'ninguno'));
+    this.sala.participantes.alExpulsar((id, recuerdo) => this.acceso.alExpulsar(id, recuerdo));
   }
 
   /**
@@ -179,6 +184,7 @@ export class SalaService {
     mesa: () => this.mesa,
     fase: () => this.fases.actual(),
     asientoDe: (id) => this.asientoDe(id),
+    veGrimorio: (id) => this.acceso.de(id) === 'concedido',
     despertar: (asientoId) => void this.despertar(asientoId),
   });
   /** La fase de la partida y la máquina del tiempo. */
@@ -672,7 +678,7 @@ export class SalaService {
     this.entregas.olvidar();
     this.farolesDemonio.vaciar();
     this.final.olvidar();
-    this.sala.participantes.olvidarGrimorios();
+    this.acceso.nuevaPartida();
     this.despertados.cerrarTodos();
     this.guiado.olvidar();
     this.recordatorios = {};
@@ -827,7 +833,7 @@ export class SalaService {
     return this.senales.senalamiento();
   }
 
-  veSenalamiento(participante: SalaParticipante): boolean {
+  veSenalamiento(participante: Participante): boolean {
     return this.senales.veSenalamiento(participante);
   }
 
@@ -836,7 +842,7 @@ export class SalaService {
    * quien lo ve no levanta la mano: las manos de señalar van en las fichas. De noche,
    * quien no lo ve sigue igual (así no sabe que lo hay).
    */
-  manosBloqueadas(participante: SalaParticipante): boolean {
+  manosBloqueadas(participante: Participante): boolean {
     return this.veSenalamiento(participante);
   }
 
@@ -1097,11 +1103,11 @@ export class SalaService {
     this.sala.participantes.desconectar(clave, socketId, alExpulsar);
   }
 
-  participanteDe(clave: string): SalaParticipante | undefined {
+  participanteDe(clave: string): Participante | undefined {
     return this.sala.participantes.participanteDe(clave);
   }
 
-  buscar(id: string): SalaParticipante | undefined {
+  buscar(id: string): Participante | undefined {
     return this.sala.participantes.buscar(id);
   }
 
@@ -1205,8 +1211,13 @@ export class SalaService {
     this.sala.participantes.cambiarRol(id, rol);
   }
 
+  /** Si un participante ha pedido ver el grimorio o lo ve (ver AccesoGrimorio). */
+  accesoGrimorio(id: string): SalaAccesoGrimorio {
+    return this.acceso.de(id);
+  }
+
   cambiarAccesoGrimorio(id: string, acceso: SalaAccesoGrimorio): void {
-    this.sala.participantes.cambiarAccesoGrimorio(id, acceso);
+    this.acceso.cambiar(id, acceso);
   }
 
   cambiarSonido(id: string, sinSonido: boolean): void {
@@ -1225,7 +1236,7 @@ export class SalaService {
     this.sala.participantes.elegirEstiloMano(id, estilo);
   }
 
-  participantes(): SalaParticipante[] {
+  participantes(): Participante[] {
     return this.sala.participantes.participantes();
   }
 

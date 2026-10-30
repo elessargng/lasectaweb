@@ -1,4 +1,5 @@
 import { SalaService } from '../SalaService';
+import type { Participante } from '../sala/Participantes';
 import { NPC_TOR } from './personajesEspeciales';
 import { farolesVacios } from './Faroles';
 import type {
@@ -7,8 +8,7 @@ import type {
   SalaEstado,
   SalaInvitacion,
   SalaNominacion,
-  SalaParticipante,
-} from '../../contrato/sala';
+  } from '../../contrato/sala';
 
 /** Lo que la vista necesita de fuera de la partida: las conversaciones, el vídeo y los permisos. */
 export interface ContextoVista {
@@ -17,7 +17,7 @@ export interface ContextoVista {
   /** Hay videollamada en la sala. */
   video: boolean;
   /** Las acciones que puede usar ahora un participante (ver salaAcciones). */
-  accionesDe: (participante: SalaParticipante) => string[];
+  accionesDe: (participante: Participante) => string[];
 }
 
 /** Una ficha sin su personaje ni su alineamiento: así la ven quienes no son su jugador ni narran. */
@@ -82,7 +82,8 @@ export class VistaPartida {
     private readonly sala: SalaService,
     private readonly contexto: ContextoVista,
   ) {
-    this.participantes = sala.participantes();
+    // Con su acceso al grimorio (es de la partida, no del participante)
+    this.participantes = sala.participantes().map((p) => ({ ...p, accesoGrimorio: sala.accesoGrimorio(p.id) }));
     this.asientos = sala.asientos();
     this.nominacion = sala.nominacion();
     this.revelacion = sala.revelacion();
@@ -106,10 +107,10 @@ export class VistaPartida {
   }
 
   /** El estado de la sala tal como lo ve este participante. */
-  para(yo: SalaParticipante): SalaEstado {
+  para(yo: Participante): SalaEstado {
     const { sala, contexto, comun } = this;
     const narra = yo.rol === 'narrador';
-    const veGrimorio = narra || (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido');
+    const veGrimorio = narra || (yo.rol === 'visitante' && sala.accesoGrimorio(yo.id) === 'concedido');
     const ocultarVotos = this.secreta && !veGrimorio;
     // La votación en curso solo se esconde si es una nominación (las expulsiones, no)
     const ocultarVotacion = ocultarVotos && !!this.nominacion?.privada;
@@ -174,7 +175,7 @@ export class VistaPartida {
   }
 
   /** Un asiento como lo ve quien no ve el grimorio (un jugador o un visitante sin acceso). */
-  private asientoSinGrimorio(a: SalaAsiento, yo: SalaParticipante, ocultarVotos: boolean, ocultarVotacion: boolean): SalaAsiento {
+  private asientoSinGrimorio(a: SalaAsiento, yo: Participante, ocultarVotos: boolean, ocultarVotacion: boolean): SalaAsiento {
     return {
       // La muerte pendiente (de la noche, por anunciar) es del grimorio: los demás no la ven
       ...(this.reveladas.has(a.id)

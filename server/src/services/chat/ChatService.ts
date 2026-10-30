@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import type { Participante } from '../sala/Participantes';
 import { ChatRepository } from '../../repositories/ChatRepository';
 import {
   CANAL_GENERAL,
@@ -9,7 +10,6 @@ import {
   SalaMensaje,
   SalaSusurro,
 } from '../../contrato/chat';
-import { SalaParticipante } from '../../contrato/sala';
 import { SalaService } from '../SalaService';
 
 /** Un mensaje que no se puede mandar (el mensaje de error es para quien escribe). */
@@ -50,18 +50,18 @@ export class ChatService {
   ) {}
 
   /** Si alguien puede leer (y escribir en) un canal. */
-  puedeLeer(yo: SalaParticipante, canal: string): boolean {
+  puedeLeer(yo: Participante, canal: string): boolean {
     if (canal === CANAL_GENERAL) return yo.rol === 'jugador' || yo.rol === 'narrador';
     if (canal === CANAL_VISITANTES) return yo.rol === 'visitante' || yo.rol === 'narrador';
     const participantes = participantesDePrivado(canal);
     if (!participantes) return false;
     if (participantes.includes(yo.id)) return true;
-    const leeAjenos = yo.rol === 'narrador' || (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido');
+    const leeAjenos = yo.rol === 'narrador' || (yo.rol === 'visitante' && this.sala.accesoGrimorio(yo.id) === 'concedido');
     return leeAjenos && participantes.every((id) => this.sala.buscar(id)?.rol !== 'narrador');
   }
 
   /** Si `yo` puede escribir en privado a `otro`. */
-  puedeEscribirA(yo: SalaParticipante, otro: SalaParticipante): boolean {
+  puedeEscribirA(yo: Participante, otro: Participante): boolean {
     if (yo.id === otro.id) return false;
     if (yo.rol === 'narrador' || otro.rol === 'narrador') return true;
     if (yo.rol !== 'jugador' || otro.rol !== 'jugador') return false;
@@ -72,7 +72,7 @@ export class ChatService {
   }
 
   /** Los mensajes que alguien puede leer, del más antiguo al más reciente. */
-  historial(yo: SalaParticipante): SalaMensaje[] {
+  historial(yo: Participante): SalaMensaje[] {
     return this.repositorio.deCanales((canal) => this.puedeLeer(yo, canal));
   }
 
@@ -88,7 +88,7 @@ export class ChatService {
     if (limpio.length > LARGO_MAXIMO_MENSAJE) throw new ChatError(`El mensaje es demasiado largo (máximo ${LARGO_MAXIMO_MENSAJE}).`);
 
     let canal: string;
-    let otro: SalaParticipante | undefined;
+    let otro: Participante | undefined;
     if (para === CANAL_GENERAL || para === CANAL_VISITANTES) {
       if (!this.puedeLeer(yo, para)) throw new ChatError('No puedes escribir en ese chat.');
       canal = para;
@@ -107,7 +107,7 @@ export class ChatService {
   }
 
   /** Por qué no puede escribirle (para el mensaje de error). */
-  private porQueNo(yo: SalaParticipante, otro: SalaParticipante): string {
+  private porQueNo(yo: Participante, otro: Participante): string {
     if (yo.id === otro.id) return 'No puedes escribirte a ti mismo.';
     if (yo.rol !== 'jugador' || otro.rol !== 'jugador') return 'Solo puedes escribir en privado a los narradores.';
     if (this.sala.configuracion().mensajes === 'todos' && this.sala.institutrizViva()) {
@@ -141,7 +141,7 @@ export class ChatService {
   }
 
   /** Entre dos jugadores sentados, las ondas del susurro (más intensas cuanto más largo). */
-  private susurro(yo: SalaParticipante, otro: SalaParticipante, texto: string): SalaSusurro | null {
+  private susurro(yo: Participante, otro: Participante, texto: string): SalaSusurro | null {
     if (yo.rol !== 'jugador' || otro.rol !== 'jugador') return null;
     const mesa = this.sala.asientos();
     const desde = mesa.find((a) => a.ocupante === yo.id)?.id;
