@@ -3,12 +3,10 @@ import { Sala, SALA_ASIENTOS } from '../../src/services/sala/Sala';
 import { invitado } from './guionDePrueba';
 
 const siempreViva = () => true;
-let siguiente = 0;
-const asientoNuevo = () => ({ id: `asiento-${++siguiente}`, ocupante: null });
 
 /** Una sala con los jugadores dados sentados en los primeros asientos, en orden. */
 function salaConJugadores(...nombres: string[]) {
-  const sala = new Sala(asientoNuevo);
+  const sala = new Sala();
   const ids = nombres.map((nombre, i) => {
     const { id } = sala.participantes.conectar(`socket-${nombre}`, `cliente-${nombre}`, invitado(nombre), siempreViva);
     expect(sala.sentar(id, sala.asientos()[i].id)).toBeNull();
@@ -21,7 +19,7 @@ function salaConJugadores(...nombres: string[]) {
 
 describe('Sala', () => {
   it('empieza con los asientos iniciales, todos libres', () => {
-    const sala = new Sala(asientoNuevo);
+    const sala = new Sala();
     expect(sala.asientos()).toHaveLength(SALA_ASIENTOS.inicial);
     expect(sala.asientos().every((a) => a.ocupante === null)).toBe(true);
   });

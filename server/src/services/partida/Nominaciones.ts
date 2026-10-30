@@ -45,6 +45,8 @@ export interface EntornoVotacion {
   segundosPorFicha(): number;
   /** No puede votar (muerto sin voto; con el Voudon vivo, los vivos que no son él). */
   sinVoto(participanteId: string): boolean;
+  /** Gasta (o devuelve) el voto de la ficha muerta de un asiento. */
+  cambiarVoto(asientoId: string, gastado: boolean): void;
   /** Un muerto que vota desde este asiento no gasta su voto (la Banshee con su habilidad, el Voudon vivo). */
   votaSinGastar(asiento: SalaAsiento): boolean;
   /** Los votos que hacen falta con tantas fichas vivas (la mitad o, con el Voudon vivo, 1). */
@@ -172,7 +174,7 @@ export class Nominaciones {
       // Voto contado: la mano baja sola.
       ocupante.manoLevantada = false;
       ocupante.dosManos = false;
-      if (asiento?.muerto && !conservaVoto) asiento.votoGastado = true;
+      if (asiento?.muerto && !conservaVoto) this.entorno.cambiarVoto(asiento.id, true);
     }
     v.resultados[asientoId] = vota ? v.votos : null;
     v.paso += 1;
@@ -321,7 +323,7 @@ export class Nominaciones {
     this.pararTemporizador();
     if (n.votacion && n.gastadosAlVotar) {
       const gastados = new Set(n.gastadosAlVotar);
-      for (const a of this.entorno.mesa()) if (a.muerto && !gastados.has(a.id)) a.votoGastado = false;
+      for (const a of this.entorno.mesa()) if (a.muerto && !gastados.has(a.id)) this.entorno.cambiarVoto(a.id, false);
     }
     for (const cuenta of n.votantesContados ?? []) this.entorno.alDesvotar(cuenta);
     n.cuentaAtrasFin = null;

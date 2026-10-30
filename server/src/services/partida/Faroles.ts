@@ -1,4 +1,5 @@
-import { NUM_FAROLES, type SalaAsiento } from '../../contrato/sala';
+import { NUM_FAROLES } from '../../contrato/sala';
+import type { Asiento } from '../sala/Sala';
 
 /** Las casillas de farol, todas vacías. */
 export const farolesVacios = (): (string | null)[] => Array.from({ length: NUM_FAROLES }, () => null);
@@ -26,7 +27,7 @@ export class Faroles {
 
   constructor(
     /** La mesa como está ahora. */
-    private readonly mesa: () => SalaAsiento[],
+    private readonly mesa: () => Asiento[],
   ) {}
 
   faroles(): (string | null)[] {
@@ -42,13 +43,13 @@ export class Faroles {
   }
 
   /** Los faroles del asiento, si siguen siendo de quien se sienta en él. */
-  deAsiento(asiento: SalaAsiento): (string | null)[] {
+  deAsiento(asiento: Asiento): (string | null)[] {
     const f = this.deAsientos.get(asiento.id);
     return f && f.ocupante === asiento.ocupante ? [...f.faroles] : farolesVacios();
   }
 
   /** El farol que dice usar el asiento, si sigue siendo de quien se sienta en él (y sigue entre sus faroles). */
-  enUso(asiento: SalaAsiento): string | null {
+  enUso(asiento: Asiento): string | null {
     const f = this.deAsientos.get(asiento.id);
     return f && f.ocupante === asiento.ocupante ? f.enUso : null;
   }
@@ -77,7 +78,7 @@ export class Faroles {
     return null;
   }
 
-  private guardar(asiento: SalaAsiento, faroles: (string | null)[], enUso: string | null): void {
+  private guardar(asiento: Asiento, faroles: (string | null)[], enUso: string | null): void {
     this.deAsientos.set(asiento.id, { ocupante: asiento.ocupante, faroles, enUso: enUso && faroles.includes(enUso) ? enUso : null });
   }
 

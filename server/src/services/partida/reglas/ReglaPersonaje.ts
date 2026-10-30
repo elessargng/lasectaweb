@@ -89,7 +89,7 @@ export const lleva = (ctx: ContextoReglas, asiento: SalaAsiento, personajeId: st
 
 /** Ese personaje está vivo en la mesa (en la ficha o de verdad); `salvo`: sin contar ese asiento. */
 export const vivoEnJuego = (ctx: ContextoReglas, personajeId: string, salvo?: SalaAsiento): boolean =>
-  ctx.mesa().some((a) => a !== salvo && !a.muerto && lleva(ctx, a, personajeId));
+  ctx.mesa().some((a) => a.id !== salvo?.id && !a.muerto && lleva(ctx, a, personajeId));
 
 /** El asiento lleva algún recordatorio de ese personaje (y, si se da, con ese texto). */
 export const tieneRecordatorio = (asiento: SalaAsiento, personajeId: string, texto?: RegExp): boolean =>

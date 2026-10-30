@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { barajar } from '../partida/azar';
 import { Participantes } from './Participantes';
 
@@ -10,6 +11,9 @@ export interface Asiento {
   ocupante: string | null;
 }
 
+/** Un asiento recién puesto: libre. */
+const asientoNuevo = (): Asiento => ({ id: randomUUID(), ocupante: null });
+
 /** Cómo se han movido los ocupantes: del asiento de cada clave al de su valor. */
 export type OyenteMover = (destino: Map<string, string>) => void;
 
@@ -17,18 +21,11 @@ export type OyenteMover = (destino: Map<string, string>) => void;
  * La sala: quién está (narradores, jugadores y visitantes, ver Participantes) y en
  * qué asiento de la mesa se sienta cada jugador. No sabe nada de la partida: al
  * mover a los ocupantes, avisa (alMover) para que la partida lleve sus fichas.
- *
- * `A` es lo que se guarda en cada asiento: mientras la ficha vaya dentro del
- * asiento, SalaService le pasa cómo crearlo y la sala solo toca `id` y `ocupante`.
  */
-export class Sala<A extends Asiento = Asiento> {
+export class Sala {
   readonly participantes = new Participantes();
-  private readonly mesa: A[];
+  private readonly mesa: Asiento[] = Array.from({ length: SALA_ASIENTOS.inicial }, () => asientoNuevo());
   private oyentes: OyenteMover[] = [];
-
-  constructor(private readonly asientoNuevo: () => A) {
-    this.mesa = Array.from({ length: SALA_ASIENTOS.inicial }, () => asientoNuevo());
-  }
 
   /**
    * Los asientos, en orden: el primero a las 12 y siguiendo las agujas del reloj.
@@ -36,18 +33,18 @@ export class Sala<A extends Asiento = Asiento> {
    * libera solo cuando el jugador sale, se le acaba la espera de reconexión o
    * cambia de papel.
    */
-  asientos(): A[] {
+  asientos(): Asiento[] {
     for (const asiento of this.mesa) {
       if (asiento.ocupante && this.participantes.buscar(asiento.ocupante)?.rol !== 'jugador') asiento.ocupante = null;
     }
     return this.mesa;
   }
 
-  asiento(id: string): A | null {
+  asiento(id: string): Asiento | null {
     return this.asientos().find((a) => a.id === id) ?? null;
   }
 
-  asientoDe(participanteId: string): A | null {
+  asientoDe(participanteId: string): Asiento | null {
     return this.asientos().find((a) => a.ocupante === participanteId) ?? null;
   }
 
@@ -65,13 +62,14 @@ export class Sala<A extends Asiento = Asiento> {
 
   /** Añade un asiento al final del círculo. No comprueba el máximo ni permisos. */
   anadirAsiento(): void {
-    this.mesa.push(this.asientoNuevo());
+    this.mesa.push(asientoNuevo());
   }
 
-  /** Quita el último asiento del círculo; quien estuviera sentado vuelve a visitante. */
-  quitarAsiento(): void {
+  /** Quita el último asiento del círculo; quien estuviera sentado vuelve a visitante. Devuelve su id. */
+  quitarAsiento(): string | null {
     const quitado = this.mesa.pop();
     if (quitado?.ocupante) this.participantes.cambiarRol(quitado.ocupante, 'visitante');
+    return quitado?.id ?? null;
   }
 
   /** Sienta a alguien en un asiento libre y pasa a jugador. Devuelve el error, si lo hay. */

@@ -93,7 +93,7 @@ class Sabio extends RecibeInformacion {
     const demonio = otros.find((a) => tipoDe(ctx, a) === 'demon');
     const pareja = (a: SalaAsiento, b: SalaAsiento, personaje: string): SalaOpcionDespertar => ({
       // En el orden de la mesa: que no se sepa cuál es
-      envio: tarjeta('esteJugadorEs', { jugadores: mesa.filter((x) => x === a || x === b).map((x) => x.id), personajes: [personaje] }),
+      envio: tarjeta('esteJugadorEs', { jugadores: mesa.filter((x) => x.id === a.id || x.id === b.id).map((x) => x.id), personajes: [personaje] }),
       registros: [],
     });
     const ciertas = demonio ? otros.filter((a) => a !== demonio).map((a) => pareja(demonio, a, ctx.identidad(demonio)!)) : [];

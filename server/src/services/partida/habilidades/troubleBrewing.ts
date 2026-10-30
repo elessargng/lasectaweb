@@ -149,7 +149,7 @@ class SenalaDosJugadores extends RecibeInformacion {
     const bueno = conRecordatorio(ctx, this.personaje, this.correcto)!;
     const malo = conRecordatorio(ctx, this.personaje, 'Wrong')!;
     // En el orden de la mesa: que no se sepa cuál es
-    const jugadores = ctx.mesa().filter((a) => a === bueno || a === malo);
+    const jugadores = ctx.mesa().filter((a) => a.id === bueno.id || a.id === malo.id);
     const info = esteJugadorEs(ctx, jugadores, bueno);
     // Si no es de ese tipo (el Espía, la Reclusa…), qué personaje enseñar lo decide el narrador
     return tipoDe(ctx, bueno) === this.tipo ? info : { opciones: [], avisos: info.avisos };
