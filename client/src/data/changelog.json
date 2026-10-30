@@ -22,6 +22,8 @@
           "Añadida la elección seguida de varios jugadores en la plaza en los despertares guiados.",
           "Añadida la pausa del narrador virtual al ejecutar, antes de la noche o de revelar el grimorio.",
           "Añadidas las pausas del narrador virtual al contar el disparo del Exterminador.",
+          "Añadido el anuncio del bando ganador al revelar el grimorio.",
+          "Añadidas las elecciones de cada noche y el veneno a lo que cuenta el narrador virtual al revelar.",
           "La Pitonisa y el Ravenkeeper siempre pasan por la revisión del narrador."
         ]
       },
@@ -31,7 +33,8 @@
           "Añadidos los botones de nominar, «Defensa», «Empezar votación» y «Listo» con narrador virtual.",
           "Añadida la opción de declararse Exterminador y disparar.",
           "«Entendido» se envía al pulsarlo.",
-          "Cada wake de noche espera al «Entendido» del anterior."
+          "Cada wake de noche espera al «Entendido» del anterior.",
+          "Acortadas las pausas del narrador virtual al ejecutar y al disparar."
         ]
       },
       {

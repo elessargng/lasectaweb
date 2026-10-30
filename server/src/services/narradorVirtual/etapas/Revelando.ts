@@ -10,7 +10,8 @@ const ENTRE_FICHAS_MS = 2500;
 /**
  * Se acaba la partida: revela el grimorio con el bando que gana, ficha a ficha en
  * un orden al azar, con los demonios los últimos, y de cada uno cuenta quién era,
- * lo que recibió y cómo murió (ver cronica). Si aún no lo
+ * lo que eligió y recibió cada noche y cómo murió (ver cronica), y al acabar dice
+ * quién gana. Si aún no lo
  * ha dicho (al ejecutar ya dice «…y revelamos el grimorio»), dice «Revelamos el grimorio».
  */
 export class Revelando implements Etapa {
@@ -50,5 +51,8 @@ export class Revelando implements Etapa {
       ctx.decir(frase);
       espera = Math.max(ENTRE_FICHAS_MS, duracionFrase(frase));
     }
+    // Revelado todo (y dicho lo último), quién gana
+    await new Promise<void>((listo) => (this.cancelar = ctx.temporizador.programar(espera, listo)));
+    if (this.seguir) ctx.decir(FRASES.gana(this.ganador, ctx.azar));
   }
 }

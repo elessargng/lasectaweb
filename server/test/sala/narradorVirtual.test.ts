@@ -367,7 +367,14 @@ describe('narrador virtual: la Virgen', () => {
 });
 
 describe('narrador virtual: lo que cuenta al revelar el grimorio', () => {
-  const nadie = { creia: null, infos: [], muerte: null, sinMasInformacion: false };
+  const nadie = { creia: null, noches: [], muerte: null, sinMasInformacion: false };
+  /** Una noche: lo que eligió y lo que recibió. */
+  const noche = (n: number, { eligio = [] as string[], infos = [] as { que: string; falsa: boolean }[], envenenado = false } = {}) => ({
+    noche: n,
+    eligio,
+    infos,
+    envenenado,
+  });
 
   it('quién era, lo que recibió y cómo murió', () => {
     expect(
@@ -375,7 +382,7 @@ describe('narrador virtual: lo que cuenta al revelar el grimorio', () => {
         ...nadie,
         nombre: 'Pepe',
         personaje: 'Chef',
-        infos: [{ noche: 1, que: 'un 1', falsa: false }],
+        noches: [noche(1, { infos: [{ que: 'un 1', falsa: false }] })],
         muerte: { momento: 'dia', numero: 2, causa: 'ejecucion' },
       }),
     ).toBe('Pepe era Chef, recibió un 1 y murió en la ejecución del segundo día.');
@@ -387,7 +394,7 @@ describe('narrador virtual: lo que cuenta al revelar el grimorio', () => {
         ...nadie,
         nombre: 'Luis',
         personaje: 'Adivino',
-        infos: [{ noche: 1, que: 'un no', falsa: false }],
+        noches: [noche(1, { infos: [{ que: 'un no', falsa: false }] })],
         muerte: { momento: 'noche', numero: 2, causa: 'demonio' },
         sinMasInformacion: true,
       }),
@@ -404,11 +411,45 @@ describe('narrador virtual: lo que cuenta al revelar el grimorio', () => {
         nombre: 'Juan',
         personaje: 'Borracho',
         creia: 'Empático',
-        infos: [
-          { noche: 1, que: 'un 0', falsa: false },
-          { noche: 2, que: 'un 2', falsa: true },
+        noches: [noche(1, { infos: [{ que: 'un 0', falsa: false }] }), noche(2, { infos: [{ que: 'un 2', falsa: true }] })],
+      }),
+    ).toBe('Juan creía que era Empático, pero en realidad era Borracho. Recibió un 0 la primera noche y un 2 (era mentira) la segunda noche.');
+  });
+
+  it('lo que eligió cada noche y si estaba envenenado (y, si recibió algo, si era verdad)', () => {
+    expect(
+      FRASES.alRevelar({
+        ...nadie,
+        nombre: 'Ana',
+        personaje: 'Monje',
+        noches: [noche(2, { eligio: ['a Bea'] }), noche(3, { eligio: ['a Luis'], envenenado: true })],
+      }),
+    ).toBe('Ana era Monje, eligió a Bea la segunda noche y a Luis la tercera noche (envenenado).');
+    expect(
+      FRASES.alRevelar({
+        ...nadie,
+        nombre: 'Eva',
+        personaje: 'Pitonisa',
+        noches: [
+          noche(1, { eligio: ['a Ana y a Bea'], infos: [{ que: 'un no', falsa: false }] }),
+          noche(2, { eligio: ['a Luis y a Ana'], infos: [{ que: 'un sí', falsa: false }], envenenado: true }),
+          noche(3, { eligio: ['a Bea y a Luis'], infos: [{ que: 'un sí', falsa: true }], envenenado: true }),
         ],
       }),
-    ).toBe('Juan creía que era Empático, pero en realidad era Borracho. Recibió un 0 la primera noche y un 2 la segunda noche (era mentira).');
+    ).toBe(
+      'Eva era Pitonisa, eligió a Ana y a Bea y recibió un no la primera noche; eligió a Luis y a Ana y recibió un sí la segunda noche (envenenado, pero era verdad); eligió a Bea y a Luis y recibió un sí (era mentira) la tercera noche (envenenado).',
+    );
+  });
+
+  it('al acabar, quién gana: varias frases, la favorita la más a menudo', () => {
+    const veces = new Map<string, number>();
+    for (let i = 0; i < 400; i++) {
+      const frase = FRASES.gana('bueno', Math.random);
+      veces.set(frase, (veces.get(frase) ?? 0) + 1);
+    }
+    expect(veces.size).toBeGreaterThan(2);
+    expect(Math.max(...veces.values())).toBe(veces.get('Felicidades al equipo de los buenos.'));
+    expect(FRASES.gana('malvado', () => 0)).toBe('Felicidades al equipo de los malos.');
+    expect(FRASES.gana('malvado', () => 0.99)).toMatch(/malos/);
   });
 });

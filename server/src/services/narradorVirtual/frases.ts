@@ -25,11 +25,38 @@ const SALUDOS = [
   'Ya estoy aquí. Sentaos tranquilos, que de momento no muerde nadie.',
 ] as const;
 
-/** Lo que el narrador dio a alguien una noche, ya en palabras («un 1», «un sí»…), y si era mentira. */
+/** Lo que dice al acabar de revelar el grimorio, según quién gane: la primera, la favorita. */
+const GANA = {
+  bueno: [
+    'Felicidades al equipo de los buenos.',
+    'Felicidades al equipo de los buenos: Ravenswood Bluff está a salvo.',
+    '¡Ganan los buenos! El demonio ya no volverá a molestar a la ciudad.',
+    'Enhorabuena al equipo de los buenos, habéis salvado la ciudad.',
+    'La luz se impone esta vez: felicidades a los buenos.',
+  ],
+  malvado: [
+    'Felicidades al equipo de los malos.',
+    'Felicidades al equipo de los malos: Ravenswood Bluff ya es vuestra.',
+    '¡Ganan los malos! La ciudad cae en manos del demonio.',
+    'Enhorabuena al equipo de los malos, os habéis salido con la vuestra.',
+    'La oscuridad se impone esta vez: felicidades a los malos.',
+  ],
+} as const;
+
+/** Lo que el narrador dio a alguien, ya en palabras («un 1», «un sí»…), y si era mentira. */
 export interface InfoRevelada {
-  noche: number;
   que: string;
   falsa: boolean;
+}
+
+/** Lo que hizo alguien una noche, ya en palabras. */
+export interface NocheRevelada {
+  noche: number;
+  /** Cada elección («a Ana», «a Ana y a Bea»). */
+  eligio: string[];
+  infos: InfoRevelada[];
+  /** Estaba envenenado (lo que eligió no hizo nada; lo que recibió, quizá mentira). */
+  envenenado: boolean;
 }
 
 /** Cómo y cuándo murió alguien (el número del día o de la noche). */
@@ -46,7 +73,8 @@ export interface Revelacion {
   personaje: string | null;
   /** El personaje que creía ser (el Borracho), o null. */
   creia: string | null;
-  infos: InfoRevelada[];
+  /** Las noches en que eligió o recibió algo. */
+  noches: NocheRevelada[];
   muerte: MuerteRevelada | null;
   /** Despertaba cada noche con información y murió antes del final: dejó de recibirla. */
   sinMasInformacion: boolean;
@@ -80,15 +108,42 @@ function muerteEnPalabras({ momento, numero, causa }: MuerteRevelada): string {
 }
 
 /**
+ * Lo de cada noche: «a Ana la primera noche y a Bea la segunda noche (envenenado)»
+ * (solo elecciones, o solo información: el verbo lo pone quien llama) o «eligió a
+ * Ana y a Bea y recibió un sí la primera noche, …». Lo que recibió envenenado se
+ * dice: si era mentira o, si no, que era verdad.
+ */
+function porNoches(noches: NocheRevelada[]): string | null {
+  if (!noches.length) return null;
+  // Con una sola noche, la primera, no hace falta decir cuándo
+  const conNoche = noches.length > 1 || noches[0].noche !== 1;
+  const soloInfo = noches.every((n) => !n.eligio.length);
+  const soloEleccion = noches.every((n) => !n.infos.length);
+  const tramo = (n: NocheRevelada) => {
+    const recibio = listaConY(n.infos.map((i) => `${i.que}${i.falsa ? ' (era mentira)' : ''}`));
+    const acciones = soloInfo
+      ? recibio
+      : soloEleccion
+        ? listaConY(n.eligio)
+        : [n.eligio.length && `eligió ${listaConY(n.eligio)}`, n.infos.length && `recibió ${recibio}`].filter(Boolean).join(' y ');
+    const veneno = !n.envenenado ? '' : n.infos.length && !n.infos.some((i) => i.falsa) ? ' (envenenado, pero era verdad)' : ' (envenenado)';
+    return `${acciones}${conNoche ? ` ${laNoche(n.noche)}` : ''}${veneno}`;
+  };
+  const tramos = noches.map(tramo);
+  if (soloInfo) return `recibió ${listaConY(tramos)}`;
+  if (soloEleccion) return `eligió ${listaConY(tramos)}`;
+  return tramos.join('; ');
+}
+
+/**
  * «Pepe era Chef, recibió un 1 y murió en la ejecución del segundo día.»
+ * «Ana era Monje, eligió a Bea la segunda noche y a Luis la tercera noche (envenenado).»
  * «Juan creía que era Bibliotecario, pero en realidad era Borracho. Recibió…»
  */
-function alRevelar({ nombre, personaje, creia, infos, muerte, sinMasInformacion }: Revelacion): string {
+function alRevelar({ nombre, personaje, creia, noches, muerte, sinMasInformacion }: Revelacion): string {
   const inicio = creia && personaje ? `${nombre} creía que era ${creia}, pero en realidad era ${personaje}` : personaje ? `${nombre} era ${personaje}` : nombre;
-  // Con una sola, de la primera noche, no hace falta decir cuándo
-  const conNoche = infos.length > 1 || infos.some((i) => i.noche !== 1);
   const partes = [
-    infos.length > 0 && `recibió ${listaConY(infos.map((i) => `${i.que}${conNoche ? ` ${laNoche(i.noche)}` : ''}${i.falsa ? ' (era mentira)' : ''}`))}`,
+    porNoches(noches),
     muerte && muerteEnPalabras(muerte),
     sinMasInformacion && 'ya no recibió más su información',
   ].filter((p): p is string => !!p);
@@ -97,11 +152,15 @@ function alRevelar({ nombre, personaje, creia, infos, muerte, sinMasInformacion 
   return creia ? `${inicio}. ${resto[0].toUpperCase()}${resto.slice(1)}.` : `${inicio}, ${resto}.`;
 }
 
-/** Lo que se tarda en decir cada letra (ms), para esperar a que acabe una frase. */
-const POR_LETRA_MS = 70;
+/**
+ * Lo que se tarda en decir cada letra (ms), para esperar a que acabe una frase: lo
+ * que tarda la voz del navegador en español, más o menos (si se queda corto, la
+ * siguiente no la corta: la voz las encola).
+ */
+const POR_LETRA_MS = 60;
 
-/** La pausa con suspense entre una parte y otra de lo que dice (al ejecutar, al disparar…) (ms). */
-export const PAUSA_MS = 1_500;
+/** La pausa con suspense entre una parte y otra de lo que dice (al ejecutar, al disparar…) (ms): breve, sin que se haga larga. */
+export const PAUSA_MS = 600;
 
 /** Lo que se tarda en decir una frase (ms), más o menos. */
 export const duracionFrase = (frase: string): number => frase.length * POR_LETRA_MS;
@@ -138,6 +197,11 @@ export const FRASES = {
   muere: (quien: string) => `${quien} muere.`,
   partidaContinua: () => 'La partida continúa.',
   revelamos: () => 'Revelamos el grimorio.',
+  /** Al acabar de revelar: quién gana (una de varias, la primera más a menudo); `azar` da un número en [0, 1). */
+  gana: (ganador: 'bueno' | 'malvado', azar: () => number) => {
+    const frases = GANA[ganador];
+    return azar() < 0.4 ? frases[0] : frases[1 + Math.min(frases.length - 2, Math.floor(azar() * (frases.length - 1)))];
+  },
   /** Al revelar cada ficha: quién era, lo que recibió y cómo murió. */
   alRevelar,
   /** Jarvis no consigue hablar con su modelo y deja la partida a «Tonto y tú». */

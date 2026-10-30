@@ -402,6 +402,9 @@ describe('la noche del narrador virtual', () => {
       expect(orden).toHaveLength(7);
       expect(orden[6]).toBe(m.asiento('imp').id);
       expect(m.frases).toContain('Revelamos el grimorio.');
+      // Y, revelado todo, quién gana
+      while (!/buenos/.test(m.frases[m.frases.length - 1] ?? '') && Date.now() < limite) await new Promise((r) => setTimeout(r, 5));
+      expect(m.frases[m.frases.length - 1]).toMatch(/buenos/);
     });
 
     it('el Violinista: sin demonio que conteste, elige su estrategia; todos señalan y se revela', async () => {
