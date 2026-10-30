@@ -24,7 +24,6 @@ import {
   SalaNarradorVirtual,
 } from '../contrato/sala';
 import { GuionResuelto, PersonajeDeGuion } from '../types/guiones';
-import { repartoPara } from './partida/distribucion';
 import { type SalaLlegada } from './sala/Participantes';
 import { Sala, SALA_ASIENTOS } from './sala/Sala';
 import { Grimorio, identidadDe } from './partida/Grimorio';
@@ -42,10 +41,10 @@ import { Senalamientos } from './partida/Senalamientos';
 import { Revelacion } from './partida/Revelacion';
 import { Npcs } from './partida/Npcs';
 import { Entregas, type FichaEntregada } from './partida/Entregas';
-import { Bolsa } from './partida/Bolsa';
+import { Guion } from './partida/Guion';
+import { Reparto } from './partida/Reparto';
 import type { AsientoDiario, HechoDiario } from '../contrato/diario';
 import { PASOS_DE_FASE_MAX, type EventoPartida, type FotoAsiento, type OyentePartida } from './partida/eventos';
-import { barajar } from './partida/azar';
 import { Reglas } from './partida/reglas';
 import type { ContextoReglas, RegistroAlNominar } from './partida/reglas/ReglaPersonaje';
 import { voudonVivo } from './partida/reglas/voudon';
@@ -161,7 +160,7 @@ export class SalaService {
   /** El despertar guiado desde el orden de noche (ver DespertarGuiado). */
   private readonly guiado = new DespertarGuiado({
     ctx: { ...this.contextoReglas, faroles: () => this.faroles() },
-    habilidades: () => habilidadesDelGuion(this.guionActual?.edicion ?? null),
+    habilidades: () => habilidadesDelGuion(this.guionPartida.actual()?.edicion ?? null),
     noche: () => this.faseActual.momento === 'noche',
     despertar: (asientoId) => this.despertar(asientoId),
     mandar: (asientoId, envio, eleccion) => this.mandarDelNarrador(asientoId, envio, { eleccion, guiado: true }),
@@ -176,11 +175,18 @@ export class SalaService {
   /** El final de la partida: qué bando ha ganado y qué fichas se han revelado. */
   private readonly final = new Revelacion(() => this.mesa);
   /** Los NPCs en juego y lo que traen (Bootlegger, Storm Catcher, silencio). */
-  private readonly npcsPartida = new Npcs(() => this.guionActual);
+  private readonly npcsPartida = new Npcs(() => this.guionPartida.actual());
   /** Lo entregado a cada jugador y los grimorios enviados. */
   private readonly entregas = new Entregas(() => this.mesa);
-  /** Los personajes para repartir. */
-  private readonly bolsaPartida = new Bolsa((id) => this.esViajero(id));
+  /** El guion de la partida y sus personajes. */
+  private readonly guionPartida = new Guion();
+  /** La bolsa y el reparto de personajes. */
+  private readonly reparto = new Reparto({
+    mesa: () => this.mesa,
+    esViajero: (id) => this.esViajero(id),
+    reglas: (asientos, personajes) => this.reglas.repartir(asientos, personajes),
+    darPersonaje: (asientoId, personaje) => this.grimorio.repartir(asientoId, personaje),
+  });
   /** El señalamiento en curso. */
   private readonly senales = new Senalamientos({
     mesa: () => this.mesa,
@@ -189,17 +195,14 @@ export class SalaService {
     despertar: (asientoId) => void this.despertar(asientoId),
   });
   private faseActual: SalaFase = { momento: 'preparacion', numero: 0, reinicios: 0 };
-  private guionActual: GuionResuelto | null = null;
-  /** Sube cada vez que cambia el guion, para mandarlo solo entonces. */
-  private versionGuionActual = 0;
 
   /** El guion de la sala (ya resuelto por GuionService), o null. */
   guion(): GuionResuelto | null {
-    return this.guionActual;
+    return this.guionPartida.actual();
   }
 
   versionGuion(): number {
-    return this.versionGuionActual;
+    return this.guionPartida.version();
   }
 
   /**
@@ -208,25 +211,23 @@ export class SalaService {
    */
   cambiarGuion(guion: GuionResuelto): void {
     this.limpiarGrimorio();
-    this.guionActual = guion;
-    this.versionGuionActual += 1;
+    this.guionPartida.cambiar(guion);
     // La bolsa, los faroles y los NPCs eran de los personajes del otro guion. Los
     // legendarios y lóricos que trae el guion, en juego desde el principio
-    this.bolsaPartida.vaciar();
+    this.reparto.bolsa.vaciar();
     this.npcsPartida.alCambiarGuion();
     this.entregas.retenerFichas(false);
     this.farolesDemonio.vaciar();
   }
 
-  /** El reparto dado por bueno a mano (ver SalaEstado.setupAceptado). */
-  private setupAceptadoActual: string | null = null;
+  // El reparto y la bolsa: los lleva Reparto
 
   setupAceptado(): string | null {
-    return this.setupAceptadoActual;
+    return this.reparto.setupAceptado();
   }
 
   aceptarSetup(firma: string | null): void {
-    this.setupAceptadoActual = firma;
+    this.reparto.aceptarSetup(firma);
   }
 
   // Los NPCs y lo que traen: los lleva Npcs
@@ -334,40 +335,33 @@ export class SalaService {
     return this.mesa.find((a) => a.ocupante === participanteId) ?? null;
   }
 
-  /**
-   * Un personaje de la partida: del guion o, aunque el guion no lo traiga, uno de
-   * los viajeros o de los NPCs (legendarios y lóricos) del catálogo. undefined si no.
-   */
+  /** Un personaje de la partida (ver Guion.personaje). */
   personaje(id: string): PersonajeDeGuion | undefined {
-    const g = this.guionActual;
-    if (!g) return undefined;
-    return g.personajes.find((p) => p.id === id) ?? g.viajeros?.find((p) => p.id === id) ?? g.npcs?.find((p) => p.id === id);
+    return this.guionPartida.personaje(id);
   }
 
-  // La bolsa: la lleva Bolsa
-
   bolsa(): string[] {
-    return this.bolsaPartida.bolsa();
+    return this.reparto.bolsa.bolsa();
   }
 
   alternarEnBolsa(personajeId: string): void {
-    this.bolsaPartida.alternar(personajeId);
+    this.reparto.bolsa.alternar(personajeId);
   }
 
   ponerEnBolsa(personajeId: string, cantidad: number): void {
-    this.bolsaPartida.poner(personajeId, cantidad);
+    this.reparto.bolsa.poner(personajeId, cantidad);
   }
 
   reemplazarBolsa(personajes: string[]): void {
-    this.bolsaPartida.reemplazar(personajes);
+    this.reparto.bolsa.reemplazar(personajes);
   }
 
   vaciarBolsa(): void {
-    this.bolsaPartida.vaciar();
+    this.reparto.bolsa.vaciar();
   }
 
   private esViajero(id: string): boolean {
-    return this.personaje(id)?.tipo === 'traveller';
+    return this.guionPartida.esViajero(id);
   }
 
   /** Quién es de verdad el de un asiento (ver identidadDe). */
@@ -375,62 +369,20 @@ export class SalaService {
     return identidadDe(asiento);
   }
 
-  /**
-   * Si en un asiento hay un viajero puesto a mano (de verdad: un Aprendiz con la
-   * ficha de un aldeano sigue siendo viajero): ese asiento no entra en el
-   * reparto. Uno que esté en la bolsa no cuenta (salió del reparto, y al repartir
-   * otra vez puede tocarle a otro).
-   */
   private llevaViajero(asiento: SalaAsiento): boolean {
-    const id = this.identidad(asiento);
-    return !!id && this.esViajero(id) && !this.bolsaPartida.contiene(id);
+    return this.reparto.llevaViajero(asiento);
   }
 
-
-  /**
-   * El reparto de la partida: los jugadores (asientos, sin los viajeros: los
-   * puestos a mano y los de la bolsa) y cuántos de cada tipo (ver repartoPara).
-   */
   distribucion(): SalaDistribucion {
-    const viajeros = this.mesa.filter((a) => this.llevaViajero(a)).length + this.bolsaPartida.viajeros();
-    const jugadores = Math.max(0, this.mesa.length - viajeros);
-    const reparto = repartoPara(jugadores);
-    // Los muertos con sudario (público; la muerte pendiente aún no cuenta). Un viajero
-    // de la bolsa aún sin repartir está vivo
-    const muertos = this.mesa.filter((a) => a.muerto);
-    const viajerosMuertos = muertos.filter((a) => {
-      const id = this.identidad(a);
-      return !!id && this.esViajero(id);
-    }).length;
-    return {
-      jugadores,
-      jugadoresVivos: Math.max(0, jugadores - (muertos.length - viajerosMuertos)),
-      viajeros,
-      viajerosVivos: Math.max(0, viajeros - viajerosMuertos),
-      aldeanos: reparto?.aldeanos ?? null,
-      forasteros: reparto?.forasteros ?? null,
-      esbirros: reparto?.esbirros ?? null,
-      demonios: reparto?.demonios ?? null,
-    };
+    return this.reparto.distribucion();
   }
 
-  /** Cuántos personajes hay que meter en la bolsa: uno por asiento sin viajero puesto a mano (los de la bolsa, también). */
   fichasParaRepartir(): number {
-    return this.mesa.filter((a) => !this.llevaViajero(a)).length;
+    return this.reparto.fichasParaRepartir();
   }
 
-  /**
-   * Reparte al azar los personajes de la bolsa (también sus viajeros) entre los
-   * asientos que no llevan un viajero puesto a mano (tiene que haber tantos como
-   * asientos; no lo comprueba). El
-   * alineamiento vuelve a ser el de su tipo. La bolsa se queda como estaba.
-   *
-   * Las reglas pueden cambiar el reparto (el Revolutionary: ver reglas/revolucionario.ts).
-   */
   repartirBolsa(): void {
-    const asientos = this.mesa.filter((a) => !this.llevaViajero(a));
-    const personajes = this.reglas.repartir(asientos, barajar(this.bolsaPartida.bolsa()));
-    asientos.forEach((a, i) => this.grimorio.repartir(a.id, personajes[i] ?? null));
+    this.reparto.repartir();
   }
 
   /**
@@ -758,10 +710,9 @@ export class SalaService {
     this.npcsPartida.nuevaPartida();
     this.nominaciones.olvidarTodo();
     this.grimorio.limpiar();
-    this.bolsaPartida.vaciar();
+    this.reparto.olvidar();
     this.entregas.olvidar();
     this.farolesDemonio.vaciar();
-    this.setupAceptadoActual = null;
     this.final.olvidar();
     this.sala.participantes.olvidarGrimorios();
     this.despertados.cerrarTodos();
@@ -977,7 +928,7 @@ export class SalaService {
   esbirrosLilmonsta(): string[] | null {
     return esbirrosLilmonsta(this.contextoReglas, {
       noche: this.faseActual.momento === 'noche',
-      enElGuion: !!this.guionActual?.personajes.some((p) => p.id === DEMONIO_LILMONSTA),
+      enElGuion: !!this.guionPartida.actual()?.personajes.some((p) => p.id === DEMONIO_LILMONSTA),
       esbirrosQueTocan: this.distribucion().esbirros,
     });
   }
@@ -1020,8 +971,8 @@ export class SalaService {
       narradores: this.sala.participantes.narradores().map((p) => ({ userId: this.cuentaDe(p.id), nombre: p.nombre })),
       npcs: this.npcs(),
       votaciones: this.votaciones(),
-      guion: this.guionActual?.nombre ?? null,
-      edicion: this.guionActual?.edicion ?? null,
+      guion: this.guionPartida.actual()?.nombre ?? null,
+      edicion: this.guionPartida.actual()?.edicion ?? null,
       dias: this.faseActual.numero,
     });
   }
