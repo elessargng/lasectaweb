@@ -106,3 +106,25 @@ export const guionTroubleBrewing = (): GuionResuelto => ({
     personaje('imp', 'demon', ['Dead']),
   ],
 });
+
+/** No Greater Joy (para 5 o 6 jugadores), con lo que usan los tests. */
+export const guionNoGreaterJoy = (): GuionResuelto => ({
+  ...guionDePrueba(),
+  nombre: 'No Greater Joy',
+  edicion: 'nogreaterjoy',
+  personajes: [
+    personaje('investigator', 'townsfolk', ['Minion', 'Wrong']),
+    personaje('clockmaker', 'townsfolk'),
+    personaje('empath', 'townsfolk'),
+    personaje('chambermaid', 'townsfolk'),
+    personaje('artist', 'townsfolk', ['No Ability']),
+    personaje('sage', 'townsfolk'),
+    personaje('drunk', 'outsider', ['Is The Drunk']),
+    personaje('klutz', 'outsider'),
+    personaje('scarletwoman', 'minion', ['Is The Demon']),
+    personaje('baron', 'minion'),
+    personaje('imp', 'demon', ['Dead']),
+  ],
+  primeraNoche: ['investigator', 'clockmaker', 'empath', 'chambermaid'],
+  otrasNoches: ['scarletwoman', 'imp', 'empath', 'sage', 'chambermaid'],
+});

@@ -1,4 +1,5 @@
 import { IconoVotar } from './IconosJuego';
+import ConAyuda from './ConAyuda';
 import { useState } from 'react';
 import Dialog from '../components/Dialog';
 import { botonIcono, botonSecundario } from './estilos';
@@ -25,15 +26,17 @@ const RegistroVotaciones = ({ votaciones }: { votaciones: SalaRegistroVotacion[]
 
   return (
     <>
-      <button
-        type="button"
-        aria-label={`Registro de votaciones (${votaciones.length})`}
-        aria-haspopup="dialog"
-        onClick={() => setAbierto(true)}
-        className={botonIcono}
-      >
-        <IconoVotar size={22} />
-      </button>
+      <ConAyuda texto="Ver el registro de votaciones">
+        <button
+          type="button"
+          aria-label={`Registro de votaciones (${votaciones.length})`}
+          aria-haspopup="dialog"
+          onClick={() => setAbierto(true)}
+          className={botonIcono}
+        >
+          <IconoVotar size={22} />
+        </button>
+      </ConAyuda>
       {abierto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sala-velo">
           <Dialog

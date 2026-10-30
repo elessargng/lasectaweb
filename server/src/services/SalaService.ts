@@ -42,6 +42,7 @@ import { Revelacion } from './partida/Revelacion';
 import { Npcs } from './partida/Npcs';
 import { Entregas, type FichaEntregada } from './partida/Entregas';
 import { Bolsa } from './partida/Bolsa';
+import type { AsientoDiario, HechoDiario } from '../contrato/diario';
 import { PASOS_DE_FASE_MAX, type EventoPartida, type FotoAsiento, type OyentePartida } from './partida/eventos';
 import { barajar } from './partida/azar';
 import { Reglas } from './partida/reglas';
@@ -315,6 +316,7 @@ export class SalaService {
 
   enviarGrimorio(asientoId: string, fichas: SalaFichaEnviada[], faroles: string[] = []): void {
     this.entregas.enviarGrimorio(asientoId, fichas, faroles);
+    this.anotar({ tipo: 'grimorio', asiento: this.asientoDiario(asientoId) });
   }
 
   grimorioRecibidoPor(participanteId: string): SalaGrimorioEnviado | null {
@@ -329,19 +331,24 @@ export class SalaService {
 
   ponerFarol(posicion: number, personajeId: string | null): void {
     this.farolesDemonio.ponerFarol(posicion, personajeId);
+    this.anotar({ tipo: 'farol', asiento: null, posicion, personaje: personajeId });
   }
 
   ponerFarolAsiento(asientoId: string, posicion: number, personajeId: string | null): void {
     this.farolesDemonio.ponerFarolAsiento(asientoId, posicion, personajeId);
+    this.anotar({ tipo: 'farol', asiento: this.asientoDiario(asientoId), posicion, personaje: personajeId });
   }
 
   copiarFaroles(asientoId: string, personajes: string[]): void {
     this.farolesDemonio.copiarFaroles(asientoId, personajes);
+    this.anotar({ tipo: 'copiaFaroles', asiento: this.asientoDiario(asientoId), personajes });
   }
 
   /** El farol que dice usar el jugador de un asiento (uno de los suyos), o null. Devuelve el error, si lo hay. */
   usarFarol(asientoId: string, personajeId: string | null): string | null {
-    return this.farolesDemonio.usarFarol(asientoId, personajeId);
+    const error = this.farolesDemonio.usarFarol(asientoId, personajeId);
+    if (!error) this.anotar({ tipo: 'usaFarol', asiento: this.asientoDiario(asientoId), personaje: personajeId });
+    return error;
   }
 
   /** El asiento en el que se sienta un participante, o null. */
@@ -494,6 +501,25 @@ export class SalaService {
 
   private avisar(evento: EventoPartida): void {
     for (const oyente of this.oyentes) oyente(evento);
+  }
+
+  /**
+   * Apunta algo que se ha hecho en la partida, para su diario (ver contrato/diario).
+   * En la preparación solo cuentan los faroles; revelado el grimorio, ya nada.
+   */
+  anotar(hecho: HechoDiario): void {
+    const { momento, numero } = this.faseActual;
+    if (this.final.revelacion()) return;
+    if (momento === 'preparacion' && !['farol', 'copiaFaroles', 'usaFarol'].includes(hecho.tipo)) return;
+    this.avisar({ tipo: 'diario', entrada: { ...hecho, fase: { momento, numero }, hora: Date.now() } });
+  }
+
+  /** Un asiento para el diario: su número y quien se sienta ahora. */
+  asientoDiario(asientoId: string): AsientoDiario {
+    const mesa = this.mesaAlDia();
+    const i = mesa.findIndex((a) => a.id === asientoId);
+    const ocupante = mesa[i]?.ocupante;
+    return { numero: i + 1, nombre: ocupante ? (this.buscar(ocupante)?.nombre ?? null) : null };
   }
 
   /** El id de usuario de un participante con cuenta, o null (invitado, o ya no está). */
@@ -681,7 +707,20 @@ export class SalaService {
   }
 
   enviarDespertar(asientoId: string, mensaje: Parameters<Despertares['enviar']>[1]): void {
+    if (!this.hayDespertar(asientoId)) return;
     this.despertados.enviar(asientoId, mensaje);
+    this.anotar({
+      tipo: 'despertar',
+      asiento: this.asientoDiario(asientoId),
+      delNarrador: mensaje.autor === 'narrador',
+      ficha: mensaje.ficha,
+      tarjeta: mensaje.tarjeta,
+      jugadores: mensaje.jugadores.map((id) => this.asientoDiario(id)),
+      personajes: mensaje.personajes,
+      texto: mensaje.texto,
+      alineamiento: mensaje.alineamiento,
+      eleccion: mensaje.eleccion?.cantidad ?? null,
+    });
   }
 
   /**
@@ -898,6 +937,7 @@ export class SalaService {
     asiento.personaje = personaje;
     asiento.alineamiento = null;
     this.identidadAutomatica(asiento);
+    this.anotar({ tipo: 'personaje', asiento: this.asientoDiario(asientoId), personaje });
   }
 
   /**
@@ -916,13 +956,18 @@ export class SalaService {
   /** Pone una ficha recordatorio junto a la de un asiento. No comprueba permisos. */
   ponerRecordatorio(asientoId: string, recordatorio: Omit<SalaRecordatorio, 'id'>): void {
     const asiento = this.mesa.find((a) => a.id === asientoId);
-    if (asiento) asiento.recordatorios.push({ id: randomUUID(), ...recordatorio });
+    if (!asiento) return;
+    asiento.recordatorios.push({ id: randomUUID(), ...recordatorio });
+    this.anotar({ tipo: 'recordatorio', asiento: this.asientoDiario(asientoId), personaje: recordatorio.personaje, texto: recordatorio.texto, quitado: false });
   }
 
   /** Quita una ficha recordatorio. No comprueba permisos. */
   quitarRecordatorio(asientoId: string, recordatorioId: string): void {
     const asiento = this.mesa.find((a) => a.id === asientoId);
-    if (asiento) asiento.recordatorios = asiento.recordatorios.filter((r) => r.id !== recordatorioId);
+    const quitado = asiento?.recordatorios.find((r) => r.id === recordatorioId);
+    if (!asiento || !quitado) return;
+    asiento.recordatorios = asiento.recordatorios.filter((r) => r !== quitado);
+    this.anotar({ tipo: 'recordatorio', asiento: this.asientoDiario(asientoId), personaje: quitado.personaje, texto: quitado.texto, quitado: true });
   }
 
   /**
@@ -957,7 +1002,9 @@ export class SalaService {
   /** Cambia el alineamiento de la ficha de un asiento. No comprueba permisos. */
   cambiarAlineamiento(asientoId: string, alineamiento: SalaAlineamiento): void {
     const asiento = this.mesa.find((a) => a.id === asientoId);
-    if (asiento) asiento.alineamiento = alineamiento;
+    if (!asiento) return;
+    asiento.alineamiento = alineamiento;
+    this.anotar({ tipo: 'alineamiento', asiento: this.asientoDiario(asientoId), alineamiento });
   }
 
   // El gong y el reloj: los lleva RelojSala
@@ -1025,6 +1072,10 @@ export class SalaService {
    */
   senalar(participanteId: string, objetivo: string | null): string | null {
     const error = this.senales.senalar(participanteId, objetivo);
+    const desde = this.asientoDe(participanteId);
+    if (!error && desde) {
+      this.anotar({ tipo: 'senala', asiento: this.asientoDiario(desde.id), objetivo: objetivo === null ? null : this.asientoDiario(objetivo) });
+    }
     if (!error && objetivo !== null && this.senales.senalamiento()?.tipo === 'lilmonsta') this.resolverLilmonsta();
     return error;
   }
@@ -1108,9 +1159,12 @@ export class SalaService {
    * narrador la hace efectiva (confirmarMuerte). Revivir quita también la pendiente.
    * No comprueba permisos.
    */
-  cambiarVida(asientoId: string, muerto: boolean): void {
+  cambiarVida(asientoId: string, muerto: boolean, { anotar = true }: { anotar?: boolean } = {}): void {
     const asiento = this.mesa.find((a) => a.id === asientoId);
     if (!asiento) return;
+    // Para el diario, muere cuando se le pone la muerte (de noche, aunque se anuncie después)
+    const estabaMuerto = asiento.muerto || asiento.muertePendiente;
+    if (anotar && estabaMuerto !== muerto) this.anotar({ tipo: muerto ? 'muere' : 'revive', asiento: this.asientoDiario(asientoId) });
     if (muerto && this.faseActual.momento === 'noche' && !asiento.muerto) {
       asiento.muertePendiente = true;
       return;
@@ -1147,7 +1201,8 @@ export class SalaService {
       asiento.recordatorios.push({ id: randomUUID(), personaje, indice, texto: this.personaje(personaje)!.recordatorios[indice] });
     }
     this.avisar({ tipo: 'ejecucion', userId: this.cuentaDe(asiento.ocupante) });
-    this.cambiarVida(asiento.id, true);
+    this.anotar({ tipo: 'ejecucion', asiento: this.asientoDiario(asiento.id) });
+    this.cambiarVida(asiento.id, true, { anotar: false });
     // Los vivos que quedan: los asientos (también los libres, que cuentan como jugadores)
     // sin muerte, sin contar a los viajeros
     const vivos = this.mesa.filter((a) => !a.muerto && !a.muertePendiente && !this.llevaViajero(a)).length;
@@ -1415,6 +1470,8 @@ export class SalaService {
       turno: null,
       listos: [],
       exterminadores: [],
+      artistas: [],
+      patosos: [],
     });
     return participante;
   }

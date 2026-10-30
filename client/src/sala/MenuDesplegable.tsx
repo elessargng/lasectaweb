@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { colocarDesplegable } from './colocarDesplegable';
+import ConAyuda from './ConAyuda';
 import TeclaAtajo from './TeclaAtajo';
 import type { Atajo } from './atajos';
 
@@ -39,6 +40,8 @@ interface MenuDesplegableProps {
    */
   descripcion?: string;
   botonClassName: string;
+  /** Lo que hace, en un rótulo bajo el botón al pasar el ratón (ver ConAyuda). */
+  ayuda?: string;
   opciones: OpcionMenu[];
   /** Hacia dónde se abre la lista. */
   alinear?: 'izquierda' | 'derecha';
@@ -67,6 +70,7 @@ const MenuDesplegable = ({
   etiqueta,
   descripcion,
   botonClassName,
+  ayuda,
   opciones,
   alinear = 'izquierda',
   extrasGrupo = {},
@@ -134,21 +138,31 @@ const MenuDesplegable = ({
     cerrar();
   };
 
+  const botonMenu = (
+    <button
+      ref={botonRef}
+      id={`${id}-boton`}
+      type="button"
+      aria-label={etiqueta}
+      aria-describedby={descripcion ? `${id}-estado` : undefined}
+      aria-expanded={abierto}
+      aria-controls={id}
+      onClick={() => setAbierto((v) => !v)}
+      className={botonClassName}
+    >
+      {boton}
+    </button>
+  );
+
   return (
     <div ref={contenedorRef} className="relative">
-      <button
-        ref={botonRef}
-        id={`${id}-boton`}
-        type="button"
-        aria-label={etiqueta}
-        aria-describedby={descripcion ? `${id}-estado` : undefined}
-        aria-expanded={abierto}
-        aria-controls={id}
-        onClick={() => setAbierto((v) => !v)}
-        className={botonClassName}
-      >
-        {boton}
-      </button>
+      {ayuda ? (
+        <ConAyuda texto={ayuda} alinear={alinear}>
+          {botonMenu}
+        </ConAyuda>
+      ) : (
+        botonMenu
+      )}
       {descripcion && (
         <span id={`${id}-estado`} className="sr-only">
           {descripcion}

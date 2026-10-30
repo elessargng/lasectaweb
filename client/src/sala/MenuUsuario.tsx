@@ -29,6 +29,7 @@ const MenuUsuario = ({ nombre, avatar, conCuenta, onPreferencias, enLaSala, onSa
     <MenuDesplegable
       id="sala-menu-usuario"
       alinear="derecha"
+      ayuda="Preferencias y salir"
       botonClassName="flex items-center gap-2 rounded-full border border-gold/25 bg-background/40 py-1 pl-1 pr-1 sm:pr-3 font-ui text-sm text-on-surface-bright transition-colors hover:border-gold/70 aria-expanded:border-gold/70 motion-reduce:transition-none"
       boton={
         <>

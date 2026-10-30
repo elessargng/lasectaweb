@@ -106,7 +106,7 @@ export class EstadisticasService {
    * Quien estuvo en una partida (jugando o narrando) la ve entera: al final se
    * revela el grimorio a todos. Si no estuvo (mira el historial público de otro), de
    * quienes tienen las estadísticas privadas no se dice nada (ni su nombre ni su
-   * personaje: se cuentan aparte) y no se dan las nominaciones (llevan nombres).
+   * personaje: se cuentan aparte) y no se dan las nominaciones ni el diario (llevan nombres).
    */
   async historial(userId: string, quienMira: string | null): Promise<{ partidas: HistorialPartida[] } | null> {
     const usuario = await this.estadisticas.nombreDe(userId);
@@ -146,6 +146,7 @@ function verPartida(p: PartidaGuardada, userId: string, quienMira: string | null
   const publico = (id: string) => !!p.participantes.find((y) => y.userId === id)?.estadisticasPublicas;
   const visible = (id: string | null) => estuvo || !id || id === userId || publico(id);
   const otros = p.participantes.filter((x) => x.userId !== userId);
+  const todoVisible = estuvo || p.participantes.every((x) => visible(x.userId));
   return {
     ...p,
     propia: p.participantes.find((x) => x.userId === userId) ?? null,
@@ -157,6 +158,7 @@ function verPartida(p: PartidaGuardada, userId: string, quienMira: string | null
           ? a
           : { numero: a.numero, nombre: null, userId: null, personaje: null, ficha: null, alineamiento: null, muerto: a.muerto, oculto: true },
       ) ?? null,
-    votaciones: estuvo || p.participantes.every((x) => visible(x.userId)) ? p.votaciones : null,
+    votaciones: todoVisible ? p.votaciones : null,
+    diario: todoVisible ? p.diario : null,
   };
 }

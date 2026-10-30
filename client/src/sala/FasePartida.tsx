@@ -59,6 +59,7 @@ const FasePartida = ({ fase, onVolverAtras }: FasePartidaProps) => {
       id="sala-fase-menu"
       boton={contenido}
       descripcion="Máquina del tiempo"
+      ayuda={`Máquina del tiempo: volver a ${destino}`}
       botonClassName={`${clases} cursor-pointer hover:border-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main`}
       opciones={[
         {

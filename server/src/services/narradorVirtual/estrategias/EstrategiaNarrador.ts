@@ -42,7 +42,13 @@ export type MotivoDecision =
   /** El Exterminador dispara a la Reclusa: si registra como demonio. */
   | 'reclusaComoDemonio'
   /** El Violinista: el bueno que elige el demonio si no contesta. */
-  | 'violinistaBueno';
+  | 'violinistaBueno'
+  /** La pregunta libre del Artista: sí, no o que la reformule. */
+  | 'artista'
+  /** La pregunta montada del Artista, si no la hace el Artista sano: qué se le contesta. */
+  | 'artistaSinHabilidad'
+  /** El Patoso que no ha elegido a tiempo (o en un asiento libre): a quién elige. */
+  | 'patoso';
 
 /**
  * Lo que la mesa sabe de una opción y le sirve al narrador para decidir: es la

@@ -45,7 +45,9 @@ import { anguloAsiento } from './geometriaMesa';
 import { useMoverAsientos } from './useMoverAsientos';
 import { useIntercambiarFichas } from './useIntercambiarFichas';
 import { CAUSAS_FINAL } from './causasFinal';
+import DialogoArtista from './DialogoArtista';
 import DialogoIntercambio from './DialogoIntercambio';
+import DialogoPatoso from './DialogoPatoso';
 import DialogoRegistroEspia from './DialogoRegistroEspia';
 import { useNominacion } from './useNominacion';
 import type { SalaEstado, SalaParticipante, SalaRecordatorio, SalaResultado } from './useSala';
@@ -289,9 +291,27 @@ const Mesa = ({
     // false: el menú se cierra y el foco vuelve a la ficha
     return false;
   };
+  // Desde la suya: preguntar como Artista (de día, una vez) y, al morir, declararse Patoso
+  const [dialogoVirtual, setDialogoVirtual] = useState<'artista' | 'patoso' | null>(null);
+  const puedeArtista = acciones.includes('jugador:artista');
+  const puedePatoso = acciones.includes('jugador:patoso');
+  // El Patoso de verdad (lo dice su ficha) tiene que elegir: se le abre solo, sin poder cancelar
+  const soyPatoso = !!miAsiento && asientos.find((a) => a.id === miAsiento)?.personaje === 'klutz';
+  useEffect(() => {
+    if (puedePatoso && soyPatoso) setDialogoVirtual('patoso');
+  }, [puedePatoso, soyPatoso]);
+  // Se acaba su momento (o el día): la ventana se cierra
+  if ((dialogoVirtual === 'patoso' && !puedePatoso) || (dialogoVirtual === 'artista' && !puedeArtista && estado.narradorVirtual?.etapa === 'noche')) {
+    setDialogoVirtual(null);
+  }
   const opcionesJugador = (asientoId: string): OpcionMenu[] =>
     asientoId === miAsiento
-      ? []
+      ? [
+          ...(puedeArtista
+            ? [{ id: 'jugador:artista', etiqueta: 'Preguntar como Artista', abreDialogo: true, elegir: () => setDialogoVirtual('artista') }]
+            : []),
+          ...(puedePatoso ? [{ id: 'jugador:patoso', etiqueta: 'Declararte Patoso', abreDialogo: true, elegir: () => setDialogoVirtual('patoso') }] : []),
+        ]
       : [
           ...(acciones.includes('jugador:nominar') ? [{ id: 'jugador:nominar', etiqueta: 'Nominar', elegir: actuarSobre('jugador:nominar', asientoId) }] : []),
           ...(acciones.includes('jugador:exterminar')
@@ -957,6 +977,18 @@ const Mesa = ({
         </div>
       )}
       {nominar.preguntaEspia && <DialogoRegistroEspia {...nominar.preguntaEspia} />}
+      {dialogoVirtual === 'artista' && miAsiento && (
+        <DialogoArtista
+          estado={estado}
+          miAsiento={miAsiento}
+          libre={estado.narradorVirtual?.id === 'jarvis'}
+          pedir={pedir}
+          onCerrar={() => setDialogoVirtual(null)}
+        />
+      )}
+      {dialogoVirtual === 'patoso' && miAsiento && (
+        <DialogoPatoso estado={estado} miAsiento={miAsiento} obligado={soyPatoso} pedir={pedir} onCerrar={() => setDialogoVirtual(null)} />
+      )}
       {intercambiando && (
         <DialogoIntercambio
           ficha={nombreDeAsiento(estado, intercambiando)}

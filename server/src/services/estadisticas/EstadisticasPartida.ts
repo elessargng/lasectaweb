@@ -1,3 +1,4 @@
+import type { EntradaDiario } from '../../contrato/diario';
 import { PASOS_DE_FASE_MAX, type EventoPartida, type FotoAsiento } from '../partida/eventos';
 import { SeguimientoPartida, type FotoJugador, type InstantaneaSeguimiento, type RegistroPartida } from './SeguimientoPartida';
 
@@ -16,7 +17,9 @@ export class EstadisticasPartida {
    * Lo apuntado antes de cada cambio de fase, para que la máquina del tiempo lo
    * devuelva: va a la par que los pasos que recuerda la sala.
    */
-  private pasos: InstantaneaSeguimiento[] = [];
+  private pasos: { seguimiento: InstantaneaSeguimiento; diario: number }[] = [];
+  /** Lo que se ha hecho en la partida, en orden (ver contrato/diario). */
+  private diario: EntradaDiario[] = [];
 
   constructor(
     /** A quién se da cada partida terminada (con alguien con cuenta) para que la guarde. */
@@ -48,14 +51,21 @@ export class EstadisticasPartida {
       case 'ejecucion':
         this.seguimiento.ejecutado(evento.userId);
         return;
+      case 'diario':
+        this.diario.push(evento.entrada);
+        return;
       case 'vueltaAtras': {
+        // Lo que se hizo desde ese cambio de fase, fuera también del diario
         const paso = evento.deshace ? this.pasos.pop() : undefined;
-        if (paso) this.seguimiento.restaurar(paso);
-        else if (evento.aPreparacion) this.seguimiento.reiniciar();
+        if (paso) {
+          this.seguimiento.restaurar(paso.seguimiento);
+          this.diario.length = Math.min(this.diario.length, paso.diario);
+        } else if (evento.aPreparacion) this.seguimiento.reiniciar();
         return;
       }
       case 'nuevaPartida':
         this.pasos = [];
+        this.diario = [];
         this.seguimiento.reiniciar();
         return;
       case 'partidaTerminada':
@@ -65,7 +75,7 @@ export class EstadisticasPartida {
   }
 
   private recordarPaso(): void {
-    this.pasos.push(this.seguimiento.instantanea());
+    this.pasos.push({ seguimiento: this.seguimiento.instantanea(), diario: this.diario.length });
     if (this.pasos.length > PASOS_DE_FASE_MAX) this.pasos.shift();
   }
 
@@ -73,8 +83,11 @@ export class EstadisticasPartida {
   private terminar(fin: Extract<EventoPartida, { tipo: 'partidaTerminada' }>): void {
     const jugadores = this.seguimiento.estaEmpezada() ? this.seguimiento.terminar(fotosDeCuentas(fin.mesa), fin.ganador, fin.causas) : [];
     const narradores = fin.narradores.map((n) => n.userId).filter((id): id is string => !!id);
+    const diario = this.diario;
+    this.diario = [];
     if (jugadores.length === 0 && narradores.length === 0) return;
     this.guardar({
+      diario,
       mesa: fin.mesa,
       narradoresNombres: fin.narradores.map((n) => n.nombre),
       npcs: fin.npcs,

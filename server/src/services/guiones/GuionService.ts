@@ -13,11 +13,21 @@ import {
 import { GuionInvalidoError } from './errores';
 import { leerGuionJson } from './lectorGuionJson';
 
-/** Los guiones por defecto: las tres ediciones base, con sus aldeanos, forasteros, esbirros y demonios. */
-const PREDETERMINADOS: GuionPredeterminado[] = [
+/**
+ * Los guiones por defecto: las tres ediciones base, con sus aldeanos, forasteros,
+ * esbirros y demonios, y los que son una lista fija de personajes de varias
+ * ediciones (`personajes`, como No Greater Joy, para 5 o 6 jugadores).
+ */
+const PREDETERMINADOS: (GuionPredeterminado & { personajes?: readonly string[] })[] = [
   { id: 'troublebrewing', nombre: 'Trouble Brewing', autor: 'Steven Medway' },
   { id: 'badmoonrising', nombre: 'Bad Moon Rising', autor: 'Steven Medway' },
   { id: 'sectsviolets', nombre: 'Sects & Violets', autor: 'Steven Medway' },
+  {
+    id: 'nogreaterjoy',
+    nombre: 'No Greater Joy',
+    autor: 'Steven Medway',
+    personajes: ['investigator', 'clockmaker', 'empath', 'chambermaid', 'artist', 'sage', 'drunk', 'klutz', 'scarletwoman', 'baron', 'imp'],
+  },
 ];
 const TIPOS_BASE = ['townsfolk', 'outsider', 'minion', 'demon'] as const;
 
@@ -37,19 +47,20 @@ export class GuionService {
   }
 
   predeterminados(): GuionPredeterminado[] {
-    return PREDETERMINADOS.map((g) => ({ ...g }));
+    return PREDETERMINADOS.map(({ id, nombre, autor }) => ({ id, nombre, autor }));
   }
 
   /** Uno de los guiones por defecto, ya resuelto. */
   async guionPredeterminado(id: string): Promise<GuionResuelto> {
     const guion = PREDETERMINADOS.find((g) => g.id === id);
     if (!guion) throw new GuionInvalidoError('Ese guion no existe.');
-    const personajes = await this.personajes.listarPorEdicion(guion.id, TIPOS_BASE);
-    if (personajes.length === 0) throw new GuionInvalidoError('Todavía no se han cargado los personajes. Prueba en un rato.');
-    return this.resolver(
-      { nombre: guion.nombre, autor: guion.autor, entradas: personajes.map((p) => p.id), bootlegger: [], fondo: null },
-      guion.id,
-    );
+    const entradas = guion.personajes
+      ? (await this.personajes.buscarPorIds([...guion.personajes])).map((p) => p.id)
+      : (await this.personajes.listarPorEdicion(guion.id, TIPOS_BASE)).map((p) => p.id);
+    if (entradas.length === 0) throw new GuionInvalidoError('Todavía no se han cargado los personajes. Prueba en un rato.');
+    // Los de lista fija, en su orden
+    if (guion.personajes) entradas.sort((a, b) => guion.personajes!.indexOf(a) - guion.personajes!.indexOf(b));
+    return this.resolver({ nombre: guion.nombre, autor: guion.autor, entradas, bootlegger: [], fondo: null }, guion.id);
   }
 
   /** Un guion importado de un JSON (formato del editor de guiones de BotC), ya resuelto. */

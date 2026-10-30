@@ -7,7 +7,7 @@ import type { MotivoDecision, RasgoOpcion } from './EstrategiaNarrador';
  */
 
 export const INSTRUCCIONES_NARRADOR =
-  'Eres el narrador de una partida de Blood on the Clocktower (guion Trouble Brewing). En el estado tienes el grimorio ' +
+  'Eres el narrador de una partida de Blood on the Clocktower. En el estado tienes el grimorio ' +
   'entero: quién es cada jugador de verdad, su bando, si está vivo, envenenado o borracho, sus recordatorios, lo que se ' +
   'le ha dicho de noche y, de los malvados, los faroles que usan. Quieres una partida equilibrada e interesante hasta el ' +
   'final: que el bien pueda resolverla y que el mal tenga opciones de ganar, sin decidir tú quién gana. Decide como lo ' +
@@ -26,7 +26,9 @@ const POR_MOTIVO: Record<MotivoDecision, string> = {
   redHerring: 'El Red Herring: un jugador bueno que a la Pitonisa le saldrá como el demonio. Que confunda sin hundir al bien.',
   correcto: 'El jugador de verdad de ese tipo que se le enseña.',
   incorrecto: 'El otro jugador que se le enseña sin serlo: que la información sea útil e interesante.',
-  revision: 'Alguien puede registrar como otro (el Espía, la Reclusa). Decide qué se le dice pensando en el equilibrio.',
+  revision:
+    'Hay varias respuestas posibles: alguien puede registrar como otro (el Espía, la Reclusa) o la habilidad deja ' +
+    'elegir a quién enseñar (el Sabio). Decide qué se le dice pensando en el equilibrio.',
   droisonVerdad:
     'Este rol de información está envenenado o borracho y puedes mentirle. Lo habitual: si la verdad no le cuesta nada al ' +
     'mal, decirla a menudo esconde el veneno; si la señala, casi nunca. Sé coherente con lo que ya se le dijo. La ' +
@@ -39,6 +41,17 @@ const POR_MOTIVO: Record<MotivoDecision, string> = {
   espiaComoAldeano: 'El Espía nomina a la Virgen: si registra como aldeano, el Espía es ejecutado al momento.',
   reclusaComoDemonio: 'El Exterminador dispara a la Reclusa: si registra como demonio, muere.',
   violinistaBueno: 'El Violinista: el jugador bueno que se enfrenta al demonio; todos votarán entre los dos.',
+  artista:
+    'Un jugador dice ser el Artista y te hace en privado una pregunta de sí o no. Si es el Artista de verdad, vivo y ' +
+    'sin envenenar ni emborrachar, contesta la verdad según el grimorio. Si no lo es, o está envenenado o borracho, ' +
+    'puedes contestar lo que quieras pensando en el equilibrio. Si no se puede contestar con sí o no, o no lo sabes ' +
+    'por el grimorio (cómo es la gente, su género, lo que se ve en cámara, lo que piensan o harán), pide que la reformule.',
+  artistaSinHabilidad:
+    'Un jugador hace la pregunta del Artista sin poder usar su habilidad (no es el Artista, o está envenenado o ' +
+    'borracho): no tienes que decirle la verdad. Contesta lo que haga la partida más interesante sin romperla.',
+  patoso:
+    'El Patoso ha muerto y no ha elegido a tiempo (o nadie juega en su asiento): elige al jugador vivo que elegiría ' +
+    'él, un bueno que intenta acertar con quién es bueno.',
 };
 
 const RASGOS: Record<RasgoOpcion, string> = {

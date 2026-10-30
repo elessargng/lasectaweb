@@ -160,6 +160,7 @@ const MenuMano = ({
       id="sala-menu-mano"
       alinear="derecha"
       etiqueta="Tu mano"
+      ayuda="Levantar o bajar la mano y elegir su forma"
       // El estado, en la descripción: al bajarse sola (al votar) no se anuncia
       descripcion={`${nombreMano(forma, porId)}, ${manos === 2 ? 'las dos levantadas' : levantada ? 'levantada' : 'bajada'}${sinVoto ? ', sin voto' : ''}`}
       boton={<Mano forma={forma} className={`h-7 w-7 ${levantada ? '' : 'opacity-60'}`} />}

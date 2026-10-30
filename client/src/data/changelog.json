@@ -25,7 +25,12 @@
           "Añadido el anuncio del bando ganador al revelar el grimorio.",
           "Añadidas las elecciones de cada noche y el veneno a lo que cuenta el narrador virtual al revelar.",
           "La Mujer Escarlata que hereda el demonio pasa a ser el Imp con narrador virtual.",
-          "Al revelar el grimorio se paran el reloj, las votaciones y los señalamientos."
+          "Al revelar el grimorio se paran el reloj, las votaciones y los señalamientos.",
+          "Añadido el guion No Greater Joy al narrador virtual, para 5 o 6 jugadores.",
+          "Añadida la pregunta del Artista con narrador virtual.",
+          "Añadida la declaración del Patoso con narrador virtual.",
+          "Añadida la ayuda de todos los botones de arriba de la sala.",
+          "Movido el menú del narrador entre la fase y el guion."
         ]
       },
       {
@@ -41,7 +46,8 @@
       {
         "category": "Estadísticas",
         "items": [
-          "Añadidas las Reliquias, junto a los logros."
+          "Añadidas las Reliquias, junto a los logros.",
+          "Añadido el diario de la partida al historial."
         ]
       }
     ]

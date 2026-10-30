@@ -168,4 +168,50 @@ describe('estadísticas de la partida', () => {
     sala.empezarRevelacion('bueno');
     expect(registros[0].jugadores).toEqual([]);
   });
+
+  it('el diario apunta, por noches y días, los despertares, las muertes, la ejecución y los faroles', () => {
+    const { sala, asiento, registros } = partida();
+    const envio = { tarjeta: null, personajes: [], texto: null, alineamiento: null };
+    // En la preparación, el demonio se pone un farol
+    sala.ponerFarolAsiento(asiento(1), 0, 'empath');
+    sala.irANoche();
+    // Noche 1: el narrador despierta a Bea (el demonio), le pide que elija y elige a Ceci, que muere
+    sala.despertar(asiento(1));
+    sala.mandarDelNarrador(asiento(1), { ...envio, ficha: null, tarjeta: 'eleccion', jugadores: [] });
+    sala.enviarDespertar(asiento(1), { ...envio, autor: asiento(1), ficha: 'jugador', jugadores: [asiento(2)] });
+    sala.cambiarVida(asiento(2), true);
+    sala.amanecer();
+    sala.confirmarMuerte(asiento(2));
+    sala.usarFarol(asiento(1), 'empath');
+    sala.nominar(asiento(0), asiento(1));
+    sala.ejecutar(asiento(1));
+    sala.empezarRevelacion('bueno');
+
+    const resumen = registros[0].diario.map(({ fase, hora, ...h }) => [`${fase.momento} ${fase.numero}`, h]);
+    expect(resumen).toEqual([
+      ['preparacion 0', { tipo: 'farol', asiento: { numero: 2, nombre: 'bea' }, posicion: 0, personaje: 'empath' }],
+      [
+        'noche 1',
+        expect.objectContaining({ tipo: 'despertar', asiento: { numero: 2, nombre: 'bea' }, delNarrador: true, tarjeta: 'eleccion', jugadores: [] }),
+      ],
+      [
+        'noche 1',
+        expect.objectContaining({ tipo: 'despertar', delNarrador: false, ficha: 'jugador', jugadores: [{ numero: 3, nombre: 'ceci' }] }),
+      ],
+      ['noche 1', { tipo: 'muere', asiento: { numero: 3, nombre: 'ceci' } }],
+      ['dia 1', { tipo: 'usaFarol', asiento: { numero: 2, nombre: 'bea' }, personaje: 'empath' }],
+      ['dia 1', { tipo: 'ejecucion', asiento: { numero: 2, nombre: 'bea' } }],
+    ]);
+  });
+
+  it('la máquina del tiempo saca del diario lo hecho desde el cambio de fase que deshace', () => {
+    const { sala, asiento, registros } = partida();
+    sala.irANoche();
+    sala.cambiarVida(asiento(2), true);
+    sala.amanecer();
+    sala.cambiarAlineamiento(asiento(0), 'malvado');
+    sala.volverAtras();
+    sala.empezarRevelacion('bueno');
+    expect(registros[0].diario.map((e) => e.tipo)).toEqual(['muere']);
+  });
 });

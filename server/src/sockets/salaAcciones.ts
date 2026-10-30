@@ -50,7 +50,7 @@ import { guardarAvatarSala } from '../utils/salaAvatarStorage';
 import { GuionResuelto, PersonajeDeGuion, TIPOS_NPC, TipoPersonaje } from '../types/guiones';
 import { GuionInvalidoError } from '../services/guiones/errores';
 import type { RegistroPartida } from '../services/estadisticas/SeguimientoPartida';
-import type { ServicioNarradorVirtual } from '../services/narradorVirtual/NarradorVirtualService';
+import type { AccionSuelta, ServicioNarradorVirtual } from '../services/narradorVirtual/NarradorVirtualService';
 import type { Azar, ClienteJev, DatosJev, Temporizador } from '../services/narradorVirtual/puertos';
 import type { AccionJugador } from '../services/narradorVirtual/etapas/Etapa';
 import { diaVirtual, noPuedeNominar, nominoHoy } from '../services/narradorVirtual/dia/reglasDia';
@@ -198,7 +198,7 @@ const esNarrador = (_sala: SalaService, yo: SalaParticipante) => yo.rol === 'nar
 
 /** Lo que pide un jugador al narrador virtual en el día: se lo pasa (ya comprobado que puede). */
 const alNarradorVirtual =
-  (accion: AccionJugador | 'exterminar') =>
+  (accion: AccionJugador | AccionSuelta) =>
   async (_sala: SalaService, yo: SalaParticipante, datos: unknown, deps: DependenciasSala): Promise<SalaEfecto> => {
     if (!deps.narradorVirtual) return { ok: false, error: 'Esta sala no tiene narradores virtuales.' };
     const error = await deps.narradorVirtual.pedir(yo.id, accion, datos);
@@ -446,7 +446,8 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   /**
    * En lugar de hacerse narrador, añade un narrador virtual que lleva la partida
    * solo. datos: { narrador: id de NARRADORES_VIRTUALES (disponible), guion: id de
-   * GUIONES_NARRADOR_VIRTUAL, jugadores: de JUGADORES_NARRADOR_VIRTUAL.min a .max }.
+   * GUIONES_NARRADOR_VIRTUAL, jugadores: de JUGADORES_NARRADOR_VIRTUAL.min a .max, y
+   * de los que admite ese guion }.
    * Solo con cuenta: los invitados, no.
    */
   'sala:anadirNarradorVirtual': {
@@ -458,10 +459,14 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       if (!NARRADORES_VIRTUALES.some((n) => n.id === narrador && n.disponible)) {
         return { ok: false, error: 'Ese narrador virtual aún no está disponible.' };
       }
-      if (!GUIONES_NARRADOR_VIRTUAL.some((g) => g.id === guion)) return { ok: false, error: 'Ese guion aún no se puede jugar con narrador virtual.' };
+      const delGuion = GUIONES_NARRADOR_VIRTUAL.find((g) => g.id === guion);
+      if (!delGuion) return { ok: false, error: 'Ese guion aún no se puede jugar con narrador virtual.' };
       const { min, max } = JUGADORES_NARRADOR_VIRTUAL;
       if (typeof jugadores !== 'number' || !Number.isInteger(jugadores) || jugadores < min || jugadores > max) {
         return { ok: false, error: `Tiene que haber de ${min} a ${max} jugadores.` };
+      }
+      if (jugadores < delGuion.jugadores.min || jugadores > delGuion.jugadores.max) {
+        return { ok: false, error: `${delGuion.nombre} es para ${delGuion.jugadores.min} a ${delGuion.jugadores.max} jugadores.` };
       }
       const error = await narradorVirtual.anadir(yo.id, {
         narrador: narrador as IdNarradorVirtual,
@@ -543,6 +548,41 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
     noPuede: (sala, yo) => (sala.narradorVirtual()?.exterminadores.includes(yo.id) ? 'Ya has disparado en esta partida.' : 'Ahora no se puede disparar.'),
     hacer: alNarradorVirtual('exterminar'),
+  },
+
+  /**
+   * Con narrador virtual: un muerto se declara Patoso (lo sea o no) y elige a un vivo,
+   * mientras puede (ver SalaNarradorVirtual.patosos). datos: { asientoId } del elegido.
+   */
+  'jugador:patoso': {
+    puede: (sala, yo) => {
+      const narrador = sala.narradorVirtual();
+      const mio = sala.asientoDe(yo.id)?.id;
+      return !!narrador && narrador.etapa !== 'revelando' && !!mio && narrador.patosos.some((p) => p.asiento === mio);
+    },
+    noPuede: 'Ya no puedes declararte Patoso.',
+    hacer: alNarradorVirtual('patoso'),
+  },
+
+  /**
+   * Con narrador virtual, de día: un jugador vivo le hace la pregunta del Artista
+   * (lo sea o no; una vez por partida, salvo que le pida que la reformule). datos: {
+   * texto } (libre) o { pregunta } (montada, ver contrato/artista). Contesta en
+   * `valor`: 'si', 'no' o 'reformular'.
+   */
+  'jugador:artista': {
+    puede: (sala, yo) => {
+      const dia = diaVirtual(sala);
+      const asiento = sala.asientoDe(yo.id);
+      return !!dia && !!asiento && !asiento.muerto && !dia.artistas.includes(yo.id);
+    },
+    noPuede: (sala, yo) =>
+      sala.narradorVirtual()?.artistas.includes(yo.id) ? 'Ya has hecho tu pregunta de Artista.' : 'Ahora no se puede preguntar como Artista.',
+    hacer: async (_sala, yo, datos, { narradorVirtual }) => {
+      if (!narradorVirtual) return { ok: false, error: 'Esta sala no tiene narradores virtuales.' };
+      const r = await narradorVirtual.preguntarArtista(yo.id, datos);
+      return 'error' in r ? { ok: false, error: r.error } : { ok: true, valor: r.respuesta };
+    },
   },
 
   /** Da la palabra a un participante (los demás jugadores callan) o, con null, a todos. datos: { participanteId | null }. */

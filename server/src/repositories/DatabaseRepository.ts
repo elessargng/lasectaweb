@@ -995,6 +995,11 @@ export class DatabaseRepository {
     await this.applyMigration('032_drop_jarvis_configuracion', async (db) => {
       await db.exec('DROP TABLE IF EXISTS jarvis_configuracion;');
     });
+
+    // Migración 033: el diario de cada partida (todo lo que se hizo, por noches y días)
+    await this.applyMigration('033_partidas_diario', async (db) => {
+      await db.exec('ALTER TABLE sala_partidas ADD COLUMN diario TEXT;');
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

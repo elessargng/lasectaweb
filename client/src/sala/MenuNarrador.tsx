@@ -130,8 +130,8 @@ const MenuNarrador = ({
     <>
       <MenuDesplegable
         id={ID_MENU_NARRADOR}
-        alinear="derecha"
         etiqueta="Opciones de narrador"
+        ayuda="Opciones de narrador"
         boton={<ScrollText size={22} />}
         botonClassName={botonIcono}
         opciones={opciones}

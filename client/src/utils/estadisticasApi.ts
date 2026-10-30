@@ -1,3 +1,4 @@
+import type { EntradaDiario } from '@contrato/diario';
 import { parseApiResponse } from './api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api';
@@ -173,6 +174,8 @@ export interface PartidaHistorial {
   npcs: string[] | null;
   /** Las nominaciones (null si no se guardaron o no se pueden ver). */
   votaciones: VotacionHistorial[] | null;
+  /** Todo lo que se hizo, por noches y días (null si no se guardó o no se puede ver). */
+  diario: EntradaDiario[] | null;
 }
 
 /** El historial de partidas de alguien (el propio, siempre; el de otro, si son públicas). */

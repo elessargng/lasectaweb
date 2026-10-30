@@ -1,13 +1,16 @@
 import type { HabilidadNocturna } from './HabilidadNocturna';
+import { HABILIDADES_NO_GREATER_JOY } from './noGreaterJoy';
 import { HABILIDADES_TROUBLE_BREWING } from './troubleBrewing';
 
 /**
- * Las habilidades de noche de cada guion, por edición oficial. Solo Trouble
- * Brewing, de momento: en otros guiones hay personajes que cambian las reglas
- * (el Vortox, la Marioneta…) y se despierta a mano. Un guion nuevo es una entrada más.
+ * Las habilidades de noche de cada guion, por su id de predeterminado. Solo
+ * Trouble Brewing y No Greater Joy, de momento: en otros guiones hay personajes que
+ * cambian las reglas (el Vortox, la Marioneta…) y se despierta a mano. Un guion
+ * nuevo es una entrada más.
  */
 const POR_EDICION: Record<string, readonly HabilidadNocturna[]> = {
   troublebrewing: HABILIDADES_TROUBLE_BREWING,
+  nogreaterjoy: HABILIDADES_NO_GREATER_JOY,
 };
 
 /** Las habilidades de noche de un guion (por su edición), por personaje; ninguna si no las tiene. */

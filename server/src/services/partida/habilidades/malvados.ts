@@ -11,6 +11,9 @@ const JUGADORES_MINIMOS = 7;
 
 const pocosJugadores = (ctx: ContextoNoche) => ctx.mesa().filter((a) => tipoDe(ctx, a) !== 'traveller').length < JUGADORES_MINIMOS;
 
+/** Los malvados se conocen la primera noche y el demonio recibe sus faroles: con menos de 7 jugadores (teensy), no. */
+export const malvadosSeConocen = (ctx: ContextoNoche) => !pocosJugadores(ctx);
+
 /** Los de un tipo de verdad (no el de su ficha). */
 const deTipo = (ctx: ContextoNoche, tipo: string) => ctx.mesa().filter((a) => tipoDe(ctx, a) === tipo);
 

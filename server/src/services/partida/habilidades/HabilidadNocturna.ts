@@ -15,6 +15,11 @@ import { droison, tieneRecordatorio, type ContextoReglas } from '../reglas/Regla
 export interface ContextoNoche extends ContextoReglas {
   /** Los faroles que el narrador ha preparado para el demonio (casillas vacías: null). */
   faroles(): (string | null)[];
+  /**
+   * Los asientos despertados esta noche por su habilidad (no por la información de
+   * los esbirros y del demonio): lo sabe el despertar guiado. Sin él, ninguno.
+   */
+  despertados?(): string[];
 }
 
 /** Lo que cambia en la partida al hacerse una habilidad (lo aplica DespertarGuiado). */
@@ -311,8 +316,8 @@ export class EligeYMarca extends Elige {
  * diría si ha tenido que revisarla (si alguien registra como otro o está droison).
  */
 export abstract class EligeYSabe extends Elige {
-  constructor(personaje: string, cantidad: number) {
-    super(personaje, { cantidad, puedeElegirse: true });
+  constructor(personaje: string, cantidad: number, puedeElegirse = true) {
+    super(personaje, { cantidad, puedeElegirse });
   }
 
   alElegir(ctx: ContextoNoche, asiento: SalaAsiento, elegidos: SalaAsiento[]): Resultado {

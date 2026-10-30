@@ -7,6 +7,7 @@ import { Noche } from './Noche';
 import { Revelando } from './Revelando';
 import { comprobarFinal, type Ganador } from '../final/comprobarFinal';
 import { apuntarMuerteDeDia } from '../final/cronica';
+import { abrirPatosos, cerrarPatosos } from '../dia/patoso';
 
 /** Lo que dura la puesta en común (ms). */
 const PUESTA_EN_COMUN_MS = 60_000;
@@ -235,21 +236,32 @@ export class Nominaciones implements Etapa {
     if ((await ctx.mesa.accion('narrador:ejecutar', { asientoId: marcado.id })).ok) await this.trasEjecutar(ctx, marcado.id, FRASES.ejecutado(quien));
   }
 
-  /** Tras una ejecución (`frase`: cómo se cuenta): si se acaba la partida (también por el Santo), se revela; si no, a la noche. */
+  /**
+   * Tras una ejecución (`frase`: cómo se cuenta): si se acaba la partida (también por
+   * el Santo), se revela; si no, a la noche. El ejecutado puede declararse Patoso hasta el amanecer.
+   */
   private async trasEjecutar(ctx: ContextoEtapa, ejecutado: string, frase: string): Promise<void> {
     apuntarMuerteDeDia(ctx.recuerdos.cronica, ctx.sala, ejecutado, 'ejecucion');
+    abrirPatosos(ctx.sala, [ejecutado], 'amanecer');
     await this.terminarDia(ctx, frase, await comprobarFinal(ctx, { ejecutado }));
   }
 
   /**
    * Se acaba el día, dicho en dos partes con una pausa («Pepe es ejecutada y muere…»,
    * «Y nos vamos a la noche» o «Y revelamos el grimorio»). Hasta que no acaba de
-   * decirlo no se va a la noche ni se revela; mientras, no se atiende a nadie.
+   * decirlo no se va a la noche ni se revela; mientras, no se atiende a nadie. Los
+   * muertos de anoche ya no pueden declararse Patoso (si el de verdad no ha elegido,
+   * elige ahora y eso puede acabar la partida).
    */
   private async terminarDia(ctx: ContextoEtapa, frase: string, ganador: Ganador | null): Promise<void> {
     this.terminando = true;
     ctx.decir(frase);
     await this.esperar(ctx, duracionFrase(frase) + PAUSA_MS);
+    const porElPatoso = ganador ? null : await cerrarPatosos(ctx, 'anochecer');
+    if (porElPatoso) {
+      await ctx.pasarA(new Revelando(porElPatoso));
+      return;
+    }
     const despues = FRASES.trasEjecucion(!!ganador);
     ctx.decir(despues);
     await this.esperar(ctx, duracionFrase(despues));

@@ -1,8 +1,9 @@
-import { ChevronDown, Crown, Feather, Gavel, Skull, Trophy, Users } from 'lucide-react';
+import { BookOpen, ChevronDown, Crown, Feather, Gavel, Skull, Trophy, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { LOGROS } from '../../data/logros';
 import { CAUSAS_FINAL } from '../../sala/causasFinal';
+import DiarioPartida from './DiarioPartida';
 import NombrePersonaje, { CadenaRoles } from './NombrePersonaje';
 import TextoLogro from './TextoLogro';
 import { getAvatarUrl, urlDelServidor } from '../../utils/api';
@@ -26,8 +27,9 @@ const idTitulo = (p: PartidaHistorial) => `historial-${p.partidaId}-titulo`;
  * a la más antigua, como una ficha de crónica. A la vista, el guion, la fecha, los
  * días, quién ganó y lo suyo (sus roles y si ganó); al abrirla («Ver la partida»),
  * la mesa entera (quién jugó, qué era, su bando y si acabó vivo), quién narró, los
- * NPCs, lo que pasó (los logros) y las nominaciones. De las partidas de antes de
- * guardar la mesa entera, solo se sabe de quienes tenían cuenta.
+ * NPCs, lo que pasó (los logros) y el diario (todo lo que se hizo, por noches y
+ * días; en las partidas de antes de guardarlo, solo las nominaciones). De las
+ * partidas de antes de guardar la mesa entera, solo se sabe de quienes tenían cuenta.
  *
  * Se filtra por jugadas o narradas y se cargan de 8 en 8 («Mostrar más»: el foco
  * va a la primera nueva).
@@ -321,7 +323,14 @@ const DetallePartida = ({ partida: p, usuario, propias, personajes }: TarjetaPar
         </section>
       )}
 
-      {p.votaciones && p.votaciones.length > 0 && (
+      {p.diario && p.diario.length > 0 ? (
+        <section aria-labelledby={`${p.partidaId}-diario`}>
+          <h5 id={`${p.partidaId}-diario`} className={subtitulo}>
+            <BookOpen className="h-4 w-4" aria-hidden="true" /> Diario de la partida
+          </h5>
+          <DiarioPartida diario={p.diario} votaciones={p.votaciones ?? []} personajes={personajes} id={p.partidaId} />
+        </section>
+      ) : p.votaciones && p.votaciones.length > 0 && (
         <section aria-labelledby={`${p.partidaId}-nominaciones`}>
           <h5 id={`${p.partidaId}-nominaciones`} className={subtitulo}>
             <Gavel className="h-4 w-4" aria-hidden="true" /> Nominaciones

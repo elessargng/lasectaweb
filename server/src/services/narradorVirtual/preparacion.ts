@@ -94,7 +94,7 @@ export async function elegirBolsa(
 ): Promise<BolsaElegida | null> {
   const { aldeanos, forasteros, esbirros, demonios } = distribucion;
   if (aldeanos === null || forasteros === null || esbirros === null || demonios === null) return null;
-  const conceptos = sortearConceptos(azar);
+  const conceptos = sortearConceptos(azar, personajes.map((p) => p.id));
   const favorecida = CONCEPTOS_BIEN[conceptos.bien].categoria;
   const mal = CONCEPTOS_MAL[conceptos.mal];
   const instrucciones = instruccionesBolsa(conceptos, usadosRecientes(recientes, personajes));
@@ -135,13 +135,16 @@ export async function elegirBolsa(
   }
   const ajustado = repartoAjustado(distribucion, elegidos.map((p) => p.id));
   const nForasteros = ajustado.forasteros ?? 0;
+  let sinForastero = 0;
   for (let i = 0; i < nForasteros; i++) {
-    await elegir(`un forastero (${i + 1} de ${nForasteros})`, { tipo: 'outsider' }, libres(deTipo('outsider')), mal.forasteros);
+    const forastero = await elegir(`un forastero (${i + 1} de ${nForasteros})`, { tipo: 'outsider' }, libres(deTipo('outsider')), mal.forasteros);
+    if (!forastero) sinForastero++;
   }
   const fuera = elegidos.filter((p) => p.id in NO_VAN_EN_BOLSA);
 
-  // Los aldeanos, cada uno de su categoría; si ya no queda ninguno de ella, de otra que tenga
-  const nAldeanos = ajustado.aldeanos ?? 0;
+  // Los aldeanos (y uno más por cada forastero que no tenga el guion), cada uno de su
+  // categoría; si ya no queda ninguno de ella, de otra que tenga
+  const nAldeanos = (ajustado.aldeanos ?? 0) + sinForastero;
   const categorias = categoriasDeHuecos(nAldeanos, favorecida, azar);
   const deCategoria = (c: CategoriaAldeano) => (p: PersonajeDeGuion) => p.tipo === 'townsfolk' && CATEGORIAS_ALDEANOS[c].includes(p.id);
   for (let i = 0; i < nAldeanos; i++) {

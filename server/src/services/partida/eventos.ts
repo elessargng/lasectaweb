@@ -1,3 +1,4 @@
+import type { EntradaDiario } from '../../contrato/diario';
 import type { SalaAlineamiento, SalaRegistroVotacion } from '../../contrato/sala';
 
 /**
@@ -38,6 +39,8 @@ export type EventoPartida =
   | { tipo: 'desvoto'; userId: string | null }
   /** El narrador ha ejecutado a alguien (su cuenta, o null). */
   | { tipo: 'ejecucion'; userId: string | null }
+  /** Algo que se ha hecho en la partida, para su diario (ver contrato/diario). */
+  | { tipo: 'diario'; entrada: EntradaDiario }
   /**
    * La máquina del tiempo: se vuelve a la fase anterior. `deshace`: se deshace el
    * último cambio de fase (el último anochece o amanece), con lo que trajo; si

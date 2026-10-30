@@ -4,8 +4,12 @@ import type { EstrategiaNarrador } from './estrategias/EstrategiaNarrador';
 import { TontoYTu } from './estrategias/TontoYTu';
 import { EsperandoJugadores } from './etapas/EsperandoJugadores';
 import { decisionesDe, type AccionJugador, type ContextoEtapa, type Etapa } from './etapas/Etapa';
+import type { RespuestaArtista } from '../../contrato/artista';
+import { preguntarComoArtista } from './dia/artista';
 import { contarDisparo, exterminar } from './dia/exterminar';
-import { comprobarFinal, esDemonio } from './final/comprobarFinal';
+import { contarPatoso } from './dia/patoso';
+import { vivo } from './mesaDeJuego';
+import { comprobarFinal, esDemonio, type Ganador } from './final/comprobarFinal';
 import { Revelando } from './etapas/Revelando';
 import { Violinista } from './etapas/Violinista';
 import { FRASES } from './frases';
@@ -31,8 +35,13 @@ export interface ServicioNarradorVirtual {
   anadir(creador: string, opciones: OpcionesNarradorVirtual): Promise<string | null>;
   quitar(): void;
   /** Un jugador le pide algo en el día (ya comprobado que puede). Devuelve el error, si lo hay. */
-  pedir(jugador: string, accion: AccionJugador | 'exterminar', datos: unknown): Promise<string | null>;
+  pedir(jugador: string, accion: AccionJugador | AccionSuelta, datos: unknown): Promise<string | null>;
+  /** Un jugador le hace la pregunta del Artista (ya comprobado que puede): la respuesta o el error. */
+  preguntarArtista(jugador: string, datos: unknown): Promise<{ error: string } | { respuesta: RespuestaArtista }>;
 }
+
+/** Lo que piden los jugadores fuera de los turnos del día: disparar como Exterminador, declararse Patoso. */
+export type AccionSuelta = 'exterminar' | 'patoso';
 
 /** Lo que espera a que alguien ocupe el asiento de quien se ha ido en plena partida (ms); si no, el Violinista. */
 export const ESPERA_ABANDONO_MS = 120_000;
@@ -54,8 +63,8 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
   private fuera: FueraDeLaBolsa[] = [];
   /** Lo que recuerda de la partida (ver ContextoEtapa.recuerdos). */
   private recuerdos = recuerdosNuevos();
-  /** Contando un disparo del Exterminador (con sus pausas): hasta que acaba, no se dispara otra vez. */
-  private contandoDisparo = false;
+  /** Contando un disparo del Exterminador o lo que elige un Patoso (con sus pausas): hasta que acaba, no se cuenta otro. */
+  private contando = false;
   /** Revisando la sala ahora; `otraVez`: ha vuelto a cambiar mientras tanto. */
   private revisando = false;
   private otraVez = false;
@@ -152,25 +161,39 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     this.sala.quitarNarradorVirtual();
   }
 
-  async pedir(jugador: string, accion: AccionJugador | 'exterminar', datos: unknown): Promise<string | null> {
+  async pedir(jugador: string, accion: AccionJugador | AccionSuelta, datos: unknown): Promise<string | null> {
     if (!this.etapa || !this.sala.narradorVirtual()) return 'La sala no tiene narrador virtual.';
-    if (accion === 'exterminar') {
+    if (accion === 'exterminar' || accion === 'patoso') {
       const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
       if (typeof asientoId !== 'string' || !this.sala.hayAsiento(asientoId)) return 'Ese asiento ya no existe.';
-      if (this.sala.asientoDe(jugador)?.id === asientoId) return 'No puedes dispararte a ti.';
-      if (this.contandoDisparo) return 'Espera a que el narrador termine de contar el disparo.';
+      const mio = this.sala.asientoDe(jugador)?.id;
+      if (mio === asientoId) return accion === 'exterminar' ? 'No puedes dispararte a ti.' : 'Elige a otro jugador.';
+      if (this.contando) return 'Espera a que el narrador termine de contar lo anterior.';
       const ctx = this.contexto();
-      const muere = await exterminar(ctx, jugador, asientoId);
-      // Se cuenta con pausas (sin hacer esperar a quien dispara); si ha caído el demonio, se acaba
-      this.contandoDisparo = true;
-      void contarDisparo(ctx, jugador, asientoId, muere)
+      let contar: Promise<Ganador | null>;
+      if (accion === 'patoso') {
+        if (!mio) return 'No estás sentado.';
+        if (!vivo(this.sala.asientos().find((a) => a.id === asientoId)!)) return 'Elige a un jugador vivo.';
+        contar = contarPatoso(ctx, mio, asientoId);
+      } else {
+        const muere = await exterminar(ctx, jugador, asientoId);
+        contar = contarDisparo(ctx, jugador, asientoId, muere);
+      }
+      // Se cuenta con pausas (sin hacer esperar a quien lo pide); si se acaba la partida, se revela
+      this.contando = true;
+      void contar
         .then(async (ganador) => {
           if (ganador && this.sala.narradorVirtual()) await this.pasarA(new Revelando(ganador));
         })
-        .finally(() => (this.contandoDisparo = false));
+        .finally(() => (this.contando = false));
       return null;
     }
     return this.etapa.alPedir ? this.etapa.alPedir(this.contexto(), jugador, accion, datos) : 'Ahora no es el momento.';
+  }
+
+  async preguntarArtista(jugador: string, datos: unknown): Promise<{ error: string } | { respuesta: RespuestaArtista }> {
+    if (!this.etapa || !this.sala.narradorVirtual()) return { error: 'La sala no tiene narrador virtual.' };
+    return preguntarComoArtista(this.contexto(), jugador, datos);
   }
 
   /** Lo que salió pero no va en la bolsa (ver `prepararPartida`). */

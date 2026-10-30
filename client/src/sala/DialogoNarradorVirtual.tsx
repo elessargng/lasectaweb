@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  GUIONES_NARRADOR_VIRTUAL,
+  guionesParaJugadores,
   JUGADORES_NARRADOR_VIRTUAL,
   NARRADORES_VIRTUALES,
   type GuionNarradorVirtual,
@@ -26,14 +26,18 @@ const NUMEROS = Array.from({ length: max - min + 1 }, (_, i) => min + i);
 
 /**
  * En lugar de hacerse narrador: añadir un narrador virtual que lleva la partida
- * solo. Se elige el guion, cuántos jugadores y qué narrador (los que aún no se
- * pueden elegir salen desactivados, con el motivo). Al añadirlo, prepara la
+ * solo. Se elige cuántos jugadores, el guion (los que son para ese número: No
+ * Greater Joy con 5 o 6, Trouble Brewing con 7 o más) y qué narrador (los que aún
+ * no se pueden elegir salen desactivados, con el motivo). Al añadirlo, prepara la
  * mesa y espera a que se llene. Al abrirse, el foco va al título.
  */
 const DialogoNarradorVirtual = ({ sentados, noDisponible = {}, pedir, onCerrar }: DialogoNarradorVirtualProps) => {
   const elegible = (n: (typeof NARRADORES_VIRTUALES)[number]) => n.disponible && !noDisponible[n.id];
-  const [guion, setGuion] = useState<GuionNarradorVirtual>(GUIONES_NARRADOR_VIRTUAL[0].id);
   const [jugadores, setJugadores] = useState(Math.min(max, Math.max(min, sentados)));
+  const guiones = guionesParaJugadores(jugadores);
+  const [guionElegido, setGuion] = useState<GuionNarradorVirtual>(guiones[0].id);
+  // Al cambiar los jugadores, si el elegido ya no vale, el primero de los que valen
+  const guion = guiones.some((g) => g.id === guionElegido) ? guionElegido : guiones[0].id;
   const [narrador, setNarrador] = useState<IdNarradorVirtual>(NARRADORES_VIRTUALES.find(elegible)!.id);
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -66,23 +70,6 @@ const DialogoNarradorVirtual = ({ sentados, noDisponible = {}, pedir, onCerrar }
             Lleva la partida solo: prepara la mesa, espera a que se llene, reparte y narra las noches y los días.
           </p>
           <div className="flex flex-col gap-1">
-            <label htmlFor="sala-virtual-guion" className="font-ui text-xs">
-              Guion
-            </label>
-            <select
-              id="sala-virtual-guion"
-              value={guion}
-              onChange={(e) => setGuion(e.target.value as GuionNarradorVirtual)}
-              className={`${campo} text-sm`}
-            >
-              {GUIONES_NARRADOR_VIRTUAL.map((g) => (
-                <option key={g.id} value={g.id} lang="en">
-                  {g.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
             <label htmlFor="sala-virtual-jugadores" className="font-ui text-xs">
               Jugadores
             </label>
@@ -104,6 +91,27 @@ const DialogoNarradorVirtual = ({ sentados, noDisponible = {}, pedir, onCerrar }
                 Ya hay {sentados} sentados: como poco, {sentados}.
               </p>
             )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="sala-virtual-guion" className="font-ui text-xs">
+              Guion
+            </label>
+            <select
+              id="sala-virtual-guion"
+              value={guion}
+              onChange={(e) => setGuion(e.target.value as GuionNarradorVirtual)}
+              aria-describedby="sala-virtual-guion-ayuda"
+              className={`${campo} text-sm`}
+            >
+              {guiones.map((g) => (
+                <option key={g.id} value={g.id} lang="en">
+                  {g.nombre}
+                </option>
+              ))}
+            </select>
+            <p id="sala-virtual-guion-ayuda" className="text-xs text-on-surface-muted">
+              Con 5 o 6 jugadores, No Greater Joy; con 7 o más, Trouble Brewing.
+            </p>
           </div>
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-1 font-ui text-xs">Narrador</legend>

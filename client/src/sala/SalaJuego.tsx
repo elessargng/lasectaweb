@@ -1920,6 +1920,21 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                       : undefined
                   }
                 />
+                {/* Las opciones de narrador, entre la fase y el guion */}
+                <MenuNarrador
+                  estado={estado}
+                  pedir={pedirPropio}
+                  onAsientos={() => setEditandoAsientos((v) => !v)}
+                  revelando={revelandoGrimorio}
+                  onRevelando={setRevelandoGrimorio}
+                  atajoFase={atajos.cambiarFase}
+                  atajoRevelar={atajos.revelarGrimorio}
+                  atajoGong={atajos.sonarGong}
+                  poniendoReloj={poniendoReloj}
+                  onPoniendoReloj={setPoniendoReloj}
+                  atajoReloj={atajos.reloj}
+                  onRelojPuesto={(texto) => anunciar('reloj', texto)}
+                />
                 <TituloGuion
                   guion={guion}
                   puedeCambiar={estado.acciones.includes('narrador:cambiarGuion')}
@@ -1993,22 +2008,6 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                         }
                       : null
                   }
-                />
-              )}
-              {estado && (
-                <MenuNarrador
-                  estado={estado}
-                  pedir={pedirPropio}
-                  onAsientos={() => setEditandoAsientos((v) => !v)}
-                  revelando={revelandoGrimorio}
-                  onRevelando={setRevelandoGrimorio}
-                  atajoFase={atajos.cambiarFase}
-                  atajoRevelar={atajos.revelarGrimorio}
-                  atajoGong={atajos.sonarGong}
-                  poniendoReloj={poniendoReloj}
-                  onPoniendoReloj={setPoniendoReloj}
-                  atajoReloj={atajos.reloj}
-                  onRelojPuesto={(texto) => anunciar('reloj', texto)}
                 />
               )}
               {puedeLevantarMano && yo && (

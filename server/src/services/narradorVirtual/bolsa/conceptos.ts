@@ -2,20 +2,22 @@ import { barajar } from '../../../contrato/bolsaAleatoria';
 import type { Azar } from '../puertos';
 
 /**
- * Qué partida monta el narrador virtual (Trouble Brewing): para que no salga
- * siempre la misma bolsa, cada partida sortea un concepto del bien y uno del mal,
- * y cada hueco de aldeano tiene una categoría. El código pone el azar y los
- * huecos; quien decide (Jarvis o «Tonto y tú») elige el personaje de cada uno.
+ * Qué partida monta el narrador virtual (Trouble Brewing o No Greater Joy): para
+ * que no salga siempre la misma bolsa, cada partida sortea un concepto del bien y
+ * uno del mal, y cada hueco de aldeano tiene una categoría. El código pone el azar
+ * y los huecos; quien decide (Jarvis o «Tonto y tú») elige el personaje de cada
+ * uno. Las categorías llevan los aldeanos de todos los guiones: de cada una solo
+ * salen los del guion de la partida.
  */
 
 /** Las categorías de los aldeanos, por lo que aportan al bien. */
 export type CategoriaAldeano = 'infoPrimeraNoche' | 'infoRecurrente' | 'trampasDemonio' | 'accion';
 
 export const CATEGORIAS_ALDEANOS: Record<CategoriaAldeano, readonly string[]> = {
-  infoPrimeraNoche: ['washerwoman', 'librarian', 'investigator', 'chef'],
-  infoRecurrente: ['empath', 'fortuneteller', 'undertaker'],
-  trampasDemonio: ['soldier', 'monk', 'mayor', 'ravenkeeper'],
-  accion: ['slayer', 'virgin'],
+  infoPrimeraNoche: ['washerwoman', 'librarian', 'investigator', 'chef', 'clockmaker'],
+  infoRecurrente: ['empath', 'fortuneteller', 'undertaker', 'chambermaid'],
+  trampasDemonio: ['soldier', 'monk', 'mayor', 'ravenkeeper', 'sage'],
+  accion: ['slayer', 'virgin', 'artist'],
 };
 
 /** Cada categoría en palabras (en la pregunta de su hueco). */
@@ -23,7 +25,7 @@ export const NOMBRE_CATEGORIA: Record<CategoriaAldeano, string> = {
   infoPrimeraNoche: 'información la primera noche',
   infoRecurrente: 'información cada noche',
   trampasDemonio: 'trampa para el demonio',
-  accion: 'acción contra el mal',
+  accion: 'acción de día',
 };
 
 const CATEGORIAS = Object.keys(CATEGORIAS_ALDEANOS) as CategoriaAldeano[];
@@ -51,7 +53,7 @@ export const CONCEPTOS_BIEN: Record<ConceptoBien, { descripcion: string; categor
     categoria: 'trampasDemonio',
   },
   irAPorEllo: {
-    descripcion: 'el bien tiene habilidades para actuar directamente contra el mal a la luz del día',
+    descripcion: 'el bien tiene habilidades para actuar a la luz del día',
     categoria: 'accion',
   },
 };
@@ -111,10 +113,16 @@ export function alAzarConPeso<O extends { peso?: number }>(opciones: readonly O[
   return opciones[opciones.length - 1];
 }
 
-/** El concepto del bien y el del mal, juntos y con el peso de su combinación. */
-export function sortearConceptos(azar: Azar): Conceptos {
+/**
+ * El concepto del bien y el del mal, juntos y con el peso de su combinación. Con
+ * los personajes del guion, solo los del mal cuyo esbirro está en él (si no hay
+ * ninguno, todos).
+ */
+export function sortearConceptos(azar: Azar, personajes?: readonly string[]): Conceptos {
+  const todos = Object.keys(CONCEPTOS_MAL) as ConceptoMal[];
+  const delGuion = personajes ? todos.filter((m) => personajes.includes(CONCEPTOS_MAL[m].esbirro)) : todos;
   const combinaciones = (Object.keys(CONCEPTOS_BIEN) as ConceptoBien[]).flatMap((bien) =>
-    (Object.keys(CONCEPTOS_MAL) as ConceptoMal[]).map((mal) => ({ bien, mal, peso: PESOS_COMBINACIONES[`${bien}×${mal}`] ?? 1 })),
+    (delGuion.length ? delGuion : todos).map((mal) => ({ bien, mal, peso: PESOS_COMBINACIONES[`${bien}×${mal}`] ?? 1 })),
   );
   const { bien, mal } = alAzarConPeso(combinaciones, azar);
   return { bien, mal };

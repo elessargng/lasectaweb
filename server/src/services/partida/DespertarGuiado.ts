@@ -208,8 +208,18 @@ export class DespertarGuiado {
     const asiento = mesa.find((a) => a.id === asientoId);
     if (!turno || !habilidad || !asiento) return;
     const elegidosEnMesa = elegidos.flatMap((id) => mesa.find((a) => a.id === id) ?? []);
+    // Con quién ha despertado esta noche por su habilidad (la Camarera)
+    const ctx = { ...this.entorno.ctx, despertados: () => this.despertados() };
     // La respuesta a lo que ha elegido es del mismo despertar: no espera en la cola
-    this.aplicar(turno.personaje, asiento, habilidad.alElegir(this.entorno.ctx, asiento, elegidosEnMesa), true);
+    this.aplicar(turno.personaje, asiento, habilidad.alElegir(ctx, asiento, elegidosEnMesa), true);
+  }
+
+  /**
+   * Los asientos despertados esta noche por su habilidad: los que tienen turno (solo
+   * se guarda al despertarlos), sin la información de los esbirros y del demonio.
+   */
+  private despertados(): string[] {
+    return this.turnos.filter((t) => t.personaje !== 'esbirros' && t.personaje !== 'demonios').map((t) => t.asiento);
   }
 
   /**

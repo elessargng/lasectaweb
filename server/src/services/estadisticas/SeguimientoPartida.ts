@@ -1,3 +1,4 @@
+import type { EntradaDiario } from '../../contrato/diario';
 import { CAUSAS_CON_VICTORIA, type SalaAlineamiento, type SalaRegistroVotacion } from '../../contrato/sala';
 
 /** Una causa de final y, si es de alguien concreto (el esbirro que cazó a la Doncel), su cuenta. */
@@ -67,6 +68,8 @@ export interface RegistroPartida {
   narradoresNombres: string[];
   npcs: string[];
   votaciones: SalaRegistroVotacion[];
+  /** Todo lo que se hizo en ella, por noches y días (ver contrato/diario). */
+  diario: EntradaDiario[];
 }
 
 /** Lo apuntado en un momento (ver instantanea). */

@@ -205,6 +205,8 @@ export const FRASES = {
   /** Alguien se declara Exterminador y dispara (luego, tras una pausa, si muere y si sigue la partida). */
   disparo: (quien: string, aQuien: string) => `${quien} se declara exterminador y dispara a ${aQuien} y…`,
   muere: (quien: string) => `${quien} muere.`,
+  /** Un muerto se declara Patoso y elige a un vivo (luego, tras una pausa, si sigue la partida). */
+  patoso: (quien: string, aQuien: string) => `${quien} se declara patoso y elige a ${aQuien} y…`,
   partidaContinua: () => 'La partida continúa.',
   revelamos: () => 'Revelamos el grimorio.',
   /** Al acabar de revelar: quién gana (una de varias, la primera más a menudo); `azar` da un número en [0, 1). */

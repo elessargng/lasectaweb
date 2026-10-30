@@ -1,5 +1,6 @@
 import { IconoLibroHechizos, IconoLuna, IconoPluma } from './IconosJuego';
 import IconoBolsa from './IconoBolsa';
+import ConAyuda from './ConAyuda';
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import type { TipoAviso } from './avisosConfig';
 import DialogoBolsa from './DialogoBolsa';
@@ -115,18 +116,21 @@ const TituloGuion = ({
     { id: 'archivo', etiqueta: 'Cargar desde archivo…', elegir: () => archivoRef.current?.click() },
   ];
 
-  const botonVista = (v: Vista, etiqueta: string, icono: ReactNode) => (
-    <button
-      id={ID_BOTON[v]}
-      type="button"
-      aria-label={etiqueta}
-      aria-expanded={vista === v}
-      aria-controls={vista === v ? 'sala-panel-guion' : undefined}
-      onClick={() => alternar(v)}
-      className={botonIcono}
-    >
-      {icono}
-    </button>
+  // «que» es lo que se ve o se cierra, para la ayuda: «la hoja de personajes»
+  const botonVista = (v: Vista, etiqueta: string, que: string, icono: ReactNode) => (
+    <ConAyuda texto={`${vista === v ? 'Cerrar' : 'Ver'} ${que}`} alinear="izquierda">
+      <button
+        id={ID_BOTON[v]}
+        type="button"
+        aria-label={etiqueta}
+        aria-expanded={vista === v}
+        aria-controls={vista === v ? 'sala-panel-guion' : undefined}
+        onClick={() => alternar(v)}
+        className={botonIcono}
+      >
+        {icono}
+      </button>
+    </ConAyuda>
   );
 
   return (
@@ -158,27 +162,30 @@ const TituloGuion = ({
       )}
       {guion && (
         <>
-          {botonVista('guion', 'Hoja de personajes', <IconoLibroHechizos size={20} />)}
-          {botonVista('noche', 'Orden de noche', <IconoLuna size={20} />)}
+          {botonVista('guion', 'Hoja de personajes', 'la hoja de personajes', <IconoLibroHechizos size={20} />)}
+          {botonVista('noche', 'Orden de noche', 'el orden de noche', <IconoLuna size={20} />)}
         </>
       )}
       {bolsa && (
-        <button
-          id={ID_BOTON_BOLSA}
-          type="button"
-          aria-label="Preparar la bolsa"
-          aria-haspopup="dialog"
-          onClick={() => setPreparandoBolsa(true)}
-          className={botonIcono}
-        >
-          <IconoBolsa size={20} />
-        </button>
+        <ConAyuda texto="Preparar la bolsa de personajes" alinear="izquierda">
+          <button
+            id={ID_BOTON_BOLSA}
+            type="button"
+            aria-label="Preparar la bolsa"
+            aria-haspopup="dialog"
+            onClick={() => setPreparandoBolsa(true)}
+            className={botonIcono}
+          >
+            <IconoBolsa size={20} />
+          </button>
+        </ConAyuda>
       )}
       {puedeCambiar && (
         <>
           <MenuDesplegable
             id="sala-menu-guion"
             etiqueta="Cambiar de guion"
+            ayuda="Cambiar de guion"
             boton={<IconoPluma size={20} />}
             botonClassName={botonIcono}
             opciones={opciones}

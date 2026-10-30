@@ -1,6 +1,7 @@
 import PulpitoNovato from './PulpitoNovato';
 import { Ear } from 'lucide-react';
 import { IconoGente, IconoLibroSecreto } from './IconosJuego';
+import ConAyuda from './ConAyuda';
 import { useEffect, useRef, useState } from 'react';
 import { botonIcono } from './estilos';
 import type { SalaParticipante, SalaRol } from './useSala';
@@ -70,23 +71,25 @@ const ListaParticipantes = ({ participantes, yo, escuchando, volumen = null }: L
 
   return (
     <div className="relative">
-      <button
-        ref={botonRef}
-        type="button"
-        aria-label={`Participantes (${participantes.length})`}
-        aria-expanded={abierta}
-        aria-controls="sala-participantes"
-        onClick={() => setAbierta((v) => !v)}
-        className={botonIcono}
-      >
-        <IconoGente size={22} />
-        <span
-          aria-hidden="true"
-          className="sala-contador absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-ui text-[10px] font-bold leading-none"
+      <ConAyuda texto="Quién hay en la sala">
+        <button
+          ref={botonRef}
+          type="button"
+          aria-label={`Participantes (${participantes.length})`}
+          aria-expanded={abierta}
+          aria-controls="sala-participantes"
+          onClick={() => setAbierta((v) => !v)}
+          className={botonIcono}
         >
-          {participantes.length}
-        </span>
-      </button>
+          <IconoGente size={22} />
+          <span
+            aria-hidden="true"
+            className="sala-contador absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-ui text-[10px] font-bold leading-none"
+          >
+            {participantes.length}
+          </span>
+        </button>
+      </ConAyuda>
 
       <div
         ref={panelRef}

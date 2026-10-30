@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { DatabaseRepository } from './DatabaseRepository';
 import type { AsientoPartida, RegistroPartida } from '../services/estadisticas/SeguimientoPartida';
 import type { SalaRegistroVotacion } from '../contrato/sala';
+import type { EntradaDiario } from '../contrato/diario';
 
 /** Lo que ha hecho alguien en una partida (como jugador o como narrador), con la partida. */
 export interface Participacion {
@@ -70,6 +71,8 @@ export interface PartidaGuardada {
   narradoresNombres: string[] | null;
   npcs: string[] | null;
   votaciones: SalaRegistroVotacion[] | null;
+  /** null en las partidas de antes de guardar el diario. */
+  diario: EntradaDiario[] | null;
 }
 
 /**
@@ -84,11 +87,12 @@ export class EstadisticasRepository {
     await db.exec('BEGIN TRANSACTION;');
     try {
       await db.run(
-        `INSERT INTO sala_partidas (id, fecha, guion, edicion, ganador, dias, jugadores, causas, mesa, narradoresNombres, npcs, votaciones)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO sala_partidas (id, fecha, guion, edicion, ganador, dias, jugadores, causas, mesa, narradoresNombres, npcs, votaciones, diario)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id, r.fecha.toISOString(), r.guion, r.edicion, r.ganador, r.dias, r.jugadores.length, JSON.stringify(r.causas),
           JSON.stringify(r.mesa), JSON.stringify(r.narradoresNombres), JSON.stringify(r.npcs), JSON.stringify(r.votaciones),
+          JSON.stringify(r.diario),
         ]
       );
       for (const j of r.jugadores) {
@@ -181,6 +185,7 @@ export class EstadisticasRepository {
       narradoresNombres: jsonLista<string>(p.narradoresNombres),
       npcs: jsonLista<string>(p.npcs),
       votaciones: jsonLista<SalaRegistroVotacion>(p.votaciones),
+      diario: jsonLista<EntradaDiario>(p.diario),
     }));
   }
 

@@ -5,6 +5,7 @@ import { comprobarFinal, type Ganador } from '../final/comprobarFinal';
 import { duracionFrase, FRASES, PAUSA_MS } from '../frases';
 import { contextoNoche, nombreDeAsiento, tipoReal } from '../mesaDeJuego';
 import { ponerRecordatorio } from '../noche/requisitos';
+import { abrirPatosos } from './patoso';
 
 /**
  * Un jugador se declara Exterminador y dispara a otro (una vez por partida y
@@ -35,13 +36,14 @@ export async function exterminar(ctx: ContextoEtapa, tirador: string, asientoId:
   return esExterminador && !objetivo.muerto && registraComoDemonio;
 }
 
-/** Muere de un disparo del Exterminador: ya no nomina (queda listo para la noche). */
+/** Muere de un disparo del Exterminador: ya no nomina (queda listo para la noche) y puede declararse Patoso hasta el amanecer. */
 export async function morirDeUnDisparo(ctx: ContextoEtapa, asientoId: string): Promise<void> {
   const { sala } = ctx;
   const objetivo = sala.asientos().find((a) => a.id === asientoId);
   if (!objetivo) return;
   await ctx.mesa.accion('narrador:cambiarVida', { asientoId, muerto: true });
   apuntarMuerteDeDia(ctx.recuerdos.cronica, sala, asientoId, 'exterminador');
+  abrirPatosos(sala, [asientoId], 'amanecer');
   const narrador = sala.narradorVirtual();
   const ocupante = objetivo.ocupante;
   if (narrador && ocupante && !narrador.listos.includes(ocupante)) sala.actualizarNarradorVirtual({ listos: [...narrador.listos, ocupante] });
@@ -57,6 +59,7 @@ export async function contarDisparo(ctx: ContextoEtapa, tirador: string, asiento
   const { sala } = ctx;
   const desde = sala.asientoDe(tirador);
   if (!desde) return null;
+  sala.anotar({ tipo: 'exterminador', asiento: sala.asientoDiario(desde.id), objetivo: sala.asientoDiario(asientoId), muere });
   const decirYEsperar = async (frase: string) => {
     ctx.decir(frase);
     await new Promise<void>((seguir) => ctx.temporizador.programar(duracionFrase(frase) + PAUSA_MS, seguir));

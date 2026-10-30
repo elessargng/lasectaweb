@@ -3,13 +3,15 @@ import { habilidadesDelGuion } from '../../partida/habilidades';
 import { elegirVarios } from '../estrategias/EstrategiaNarrador';
 import { FRASES } from '../frases';
 import { describirPersonaje, opcionesDeAsientos } from '../grimorio';
-import { nombreDeAsiento, sinEntender, todosHanEntendido, tipoReal, vivo } from '../mesaDeJuego';
+import { malvadosSeConocen } from '../../partida/habilidades/malvados';
+import { contextoNoche, nombreDeAsiento, sinEntender, todosHanEntendido, tipoReal, vivo } from '../mesaDeJuego';
 import { planificarNoche } from '../noche/planificarNoche';
 import { cumplirRequisitos, ponerFaroles, ponerRecordatorio } from '../noche/requisitos';
 import { resolverRevision } from '../noche/revisiones';
 import { duracionPrivados, Privados } from './Dia';
 import { comprobarFinal, escarlataAImp } from '../final/comprobarFinal';
 import { apuntarNoche } from '../final/cronica';
+import { abrirPatosos, cerrarPatosos } from '../dia/patoso';
 import { Revelando } from './Revelando';
 import type { ContextoEtapa, Etapa } from './Etapa';
 
@@ -126,7 +128,8 @@ export class Noche implements Etapa {
     });
     for (const { personajes } of plan) {
       for (let paso = 0; paso < personajes.length; paso++) await this.dormir(ctx, ESPERA_PASO.min + Math.floor(ctx.azar() * (ESPERA_PASO.max - ESPERA_PASO.min)));
-      if (personajes.includes('demonios')) await ponerFaroles(ctx);
+      // En una teensy (menos de 7 jugadores) el demonio no recibe faroles
+      if (personajes.includes('demonios') && malvadosSeConocen(contextoNoche(sala))) await ponerFaroles(ctx);
       // Antes de que despierte el demonio, la Mujer Escarlata que lo ha heredado ya es el Imp
       if (personajes.some((p) => sala.personaje(p)?.tipo === 'demon')) await escarlataAImp(ctx);
       await Promise.all(personajes.map((p) => this.resolverFila(ctx, p)));
@@ -222,15 +225,26 @@ export class Noche implements Etapa {
     if ((await ctx.mesa.accion('narrador:nuevoImp', { asientoId: nuevo.id })).ok && era) ctx.recuerdos.cronica.antes.set(nuevo.id, era);
   }
 
-  /** Amanece: se anuncian las muertes de la noche y empiezan los privados. */
+  /**
+   * Amanece: los muertos de ayer ya no pueden declararse Patoso (si el de verdad no
+   * ha elegido, elige ahora), se anuncian las muertes de la noche (que pueden
+   * declararse Patoso durante el día) y empiezan los privados.
+   */
   private async amanecer(ctx: ContextoEtapa): Promise<void> {
     const { sala } = ctx;
+    const porElPatoso = await cerrarPatosos(ctx, 'amanecer');
+    this.seguirSiNoCancelada();
+    if (porElPatoso) {
+      await ctx.pasarA(new Revelando(porElPatoso));
+      return;
+    }
     const muertos = sala.asientos().filter((a) => a.muertePendiente);
     const nombres = muertos.map((a) => nombreDeAsiento(sala, a.id));
     // Antes de que se cierren los despertares: lo que se ha dado y quién ha matado a quién
     apuntarNoche(ctx.recuerdos.cronica, sala);
     if (!(await ctx.mesa.accion('narrador:amanecer')).ok) return;
     for (const a of muertos) await ctx.mesa.accion('narrador:confirmarMuerte', { asientoId: a.id });
+    abrirPatosos(sala, muertos.map((a) => a.id), 'anochecer');
     const buenosDias = sala.fase().numero === 1 ? FRASES.primerDia(duracionPrivados(sala) / 1000) : FRASES.buenosDias(nombres);
     // Si con las muertes de la noche se acaba la partida, se revela
     const ganador = await comprobarFinal(ctx);
