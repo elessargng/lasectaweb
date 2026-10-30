@@ -42,6 +42,7 @@ import { Revelacion } from './partida/Revelacion';
 import { Npcs } from './partida/Npcs';
 import { Entregas, type FichaEntregada } from './partida/Entregas';
 import { Fases } from './partida/Fases';
+import { Configuracion, SALA_SEGUNDOS_POR_FICHA } from './partida/Configuracion';
 import { Guion } from './partida/Guion';
 import { Reparto } from './partida/Reparto';
 import type { AsientoDiario, HechoDiario } from '../contrato/diario';
@@ -51,10 +52,8 @@ import type { ContextoReglas, RegistroAlNominar } from './partida/reglas/ReglaPe
 import { voudonVivo } from './partida/reglas/voudon';
 import { cuidadorLilmonsta, DEMONIO_LILMONSTA, esbirrosLilmonsta, recordatorioLilmonsta } from './partida/reglas/lilMonsta';
 
-export { SALA_ASIENTOS };
+export { SALA_ASIENTOS, SALA_SEGUNDOS_POR_FICHA };
 
-/** Lo que tarda la aguja de ficha en ficha al votar, en segundos (de cuarto en cuarto). */
-export const SALA_SEGUNDOS_POR_FICHA = { min: 0.25, max: 2, paso: 0.25, defecto: 1 };
 
 /**
  * La sala de juego, en memoria: quién está, la mesa y la partida. Se pierde al
@@ -100,14 +99,8 @@ export class SalaService {
     }));
   }
 
-  private ajustes: SalaConfiguracion = {
-    grimorioJugadores: false,
-    segundosPorFicha: SALA_SEGUNDOS_POR_FICHA.defecto,
-    // Por defecto, los privados entre jugadores solo con los vecinos
-    mensajes: 'vecinos',
-    fondo: null,
-    ocultarCamarasConversacion: true,
-  };
+  /** Los ajustes de la partida y si se puede conversar en privado. */
+  private readonly ajustes = new Configuracion();
   /** Lo que las reglas de los personajes pueden consultar de la partida. */
   private readonly contextoReglas: ContextoReglas = {
     mesa: () => this.mesa,
@@ -128,7 +121,7 @@ export class SalaService {
       return !!id && this.esViajero(id);
     },
     dia: () => this.fases.actual().numero,
-    segundosPorFicha: () => this.ajustes.segundosPorFicha,
+    segundosPorFicha: () => this.ajustes.actual().segundosPorFicha,
     sinVoto: (id) => this.sinVoto(id),
     cambiarVoto: (asientoId, gastado) => this.cambiarVoto(asientoId, gastado),
     votaSinGastar: (asiento) => this.reglas.votaSinGastar(asiento),
@@ -989,12 +982,12 @@ export class SalaService {
   }
 
   configuracion(): SalaConfiguracion {
-    return { ...this.ajustes };
+    return this.ajustes.actual();
   }
 
   /** Cambia ajustes de la partida. No comprueba permisos. */
   configurar(cambios: Partial<SalaConfiguracion>): void {
-    this.ajustes = { ...this.ajustes, ...cambios };
+    this.ajustes.cambiar(cambios);
   }
 
   /** Los asientos, en orden (el primero a las 12, como las agujas del reloj). */
@@ -1179,7 +1172,7 @@ export class SalaService {
     if (narrador) this.sala.participantes.expulsar(narrador.participante);
     this.narradoresVirtuales.borrar();
     this.nominaciones.darPalabra(null);
-    this.privadosAbiertos = true;
+    this.ajustes.permitirPrivados(true);
   }
 
   /** Quien tiene la palabra en la nominación (los demás jugadores callan), o null: hablan todos. */
@@ -1194,15 +1187,13 @@ export class SalaService {
 
   /** Si se puede conversar en privado (el narrador virtual lo cierra fuera de los privados). */
   privadosPermitidos(): boolean {
-    return this.privadosAbiertos;
+    return this.ajustes.privadosPermitidos();
   }
 
   /** Abre o cierra las conversaciones privadas (cerrarlas termina las que haya). No comprueba permisos. */
   permitirPrivados(abiertos: boolean): void {
-    this.privadosAbiertos = abiertos;
+    this.ajustes.permitirPrivados(abiertos);
   }
-
-  private privadosAbiertos = true;
 
   cambiarRol(id: string, rol: SalaRol): void {
     this.sala.participantes.cambiarRol(id, rol);
