@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import {
   SalaAccesoGrimorio,
   SalaAlineamiento,
@@ -24,721 +23,604 @@ import {
 } from '../contrato/sala';
 import { GuionResuelto, PersonajeDeGuion } from '../types/guiones';
 import { type Participante, type SalaLlegada } from './sala/Participantes';
-import { AccesoGrimorio } from './partida/AccesoGrimorio';
 import { Sala, SALA_ASIENTOS } from './sala/Sala';
-import { Grimorio, identidadDe } from './partida/Grimorio';
+import { Partida } from './partida/Partida';
+import { identidadDe } from './partida/Grimorio';
 import { NarradorVirtualEnMemoria, type NarradorVirtualRepository } from '../repositories/NarradorVirtualRepository';
-import {
-  NPC_GARDENER,
-} from './partida/personajesEspeciales';
-import { RelojSala } from './partida/RelojSala';
-import { Despertares } from './partida/Despertares';
-import { DespertarGuiado } from './partida/DespertarGuiado';
-import { habilidadesDelGuion } from './partida/habilidades';
-import { Nominaciones } from './partida/Nominaciones';
-import { Faroles } from './partida/Faroles';
-import { Senalamientos } from './partida/Senalamientos';
-import { Revelacion } from './partida/Revelacion';
-import { Npcs } from './partida/Npcs';
-import { Entregas, type FichaEntregada } from './partida/Entregas';
-import { Fases } from './partida/Fases';
-import { Configuracion, SALA_SEGUNDOS_POR_FICHA } from './partida/Configuracion';
-import { Guion } from './partida/Guion';
-import { Reparto } from './partida/Reparto';
+import type { Despertares } from './partida/Despertares';
+import type { Senalamientos } from './partida/Senalamientos';
+import type { FichaEntregada } from './partida/Entregas';
+import { SALA_SEGUNDOS_POR_FICHA } from './partida/Configuracion';
 import type { AsientoDiario, HechoDiario } from '../contrato/diario';
-import { type EventoPartida, type FotoAsiento, type OyentePartida } from './partida/eventos';
-import { Reglas } from './partida/reglas';
-import type { ContextoReglas, RegistroAlNominar } from './partida/reglas/ReglaPersonaje';
-import { voudonVivo } from './partida/reglas/voudon';
-import { cuidadorLilmonsta, DEMONIO_LILMONSTA, esbirrosLilmonsta, recordatorioLilmonsta } from './partida/reglas/lilMonsta';
+import type { OyentePartida } from './partida/eventos';
+import type { RegistroAlNominar } from './partida/reglas/ReglaPersonaje';
 
 export { SALA_ASIENTOS, SALA_SEGUNDOS_POR_FICHA };
-
 
 /**
  * La sala de juego, en memoria: quién está, la mesa y la partida. Se pierde al
  * reiniciar el servidor, como una sala que se vacía. Es la fachada de la sala:
  * las acciones, el chat, las conversaciones y la vista solo hablan con ella, y
- * ella reparte el trabajo entre sus partes (en services/partida/).
+ * ella pasa cada cosa a la sala (quién está y dónde se sienta, ver Sala) o a la
+ * partida (ver Partida). Lleva además el narrador virtual, que es de las dos.
  */
 export class SalaService {
-  /** Quién está en la sala y en qué asiento se sienta cada jugador (ver Sala). */
-  private readonly sala = new Sala();
-  /** Quién ha pedido ver el grimorio y a quién se le ha concedido. */
-  private readonly acceso = new AccesoGrimorio((id) => this.sala.participantes.recuerdoDe(id));
-  /** La ficha de cada asiento y lo que se hace con ellas (ver Grimorio). */
-  private readonly grimorio = new Grimorio({
-    asientos: () => this.sala.asientos(),
-    personaje: (id) => this.personaje(id),
-    noche: () => this.fases.actual().momento === 'noche',
-    anotar: (hecho) => this.anotar(hecho),
-    asientoDiario: (asientoId) => this.asientoDiario(asientoId),
-  });
+  /** Quién está en la sala y en qué asiento se sienta cada jugador. */
+  readonly sala = new Sala();
+  /** La partida que se juega en la sala. */
+  readonly partida = new Partida(this.sala, { hayNarradorVirtual: () => !!this.narradorVirtual() });
 
   constructor(
     /** Dónde se guarda el narrador virtual de la sala (ver NarradorVirtualService). */
     private readonly narradoresVirtuales: NarradorVirtualRepository = new NarradorVirtualEnMemoria(),
-  ) {
-    // Al cambiar de silla, cada jugador se lleva su ficha
-    this.sala.alMover((destino) => this.llevarFichas(destino));
-    // El acceso al grimorio es de los visitantes: al cambiar de papel se pierde (y se vuelve a pedir)
-    this.sala.participantes.alCambiarRol((id) => this.acceso.cambiar(id, 'ninguno'));
-    this.sala.participantes.alExpulsar((id, recuerdo) => this.acceso.alExpulsar(id, recuerdo));
-  }
+  ) {}
 
-  /**
-   * Los asientos con su ficha y sus faroles, en orden (ver Sala.asientos). Es una
-   * copia para leer: las fichas se cambian en this.grimorio.
-   */
-  private get mesa(): SalaAsiento[] {
-    return this.sala.asientos().map((a) => ({
-      ...a,
-      ...this.grimorio.ficha(a.id),
-      faroles: this.farolesDemonio.deAsiento(a),
-      farolEnUso: this.farolesDemonio.enUso(a),
-    }));
-  }
-
-  /** Los ajustes de la partida y si se puede conversar en privado. */
-  private readonly ajustes = new Configuracion();
-  /** Lo que las reglas de los personajes pueden consultar de la partida. */
-  private readonly contextoReglas: ContextoReglas = {
-    mesa: () => this.mesa,
-    identidad: (asiento) => this.identidad(asiento),
-    alineamiento: (asiento) => this.alineamientoEfectivo(asiento),
-    personaje: (id) => this.personaje(id),
-  };
-  /** Las reglas de los personajes (ver reglas/). */
-  private readonly reglas = new Reglas(this.contextoReglas);
-  /** Las nominaciones y votaciones del día. */
-  private readonly nominaciones = new Nominaciones({
-    mesa: () => this.mesa,
-    buscar: (id) => this.buscar(id),
-    bajarManos: () => this.sala.participantes.bajarManos(),
-    cuentaDe: (id) => this.cuentaDe(id),
-    llevaViajero: (asiento) => {
-      const id = this.identidad(asiento);
-      return !!id && this.esViajero(id);
-    },
-    dia: () => this.fases.actual().numero,
-    segundosPorFicha: () => this.ajustes.actual().segundosPorFicha,
-    sinVoto: (id) => this.sinVoto(id),
-    cambiarVoto: (asientoId, gastado) => this.cambiarVoto(asientoId, gastado),
-    votaSinGastar: (asiento) => this.reglas.votaSinGastar(asiento),
-    mayoria: (vivos) => this.reglas.mayoria(vivos),
-    valorDelVoto: (asiento, ocupante) => this.reglas.valorDelVoto(asiento, ocupante.dosManos),
-    secreta: () => this.votacionSecreta(),
-    alNominar: (desde, hasta) =>
-      this.avisar({ tipo: 'nominacion', nomina: this.cuentaDelAsiento(desde), nominado: this.cuentaDelAsiento(hasta) }),
-    alVotar: (cuenta) => this.avisar({ tipo: 'voto', userId: cuenta }),
-    alDesvotar: (cuenta) => this.avisar({ tipo: 'desvoto', userId: cuenta }),
-    alExpulsar: (asientoId) => this.cambiarVida(asientoId, true),
-    alCambiarSola: () => this.alCambiarSola(),
-  });
-  /** El gong y el reloj del narrador. */
-  private readonly tiempo = new RelojSala();
-  /** Los despertares de la noche. */
-  private readonly despertados = new Despertares(
-    () => this.mesa,
-    () => this.fases.actual(),
-  );
-  /** El despertar guiado desde el orden de noche (ver DespertarGuiado). */
-  private readonly guiado = new DespertarGuiado({
-    ctx: { ...this.contextoReglas, faroles: () => this.faroles() },
-    habilidades: () => habilidadesDelGuion(this.guionPartida.actual()?.edicion ?? null),
-    noche: () => this.fases.actual().momento === 'noche',
-    despertar: (asientoId) => this.despertar(asientoId),
-    mandar: (asientoId, envio, eleccion) => this.mandarDelNarrador(asientoId, envio, { eleccion, guiado: true }),
-    porEntender: (asientoId) => this.despertados.porEntender(asientoId),
-    ponerRecordatorio: (asientoId, personaje, texto) => this.ponerRecordatorioDe(asientoId, personaje, texto),
-    matarDeNoche: (asientoId) => this.cambiarVida(asientoId, true),
-    enviarGrimorio: (asientoId) => this.enviarGrimorioDeLaMesa(asientoId),
-    cambiarPersonaje: (asientoId, personaje) => this.cambiarPersonaje(asientoId, personaje),
-  });
-  /** Los faroles para el demonio (del narrador y de cada asiento). */
-  private readonly farolesDemonio = new Faroles(() => this.sala.asientos());
-  /** El final de la partida: qué bando ha ganado y qué fichas se han revelado. */
-  private readonly final = new Revelacion(() => this.mesa);
-  /** Los NPCs en juego y lo que traen (Bootlegger, Storm Catcher, silencio). */
-  private readonly npcsPartida = new Npcs(() => this.guionPartida.actual());
-  /** Lo entregado a cada jugador y los grimorios enviados. */
-  private readonly entregas = new Entregas(() => this.mesa);
-  /** El guion de la partida y sus personajes. */
-  private readonly guionPartida = new Guion();
-  /** La bolsa y el reparto de personajes. */
-  private readonly reparto = new Reparto({
-    mesa: () => this.mesa,
-    esViajero: (id) => this.esViajero(id),
-    reglas: (asientos, personajes) => this.reglas.repartir(asientos, personajes),
-    darPersonaje: (asientoId, personaje) => this.grimorio.repartir(asientoId, personaje),
-  });
-  /** El señalamiento en curso. */
-  private readonly senales = new Senalamientos({
-    mesa: () => this.mesa,
-    fase: () => this.fases.actual(),
-    asientoDe: (id) => this.asientoDe(id),
-    veGrimorio: (id) => this.acceso.de(id) === 'concedido',
-    despertar: (asientoId) => void this.despertar(asientoId),
-  });
-  /** La fase de la partida y la máquina del tiempo. */
-  private readonly fases = new Fases();
+  // El guion
 
   /** El guion de la sala (ya resuelto por GuionService), o null. */
   guion(): GuionResuelto | null {
-    return this.guionPartida.actual();
+    return this.partida.guion.actual();
   }
 
   versionGuion(): number {
-    return this.guionPartida.version();
+    return this.partida.guion.version();
   }
 
-  /**
-   * Cambia el guion de la sala. Es otra partida: antes se limpia el grimorio
-   * (fichas, bolsa, faroles, registro, fase…, ver limpiarGrimorio). No comprueba permisos.
-   */
+  /** Ver Partida.cambiarGuion. No comprueba permisos. */
   cambiarGuion(guion: GuionResuelto): void {
-    this.limpiarGrimorio();
-    this.guionPartida.cambiar(guion);
-    // La bolsa, los faroles y los NPCs eran de los personajes del otro guion. Los
-    // legendarios y lóricos que trae el guion, en juego desde el principio
-    this.reparto.bolsa.vaciar();
-    this.npcsPartida.alCambiarGuion();
-    this.entregas.retenerFichas(false);
-    this.farolesDemonio.vaciar();
-  }
-
-  // El reparto y la bolsa: los lleva Reparto
-
-  setupAceptado(): string | null {
-    return this.reparto.setupAceptado();
-  }
-
-  aceptarSetup(firma: string | null): void {
-    this.reparto.aceptarSetup(firma);
-  }
-
-  // Los NPCs y lo que traen: los lleva Npcs
-
-  npcs(): string[] {
-    return this.npcsPartida.npcs();
-  }
-
-  /** Pone en juego un NPC, o lo quita si ya estaba. No comprueba que sea del guion. */
-  alternarNpc(personajeId: string): void {
-    this.npcsPartida.alternar(personajeId);
-    // Sin el Gardener ya no hay nada que retener: los personajes se entregan (como estén ahora)
-    if (this.entregas.fichasRetenidas() && !this.npcActivo(NPC_GARDENER)) this.entregarFichas();
-  }
-
-  npcActivo(id: string): boolean {
-    return this.npcsPartida.activo(id);
-  }
-
-  bootlegger(): string[] {
-    return this.npcsPartida.bootlegger();
-  }
-
-  escribirBootlegger(reglas: string[] | null): void {
-    this.npcsPartida.escribirBootlegger(reglas);
-  }
-
-  rolStormcatcher(): string | null {
-    return this.npcsPartida.rolStormcatcher();
-  }
-
-  nombrarStormcatcher(personajeId: string | null): void {
-    this.npcsPartida.nombrarStormcatcher(personajeId);
-  }
-
-  silencio(): boolean {
-    return this.npcsPartida.silencio();
-  }
-
-  pedirSilencio(activo: boolean): void {
-    this.npcsPartida.pedirSilencio(activo);
-  }
-
-  // Lo entregado a los jugadores y los grimorios enviados: lo lleva Entregas
-
-  entregarFichas(): void {
-    this.entregas.entregarFichas();
-  }
-
-  comunicarFicha(asientoId: string, personajes: string[], alineamiento: SalaAlineamiento | null): void {
-    this.entregas.comunicarFicha(asientoId, personajes, alineamiento);
-  }
-
-  fichaEntregada(asientoId: string): FichaEntregada {
-    return this.entregas.fichaEntregada(asientoId);
-  }
-
-  fichasRetenidas(): boolean {
-    return this.entregas.fichasRetenidas();
-  }
-
-  retenerFichas(retenidas: boolean): void {
-    this.entregas.retenerFichas(retenidas);
-  }
-
-  enviarGrimorio(asientoId: string, fichas: SalaFichaEnviada[], faroles: string[] = []): void {
-    this.entregas.enviarGrimorio(asientoId, fichas, faroles);
-    this.anotar({ tipo: 'grimorio', asiento: this.asientoDiario(asientoId) });
-  }
-
-  grimorioRecibidoPor(participanteId: string): SalaGrimorioEnviado | null {
-    return this.entregas.grimorioRecibidoPor(participanteId);
-  }
-
-  // Los faroles: los lleva Faroles
-
-  faroles(): (string | null)[] {
-    return this.farolesDemonio.faroles();
-  }
-
-  ponerFarol(posicion: number, personajeId: string | null): void {
-    this.farolesDemonio.ponerFarol(posicion, personajeId);
-    this.anotar({ tipo: 'farol', asiento: null, posicion, personaje: personajeId });
-  }
-
-  ponerFarolAsiento(asientoId: string, posicion: number, personajeId: string | null): void {
-    this.farolesDemonio.ponerFarolAsiento(asientoId, posicion, personajeId);
-    this.anotar({ tipo: 'farol', asiento: this.asientoDiario(asientoId), posicion, personaje: personajeId });
-  }
-
-  copiarFaroles(asientoId: string, personajes: string[]): void {
-    this.farolesDemonio.copiarFaroles(asientoId, personajes);
-    this.anotar({ tipo: 'copiaFaroles', asiento: this.asientoDiario(asientoId), personajes });
-  }
-
-  /** El farol que dice usar el jugador de un asiento (uno de los suyos), o null. Devuelve el error, si lo hay. */
-  usarFarol(asientoId: string, personajeId: string | null): string | null {
-    const error = this.farolesDemonio.usarFarol(asientoId, personajeId);
-    if (!error) this.anotar({ tipo: 'usaFarol', asiento: this.asientoDiario(asientoId), personaje: personajeId });
-    return error;
-  }
-
-  /** El asiento en el que se sienta un participante, o null. */
-  asientoDe(participanteId: string): SalaAsiento | null {
-    return this.mesa.find((a) => a.ocupante === participanteId) ?? null;
+    this.partida.cambiarGuion(guion);
   }
 
   /** Un personaje de la partida (ver Guion.personaje). */
   personaje(id: string): PersonajeDeGuion | undefined {
-    return this.guionPartida.personaje(id);
+    return this.partida.guion.personaje(id);
+  }
+
+  // El reparto y la bolsa
+
+  setupAceptado(): string | null {
+    return this.partida.reparto.setupAceptado();
+  }
+
+  aceptarSetup(firma: string | null): void {
+    this.partida.reparto.aceptarSetup(firma);
   }
 
   bolsa(): string[] {
-    return this.reparto.bolsa.bolsa();
+    return this.partida.reparto.bolsa.bolsa();
   }
 
   alternarEnBolsa(personajeId: string): void {
-    this.reparto.bolsa.alternar(personajeId);
+    this.partida.reparto.bolsa.alternar(personajeId);
   }
 
   ponerEnBolsa(personajeId: string, cantidad: number): void {
-    this.reparto.bolsa.poner(personajeId, cantidad);
+    this.partida.reparto.bolsa.poner(personajeId, cantidad);
   }
 
   reemplazarBolsa(personajes: string[]): void {
-    this.reparto.bolsa.reemplazar(personajes);
+    this.partida.reparto.bolsa.reemplazar(personajes);
   }
 
   vaciarBolsa(): void {
-    this.reparto.bolsa.vaciar();
+    this.partida.reparto.bolsa.vaciar();
   }
 
-  private esViajero(id: string): boolean {
-    return this.guionPartida.esViajero(id);
+  distribucion(): SalaDistribucion {
+    return this.partida.reparto.distribucion();
   }
+
+  fichasParaRepartir(): number {
+    return this.partida.reparto.fichasParaRepartir();
+  }
+
+  repartirBolsa(): void {
+    this.partida.reparto.repartir();
+  }
+
+  // Los NPCs y lo que traen
+
+  npcs(): string[] {
+    return this.partida.npcs.npcs();
+  }
+
+  /** Ver Partida.alternarNpc. */
+  alternarNpc(personajeId: string): void {
+    this.partida.alternarNpc(personajeId);
+  }
+
+  npcActivo(id: string): boolean {
+    return this.partida.npcs.activo(id);
+  }
+
+  bootlegger(): string[] {
+    return this.partida.npcs.bootlegger();
+  }
+
+  escribirBootlegger(reglas: string[] | null): void {
+    this.partida.npcs.escribirBootlegger(reglas);
+  }
+
+  rolStormcatcher(): string | null {
+    return this.partida.npcs.rolStormcatcher();
+  }
+
+  nombrarStormcatcher(personajeId: string | null): void {
+    this.partida.npcs.nombrarStormcatcher(personajeId);
+  }
+
+  silencio(): boolean {
+    return this.partida.npcs.silencio();
+  }
+
+  pedirSilencio(activo: boolean): void {
+    this.partida.npcs.pedirSilencio(activo);
+  }
+
+  // Lo entregado a los jugadores y los grimorios enviados
+
+  entregarFichas(): void {
+    this.partida.entregas.entregarFichas();
+  }
+
+  comunicarFicha(asientoId: string, personajes: string[], alineamiento: SalaAlineamiento | null): void {
+    this.partida.entregas.comunicarFicha(asientoId, personajes, alineamiento);
+  }
+
+  fichaEntregada(asientoId: string): FichaEntregada {
+    return this.partida.entregas.fichaEntregada(asientoId);
+  }
+
+  fichasRetenidas(): boolean {
+    return this.partida.entregas.fichasRetenidas();
+  }
+
+  retenerFichas(retenidas: boolean): void {
+    this.partida.entregas.retenerFichas(retenidas);
+  }
+
+  enviarGrimorio(asientoId: string, fichas: SalaFichaEnviada[], faroles: string[] = []): void {
+    this.partida.enviarGrimorio(asientoId, fichas, faroles);
+  }
+
+  grimorioRecibidoPor(participanteId: string): SalaGrimorioEnviado | null {
+    return this.partida.entregas.grimorioRecibidoPor(participanteId);
+  }
+
+  // Los faroles
+
+  faroles(): (string | null)[] {
+    return this.partida.faroles.faroles();
+  }
+
+  ponerFarol(posicion: number, personajeId: string | null): void {
+    this.partida.ponerFarol(posicion, personajeId);
+  }
+
+  ponerFarolAsiento(asientoId: string, posicion: number, personajeId: string | null): void {
+    this.partida.ponerFarolAsiento(asientoId, posicion, personajeId);
+  }
+
+  copiarFaroles(asientoId: string, personajes: string[]): void {
+    this.partida.copiarFaroles(asientoId, personajes);
+  }
+
+  /** Ver Partida.usarFarol. */
+  usarFarol(asientoId: string, personajeId: string | null): string | null {
+    return this.partida.usarFarol(asientoId, personajeId);
+  }
+
+  // Lo que pasa en la partida: los oyentes y el diario
+
+  /** Ver Partida.alCambiarSola. */
+  get alCambiarSola(): () => void {
+    return this.partida.alCambiarSola;
+  }
+
+  set alCambiarSola(alCambiar: () => void) {
+    this.partida.alCambiarSola = alCambiar;
+  }
+
+  /** Ver Partida.suscribir. */
+  suscribir(oyente: OyentePartida): () => void {
+    return this.partida.suscribir(oyente);
+  }
+
+  anotar(hecho: HechoDiario): void {
+    this.partida.anotar(hecho);
+  }
+
+  asientoDiario(asientoId: string): AsientoDiario {
+    return this.partida.asientoDiario(asientoId);
+  }
+
+  // La fase y la máquina del tiempo
+
+  fase(): SalaFase {
+    return this.partida.fases.actual();
+  }
+
+  irANoche(): void {
+    this.partida.irANoche();
+  }
+
+  amanecer(): void {
+    this.partida.amanecer();
+  }
+
+  /** Ver Fases.anterior. */
+  faseAnterior(): SalaFase | null {
+    return this.partida.fases.anterior();
+  }
+
+  /** Ver Partida.volverAtras. No comprueba permisos. */
+  volverAtras(): boolean {
+    return this.partida.volverAtras();
+  }
+
+  recordatoriosNoche(): Record<string, boolean> {
+    return this.partida.recordatoriosNoche();
+  }
+
+  cambiarRecordatorio(id: string, activo: boolean): void {
+    this.partida.cambiarRecordatorio(id, activo);
+  }
+
+  /** Ver Partida.limpiarGrimorio. */
+  limpiarGrimorio(): void {
+    this.partida.limpiarGrimorio();
+  }
+
+  // Los despertares
+
+  despertares(): SalaDespertar[] {
+    return this.partida.despertares.despertares();
+  }
+
+  hayDespertar(asientoId: string): boolean {
+    return this.partida.despertares.hayDespertar(asientoId);
+  }
+
+  asientoDespiertoDe(participanteId: string): string | null {
+    return this.partida.despertares.asientoDespiertoDe(participanteId);
+  }
+
+  despertar(asientoId: string): string | null {
+    return this.partida.despertares.despertar(asientoId);
+  }
+
+  enviarDespertar(asientoId: string, mensaje: Parameters<Despertares['enviar']>[1]): void {
+    this.partida.enviarDespertar(asientoId, mensaje);
+  }
+
+  /** Ver Partida.mandarDelNarrador. */
+  mandarDelNarrador(
+    asientoId: string,
+    envio: SalaEnvioDespertar,
+    opciones: { eleccion?: SalaEleccionDespertar; guiado?: boolean } = {},
+  ): void {
+    this.partida.mandarDelNarrador(asientoId, envio, opciones);
+  }
+
+  respuestaGuiada(asientoId: string): boolean {
+    return this.partida.despertares.respuestaGuiada(asientoId);
+  }
+
+  // El despertar guiado
+
+  habilidadesNoche(): SalaHabilidadNoche[] {
+    return this.partida.guiado.habilidadesNoche();
+  }
+
+  despertarHabilidad(personaje: string): string | null {
+    return this.partida.guiado.despertar(personaje);
+  }
+
+  eleccionPendiente(asientoId: string): SalaEleccionDespertar | null {
+    return this.partida.guiado.eleccionPendiente(asientoId);
+  }
+
+  alElegirHabilidad(asientoId: string, elegidos: string[]): void {
+    this.partida.guiado.alElegir(asientoId, elegidos);
+  }
+
+  /** El jugador de un asiento ha contestado «Entendido» en su despertar: le llega lo siguiente de su cola (ver DespertarGuiado). */
+  alEntenderHabilidad(asientoId: string): void {
+    this.partida.guiado.alEntender(asientoId);
+  }
+
+  resolverHabilidad(personaje: string, envio: SalaEnvioDespertar): string | null {
+    return this.partida.guiado.resolver(personaje, envio);
+  }
+
+  nuevoImp(): string | null {
+    return this.partida.guiado.nuevoImp();
+  }
+
+  elegirNuevoImp(asientoId: string): string | null {
+    return this.partida.guiado.elegirNuevoImp(asientoId);
+  }
+
+  // Las nominaciones y votaciones
+
+  /** El registro de nominaciones y votaciones, en el orden en que se nominó. */
+  votaciones(): SalaRegistroVotacion[] {
+    return this.partida.nominaciones.votaciones();
+  }
+
+  votacionSecreta(): boolean {
+    return this.partida.votacionSecreta();
+  }
+
+  nominacion(): SalaNominacion | null {
+    return this.partida.nominaciones.nominacion();
+  }
+
+  gastadosAlVotar(): Set<string> | null {
+    return this.partida.nominaciones.gastadosAlVotar();
+  }
+
+  elegirVotosNecesarios(votos: number | null): void {
+    this.partida.nominaciones.elegirVotosNecesarios(votos);
+  }
+
+  /** Ver Partida.nominar. No comprueba permisos. */
+  nominar(
+    desde: string,
+    hasta: string,
+    registro: RegistroAlNominar = {},
+  ): { pregunta: 'comoAldeano' } | { anochece: boolean; final: boolean } | null {
+    return this.partida.nominar(desde, hasta, registro);
+  }
+
+  cerrarNominacion(): void {
+    this.partida.nominaciones.cerrarNominacion();
+  }
+
+  hayVotacion(): boolean {
+    return this.partida.nominaciones.hayVotacion();
+  }
+
+  votacionEnMarcha(): boolean {
+    return this.partida.nominaciones.votacionEnMarcha();
+  }
+
+  reiniciarVotacion(): void {
+    this.partida.nominaciones.reiniciarVotacion();
+  }
+
+  iniciarCuentaAtras(ahora: number): void {
+    this.partida.nominaciones.iniciarCuentaAtras(ahora);
+  }
+
+  /** Quien tiene la palabra en la nominación (los demás jugadores callan), o null: hablan todos. */
+  palabra(): string | null {
+    return this.partida.nominaciones.palabra();
+  }
+
+  /** Da la palabra a uno en la nominación en curso (o, con null, a todos). Devuelve el error, si lo hay. No comprueba permisos. */
+  darPalabra(participanteId: string | null): string | null {
+    return this.partida.nominaciones.darPalabra(participanteId);
+  }
+
+  // Las fichas de la mesa
 
   /** Quién es de verdad el de un asiento (ver identidadDe). */
   identidad(asiento: SalaAsiento): string | null {
     return identidadDe(asiento);
   }
 
-  private llevaViajero(asiento: SalaAsiento): boolean {
-    return this.reparto.llevaViajero(asiento);
-  }
-
-  distribucion(): SalaDistribucion {
-    return this.reparto.distribucion();
-  }
-
-  fichasParaRepartir(): number {
-    return this.reparto.fichasParaRepartir();
-  }
-
-  repartirBolsa(): void {
-    this.reparto.repartir();
-  }
-
-  /**
-   * Se llama cuando la sala cambia sola, sin que nadie pida nada (la votación
-   * avanza con el tiempo): quien la usa manda el estado a todos.
-   */
-  alCambiarSola: () => void = () => {};
-
-  /** Quienes escuchan lo que pasa en la partida (ver eventos.ts). */
-  private oyentes: OyentePartida[] = [];
-
-  /**
-   * Para enterarse de lo que pasa en la partida (las estadísticas, por ejemplo).
-   * Hay que suscribirse desde el principio. Devuelve cómo dejar de escuchar.
-   */
-  suscribir(oyente: OyentePartida): () => void {
-    this.oyentes.push(oyente);
-    return () => {
-      this.oyentes = this.oyentes.filter((o) => o !== oyente);
-    };
-  }
-
-  private avisar(evento: EventoPartida): void {
-    for (const oyente of this.oyentes) oyente(evento);
-  }
-
-  /**
-   * Apunta algo que se ha hecho en la partida, para su diario (ver contrato/diario).
-   * En la preparación solo cuentan los faroles; revelado el grimorio, ya nada.
-   */
-  anotar(hecho: HechoDiario): void {
-    const { momento, numero } = this.fases.actual();
-    if (this.final.revelacion()) return;
-    if (momento === 'preparacion' && !['farol', 'copiaFaroles', 'usaFarol'].includes(hecho.tipo)) return;
-    this.avisar({ tipo: 'diario', entrada: { ...hecho, fase: { momento, numero }, hora: Date.now() } });
-  }
-
-  /** Un asiento para el diario: su número y quien se sienta ahora. */
-  asientoDiario(asientoId: string): AsientoDiario {
-    const mesa = this.mesa;
-    const i = mesa.findIndex((a) => a.id === asientoId);
-    const ocupante = mesa[i]?.ocupante;
-    return { numero: i + 1, nombre: ocupante ? (this.buscar(ocupante)?.nombre ?? null) : null };
-  }
-
-  /** El id de usuario de un participante con cuenta, o null (invitado, o ya no está). */
-  private cuentaDe(participanteId: string | null): string | null {
-    return this.sala.participantes.cuentaDe(participanteId);
-  }
-
-  private cuentaDelAsiento(asientoId: string): string | null {
-    return this.cuentaDe(this.mesa.find((a) => a.id === asientoId)?.ocupante ?? null);
-  }
-
   /** El alineamiento de un asiento (ver Grimorio.alineamiento). */
   alineamientoEfectivo(asiento: SalaAsiento): SalaAlineamiento | null {
-    return this.grimorio.alineamiento(asiento);
+    return this.partida.grimorio.alineamiento(asiento);
   }
 
-  /** Cómo está ahora la mesa, asiento a asiento (para quien escucha la partida). */
-  private fotoDeLaMesa(): FotoAsiento[] {
-    return this.mesa.map((a, i) => {
-      const personaje = this.identidad(a);
-      return {
-        numero: i + 1,
-        nombre: a.ocupante ? (this.buscar(a.ocupante)?.nombre ?? null) : null,
-        userId: this.cuentaDe(a.ocupante),
-        personaje,
-        ficha: a.personaje && a.personaje !== personaje ? a.personaje : null,
-        alineamiento: this.alineamientoEfectivo(a),
-        muerto: a.muerto,
-      };
-    });
+  marcar(asientoId: string, marcado: boolean, votos: number | null = null): void {
+    this.partida.grimorio.marcar(asientoId, marcado, votos);
   }
 
-  /** El registro de nominaciones y votaciones, en el orden en que se nominó. */
-  votaciones(): SalaRegistroVotacion[] {
-    return this.nominaciones.votaciones();
+  desmarcar(): void {
+    this.partida.grimorio.desmarcar();
   }
 
-  fase(): SalaFase {
-    return this.fases.actual();
+  hayMarca(): boolean {
+    return this.partida.grimorio.hayMarca();
   }
 
-  /**
-   * Anochece (desde la preparación, la noche 1; desde un día, la siguiente
-   * noche): se cierra la nominación abierta y se quitan la calavera y el récord
-   * de votos del día.
-   */
-  irANoche(): void {
-    const marcadas = this.mesa.filter((a) => a.marcado);
-    this.avisar({
-      tipo: 'anochece',
-      desdePreparacion: this.fases.actual().momento === 'preparacion',
-      mesa: this.fotoDeLaMesa(),
-      conCalavera: marcadas.flatMap((a) => this.cuentaDe(a.ocupante) ?? []),
-    });
-    // Para poder volver: lo que se quita al anochecer
-    this.fases.anochecer({
-      marcas: marcadas.map((a) => ({ asiento: a.id, votos: a.votosMarca })),
-      maximoDelDia: this.nominaciones.recordDelDia(),
-    });
-    // Otra noche: el despertar guiado empieza de cero
-    this.guiado.olvidar();
-    // Lo que se señaló de día no sigue de noche (lo verían otros); el reloj tampoco
-    this.senales.terminar();
-    this.tiempo.quitarReloj();
-    this.cerrarNominacion();
-    this.desmarcar();
-    this.nominaciones.ponerRecordDelDia(null);
+  cambiarPersonaje(asientoId: string, personaje: string | null): void {
+    this.partida.grimorio.cambiarPersonaje(asientoId, personaje);
   }
 
-  /**
-   * Amanece: el día de la misma noche. Los despertares de la noche se acaban: no
-   * se ven de día y la noche siguiente empieza sin ellos.
-   */
-  amanecer(): void {
-    this.fases.amanecer({ hilos: this.despertados.instantanea(), senalamiento: this.senales.instantanea() });
-    this.avisar({ tipo: 'amanece', mesa: this.fotoDeLaMesa() });
-    this.despertados.cerrarTodos();
-    // Lo de la noche no se ve de día (y el reloj se quita)
-    this.senales.terminar();
-    this.tiempo.quitarReloj();
+  intercambiarFichas(desdeId: string, hastaId: string): void {
+    this.partida.grimorio.intercambiarFichas(desdeId, hastaId);
   }
 
-  /** Ver Fases.anterior. */
-  faseAnterior(): SalaFase | null {
-    return this.fases.anterior();
+  ponerRecordatorio(asientoId: string, recordatorio: Omit<SalaRecordatorio, 'id'>): void {
+    this.partida.grimorio.ponerRecordatorio(asientoId, recordatorio);
   }
 
-  /**
-   * La máquina del tiempo del narrador: vuelve a la fase anterior (ver faseAnterior),
-   * por si se pasó de fase antes de tiempo. Si fue este mismo cambio el que se
-   * hizo, devuelve lo que se quitó: al volver al día, la calavera y el récord de
-   * votos; a la noche, sus despertares (con lo que se dijeron) y su señalamiento
-   * (y quien escucha la partida deshace lo de ese cambio). Lo demás de la partida (muertes, fichas,
-   * recordatorios) se queda como está. Se cierra la nominación abierta. No comprueba permisos.
-   */
-  volverAtras(): boolean {
-    if (!this.fases.anterior()) return false;
-    this.cerrarNominacion();
-    this.senales.terminar();
-    this.tiempo.quitarReloj();
-    const { fase: anterior, recuerdo: paso } = this.fases.volver()!;
-    if (anterior.momento === 'dia') {
-      // Al día: sin los despertares de la noche (como al amanecer) y, si se puede, con su calavera
-      this.despertados.cerrarTodos();
-      this.nominaciones.ponerRecordDelDia(paso?.maximoDelDia ?? null);
-      for (const m of paso?.marcas ?? []) this.marcar(m.asiento, true, m.votos);
-    } else if (anterior.momento === 'noche') {
-      this.desmarcar();
-      this.nominaciones.ponerRecordDelDia(null);
-      if (paso?.hilos) this.despertados.restaurar(paso.hilos);
-      if (paso?.senalamiento) this.senales.restaurar(paso.senalamiento);
-    }
-    this.avisar({ tipo: 'vueltaAtras', deshace: !!paso, aPreparacion: anterior.momento === 'preparacion' });
-    return true;
+  quitarRecordatorio(asientoId: string, recordatorioId: string): void {
+    this.partida.grimorio.quitarRecordatorio(asientoId, recordatorioId);
   }
 
-  /** Recordatorios del orden de noche cambiados a mano (ver SalaEstado.recordatoriosNoche). */
-  private recordatorios: Record<string, boolean> = {};
-
-  recordatoriosNoche(): Record<string, boolean> {
-    return { ...this.recordatorios };
+  recordatorioQueSobra(asientoId: string, personajeId: string, indice: number): { asientoId: string; recordatorioId: string } | null {
+    return this.partida.grimorio.recordatorioQueSobra(asientoId, personajeId, indice);
   }
 
-  /** Pone (true) o quita (false) a mano la ficha recordatorio de una fila del orden de noche. */
-  cambiarRecordatorio(id: string, activo: boolean): void {
-    this.recordatorios[id] = activo;
+  escribirNota(asientoId: string, texto: string | null): boolean {
+    return this.partida.grimorio.escribirNota(asientoId, texto);
   }
 
-  // Los despertares: los lleva Despertares
-
-  despertares(): SalaDespertar[] {
-    return this.despertados.despertares();
+  cambiarAlineamiento(asientoId: string, alineamiento: SalaAlineamiento): void {
+    this.partida.grimorio.cambiarAlineamiento(asientoId, alineamiento);
   }
 
-  hayDespertar(asientoId: string): boolean {
-    return this.despertados.hayDespertar(asientoId);
+  /** Ver Grimorio.cambiarVida. */
+  cambiarVida(asientoId: string, muerto: boolean, opciones: { anotar?: boolean } = {}): void {
+    this.partida.grimorio.cambiarVida(asientoId, muerto, opciones);
   }
 
-  asientoDespiertoDe(participanteId: string): string | null {
-    return this.despertados.asientoDespiertoDe(participanteId);
+  /** Ver Partida.ejecutar. No comprueba permisos. */
+  ejecutar(asientoId: string): { anochece: boolean; final: boolean } | null {
+    return this.partida.ejecutar(asientoId);
   }
 
-  despertar(asientoId: string): string | null {
-    return this.despertados.despertar(asientoId);
+  confirmarMuerte(asientoId: string): boolean {
+    return this.partida.grimorio.confirmarMuerte(asientoId);
   }
 
-  enviarDespertar(asientoId: string, mensaje: Parameters<Despertares['enviar']>[1]): void {
-    if (!this.hayDespertar(asientoId)) return;
-    this.despertados.enviar(asientoId, mensaje);
-    this.anotar({
-      tipo: 'despertar',
-      asiento: this.asientoDiario(asientoId),
-      delNarrador: mensaje.autor === 'narrador',
-      ficha: mensaje.ficha,
-      tarjeta: mensaje.tarjeta,
-      jugadores: mensaje.jugadores.map((id) => this.asientoDiario(id)),
-      personajes: mensaje.personajes,
-      texto: mensaje.texto,
-      alineamiento: mensaje.alineamiento,
-      eleccion: mensaje.eleccion?.cantidad ?? null,
-    });
+  cambiarVoto(asientoId: string, gastado: boolean): boolean {
+    return this.partida.grimorio.cambiarVoto(asientoId, gastado);
   }
 
-  /**
-   * Manda algo del narrador a un asiento despierto (`guiado`: desde el despertar guiado);
-   * con «Tú eres», su ficha pasa a ser la que se le dice.
-   */
-  mandarDelNarrador(
-    asientoId: string,
-    envio: SalaEnvioDespertar,
-    { eleccion, guiado = false }: { eleccion?: SalaEleccionDespertar; guiado?: boolean } = {},
-  ): void {
-    this.enviarDespertar(asientoId, { ...envio, autor: 'narrador', guiado, ...(eleccion ? { eleccion } : {}) });
-    if (envio.tarjeta === 'tuEres') this.comunicarFicha(asientoId, envio.personajes, envio.alineamiento);
+  devolverVotos(): number {
+    return this.partida.grimorio.devolverVotos();
   }
 
-  // El despertar guiado: lo lleva DespertarGuiado
+  // Lo que dicen las reglas de los personajes
 
-  habilidadesNoche(): SalaHabilidadNoche[] {
-    return this.guiado.habilidadesNoche();
+  /** Ver Partida.sinVoto. */
+  sinVoto(participanteId: string): boolean {
+    return this.partida.sinVoto(participanteId);
   }
 
-  despertarHabilidad(personaje: string): string | null {
-    return this.guiado.despertar(personaje);
+  institutrizViva(): boolean {
+    return this.partida.institutrizViva();
   }
 
-  eleccionPendiente(asientoId: string): SalaEleccionDespertar | null {
-    return this.guiado.eleccionPendiente(asientoId);
+  voudonVivo(): boolean {
+    return this.partida.voudonVivo();
   }
 
-  respuestaGuiada(asientoId: string): boolean {
-    return this.despertados.respuestaGuiada(asientoId);
+  puedeVotarDoble(participanteId: string): boolean {
+    return this.partida.puedeVotarDoble(participanteId);
   }
 
-  alElegirHabilidad(asientoId: string, elegidos: string[]): void {
-    this.guiado.alElegir(asientoId, elegidos);
+  // El gong y el reloj
+
+  gong(): number | null {
+    return this.partida.reloj.gong();
   }
 
-  /** El jugador de un asiento ha contestado «Entendido» en su despertar: le llega lo siguiente de su cola (ver DespertarGuiado). */
-  alEntenderHabilidad(asientoId: string): void {
-    this.guiado.alEntender(asientoId);
+  sonarGong(): void {
+    this.partida.reloj.sonarGong();
   }
 
-  resolverHabilidad(personaje: string, envio: SalaEnvioDespertar): string | null {
-    return this.guiado.resolver(personaje, envio);
+  reloj(): SalaReloj | null {
+    return this.partida.reloj.reloj();
   }
 
-  nuevoImp(): string | null {
-    return this.guiado.nuevoImp();
+  ponerReloj(segundos: number, mensaje: string): void {
+    this.partida.reloj.ponerReloj(segundos, mensaje);
   }
 
-  elegirNuevoImp(asientoId: string): string | null {
-    return this.guiado.elegirNuevoImp(asientoId);
+  relojEnMarcha(): boolean {
+    return this.partida.reloj.relojEnMarcha();
   }
 
-  /** Pone un recordatorio de un personaje por su texto (en el original), único en la mesa (ver recordatorioQueSobra). */
-  private ponerRecordatorioDe(asientoId: string, personajeId: string, texto: string): void {
-    const textos = this.personaje(personajeId)?.recordatorios ?? [];
-    const indice = textos.findIndex((t) => t.toLowerCase() === texto.toLowerCase());
-    if (indice < 0) return;
-    const sobra = this.recordatorioQueSobra(asientoId, personajeId, indice);
-    if (sobra) this.quitarRecordatorio(sobra.asientoId, sobra.recordatorioId);
-    this.ponerRecordatorio(asientoId, { personaje: personajeId, indice, texto: textos[indice] });
+  terminarReloj(): void {
+    this.partida.reloj.terminarReloj();
   }
 
-  /** Envía a quien se sienta en un asiento el grimorio tal como está (el Espía); a un asiento libre, nada. */
-  private enviarGrimorioDeLaMesa(asientoId: string): void {
-    if (!this.mesa.find((a) => a.id === asientoId)?.ocupante) return;
-    const fichas: SalaFichaEnviada[] = this.mesa.map((a) => ({
-      asientoId: a.id,
-      personaje: a.personaje,
-      alineamiento: a.alineamiento,
-      muerto: a.muerto,
-      recordatorios: a.recordatorios.map((r) => ({ ...r, id: randomUUID() })),
-    }));
-    this.enviarGrimorio(asientoId, fichas);
+  quitarReloj(): void {
+    this.partida.reloj.quitarReloj();
   }
 
-  /**
-   * Deja la partida como al principio, en la preparación: sin registro de
-   * votaciones, todas las fichas vivas, sin personaje y sin calavera, la bolsa
-   * vacía, sin nominación y nadie con acceso al grimorio (las peticiones
-   * pendientes siguen). Los jugadores siguen en sus asientos.
-   */
-  limpiarGrimorio(): void {
-    this.cerrarNominacion();
-    this.senales.terminar();
-    this.tiempo.quitarReloj();
-    this.avisar({ tipo: 'nuevaPartida' });
-    this.npcsPartida.nuevaPartida();
-    this.nominaciones.olvidarTodo();
-    this.grimorio.limpiar();
-    this.reparto.olvidar();
-    this.entregas.olvidar();
-    this.farolesDemonio.vaciar();
-    this.final.olvidar();
-    this.acceso.nuevaPartida();
-    this.despertados.cerrarTodos();
-    this.guiado.olvidar();
-    this.recordatorios = {};
-    this.fases.nuevaPartida();
+  // El señalamiento
+
+  senalamiento(): SalaSenalamiento | null {
+    return this.partida.senalamientos.senalamiento();
   }
 
-  /** Las votaciones son secretas (el Organ Grinder, ver reglas/organGrinder.ts). */
-  votacionSecreta(): boolean {
-    return this.reglas.votacionSecreta();
+  veSenalamiento(participante: Participante): boolean {
+    return this.partida.senalamientos.veSenalamiento(participante);
   }
 
-  // Las nominaciones y votaciones: las lleva Nominaciones
-
-  nominacion(): SalaNominacion | null {
-    return this.nominaciones.nominacion();
+  /** Ver Partida.manosBloqueadas. */
+  manosBloqueadas(participante: Participante): boolean {
+    return this.partida.manosBloqueadas(participante);
   }
 
-  gastadosAlVotar(): Set<string> | null {
-    return this.nominaciones.gastadosAlVotar();
+  /** Ver Partida.empezarSenalamiento. No comprueba permisos. */
+  empezarSenalamiento(datos: Parameters<Senalamientos['empezar']>[0]): void {
+    this.partida.empezarSenalamiento(datos);
   }
 
-  elegirVotosNecesarios(votos: number | null): void {
-    this.nominaciones.elegirVotosNecesarios(votos);
+  /** Ver Partida.senalar. */
+  senalar(participanteId: string, objetivo: string | null): string | null {
+    return this.partida.senalar(participanteId, objetivo);
   }
 
-  /**
-   * Abre la nominación. Lo que pase al nominar lo dicen las reglas (ver
-   * ReglaPersonaje.alNominar): con la Virgen, su recordatorio y, si toca, la
-   * ejecución al momento de quien nomina (se cierra la nominación). Si depende de
-   * cómo registra quien nomina (el Espía) y `registro` no lo dice, no se nomina:
-   * se devuelve la pregunta, para volver a nominar con la respuesta (y nadie ve
-   * nada hasta entonces). Devuelve la ejecución (ver ejecutar) o null. No comprueba permisos.
-   */
-  nominar(
-    desde: string,
-    hasta: string,
-    registro: RegistroAlNominar = {},
-  ): { pregunta: 'comoAldeano' } | { anochece: boolean; final: boolean } | null {
-    const nominador = this.mesa.find((a) => a.id === desde);
-    const nominado = this.mesa.find((a) => a.id === hasta);
-    // Pedir la expulsión de un viajero no es nominar
-    const efectos = nominador && nominado && !this.llevaViajero(nominado) ? this.reglas.alNominar(nominador, nominado, registro) : null;
-    if (efectos && 'pregunta' in efectos) return efectos;
-    this.nominaciones.nominar(desde, hasta);
-    if (!efectos) return null;
-    for (const r of efectos.recordatorios) this.ponerRecordatorioDe(hasta, r.personaje, r.texto);
-    if (!efectos.ejecutaAlNominador) return null;
-    this.cerrarNominacion();
-    return this.ejecutar(desde);
+  /** Quita el señalamiento. No comprueba permisos. */
+  terminarSenalamiento(): void {
+    this.partida.senalamientos.terminar();
   }
 
-  cerrarNominacion(): void {
-    this.nominaciones.cerrarNominacion();
+  esbirrosLilmonsta(): string[] | null {
+    return this.partida.esbirrosLilmonsta();
   }
 
-  hayVotacion(): boolean {
-    return this.nominaciones.hayVotacion();
+  // La revelación del grimorio
+
+  revelacion(): SalaRevelacion | null {
+    return this.partida.revelacion.revelacion();
   }
 
-  votacionEnMarcha(): boolean {
-    return this.nominaciones.votacionEnMarcha();
+  revelarFicha(asientoId: string): void {
+    this.partida.revelacion.revelarFicha(asientoId);
   }
 
-  reiniciarVotacion(): void {
-    this.nominaciones.reiniciarVotacion();
+  revelarTodas(): void {
+    this.partida.revelacion.revelarTodas();
   }
 
-  iniciarCuentaAtras(ahora: number): void {
-    this.nominaciones.iniciarCuentaAtras(ahora);
+  /** Ver Partida.empezarRevelacion. */
+  empezarRevelacion(ganador: SalaAlineamiento, causas: string[] = [], esbirros: Record<string, string> = {}): void {
+    this.partida.empezarRevelacion(ganador, causas, esbirros);
+  }
+
+  // La configuración
+
+  configuracion(): SalaConfiguracion {
+    return this.partida.configuracion.actual();
+  }
+
+  /** Cambia ajustes de la partida. No comprueba permisos. */
+  configurar(cambios: Partial<SalaConfiguracion>): void {
+    this.partida.configuracion.cambiar(cambios);
+  }
+
+  /** Si se puede conversar en privado (el narrador virtual lo cierra fuera de los privados). */
+  privadosPermitidos(): boolean {
+    return this.partida.configuracion.privadosPermitidos();
+  }
+
+  /** Abre o cierra las conversaciones privadas (cerrarlas termina las que haya). No comprueba permisos. */
+  permitirPrivados(abiertos: boolean): void {
+    this.partida.configuracion.permitirPrivados(abiertos);
+  }
+
+  // El acceso al grimorio
+
+  /** Si un participante ha pedido ver el grimorio o lo ve (ver AccesoGrimorio). */
+  accesoGrimorio(id: string): SalaAccesoGrimorio {
+    return this.partida.acceso.de(id);
+  }
+
+  cambiarAccesoGrimorio(id: string, acceso: SalaAccesoGrimorio): void {
+    this.partida.acceso.cambiar(id, acceso);
+  }
+
+  // La mesa: los asientos (de la sala) con sus fichas (de la partida)
+
+  /** Los asientos, en orden (el primero a las 12, como las agujas del reloj), con su ficha. */
+  asientos(): SalaAsiento[] {
+    return this.partida.mesa();
+  }
+
+  /** El asiento en el que se sienta un participante, o null. */
+  asientoDe(participanteId: string): SalaAsiento | null {
+    return this.partida.asientoDe(participanteId);
   }
 
   /** Si existe ese asiento. */
@@ -746,285 +628,19 @@ export class SalaService {
     return !!this.sala.asiento(id);
   }
 
-  // Las fichas de la mesa: las lleva Grimorio
-
-  marcar(asientoId: string, marcado: boolean, votos: number | null = null): void {
-    this.grimorio.marcar(asientoId, marcado, votos);
-  }
-
-  desmarcar(): void {
-    this.grimorio.desmarcar();
-  }
-
-  hayMarca(): boolean {
-    return this.grimorio.hayMarca();
-  }
-
-  cambiarPersonaje(asientoId: string, personaje: string | null): void {
-    this.grimorio.cambiarPersonaje(asientoId, personaje);
-  }
-
-  intercambiarFichas(desdeId: string, hastaId: string): void {
-    this.grimorio.intercambiarFichas(desdeId, hastaId);
-  }
-
-  ponerRecordatorio(asientoId: string, recordatorio: Omit<SalaRecordatorio, 'id'>): void {
-    this.grimorio.ponerRecordatorio(asientoId, recordatorio);
-  }
-
-  quitarRecordatorio(asientoId: string, recordatorioId: string): void {
-    this.grimorio.quitarRecordatorio(asientoId, recordatorioId);
-  }
-
-  recordatorioQueSobra(asientoId: string, personajeId: string, indice: number): { asientoId: string; recordatorioId: string } | null {
-    return this.grimorio.recordatorioQueSobra(asientoId, personajeId, indice);
-  }
-
-  escribirNota(asientoId: string, texto: string | null): boolean {
-    return this.grimorio.escribirNota(asientoId, texto);
-  }
-
-  cambiarAlineamiento(asientoId: string, alineamiento: SalaAlineamiento): void {
-    this.grimorio.cambiarAlineamiento(asientoId, alineamiento);
-  }
-
-  // El gong y el reloj: los lleva RelojSala
-
-  gong(): number | null {
-    return this.tiempo.gong();
-  }
-
-  sonarGong(): void {
-    this.tiempo.sonarGong();
-  }
-
-  reloj(): SalaReloj | null {
-    return this.tiempo.reloj();
-  }
-
-  ponerReloj(segundos: number, mensaje: string): void {
-    this.tiempo.ponerReloj(segundos, mensaje);
-  }
-
-  relojEnMarcha(): boolean {
-    return this.tiempo.relojEnMarcha();
-  }
-
-  terminarReloj(): void {
-    this.tiempo.terminarReloj();
-  }
-
-  quitarReloj(): void {
-    this.tiempo.quitarReloj();
-  }
-
-  // El señalamiento: lo lleva Senalamientos
-
-  senalamiento(): SalaSenalamiento | null {
-    return this.senales.senalamiento();
-  }
-
-  veSenalamiento(participante: Participante): boolean {
-    return this.senales.veSenalamiento(participante);
-  }
-
-  /**
-   * Mientras hay un señalamiento (también congelado, hasta que el narrador lo quite),
-   * quien lo ve no levanta la mano: las manos de señalar van en las fichas. De noche,
-   * quien no lo ve sigue igual (así no sabe que lo hay).
-   */
-  manosBloqueadas(participante: Participante): boolean {
-    return this.veSenalamiento(participante);
-  }
-
-  /** Empieza un señalamiento (ver Senalamientos.empezar); quien lo ve baja la mano. No comprueba permisos. */
-  empezarSenalamiento(datos: Parameters<Senalamientos['empezar']>[0]): void {
-    this.senales.empezar(datos);
-    // Quien lo ve baja la mano (no se puede levantar mientras dure)
-    for (const participante of this.sala.participantes.participantes()) {
-      if (participante.manoLevantada && this.veSenalamiento(participante)) this.levantarMano(participante.id, false);
-    }
-  }
-
-  /**
-   * El jugador de un asiento que señala, señala a otro (null: deja de señalar).
-   * Con Lil' Monsta, cuando todos los esbirros sentados señalan al mismo, se
-   * congela y ese lleva su «Is The Demon». Devuelve el error, si lo hay.
-   */
-  senalar(participanteId: string, objetivo: string | null): string | null {
-    const error = this.senales.senalar(participanteId, objetivo);
-    const desde = this.asientoDe(participanteId);
-    if (!error && desde) {
-      this.anotar({ tipo: 'senala', asiento: this.asientoDiario(desde.id), objetivo: objetivo === null ? null : this.asientoDiario(objetivo) });
-    }
-    if (!error && objetivo !== null && this.senales.senalamiento()?.tipo === 'lilmonsta') this.resolverLilmonsta();
-    return error;
-  }
-
-  /** Lil' Monsta: si todos los esbirros sentados señalan al mismo, ese lo cuida (ver reglas/lilMonsta.ts). */
-  private resolverLilmonsta(): void {
-    const s = this.senales.senalamiento();
-    const cuidador = s && cuidadorLilmonsta(this.contextoReglas, s);
-    if (!cuidador) return;
-    this.senales.congelar();
-    // Su «Is The Demon» pasa al que lo cuida (solo hay uno)
-    const r = recordatorioLilmonsta(this.contextoReglas);
-    if (!r) return;
-    this.grimorio.quitarDeTodas(DEMONIO_LILMONSTA, r.indice);
-    this.ponerRecordatorio(cuidador, { personaje: DEMONIO_LILMONSTA, indice: r.indice, texto: r.texto });
-  }
-
-  /** Quita el señalamiento. No comprueba permisos. */
-  terminarSenalamiento(): void {
-    this.senales.terminar();
-  }
-
-  /** Se puede empezar Lil' Monsta: los asientos de los esbirros vivos, o null (ver reglas/lilMonsta.ts). */
-  esbirrosLilmonsta(): string[] | null {
-    return esbirrosLilmonsta(this.contextoReglas, {
-      noche: this.fases.actual().momento === 'noche',
-      enElGuion: !!this.guionPartida.actual()?.personajes.some((p) => p.id === DEMONIO_LILMONSTA),
-      esbirrosQueTocan: this.distribucion().esbirros,
-    });
-  }
-
-  // La revelación del grimorio: la lleva Revelacion
-
-  revelacion(): SalaRevelacion | null {
-    return this.final.revelacion();
-  }
-
-  revelarFicha(asientoId: string): void {
-    this.final.revelarFicha(asientoId);
-  }
-
-  revelarTodas(): void {
-    this.final.revelarTodas();
-  }
-
-  /**
-   * Empieza a revelar el grimorio: ha ganado ese bando (y lo que haya pasado, ver
-   * CAUSAS_FIN_PARTIDA) y todas las fichas se dan la vuelta.
-   */
-  empezarRevelacion(ganador: SalaAlineamiento, causas: string[] = [], esbirros: Record<string, string> = {}): void {
-    // Se acaba todo lo que corre: la nominación (y su cuenta atrás o votación), el reloj y el señalamiento
-    this.cerrarNominacion();
-    this.quitarReloj();
-    this.terminarSenalamiento();
-    this.final.empezar(ganador, causas);
-    // Se acaba la partida. Las causas de esbirro (la Doncel cazada), de la cuenta del
-    // esbirro que eligió el narrador
-    this.avisar({
-      tipo: 'partidaTerminada',
-      ganador,
-      causas: causas.map((id) => {
-        const asiento = esbirros[id];
-        if (!asiento) return { id };
-        return { id, userId: this.cuentaDe(this.mesa.find((a) => a.id === asiento)?.ocupante ?? null) };
-      }),
-      mesa: this.fotoDeLaMesa(),
-      narradores: this.sala.participantes.narradores().map((p) => ({ userId: this.cuentaDe(p.id), nombre: p.nombre })),
-      npcs: this.npcs(),
-      votaciones: this.votaciones(),
-      guion: this.guionPartida.actual()?.nombre ?? null,
-      edicion: this.guionPartida.actual()?.edicion ?? null,
-      dias: this.fases.actual().numero,
-    });
-  }
-
-  /** Ver Grimorio.cambiarVida. */
-  cambiarVida(asientoId: string, muerto: boolean, opciones: { anotar?: boolean } = {}): void {
-    this.grimorio.cambiarVida(asientoId, muerto, opciones);
-  }
-
-  /**
-   * Ejecuta al de un asiento (el que lleva la calavera): muere como al matarlo y
-   * se le ponen los recordatorios de los personajes que funcionan con las
-   * ejecuciones (ver Reglas). Luego anochece, salvo si una regla lo impide (el
-   * Carnicero vivo: puede haber otra ejecución) o si quedan solo dos
-   * jugadores vivos (`final`): entonces decide el narrador si se va a la noche o
-   * se revela el grimorio. Devuelve si ha anochecido y si quedan dos, o null si
-   * el asiento no existe. No comprueba permisos.
-   */
-  ejecutar(asientoId: string): { anochece: boolean; final: boolean } | null {
-    const asiento = this.mesa.find((a) => a.id === asientoId);
-    if (!asiento) return null;
-    // Los recordatorios de los personajes que funcionan con las ejecuciones (ver Reglas)
-    for (const { personaje, texto, unico } of this.reglas.recordatoriosAlEjecutar(asiento)) {
-      const indice = this.personaje(personaje)?.recordatorios.findIndex((t) => t.toLowerCase() === texto.toLowerCase()) ?? -1;
-      if (indice < 0) continue;
-      if (unico) this.grimorio.quitarDeTodas(personaje, indice);
-      this.grimorio.ponerRecordatorio(asiento.id, { personaje, indice, texto: this.personaje(personaje)!.recordatorios[indice] }, { anotar: false });
-    }
-    this.avisar({ tipo: 'ejecucion', userId: this.cuentaDe(asiento.ocupante) });
-    this.anotar({ tipo: 'ejecucion', asiento: this.asientoDiario(asiento.id) });
-    this.cambiarVida(asiento.id, true, { anotar: false });
-    // Los vivos que quedan: los asientos (también los libres, que cuentan como jugadores)
-    // sin muerte, sin contar a los viajeros
-    const vivos = this.mesa.filter((a) => !a.muerto && !a.muertePendiente && !this.llevaViajero(a)).length;
-    const final = vivos <= 2;
-    // Con narrador virtual, anochece él cuando acaba de decirlo (o revela, si se acaba la partida)
-    const anochece = !final && !this.narradorVirtual() && this.reglas.anocheceTrasEjecutar();
-    if (anochece) this.irANoche();
-    return { anochece, final };
-  }
-
-  confirmarMuerte(asientoId: string): boolean {
-    return this.grimorio.confirmarMuerte(asientoId);
-  }
-
-  cambiarVoto(asientoId: string, gastado: boolean): boolean {
-    return this.grimorio.cambiarVoto(asientoId, gastado);
-  }
-
-  devolverVotos(): number {
-    return this.grimorio.devolverVotos();
-  }
-
-  configuracion(): SalaConfiguracion {
-    return this.ajustes.actual();
-  }
-
-  /** Cambia ajustes de la partida. No comprueba permisos. */
-  configurar(cambios: Partial<SalaConfiguracion>): void {
-    this.ajustes.cambiar(cambios);
-  }
-
-  /** Los asientos, en orden (el primero a las 12, como las agujas del reloj). */
-  asientos(): SalaAsiento[] {
-    return this.mesa;
-  }
-
   anadirAsiento(): void {
     this.sala.anadirAsiento();
   }
 
+  /** Quita el último asiento y su ficha. */
   quitarAsiento(): void {
     const quitado = this.sala.quitarAsiento();
-    if (quitado) this.grimorio.olvidar(quitado);
+    if (quitado) this.partida.grimorio.olvidar(quitado);
   }
 
-  /** Ver Sala.mezclar: cada jugador cambia de silla con su ficha (ver llevarFichas). */
+  /** Ver Sala.mezclar: cada jugador cambia de silla con su ficha (ver Partida.llevarFichas). */
   mezclarAsientos(): number {
     return this.sala.mezclar();
-  }
-
-  /**
-   * Lleva lo de cada ficha (personaje, alineamiento, muerte, voto, calavera,
-   * recordatorios, la nota; y lo que va por asiento: lo entregado, los faroles, el
-   * grimorio enviado, los despertares, lo revelado, la nominación) del asiento de
-   * cada clave al de su valor. Al cambiar de sitio a los jugadores, su ficha va con
-   * ellos: cambian de silla, no de personaje. `destino` es una permutación de la mesa.
-   */
-  private llevarFichas(destino: Map<string, string>): void {
-    const a = (id: string) => destino.get(id) ?? id;
-    this.grimorio.remapear(a);
-    this.entregas.remapear(a);
-    this.farolesDemonio.remapear(a);
-    this.despertados.remapear(a);
-    this.guiado.remapear(a);
-    this.final.remapear(a);
-    this.nominaciones.remapear(a);
   }
 
   moverOcupante(desde: string, hasta: string): string | null {
@@ -1039,37 +655,9 @@ export class SalaService {
     this.sala.levantar(id);
   }
 
-  /** No puede votar: no está sentado, o las reglas dicen que no (ver Reglas.puedeVotar). */
-  sinVoto(participanteId: string): boolean {
-    const asiento = this.asientoDe(participanteId);
-    if (!asiento) return true;
-    // En la expulsión de un viajero vota cualquiera (los muertos, sin gastar su voto)
-    if (this.nominaciones.esExpulsion()) return false;
-    return !this.reglas.puedeVotar(asiento);
-  }
-
-  /**
-   * Los jugadores solo pueden conversar en privado con sus vecinos (la Institutriz
-   * viva). Se llama así por ella, que es quien lo pide (ver reglas/institutriz.ts).
-   */
-  institutrizViva(): boolean {
-    return this.reglas.soloVecinos();
-  }
-
   /** Ver Sala.sonVecinos. */
   sonVecinos(unoId: string, otroId: string): boolean {
     return this.sala.sonVecinos(unoId, otroId);
-  }
-
-  /** El Voudon está vivo en la mesa (ver reglas/voudon.ts). */
-  voudonVivo(): boolean {
-    return voudonVivo(this.contextoReglas);
-  }
-
-  /** Puede votar con las dos manos (dos votos): la Banshee con su habilidad (ver reglas/banshee.ts). */
-  puedeVotarDoble(participanteId: string): boolean {
-    const asiento = this.mesa.find((a) => a.ocupante === participanteId);
-    return !!asiento && this.reglas.votaDoble(asiento);
   }
 
   // Quién está en la sala: lo lleva Participantes (ver allí lo que hace cada uno)
@@ -1126,6 +714,36 @@ export class SalaService {
     return this.sala.participantes.hayNarrador();
   }
 
+  cambiarRol(id: string, rol: SalaRol): void {
+    this.sala.participantes.cambiarRol(id, rol);
+  }
+
+  cambiarSonido(id: string, sinSonido: boolean): void {
+    this.sala.participantes.cambiarSonido(id, sinSonido);
+  }
+
+  levantarMano(id: string, levantada: boolean, dos = false): void {
+    this.sala.participantes.levantarMano(id, levantada, dos);
+  }
+
+  elegirFormaMano(id: string, forma: SalaFormaMano): void {
+    this.sala.participantes.elegirFormaMano(id, forma);
+  }
+
+  elegirEstiloMano(id: string, estilo: string): void {
+    this.sala.participantes.elegirEstiloMano(id, estilo);
+  }
+
+  participantes(): Participante[] {
+    return this.sala.participantes.participantes();
+  }
+
+  conexiones(): { socketId: string; clave: string; id: string }[] {
+    return this.sala.participantes.conexiones();
+  }
+
+  // El narrador virtual: su participante es de la sala; lo que lleva de la partida, de aquí
+
   /** El narrador virtual de la sala, si lo hay (y su participante sigue en ella). */
   narradorVirtual(): SalaNarradorVirtual | null {
     const narrador = this.narradoresVirtuales.actual();
@@ -1171,65 +789,7 @@ export class SalaService {
     const narrador = this.narradoresVirtuales.actual();
     if (narrador) this.sala.participantes.expulsar(narrador.participante);
     this.narradoresVirtuales.borrar();
-    this.nominaciones.darPalabra(null);
-    this.ajustes.permitirPrivados(true);
-  }
-
-  /** Quien tiene la palabra en la nominación (los demás jugadores callan), o null: hablan todos. */
-  palabra(): string | null {
-    return this.nominaciones.palabra();
-  }
-
-  /** Da la palabra a uno en la nominación en curso (o, con null, a todos). Devuelve el error, si lo hay. No comprueba permisos. */
-  darPalabra(participanteId: string | null): string | null {
-    return this.nominaciones.darPalabra(participanteId);
-  }
-
-  /** Si se puede conversar en privado (el narrador virtual lo cierra fuera de los privados). */
-  privadosPermitidos(): boolean {
-    return this.ajustes.privadosPermitidos();
-  }
-
-  /** Abre o cierra las conversaciones privadas (cerrarlas termina las que haya). No comprueba permisos. */
-  permitirPrivados(abiertos: boolean): void {
-    this.ajustes.permitirPrivados(abiertos);
-  }
-
-  cambiarRol(id: string, rol: SalaRol): void {
-    this.sala.participantes.cambiarRol(id, rol);
-  }
-
-  /** Si un participante ha pedido ver el grimorio o lo ve (ver AccesoGrimorio). */
-  accesoGrimorio(id: string): SalaAccesoGrimorio {
-    return this.acceso.de(id);
-  }
-
-  cambiarAccesoGrimorio(id: string, acceso: SalaAccesoGrimorio): void {
-    this.acceso.cambiar(id, acceso);
-  }
-
-  cambiarSonido(id: string, sinSonido: boolean): void {
-    this.sala.participantes.cambiarSonido(id, sinSonido);
-  }
-
-  levantarMano(id: string, levantada: boolean, dos = false): void {
-    this.sala.participantes.levantarMano(id, levantada, dos);
-  }
-
-  elegirFormaMano(id: string, forma: SalaFormaMano): void {
-    this.sala.participantes.elegirFormaMano(id, forma);
-  }
-
-  elegirEstiloMano(id: string, estilo: string): void {
-    this.sala.participantes.elegirEstiloMano(id, estilo);
-  }
-
-  participantes(): Participante[] {
-    return this.sala.participantes.participantes();
-  }
-
-  conexiones(): { socketId: string; clave: string; id: string }[] {
-    return this.sala.participantes.conexiones();
+    this.partida.nominaciones.darPalabra(null);
+    this.partida.configuracion.permitirPrivados(true);
   }
 }
-
