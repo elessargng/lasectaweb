@@ -128,3 +128,14 @@ export const guionNoGreaterJoy = (): GuionResuelto => ({
   primeraNoche: ['investigator', 'clockmaker', 'empath', 'chambermaid'],
   otrasNoches: ['scarletwoman', 'imp', 'empath', 'sage', 'chambermaid'],
 });
+
+/** Un azar con semilla (mulberry32): las mismas elecciones cada vez. */
+export function conSemilla(semilla: number): () => number {
+  let s = semilla;
+  return () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}

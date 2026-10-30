@@ -15,18 +15,7 @@ import {
 import type { Decision } from '../../src/services/narradorVirtual/estrategias/EstrategiaNarrador';
 import { TontoYTu } from '../../src/services/narradorVirtual/estrategias/TontoYTu';
 import { elegirBolsa } from '../../src/services/narradorVirtual/preparacion';
-import { guionTroubleBrewing, personaje } from './guionDePrueba';
-
-/** Un azar con semilla (mulberry32): las mismas elecciones cada vez. */
-function conSemilla(semilla: number): () => number {
-  let s = semilla;
-  return () => {
-    s = (s + 0x6d2b79f5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+import { conSemilla, guionTroubleBrewing, personaje } from './guionDePrueba';
 
 /** Trouble Brewing entero (el de prueba no trae al Barón). */
 const PERSONAJES = [...guionTroubleBrewing().personajes, personaje('baron', 'minion')];

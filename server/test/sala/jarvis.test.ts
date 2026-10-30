@@ -5,7 +5,7 @@ import { Jarvis } from '../../src/services/narradorVirtual/estrategias/Jarvis';
 import type { Grimorio } from '../../src/services/narradorVirtual/grimorio';
 import type { ClienteJev, PreguntaJev, RespuestaJev } from '../../src/services/narradorVirtual/puertos';
 import { Arnes, type Cliente } from './arnes';
-import { guionTroubleBrewing } from './guionDePrueba';
+import { conSemilla, guionTroubleBrewing } from './guionDePrueba';
 
 const GRIMORIO: Grimorio = { guion: 'troublebrewing', fase: { momento: 'noche', numero: 1 }, asientos: [], personajes: [], farolesDemonio: [], votaciones: [] };
 
@@ -156,9 +156,10 @@ describe('añadir a Jarvis', () => {
   const JARVIS = { narrador: 'jarvis', guion: 'troublebrewing', jugadores: 7 };
   const DATOS = { endpoint: 'https://api.typesafe.ai', modelo: 'jev-latest', apiKey: 'clave' };
 
-  /** Una sala con Jarvis: el modelo de la cuenta «ana» (si `conModelo`) y lo que conteste. */
-  const sala = (opciones: { conModelo?: boolean; comprobar?: string | null; responder?: () => Record<string, RespuestaJev> | Error }) =>
+  /** Una sala con Jarvis: el modelo de la cuenta «ana» (si `conModelo`) y lo que conteste; con `semilla`, la bolsa sale siempre igual. */
+  const sala = (opciones: { conModelo?: boolean; comprobar?: string | null; responder?: () => Record<string, RespuestaJev> | Error; semilla?: number }) =>
     Arnes.crear({
+      azarNarradorVirtual: opciones.semilla === undefined ? undefined : conSemilla(opciones.semilla),
       guiones: { guionPredeterminado: async () => tb(), importar: async () => tb() },
       relojNarradorVirtual: { programar: (ms, hacer) => ((t) => () => clearTimeout(t))(setTimeout(hacer, ms / 1000)) },
       modeloJarvisDe: async (userId) => (opciones.conModelo !== false && userId === 'ana' ? DATOS : null),
@@ -204,11 +205,12 @@ describe('añadir a Jarvis', () => {
   });
 
   it('si el modelo deja de responder del todo, Jarvis se va y sigue «Tonto y tú»', async () => {
-    arnes = await sala({ responder: () => new Error('Sin respuesta') });
+    arnes = await sala({ responder: () => new Error('Sin respuesta'), semilla: 2 });
     const ana: Cliente = await arnes.entrar('Ana', { cuenta: 'ana' });
     const voces: string[] = [];
     ana.socket.on('sala:voz', ({ texto }: { texto: string }) => voces.push(texto));
-    // Al preparar la bolsa ya decide 7 veces: a la quinta, se rinde
+    // Al preparar la bolsa ya decide 7 veces, pero las de una sola opción no se le preguntan (y cuentan como
+    // acierto): con esta semilla le pregunta al menos 5 seguidas, y a la quinta se rinde
     await arnes.accion(ana, 'sala:anadirNarradorVirtual', JARVIS);
     await ana.esperarQue((e) => e.narradorVirtual?.id === 'tontoYTu');
     expect(ana.estado.participantes.find((p) => p.virtual)).toMatchObject({ nombre: 'Tonto y tú', avatar: '/narradores/tonto-y-tu.webp' });

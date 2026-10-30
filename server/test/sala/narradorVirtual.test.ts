@@ -192,12 +192,15 @@ describe('narrador virtual', () => {
       }
     };
     const eligiendo = jugadores.map(elegir);
-    await new Promise((r) => setTimeout(r, 1500));
-    expect(ana.estado.fase.momento).toBe('noche');
-    // Pasado el minuto, a quien no lo ha dicho se le escribe (y suena el gong); sigue
-    // siendo guiado: solo contesta «Entendido» o un texto
+    // Pasado el minuto, a quien no lo ha dicho se le escribe (y suena el gong) y sigue
+    // siendo de noche; sigue siendo guiado: solo contesta «Entendido» o un texto
     const ultimoDe = (c: Cliente) => c.estado.despertares[0]?.mensajes.slice(-1)[0];
-    const recordado = jugadores.find((c) => ultimoDe(c)?.ficha === 'personalizado')!;
+    const recordadoYa = () => jugadores.find((c) => ultimoDe(c)?.ficha === 'personalizado');
+    for (const limite = Date.now() + 10_000; !recordadoYa(); await new Promise((r) => setTimeout(r, 20))) {
+      if (Date.now() > limite) throw new Error('No se le ha recordado a nadie que diga «Entendido»');
+    }
+    expect(ana.estado.fase.momento).toBe('noche');
+    const recordado = recordadoYa()!;
     expect(ultimoDe(recordado)).toMatchObject({
       autor: 'narrador',
       texto: 'Envía «Entendido» para saber que has visto el wake de noche.',
