@@ -1,14 +1,14 @@
 [
   {
-    "version": "1.6.0",
-    "date": "2026-10-28",
-    "title": "Narrador Virtual",
-    "description": "Llega «Tonto y tú», un narrador virtual que lleva solo una partida de Trouble Brewing, de la noche a la revelación del grimorio.",
+    "version": "1.7.0",
+    "date": "2026-10-30",
+    "title": "Jarvis",
+    "description": "Llega «Jarvis», un narrador virtual más listo, con bolsas variadas, pausas para contar las ejecuciones y los disparos, y un grimorio revelado con todo lo que pasó cada noche. Gracias a Magic por su ayuda a altas horas de la noche.",
     "changes": [
       {
         "category": "Narrador",
         "items": [
-          "Añadido el narrador virtual «Tonto y tú» para Trouble Brewing.",
+          "Añadido el narrador virtual «Jarvis».",
           "Añadido el bocadillo con lo que dice el narrador virtual.",
           "Añadido el saludo del narrador virtual al entrar en la sala.",
           "Renovado el diseño del reparto de la partida.",
@@ -25,15 +25,12 @@
           "Añadido el anuncio del bando ganador al revelar el grimorio.",
           "Añadidas las elecciones de cada noche y el veneno a lo que cuenta el narrador virtual al revelar.",
           "La Mujer Escarlata que hereda el demonio pasa a ser el Imp con narrador virtual.",
-          "Al revelar el grimorio se paran el reloj, las votaciones y los señalamientos.",
-          "La Pitonisa y el Ravenkeeper siempre pasan por la revisión del narrador."
+          "Al revelar el grimorio se paran el reloj, las votaciones y los señalamientos."
         ]
       },
       {
         "category": "Jugadores",
         "items": [
-          "Añadidos los botones de nominar, «Defensa», «Empezar votación» y «Listo» con narrador virtual.",
-          "Añadida la opción de declararse Exterminador y disparar.",
           "«Entendido» se envía al pulsarlo.",
           "Cada wake de noche espera al «Entendido» del anterior.",
           "Acortadas las pausas del narrador virtual al ejecutar y al disparar.",
@@ -45,6 +42,37 @@
         "category": "Estadísticas",
         "items": [
           "Añadidas las Reliquias, junto a los logros."
+        ]
+      },
+      {
+        "category": "Para usar Jarvis",
+        "items": [
+          "Hace falta una cuenta registrada.",
+          "Cada usuario engancha en Preferencias su modelo JEV de TypeSafe: endpoint (por defecto https://api.typesafe.ai), modelo (por defecto jev-latest) y su API key. Se comprueba que responde antes de poder usarlo.",
+          "El servidor necesita la variable de entorno JARVIS_CIFRADO_KEY (cualquier texto secreto): con ella se guardan las keys cifradas con AES-256-GCM, y sin ella no se puede guardar ninguna.",
+          "Cada decisión es un POST a /v1/systemone con un tope de 15 segundos. Si el modelo falla, reintenta a los 10 segundos y, si vuelve a fallar, decide «Tonto y tú»; tras 5 fallos seguidos, «Tonto y tú» sigue el resto de la partida."
+        ]
+      }
+    ]
+  },
+  {
+    "version": "1.6.0",
+    "date": "2026-10-28",
+    "title": "Narrador Virtual",
+    "description": "Llega «Tonto y tú», un narrador virtual que lleva solo una partida de Trouble Brewing, de la noche a la revelación del grimorio.",
+    "changes": [
+      {
+        "category": "Narrador",
+        "items": [
+          "Añadido el narrador virtual «Tonto y tú» para Trouble Brewing.",
+          "La Pitonisa y el Ravenkeeper siempre pasan por la revisión del narrador."
+        ]
+      },
+      {
+        "category": "Jugadores",
+        "items": [
+          "Añadidos los botones de nominar, «Defensa», «Empezar votación» y «Listo» con narrador virtual.",
+          "Añadida la opción de declararse Exterminador y disparar."
         ]
       },
       {
