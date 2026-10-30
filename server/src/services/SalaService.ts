@@ -180,7 +180,7 @@ export class SalaService {
   }
 
   enviarGrimorio(asientoId: string, fichas: SalaFichaEnviada[], faroles: string[] = []): void {
-    this.partida.enviarGrimorio(asientoId, fichas, faroles);
+    this.partida.entregas.enviarGrimorio(asientoId, fichas, faroles);
   }
 
   grimorioRecibidoPor(participanteId: string): SalaGrimorioEnviado | null {
@@ -194,20 +194,20 @@ export class SalaService {
   }
 
   ponerFarol(posicion: number, personajeId: string | null): void {
-    this.partida.ponerFarol(posicion, personajeId);
+    this.partida.faroles.ponerFarol(posicion, personajeId);
   }
 
   ponerFarolAsiento(asientoId: string, posicion: number, personajeId: string | null): void {
-    this.partida.ponerFarolAsiento(asientoId, posicion, personajeId);
+    this.partida.faroles.ponerFarolAsiento(asientoId, posicion, personajeId);
   }
 
   copiarFaroles(asientoId: string, personajes: string[]): void {
-    this.partida.copiarFaroles(asientoId, personajes);
+    this.partida.faroles.copiarFaroles(asientoId, personajes);
   }
 
-  /** Ver Partida.usarFarol. */
+  /** Ver Faroles.usarFarol. */
   usarFarol(asientoId: string, personajeId: string | null): string | null {
-    return this.partida.usarFarol(asientoId, personajeId);
+    return this.partida.faroles.usarFarol(asientoId, personajeId);
   }
 
   // Lo que pasa en la partida: los oyentes y el diario
@@ -290,7 +290,7 @@ export class SalaService {
   }
 
   enviarDespertar(asientoId: string, mensaje: Parameters<Despertares['enviar']>[1]): void {
-    this.partida.enviarDespertar(asientoId, mensaje);
+    this.partida.despertares.enviar(asientoId, mensaje);
   }
 
   /** Ver Partida.mandarDelNarrador. */

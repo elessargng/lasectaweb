@@ -1,4 +1,4 @@
-import type { EntradaDiario } from '../../contrato/diario';
+import type { AsientoDiario, EntradaDiario, HechoDiario } from '../../contrato/diario';
 import type { SalaAlineamiento, SalaRegistroVotacion } from '../../contrato/sala';
 
 /**
@@ -6,6 +6,13 @@ import type { SalaAlineamiento, SalaRegistroVotacion } from '../../contrato/sala
  * sepa de él (las estadísticas, por ejemplo). La sala los avisa en el orden en
  * que pasan; quien escucha tiene que estar suscrito desde el principio.
  */
+
+/** Donde las piezas de la partida apuntan lo que se hace con ellas (ver Partida.anotar). */
+export interface Diario {
+  anotar(hecho: HechoDiario): void;
+  /** Un asiento como se apunta: su número y quien se sienta ahora. */
+  asiento(asientoId: string): AsientoDiario;
+}
 
 /** Cuántos cambios de fase recuerda la máquina del tiempo del narrador. */
 export const PASOS_DE_FASE_MAX = 20;

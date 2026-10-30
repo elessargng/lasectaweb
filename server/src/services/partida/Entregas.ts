@@ -1,4 +1,5 @@
 import type { SalaAlineamiento, SalaAsiento, SalaFichaEnviada, SalaGrimorioEnviado } from '../../contrato/sala';
+import type { Diario } from './eventos';
 
 /** Lo que sabe un jugador de su ficha. */
 export interface FichaEntregada {
@@ -26,6 +27,7 @@ export class Entregas {
   constructor(
     /** La mesa, en orden. */
     private readonly mesa: () => SalaAsiento[],
+    private readonly diario: Diario,
   ) {}
 
   /**
@@ -64,10 +66,11 @@ export class Entregas {
     this.retenidas = retenidas;
   }
 
-  /** Envía un grimorio (sus fichas y los faroles) a quien se sienta en un asiento. No comprueba las fichas. */
+  /** Envía un grimorio (sus fichas y los faroles) a quien se sienta en un asiento y lo apunta en el diario. No comprueba las fichas. */
   enviarGrimorio(asientoId: string, fichas: SalaFichaEnviada[], faroles: string[] = []): void {
     const ocupante = this.mesa().find((a) => a.id === asientoId)?.ocupante;
     if (ocupante) this.grimoriosEnviados.set(asientoId, { ocupante, grimorio: { hora: Date.now(), fichas, faroles } });
+    this.diario.anotar({ tipo: 'grimorio', asiento: this.diario.asiento(asientoId) });
   }
 
   /** El último grimorio enviado a un participante (si sigue en el asiento al que se envió), o null. */

@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { MensajeDespertar, SalaAsiento, SalaDespertar, SalaFase } from '../../contrato/sala';
+import type { Diario } from './eventos';
 
 /** Mensajes que se guardan en cada despertar (los más antiguos se descartan). */
 export const SALA_MENSAJES_DESPERTAR_MAX = 300;
@@ -24,6 +25,7 @@ export class Despertares {
     private readonly mesa: () => SalaAsiento[],
     /** La fase de la partida, para fechar los mensajes. */
     private readonly fase: () => SalaFase,
+    private readonly diario: Diario,
   ) {}
 
   /**
@@ -82,7 +84,10 @@ export class Despertares {
     return !!ultimo && ultimo.autor === 'narrador' && ultimo.ficha !== 'entendido';
   }
 
-  /** Guarda un mensaje en el despertar de un asiento (sin `eleccion`: una libre; sin `guiado`, no lo es). No valida: lo hace quien lo llama. */
+  /**
+   * Guarda un mensaje en el despertar de un asiento (sin `eleccion`: una libre; sin
+   * `guiado`, no lo es) y lo apunta en el diario. Sin despertar, nada. No valida: lo hace quien lo llama.
+   */
   enviar(
     asientoId: string,
     mensaje: Omit<MensajeDespertar, 'id' | 'hora' | 'fase' | 'eleccion' | 'guiado'> & Partial<Pick<MensajeDespertar, 'eleccion' | 'guiado'>>,
@@ -92,6 +97,18 @@ export class Despertares {
     const { momento, numero } = this.fase();
     hilo.mensajes.push({ eleccion: null, guiado: false, ...mensaje, id: randomUUID(), hora: Date.now(), fase: { momento, numero } });
     if (hilo.mensajes.length > SALA_MENSAJES_DESPERTAR_MAX) hilo.mensajes.shift();
+    this.diario.anotar({
+      tipo: 'despertar',
+      asiento: this.diario.asiento(asientoId),
+      delNarrador: mensaje.autor === 'narrador',
+      ficha: mensaje.ficha,
+      tarjeta: mensaje.tarjeta,
+      jugadores: mensaje.jugadores.map((id) => this.diario.asiento(id)),
+      personajes: mensaje.personajes,
+      texto: mensaje.texto,
+      alineamiento: mensaje.alineamiento,
+      eleccion: mensaje.eleccion?.cantidad ?? null,
+    });
   }
 
   /** Una copia de los despertares abiertos, para devolverlos con la máquina del tiempo. */

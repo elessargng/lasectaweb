@@ -1,5 +1,6 @@
 import { NUM_FAROLES } from '../../contrato/sala';
 import type { Asiento } from '../sala/Sala';
+import type { Diario } from './eventos';
 
 /** Las casillas de farol, todas vacías. */
 export const farolesVacios = (): (string | null)[] => Array.from({ length: NUM_FAROLES }, () => null);
@@ -13,7 +14,8 @@ function ponerEnCasilla(casillas: (string | null)[], posicion: number, personaje
 
 /**
  * Los faroles para el demonio: los que prepara el narrador y los de cada asiento
- * (los que se pone su jugador o le copia el narrador). No comprueba permisos ni el guion.
+ * (los que se pone su jugador o le copia el narrador). Lo que se cambia se apunta
+ * en el diario. No comprueba permisos ni el guion.
  */
 export class Faroles {
   /** Los faroles que el narrador prepara para el demonio (ver SalaEstado.faroles). */
@@ -28,6 +30,7 @@ export class Faroles {
   constructor(
     /** La mesa como está ahora. */
     private readonly mesa: () => Asiento[],
+    private readonly diario: Diario,
   ) {}
 
   faroles(): (string | null)[] {
@@ -40,6 +43,7 @@ export class Faroles {
    */
   ponerFarol(posicion: number, personajeId: string | null): void {
     this.delNarrador = ponerEnCasilla(this.delNarrador, posicion, personajeId);
+    this.diario.anotar({ tipo: 'farol', asiento: null, posicion, personaje: personajeId });
   }
 
   /** Los faroles del asiento, si siguen siendo de quien se sienta en él. */
@@ -57,15 +61,15 @@ export class Faroles {
   /** Pone un farol en una casilla de un asiento (o la vacía). Si el que usaba ya no está, deja de usarlo. */
   ponerFarolAsiento(asientoId: string, posicion: number, personajeId: string | null): void {
     const asiento = this.mesa().find((a) => a.id === asientoId);
-    if (!asiento) return;
-    this.guardar(asiento, ponerEnCasilla(this.deAsiento(asiento), posicion, personajeId), this.enUso(asiento));
+    if (asiento) this.guardar(asiento, ponerEnCasilla(this.deAsiento(asiento), posicion, personajeId), this.enUso(asiento));
+    this.diario.anotar({ tipo: 'farol', asiento: this.diario.asiento(asientoId), posicion, personaje: personajeId });
   }
 
   /** Cambia de una vez los faroles de un asiento (los que le ha enseñado el narrador). */
   copiarFaroles(asientoId: string, personajes: string[]): void {
     const asiento = this.mesa().find((a) => a.id === asientoId);
-    if (!asiento) return;
-    this.guardar(asiento, farolesVacios().map((_, i) => personajes[i] ?? null), this.enUso(asiento));
+    if (asiento) this.guardar(asiento, farolesVacios().map((_, i) => personajes[i] ?? null), this.enUso(asiento));
+    this.diario.anotar({ tipo: 'copiaFaroles', asiento: this.diario.asiento(asientoId), personajes });
   }
 
   /** El asiento dice usar uno de sus faroles (o ninguno, con null). Devuelve el error, si lo hay. */
@@ -75,6 +79,7 @@ export class Faroles {
     const faroles = this.deAsiento(asiento);
     if (personajeId !== null && !faroles.includes(personajeId)) return 'Ese personaje no está entre tus faroles.';
     this.guardar(asiento, faroles, personajeId);
+    this.diario.anotar({ tipo: 'usaFarol', asiento: this.diario.asiento(asientoId), personaje: personajeId });
     return null;
   }
 
@@ -88,7 +93,7 @@ export class Faroles {
     this.deAsientos.clear();
   }
 
-  /** Los asientos han cambiado de sitio (ver SalaService.llevarFichas): cada farol va con el suyo. */
+  /** Los asientos han cambiado de sitio (ver Partida.llevarFichas): cada farol va con el suyo. */
   remapear(a: (asientoId: string) => string): void {
     this.deAsientos = new Map([...this.deAsientos].map(([k, v]) => [a(k), v] as const));
   }

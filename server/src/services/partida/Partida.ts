@@ -15,7 +15,7 @@ import { Configuracion } from './Configuracion';
 import { DespertarGuiado } from './DespertarGuiado';
 import { Despertares } from './Despertares';
 import { Entregas } from './Entregas';
-import { type EventoPartida, type FotoAsiento, type OyentePartida } from './eventos';
+import { type Diario, type EventoPartida, type FotoAsiento, type OyentePartida } from './eventos';
 import { Faroles } from './Faroles';
 import { Fases } from './Fases';
 import { Grimorio, identidadDe } from './Grimorio';
@@ -115,6 +115,7 @@ export class Partida {
   readonly despertares = new Despertares(
     () => this.mesa(),
     () => this.fases.actual(),
+    this.diario(),
   );
   /** El despertar guiado desde el orden de noche (ver DespertarGuiado). */
   readonly guiado = new DespertarGuiado({
@@ -129,14 +130,14 @@ export class Partida {
     enviarGrimorio: (asientoId) => this.enviarGrimorioDeLaMesa(asientoId),
     cambiarPersonaje: (asientoId, personaje) => this.grimorio.cambiarPersonaje(asientoId, personaje),
   });
-  /** Los faroles para el demonio (del narrador y de cada asiento). Se ponen con ponerFarol…, que los apuntan en el diario. */
-  readonly faroles = new Faroles(() => this.sala.asientos());
+  /** Los faroles para el demonio (del narrador y de cada asiento). */
+  readonly faroles = new Faroles(() => this.sala.asientos(), this.diario());
   /** El final de la partida: qué bando ha ganado y qué fichas se han revelado. */
   readonly revelacion = new Revelacion(() => this.mesa());
   /** Los NPCs en juego y lo que traen (Bootlegger, Storm Catcher, silencio). */
   readonly npcs = new Npcs(() => this.guion.actual());
   /** Lo entregado a cada jugador y los grimorios enviados. */
-  readonly entregas = new Entregas(() => this.mesa());
+  readonly entregas = new Entregas(() => this.mesa(), this.diario());
   /** La bolsa y el reparto de personajes. */
   readonly reparto = new Reparto({
     mesa: () => this.mesa(),
@@ -195,35 +196,6 @@ export class Partida {
     if (this.entregas.fichasRetenidas() && !this.npcs.activo(NPC_GARDENER)) this.entregas.entregarFichas();
   }
 
-  // Lo que se apunta en el diario al hacerlo
-
-  enviarGrimorio(asientoId: string, fichas: SalaFichaEnviada[], faroles: string[] = []): void {
-    this.entregas.enviarGrimorio(asientoId, fichas, faroles);
-    this.anotar({ tipo: 'grimorio', asiento: this.asientoDiario(asientoId) });
-  }
-
-  ponerFarol(posicion: number, personajeId: string | null): void {
-    this.faroles.ponerFarol(posicion, personajeId);
-    this.anotar({ tipo: 'farol', asiento: null, posicion, personaje: personajeId });
-  }
-
-  ponerFarolAsiento(asientoId: string, posicion: number, personajeId: string | null): void {
-    this.faroles.ponerFarolAsiento(asientoId, posicion, personajeId);
-    this.anotar({ tipo: 'farol', asiento: this.asientoDiario(asientoId), posicion, personaje: personajeId });
-  }
-
-  copiarFaroles(asientoId: string, personajes: string[]): void {
-    this.faroles.copiarFaroles(asientoId, personajes);
-    this.anotar({ tipo: 'copiaFaroles', asiento: this.asientoDiario(asientoId), personajes });
-  }
-
-  /** El farol que dice usar el jugador de un asiento (uno de los suyos), o null. Devuelve el error, si lo hay. */
-  usarFarol(asientoId: string, personajeId: string | null): string | null {
-    const error = this.faroles.usarFarol(asientoId, personajeId);
-    if (!error) this.anotar({ tipo: 'usaFarol', asiento: this.asientoDiario(asientoId), personaje: personajeId });
-    return error;
-  }
-
   /**
    * Se llama cuando la partida cambia sola, sin que nadie pida nada (la votación
    * avanza con el tiempo): quien la usa manda el estado a todos.
@@ -257,6 +229,11 @@ export class Partida {
     if (this.revelacion.revelacion()) return;
     if (momento === 'preparacion' && !['farol', 'copiaFaroles', 'usaFarol'].includes(hecho.tipo)) return;
     this.avisar({ tipo: 'diario', entrada: { ...hecho, fase: { momento, numero }, hora: Date.now() } });
+  }
+
+  /** El diario, para las piezas que apuntan lo que se hace con ellas. */
+  private diario(): Diario {
+    return { anotar: (hecho) => this.anotar(hecho), asiento: (asientoId) => this.asientoDiario(asientoId) };
   }
 
   /** Un asiento para el diario: su número y quien se sienta ahora. */
@@ -371,24 +348,6 @@ export class Partida {
     this.recordatorios[id] = activo;
   }
 
-  /** Manda algo a un asiento despierto (si lo está) y lo apunta en el diario. */
-  enviarDespertar(asientoId: string, mensaje: Parameters<Despertares['enviar']>[1]): void {
-    if (!this.despertares.hayDespertar(asientoId)) return;
-    this.despertares.enviar(asientoId, mensaje);
-    this.anotar({
-      tipo: 'despertar',
-      asiento: this.asientoDiario(asientoId),
-      delNarrador: mensaje.autor === 'narrador',
-      ficha: mensaje.ficha,
-      tarjeta: mensaje.tarjeta,
-      jugadores: mensaje.jugadores.map((id) => this.asientoDiario(id)),
-      personajes: mensaje.personajes,
-      texto: mensaje.texto,
-      alineamiento: mensaje.alineamiento,
-      eleccion: mensaje.eleccion?.cantidad ?? null,
-    });
-  }
-
   /**
    * Manda algo del narrador a un asiento despierto (`guiado`: desde el despertar guiado);
    * con «Tú eres», su ficha pasa a ser la que se le dice.
@@ -398,7 +357,7 @@ export class Partida {
     envio: SalaEnvioDespertar,
     { eleccion, guiado = false }: { eleccion?: SalaEleccionDespertar; guiado?: boolean } = {},
   ): void {
-    this.enviarDespertar(asientoId, { ...envio, autor: 'narrador', guiado, ...(eleccion ? { eleccion } : {}) });
+    this.despertares.enviar(asientoId, { ...envio, autor: 'narrador', guiado, ...(eleccion ? { eleccion } : {}) });
     if (envio.tarjeta === 'tuEres') this.entregas.comunicarFicha(asientoId, envio.personajes, envio.alineamiento);
   }
 
@@ -423,7 +382,7 @@ export class Partida {
       muerto: a.muerto,
       recordatorios: a.recordatorios.map((r) => ({ ...r, id: randomUUID() })),
     }));
-    this.enviarGrimorio(asientoId, fichas);
+    this.entregas.enviarGrimorio(asientoId, fichas);
   }
 
   /**
