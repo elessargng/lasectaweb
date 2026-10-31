@@ -1,11 +1,25 @@
-import type { ConfiguracionDto } from '../../views/dto/partida';
+import type { MensajesPrivados } from '../compartido/chat';
 
 /** Lo que tarda la aguja de ficha en ficha al votar, en segundos (de cuarto en cuarto). */
 export const SALA_SEGUNDOS_POR_FICHA = { min: 0.25, max: 2, paso: 0.25, defecto: 1 };
 
-/** Los ajustes de la partida (ver ConfiguracionDto) y si se puede conversar en privado. No comprueba permisos. */
+/** Los ajustes de la partida que fija el narrador y valen para todos. */
+export interface Ajustes {
+  /** Cada jugador puede cambiar las fichas en su propio grimorio (si no, solo las ve). */
+  grimorioJugadores: boolean;
+  /** Lo que tarda la aguja en pasar de una ficha a la siguiente al votar, en segundos. */
+  segundosPorFicha: number;
+  /** Mensajes privados entre jugadores: ninguno, solo con los vecinos o con todos. */
+  mensajes: MensajesPrivados;
+  /** El fondo de la sala (una imagen subida o de la Biblioteca, o la del guion), o null: el de por defecto. */
+  fondo: string | null;
+  /** Las cámaras de quien conversa en privado no se ven en la plaza. */
+  ocultarCamarasConversacion: boolean;
+}
+
+/** Los ajustes de la partida y si se puede conversar en privado. No comprueba permisos. */
 export class Configuracion {
-  private ajustes: ConfiguracionDto = {
+  private ajustes: Ajustes = {
     grimorioJugadores: false,
     segundosPorFicha: SALA_SEGUNDOS_POR_FICHA.defecto,
     // Por defecto, los privados entre jugadores solo con los vecinos
@@ -16,11 +30,11 @@ export class Configuracion {
   private privadosAbiertos = true;
 
   /** Los ajustes (una copia). */
-  actual(): ConfiguracionDto {
+  actual(): Ajustes {
     return { ...this.ajustes };
   }
 
-  cambiar(cambios: Partial<ConfiguracionDto>): void {
+  cambiar(cambios: Partial<Ajustes>): void {
     this.ajustes = { ...this.ajustes, ...cambios };
   }
 

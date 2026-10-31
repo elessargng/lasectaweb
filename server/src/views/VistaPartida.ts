@@ -8,6 +8,10 @@ import type { JugadorDto } from './dto/jugador';
 import type { NominacionDto } from './dto/partida';
 import type { ConversacionDto, SalaDto, InvitacionDto } from './dto/sala';
 import type { Conversacion, Invitacion } from '../models/conversaciones';
+import type { Ajustes } from '../models/partida/Configuracion';
+import type { Reloj } from '../models/partida/RelojSala';
+import type { EstadoRevelacion } from '../models/partida/Revelacion';
+import type { ConfiguracionDto, RelojDto, RevelacionDto } from './dto/partida';
 
 /** Lo que la vista necesita de fuera de la partida: las conversaciones, el vídeo y los permisos. */
 export interface ContextoVista {
@@ -31,6 +35,23 @@ const sinPersonaje = (a: JugadorDto): JugadorDto => ({
 });
 const sinRecordatorios = (a: JugadorDto): JugadorDto => ({ ...a, recordatorios: [] });
 
+/** El Dto de algo que puede no estar (null se queda en null). */
+const siHay = <T, D>(x: T | null, dto: (x: T) => D): D | null => (x === null ? null : dto(x));
+
+const configuracionDto = (a: Ajustes): ConfiguracionDto => ({
+  grimorioJugadores: a.grimorioJugadores,
+  segundosPorFicha: a.segundosPorFicha,
+  mensajes: a.mensajes,
+  fondo: a.fondo,
+  ocultarCamarasConversacion: a.ocultarCamarasConversacion,
+});
+const relojDto = (r: Reloj): RelojDto => ({ inicio: r.inicio, fin: r.fin, mensaje: r.mensaje });
+const revelacionDto = (r: EstadoRevelacion): RevelacionDto => ({
+  ganador: r.ganador,
+  causas: [...r.causas],
+  reveladas: [...r.reveladas],
+  terminada: r.terminada,
+});
 const conversacionDto = (c: Conversacion): ConversacionDto => ({ id: c.id, miembros: [...c.miembros], oyentes: [...c.oyentes] });
 const invitacionDto = (i: Invitacion): InvitacionDto => ({ id: i.id, de: i.de, para: i.para, ...(i.conversacion && { conversacion: i.conversacion }) });
 
@@ -114,7 +135,7 @@ export class VistaPartida {
     this.secreta = partida.votacionSecreta();
     this.gastadosAlVotar = partida.nominaciones.gastadosAlVotar();
     this.comun = {
-      configuracion: partida.configuracion.actual(),
+      configuracion: configuracionDto(partida.configuracion.actual()),
       fase: partida.fases.actual(),
       distribucion: partida.reparto.distribucion(),
       bolsa: partida.reparto.bolsa.bolsa(),
@@ -151,9 +172,9 @@ export class VistaPartida {
       nominacion: ocultarVotacion && this.nominacion ? nominacionSecreta(this.nominacion, miAsiento) : this.nominacion,
       fase: comun.fase,
       distribucion: comun.distribucion,
-      revelacion: this.revelacion,
+      revelacion: siHay(this.revelacion, revelacionDto),
       gong: partida.reloj.gong(),
-      reloj: partida.reloj.reloj(),
+      reloj: siHay(partida.reloj.reloj(), relojDto),
       // De noche, solo quien señala (y quien ve el grimorio)
       senalamiento: partida.senalamientos.veSenalamiento(yo) ? comun.senalamiento : null,
       video: contexto.video,

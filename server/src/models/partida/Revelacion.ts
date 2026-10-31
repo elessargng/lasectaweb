@@ -1,6 +1,15 @@
 import type { Alineamiento } from '../compartido/jugador';
-import type { RevelacionDto } from '../../views/dto/partida';
 import type { Jugador } from './Jugador';
+
+/** Cómo va la revelación del final: quién ha ganado, lo que ha pasado y las fichas ya reveladas. */
+export interface EstadoRevelacion {
+  ganador: Alineamiento;
+  /** Lo que ha pasado (ids de CAUSAS_FIN_PARTIDA); vacío hasta que está todo revelado. */
+  causas: string[];
+  /** Los jugadores cuya ficha ya se ha revelado, en orden. */
+  reveladas: string[];
+  terminada: boolean;
+}
 
 /**
  * El final de la partida: el narrador dice qué bando ha ganado (y lo que ha
@@ -16,7 +25,7 @@ export class Revelacion {
   ) {}
 
   /** La revelación del grimorio en curso (o acabada), o null. */
-  revelacion(): RevelacionDto | null {
+  revelacion(): EstadoRevelacion | null {
     const r = this.actual;
     if (!r) return null;
     const plaza = this.plaza();
