@@ -6,6 +6,7 @@ import { NPC_TOR } from '../models/partida/personajesEspeciales';
 import { farolesVacios } from '../models/partida/Faroles';
 import type { JugadorDto } from './dto/jugador';
 import type { NominacionDto } from './dto/partida';
+import type { Nominacion } from '../models/partida/Nominaciones';
 import type { ConversacionDto, SalaDto, InvitacionDto } from './dto/sala';
 import type { Conversacion, Invitacion } from '../models/conversaciones';
 import type { Ajustes } from '../models/partida/Configuracion';
@@ -64,6 +65,24 @@ const senalamientoDto = (s: Senalamiento): SenalamientoDto => ({
   fin: s.fin,
   congelado: s.congelado,
   senales: { ...s.senales },
+});
+// Campo a campo: lo que la nominación guarda para sí (quién ha votado ya, por cuenta) no sale
+const nominacionDto = (n: Nominacion): NominacionDto => ({
+  desde: n.desde,
+  hasta: n.hasta,
+  cuentaAtrasFin: n.cuentaAtrasFin,
+  votacion: n.votacion && {
+    orden: [...n.votacion.orden],
+    paso: n.votacion.paso,
+    resultados: { ...n.votacion.resultados },
+    votos: n.votacion.votos,
+    terminada: n.votacion.terminada,
+    ...(n.votacion.valores && { valores: { ...n.votacion.valores } }),
+  },
+  expulsion: n.expulsion,
+  votosNecesarios: n.votosNecesarios,
+  votosNecesariosPorDefecto: n.votosNecesariosPorDefecto,
+  privada: n.privada,
 });
 const conversacionDto = (c: Conversacion): ConversacionDto => ({ id: c.id, miembros: [...c.miembros], oyentes: [...c.oyentes] });
 const invitacionDto = (i: Invitacion): InvitacionDto => ({ id: i.id, de: i.de, para: i.para, ...(i.conversacion && { conversacion: i.conversacion }) });
@@ -140,7 +159,7 @@ export class VistaPartida {
     }));
     this.calavera = partida.grimorio.calavera();
     this.notas = partida.grimorio.notas();
-    this.nominacion = partida.nominaciones.nominacion();
+    this.nominacion = siHay(partida.nominaciones.nominacion(), nominacionDto);
     this.revelacion = partida.revelacion.revelacion();
     this.reveladas = new Set(this.revelacion?.reveladas ?? []);
     this.tor = partida.npcs.activo(NPC_TOR);

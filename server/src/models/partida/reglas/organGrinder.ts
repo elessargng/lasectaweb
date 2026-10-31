@@ -5,7 +5,7 @@ export const ESBIRRO_ORGAN_GRINDER = 'organgrinder';
 /**
  * Organ Grinder: vivo (de verdad: un Borracho que se cree Organ Grinder no
  * cuenta) y sin un recordatorio «Drunk» en su ficha (el suyo, al elegir estar
- * borracho, o el de otro), las votaciones son secretas (ver NominacionDto.privada).
+ * borracho, o el de otro), las votaciones son secretas (ver Nominacion.privada).
  */
 export const organGrinder: ReglaPersonaje = {
   personaje: ESBIRRO_ORGAN_GRINDER,

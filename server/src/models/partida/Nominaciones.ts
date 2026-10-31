@@ -1,5 +1,4 @@
 import type { RegistroVotacion } from '../compartido/partida';
-import type { NominacionDto } from '../../views/dto/partida';
 import type { Participante } from '../sala/Participantes';
 import type { Jugador } from './Jugador';
 
@@ -9,8 +8,41 @@ import type { Jugador } from './Jugador';
  */
 export const SALA_CUENTA_ATRAS_MS = 4000;
 
+/**
+ * La votación de una nominación: la aguja del nominado recorre las fichas en el
+ * sentido de las agujas del reloj, del jugador siguiente al nominado hasta él.
+ */
+export interface Votacion {
+  /** Los jugadores en el orden en que vota cada uno (el último, el nominado). */
+  orden: string[];
+  /** Cuántas fichas ha recorrido ya la aguja. */
+  paso: number;
+  /** Por jugador ya recorrido: los votos acumulados si votó, o null si no. */
+  resultados: Record<string, number | null>;
+  votos: number;
+  terminada: boolean;
+  /** Lo que valió el voto de cada jugador que votó, si no fue 1 (Banshee, Burócrata, Ladrón). */
+  valores?: Record<string, number>;
+}
+
+/** Una nominación en curso: de qué jugador a qué jugador, su cuenta atrás y su votación. */
+export interface Nominacion {
+  desde: string;
+  hasta: string;
+  /** Cuándo acaba la cuenta atrás (ms), o null si no ha empezado. */
+  cuentaAtrasFin: number | null;
+  votacion: Votacion | null;
+  /** El nominado es un viajero: es una expulsión (ver NominacionDto). */
+  expulsion: boolean;
+  /** Votos que hacen falta: los que ha elegido el narrador o, si no, los de por defecto. */
+  votosNecesarios: number;
+  votosNecesariosPorDefecto: number;
+  /** Votación secreta (el Organ Grinder): quien no ve el grimorio no ve los votos. */
+  privada: boolean;
+}
+
 /** La nominación tal como se guarda: los votos que hacen falta se calculan al pedirla. */
-type NominacionInterna = Omit<NominacionDto, 'votosNecesarios' | 'votosNecesariosPorDefecto' | 'privada'> & {
+type NominacionInterna = Omit<Nominacion, 'votosNecesarios' | 'votosNecesariosPorDefecto' | 'privada'> & {
   /** Quien tiene la palabra (los demás jugadores callan), o null: hablan todos. */
   palabra: string | null;
   /** Los votos que ha fijado el narrador; null: los de por defecto. */
@@ -212,7 +244,7 @@ export class Nominaciones {
   }
 
   /** La nominación en curso (una copia), con los votos que hacen falta. */
-  nominacion(): NominacionDto | null {
+  nominacion(): Nominacion | null {
     const actual = this.nominacionVigente();
     if (!actual) return null;
     const { votosElegidos: _, registro: __, palabra: ___, porDefectoAlTerminar, ...resto } = actual;
@@ -262,7 +294,7 @@ export class Nominaciones {
   /**
    * Empieza una nominación (sustituye a la que hubiera) y la apunta en el
    * registro, con su día (si no se llega a votar, queda sin votos). Si el nominado
-   * es un viajero, es una expulsión (ver NominacionDto.expulsion). Baja todas
+   * es un viajero, es una expulsión (ver Nominacion.expulsion). Baja todas
    * las manos que hubiera levantadas. No comprueba permisos.
    */
   nominar(desde: string, hasta: string): void {

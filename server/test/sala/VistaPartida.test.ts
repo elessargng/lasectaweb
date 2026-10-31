@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { SALA_CUENTA_ATRAS_MS } from '../../src/models/partida/Nominaciones';
 import { SalaDeJuego } from '../../src/models/SalaDeJuego';
 import { VistaPartida, type ContextoVista } from '../../src/views/VistaPartida';
 import { guionDePrueba, invitado } from './guionDePrueba';
@@ -30,6 +31,21 @@ function partida() {
 }
 
 describe('VistaPartida', () => {
+  it('de la nominación solo sale lo que se envía: no quién ha votado ya (por cuenta) ni los votos gastados al empezar', () => {
+    vi.useFakeTimers();
+    try {
+      const { juego, narradora, ana, vista, asiento } = partida();
+      juego.partida.nominaciones.nominar(asiento(0).id, asiento(1).id);
+      juego.partida.nominaciones.iniciarCuentaAtras(Date.now());
+      vi.advanceTimersByTime(SALA_CUENTA_ATRAS_MS + 100);
+      expect(juego.partida.nominaciones.votacionEnMarcha()).toBe(true);
+      const campos = ['cuentaAtrasFin', 'desde', 'expulsion', 'hasta', 'privada', 'votacion', 'votosNecesarios', 'votosNecesariosPorDefecto'];
+      for (const quien of [narradora, ana]) expect(Object.keys(vista(quien).nominacion!).sort()).toEqual(campos);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('un viajero ve su alineamiento como se le dijo, no el que se le pone en el grimorio', () => {
     const { juego, ana, vista, asiento } = partida();
     juego.partida.grimorio.cambiarPersonaje(asiento(0).id, 'voudon');

@@ -65,7 +65,7 @@ export interface RegistroVotacion {
   /** Los asientos que nominan y que son nominados (no los hay en las partidas guardadas antes). */
   nominaAsiento?: string;
   nominadoAsiento?: string;
-  /** Era la expulsión de un viajero (ver NominacionDto.expulsion), no una nominación. */
+  /** Era la expulsión de un viajero (ver la nominación), no una nominación. */
   expulsion?: boolean;
   /** Nombres de quienes votaron, en el orden en que votaron; null si no se llegó a votar. */
   votantes: string[] | null;
