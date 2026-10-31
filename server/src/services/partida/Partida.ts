@@ -75,8 +75,8 @@ export class Partida {
   /** Lo que las reglas de los personajes pueden consultar de la partida. */
   private readonly contextoReglas: ContextoReglas = {
     plaza: () => this.plaza(),
-    identidad: (asiento) => identidadDe(asiento),
-    alineamiento: (asiento) => this.grimorio.alineamiento(asiento),
+    identidad: (jugador) => identidadDe(jugador),
+    alineamiento: (jugador) => this.grimorio.alineamiento(jugador),
     personaje: (id) => this.guion.personaje(id),
   };
   /** Las reglas de los personajes (ver reglas/). */
@@ -87,17 +87,17 @@ export class Partida {
     buscar: (id) => this.sala.participantes.buscar(id),
     bajarManos: () => this.sala.participantes.bajarManos(),
     cuentaDe: (id) => this.cuentaDe(id),
-    llevaViajero: (asiento) => {
-      const id = identidadDe(asiento);
+    llevaViajero: (jugador) => {
+      const id = identidadDe(jugador);
       return !!id && this.guion.esViajero(id);
     },
     dia: () => this.fases.actual().numero,
     segundosPorFicha: () => this.configuracion.actual().segundosPorFicha,
     sinVoto: (id) => this.sinVoto(id),
     cambiarVoto: (jugadorId, gastado) => this.grimorio.cambiarVoto(jugadorId, gastado),
-    votaSinGastar: (asiento) => this.reglas.votaSinGastar(asiento),
+    votaSinGastar: (jugador) => this.reglas.votaSinGastar(jugador),
     mayoria: (vivos) => this.reglas.mayoria(vivos),
-    valorDelVoto: (asiento, ocupante) => this.reglas.valorDelVoto(asiento, ocupante.dosManos),
+    valorDelVoto: (jugador, ocupante) => this.reglas.valorDelVoto(jugador, ocupante.dosManos),
     secreta: () => this.votacionSecreta(),
     alNominar: (desde, hasta) =>
       this.avisar({ tipo: 'nominacion', nomina: this.cuentaDelAsiento(desde), nominado: this.cuentaDelAsiento(hasta) }),
@@ -139,7 +139,7 @@ export class Partida {
   readonly reparto = new Reparto({
     plaza: () => this.plaza(),
     esViajero: (id) => this.guion.esViajero(id),
-    reglas: (asientos, personajes) => this.reglas.repartir(asientos, personajes),
+    reglas: (jugadores, personajes) => this.reglas.repartir(jugadores, personajes),
     darPersonaje: (jugadorId, personaje) => this.grimorio.repartir(jugadorId, personaje),
   });
   /** El señalamiento en curso. */
@@ -532,19 +532,19 @@ export class Partida {
    * el asiento no existe.
    */
   ejecutar(jugadorId: string): { anochece: boolean; final: boolean } | null {
-    const asiento = this.plaza().find((a) => a.id === jugadorId);
-    if (!asiento) return null;
+    const jugador = this.plaza().find((a) => a.id === jugadorId);
+    if (!jugador) return null;
     // Los recordatorios de los personajes que funcionan con las ejecuciones (ver Reglas)
-    for (const { personaje, texto, unico } of this.reglas.recordatoriosAlEjecutar(asiento)) {
+    for (const { personaje, texto, unico } of this.reglas.recordatoriosAlEjecutar(jugador)) {
       const textos = this.guion.personaje(personaje)?.recordatorios;
       const indice = textos?.findIndex((t) => t.toLowerCase() === texto.toLowerCase()) ?? -1;
       if (indice < 0) continue;
       if (unico) this.grimorio.quitarDeTodas(personaje, indice);
-      this.grimorio.ponerRecordatorio(asiento.id, { personaje, indice, texto: textos![indice] }, { anotar: false });
+      this.grimorio.ponerRecordatorio(jugador.id, { personaje, indice, texto: textos![indice] }, { anotar: false });
     }
-    this.avisar({ tipo: 'ejecucion', userId: this.cuentaDe(asiento.participanteId) });
-    this.anotar({ tipo: 'ejecucion', asiento: this.asientoDiario(asiento.id) });
-    this.grimorio.cambiarVida(asiento.id, true, { anotar: false });
+    this.avisar({ tipo: 'ejecucion', userId: this.cuentaDe(jugador.participanteId) });
+    this.anotar({ tipo: 'ejecucion', asiento: this.asientoDiario(jugador.id) });
+    this.grimorio.cambiarVida(jugador.id, true, { anotar: false });
     // Los vivos que quedan: los asientos (también los libres, que cuentan como jugadores)
     // sin muerte, sin contar a los viajeros
     const vivos = this.plaza().filter((a) => !a.muerto && !a.muertePendiente && !this.reparto.llevaViajero(a)).length;
@@ -557,11 +557,11 @@ export class Partida {
 
   /** No puede votar: no está sentado, o las reglas dicen que no (ver Reglas.puedeVotar). */
   sinVoto(participanteId: string): boolean {
-    const asiento = this.jugadorDe(participanteId);
-    if (!asiento) return true;
+    const jugador = this.jugadorDe(participanteId);
+    if (!jugador) return true;
     // En la expulsión de un viajero vota cualquiera (los muertos, sin gastar su voto)
     if (this.nominaciones.esExpulsion()) return false;
-    return !this.reglas.puedeVotar(asiento);
+    return !this.reglas.puedeVotar(jugador);
   }
 
   /**
@@ -579,7 +579,7 @@ export class Partida {
 
   /** Puede votar con las dos manos (dos votos): la Banshee con su habilidad (ver reglas/banshee.ts). */
   puedeVotarDoble(participanteId: string): boolean {
-    const asiento = this.jugadorDe(participanteId);
-    return !!asiento && this.reglas.votaDoble(asiento);
+    const jugador = this.jugadorDe(participanteId);
+    return !!jugador && this.reglas.votaDoble(jugador);
   }
 }

@@ -16,7 +16,7 @@ interface DialogoFarolesProps {
   faroles: (string | null)[];
   /** La bolsa y las fichas de la plaza: lo que está en juego («asignado»). */
   bolsa: string[];
-  asientos: JugadorDto[];
+  plaza: JugadorDto[];
   pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onCerrar: () => void;
 }
@@ -30,13 +30,13 @@ interface DialogoFarolesProps {
  * no están en la bolsa ni en ninguna ficha; desactivado, salen todos y los que
  * están en juego llevan el sello «Asignado» (se pueden elegir igual).
  */
-const DialogoFaroles = ({ faroles, bolsa, asientos, pedir, onCerrar }: DialogoFarolesProps) => {
+const DialogoFaroles = ({ faroles, bolsa, plaza, pedir, onCerrar }: DialogoFarolesProps) => {
   const { personajes, todosPorId } = useFichas();
   const [soloSinAsignar, setSoloSinAsignar] = useState(true);
   const [error, setError] = useState('');
   const ariaLiveErrores = useAriaLive('errores');
 
-  const asignados = new Set([...bolsa, ...asientos.flatMap((a) => (a.personaje ? [a.personaje] : []))]);
+  const asignados = new Set([...bolsa, ...plaza.flatMap((a) => (a.personaje ? [a.personaje] : []))]);
   const llenas = faroles.every(Boolean);
 
   const poner = async (posicion: number, personajeId: string | null) => {

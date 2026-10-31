@@ -542,14 +542,14 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   'jugador:seguirNominando': {
     puede: (juego, yo) => {
       const { partida, narrador } = juego;
-      const asiento = partida.jugadorDe(yo.id);
+      const jugador = partida.jugadorDe(yo.id);
       return (
         narrador.actual()?.etapa === 'nominaciones' &&
         !partida.nominaciones.nominacion() &&
-        !!asiento &&
-        !asiento.muerto &&
+        !!jugador &&
+        !jugador.muerto &&
         narrador.actual()!.listos.includes(yo.id) &&
-        !nominoHoy(juego, asiento.id)
+        !nominoHoy(juego, jugador.id)
       );
     },
     noPuede: 'Ahora no puedes dejar de estar listo.',
@@ -595,8 +595,8 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     puede: (juego, yo) => {
       const { partida } = juego;
       const dia = diaVirtual(juego);
-      const asiento = partida.jugadorDe(yo.id);
-      return !!dia && !!asiento && !asiento.muerto && !dia.artistas.includes(yo.id);
+      const jugador = partida.jugadorDe(yo.id);
+      return !!dia && !!jugador && !jugador.muerto && !dia.artistas.includes(yo.id);
     },
     noPuede: ({ narrador }, yo) =>
       narrador.actual()?.artistas.includes(yo.id) ? 'Ya has hecho tu pregunta de Artista.' : 'Ahora no se puede preguntar como Artista.',
@@ -1171,8 +1171,8 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     puede: (juego, yo) => {
       const { partida } = juego;
       const s = partida.senalamientos.senalamiento();
-      const asiento = partida.jugadorDe(yo.id);
-      return yo.rol === 'jugador' && !!s && !s.congelado && !!asiento && s.senaladores.includes(asiento.id);
+      const jugador = partida.jugadorDe(yo.id);
+      return yo.rol === 'jugador' && !!s && !s.congelado && !!jugador && s.senaladores.includes(jugador.id);
     },
     noPuede: 'No te toca señalar.',
     hacer: (juego, yo, datos) => {
@@ -1262,14 +1262,14 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
       const { jugadorId, personajeId, indice } = (datos as { jugadorId?: unknown; personajeId?: unknown; indice?: unknown }) ?? {};
-      const asiento = partida.plaza().find((a) => a.id === jugadorId);
-      if (!asiento || typeof jugadorId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
+      const jugador = partida.plaza().find((a) => a.id === jugadorId);
+      if (!jugador || typeof jugadorId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
       const personaje = typeof personajeId === 'string' ? partida.guion.personaje(personajeId) : undefined;
       if (!personaje) return { ok: false, error: 'Ese personaje no está en el guion.' };
       const texto = typeof indice === 'number' && Number.isInteger(indice) ? personaje.recordatorios[indice] : undefined;
       if (texto === undefined) return { ok: false, error: 'Ese recordatorio no existe.' };
       const sobra = partida.grimorio.recordatorioQueSobra(jugadorId, personaje.id, indice as number);
-      if (asiento.recordatorios.length >= MAX_RECORDATORIOS && sobra?.jugadorId !== jugadorId) {
+      if (jugador.recordatorios.length >= MAX_RECORDATORIOS && sobra?.jugadorId !== jugadorId) {
         return { ok: false, error: `Una ficha no puede llevar más de ${MAX_RECORDATORIOS} recordatorios.` };
       }
       if (sobra) partida.grimorio.quitarRecordatorio(sobra.jugadorId, sobra.recordatorioId);
@@ -1288,14 +1288,14 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
       const { jugadorId, texto, icono } = (datos as { jugadorId?: unknown; texto?: unknown; icono?: unknown }) ?? {};
-      const asiento = partida.plaza().find((a) => a.id === jugadorId);
-      if (!asiento || typeof jugadorId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
+      const jugador = partida.plaza().find((a) => a.id === jugadorId);
+      if (!jugador || typeof jugadorId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
       const limpio = typeof texto === 'string' ? texto.replace(/\s+/g, ' ').trim() : '';
       if (!limpio) return { ok: false, error: 'Escribe el texto del recordatorio.' };
       if ([...limpio].length > SALA_RECORDATORIO_TEXTO_MAX) {
         return { ok: false, error: `El recordatorio puede tener como mucho ${SALA_RECORDATORIO_TEXTO_MAX} caracteres.` };
       }
-      if (asiento.recordatorios.length >= MAX_RECORDATORIOS) {
+      if (jugador.recordatorios.length >= MAX_RECORDATORIOS) {
         return { ok: false, error: `Una ficha no puede llevar más de ${MAX_RECORDATORIOS} recordatorios.` };
       }
       const conIcono = leerIconoRecordatorio(juego, icono);
@@ -1618,11 +1618,11 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     noPuede: 'Solo un jugador sentado se pone faroles.',
     hacer: (juego, yo, datos) => {
       const { partida } = juego;
-      const asiento = partida.jugadorDe(yo.id);
-      if (!asiento) return { ok: false, error: 'Ya no estás sentado.' };
+      const jugador = partida.jugadorDe(yo.id);
+      if (!jugador) return { ok: false, error: 'Ya no estás sentado.' };
       const farol = leerFarol(juego, datos);
       if ('error' in farol) return { ok: false, error: farol.error };
-      partida.faroles.ponerFarolAsiento(asiento.id, farol.posicion, farol.personajeId);
+      partida.faroles.ponerFarolAsiento(jugador.id, farol.posicion, farol.personajeId);
       return { ok: true };
     },
   },
@@ -1636,11 +1636,11 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     noPuede: 'Solo un jugador sentado usa faroles.',
     hacer: (juego, yo, datos) => {
       const { partida } = juego;
-      const asiento = partida.jugadorDe(yo.id);
-      if (!asiento) return { ok: false, error: 'Ya no estás sentado.' };
+      const jugador = partida.jugadorDe(yo.id);
+      if (!jugador) return { ok: false, error: 'Ya no estás sentado.' };
       const personajeId = (datos as { personajeId?: unknown } | null)?.personajeId ?? null;
       if (personajeId !== null && typeof personajeId !== 'string') return { ok: false, error: 'Personaje desconocido.' };
-      const error = partida.faroles.usarFarol(asiento.id, personajeId);
+      const error = partida.faroles.usarFarol(jugador.id, personajeId);
       return error ? { ok: false, error } : { ok: true };
     },
   },
@@ -1846,11 +1846,11 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
       const jugadorId = (datos as { jugadorId?: unknown } | null)?.jugadorId;
-      const asiento = partida.plaza().find((a) => a.id === jugadorId);
-      if (!asiento) return { ok: false, error: 'Ese asiento ya no existe.' };
-      if (partida.grimorio.calavera()?.jugadorId !== asiento.id) return { ok: false, error: 'Solo se ejecuta a quien lleva la calavera.' };
+      const jugador = partida.plaza().find((a) => a.id === jugadorId);
+      if (!jugador) return { ok: false, error: 'Ese asiento ya no existe.' };
+      if (partida.grimorio.calavera()?.jugadorId !== jugador.id) return { ok: false, error: 'Solo se ejecuta a quien lleva la calavera.' };
       // Si quedan dos vivos, no anochece: el narrador elige (valor «final») entre la noche y revelar el grimorio
-      const { final } = partida.ejecutar(asiento.id) ?? { final: false };
+      const { final } = partida.ejecutar(jugador.id) ?? { final: false };
       return final ? { ok: true, valor: 'final' } : { ok: true };
     },
   },

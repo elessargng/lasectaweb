@@ -87,16 +87,16 @@ export class DespertarGuiado {
   /** Los que despiertan con una habilidad: el de su ficha o, los esbirros y el demonio, cada uno. */
   private asientosDe(habilidad: HabilidadNocturna): Jugador[] {
     if (habilidad.despiertan) return habilidad.despiertan(this.entorno.ctx);
-    const asiento = this.asientoDe(habilidad.personaje);
-    return asiento ? [asiento] : [];
+    const jugador = this.asientoDe(habilidad.personaje);
+    return jugador ? [jugador] : [];
   }
 
   /**
    * Lo que dice una habilidad de todos los que despiertan con ella: lo peor de
    * cada uno (falta, revisar, listo), con sus avisos sin repetir. Las opciones, las del primero.
    */
-  private preparar(habilidad: HabilidadNocturna, asientos: Jugador[]): Pick<Resultado, 'estado' | 'avisos' | 'opciones'> {
-    const resultados = asientos.map((a) => habilidad.preparar(this.entorno.ctx, a));
+  private preparar(habilidad: HabilidadNocturna, jugadores: Jugador[]): Pick<Resultado, 'estado' | 'avisos' | 'opciones'> {
+    const resultados = jugadores.map((a) => habilidad.preparar(this.entorno.ctx, a));
     const estado = (['falta', 'revisar'] as const).find((e) => resultados.some((r) => r.estado === e)) ?? 'listo';
     const avisos = [...new Map(resultados.flatMap((r) => r.avisos).map((a) => [JSON.stringify(a), a])).values()];
     return { estado, avisos, opciones: resultados[0]?.opciones ?? [] };
@@ -106,12 +106,12 @@ export class DespertarGuiado {
   habilidadesNoche(): HabilidadNocheDto[] {
     if (!this.entorno.noche()) return [];
     return [...this.entorno.habilidades().values()].flatMap((h): HabilidadNocheDto[] => {
-      const asientos = this.asientosDe(h);
-      if (!asientos.length) return [];
-      const fila = { personaje: h.personaje, jugador: asientos[0].id, jugadores: asientos.map((a) => a.id) };
-      const turno = this.turnoDe(h.personaje, asientos[0].id);
+      const jugadores = this.asientosDe(h);
+      if (!jugadores.length) return [];
+      const fila = { personaje: h.personaje, jugador: jugadores[0].id, jugadores: jugadores.map((a) => a.id) };
+      const turno = this.turnoDe(h.personaje, jugadores[0].id);
       if (turno) return [{ ...fila, estado: turno.estado, avisos: turno.avisos, opciones: turno.opciones }];
-      return [{ ...fila, ...this.preparar(h, asientos) }];
+      return [{ ...fila, ...this.preparar(h, jugadores) }];
     });
   }
 
@@ -123,21 +123,21 @@ export class DespertarGuiado {
   despertar(personaje: string): string | null {
     const habilidad = this.entorno.habilidades().get(personaje);
     if (!habilidad) return 'Ese personaje no se despierta solo.';
-    const asientos = this.asientosDe(habilidad);
-    if (!asientos.length) return 'Nadie lleva ese personaje.';
-    const turno = this.turnoDe(personaje, asientos[0].id);
+    const jugadores = this.asientosDe(habilidad);
+    if (!jugadores.length) return 'Nadie lleva ese personaje.';
+    const turno = this.turnoDe(personaje, jugadores[0].id);
     if (turno?.estado === 'hecho') return 'Ya se ha despertado esta noche.';
     if (turno?.estado === 'revisar') return 'Antes hay que revisar lo que se le manda.';
-    const preparados = asientos.map((a) => habilidad.preparar(this.entorno.ctx, a));
+    const preparados = jugadores.map((a) => habilidad.preparar(this.entorno.ctx, a));
     if (preparados.some((p) => p.estado === 'falta')) return 'Falta algo en el grimorio.';
     if (preparados.some((p) => p.estado === 'revisar')) return 'Antes hay que revisar lo que se le manda.';
-    for (const [i, asiento] of asientos.entries()) {
-      const error = this.entorno.despertar(asiento.id);
+    for (const [i, jugador] of jugadores.entries()) {
+      const error = this.entorno.despertar(jugador.id);
       if (error) return error;
       if (habilidad.eleccion) {
-        this.entregar(asiento.id, { envio: tarjeta('eleccion'), eleccion: habilidad.eleccion });
-        this.guardar({ personaje, asiento: asiento.id, estado: 'esperando', avisos: preparados[i].avisos, opciones: [] });
-      } else this.aplicar(personaje, asiento, preparados[i]);
+        this.entregar(jugador.id, { envio: tarjeta('eleccion'), eleccion: habilidad.eleccion });
+        this.guardar({ personaje, asiento: jugador.id, estado: 'esperando', avisos: preparados[i].avisos, opciones: [] });
+      } else this.aplicar(personaje, jugador, preparados[i]);
     }
     return null;
   }
@@ -146,22 +146,22 @@ export class DespertarGuiado {
    * Lo que pasa con lo que dice la habilidad: si está listo, se hace; si no, queda para
    * revisar. `respuesta`: contesta a lo que ha elegido (se le manda ya, sin cola).
    */
-  private aplicar(personaje: string, asiento: Jugador, resultado: Resultado, respuesta = false): void {
+  private aplicar(personaje: string, jugador: Jugador, resultado: Resultado, respuesta = false): void {
     const { estado, avisos, opciones, efectos } = resultado;
     if (estado !== 'listo') {
-      this.guardar({ personaje, asiento: asiento.id, estado: 'revisar', avisos, opciones });
+      this.guardar({ personaje, asiento: jugador.id, estado: 'revisar', avisos, opciones });
       return;
     }
     for (const r of efectos.recordatorios) this.entorno.ponerRecordatorio(r.asiento, personaje, r.texto);
     if (efectos.muere) this.entorno.matarDeNoche(efectos.muere);
-    if (efectos.grimorio) this.entorno.enviarGrimorio(asiento.id);
-    if (efectos.nuevoImp) this.impQueMuere = asiento.id;
-    const enviar = (envio: EnvioDespertar) => (respuesta ? this.entorno.mandar(asiento.id, envio) : this.entregar(asiento.id, { envio }));
+    if (efectos.grimorio) this.entorno.enviarGrimorio(jugador.id);
+    if (efectos.nuevoImp) this.impQueMuere = jugador.id;
+    const enviar = (envio: EnvioDespertar) => (respuesta ? this.entorno.mandar(jugador.id, envio) : this.entregar(jugador.id, { envio }));
     for (const envio of resultado.previos ?? []) enviar(envio);
     if (opciones[0]) enviar(opciones[0].envio);
     // Contestado con «Entendido», ya está: lo siguiente de su cola
-    if (respuesta && opciones[0]?.envio.ficha === 'entendido') this.alEntender(asiento.id);
-    this.guardar({ personaje, asiento: asiento.id, estado: 'hecho', avisos, opciones: [] });
+    if (respuesta && opciones[0]?.envio.ficha === 'entendido') this.alEntender(jugador.id);
+    this.guardar({ personaje, asiento: jugador.id, estado: 'hecho', avisos, opciones: [] });
   }
 
   /**
@@ -205,13 +205,13 @@ export class DespertarGuiado {
     const turno = this.turnos.find((t) => t.asiento === jugadorId && t.estado === 'esperando');
     const habilidad = turno && this.entorno.habilidades().get(turno.personaje);
     const plaza = this.entorno.ctx.plaza();
-    const asiento = plaza.find((a) => a.id === jugadorId);
-    if (!turno || !habilidad || !asiento) return;
+    const jugador = plaza.find((a) => a.id === jugadorId);
+    if (!turno || !habilidad || !jugador) return;
     const elegidosEnPlaza = elegidos.flatMap((id) => plaza.find((a) => a.id === id) ?? []);
     // Con quién ha despertado esta noche por su habilidad (la Camarera)
     const ctx = { ...this.entorno.ctx, despertados: () => this.despertados() };
     // La respuesta a lo que ha elegido es del mismo despertar: no espera en la cola
-    this.aplicar(turno.personaje, asiento, habilidad.alElegir(ctx, asiento, elegidosEnPlaza), true);
+    this.aplicar(turno.personaje, jugador, habilidad.alElegir(ctx, jugador, elegidosEnPlaza), true);
   }
 
   /**
@@ -229,15 +229,15 @@ export class DespertarGuiado {
    */
   resolver(personaje: string, envio: EnvioDespertar): string | null {
     const habilidad = this.entorno.habilidades().get(personaje);
-    const asiento = this.asientoDe(personaje);
-    if (!habilidad || !asiento) return 'Nadie lleva ese personaje.';
-    const turno = this.turnoDe(personaje, asiento.id);
-    const preparado = turno ?? habilidad.preparar(this.entorno.ctx, asiento);
+    const jugador = this.asientoDe(personaje);
+    if (!habilidad || !jugador) return 'Nadie lleva ese personaje.';
+    const turno = this.turnoDe(personaje, jugador.id);
+    const preparado = turno ?? habilidad.preparar(this.entorno.ctx, jugador);
     if (preparado.estado !== 'revisar') return 'No hay nada que revisar.';
-    const error = this.entorno.despertar(asiento.id);
+    const error = this.entorno.despertar(jugador.id);
     if (error) return error;
-    this.entregar(asiento.id, { envio });
-    this.guardar({ personaje, asiento: asiento.id, estado: 'hecho', avisos: preparado.avisos, opciones: [] });
+    this.entregar(jugador.id, { envio });
+    this.guardar({ personaje, asiento: jugador.id, estado: 'hecho', avisos: preparado.avisos, opciones: [] });
     return null;
   }
 

@@ -12,8 +12,8 @@ const VIVOS_PARA_HEREDAR = 5;
 export type Ganador = 'bueno' | 'malvado';
 
 /** Es un demonio: lo es de verdad o es la Mujer Escarlata que ya lo ha heredado («Is The Demon»). */
-export const esDemonio = (juego: SalaDeJuego, asiento: Jugador): boolean =>
-  tipoReal(juego, asiento) === 'demon' || tieneRecordatorio(asiento, 'scarletwoman', /^is the demon$/i);
+export const esDemonio = (juego: SalaDeJuego, jugador: Jugador): boolean =>
+  tipoReal(juego, jugador) === 'demon' || tieneRecordatorio(jugador, 'scarletwoman', /^is the demon$/i);
 
 /**
  * La Mujer Escarlata que ha heredado el demonio («Is The Demon») pasa a ser el Imp:

@@ -84,11 +84,11 @@ export async function preguntarComoArtista(
 }
 
 /** Si un asiento es lo que se pregunta: el demonio lo es también la Mujer Escarlata que lo ha heredado. */
-function es(juego: SalaDeJuego, asiento: Jugador, quien: QuienArtista): boolean {
+function es(juego: SalaDeJuego, jugador: Jugador, quien: QuienArtista): boolean {
   const { partida } = juego;
-  if (quien.por === 'personaje') return identidadDe(asiento) === quien.personaje;
-  if (quien.por === 'tipo') return quien.tipo === 'demon' ? esDemonio(juego, asiento) : tipoReal(juego, asiento) === quien.tipo;
-  return (partida.grimorio.alineamiento(asiento) ?? 'bueno') === quien.alineamiento;
+  if (quien.por === 'personaje') return identidadDe(jugador) === quien.personaje;
+  if (quien.por === 'tipo') return quien.tipo === 'demon' ? esDemonio(juego, jugador) : tipoReal(juego, jugador) === quien.tipo;
+  return (partida.grimorio.alineamiento(jugador) ?? 'bueno') === quien.alineamiento;
 }
 
 /** Sin tildes ni mayúsculas: para comparar la inicial. */

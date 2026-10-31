@@ -19,7 +19,7 @@ export const malvadosSeConocen = (ctx: ContextoNoche) => !pocosJugadores(ctx);
 /** Los de un tipo de verdad (no el de su ficha). */
 const deTipo = (ctx: ContextoNoche, tipo: string) => ctx.plaza().filter((a) => tipoDe(ctx, a) === tipo);
 
-const ids = (asientos: Jugador[]) => asientos.map((a) => a.id);
+const ids = (jugadores: Jugador[]) => jugadores.map((a) => a.id);
 
 /** Despierta a todos los de un tipo: a cada uno se le manda lo suyo. No eligen. */
 abstract class InformacionMalvada implements HabilidadNocturna {
@@ -37,9 +37,9 @@ abstract class InformacionMalvada implements HabilidadNocturna {
     return deTipo(ctx, this.tipo);
   }
 
-  preparar(ctx: ContextoNoche, asiento: Jugador): Resultado {
+  preparar(ctx: ContextoNoche, jugador: Jugador): Resultado {
     if (pocosJugadores(ctx)) return falta([{ tipo: 'pocosJugadores' }]);
-    return this.informar(ctx, asiento);
+    return this.informar(ctx, jugador);
   }
 
   alElegir(): Resultado {
@@ -47,7 +47,7 @@ abstract class InformacionMalvada implements HabilidadNocturna {
   }
 
   /** Lo que se le manda. */
-  protected abstract informar(ctx: ContextoNoche, asiento: Jugador): Resultado;
+  protected abstract informar(ctx: ContextoNoche, jugador: Jugador): Resultado;
 }
 
 /** Cada esbirro ve quién es el demonio y quiénes son los esbirros (si hay más). */

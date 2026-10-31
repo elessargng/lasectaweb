@@ -75,9 +75,9 @@ export async function cumplirRequisitos(ctx: ContextoEtapa, fila: HabilidadNoche
   let puesto = false;
   const faltan = fila.avisos.flatMap((a) => (a.tipo === 'faltaRecordatorio' ? [a] : []));
   if (fila.avisos.some((a) => a.tipo === 'faltanFaroles')) puesto = (await ponerFaroles(ctx)) || puesto;
-  const asientos = partida.plaza();
-  const yo = asientos.find((a) => a.id === fila.jugador);
-  const otros = asientos.filter((a) => a.id !== fila.jugador);
+  const jugadores = partida.plaza();
+  const yo = jugadores.find((a) => a.id === fila.jugador);
+  const otros = jugadores.filter((a) => a.id !== fila.jugador);
   // El correcto antes que el «Wrong» (que no puede caer en el mismo)
   let correcto: Jugador | null = null;
   for (const { personaje, texto } of [...faltan].sort((a, b) => Number(a.texto === 'Wrong') - Number(b.texto === 'Wrong'))) {
@@ -85,7 +85,7 @@ export async function cumplirRequisitos(ctx: ContextoEtapa, fila: HabilidadNoche
     let elegido: Jugador | null = null;
     if (clave === 'red herring') {
       // La Pitonisa: un bueno cualquiera (puede ser ella)
-      const buenos = asientos.filter((a) => partida.grimorio.alineamiento(a) !== 'malvado');
+      const buenos = jugadores.filter((a) => partida.grimorio.alineamiento(a) !== 'malvado');
       elegido = buenos.length
         ? await ctx.decidir({
             motivo: 'redHerring',

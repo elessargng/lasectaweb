@@ -33,8 +33,8 @@ function mismoAlineamiento(ctx: ContextoReglas, personajes: string[], x: number,
  */
 export const revolucionario: ReglaPersonaje = {
   personaje: NPC_REVOLUTIONARY,
-  repartir: (ctx, asientos, personajes) => {
-    const marcados = asientos.flatMap((a, i) => (tieneRecordatorio(a, NPC_REVOLUTIONARY) ? [i] : []));
+  repartir: (ctx, jugadores, personajes) => {
+    const marcados = jugadores.flatMap((a, i) => (tieneRecordatorio(a, NPC_REVOLUTIONARY) ? [i] : []));
     return marcados.length === 2 ? mismoAlineamiento(ctx, personajes, marcados[0], marcados[1]) : personajes;
   },
 };

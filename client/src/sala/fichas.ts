@@ -125,10 +125,10 @@ export const FichasContexto = createContext<ContextoFichas>({
  * (solo le llegan a quien ve el grimorio) y, con grimorio propio, los anotados.
  */
 export function recordatoriosDeFicha(
-  asiento: JugadorDto,
+  jugador: JugadorDto,
   anotados: Record<string, Recordatorio[]> | null,
 ): Recordatorio[] {
-  return [...(asiento.recordatorios ?? []), ...(anotados?.[asiento.id] ?? [])];
+  return [...(jugador.recordatorios ?? []), ...(anotados?.[jugador.id] ?? [])];
 }
 
 /** El texto de un recordatorio en el idioma de quien mira (el original si no hay traducción). */
@@ -196,9 +196,9 @@ export const esRecordatorioDeIdentidad = (r: Recordatorio) => !esRecordatorioTex
  * o, sin él, el de su ficha. Solo lo sabe quien ve los recordatorios (el
  * grimorio): a los jugadores no les llegan.
  */
-export function identidadDe(asiento: JugadorDto): { personaje: string | null; porRecordatorio: boolean } {
-  const r = [...(asiento.recordatorios ?? [])].reverse().find(esRecordatorioDeIdentidad);
-  return r ? { personaje: r.personaje, porRecordatorio: true } : { personaje: asiento.personaje, porRecordatorio: false };
+export function identidadDe(jugador: JugadorDto): { personaje: string | null; porRecordatorio: boolean } {
+  const r = [...(jugador.recordatorios ?? [])].reverse().find(esRecordatorioDeIdentidad);
+  return r ? { personaje: r.personaje, porRecordatorio: true } : { personaje: jugador.personaje, porRecordatorio: false };
 }
 
 /**
@@ -207,13 +207,13 @@ export function identidadDe(asiento: JugadorDto): { personaje: string | null; po
  * Marioneta con la de un aldeano, malvada). Un viajero de verdad (el Aprendiz)
  * es del bando de la habilidad que gana: el de su ficha. null: el de su ficha.
  */
-export function alineamientoReal(asiento: JugadorDto, porId: Map<string, PersonajeMostrado>): Alineamiento | null {
-  if (asiento.alineamiento) return asiento.alineamiento;
-  const { personaje, porRecordatorio } = identidadDe(asiento);
+export function alineamientoReal(jugador: JugadorDto, porId: Map<string, PersonajeMostrado>): Alineamiento | null {
+  if (jugador.alineamiento) return jugador.alineamiento;
+  const { personaje, porRecordatorio } = identidadDe(jugador);
   const real = porRecordatorio && personaje ? porId.get(personaje) : undefined;
   if (!real) return null;
   if (real.tipo === 'traveller') {
-    const ficha = asiento.personaje ? porId.get(asiento.personaje) : undefined;
+    const ficha = jugador.personaje ? porId.get(jugador.personaje) : undefined;
     return ficha ? alineamientoDeTipo(ficha.tipo) : null;
   }
   return alineamientoDeTipo(real.tipo);

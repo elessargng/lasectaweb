@@ -32,9 +32,9 @@ export class Revelando implements Etapa {
     // Si acaba antes de la noche en que lo sería, la Mujer Escarlata que ha heredado se revela ya como el Imp
     await escarlataAImp(ctx);
     if (!(await ctx.plaza.accion('narrador:revelarGrimorio', { ganador: this.ganador })).ok) return;
-    const asientos = partida.plaza();
-    const demonios = asientos.filter((a) => esDemonio(ctx.juego, a));
-    const orden = [...barajar(asientos.filter((a) => !demonios.includes(a)), ctx.azar), ...barajar(demonios, ctx.azar)];
+    const jugadores = partida.plaza();
+    const demonios = jugadores.filter((a) => esDemonio(ctx.juego, a));
+    const orden = [...barajar(jugadores.filter((a) => !demonios.includes(a)), ctx.azar), ...barajar(demonios, ctx.azar)];
     void this.revelar(ctx, orden.map((a) => a.id));
   }
 
@@ -50,9 +50,9 @@ export class Revelando implements Etapa {
     for (const jugadorId of orden) {
       await new Promise<void>((listo) => (this.cancelar = ctx.temporizador.programar(espera, listo)));
       if (!this.seguir) return;
-      const asiento = partida.plaza().find((a) => a.id === jugadorId);
-      if (!asiento) continue;
-      const frase = fraseAlRevelar(ctx.recuerdos.cronica, ctx.juego, asiento);
+      const jugador = partida.plaza().find((a) => a.id === jugadorId);
+      if (!jugador) continue;
+      const frase = fraseAlRevelar(ctx.recuerdos.cronica, ctx.juego, jugador);
       await ctx.plaza.accion('narrador:revelarFicha', { jugadorId });
       ctx.decir(frase);
       espera = Math.max(ENTRE_FICHAS_MS, duracionFrase(frase));

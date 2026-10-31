@@ -25,13 +25,13 @@ const idMenuFicha = (participanteId: string) => `sala-ficha-${participanteId}-bo
  * nominación a «Cuenta atrás», y al cancelar, marcar o cerrar a la ficha de quien nominaba.
  */
 export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
-  const { plaza: asientos, acciones, nominacion } = estado;
+  const { plaza, acciones, nominacion } = estado;
   const [eligiendoDesde, setEligiendoDesde] = useState<string | null>(null);
   // Elemento al que llevar el foco cuando se pinte el cambio.
   const focoRef = useRef<string | null>(null);
 
   // Si el asiento que nominaba ya no existe, no se está eligiendo.
-  const desde = eligiendoDesde && asientos.some((a) => a.id === eligiendoDesde) ? eligiendoDesde : null;
+  const desde = eligiendoDesde && plaza.some((a) => a.id === eligiendoDesde) ? eligiendoDesde : null;
   const nombreDe = (jugadorId: string) => {
     const { numero, ocupante } = datosAsiento(estado, jugadorId);
     return describirAsiento(numero, ocupante);
@@ -69,8 +69,8 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
   const empezar = (id: string) => {
     setEligiendoDesde(id);
     // El foco, a la ficha del asiento siguiente (en el orden de la plaza).
-    const i = asientos.findIndex((a) => a.id === id);
-    focoRef.current = idFichaNominar(asientos[(i + 1) % asientos.length].id);
+    const i = plaza.findIndex((a) => a.id === id);
+    focoRef.current = idFichaNominar(plaza[(i + 1) % plaza.length].id);
     onAnuncio(`Elige a qué ficha nomina el ${nombreDe(id)} (puede ser la suya): pulsa la ficha. Escape para cancelar.`);
   };
 
@@ -106,7 +106,7 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
     return r.ok;
   };
 
-  const nominado = nominacion ? asientos.find((a) => a.id === nominacion.hasta) : undefined;
+  const nominado = nominacion ? plaza.find((a) => a.id === nominacion.hasta) : undefined;
 
   // Las nominaciones de hoy (del registro, que solo tienen los narradores): quién ya
   // nominó y quién ya fue nominado. Es solo un aviso: el narrador puede repetir.
@@ -165,7 +165,7 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
               ? {
                   necesarios: nominacion.votosNecesarios,
                   porDefecto: nominacion.votosNecesariosPorDefecto,
-                  maximo: Math.max(1, asientos.length),
+                  maximo: Math.max(1, plaza.length),
                   onCambiar: (votos: number | null) => void actuar('narrador:votosNecesarios', { votos }),
                 }
               : null,

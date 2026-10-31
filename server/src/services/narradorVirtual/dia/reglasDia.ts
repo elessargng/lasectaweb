@@ -29,11 +29,11 @@ export function diaVirtual(juego: SalaDeJuego) {
 export function noPuedeNominar(juego: SalaDeJuego, yo: Participante): string | null {
   const { partida, narrador } = juego;
   if (narrador.actual()?.etapa !== 'nominaciones') return 'Ahora no es el momento de nominar.';
-  const asiento = partida.jugadorDe(yo.id);
-  if (yo.rol !== 'jugador' || !asiento) return 'Solo nominan los jugadores sentados.';
-  if (asiento.muerto) return 'Los muertos no nominan.';
+  const jugador = partida.jugadorDe(yo.id);
+  if (yo.rol !== 'jugador' || !jugador) return 'Solo nominan los jugadores sentados.';
+  if (jugador.muerto) return 'Los muertos no nominan.';
   if (partida.nominaciones.nominacion()) return 'Ya hay una nominación en marcha.';
-  if (nominoHoy(juego, asiento.id)) return 'Ya has nominado hoy.';
+  if (nominoHoy(juego, jugador.id)) return 'Ya has nominado hoy.';
   return null;
 }
 

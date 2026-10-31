@@ -52,8 +52,8 @@ export class Senalamientos {
     if (!s) return false;
     if (s.publico || participante.rol === 'narrador') return true;
     if (participante.rol === 'visitante') return this.entorno.veGrimorio(participante.id);
-    const asiento = this.entorno.jugadorDe(participante.id);
-    return !!asiento && s.senaladores.includes(asiento.id);
+    const jugador = this.entorno.jugadorDe(participante.id);
+    return !!jugador && s.senaladores.includes(jugador.id);
   }
 
   /**
@@ -92,14 +92,14 @@ export class Senalamientos {
     const s = this.senalamiento() && this.actual!;
     if (!s) return 'No hay ningún señalamiento.';
     if (s.congelado) return 'El señalamiento ya ha terminado.';
-    const asiento = this.entorno.jugadorDe(participanteId);
-    if (!asiento || !s.senaladores.includes(asiento.id)) return 'No te toca señalar.';
+    const jugador = this.entorno.jugadorDe(participanteId);
+    if (!jugador || !s.senaladores.includes(jugador.id)) return 'No te toca señalar.';
     if (objetivo === null) {
-      delete s.senales[asiento.id];
+      delete s.senales[jugador.id];
       return null;
     }
     if (!s.objetivos.includes(objetivo)) return 'Ese asiento no se puede señalar.';
-    s.senales[asiento.id] = objetivo;
+    s.senales[jugador.id] = objetivo;
     return null;
   }
 

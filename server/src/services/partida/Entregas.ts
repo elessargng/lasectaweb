@@ -77,8 +77,8 @@ export class Entregas {
 
   /** El último grimorio enviado a un participante (si sigue en el asiento al que se envió), o null. */
   grimorioRecibidoPor(participanteId: string): GrimorioEnviadoDto | null {
-    const asiento = this.plaza().find((a) => a.participanteId === participanteId);
-    const enviado = asiento ? this.grimoriosEnviados.get(asiento.id) : undefined;
+    const jugador = this.plaza().find((a) => a.participanteId === participanteId);
+    const enviado = jugador ? this.grimoriosEnviados.get(jugador.id) : undefined;
     return enviado && enviado.ocupante === participanteId ? enviado.grimorio : null;
   }
 

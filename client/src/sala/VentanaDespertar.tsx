@@ -80,12 +80,12 @@ const VentanaDespertar = ({
   const nombre = nombreDeAsiento(estado, actual.jugador);
   // El Espía y la Viuda (su ficha o quien es de verdad) ven el grimorio: se les envía desde aquí
   const [enviandoGrimorio, setEnviandoGrimorio] = useState(false);
-  const asiento = estado.plaza.find((a) => a.id === actual.jugador);
+  const jugador = estado.plaza.find((a) => a.id === actual.jugador);
   const veGrimorio =
     !soloLectura &&
-    !!asiento?.participanteId &&
+    !!jugador?.participanteId &&
     estado.acciones.includes('narrador:enviarGrimorio') &&
-    (PERSONAJES_GRIMORIO.includes(asiento.personaje ?? '') || PERSONAJES_GRIMORIO.includes(identidadDe(asiento).personaje ?? ''));
+    (PERSONAJES_GRIMORIO.includes(jugador.personaje ?? '') || PERSONAJES_GRIMORIO.includes(identidadDe(jugador).personaje ?? ''));
   const conPestanas = abiertos.length > 1;
   const revision = revisiones?.get(actual.jugador);
 

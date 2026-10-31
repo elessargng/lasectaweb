@@ -195,9 +195,9 @@ export class Noche implements Etapa {
   private async esperarEleccion(ctx: ContextoEtapa, fila: HabilidadNocheDto): Promise<void> {
     const { partida } = ctx.juego;
     const eleccion = habilidadesDelGuion(partida.guion.actual()?.edicion ?? null).get(fila.personaje)?.eleccion;
-    const asiento = partida.plaza().find((a) => a.id === fila.jugador);
-    if (eleccion && asiento && !asiento.participanteId) {
-      const posibles = partida.plaza().filter((a) => eleccion.puedeElegirse || a.id !== asiento.id);
+    const jugador = partida.plaza().find((a) => a.id === fila.jugador);
+    if (eleccion && jugador && !jugador.participanteId) {
+      const posibles = partida.plaza().filter((a) => eleccion.puedeElegirse || a.id !== jugador.id);
       const elegidos = await elegirVarios(
         (d) => ctx.decidir(d),
         {
@@ -208,7 +208,7 @@ export class Noche implements Etapa {
         eleccion.cantidad,
       );
       const jugadores = elegidos.map((a) => a.id);
-      await ctx.plaza.accion('despertar:enviar', { jugadorId: asiento.id, ficha: 'jugador', jugadores });
+      await ctx.plaza.accion('despertar:enviar', { jugadorId: jugador.id, ficha: 'jugador', jugadores });
     }
     // Si aún no se le ha pedido (espera a que entienda lo anterior: ver DespertarGuiado), se le recuerda
     const elegido = () => this.fila(ctx, fila.personaje)?.estado !== 'esperando';

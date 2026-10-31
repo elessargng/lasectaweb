@@ -61,7 +61,7 @@ export interface Grimorio {
 }
 
 /** El número (1, 2…) de cada asiento, por su id. */
-const numeros = (asientos: readonly Jugador[]) => new Map(asientos.map((a, i) => [a.id, i + 1]));
+const numeros = (jugadores: readonly Jugador[]) => new Map(jugadores.map((a, i) => [a.id, i + 1]));
 
 function mensaje(m: MensajeDespertar, numero: Map<string, number>): MensajeGrimorio {
   return {
@@ -77,14 +77,14 @@ function mensaje(m: MensajeDespertar, numero: Map<string, number>): MensajeGrimo
 
 export function instantaneaGrimorio(juego: SalaDeJuego): Grimorio {
   const { partida } = juego;
-  const asientos = partida.plaza();
-  const numero = numeros(asientos);
+  const jugadores = partida.plaza();
+  const numero = numeros(jugadores);
   const noche = contextoNoche(juego);
   const despertares = partida.despertares.despertares();
   return {
     guion: partida.guion.actual()?.edicion ?? null,
     fase: { momento: partida.fases.actual().momento, numero: partida.fases.actual().numero },
-    asientos: asientos.map((a, i) => {
+    asientos: jugadores.map((a, i) => {
       const identidad = identidadDe(a) ?? null;
       const alineamiento = partida.grimorio.alineamiento(a) ?? null;
       const malvado = alineamiento === 'malvado';
@@ -111,12 +111,12 @@ export function instantaneaGrimorio(juego: SalaDeJuego): Grimorio {
 }
 
 /** Un asiento como opción de una decisión: «Asiento 3: Ana (chef, bueno)». */
-export function describirAsiento(juego: SalaDeJuego, asiento: Jugador): string {
+export function describirAsiento(juego: SalaDeJuego, jugador: Jugador): string {
   const { partida } = juego;
-  const i = partida.plaza().findIndex((a) => a.id === asiento.id);
-  const quien = identidadDe(asiento);
-  const datos = [quien && (partida.guion.personaje(quien)?.nombre ?? quien), partida.grimorio.alineamiento(asiento), vivo(asiento) ? null : 'muerto'].filter(Boolean);
-  return `Asiento ${i + 1}: ${nombreDeAsiento(juego, asiento.id)}${datos.length ? ` (${datos.join(', ')})` : ''}`;
+  const i = partida.plaza().findIndex((a) => a.id === jugador.id);
+  const quien = identidadDe(jugador);
+  const datos = [quien && (partida.guion.personaje(quien)?.nombre ?? quien), partida.grimorio.alineamiento(jugador), vivo(jugador) ? null : 'muerto'].filter(Boolean);
+  return `Asiento ${i + 1}: ${nombreDeAsiento(juego, jugador.id)}${datos.length ? ` (${datos.join(', ')})` : ''}`;
 }
 
 /** Un personaje como opción: «Monje (townsfolk)». */
@@ -127,10 +127,10 @@ export function describirPersonaje(juego: SalaDeJuego, id: string): string {
 }
 
 /** Unos asientos como opciones de una decisión (la clave, su número: «a3»). */
-export function opcionesDeAsientos(juego: SalaDeJuego, asientos: readonly Jugador[]): Opcion<Jugador>[] {
+export function opcionesDeAsientos(juego: SalaDeJuego, jugadores: readonly Jugador[]): Opcion<Jugador>[] {
   const { partida } = juego;
   const numero = numeros(partida.plaza());
-  return asientos.map((a) => ({ clave: `a${numero.get(a.id) ?? a.id}`, descripcion: describirAsiento(juego, a), valor: a }));
+  return jugadores.map((a) => ({ clave: `a${numero.get(a.id) ?? a.id}`, descripcion: describirAsiento(juego, a), valor: a }));
 }
 
 /** Lo que se le manda a alguien en su despertar, en palabras: «tarjeta esteJugadorEs; ficha dos; jugadores 3 y 5; personajes Chef». */

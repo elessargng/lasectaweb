@@ -573,10 +573,10 @@ export const BotoneraDespertar = ({
       return faroles.length > 0 ? { personajes: faroles } : undefined;
     }
     if (tarjeta === 'tuEres') {
-      const asiento = estado.plaza.find((a) => a.id === jugadorId);
-      const personaje = asiento?.personaje ? porId.get(asiento.personaje) : undefined;
-      if (!asiento || !personaje) return undefined;
-      return { personajes: [personaje.id], alineamiento: alineamientoDe(personaje, asiento.alineamiento) };
+      const jugador = estado.plaza.find((a) => a.id === jugadorId);
+      const personaje = jugador?.personaje ? porId.get(jugador.personaje) : undefined;
+      if (!jugador || !personaje) return undefined;
+      return { personajes: [personaje.id], alineamiento: alineamientoDe(personaje, jugador.alineamiento) };
     }
     return undefined;
   };

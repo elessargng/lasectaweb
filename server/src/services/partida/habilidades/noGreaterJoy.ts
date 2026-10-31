@@ -67,8 +67,8 @@ class Camarera extends EligeYSabe {
 export const camarera = new Camarera();
 
 /** Le ha matado el demonio esta noche: muere y lleva el recordatorio de un demonio (su «Dead»). */
-const muereAManosDelDemonio = (ctx: ContextoNoche, asiento: Jugador) =>
-  asiento.muertePendiente && asiento.recordatorios.some((r) => ctx.personaje(r.personaje)?.tipo === 'demon');
+const muereAManosDelDemonio = (ctx: ContextoNoche, jugador: Jugador) =>
+  jugador.muertePendiente && jugador.recordatorios.some((r) => ctx.personaje(r.personaje)?.tipo === 'demon');
 
 /**
  * El Sabio: si le mata el demonio, despierta y sabe que es uno de dos jugadores.
@@ -82,15 +82,15 @@ class Sabio extends RecibeInformacion {
     this.tipoEnsenado = 'demon';
   }
 
-  preparar(ctx: ContextoNoche, asiento: Jugador): Resultado {
-    if (asiento.muerto) return falta([{ tipo: 'muerto' }]);
-    if (!muereAManosDelDemonio(ctx, asiento)) return falta([{ tipo: 'noMuere' }]);
-    return informar(ctx, asiento, this.informacion(ctx, asiento), [], true);
+  preparar(ctx: ContextoNoche, jugador: Jugador): Resultado {
+    if (jugador.muerto) return falta([{ tipo: 'muerto' }]);
+    if (!muereAManosDelDemonio(ctx, jugador)) return falta([{ tipo: 'noMuere' }]);
+    return informar(ctx, jugador, this.informacion(ctx, jugador), [], true);
   }
 
-  protected informacion(ctx: ContextoNoche, asiento: Jugador) {
+  protected informacion(ctx: ContextoNoche, jugador: Jugador) {
     const plaza = ctx.plaza();
-    const otros = plaza.filter((a) => a.id !== asiento.id);
+    const otros = plaza.filter((a) => a.id !== jugador.id);
     const demonio = otros.find((a) => tipoDe(ctx, a) === 'demon');
     const pareja = (a: Jugador, b: Jugador, personaje: string): OpcionDespertar => ({
       // En el orden de la plaza: que no se sepa cuál es
@@ -101,7 +101,7 @@ class Sabio extends RecibeInformacion {
     // Droison, también dos que no son el demonio (con el demonio que hay, o el Imp)
     const personaje = demonio ? ctx.identidad(demonio)! : 'imp';
     const sinDemonio = otros.filter((a) => a !== demonio);
-    const falsas = droison(ctx, asiento)
+    const falsas = droison(ctx, jugador)
       ? sinDemonio.flatMap((a, i) => sinDemonio.slice(i + 1).map((b) => pareja(a, b, personaje)))
       : [];
     return { opciones: [...ciertas, ...falsas] };

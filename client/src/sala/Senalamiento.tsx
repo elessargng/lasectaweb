@@ -44,9 +44,9 @@ interface ManosSenalamientoProps {
  * sola. Todo es visual: lo dice el nombre de cada ficha. No recibe el ratón.
  */
 export function ManosSenalamiento({ estado, senalamiento, miAsiento }: ManosSenalamientoProps) {
-  const { plaza: asientos, participantes } = estado;
-  const total = asientos.length;
-  const indice = (id: string) => asientos.findIndex((a) => a.id === id);
+  const { plaza, participantes } = estado;
+  const total = plaza.length;
+  const indice = (id: string) => plaza.findIndex((a) => a.id === id);
   if (total === 0) return null;
 
   const senales = Object.entries(senalamiento.senales).flatMap(([desde, hasta]) => {
@@ -55,7 +55,7 @@ export function ManosSenalamiento({ estado, senalamiento, miAsiento }: ManosSena
     if (i < 0 || j < 0) return [];
     const a = enCirculo(i, total);
     const b = enCirculo(j, total);
-    const ocupante = participantes.find((p) => p.id === asientos[i].participanteId);
+    const ocupante = participantes.find((p) => p.id === plaza[i].participanteId);
     return [
       {
         desde,

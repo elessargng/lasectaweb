@@ -137,7 +137,7 @@ const PanelFaroles = ({ modo, faroles, estado, pedir, onError, onAnuncio, fijado
         <DialogoFaroles
           faroles={faroles}
           bolsa={estado.bolsa}
-          asientos={estado.plaza}
+          plaza={estado.plaza}
           pedir={pedir}
           onCerrar={() => setAsignando(false)}
         />

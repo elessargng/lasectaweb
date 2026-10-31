@@ -51,26 +51,26 @@ export class Reglas {
    * Si quien se sienta en el asiento puede votar: lo que diga la primera regla que
    * decida o, si no, que no sea un muerto que ya ha gastado su voto.
    */
-  puedeVotar(asiento: Jugador): boolean {
+  puedeVotar(jugador: Jugador): boolean {
     for (const r of this.reglas) {
-      const decide = r.puedeVotar?.(this.ctx, asiento);
+      const decide = r.puedeVotar?.(this.ctx, jugador);
       if (decide !== undefined) return decide;
     }
-    return !(asiento.muerto && asiento.votoGastado);
+    return !(jugador.muerto && jugador.votoGastado);
   }
 
   /** Un muerto que vota desde este asiento no gasta su voto. */
-  votaSinGastar(asiento: Jugador): boolean {
-    return this.reglas.some((r) => r.votaSinGastar?.(this.ctx, asiento));
+  votaSinGastar(jugador: Jugador): boolean {
+    return this.reglas.some((r) => r.votaSinGastar?.(this.ctx, jugador));
   }
 
-  votaDoble(asiento: Jugador): boolean {
-    return this.reglas.some((r) => r.votaDoble?.(this.ctx, asiento));
+  votaDoble(jugador: Jugador): boolean {
+    return this.reglas.some((r) => r.votaDoble?.(this.ctx, jugador));
   }
 
   /** Lo que vale el voto de quien se sienta en el asiento: 1 por lo que lo multiplique cada regla. */
-  valorDelVoto(asiento: Jugador, dosManos: boolean): number {
-    return this.reglas.reduce((valor, r) => valor * (r.multiplicaVoto?.(this.ctx, asiento, dosManos) ?? 1), 1);
+  valorDelVoto(jugador: Jugador, dosManos: boolean): number {
+    return this.reglas.reduce((valor, r) => valor * (r.multiplicaVoto?.(this.ctx, jugador, dosManos) ?? 1), 1);
   }
 
   /** Los votos que hacen falta para la calavera con tantas fichas vivas: los de una regla o la mitad, hacia arriba. */
@@ -129,7 +129,7 @@ export class Reglas {
   }
 
   /** Los personajes barajados, en el orden en que se reparten (ver ReglaPersonaje.repartir). */
-  repartir(asientos: Jugador[], personajes: string[]): string[] {
-    return this.reglas.reduce((lista, r) => r.repartir?.(this.ctx, asientos, lista) ?? lista, personajes);
+  repartir(jugadores: Jugador[], personajes: string[]): string[] {
+    return this.reglas.reduce((lista, r) => r.repartir?.(this.ctx, jugadores, lista) ?? lista, personajes);
   }
 }

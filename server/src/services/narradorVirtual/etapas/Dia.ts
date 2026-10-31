@@ -128,8 +128,8 @@ export class Nominaciones implements Etapa {
     if (this.terminando) return 'El día ya ha terminado.';
     const narrador = juego.narrador.actual();
     const yo = sala.participantes.buscar(jugador);
-    const miAsiento = partida.jugadorDe(jugador);
-    if (!narrador || !yo || !miAsiento) return 'No estás sentado.';
+    const miJugador = partida.jugadorDe(jugador);
+    if (!narrador || !yo || !miJugador) return 'No estás sentado.';
     const nominacion = partida.nominaciones.nominacion();
 
     if (accion === 'nominar') {
@@ -138,10 +138,10 @@ export class Nominaciones implements Etapa {
       const hasta = (datos as { jugadorId?: unknown } | null)?.jugadorId;
       if (typeof hasta !== 'string' || !sala.jugador(hasta)) return 'Ese asiento ya no existe.';
       if (nominadoHoy(juego, hasta)) return `${nombreDeAsiento(juego, hasta)} ya ha sido nominado hoy.`;
-      return this.nominar(ctx, miAsiento.id, hasta, jugador);
+      return this.nominar(ctx, miJugador.id, hasta, jugador);
     }
     if (accion === 'defensa') {
-      if (narrador.turno !== 'acusacion' || nominacion?.desde !== miAsiento.id) return 'Ahora no te toca.';
+      if (narrador.turno !== 'acusacion' || nominacion?.desde !== miJugador.id) return 'Ahora no te toca.';
       const nominado = partida.plaza().find((a) => a.id === nominacion.hasta)?.participanteId ?? null;
       juego.narrador.actualizar({ turno: 'defensa' });
       await ctx.plaza.accion('narrador:darPalabra', { participanteId: nominado });
@@ -149,7 +149,7 @@ export class Nominaciones implements Etapa {
       return null;
     }
     if (accion === 'voto') {
-      if (narrador.turno !== 'defensa' || nominacion?.hasta !== miAsiento.id) return 'Ahora no te toca.';
+      if (narrador.turno !== 'defensa' || nominacion?.hasta !== miJugador.id) return 'Ahora no te toca.';
       this.marcaAlVotar = partida.grimorio.calavera()?.votos ?? null;
       juego.narrador.actualizar({ turno: 'votacion' });
       await ctx.plaza.accion('narrador:darPalabra', { participanteId: null });
@@ -163,8 +163,8 @@ export class Nominaciones implements Etapa {
       return null;
     }
     // Seguir nominando: quien ha nominado hoy y los muertos están listos siempre
-    if (miAsiento.muerto) return 'Los muertos no nominan: estás listo.';
-    if (partida.nominaciones.votaciones().some((v) => v.dia === partida.fases.actual().numero && v.nominaAsiento === miAsiento.id)) return 'Ya has nominado hoy: estás listo.';
+    if (miJugador.muerto) return 'Los muertos no nominan: estás listo.';
+    if (partida.nominaciones.votaciones().some((v) => v.dia === partida.fases.actual().numero && v.nominaAsiento === miJugador.id)) return 'Ya has nominado hoy: estás listo.';
     juego.narrador.actualizar({ listos: narrador.listos.filter((id) => id !== jugador) });
     return null;
   }

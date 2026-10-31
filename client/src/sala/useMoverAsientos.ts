@@ -15,7 +15,7 @@ interface Movimiento {
 }
 
 interface Opciones {
-  asientos: JugadorDto[];
+  plaza: JugadorDto[];
   participantes: ParticipanteDto[];
   /** La plaza: dentro están los asientos, marcados con data-asiento. */
   plazaRef: RefObject<HTMLElement | null>;
@@ -34,26 +34,26 @@ interface Opciones {
  * - Con teclado (y lector): Intro o Espacio coge, las flechas eligen asiento,
  *   Intro o Espacio suelta y Escape cancela. Cada paso se anuncia.
  */
-export function useMoverAsientos({ asientos, participantes, plazaRef, pedir, onError, onAnuncio }: Opciones) {
+export function useMoverAsientos({ plaza, participantes, plazaRef, pedir, onError, onAnuncio }: Opciones) {
   const [movimiento, setMovimiento] = useState<Movimiento | null>(null);
   // Tras soltar con el teclado, el foco va a su asa cuando llega a su nuevo asiento
   // (el id es el de su jugador, que se cambia de silla con él).
   const focoPendienteRef = useRef<{ asiento: string; numero: number } | null>(null);
 
-  const ocupanteDe = (jugadorId: string) => asientos.find((a) => a.id === jugadorId)?.participanteId ?? null;
+  const ocupanteDe = (jugadorId: string) => plaza.find((a) => a.id === jugadorId)?.participanteId ?? null;
   const nombreDe = (id: string | null) => participantes.find((p) => p.id === id)?.nombre ?? '';
-  const numeroDe = (jugadorId: string) => asientos.findIndex((a) => a.id === jugadorId) + 1;
+  const numeroDe = (jugadorId: string) => plaza.findIndex((a) => a.id === jugadorId) + 1;
 
   // Si mientras tanto el jugador se ha ido o el asiento ya no existe, no hay movimiento.
   const activo =
-    movimiento && ocupanteDe(movimiento.desde) && asientos.some((a) => a.id === movimiento.hasta) ? movimiento : null;
+    movimiento && ocupanteDe(movimiento.desde) && plaza.some((a) => a.id === movimiento.hasta) ? movimiento : null;
 
   /** Quién se ve en cada asiento, con el movimiento provisional aplicado. */
-  const ocupanteVisible = (asiento: JugadorDto): string | null => {
-    if (!activo || activo.desde === activo.hasta) return asiento.participanteId;
-    if (asiento.id === activo.desde) return ocupanteDe(activo.hasta);
-    if (asiento.id === activo.hasta) return ocupanteDe(activo.desde);
-    return asiento.participanteId;
+  const ocupanteVisible = (jugador: JugadorDto): string | null => {
+    if (!activo || activo.desde === activo.hasta) return jugador.participanteId;
+    if (jugador.id === activo.desde) return ocupanteDe(activo.hasta);
+    if (jugador.id === activo.hasta) return ocupanteDe(activo.desde);
+    return jugador.participanteId;
   };
 
   useEffect(() => {
@@ -146,8 +146,8 @@ export function useMoverAsientos({ asientos, participantes, plazaRef, pedir, onE
       const paso = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
       if (paso) {
         e.preventDefault();
-        const i = asientos.findIndex((a) => a.id === activo.hasta);
-        const hasta = asientos[(i + paso + asientos.length) % asientos.length].id;
+        const i = plaza.findIndex((a) => a.id === activo.hasta);
+        const hasta = plaza[(i + paso + plaza.length) % plaza.length].id;
         setMovimiento({ ...activo, hasta });
         onAnuncio(describirDestino(activo.desde, hasta));
       } else if (e.key === 'Escape') {

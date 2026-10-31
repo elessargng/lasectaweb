@@ -11,7 +11,7 @@ export const voudonVivo = (ctx: ContextoReglas): boolean => vivoEnJuego(ctx, VIA
  */
 export const voudon: ReglaPersonaje = {
   personaje: VIAJERO_VOUDON,
-  puedeVotar: (ctx, asiento) => (voudonVivo(ctx) ? asiento.muerto || lleva(ctx, asiento, VIAJERO_VOUDON) : undefined),
+  puedeVotar: (ctx, jugador) => (voudonVivo(ctx) ? jugador.muerto || lleva(ctx, jugador, VIAJERO_VOUDON) : undefined),
   votaSinGastar: (ctx) => voudonVivo(ctx),
   mayoria: (ctx) => (voudonVivo(ctx) ? 1 : undefined),
 };

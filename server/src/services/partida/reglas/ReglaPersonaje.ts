@@ -7,9 +7,9 @@ export interface ContextoReglas {
   /** Los jugadores de la plaza, en orden. */
   plaza(): readonly Jugador[];
   /** Quién es de verdad el de un asiento: el de su «Is The …» o, sin él, el de su ficha. */
-  identidad(asiento: Jugador): string | null;
+  identidad(jugador: Jugador): string | null;
   /** El alineamiento de un asiento: el puesto por el narrador o el de su tipo. */
-  alineamiento(asiento: Jugador): Alineamiento | null;
+  alineamiento(jugador: Jugador): Alineamiento | null;
   /** Un personaje de la partida (del guion o del catálogo). */
   personaje(id: string): PersonajeDeGuion | undefined;
 }
@@ -44,13 +44,13 @@ export interface ReglaPersonaje {
    * Si quien se sienta en el asiento puede votar: true o false si esta regla lo
    * decide ahora, undefined si no. Decide la primera de la lista que responda.
    */
-  puedeVotar?(ctx: ContextoReglas, asiento: Jugador): boolean | undefined;
+  puedeVotar?(ctx: ContextoReglas, jugador: Jugador): boolean | undefined;
   /** Un muerto que vota desde este asiento no gasta su voto. */
-  votaSinGastar?(ctx: ContextoReglas, asiento: Jugador): boolean;
+  votaSinGastar?(ctx: ContextoReglas, jugador: Jugador): boolean;
   /** Quien se sienta en el asiento puede votar con las dos manos. */
-  votaDoble?(ctx: ContextoReglas, asiento: Jugador): boolean;
+  votaDoble?(ctx: ContextoReglas, jugador: Jugador): boolean;
   /** Por cuánto se multiplica su voto (`dosManos`: ha levantado las dos). */
-  multiplicaVoto?(ctx: ContextoReglas, asiento: Jugador, dosManos: boolean): number;
+  multiplicaVoto?(ctx: ContextoReglas, jugador: Jugador, dosManos: boolean): number;
   /** Los votos que hacen falta para la calavera, si esta regla los cambia ahora; undefined si no. */
   mayoria?(ctx: ContextoReglas): number | undefined;
   /** Las votaciones son secretas. */
@@ -81,24 +81,24 @@ export interface ReglaPersonaje {
    * en orden) y los personajes ya barajados (uno por asiento) y devuelve los
    * personajes en el orden en que se repartirán.
    */
-  repartir?(ctx: ContextoReglas, asientos: Jugador[], personajes: string[]): string[];
+  repartir?(ctx: ContextoReglas, jugadores: Jugador[], personajes: string[]): string[];
 }
 
 /** La ficha del asiento es la de ese personaje, o lo es de verdad (por su «Is The …»). */
-export const lleva = (ctx: ContextoReglas, asiento: Jugador, personajeId: string): boolean =>
-  asiento.personaje === personajeId || ctx.identidad(asiento) === personajeId;
+export const lleva = (ctx: ContextoReglas, jugador: Jugador, personajeId: string): boolean =>
+  jugador.personaje === personajeId || ctx.identidad(jugador) === personajeId;
 
 /** Ese personaje está vivo en la plaza (en la ficha o de verdad); `salvo`: sin contar ese asiento. */
 export const vivoEnJuego = (ctx: ContextoReglas, personajeId: string, salvo?: Jugador): boolean =>
   ctx.plaza().some((a) => a.id !== salvo?.id && !a.muerto && lleva(ctx, a, personajeId));
 
 /** El asiento lleva algún recordatorio de ese personaje (y, si se da, con ese texto). */
-export const tieneRecordatorio = (asiento: Jugador, personajeId: string, texto?: RegExp): boolean =>
-  asiento.recordatorios.some((r) => r.personaje === personajeId && (!texto || texto.test(r.texto)));
+export const tieneRecordatorio = (jugador: Jugador, personajeId: string, texto?: RegExp): boolean =>
+  jugador.recordatorios.some((r) => r.personaje === personajeId && (!texto || texto.test(r.texto)));
 
 /** Si está envenenado (el recordatorio del Envenenador) o borracho (es el Borracho de verdad); null si está sano. */
-export function droison(ctx: ContextoReglas, asiento: Jugador): 'envenenado' | 'borracho' | null {
-  if (ctx.identidad(asiento) === 'drunk') return 'borracho';
-  if (tieneRecordatorio(asiento, 'poisoner', /^poisoned$/i)) return 'envenenado';
+export function droison(ctx: ContextoReglas, jugador: Jugador): 'envenenado' | 'borracho' | null {
+  if (ctx.identidad(jugador) === 'drunk') return 'borracho';
+  if (tieneRecordatorio(jugador, 'poisoner', /^poisoned$/i)) return 'envenenado';
   return null;
 }

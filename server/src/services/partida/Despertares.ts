@@ -62,9 +62,9 @@ export class Despertares {
 
   /** Abre el despertar de un asiento (si ya lo tiene, no hace nada). Devuelve el error, si lo hay. */
   despertar(jugadorId: string): string | null {
-    const asiento = this.plaza().find((a) => a.id === jugadorId);
-    if (!asiento) return 'Ese asiento ya no existe.';
-    if (!this.hayDespertar(jugadorId)) this.hilos.push({ asiento: jugadorId, ocupante: asiento.participanteId, mensajes: [] });
+    const jugador = this.plaza().find((a) => a.id === jugadorId);
+    if (!jugador) return 'Ese asiento ya no existe.';
+    if (!this.hayDespertar(jugadorId)) this.hilos.push({ asiento: jugadorId, ocupante: jugador.participanteId, mensajes: [] });
     return null;
   }
 

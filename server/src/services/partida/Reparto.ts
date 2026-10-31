@@ -11,7 +11,7 @@ export interface EntornoReparto {
   plaza(): readonly Jugador[];
   esViajero(personajeId: string): boolean;
   /** Lo que hacen las reglas con el reparto (el Revolutionary: ver reglas/revolucionario.ts). */
-  reglas(asientos: Jugador[], personajes: string[]): string[];
+  reglas(jugadores: Jugador[], personajes: string[]): string[];
   /** Pone en la ficha del asiento el personaje que le ha tocado (ver Grimorio.repartir). */
   darPersonaje(jugadorId: string, personaje: string | null): void;
 }
@@ -44,8 +44,8 @@ export class Reparto {
    * reparto. Uno que esté en la bolsa no cuenta (salió del reparto, y al repartir
    * otra vez puede tocarle a otro).
    */
-  llevaViajero(asiento: Jugador): boolean {
-    const id = identidadDe(asiento);
+  llevaViajero(jugador: Jugador): boolean {
+    const id = identidadDe(jugador);
     return !!id && this.entorno.esViajero(id) && !this.bolsa.contiene(id);
   }
 
@@ -89,9 +89,9 @@ export class Reparto {
    * bolsa se queda como estaba.
    */
   repartir(): void {
-    const asientos = this.entorno.plaza().filter((a) => !this.llevaViajero(a));
-    const personajes = this.entorno.reglas(asientos, barajar(this.bolsa.bolsa()));
-    asientos.forEach((a, i) => this.entorno.darPersonaje(a.id, personajes[i] ?? null));
+    const jugadores = this.entorno.plaza().filter((a) => !this.llevaViajero(a));
+    const personajes = this.entorno.reglas(jugadores, barajar(this.bolsa.bolsa()));
+    jugadores.forEach((a, i) => this.entorno.darPersonaje(a.id, personajes[i] ?? null));
   }
 
   /** Otra partida: la bolsa vacía y sin reparto aceptado. */

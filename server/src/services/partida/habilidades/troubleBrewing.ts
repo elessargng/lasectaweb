@@ -46,8 +46,8 @@ export const monje = new EligeYMarca('monk', 'Safe', { puedeElegirse: false, tra
 export const mayordomo = new EligeYMarca('butler', 'Master', { puedeElegirse: false });
 
 /** Protegido del demonio esta noche: con el «Safe» del Monje o un Soldado sano. */
-const protegido = (ctx: ContextoNoche, asiento: Jugador) =>
-  tieneRecordatorio(asiento, 'monk', /^safe$/i) || (ctx.identidad(asiento) === 'soldier' && !droison(ctx, asiento));
+const protegido = (ctx: ContextoNoche, jugador: Jugador) =>
+  tieneRecordatorio(jugador, 'monk', /^safe$/i) || (ctx.identidad(jugador) === 'soldier' && !droison(ctx, jugador));
 
 /**
  * El Imp: el elegido muere (su «Dead» y la muerte pendiente), salvo que esté
@@ -59,9 +59,9 @@ export class Imp extends EligeYMarca {
     super('imp', 'Dead', { puedeElegirse: true });
   }
 
-  protected marcar(ctx: ContextoNoche, asiento: Jugador, elegido: Jugador, avisos: AvisoHabilidad[]): Resultado {
+  protected marcar(ctx: ContextoNoche, jugador: Jugador, elegido: Jugador, avisos: AvisoHabilidad[]): Resultado {
     const muere: Efectos = { ...sinEfectos(), recordatorios: [{ asiento: elegido.id, texto: this.recordatorio }], muere: elegido.id };
-    if (elegido.id === asiento.id) return listo(OK, { ...muere, nuevoImp: true }, avisos);
+    if (elegido.id === jugador.id) return listo(OK, { ...muere, nuevoImp: true }, avisos);
     if (elegido.muerto) return listo(OK, sinEfectos(), avisos);
     if (protegido(ctx, elegido)) return listo(OK, sinEfectos(), [...avisos, { tipo: 'protegido', jugador: elegido.id }]);
     if (ctx.identidad(elegido) === 'mayor' && !droison(ctx, elegido)) {
@@ -106,8 +106,8 @@ class Cuervero extends EligeYSabe {
     this.despiertaAlMorir = true;
   }
 
-  protected requisitos(_ctx: ContextoNoche, asiento: Jugador): AvisoHabilidad[] {
-    return asiento.muertePendiente ? [] : [{ tipo: 'noMuere' }];
+  protected requisitos(_ctx: ContextoNoche, jugador: Jugador): AvisoHabilidad[] {
+    return jugador.muertePendiente ? [] : [{ tipo: 'noMuere' }];
   }
 
   protected saber(ctx: ContextoNoche, _asiento: Jugador, [elegido]: Jugador[]) {
@@ -207,8 +207,8 @@ class Empatico extends RecibeInformacion {
     return 2;
   }
 
-  protected informacion(ctx: ContextoNoche, asiento: Jugador) {
-    const vecinos = vecinosVivos(ctx, asiento);
+  protected informacion(ctx: ContextoNoche, jugador: Jugador) {
+    const vecinos = vecinosVivos(ctx, jugador);
     const opciones = segunRegistros(ctx, vecinos, (a) => alineamientosPosibles(ctx, a), (registro) =>
       numero(vecinos.filter((a) => (registro(a) ?? ctx.alineamiento(a)) === 'malvado').length),
     );
@@ -253,8 +253,8 @@ class MujerEscarlata extends RecibeInformacion {
     super('scarletwoman');
   }
 
-  protected requisitos(_ctx: ContextoNoche, asiento: Jugador) {
-    return tieneRecordatorio(asiento, this.personaje, /^is the demon$/i) ? [] : [{ tipo: 'faltaRecordatorio' as const, personaje: this.personaje, texto: 'Is The Demon' }];
+  protected requisitos(_ctx: ContextoNoche, jugador: Jugador) {
+    return tieneRecordatorio(jugador, this.personaje, /^is the demon$/i) ? [] : [{ tipo: 'faltaRecordatorio' as const, personaje: this.personaje, texto: 'Is The Demon' }];
   }
 
   protected informacion() {

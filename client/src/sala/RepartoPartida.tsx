@@ -10,7 +10,7 @@ interface RepartoPartidaProps {
   distribucion: DistribucionDto;
   /** La bolsa (solo el narrador); null para los demás. */
   bolsa: string[] | null;
-  asientos: JugadorDto[];
+  plaza: JugadorDto[];
   /** Los NPCs en juego (el Centinela altera la preparación). */
   npcs: string[];
   /** El reparto dado por bueno a mano aunque no cuadre (su firma), o null. */
@@ -46,7 +46,7 @@ interface RepartoPartidaProps {
  * habilidad es que no haya forasteros), «Es el que quiero» lo da por bueno: el
  * recuadro vuelve a su aspecto de siempre hasta que el reparto cambie.
  */
-const RepartoPartida = ({ distribucion, bolsa, asientos, npcs, setupAceptado, preparacion, pedir, onError, resumido = false }: RepartoPartidaProps) => {
+const RepartoPartida = ({ distribucion, bolsa, plaza, npcs, setupAceptado, preparacion, pedir, onError, resumido = false }: RepartoPartidaProps) => {
   const { todosPorId } = useFichas();
   const tituloRef = useRef<HTMLHeadingElement>(null);
   const [confirmacion, setConfirmacion] = useState('');
@@ -55,11 +55,11 @@ const RepartoPartida = ({ distribucion, bolsa, asientos, npcs, setupAceptado, pr
   const hayReparto = distribucion.aldeanos !== null;
 
   // Lo que se cuenta: lo que hay en juego (si ya hay personajes en la plaza) o la bolsa
-  const enPlaza = asientos.some((a) => a.personaje);
+  const enPlaza = plaza.some((a) => a.personaje);
   const ids = !bolsa
     ? null
     : enPlaza
-      ? asientos.flatMap((a) => {
+      ? plaza.flatMap((a) => {
           const id = identidadDe(a).personaje;
           return id ? [id] : [];
         })

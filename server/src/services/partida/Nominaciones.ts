@@ -42,7 +42,7 @@ export interface EntornoVotacion {
   /** La cuenta de un participante, o null (invitado). */
   cuentaDe(participanteId: string): string | null;
   /** En el asiento hay un viajero: nominarlo es pedir su expulsión. */
-  llevaViajero(asiento: Jugador): boolean;
+  llevaViajero(jugador: Jugador): boolean;
   /** El día de la partida (para el registro). */
   dia(): number;
   /** Lo que tarda la aguja en pasar de una ficha a la siguiente. */
@@ -52,11 +52,11 @@ export interface EntornoVotacion {
   /** Gasta (o devuelve) el voto de la ficha muerta de un asiento. */
   cambiarVoto(jugadorId: string, gastado: boolean): void;
   /** Un muerto que vota desde este asiento no gasta su voto (la Banshee con su habilidad, el Voudon vivo). */
-  votaSinGastar(asiento: Jugador): boolean;
+  votaSinGastar(jugador: Jugador): boolean;
   /** Los votos que hacen falta con tantas fichas vivas (la mitad o, con el Voudon vivo, 1). */
   mayoria(vivos: number): number;
   /** Lo que vale el voto de quien se sienta en un asiento (1, o lo que digan sus recordatorios). */
-  valorDelVoto(asiento: Jugador, ocupante: Participante): number;
+  valorDelVoto(jugador: Jugador, ocupante: Participante): number;
   /** La votación es secreta (Organ Grinder). */
   secreta(): boolean;
   /**
@@ -147,16 +147,16 @@ export class Nominaciones {
     const v = n?.votacion;
     if (!n || !v || v.terminada) return;
     const jugadorId = v.orden[v.paso];
-    const asiento = this.entorno.plaza().find((a) => a.id === jugadorId);
-    const ocupante = asiento?.participanteId ? this.entorno.buscar(asiento.participanteId) : undefined;
+    const jugador = this.entorno.plaza().find((a) => a.id === jugadorId);
+    const ocupante = jugador?.participanteId ? this.entorno.buscar(jugador.participanteId) : undefined;
     // La Banshee con su habilidad, y los muertos con el Voudon vivo, votan sin gastar el
     // voto de muerto (ni les hace falta); con el Voudon, los vivos no votan (salvo él)
     // En una expulsión nadie gasta el voto de muerto y cada mano vale 1
-    const conservaVoto = n.expulsion || (!!asiento && this.entorno.votaSinGastar(asiento));
+    const conservaVoto = n.expulsion || (!!jugador && this.entorno.votaSinGastar(jugador));
     const sinVoto = !ocupante || this.entorno.sinVoto(ocupante.id);
     const vota = ocupante?.rol === 'jugador' && ocupante.manoLevantada && !sinVoto;
     if (vota) {
-      const valor = n.expulsion ? 1 : this.entorno.valorDelVoto(asiento!, ocupante);
+      const valor = n.expulsion ? 1 : this.entorno.valorDelVoto(jugador!, ocupante);
       v.votos += valor;
       if (valor !== 1) v.valores = { ...v.valores, [jugadorId]: valor };
       const cuenta = this.entorno.cuentaDe(ocupante.id);
@@ -165,7 +165,7 @@ export class Nominaciones {
       // Voto contado: la mano baja sola.
       ocupante.manoLevantada = false;
       ocupante.dosManos = false;
-      if (asiento?.muerto && !conservaVoto) this.entorno.cambiarVoto(asiento.id, true);
+      if (jugador?.muerto && !conservaVoto) this.entorno.cambiarVoto(jugador.id, true);
     }
     v.resultados[jugadorId] = vota ? v.votos : null;
     v.paso += 1;

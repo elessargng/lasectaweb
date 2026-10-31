@@ -50,7 +50,7 @@ const leerQuien = (valor: string): QuienArtista => {
  */
 const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoArtistaProps) => {
   const { personajes, todosPorId } = useFichas();
-  const asientos = estado.plaza;
+  const plaza = estado.plaza;
   const [texto, setTexto] = useState('');
   const [tipo, setTipo] = useState<TipoPreguntaArtista>('es');
   const [quien, setQuien] = useState('tipo:demon');
@@ -58,8 +58,8 @@ const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoAr
   const [todos, setTodos] = useState(false);
   const [letra, setLetra] = useState('');
   const [par, setPar] = useState(true);
-  const [desde, setDesde] = useState(asientos[0]?.id ?? '');
-  const [hasta, setHasta] = useState(asientos[asientos.length - 1]?.id ?? '');
+  const [desde, setDesde] = useState(plaza[0]?.id ?? '');
+  const [hasta, setHasta] = useState(plaza[plaza.length - 1]?.id ?? '');
   const [a, setA] = useState(miAsiento);
   const [cuando, setCuando] = useState<'anoche' | 'algunaNoche'>('anoche');
   const [respuesta, setRespuesta] = useState<RespuestaArtista | null>(null);
@@ -82,7 +82,7 @@ const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoAr
         return { tipo, quien: q };
       case 'es':
         // En el orden de la plaza
-        return elegidos.length ? { tipo, quien: q, jugadores: asientos.filter((x) => elegidos.includes(x.id)).map((x) => x.id), todos } : null;
+        return elegidos.length ? { tipo, quien: q, jugadores: plaza.filter((x) => elegidos.includes(x.id)).map((x) => x.id), todos } : null;
       case 'inicial':
         return letraValida ? { tipo, quien: q, letra: letra.toUpperCase() } : null;
       case 'silla':
@@ -119,7 +119,7 @@ const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoAr
         {etiqueta}
       </label>
       <select id={id} value={valor} onChange={(e) => cambiar(e.target.value)} className={`${campo} text-sm`}>
-        {asientos.map((x) => (
+        {plaza.map((x) => (
           <option key={x.id} value={x.id}>
             {x.id === miAsiento ? `${nombreDeAsiento(estado, x.id)}, tú` : nombreDeAsiento(estado, x.id)}
           </option>
@@ -182,7 +182,7 @@ const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoAr
                   <fieldset className="flex flex-col gap-1" aria-describedby={error && !elegidos.length ? 'sala-artista-error' : undefined}>
                     <legend className="mb-1 font-ui text-xs">Jugadores</legend>
                     <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                      {asientos.map((x) => (
+                      {plaza.map((x) => (
                         <label key={x.id} className="flex cursor-pointer items-center gap-2 text-sm">
                           <input type="checkbox" checked={elegidos.includes(x.id)} onChange={() => alternar(x.id)} />
                           {x.id === miAsiento ? `${nombreDeAsiento(estado, x.id)}, tú` : nombreDeAsiento(estado, x.id)}

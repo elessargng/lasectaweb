@@ -247,10 +247,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     if (revAhora && !propia) {
       for (const jugadorId of revAhora.reveladas.filter((id) => !revAntes?.reveladas.includes(id))) {
         const numero = nuevo.plaza.findIndex((a) => a.id === jugadorId) + 1;
-        const asiento = nuevo.plaza[numero - 1];
-        const ocupante = nuevo.participantes.find((p) => p.id === asiento?.participanteId);
+        const jugador = nuevo.plaza[numero - 1];
+        const ocupante = nuevo.participantes.find((p) => p.id === jugador?.participanteId);
         // Quién es de verdad (su «Is The …»), no la ficha que llevaba
-        const real = asiento ? identidadDe(asiento).personaje : null;
+        const real = jugador ? identidadDe(jugador).personaje : null;
         const personaje = real ? personajesGuionRef.current.get(real) : undefined;
         avisos.push({
           tipo: 'revelacion',
@@ -1874,7 +1874,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       <RepartoPartida
         distribucion={estado.distribucion}
         bolsa={estado.acciones.includes('narrador:bolsa') ? estado.bolsa : null}
-        asientos={estado.plaza}
+        plaza={estado.plaza}
         npcs={estado.npcs}
         setupAceptado={estado.setupAceptado}
         preparacion={estado.fase.momento === 'preparacion'}

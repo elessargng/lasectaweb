@@ -405,8 +405,8 @@ describe('la noche del narrador virtual', () => {
       const escarlata = m.asiento('scarletwoman').id;
       partida.irANoche();
       await m.noche();
-      const asiento = partida.plaza().find((a) => a.id === escarlata)!;
-      expect(identidadDe(asiento)).toBe('imp');
+      const jugador = partida.plaza().find((a) => a.id === escarlata)!;
+      expect(identidadDe(jugador)).toBe('imp');
       expect(m.ctx.recuerdos.cronica.antes.get(escarlata)).toBe('scarletwoman');
       // Se le dijo «Tú eres el Imp» y luego despertó como el Imp (a elegir)
       const despertados = m.despertados();

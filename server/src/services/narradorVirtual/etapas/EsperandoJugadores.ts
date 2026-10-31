@@ -11,8 +11,8 @@ export class EsperandoJugadores implements Etapa {
 
   async alCambiar(ctx: ContextoEtapa): Promise<void> {
     const { partida } = ctx.juego;
-    const asientos = partida.plaza();
-    if (asientos.length === 0 || asientos.some((a) => !a.participanteId)) return;
+    const jugadores = partida.plaza();
+    if (jugadores.length === 0 || jugadores.some((a) => !a.participanteId)) return;
     const reparto = await ctx.plaza.accion('narrador:asignarPersonajes');
     if (!reparto.ok) return;
     const noche = await ctx.plaza.accion('narrador:irANoche');

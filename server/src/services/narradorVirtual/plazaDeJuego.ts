@@ -9,29 +9,29 @@ import type { Jugador } from '../partida/Jugador';
  */
 
 /** El tipo de quien es de verdad el de un asiento. */
-export const tipoReal = (juego: SalaDeJuego, asiento: Jugador): string | undefined => {
+export const tipoReal = (juego: SalaDeJuego, jugador: Jugador): string | undefined => {
   const { partida } = juego;
-  const id = identidadDe(asiento);
+  const id = identidadDe(jugador);
   return id ? partida.guion.personaje(id)?.tipo : undefined;
 };
 
 /** Vivo: ni muerto ni muere esta noche. */
-export const vivo = (asiento: Jugador): boolean => !asiento.muerto && !asiento.muertePendiente;
+export const vivo = (jugador: Jugador): boolean => !jugador.muerto && !jugador.muertePendiente;
 
 /** Cómo se le nombra en voz alta: quien se sienta o, libre, su asiento. */
 export function nombreDeAsiento(juego: SalaDeJuego, jugadorId: string): string {
   const { sala, partida } = juego;
-  const asientos = partida.plaza();
-  const i = asientos.findIndex((a) => a.id === jugadorId);
-  const ocupante = asientos[i]?.participanteId;
+  const jugadores = partida.plaza();
+  const i = jugadores.findIndex((a) => a.id === jugadorId);
+  const ocupante = jugadores[i]?.participanteId;
   return (ocupante && sala.participantes.buscar(ocupante)?.nombre) || `el asiento ${i + 1}`;
 }
 
 /** Lo que consultan las habilidades de noche, desde la sala (para preguntarles como lo haría la sala). */
 export const contextoNoche = ({ partida }: SalaDeJuego): ContextoNoche => ({
   plaza: () => partida.plaza(),
-  identidad: (asiento) => identidadDe(asiento),
-  alineamiento: (asiento) => partida.grimorio.alineamiento(asiento),
+  identidad: (jugador) => identidadDe(jugador),
+  alineamiento: (jugador) => partida.grimorio.alineamiento(jugador),
   personaje: (id) => partida.guion.personaje(id),
   faroles: () => partida.faroles.faroles(),
 });
@@ -45,10 +45,10 @@ export const contextoNoche = ({ partida }: SalaDeJuego): ContextoNoche => ({
  */
 export function sinEntender(juego: SalaDeJuego): string[] {
   const { partida } = juego;
-  const asientos = partida.plaza();
+  const jugadores = partida.plaza();
   return partida.despertares.despertares()
     .filter((d) => {
-      if (!asientos.find((a) => a.id === d.jugador)?.participanteId) return false;
+      if (!jugadores.find((a) => a.id === d.jugador)?.participanteId) return false;
       const ultimo = d.mensajes[d.mensajes.length - 1];
       return !!ultimo && ultimo.ficha !== 'entendido';
     })

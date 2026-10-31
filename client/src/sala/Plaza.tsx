@@ -270,8 +270,8 @@ const Plaza = ({
 }: PlazaProps) => {
   const anadirRef = useRef<HTMLButtonElement>(null);
   const [pidiendo, setPidiendo] = useState(false);
-  const { plaza: asientos, participantes, yo, acciones } = estado;
-  const total = asientos.length;
+  const { plaza, participantes, yo, acciones } = estado;
+  const total = plaza.length;
   const puedeSentarse = acciones.includes('sala:sentarse');
   // El narrador usa las fichas (matar, revivir…) si el servidor se lo permite; un
   // jugador con grimorio, para cambiarlas en el suyo; si no, solo se ven. Revelando el
@@ -283,7 +283,7 @@ const Plaza = ({
   // botones para señalarlas (o dejar de hacerlo, la que ya señalo); al congelarse, ya no.
   const senalamiento = estado.senalamiento;
   const senalCongelada = useSenalamientoCongelado(senalamiento, desfaseReloj);
-  const miAsiento = asientos.find((a) => a.participanteId === yo)?.id ?? null;
+  const miAsiento = plaza.find((a) => a.participanteId === yo)?.id ?? null;
   // Con narrador virtual: lo que un jugador hace desde la ficha de otro (nominarlo, dispararle)
   const actuarSobre = (accion: string, jugadorId: string) => async () => {
     const r = await pedir(accion, { jugadorId });
@@ -296,7 +296,7 @@ const Plaza = ({
   const puedeArtista = acciones.includes('jugador:artista');
   const puedePatoso = acciones.includes('jugador:patoso');
   // El Patoso de verdad (lo dice su ficha) tiene que elegir: se le abre solo, sin poder cancelar
-  const soyPatoso = !!miAsiento && asientos.find((a) => a.id === miAsiento)?.personaje === 'klutz';
+  const soyPatoso = !!miAsiento && plaza.find((a) => a.id === miAsiento)?.personaje === 'klutz';
   useEffect(() => {
     if (puedePatoso && soyPatoso) setDialogoVirtual('patoso');
   }, [puedePatoso, soyPatoso]);
@@ -358,7 +358,7 @@ const Plaza = ({
       const segundos = s.fin !== null ? Math.round((s.fin - s.inicio) / 1000) : null;
       const plazo = segundos !== null ? `, tienes ${segundos} segundos` : '';
       onAnuncio('senalamientos', senalo ? `${que}. Te toca señalar: pulsa la ficha que señalas${plazo}.` : `${que}.`);
-      const primera = senalo ? asientos.find((a) => s.objetivos.includes(a.id)) : undefined;
+      const primera = senalo ? plaza.find((a) => s.objetivos.includes(a.id)) : undefined;
       const activo = document.activeElement as HTMLElement | null;
       const escribiendo = !!activo && (activo.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(activo.tagName));
       if (primera && !escribiendo) window.setTimeout(() => document.getElementById(idFichaNominar(primera.id))?.focus(), 0);
@@ -392,12 +392,12 @@ const Plaza = ({
   // Cómo se ve si a un muerto le queda el voto (Preferencias > Interfaz): su vela, o el círculo en el sudario
   const estiloVoto = useMarcas().voto;
   // Con grimorio propio, lo anotado tapa lo que se ve de la partida (también en la propia)
-  const personajeVisto = (a: (typeof asientos)[number]) =>
+  const personajeVisto = (a: (typeof plaza)[number]) =>
     modoFichas === 'grimorio' && notas[a.id] ? notas[a.id].personaje : a.personaje;
   // Los recordatorios que se ven: los de la partida (a quien ve el grimorio) y, con grimorio propio, los anotados
-  const recordatoriosDe = (a: (typeof asientos)[number]) =>
+  const recordatoriosDe = (a: (typeof plaza)[number]) =>
     recordatoriosDeFicha(a, modoFichas === 'grimorio' ? notasRecordatorios : null);
-  const fichaDe = (a: (typeof asientos)[number]) => {
+  const fichaDe = (a: (typeof plaza)[number]) => {
     const personajeId = personajeVisto(a);
     const personaje = personajeId ? porId.get(personajeId) : undefined;
     return {
@@ -413,8 +413,8 @@ const Plaza = ({
   // Los personajes en juego (para quien mira): sus recordatorios salen primero al poner uno
   // En juego: los de las fichas y los NPCs (legendarios y lóricos), que también llevan recordatorios
   // (también quién es de verdad, por su «Is The …»)
-  const identidades = asientos.flatMap((a) => (identidadDe(a).personaje ? [identidadDe(a).personaje!] : []));
-  const enJuego = new Set([...asientos.map(personajeVisto).filter((id): id is string => !!id), ...identidades, ...estado.npcs]);
+  const identidades = plaza.flatMap((a) => (identidadDe(a).personaje ? [identidadDe(a).personaje!] : []));
+  const enJuego = new Set([...plaza.map(personajeVisto).filter((id): id is string => !!id), ...identidades, ...estado.npcs]);
   // Con todos los personajes ya puestos (quien ve el grimorio), si el reparto no cuadra
   // lo más seguro es que alguien no sea lo que cree: faltan forasteros (el Borracho)
   // o esbirros (la Marioneta). Sus recordatorios salen con los de los que están en juego.
@@ -452,7 +452,7 @@ const Plaza = ({
       else n.delete(jugadorId);
       return n;
     });
-  const notaDe = (a: (typeof asientos)[number]) => (modoFichas === 'grimorio' ? (notasEscritas[a.id] ?? null) : (estado.notas[a.id] ?? null));
+  const notaDe = (a: (typeof plaza)[number]) => (modoFichas === 'grimorio' ? (notasEscritas[a.id] ?? null) : (estado.notas[a.id] ?? null));
   const escriboNotas = modoFichas === 'narrador' || modoFichas === 'grimorio';
   // Guarda la nota de un asiento (con null, la borra) y devuelve el error, o null si ha ido bien
   const guardarNota = async (jugadorId: string, texto: string | null): Promise<string | null> => {
@@ -507,7 +507,7 @@ const Plaza = ({
     onTamanos({ avatar, ficha });
   }, [avatar, ficha, onTamanos]);
   const mover = useMoverAsientos({
-    asientos,
+    plaza,
     participantes,
     plazaRef,
     pedir,
@@ -554,8 +554,8 @@ const Plaza = ({
       onError(r.error);
       return;
     }
-    const i = asientos.findIndex((a) => a.id === jugadorId);
-    const siguiente = [...asientos.slice(i + 1), ...asientos.slice(0, i)].find(
+    const i = plaza.findIndex((a) => a.id === jugadorId);
+    const siguiente = [...plaza.slice(i + 1), ...plaza.slice(0, i)].find(
       (a) => !revelacion?.reveladas.includes(a.id),
     );
     window.setTimeout(() => document.getElementById(siguiente ? idRevelarFicha(siguiente.id) : ID_GANADOR)?.focus(), 0);
@@ -573,7 +573,7 @@ const Plaza = ({
     const r = await pedir('narrador:entregarFichas');
     if (!r.ok) return onError(r.error);
     onAnuncio('bolsa', 'Personajes entregados a los jugadores.');
-    if (asientos[0]) window.setTimeout(() => document.getElementById(idNombreAsiento(asientos[0].id))?.focus(), 0);
+    if (plaza[0]) window.setTimeout(() => document.getElementById(idNombreAsiento(plaza[0].id))?.focus(), 0);
   };
   const terminarRevelacion = async () => {
     const r = await pedir('narrador:terminarRevelacion');
@@ -592,7 +592,7 @@ const Plaza = ({
     onAnuncio('reloj', 'Reloj quitado.');
     window.setTimeout(() => document.getElementById('sala-asientos')?.focus(), 0);
   };
-  const posicionDe = (id: string) => asientos.findIndex((a) => a.id === id);
+  const posicionDe = (id: string) => plaza.findIndex((a) => a.id === id);
   const agujas =
     nominacion && posicionDe(nominacion.desde) >= 0 && posicionDe(nominacion.hasta) >= 0
       ? { desde: posicionDe(nominacion.desde), hasta: posicionDe(nominacion.hasta) }
@@ -608,12 +608,12 @@ const Plaza = ({
   useEffect(() => {
     const pendiente = focoAsientoRef.current;
     const antes = miAsientoRef.current;
-    const ahora = asientos.find((a) => a.participanteId === yo)?.id ?? null;
+    const ahora = plaza.find((a) => a.participanteId === yo)?.id ?? null;
     miAsientoRef.current = ahora;
 
     if (pendiente) {
-      const asiento = asientos.find((a) => a.id === pendiente.jugadorId);
-      if (asiento && (asiento.participanteId === yo) !== pendiente.sentado) return; // aún no ha llegado
+      const jugador = plaza.find((a) => a.id === pendiente.jugadorId);
+      if (jugador && (jugador.participanteId === yo) !== pendiente.sentado) return; // aún no ha llegado
       focoAsientoRef.current = null;
       document.getElementById(idNombreAsiento(pendiente.jugadorId))?.focus();
       return;
@@ -626,11 +626,11 @@ const Plaza = ({
     const narro = participantes.some((p) => p.id === yo && p.rol === 'narrador');
     if (antes && ahora && antes !== ahora) {
       // Me han cambiado de sitio (mezclar).
-      onAnuncio('miAsiento', `Ahora estás en el asiento ${asientos.findIndex((a) => a.id === ahora) + 1}.`);
+      onAnuncio('miAsiento', `Ahora estás en el asiento ${plaza.findIndex((a) => a.id === ahora) + 1}.`);
       return;
     }
     if (antes && antes !== ahora) {
-      const sigue = asientos.some((a) => a.id === antes);
+      const sigue = plaza.some((a) => a.id === antes);
       if (!narro) onAnuncio('miAsiento', sigue ? 'Te han levantado del asiento.' : 'Se ha eliminado tu asiento.');
       const perdido = !document.activeElement || document.activeElement === document.body;
       if (perdido) document.getElementById(sigue ? idNombreAsiento(antes) : 'sala-asientos')?.focus();
@@ -659,7 +659,7 @@ const Plaza = ({
   // Sin `disabled` (tiraría el foco al body): se marcan y no hacen nada.
   const sinMas = total >= ASIENTOS_MAX;
   const sinAsientos = total === 0;
-  const pocosParaMezclar = !asientos.some((a) => a.participanteId);
+  const pocosParaMezclar = !plaza.some((a) => a.participanteId);
   // Las fichas solo se ven (sin menú, sin seguir ni despertares): el asiento ya dice lo que lleva la suya
   const capaOculta = modoFichas === 'ver' && !seguimiento && !despertares;
   // Algo en el centro de la plaza (ver abajo): la ciudad se vela para dejarlo leer
@@ -695,7 +695,7 @@ const Plaza = ({
       )}
       {total > 0 ? (
         <ol id="sala-asientos" tabIndex={-1} aria-label="Asientos" className="focus:outline-none">
-          {asientos.map((a, i) => {
+          {plaza.map((a, i) => {
             // Editando, se ve el movimiento provisional (si se está moviendo a alguien).
             const visible = editando ? mover.ocupanteVisible(a) : a.participanteId;
             const ocupante = participante(visible);
@@ -827,7 +827,7 @@ const Plaza = ({
                     style={posicionFicha(i, total, retirado)}
                   >
                     <FichaAsiento
-                      asiento={a}
+                      jugador={a}
                       marcado={estado.calavera?.jugadorId === a.id}
                       numero={i + 1}
                       ocupante={ocupante}
@@ -959,7 +959,7 @@ const Plaza = ({
           className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 opacity-80"
           style={{ left: arrastrado.x, top: arrastrado.y }}
         >
-          <CuadroAvatar imagen={participante(asientos.find((a) => a.id === arrastrado.desde)?.participanteId ?? null)?.avatar} />
+          <CuadroAvatar imagen={participante(plaza.find((a) => a.id === arrastrado.desde)?.participanteId ?? null)?.avatar} />
         </div>
       )}
 
@@ -971,7 +971,7 @@ const Plaza = ({
           style={{ left: intercambio.arrastre.x, top: intercambio.arrastre.y }}
         >
           {(() => {
-            const a = asientos.find((x) => x.id === intercambio.arrastre!.desde);
+            const a = plaza.find((x) => x.id === intercambio.arrastre!.desde);
             const p = a?.personaje ? todosPorId.get(a.personaje) : undefined;
             return <FichaRedonda>{p && <PersonajeEnFicha personaje={p} alineamiento={a!.alineamiento} />}</FichaRedonda>;
           })()}
@@ -993,11 +993,11 @@ const Plaza = ({
       {intercambiando && (
         <DialogoIntercambio
           ficha={nombreDeAsiento(estado, intercambiando)}
-          otras={asientos
+          otras={plaza
             .filter((a) => a.id !== intercambiando)
             .map((a) => ({
               jugadorId: a.id,
-              nombre: describirAsiento(asientos.indexOf(a) + 1, participante(a.participanteId)),
+              nombre: describirAsiento(plaza.indexOf(a) + 1, participante(a.participanteId)),
               personaje: a.personaje ? todosPorId.get(a.personaje) : undefined,
             }))}
           onElegir={(hasta) => void intercambio.intercambiar(intercambiando, hasta)}

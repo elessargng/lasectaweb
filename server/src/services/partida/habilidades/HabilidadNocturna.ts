@@ -93,8 +93,8 @@ export interface HabilidadNocturna {
   tipoEnsenado?: string;
   /** Los que despiertan, si no es el de su ficha (los esbirros, el demonio): cada uno, con su `preparar`. */
   despiertan?(ctx: ContextoNoche): Jugador[];
-  preparar(ctx: ContextoNoche, asiento: Jugador): Resultado;
-  alElegir(ctx: ContextoNoche, asiento: Jugador, elegidos: Jugador[]): Resultado;
+  preparar(ctx: ContextoNoche, jugador: Jugador): Resultado;
+  alElegir(ctx: ContextoNoche, jugador: Jugador, elegidos: Jugador[]): Resultado;
 }
 
 // Lo que se manda
@@ -151,15 +151,15 @@ export const revisar = (opciones: OpcionDespertar[], avisos: AvisoHabilidad[]): 
 export { droison };
 
 /** Puede registrar como otra cosa: un Espía o una Reclusa sanos. */
-export const dudoso = (ctx: ContextoNoche, asiento: Jugador): boolean =>
-  ['spy', 'recluse'].includes(ctx.identidad(asiento) ?? '') && !droison(ctx, asiento);
+export const dudoso = (ctx: ContextoNoche, jugador: Jugador): boolean =>
+  ['spy', 'recluse'].includes(ctx.identidad(jugador) ?? '') && !droison(ctx, jugador);
 
 /** Muerto, o muere esta noche. */
-export const fuera = (asiento: Jugador): boolean => asiento.muerto || asiento.muertePendiente;
+export const fuera = (jugador: Jugador): boolean => jugador.muerto || jugador.muertePendiente;
 
 /** El tipo de quien es de verdad el de un asiento. */
-export const tipoDe = (ctx: ContextoNoche, asiento: Jugador): string | undefined => {
-  const id = ctx.identidad(asiento);
+export const tipoDe = (ctx: ContextoNoche, jugador: Jugador): string | undefined => {
+  const id = ctx.identidad(jugador);
   return id ? ctx.personaje(id)?.tipo : undefined;
 };
 
@@ -172,9 +172,9 @@ export const pideRecordatorio = (ctx: ContextoNoche, personaje: string, texto: s
   conRecordatorio(ctx, personaje, texto) ? [] : [{ tipo: 'faltaRecordatorio', personaje, texto }];
 
 /** Los vecinos vivos más cercanos, a cada lado (los asientos libres cuentan como jugadores). */
-export function vecinosVivos(ctx: ContextoNoche, asiento: Jugador): Jugador[] {
-  const vivos = ctx.plaza().filter((a) => a.id === asiento.id || !fuera(a));
-  const i = vivos.findIndex((a) => a.id === asiento.id);
+export function vecinosVivos(ctx: ContextoNoche, jugador: Jugador): Jugador[] {
+  const vivos = ctx.plaza().filter((a) => a.id === jugador.id || !fuera(a));
+  const i = vivos.findIndex((a) => a.id === jugador.id);
   const n = vivos.length;
   if (i < 0 || n < 2) return [];
   const [izquierda, derecha] = [vivos[(i - 1 + n) % n], vivos[(i + 1) % n]];
@@ -182,9 +182,9 @@ export function vecinosVivos(ctx: ContextoNoche, asiento: Jugador): Jugador[] {
 }
 
 /** Cómo puede registrar cada uno en un alineamiento: el de verdad y, el Espía y la Reclusa, también el otro. */
-export const alineamientosPosibles = (ctx: ContextoNoche, asiento: Jugador): Registro[] => {
-  if (!dudoso(ctx, asiento)) return [];
-  const real = ctx.alineamiento(asiento) === 'malvado' ? 'malvado' : 'bueno';
+export const alineamientosPosibles = (ctx: ContextoNoche, jugador: Jugador): Registro[] => {
+  if (!dudoso(ctx, jugador)) return [];
+  const real = ctx.alineamiento(jugador) === 'malvado' ? 'malvado' : 'bueno';
   return [real, real === 'malvado' ? 'bueno' : 'malvado'];
 };
 
@@ -197,11 +197,11 @@ export const alineamientosPosibles = (ctx: ContextoNoche, asiento: Jugador): Reg
  */
 export function segunRegistros(
   ctx: ContextoNoche,
-  asientos: readonly Jugador[],
-  posibles: (asiento: Jugador) => Registro[],
-  calcular: (registro: (asiento: Jugador) => Registro | null) => EnvioDespertar,
+  jugadores: readonly Jugador[],
+  posibles: (jugador: Jugador) => Registro[],
+  calcular: (registro: (jugador: Jugador) => Registro | null) => EnvioDespertar,
 ): OpcionDespertar[] {
-  const dudosos = [...new Map(asientos.filter((a) => posibles(a).length > 1).map((a) => [a.id, a])).values()];
+  const dudosos = [...new Map(jugadores.filter((a) => posibles(a).length > 1).map((a) => [a.id, a])).values()];
   let combinaciones: Map<string, Registro>[] = [new Map()];
   for (const a of dudosos) {
     combinaciones = combinaciones.flatMap((c) => posibles(a).map((r) => new Map([...c, [a.id, r]])));
@@ -222,12 +222,12 @@ export function segunRegistros(
  */
 export function informar(
   ctx: ContextoNoche,
-  asiento: Jugador,
+  jugador: Jugador,
   info: { opciones: OpcionDespertar[]; avisos?: AvisoHabilidad[]; efectos?: Efectos },
   previos: AvisoHabilidad[] = [],
   siempreRevisa = false,
 ): Resultado {
-  const estaDroison = droison(ctx, asiento);
+  const estaDroison = droison(ctx, jugador);
   // Con varias respuestas, quién puede registrar como otra cosa (una vez cada uno)
   const registran =
     info.opciones.length > 1
@@ -256,11 +256,11 @@ abstract class Habilidad implements HabilidadNocturna {
   }
 
   /** Muerto (o muere esta noche) ya no despierta, salvo quien despierta precisamente por morir. */
-  protected muerto(asiento: Jugador): boolean {
-    return this.despiertaAlMorir ? asiento.muerto : fuera(asiento);
+  protected muerto(jugador: Jugador): boolean {
+    return this.despiertaAlMorir ? jugador.muerto : fuera(jugador);
   }
 
-  abstract preparar(ctx: ContextoNoche, asiento: Jugador): Resultado;
+  abstract preparar(ctx: ContextoNoche, jugador: Jugador): Resultado;
 
   alElegir(_ctx: ContextoNoche, _asiento: Jugador, _elegidos: Jugador[]): Resultado {
     return falta([]);
@@ -274,9 +274,9 @@ abstract class Elige extends Habilidad {
     this.eleccion = eleccion;
   }
 
-  preparar(ctx: ContextoNoche, asiento: Jugador): Resultado {
-    if (this.muerto(asiento)) return falta([{ tipo: 'muerto' }]);
-    const faltan = this.requisitos(ctx, asiento);
+  preparar(ctx: ContextoNoche, jugador: Jugador): Resultado {
+    if (this.muerto(jugador)) return falta([{ tipo: 'muerto' }]);
+    const faltan = this.requisitos(ctx, jugador);
     return faltan.length ? falta(faltan) : listo(null);
   }
 }
@@ -297,11 +297,11 @@ export class EligeYMarca extends Elige {
     this.tramo = tramo;
   }
 
-  alElegir(ctx: ContextoNoche, asiento: Jugador, [elegido]: Jugador[]): Resultado {
+  alElegir(ctx: ContextoNoche, jugador: Jugador, [elegido]: Jugador[]): Resultado {
     const avisos: AvisoHabilidad[] = [{ tipo: 'elegido', jugadores: [elegido.id] }];
-    const estaDroison = droison(ctx, asiento);
+    const estaDroison = droison(ctx, jugador);
     if (estaDroison) return listo(OK, sinEfectos(), [...avisos, { tipo: estaDroison }, { tipo: 'sinEfecto' }]);
-    return this.marcar(ctx, asiento, elegido, avisos);
+    return this.marcar(ctx, jugador, elegido, avisos);
   }
 
   /** Lo que pasa con el elegido: su recordatorio. */
@@ -320,12 +320,12 @@ export abstract class EligeYSabe extends Elige {
     super(personaje, { cantidad, puedeElegirse });
   }
 
-  alElegir(ctx: ContextoNoche, asiento: Jugador, elegidos: Jugador[]): Resultado {
-    return informar(ctx, asiento, this.saber(ctx, asiento, elegidos), [{ tipo: 'elegido', jugadores: elegidos.map((a) => a.id) }], true);
+  alElegir(ctx: ContextoNoche, jugador: Jugador, elegidos: Jugador[]): Resultado {
+    return informar(ctx, jugador, this.saber(ctx, jugador, elegidos), [{ tipo: 'elegido', jugadores: elegidos.map((a) => a.id) }], true);
   }
 
   /** Lo que sabe por los que ha elegido. */
-  protected abstract saber(ctx: ContextoNoche, asiento: Jugador, elegidos: Jugador[]): { opciones: OpcionDespertar[]; avisos?: AvisoHabilidad[] };
+  protected abstract saber(ctx: ContextoNoche, jugador: Jugador, elegidos: Jugador[]): { opciones: OpcionDespertar[]; avisos?: AvisoHabilidad[] };
 }
 
 /**
@@ -334,13 +334,13 @@ export abstract class EligeYSabe extends Elige {
  * de verdad, si se puede calcular, como propuesta).
  */
 export abstract class RecibeInformacion extends Habilidad {
-  preparar(ctx: ContextoNoche, asiento: Jugador): Resultado {
-    if (this.muerto(asiento)) return falta([{ tipo: 'muerto' }]);
-    const faltan = this.requisitos(ctx, asiento);
-    if (faltan.length && !droison(ctx, asiento)) return falta(faltan);
-    return informar(ctx, asiento, faltan.length ? { opciones: [], avisos: faltan } : this.informacion(ctx, asiento));
+  preparar(ctx: ContextoNoche, jugador: Jugador): Resultado {
+    if (this.muerto(jugador)) return falta([{ tipo: 'muerto' }]);
+    const faltan = this.requisitos(ctx, jugador);
+    if (faltan.length && !droison(ctx, jugador)) return falta(faltan);
+    return informar(ctx, jugador, faltan.length ? { opciones: [], avisos: faltan } : this.informacion(ctx, jugador));
   }
 
   /** Lo que se le manda (las opciones; sin ninguna, nada) y lo que cambia (el grimorio del Espía). */
-  protected abstract informacion(ctx: ContextoNoche, asiento: Jugador): { opciones: OpcionDespertar[]; avisos?: AvisoHabilidad[]; efectos?: Efectos };
+  protected abstract informacion(ctx: ContextoNoche, jugador: Jugador): { opciones: OpcionDespertar[]; avisos?: AvisoHabilidad[]; efectos?: Efectos };
 }

@@ -50,11 +50,11 @@ export function apuntarNoche(cronica: Cronica, juego: SalaDeJuego): void {
   const { partida } = juego;
   const noche = partida.fases.actual().numero;
   cronica.ultimaNoche = noche;
-  const asientos = partida.plaza();
+  const jugadores = partida.plaza();
   const despertares = partida.despertares.despertares();
   const ctx = contextoNoche(juego);
   for (const { jugador: asiento, mensajes } of despertares) {
-    const a = asientos.find((x) => x.id === asiento);
+    const a = jugadores.find((x) => x.id === asiento);
     if (!a) continue;
     // Cada elección: lo primero con jugadores que llega tras pedírsela
     const eligio: string[][] = [];
@@ -76,9 +76,9 @@ export function apuntarNoche(cronica: Cronica, juego: SalaDeJuego): void {
   }
   cronica.falsas.clear();
   // Quién eligió a cada muerto: si fue un demonio, a sus manos (o se mató él, el Imp que pasa)
-  for (const muerto of asientos.filter((a) => a.muertePendiente)) {
+  for (const muerto of jugadores.filter((a) => a.muertePendiente)) {
     const demonio = despertares.find((d) => {
-      const quien = asientos.find((x) => x.id === d.jugador);
+      const quien = jugadores.find((x) => x.id === d.jugador);
       return !!quien && tipoReal(juego, quien) === 'demon' && d.mensajes.some((m) => m.ficha === 'jugador' && m.jugadores.includes(muerto.id));
     });
     const causa = !demonio ? 'otra' : demonio.jugador === muerto.id ? 'suicidio' : 'demonio';
@@ -96,30 +96,30 @@ export function apuntarMuerteDeDia(cronica: Cronica, juego: SalaDeJuego, asiento
  * Lo que se cuenta de un asiento al revelar su ficha. Un demonio, sea cual sea, es
  * siempre «el demonio» (quién era, lo que creía ser, lo que le enseñaron…), nunca su nombre.
  */
-export function fraseAlRevelar(cronica: Cronica, juego: SalaDeJuego, asiento: Jugador): string {
+export function fraseAlRevelar(cronica: Cronica, juego: SalaDeJuego, jugador: Jugador): string {
   const { partida } = juego;
   const nombreP = (id: string) => {
     const personaje = partida.guion.personaje(id);
     return personaje?.tipo === 'demon' ? 'el demonio' : (personaje?.nombre ?? id);
   };
   const nombre = (id: string) => nombreDeAsiento(juego, id);
-  const identidad = identidadDe(asiento) ?? asiento.personaje;
-  const noches: NocheRevelada[] = (cronica.noches.get(asiento.id) ?? []).map((n) => ({
+  const identidad = identidadDe(jugador) ?? jugador.personaje;
+  const noches: NocheRevelada[] = (cronica.noches.get(jugador.id) ?? []).map((n) => ({
     noche: n.noche,
     eligio: n.eligio.map((ids) => listaConA(ids.map(nombre))),
     infos: n.infos.map(({ envio, falsa }) => ({ que: describirInformacion(envio, nombre, nombreP), falsa })),
     // El Borracho ya lo dice «creía que era…»
     envenenado: n.droison === 'envenenado',
   }));
-  const muerte = asiento.muerto ? (cronica.muertes.get(asiento.id) ?? null) : null;
+  const muerte = jugador.muerto ? (cronica.muertes.get(jugador.id) ?? null) : null;
   // Despierta cada noche con su información y murió antes de que acabara: dejó de recibirla
-  const ficha = asiento.personaje;
-  const antes = cronica.antes.get(asiento.id);
+  const ficha = jugador.personaje;
+  const antes = cronica.antes.get(jugador.id);
   const conInformacion = noches.some((n) => n.infos.length > 0);
   const cadaNoche = !!ficha && conInformacion && (partida.guion.actual()?.otrasNoches ?? []).includes(ficha);
   const antesDelFinal = !!muerte && (muerte.momento === 'noche' || muerte.numero < cronica.ultimaNoche);
   return FRASES.alRevelar({
-    nombre: nombreDeAsiento(juego, asiento.id),
+    nombre: nombreDeAsiento(juego, jugador.id),
     personaje: identidad ? nombreP(identidad) : null,
     creia: ficha && identidad && ficha !== identidad ? nombreP(ficha) : null,
     antes: antes ? nombreP(antes) : null,

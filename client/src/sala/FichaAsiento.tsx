@@ -26,7 +26,7 @@ import { describirAsiento } from './nombresAsiento';
 import type { Alineamiento, JugadorDto, ParticipanteDto, ResultadoAccion } from './useSala';
 
 interface FichaAsientoProps {
-  asiento: JugadorDto;
+  jugador: JugadorDto;
   /** Lleva la calavera. */
   marcado: boolean;
   /** Su número en la plaza (1 es el de las 12). */
@@ -124,7 +124,7 @@ const NOMBRE_ALINEAMIENTO: Record<Alineamiento, string> = { bueno: 'bueno', malv
  * ella pero no se anuncia al cambiar.
  */
 const FichaAsiento = ({
-  asiento,
+  jugador,
   marcado,
   numero,
   ocupante,
@@ -156,17 +156,17 @@ const FichaAsiento = ({
   const [eligiendoRecordatorio, setEligiendoRecordatorio] = useState(false);
   // Matando de noche: se elige el recordatorio de quien lo mata (o ninguno)
   const [matando, setMatando] = useState(false);
-  const recordatorios = recordatoriosDeFicha(asiento, modo === 'grimorio' ? notasRecordatorios : null);
+  const recordatorios = recordatoriosDeFicha(jugador, modo === 'grimorio' ? notasRecordatorios : null);
 
   // Lo que lleva: con grimorio propio, lo anotado en él (en cualquier ficha, también la
   // suya); si no hay nada anotado, o sin grimorio, lo de la partida que se ve (narrador,
   // la propia, los viajeros). Sin guion no hay personajes que anotar.
   const anotando = modo === 'grimorio' && hayGuion;
-  const anotado = anotando ? notas[asiento.id] : undefined;
+  const anotado = anotando ? notas[jugador.id] : undefined;
   // El alineamiento, el de quien es de verdad (su «Is The …»): un Alquimista con la
   // ficha de un esbirro sale bueno
-  const contenido: ContenidoFicha = anotado ?? { personaje: asiento.personaje, alineamiento: alineamientoReal(asiento, todosPorId) };
-  const identidad = identidadDe(asiento);
+  const contenido: ContenidoFicha = anotado ?? { personaje: jugador.personaje, alineamiento: alineamientoReal(jugador, todosPorId) };
+  const identidad = identidadDe(jugador);
   // Al revelar el grimorio se ve quién es de verdad (el Filósofo, no el Alcalde que hacía)
   const personaje =
     revelando && identidad.porRecordatorio && identidad.personaje
@@ -238,9 +238,9 @@ const FichaAsiento = ({
   const ficha = (
     <span ref={fichaRef} data-resaltada={(resaltada && conPista) || undefined} className="relative block">
       <FichaRedonda
-        muerto={asiento.muerto}
-        muertePendiente={asiento.muertePendiente}
-        votoGastado={asiento.votoGastado}
+        muerto={jugador.muerto}
+        muertePendiente={jugador.muertePendiente}
+        votoGastado={jugador.votoGastado}
         marcado={marcado}
         voto={voto}
         bocaAbajo={bocaAbajo}
@@ -262,7 +262,7 @@ const FichaAsiento = ({
     if (!bocaAbajo || !revelando.onRevelar) return ficha;
     return (
       <button
-        id={idRevelarFicha(asiento.id)}
+        id={idRevelarFicha(jugador.id)}
         type="button"
         onClick={revelando.onRevelar}
         aria-label={`Revelar la ficha del ${describirAsiento(numero, ocupante)}${personaje ? `: ${personaje.nombre.texto}` : ', sin personaje'}`}
@@ -280,7 +280,7 @@ const FichaAsiento = ({
     const yaNominado = !!eligiendo.yaNominado;
     return (
       <button
-        id={idFichaNominar(asiento.id)}
+        id={idFichaNominar(jugador.id)}
         type="button"
         onClick={eligiendo.onPulsar}
         aria-label={`${eligiendo.accion ?? 'Nominar'} al ${describirAsiento(numero, ocupante)}${origen ? ', que es el que nomina' : ''}${
@@ -318,11 +318,11 @@ const FichaAsiento = ({
   // El alineamiento se dice si no es el de su tipo (o si es un viajero y ya lo tiene)
   const alineamientoDistinto = personaje && contenido.alineamiento && contenido.alineamiento !== alineamientoDeTipo(personaje.tipo);
   // El farol que dice usar (lo ven quien se sienta ahí y el narrador)
-  const farolEnUso = asiento.farolEnUso ? todosPorId.get(asiento.farolEnUso) : undefined;
+  const farolEnUso = jugador.farolEnUso ? todosPorId.get(jugador.farolEnUso) : undefined;
   const estado = [
     personaje && `${personaje.nombre.texto}${alineamientoDistinto ? `, ${NOMBRE_ALINEAMIENTO[contenido.alineamiento!]}` : ''}`,
-    asiento.muerto && (asiento.votoGastado ? 'muerta, sin voto' : 'muerta, con voto'),
-    asiento.muertePendiente && 'muerta esta noche, sin anunciar',
+    jugador.muerto && (jugador.votoGastado ? 'muerta, sin voto' : 'muerta, con voto'),
+    jugador.muertePendiente && 'muerta esta noche, sin anunciar',
     marcado && 'con la calavera',
     ocupante?.manoLevantada &&
       (ocupante.dosManos ? 'las dos manos levantadas' : `mano levantada (${nombreMano(ocupante.formaMano, todosPorId).toLocaleLowerCase('es')})`),
@@ -342,7 +342,7 @@ const FichaAsiento = ({
   if (!editable) {
     if (!seguir) return ficha;
     // Sin menú (visitantes): la ficha activa y quita el seguimiento.
-    const idEstado = `sala-ficha-estado-${asiento.id}`;
+    const idEstado = `sala-ficha-estado-${jugador.id}`;
     return (
       <button
         type="button"
@@ -363,9 +363,9 @@ const FichaAsiento = ({
   }
 
   // Revivir quita también una muerte pendiente
-  const vivo = !asiento.muerto && !asiento.muertePendiente;
+  const vivo = !jugador.muerto && !jugador.muertePendiente;
   const cambiarVida = async () => {
-    const r = await pedir('narrador:cambiarVida', { jugadorId: asiento.id, muerto: vivo });
+    const r = await pedir('narrador:cambiarVida', { jugadorId: jugador.id, muerto: vivo });
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha, que ya dice su estado.
     return false;
@@ -373,33 +373,33 @@ const FichaAsiento = ({
   // De noche: primero el recordatorio de quien lo mata; la muerte queda pendiente
   const matarDeNoche = async (recordatorio: { personaje: PersonajeMostrado; indice: number } | null) => {
     if (recordatorio) {
-      const r = await pedir('narrador:ponerRecordatorio', { jugadorId: asiento.id, personajeId: recordatorio.personaje.id, indice: recordatorio.indice });
+      const r = await pedir('narrador:ponerRecordatorio', { jugadorId: jugador.id, personajeId: recordatorio.personaje.id, indice: recordatorio.indice });
       if (!r.ok) {
         onError(r.error);
         return;
       }
     }
-    const r = await pedir('narrador:cambiarVida', { jugadorId: asiento.id, muerto: true });
+    const r = await pedir('narrador:cambiarVida', { jugadorId: jugador.id, muerto: true });
     if (!r.ok) onError(r.error);
   };
   // Ejecutar al que lleva la calavera: muere, se le ponen los recordatorios de las
   // ejecuciones (el Caníbal, el Enterrador…) y anochece, salvo con el Carnicero vivo o si
   // quedan dos vivos (entonces el narrador elige: noche o revelar el grimorio, ver SalaJuego)
   const ejecutar = async () => {
-    const r = await pedir('narrador:ejecutar', { jugadorId: asiento.id });
+    const r = await pedir('narrador:ejecutar', { jugadorId: jugador.id });
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha, que ya dice que ha muerto.
     return false;
   };
   const confirmarMuerte = async () => {
-    const r = await pedir('narrador:confirmarMuerte', { jugadorId: asiento.id });
+    const r = await pedir('narrador:confirmarMuerte', { jugadorId: jugador.id });
     if (!r.ok) onError(r.error);
     return false;
   };
 
   // El voto que le queda a un muerto: el narrador se lo quita o se lo devuelve a mano.
   const cambiarVoto = async () => {
-    const r = await pedir('narrador:cambiarVoto', { jugadorId: asiento.id, gastado: !asiento.votoGastado });
+    const r = await pedir('narrador:cambiarVoto', { jugadorId: jugador.id, gastado: !jugador.votoGastado });
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha, que ya dice si le queda el voto.
     return false;
@@ -407,7 +407,7 @@ const FichaAsiento = ({
 
   // Desde aquí la marca no cierra la nominación (el botón «Marca» de la nominación sí).
   const cambiarMarca = async () => {
-    const r = await pedir('narrador:marcar', { jugadorId: asiento.id, marcado: !marcado, cerrarNominacion: false });
+    const r = await pedir('narrador:marcar', { jugadorId: jugador.id, marcado: !marcado, cerrarNominacion: false });
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha, que ya dice si lleva la calavera.
     return false;
@@ -416,18 +416,18 @@ const FichaAsiento = ({
   // El narrador cambia la partida; un jugador, su grimorio.
   const ponerPersonaje = async (personajeId: string | null) => {
     if (modo !== 'narrador') {
-      anotar(asiento.id, { personaje: personajeId, alineamiento: null });
+      anotar(jugador.id, { personaje: personajeId, alineamiento: null });
       return;
     }
-    const r = await pedir('narrador:cambiarPersonaje', { jugadorId: asiento.id, personajeId });
+    const r = await pedir('narrador:cambiarPersonaje', { jugadorId: jugador.id, personajeId });
     if (!r.ok) onError(r.error);
   };
   const ponerAlineamiento = async (alineamiento: Alineamiento) => {
     if (modo !== 'narrador') {
-      anotar(asiento.id, { personaje: contenido.personaje, alineamiento });
+      anotar(jugador.id, { personaje: contenido.personaje, alineamiento });
       return false;
     }
-    const r = await pedir('narrador:cambiarAlineamiento', { jugadorId: asiento.id, alineamiento });
+    const r = await pedir('narrador:cambiarAlineamiento', { jugadorId: jugador.id, alineamiento });
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha, que ya dice su alineamiento.
     return false;
@@ -459,23 +459,23 @@ const FichaAsiento = ({
       const puestos = Object.entries(notasRecordatorios).flatMap(([a, lista]) =>
         lista.filter((r) => r.personaje === p.id && iguales.has(r.indice)).map((r) => ({ jugadorId: a, id: r.id })),
       );
-      const sobra = puestos.length >= iguales.size ? (puestos.find((x) => x.jugadorId !== asiento.id) ?? puestos[0]) : undefined;
+      const sobra = puestos.length >= iguales.size ? (puestos.find((x) => x.jugadorId !== jugador.id) ?? puestos[0]) : undefined;
       const sin = (a: string) => (notasRecordatorios[a] ?? []).filter((r) => r.id !== sobra?.id);
-      if (sobra && sobra.jugadorId !== asiento.id) anotarRecordatorios(sobra.jugadorId, sin(sobra.jugadorId));
-      anotarRecordatorios(asiento.id, [...sin(asiento.id), { id: crypto.randomUUID(), personaje: p.id, indice, texto }]);
+      if (sobra && sobra.jugadorId !== jugador.id) anotarRecordatorios(sobra.jugadorId, sin(sobra.jugadorId));
+      anotarRecordatorios(jugador.id, [...sin(jugador.id), { id: crypto.randomUUID(), personaje: p.id, indice, texto }]);
       return;
     }
-    const r = await pedir('narrador:ponerRecordatorio', { jugadorId: asiento.id, personajeId: p.id, indice });
+    const r = await pedir('narrador:ponerRecordatorio', { jugadorId: jugador.id, personajeId: p.id, indice });
     if (!r.ok) onError(r.error);
   };
   // Con texto propio: igual, pero sin personaje (va en redondo en la ficha)
   const ponerRecordatorioTexto = async (texto: string, icono: string) => {
     if (modo !== 'narrador') {
       const nuevo = { id: crypto.randomUUID(), personaje: RECORDATORIO_TEXTO, indice: -1, texto, icono };
-      anotarRecordatorios(asiento.id, [...(notasRecordatorios[asiento.id] ?? []), nuevo]);
+      anotarRecordatorios(jugador.id, [...(notasRecordatorios[jugador.id] ?? []), nuevo]);
       return;
     }
-    const r = await pedir('narrador:ponerRecordatorioTexto', { jugadorId: asiento.id, texto, icono });
+    const r = await pedir('narrador:ponerRecordatorioTexto', { jugadorId: jugador.id, texto, icono });
     if (!r.ok) onError(r.error);
   };
   const opcionRecordatorio: OpcionMenu = {
@@ -496,9 +496,9 @@ const FichaAsiento = ({
           vivo && deNoche
             ? { id: 'vida', etiqueta: `Matar ${quien}`, abreDialogo: true, elegir: () => setMatando(true) }
             : { id: 'vida', etiqueta: vivo ? `Matar ${quien}` : `Revivir ${quien}`, elegir: cambiarVida },
-          ...(asiento.muertePendiente ? [{ id: 'anunciar', etiqueta: 'Anunciar su muerte', elegir: confirmarMuerte }] : []),
-          ...(asiento.muerto
-            ? [{ id: 'voto', etiqueta: asiento.votoGastado ? 'Devolver voto' : 'Quitar voto', elegir: cambiarVoto }]
+          ...(jugador.muertePendiente ? [{ id: 'anunciar', etiqueta: 'Anunciar su muerte', elegir: confirmarMuerte }] : []),
+          ...(jugador.muerto
+            ? [{ id: 'voto', etiqueta: jugador.votoGastado ? 'Devolver voto' : 'Quitar voto', elegir: cambiarVoto }]
             : []),
           // De noche no se marca a nadie
           ...(deNoche ? [] : [{ id: 'marca', etiqueta: marcado ? 'Desmarcar' : 'Marcar', elegir: cambiarMarca }]),
@@ -547,7 +547,7 @@ const FichaAsiento = ({
   return (
     <>
       <MenuDesplegable
-        id={`sala-ficha-${asiento.id}`}
+        id={`sala-ficha-${jugador.id}`}
         // Nombre fijo y el estado en la descripción: así, con el foco en la ficha, no se
         // anuncia cada cambio (la mano que baja al votar, los votos…)
         etiqueta={nombreFicha}
