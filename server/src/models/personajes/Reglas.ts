@@ -13,6 +13,8 @@ import { reclusa } from './reclusa';
 import {
   droison,
   type ContextoReglas,
+  type CreeSerOtro,
+  type Droison,
   type FinDePartida,
   type Herencia,
   type PasaASerDemonio,
@@ -21,6 +23,8 @@ import {
 } from './ReglaPersonaje';
 import type { Alineamiento } from '../compartido/jugador';
 import { santo } from './santo';
+import { borracho } from './borracho';
+import { envenenador } from './envenenador';
 import { mujerEscarlata } from './mujerEscarlata';
 import { revolucionario } from './revolucionario';
 import { voudon } from './voudon';
@@ -51,6 +55,9 @@ export const REGLAS: readonly ReglaPersonaje[] = [
   leviatan,
   carnicero,
   revolucionario,
+  // Quién está droison
+  envenenador,
+  borracho,
   // Cómo registran
   reclusa,
   espia,
@@ -179,6 +186,20 @@ export class Reglas {
   /** A quién le llega lo que le hacen a un jugador: a él, con lo que cambie cada regla. */
   objetivo(jugador: Jugador): Objetivo {
     return this.reglas.reduce((o, r) => r.alterarObjetivo?.(this.ctx, jugador, o) ?? o, objetivoReal(jugador));
+  }
+
+  /** Si está envenenado o borracho: lo que diga la primera regla, o null (sano). */
+  droison(jugador: Jugador): Droison | null {
+    for (const r of this.reglas) {
+      const droison = r.droison?.(this.ctx, jugador);
+      if (droison) return droison;
+    }
+    return null;
+  }
+
+  /** Si ese personaje no va en la bolsa y cree ser otro (el Borracho): cómo; si no, undefined. */
+  creeSerOtro(personaje: string): CreeSerOtro | undefined {
+    return this.reglas.find((r) => r.personaje === personaje)?.creeSerOtro;
   }
 
   /** Si la partida acaba por un personaje: quién gana (lo que diga la primera regla), o undefined. */

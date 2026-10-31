@@ -121,7 +121,7 @@ export class Noche implements Etapa {
     const guion = partida.guion.actual();
     const primera = partida.fases.actual().numero === 1;
     const habilidades = habilidadesDelGuion(guion?.edicion ?? null);
-    if (primera) await this.ponerBorracho(ctx);
+    if (primera) await this.ponerQuienCreeSerOtro(ctx);
     const plan = planificarNoche({
       orden: (primera ? guion?.primeraNoche : guion?.otrasNoches) ?? [],
       primera,
@@ -144,26 +144,31 @@ export class Noche implements Etapa {
   }
 
   /**
-   * La primera noche, si salió el Borracho: «Is The Drunk» a quien tiene la ficha
-   * que cree ser (elegida con la bolsa); si no se eligió, a un aldeano que se decide.
+   * La primera noche, por cada uno de los que no van en la bolsa y creen ser otro
+   * (el Borracho, ver ReglaPersonaje.creeSerOtro): su recordatorio a quien tiene la
+   * ficha que cree ser (elegida con la bolsa); si no se eligió, a uno de ese tipo
+   * que se decide.
    */
-  private async ponerBorracho(ctx: ContextoEtapa): Promise<void> {
+  private async ponerQuienCreeSerOtro(ctx: ContextoEtapa): Promise<void> {
     const { partida } = ctx.juego;
-    const drunk = ctx.fueraDeLaBolsa().find((f) => f.personaje === 'drunk');
-    if (!drunk) return;
-    const aldeanos = partida.plaza().filter((a) => a.personaje && partida.guion.personaje(a.personaje)?.tipo === 'townsfolk');
-    const elQueCreeSer = aldeanos.find((a) => a.personaje === drunk.creeSer);
-    if (elQueCreeSer) {
-      await ponerRecordatorio(ctx, elQueCreeSer.id, 'drunk', 'Is The Drunk');
-      return;
+    for (const fuera of ctx.fueraDeLaBolsa()) {
+      const como = partida.reglas.creeSerOtro(fuera.personaje);
+      if (!como) continue;
+      const candidatos = partida.plaza().filter((a) => a.personaje && partida.guion.personaje(a.personaje)?.tipo === como.tipo);
+      const elQueCreeSer = candidatos.find((a) => a.personaje === fuera.creeSer);
+      if (elQueCreeSer) {
+        await ponerRecordatorio(ctx, elQueCreeSer.id, fuera.personaje, como.recordatorio);
+        continue;
+      }
+      if (!candidatos.length) continue;
+      const nombre = partida.guion.personaje(fuera.personaje)?.nombre ?? fuera.personaje;
+      const quien = await ctx.decidir({
+        motivo: 'creeSerOtro',
+        pregunta: `${nombre}: quién lo es en realidad (cree ser el personaje de su ficha).`,
+        opciones: opcionesDeAsientos(ctx.juego, candidatos),
+      });
+      await ponerRecordatorio(ctx, quien.id, fuera.personaje, como.recordatorio);
     }
-    if (!aldeanos.length) return;
-    const borracho = await ctx.decidir({
-      motivo: 'borracho',
-      pregunta: 'El Borracho: el aldeano que en realidad es el Borracho (cree ser ese aldeano).',
-      opciones: opcionesDeAsientos(ctx.juego, aldeanos),
-    });
-    await ponerRecordatorio(ctx, borracho.id, 'drunk', 'Is The Drunk');
   }
 
   private fila(ctx: ContextoEtapa, personaje: string): HabilidadNoche | undefined {

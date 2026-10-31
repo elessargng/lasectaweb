@@ -1,5 +1,5 @@
 import type { Alineamiento } from '../compartido/jugador';
-import type { PersonajeDeGuion } from '../guiones';
+import type { PersonajeDeGuion, TipoPersonaje } from '../guiones';
 import type { Recordatorio } from '../compartido/grimorio';
 import type { Jugador } from '../partida/Jugador';
 import type { Objetivo } from './Objetivo';
@@ -21,6 +21,17 @@ export interface ContextoReglas {
   percepcion(jugador: Jugador): Percepcion;
   /** A quién le llega lo que le hacen a un jugador (ver Objetivo). */
   objetivo(jugador: Jugador): Objetivo;
+  /** Si está envenenado o borracho (ver ReglaPersonaje.droison); null si está sano. */
+  droison(jugador: Jugador): Droison | null;
+}
+
+/** Cómo ha perdido la habilidad sin saberlo. */
+export type Droison = 'envenenado' | 'borracho';
+
+/** Quien no va en la bolsa y cree ser otro (el Borracho): de qué tipo cree ser y el recordatorio que dice quién es. */
+export interface CreeSerOtro {
+  tipo: TipoPersonaje;
+  recordatorio: string;
 }
 
 /** Cómo registra quien nomina, si puede registrar como otra cosa: lo dice el narrador. */
@@ -129,6 +140,13 @@ export interface ReglaPersonaje {
    * jugador: la regla mira si le toca (por quién es o por el recordatorio que lleva).
    */
   alterarObjetivo?(ctx: ContextoReglas, jugador: Jugador, base: Objetivo): Objetivo;
+  /**
+   * Deja a alguien envenenado o borracho (el Envenenador, por su recordatorio; el
+   * Borracho, a sí mismo): cómo, o null. No puede preguntar si alguien está droison.
+   */
+  droison?(ctx: ContextoReglas, jugador: Jugador): Droison | null;
+  /** No va en la bolsa y cree ser otro (el Borracho): de qué tipo y su recordatorio. */
+  creeSerOtro?: CreeSerOtro;
   /** La partida acaba por este personaje (el Santo ejecutado, el Alcalde): quién gana; si no, undefined. */
   ganador?(ctx: ContextoReglas, fin: FinDePartida): Alineamiento | undefined;
   /** Cuenta como el demonio sin serlo de verdad (la Mujer Escarlata que lo ha heredado). */
@@ -151,9 +169,5 @@ export const vivoEnJuego = (ctx: ContextoReglas, personajeId: string, salvo?: Ju
 export const tieneRecordatorio = (jugador: Jugador, personajeId: string, texto?: RegExp): boolean =>
   jugador.recordatorios.some((r) => r.personaje === personajeId && (!texto || texto.test(r.texto)));
 
-/** Si está envenenado (el recordatorio del Envenenador) o borracho (es el Borracho de verdad); null si está sano. */
-export function droison(ctx: ContextoReglas, jugador: Jugador): 'envenenado' | 'borracho' | null {
-  if (ctx.identidad(jugador) === 'drunk') return 'borracho';
-  if (tieneRecordatorio(jugador, 'poisoner', /^poisoned$/i)) return 'envenenado';
-  return null;
-}
+/** Si está envenenado o borracho (lo dicen las reglas, ver ReglaPersonaje.droison); null si está sano. */
+export const droison = (ctx: ContextoReglas, jugador: Jugador): Droison | null => ctx.droison(jugador);

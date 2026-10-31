@@ -13,8 +13,8 @@ import type { Grimorio } from '../grimorio';
 export type MotivoDecision =
   /** La bolsa, hueco a hueco: qué partida narra. */
   | 'bolsa'
-  /** El aldeano que en realidad es el Borracho. */
-  | 'borracho'
+  /** Quién es en realidad el que no va en la bolsa y cree ser otro (el Borracho). */
+  | 'creeSerOtro'
   /** A quién elige el narrador por un asiento libre. */
   | 'asientoLibre'
   /** El esbirro que pasa a ser el Imp. */

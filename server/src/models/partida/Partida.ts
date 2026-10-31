@@ -83,6 +83,7 @@ export class Partida {
     personajesDelGuion: () => this.guion.actual()?.personajes ?? [],
     percepcion: (jugador) => this.reglas.percepcion(jugador),
     objetivo: (jugador) => this.reglas.objetivo(jugador),
+    droison: (jugador) => this.reglas.droison(jugador),
   };
   /** Las reglas de los personajes (ver models/personajes); el final de la partida también les pregunta. */
   readonly reglas = new Reglas(this.contextoReglas);

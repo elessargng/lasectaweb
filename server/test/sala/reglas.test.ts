@@ -8,6 +8,7 @@ import { Jugador } from '../../src/models/partida/Jugador';
 import { percepcionReal } from '../../src/models/personajes/Percepcion';
 import { reclusa } from '../../src/models/personajes/reclusa';
 import { espia } from '../../src/models/personajes/espia';
+import { envenenador } from '../../src/models/personajes/envenenador';
 import type { PersonajeDeGuion } from '../../src/models/guiones';
 import { objetivoReal } from '../../src/models/personajes/Objetivo';
 import { REGLAS } from '../../src/models/personajes/Reglas';
@@ -319,6 +320,7 @@ describe('Reglas (cómo se combinan)', () => {
     personajesDelGuion: () => [],
     percepcion: (a) => percepcionReal(ctx, a),
     objetivo: (a) => objetivoReal(a),
+    droison: () => null,
   };
 
   it('sin reglas: vota quien no es un muerto sin voto, y hace falta la mitad', () => {
@@ -361,8 +363,9 @@ describe('Percepción (cómo registra cada uno)', () => {
     personajesDelGuion: () => guion,
     percepcion: (a) => reglas.percepcion(a),
     objetivo: (a) => objetivoReal(a),
+    droison: (a) => reglas.droison(a),
   };
-  const reglas = new Reglas(ctx, [reclusa, espia]);
+  const reglas = new Reglas(ctx, [envenenador, reclusa, espia]);
   const jugador = (personaje: string, envenenado = false): Jugador =>
     Object.assign(new Jugador(), {
       personaje,
@@ -410,6 +413,7 @@ describe('A quién le llega (quién se salva o lo desvía)', () => {
     personajesDelGuion: () => [],
     percepcion: (a) => percepcionReal(ctx, a),
     objetivo: (a) => reglas.objetivo(a),
+    droison: (a) => reglas.droison(a),
   };
   const reglas = new Reglas(ctx, REGLAS);
   const envenenado = { id: 'p', personaje: 'poisoner', indice: 0, texto: 'Poisoned' };

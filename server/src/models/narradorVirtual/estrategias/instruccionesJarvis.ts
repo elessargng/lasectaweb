@@ -17,7 +17,7 @@ const POR_MOTIVO: Record<MotivoDecision, string> = {
   bolsa:
     'Montas la bolsa de la partida hueco a hueco. Busca una partida equilibrada e interesante: variedad de información, ' +
     'personajes que se combinen bien y que el mal pueda esconderse.',
-  borracho: 'El Borracho cree ser este aldeano y recibe información que puede ser falsa: elige el que haga la partida más interesante sin romperla.',
+  creeSerOtro: 'Cree ser el personaje de su ficha (el Borracho, un aldeano) y recibe información que puede ser falsa: elige el que haga la partida más interesante sin romperla.',
   asientoLibre: 'Nadie juega en este asiento: elige lo que elegiría ese personaje jugado con sensatez por su bando.',
   nuevoImp: 'El Imp se ha matado y un esbirro pasa a ser el demonio: elige el que mejor mantenga la partida viva.',
   farol:

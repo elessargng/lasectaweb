@@ -7,7 +7,7 @@ import { chef } from '../../personajes/chef';
 import { cuervero } from '../../personajes/cuervero';
 import { empatico } from '../../personajes/empatico';
 import { enterradorDeNoche } from '../../personajes/enterrador';
-import { envenenador } from '../../personajes/envenenador';
+import { envenenadorDeNoche } from '../../personajes/envenenador';
 import { espiaDeNoche } from '../../personajes/espia';
 import { imp } from '../../personajes/imp';
 import { investigador } from '../../personajes/investigador';
@@ -22,7 +22,7 @@ import { sabio } from '../../personajes/sabio';
 const TROUBLE_BREWING: readonly HabilidadNocturna[] = [
   esbirros,
   demonios,
-  envenenador,
+  envenenadorDeNoche,
   monjeDeNoche,
   mayordomo,
   imp,
