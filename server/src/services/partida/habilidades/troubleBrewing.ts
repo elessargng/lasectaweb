@@ -1,4 +1,4 @@
-import type { SalaAvisoHabilidad, SalaOpcionDespertar, SalaRegistro } from '../../../contrato/sala';
+import type { AvisoHabilidad, OpcionDespertar, Registro } from '../../../contrato/despertar';
 import { tieneRecordatorio } from '../reglas/ReglaPersonaje';
 import {
   alineamientosPosibles,
@@ -32,8 +32,8 @@ import type { Jugador } from '../Jugador';
 /** «Este jugador es» con quien es de verdad; si puede registrar como otro, el narrador lo revisa. */
 function esteJugadorEs(ctx: ContextoNoche, jugadores: readonly Jugador[], quien: Jugador) {
   const id = ctx.identidad(quien);
-  const avisos: SalaAvisoHabilidad[] = dudoso(ctx, quien) ? [{ tipo: 'registro', asiento: quien.id }] : [];
-  const opciones: SalaOpcionDespertar[] = id
+  const avisos: AvisoHabilidad[] = dudoso(ctx, quien) ? [{ tipo: 'registro', asiento: quien.id }] : [];
+  const opciones: OpcionDespertar[] = id
     ? [{ envio: tarjeta('esteJugadorEs', { jugadores: jugadores.map((a) => a.id), personajes: [id] }), registros: [] }]
     : [];
   return { opciones, avisos };
@@ -59,7 +59,7 @@ export class Imp extends EligeYMarca {
     super('imp', 'Dead', { puedeElegirse: true });
   }
 
-  protected marcar(ctx: ContextoNoche, asiento: Jugador, elegido: Jugador, avisos: SalaAvisoHabilidad[]): Resultado {
+  protected marcar(ctx: ContextoNoche, asiento: Jugador, elegido: Jugador, avisos: AvisoHabilidad[]): Resultado {
     const muere: Efectos = { ...sinEfectos(), recordatorios: [{ asiento: elegido.id, texto: this.recordatorio }], muere: elegido.id };
     if (elegido.id === asiento.id) return listo(OK, { ...muere, nuevoImp: true }, avisos);
     if (elegido.muerto) return listo(OK, sinEfectos(), avisos);
@@ -85,7 +85,7 @@ class Adivina extends EligeYSabe {
   }
 
   protected saber(ctx: ContextoNoche, _asiento: Jugador, elegidos: Jugador[]) {
-    const posibles = (a: Jugador): SalaRegistro[] => (ctx.identidad(a) === 'recluse' && dudoso(ctx, a) ? ['noDemonio', 'demonio'] : []);
+    const posibles = (a: Jugador): Registro[] => (ctx.identidad(a) === 'recluse' && dudoso(ctx, a) ? ['noDemonio', 'demonio'] : []);
     const opciones = segunRegistros(ctx, elegidos, posibles, (registro) => {
       const demonio = (a: Jugador) => {
         const r = registro(a);
@@ -106,7 +106,7 @@ class Cuervero extends EligeYSabe {
     this.despiertaAlMorir = true;
   }
 
-  protected requisitos(_ctx: ContextoNoche, asiento: Jugador): SalaAvisoHabilidad[] {
+  protected requisitos(_ctx: ContextoNoche, asiento: Jugador): AvisoHabilidad[] {
     return asiento.muertePendiente ? [] : [{ tipo: 'noMuere' }];
   }
 

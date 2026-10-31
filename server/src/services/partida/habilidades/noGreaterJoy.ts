@@ -1,4 +1,4 @@
-import type { SalaOpcionDespertar } from '../../../contrato/sala';
+import type { OpcionDespertar } from '../../../contrato/despertar';
 import {
   droison,
   EligeYSabe,
@@ -92,7 +92,7 @@ class Sabio extends RecibeInformacion {
     const mesa = ctx.plaza();
     const otros = mesa.filter((a) => a.id !== asiento.id);
     const demonio = otros.find((a) => tipoDe(ctx, a) === 'demon');
-    const pareja = (a: Jugador, b: Jugador, personaje: string): SalaOpcionDespertar => ({
+    const pareja = (a: Jugador, b: Jugador, personaje: string): OpcionDespertar => ({
       // En el orden de la mesa: que no se sepa cuál es
       envio: tarjeta('esteJugadorEs', { jugadores: mesa.filter((x) => x.id === a.id || x.id === b.id).map((x) => x.id), personajes: [personaje] }),
       registros: [],

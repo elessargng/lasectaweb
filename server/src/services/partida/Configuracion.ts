@@ -1,11 +1,11 @@
-import type { SalaConfiguracion } from '../../contrato/sala';
+import type { ConfiguracionDto } from '../../contrato/partida';
 
 /** Lo que tarda la aguja de ficha en ficha al votar, en segundos (de cuarto en cuarto). */
 export const SALA_SEGUNDOS_POR_FICHA = { min: 0.25, max: 2, paso: 0.25, defecto: 1 };
 
-/** Los ajustes de la partida (ver SalaConfiguracion) y si se puede conversar en privado. No comprueba permisos. */
+/** Los ajustes de la partida (ver ConfiguracionDto) y si se puede conversar en privado. No comprueba permisos. */
 export class Configuracion {
-  private ajustes: SalaConfiguracion = {
+  private ajustes: ConfiguracionDto = {
     grimorioJugadores: false,
     segundosPorFicha: SALA_SEGUNDOS_POR_FICHA.defecto,
     // Por defecto, los privados entre jugadores solo con los vecinos
@@ -16,11 +16,11 @@ export class Configuracion {
   private privadosAbiertos = true;
 
   /** Los ajustes (una copia). */
-  actual(): SalaConfiguracion {
+  actual(): ConfiguracionDto {
     return { ...this.ajustes };
   }
 
-  cambiar(cambios: Partial<SalaConfiguracion>): void {
+  cambiar(cambios: Partial<ConfiguracionDto>): void {
     this.ajustes = { ...this.ajustes, ...cambios };
   }
 

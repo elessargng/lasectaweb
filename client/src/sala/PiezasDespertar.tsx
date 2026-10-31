@@ -20,7 +20,7 @@ import { botonPrincipal, botonSecundario, campo } from './estilos';
 import { useElegirEnPlaza } from './elegirEnPlaza';
 import { alineamientoDe, iconoDe } from './fichas';
 import { porTipos, type PersonajeMostrado } from './guiones';
-import type { MensajeDespertar, SalaAlineamiento, SalaEstado, SalaResultado } from './useSala';
+import type { MensajeDespertar, Alineamiento, SalaDto, ResultadoAccion } from './useSala';
 
 const foco = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main';
 const MAX_TEXTO = 200;
@@ -44,7 +44,7 @@ const PersonajeVisto = ({
   grande,
 }: {
   personaje: PersonajeMostrado;
-  alineamiento?: SalaAlineamiento | null;
+  alineamiento?: Alineamiento | null;
   grande?: boolean;
 }) => {
   // Sin alineamiento (no se le dice), el icono de por defecto: el de su bando lo diría
@@ -63,7 +63,7 @@ const PersonajeVisto = ({
 
 interface MensajeVistoProps {
   mensaje: MensajeDespertar;
-  estado: SalaEstado;
+  estado: SalaDto;
   personajes: Map<string, PersonajeMostrado>;
   /** En grande: lo último que muestra el narrador al jugador despierto. */
   grande?: boolean;
@@ -112,7 +112,7 @@ export const MensajeVisto = ({ mensaje, estado, personajes, grande = false }: Me
 
 interface HistorialProps {
   mensajes: MensajeDespertar[];
-  estado: SalaEstado;
+  estado: SalaDto;
   personajes: Map<string, PersonajeMostrado>;
   /** id del título que lo nombra. */
   tituloId: string;
@@ -161,7 +161,7 @@ export interface Pendiente {
   titulo: string;
   adjunto: AdjuntoDespertar;
   /** Lo que ya va puesto al abrir (p. ej. «Tú eres»: el personaje y el alineamiento del despierto). */
-  iniciales?: { jugadores?: string[]; personajes?: string[]; alineamiento?: SalaAlineamiento | null; texto?: string };
+  iniciales?: { jugadores?: string[]; personajes?: string[]; alineamiento?: Alineamiento | null; texto?: string };
 }
 
 interface EditorAdjuntoProps {
@@ -169,7 +169,7 @@ interface EditorAdjuntoProps {
   /** Los asientos (también los libres: cuentan como jugadores), para elegir jugadores. */
   asientos: { id: string; nombre: string }[];
   personajes: PersonajeMostrado[];
-  onEnviar: (envio: Envio) => Promise<SalaResultado>;
+  onEnviar: (envio: Envio) => Promise<ResultadoAccion>;
   /** Sin él, no hay «Cancelar» (lo que pide la habilidad del jugador: tiene que elegir). */
   onCancelar?: () => void;
   /** Cuántos jugadores hay que elegir, justo (la habilidad del jugador); sin él, al menos uno. */
@@ -206,7 +206,7 @@ export const EditorAdjunto = ({
   const tituloRef = useRef<HTMLHeadingElement>(null);
   const [jugadores, setJugadores] = useState<string[]>(pendiente.iniciales?.jugadores ?? []);
   const [elegidos, setElegidos] = useState<string[]>(pendiente.iniciales?.personajes ?? []);
-  const [bando, setBando] = useState<SalaAlineamiento | null>(pendiente.iniciales?.alineamiento ?? null);
+  const [bando, setBando] = useState<Alineamiento | null>(pendiente.iniciales?.alineamiento ?? null);
   const [texto, setTexto] = useState(pendiente.iniciales?.texto ?? '');
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -502,7 +502,7 @@ export const EditorAdjunto = ({
 };
 
 interface BotoneraDespertarProps {
-  estado: SalaEstado;
+  estado: SalaDto;
   /** El narrador: el asiento del despertar al que manda. El jugador: null (va al suyo). */
   asientoId: string | null;
   /** Todos los personajes del guion. */
@@ -511,7 +511,7 @@ interface BotoneraDespertarProps {
   conTarjetas: boolean;
   /** Título de la fila de fichas («Fichas», «Contestar»). */
   tituloFichas: string;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onError: (mensaje: string) => void;
   /** Confirmar al lector lo que se acaba de mandar. */
   onEnviado: (texto: string) => void;

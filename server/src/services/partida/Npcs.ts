@@ -8,7 +8,7 @@ import { NPC_SILENCIO, NPC_STORMCATCHER } from './personajesEspeciales';
  */
 export class Npcs {
   /**
-   * Los NPCs en juego (ver SalaEstado.npcs). Siguen al limpiar el grimorio: suelen
+   * Los NPCs en juego (ver SalaDto.npcs). Siguen al limpiar el grimorio: suelen
    * ser los mismos en la partida siguiente con el mismo guion (y los del guion
    * vuelven si se habían quitado).
    */
@@ -19,7 +19,7 @@ export class Npcs {
   private rolStormcatcherActual: string | null = null;
   /**
    * El silencio que pide el narrador con el Bibliotecario del Infierno en juego
-   * (ver SalaEstado.silencio). Solo vale mientras el NPC siga en juego: si se
+   * (ver SalaDto.silencio). Solo vale mientras el NPC siga en juego: si se
    * quita (o cambia el guion), se acaba solo.
    */
   private silencioPedido = false;

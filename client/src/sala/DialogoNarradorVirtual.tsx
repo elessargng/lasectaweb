@@ -6,18 +6,18 @@ import {
   NARRADORES_VIRTUALES,
   type GuionNarradorVirtual,
   type IdNarradorVirtual,
-} from '@contrato/sala';
+} from '@contrato/narradorVirtual';
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario, campo } from './estilos';
-import type { SalaResultado } from './useSala';
+import type { ResultadoAccion } from './useSala';
 
 interface DialogoNarradorVirtualProps {
   /** Cuántos hay ya sentados: no se puede pedir una partida de menos. */
   sentados: number;
   /** Por qué no se puede elegir alguno ahora (Jarvis sin cuenta o sin su modelo comprobado). */
   noDisponible?: Partial<Record<IdNarradorVirtual, string>>;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onCerrar: () => void;
 }
 

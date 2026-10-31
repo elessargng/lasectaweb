@@ -4,14 +4,14 @@ import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
 import { nombreDeAsiento } from './despertar';
 import { botonPrincipal, botonSecundario } from './estilos';
-import type { SalaEstado, SalaResultado } from './useSala';
+import type { SalaDto, ResultadoAccion } from './useSala';
 
 interface DialogoPatosoProps {
-  estado: SalaEstado;
+  estado: SalaDto;
   miAsiento: string;
   /** Es el Patoso de verdad (su ficha lo dice): tiene que elegir, no puede cancelar. */
   obligado: boolean;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onCerrar: () => void;
 }
 

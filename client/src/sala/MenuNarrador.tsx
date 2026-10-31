@@ -9,12 +9,12 @@ import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { botonIcono } from './estilos';
 import { ID_MENU_NARRADOR } from './ids';
 import type { Atajo } from './atajos';
-import type { SalaEstado, SalaParticipante, SalaResultado } from './useSala';
+import type { SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
 
 interface MenuNarradorProps {
-  estado: SalaEstado;
+  estado: SalaDto;
   /** Pide una acción a la sala (ver `useSala`). */
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   /** Activa o desactiva la edición de asientos (botones en el centro de la mesa). */
   onAsientos: () => void;
   /** El diálogo de revelar el grimorio, abierto (también se abre con su tecla, desde fuera del menú). */
@@ -41,8 +41,8 @@ const ELEGIR: Record<
     titulo: string;
     confirmar: string;
     sinCandidatos: string;
-    candidatos: (e: SalaEstado) => SalaParticipante[];
-    detalle?: (e: SalaEstado, p: SalaParticipante) => string;
+    candidatos: (e: SalaDto) => ParticipanteDto[];
+    detalle?: (e: SalaDto, p: ParticipanteDto) => string;
   }
 > = {
   'narrador:nombrarNarrador': {

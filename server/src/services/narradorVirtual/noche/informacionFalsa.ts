@@ -1,4 +1,4 @@
-import { FICHAS_DESPERTAR, type SalaEnvioDespertar } from '../../../contrato/sala';
+import { FICHAS_DESPERTAR, type EnvioDespertar } from '../../../contrato/despertar';
 import type { PersonajeDeGuion } from '../../../types/guiones';
 import { ficha, numero, type ContextoNoche, type HabilidadNocturna } from '../../partida/habilidades/HabilidadNocturna';
 
@@ -6,7 +6,7 @@ import { ficha, numero, type ContextoNoche, type HabilidadNocturna } from '../..
 const FICHAS_NUMERO = FICHAS_DESPERTAR.slice(FICHAS_DESPERTAR.indexOf('cero'), FICHAS_DESPERTAR.indexOf('cinco') + 1);
 
 /** El número de un mensaje (su ficha o, más de cinco, su texto), o null si no lo es. */
-export function numeroDe(envio: SalaEnvioDespertar): number | null {
+export function numeroDe(envio: EnvioDespertar): number | null {
   const enFicha = envio.ficha ? FICHAS_NUMERO.indexOf(envio.ficha) : -1;
   if (enFicha >= 0) return enFicha;
   return envio.ficha === 'personalizado' && envio.texto && /^\d+$/.test(envio.texto) ? Number(envio.texto) : null;
@@ -24,12 +24,12 @@ export function informacionesFalsas({
   ctx,
   personajes,
 }: {
-  verdadera: SalaEnvioDespertar;
+  verdadera: EnvioDespertar;
   habilidad: HabilidadNocturna;
   ctx: ContextoNoche;
   /** Los del guion: de entre ellos sale el personaje falso. */
   personajes: readonly PersonajeDeGuion[];
-}): SalaEnvioDespertar[] {
+}): EnvioDespertar[] {
   if (verdadera.ficha === 'si' || verdadera.ficha === 'no') return [ficha(verdadera.ficha === 'si' ? 'no' : 'si')];
 
   const n = numeroDe(verdadera);

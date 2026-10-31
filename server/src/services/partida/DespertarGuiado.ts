@@ -1,10 +1,10 @@
 import type {
-  SalaAvisoHabilidad,
-  SalaEleccionDespertar,
-  SalaEnvioDespertar,
-  SalaHabilidadNoche,
-  SalaOpcionDespertar,
-} from '../../contrato/sala';
+  AvisoHabilidad,
+  EleccionDespertar,
+  EnvioDespertar,
+  HabilidadNocheDto,
+  OpcionDespertar,
+} from '../../contrato/despertar';
 import { tarjeta, type ContextoNoche, type HabilidadNocturna, type Resultado } from './habilidades/HabilidadNocturna';
 import type { Jugador } from './Jugador';
 
@@ -18,7 +18,7 @@ export interface EntornoDespertarGuiado {
   /** Abre el despertar de un asiento (ver Despertares.despertar). */
   despertar: (asientoId: string) => string | null;
   /** Manda algo del narrador a un asiento (con `eleccion`, se le pide que elija). */
-  mandar: (asientoId: string, envio: SalaEnvioDespertar, eleccion?: SalaEleccionDespertar) => void;
+  mandar: (asientoId: string, envio: EnvioDespertar, eleccion?: EleccionDespertar) => void;
   /** A lo último que se le ha mandado a un asiento aún le falta el «Entendido» (ver Despertares.porEntender). */
   porEntender: (asientoId: string) => boolean;
   /** Pone un recordatorio de un personaje (por su texto) en un asiento; único en la mesa. */
@@ -33,16 +33,16 @@ export interface EntornoDespertarGuiado {
 /** Lo que ya se ha hecho esta noche con una habilidad. */
 /** Lo que se le manda a un asiento: un despertar. */
 interface Envio {
-  envio: SalaEnvioDespertar;
-  eleccion?: SalaEleccionDespertar;
+  envio: EnvioDespertar;
+  eleccion?: EleccionDespertar;
 }
 
 interface Turno {
   personaje: string;
   asiento: string;
   estado: 'esperando' | 'revisar' | 'hecho';
-  avisos: SalaAvisoHabilidad[];
-  opciones: SalaOpcionDespertar[];
+  avisos: AvisoHabilidad[];
+  opciones: OpcionDespertar[];
 }
 
 /**
@@ -103,9 +103,9 @@ export class DespertarGuiado {
   }
 
   /** Cada fila del orden de noche con habilidad y ficha en la mesa: cómo está. Fuera de la noche, ninguna. */
-  habilidadesNoche(): SalaHabilidadNoche[] {
+  habilidadesNoche(): HabilidadNocheDto[] {
     if (!this.entorno.noche()) return [];
-    return [...this.entorno.habilidades().values()].flatMap((h): SalaHabilidadNoche[] => {
+    return [...this.entorno.habilidades().values()].flatMap((h): HabilidadNocheDto[] => {
       const asientos = this.asientosDe(h);
       if (!asientos.length) return [];
       const fila = { personaje: h.personaje, asiento: asientos[0].id, asientos: asientos.map((a) => a.id) };
@@ -156,7 +156,7 @@ export class DespertarGuiado {
     if (efectos.muere) this.entorno.matarDeNoche(efectos.muere);
     if (efectos.grimorio) this.entorno.enviarGrimorio(asiento.id);
     if (efectos.nuevoImp) this.impQueMuere = asiento.id;
-    const enviar = (envio: SalaEnvioDespertar) => (respuesta ? this.entorno.mandar(asiento.id, envio) : this.entregar(asiento.id, { envio }));
+    const enviar = (envio: EnvioDespertar) => (respuesta ? this.entorno.mandar(asiento.id, envio) : this.entregar(asiento.id, { envio }));
     for (const envio of resultado.previos ?? []) enviar(envio);
     if (opciones[0]) enviar(opciones[0].envio);
     // Contestado con «Entendido», ya está: lo siguiente de su cola
@@ -193,7 +193,7 @@ export class DespertarGuiado {
 
 
   /** Lo que tiene que elegir el de un asiento (se le ha pedido y aún no ha contestado), o null. */
-  eleccionPendiente(asientoId: string): SalaEleccionDespertar | null {
+  eleccionPendiente(asientoId: string): EleccionDespertar | null {
     // Mientras la petición espera en la cola, aún no se le ha pedido
     if (this.colas.get(asientoId)?.some((e) => e.eleccion)) return null;
     const turno = this.turnos.find((t) => t.asiento === asientoId && t.estado === 'esperando');
@@ -227,7 +227,7 @@ export class DespertarGuiado {
    * le manda y la fila queda hecha. Lo demás (recordatorios, muertes) lo pone él.
    * Devuelve el error, si lo hay.
    */
-  resolver(personaje: string, envio: SalaEnvioDespertar): string | null {
+  resolver(personaje: string, envio: EnvioDespertar): string | null {
     const habilidad = this.entorno.habilidades().get(personaje);
     const asiento = this.asientoDe(personaje);
     if (!habilidad || !asiento) return 'Nadie lleva ese personaje.';

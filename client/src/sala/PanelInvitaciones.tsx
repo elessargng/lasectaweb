@@ -1,15 +1,15 @@
 import { botonPrincipal, botonSecundario } from './estilos';
 import TeclaAtajo from './TeclaAtajo';
 import type { Atajo } from './atajos';
-import type { SalaConversacion, SalaInvitacion, SalaParticipante } from './useSala';
+import type { ConversacionDto, InvitacionDto, ParticipanteDto } from './useSala';
 
 interface PanelInvitacionesProps {
-  invitaciones: SalaInvitacion[];
-  conversaciones: SalaConversacion[];
-  participantes: SalaParticipante[];
+  invitaciones: InvitacionDto[];
+  conversaciones: ConversacionDto[];
+  participantes: ParticipanteDto[];
   yo: string;
-  onResponder: (invitacion: SalaInvitacion, aceptar: boolean) => void;
-  onCancelar: (invitacion: SalaInvitacion) => void;
+  onResponder: (invitacion: InvitacionDto, aceptar: boolean) => void;
+  onCancelar: (invitacion: InvitacionDto) => void;
   /** La tecla rápida que coge esa llamada entrante (su slot), si tiene. */
   teclaLlamada?: (invitacionId: string) => Atajo | undefined;
   /** Fuera del panel de Charlas, encima de la columna: con borde propio en vez de la línea de separación. */

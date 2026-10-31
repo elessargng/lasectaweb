@@ -1,5 +1,5 @@
-import { CANAL_GENERAL, CANAL_VISITANTES, PREFIJO_PRIVADO, type SalaMensaje } from '@contrato/chat';
-import type { SalaEstado, SalaParticipante } from './useSala';
+import { CANAL_GENERAL, CANAL_VISITANTES, PREFIJO_PRIVADO, type MensajeChatDto } from '@contrato/chat';
+import type { SalaDto, ParticipanteDto } from './useSala';
 
 // Los canales, los mensajes y sus límites son del contrato con el servidor (server/src/contrato/chat.ts)
 export {
@@ -7,9 +7,9 @@ export {
   CANAL_VISITANTES,
   canalPrivado,
   LARGO_MAXIMO_MENSAJE,
-  type SalaMensaje,
-  type SalaMensajesPrivados,
-  type SalaSusurro,
+  type MensajeChatDto,
+  type MensajesPrivados,
+  type SusurroDto,
 } from '@contrato/chat';
 
 /**
@@ -35,15 +35,15 @@ export function participantesDelPrivado(canal: string): string[] | null {
 export const esAjeno = (canal: string, yo: string) => !!participantesDelPrivado(canal) && !participantesDelPrivado(canal)!.includes(yo);
 
 /** Los mensajes de una pestaña: los de su canal o, en Susurros, todos los privados ajenos. */
-export const mensajesDe = (mensajes: SalaMensaje[], canal: string, yo: string) =>
+export const mensajesDe = (mensajes: MensajeChatDto[], canal: string, yo: string) =>
   canal === CANAL_SUSURROS ? mensajes.filter((m) => esAjeno(m.canal, yo)) : mensajes.filter((m) => m.canal === canal);
 
 /** Cuántos mensajes de otros hay en una pestaña después de lo leído (`leidoHasta`, ms por canal). */
-export const sinLeerDe = (mensajes: SalaMensaje[], canal: string, yo: string, leidoHasta: Record<string, number>) =>
+export const sinLeerDe = (mensajes: MensajeChatDto[], canal: string, yo: string, leidoHasta: Record<string, number>) =>
   mensajesDe(mensajes, canal, yo).filter((m) => m.autor !== yo && m.hora > (leidoHasta[canal] ?? 0)).length;
 
 /** Las pestañas privadas propias: con mensajes (o abiertas) y en las que está `yo`. */
-export const privadosPropios = (mensajes: SalaMensaje[], abiertos: string[], yo: string) => [
+export const privadosPropios = (mensajes: MensajeChatDto[], abiertos: string[], yo: string) => [
   ...new Set([...mensajes.map((m) => m.canal).filter((c) => esPrivado(c) && !esAjeno(c, yo)), ...abiertos]),
 ];
 
@@ -55,14 +55,14 @@ export function otroDelPrivado(canal: string, yo: string): string | null {
 }
 
 /** Los canales comunes que tiene alguien según su papel. */
-export function canalesComunes(yo: SalaParticipante): string[] {
+export function canalesComunes(yo: ParticipanteDto): string[] {
   if (yo.rol === 'narrador') return [CANAL_GENERAL, CANAL_VISITANTES, CANAL_SUSURROS];
   if (yo.rol === 'visitante' && yo.accesoGrimorio === 'concedido') return [CANAL_VISITANTES, CANAL_SUSURROS];
   return [yo.rol === 'jugador' ? CANAL_GENERAL : CANAL_VISITANTES];
 }
 
 /** Los vecinos de un jugador: el más cercano sentado a cada lado de la mesa. */
-function vecinos(estado: SalaEstado, id: string): string[] {
+function vecinos(estado: SalaDto, id: string): string[] {
   const mesa = estado.asientos;
   const i = mesa.findIndex((a) => a.ocupante === id);
   if (i < 0) return [];
@@ -78,7 +78,7 @@ function vecinos(estado: SalaEstado, id: string): string[] {
 }
 
 /** Si `yo` puede escribir en privado a `otro` (como ChatService.puedeEscribirA). */
-export function puedeEscribirA(estado: SalaEstado, yo: SalaParticipante, otro: SalaParticipante): boolean {
+export function puedeEscribirA(estado: SalaDto, yo: ParticipanteDto, otro: ParticipanteDto): boolean {
   if (yo.id === otro.id) return false;
   if (yo.rol === 'narrador' || otro.rol === 'narrador') return true;
   if (yo.rol !== 'jugador' || otro.rol !== 'jugador') return false;
@@ -90,7 +90,7 @@ export function puedeEscribirA(estado: SalaEstado, yo: SalaParticipante, otro: S
 }
 
 /** Cómo se llama un canal: «General», «Visitantes», «Susurros» o el nombre del otro. */
-export function nombreCanal(canal: string, yo: string, participantes: SalaParticipante[], mensajes: SalaMensaje[]): string {
+export function nombreCanal(canal: string, yo: string, participantes: ParticipanteDto[], mensajes: MensajeChatDto[]): string {
   if (canal === CANAL_GENERAL) return 'General';
   if (canal === CANAL_VISITANTES) return 'Visitantes';
   if (canal === CANAL_SUSURROS) return 'Susurros';
@@ -104,7 +104,7 @@ export function nombreCanal(canal: string, yo: string, participantes: SalaPartic
 }
 
 /** Quién es quién en un privado ajeno: «Ana a Luis» (de quien escribe al otro). */
-export function deQuienAQuien(m: SalaMensaje, participantes: SalaParticipante[], mensajes: SalaMensaje[]): string {
+export function deQuienAQuien(m: MensajeChatDto, participantes: ParticipanteDto[], mensajes: MensajeChatDto[]): string {
   const otro = participantesDelPrivado(m.canal)?.find((id) => id !== m.autor);
   const nombreOtro =
     participantes.find((p) => p.id === otro)?.nombre ??

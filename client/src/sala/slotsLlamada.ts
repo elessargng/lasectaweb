@@ -1,4 +1,4 @@
-import type { SalaEstado, SalaInvitacion } from './useSala';
+import type { SalaDto, InvitacionDto } from './useSala';
 
 /**
  * Las llamadas entrantes y las teclas rápidas para cogerlas. Cada llamada (una
@@ -9,7 +9,7 @@ import type { SalaEstado, SalaInvitacion } from './useSala';
  */
 
 /** Las llamadas que esperan mi respuesta (igual que PanelInvitaciones), en orden de llegada. */
-export function recibidasDe(estado: SalaEstado): SalaInvitacion[] {
+export function recibidasDe(estado: SalaDto): InvitacionDto[] {
   const yo = estado.yo;
   return estado.invitaciones.filter((i) => (i.conversacion ? i.de !== yo : i.para === yo));
 }
@@ -22,13 +22,13 @@ export function recibidasDe(estado: SalaEstado): SalaInvitacion[] {
  */
 export function reconciliarSlots(
   mapa: Map<string, number>,
-  recibidas: SalaInvitacion[],
+  recibidas: InvitacionDto[],
   n: number,
-): { invitacion: SalaInvitacion; slot: number | null }[] {
+): { invitacion: InvitacionDto; slot: number | null }[] {
   const ids = new Set(recibidas.map((i) => i.id));
   for (const id of [...mapa.keys()]) if (!ids.has(id)) mapa.delete(id);
   const ocupados = new Set(mapa.values());
-  const nuevas: { invitacion: SalaInvitacion; slot: number | null }[] = [];
+  const nuevas: { invitacion: InvitacionDto; slot: number | null }[] = [];
   for (const invitacion of recibidas) {
     if (mapa.has(invitacion.id)) continue;
     let slot: number | null = null;

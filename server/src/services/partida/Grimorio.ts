@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
-import { RECORDATORIO_TEXTO, type SalaAlineamiento, type SalaRecordatorio } from '../../contrato/sala';
+import { RECORDATORIO_TEXTO, type Recordatorio } from '../../contrato/grimorio';
+import { type Alineamiento } from '../../contrato/jugador';
 import type { AsientoDiario, HechoDiario } from '../../contrato/diario';
 import type { PersonajeDeGuion } from '../../types/guiones';
 import type { Jugador } from './Jugador';
@@ -11,7 +12,7 @@ import type { Jugador } from './Jugador';
  */
 export const esRecordatorioDeIdentidad = (texto: string) => /^is the\b/i.test(texto.trim());
 /** Lo mismo con un recordatorio puesto: uno con texto propio nunca lo es (lo escribe el narrador). */
-const esIdentidad = (r: SalaRecordatorio) => r.personaje !== RECORDATORIO_TEXTO && esRecordatorioDeIdentidad(r.texto);
+const esIdentidad = (r: Recordatorio) => r.personaje !== RECORDATORIO_TEXTO && esRecordatorioDeIdentidad(r.texto);
 
 /**
  * Quién es de verdad el de una ficha: el personaje de su recordatorio «Is The …»
@@ -73,7 +74,7 @@ export class Grimorio {
    * tipo de quien es de verdad (aldeanos y forasteros, buenos; esbirros y
    * demonios, malvados). Un viajero sin alineamiento puesto: null.
    */
-  alineamiento(ficha: Pick<Jugador, 'alineamiento' | 'personaje' | 'recordatorios'>): SalaAlineamiento | null {
+  alineamiento(ficha: Pick<Jugador, 'alineamiento' | 'personaje' | 'recordatorios'>): Alineamiento | null {
     if (ficha.alineamiento) return ficha.alineamiento;
     const id = identidadDe(ficha);
     const tipo = id ? this.entorno.personaje(id)?.tipo : undefined;
@@ -137,7 +138,7 @@ export class Grimorio {
   }
 
   /** Pone una ficha recordatorio junto al jugador de un asiento (y lo apunta en el diario, si `anotar`). */
-  ponerRecordatorio(jugadorId: string, recordatorio: Omit<SalaRecordatorio, 'id'>, { anotar = true }: { anotar?: boolean } = {}): void {
+  ponerRecordatorio(jugadorId: string, recordatorio: Omit<Recordatorio, 'id'>, { anotar = true }: { anotar?: boolean } = {}): void {
     const jugador = this.jugador(jugadorId);
     if (!jugador) return;
     jugador.recordatorios.push({ id: randomUUID(), ...recordatorio });
@@ -195,7 +196,7 @@ export class Grimorio {
   }
 
   /** Cambia el alineamiento del jugador de un asiento. */
-  cambiarAlineamiento(jugadorId: string, alineamiento: SalaAlineamiento): void {
+  cambiarAlineamiento(jugadorId: string, alineamiento: Alineamiento): void {
     const jugador = this.jugador(jugadorId);
     if (!jugador) return;
     jugador.alineamiento = alineamiento;

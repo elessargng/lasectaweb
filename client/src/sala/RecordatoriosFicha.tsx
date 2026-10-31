@@ -1,17 +1,17 @@
 import type { CSSProperties } from 'react';
 import FichaRecordatorio, { TAMANO_RECORDATORIO } from './FichaRecordatorio';
 import { describirRecordatorio, esRecordatorioTexto, textoRecordatorio, useFichas } from './fichas';
-import type { SalaRecordatorio } from './useSala';
+import type { Recordatorio } from './useSala';
 
 interface RecordatoriosFichaProps {
-  recordatorios: SalaRecordatorio[];
+  recordatorios: Recordatorio[];
   /** Dónde empiezan: junto a la ficha, hacia el centro de la mesa (lo calcula la mesa). */
   style: CSSProperties;
   /** Hacia el centro de la mesa (vector unitario): por ahí se apilan. */
   hacia: { x: number; y: number };
   /** Los que quien mira puede quitar (botón); los demás solo se ven. */
-  puedeQuitar: (r: SalaRecordatorio) => boolean;
-  onQuitar: (r: SalaRecordatorio) => void;
+  puedeQuitar: (r: Recordatorio) => boolean;
+  onQuitar: (r: Recordatorio) => void;
   /**
    * Quitar solo con el ratón: los botones no se leen ni se alcanzan con el
    * tabulador, porque quien los usa ya tiene otro sitio para quitarlos (y la

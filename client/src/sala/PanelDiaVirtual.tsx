@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react';
 import { botonPrincipal, botonSecundario } from './estilos';
-import type { SalaEstado, SalaResultado } from './useSala';
+import type { SalaDto, ResultadoAccion } from './useSala';
 
 interface PanelDiaVirtualProps {
-  estado: SalaEstado;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  estado: SalaDto;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onError: (mensaje: string) => void;
 }
 

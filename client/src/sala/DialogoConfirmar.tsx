@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
 import { botonPeligro, botonSecundario } from './estilos';
-import type { SalaResultado } from './useSala';
+import type { ResultadoAccion } from './useSala';
 
 interface DialogoConfirmarProps {
   /** Título del diálogo («Limpiar grimorio»). */
@@ -11,7 +11,7 @@ interface DialogoConfirmarProps {
   confirmar: string;
   /** Qué va a pasar. */
   children: ReactNode;
-  onConfirmar: () => Promise<SalaResultado>;
+  onConfirmar: () => Promise<ResultadoAccion>;
   onCerrar: () => void;
 }
 

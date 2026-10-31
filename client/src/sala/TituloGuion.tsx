@@ -9,13 +9,13 @@ import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import PanelGuion, { type RecordatoriosNoche } from './PanelGuion';
 import { botonIcono } from './estilos';
 import { aspectoDeGuion, usePredeterminados, type Genero, type GuionResuelto } from './guiones';
-import type { SalaDistribucion, SalaResultado } from './useSala';
+import type { DistribucionDto, ResultadoAccion } from './useSala';
 
 interface TituloGuionProps {
   guion: GuionResuelto | null;
   /** El narrador puede cambiar el guion (lo decide el servidor). */
   puedeCambiar: boolean;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onError: (mensaje: string) => void;
   /** Idiomas (ids) en que se ven los nombres y las descripciones de los personajes. */
   idiomas: { nombres: string; descripciones: string; genero: Genero };
@@ -28,7 +28,7 @@ interface TituloGuionProps {
    * Preparar la bolsa (narradores, con guion): lo que lleva y el reparto; null si no se puede.
    * `puedeAsignar`: se pueden repartir los personajes (solo en la preparación).
    */
-  bolsa: { bolsa: string[]; distribucion: SalaDistribucion; npcs: string[]; puedeAsignar: boolean } | null;
+  bolsa: { bolsa: string[]; distribucion: DistribucionDto; npcs: string[]; puedeAsignar: boolean } | null;
   /** Avisa al lector (al repartir los personajes de la bolsa). */
   onAnuncio: (tipo: TipoAviso, texto: string) => void;
   /**

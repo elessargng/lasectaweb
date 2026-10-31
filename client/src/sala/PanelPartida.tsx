@@ -1,7 +1,7 @@
 import Deslizador from './Deslizador';
 import FondoSala, { type CambioFondo } from './FondoSala';
-import type { SalaMensajesPrivados } from './chat';
-import type { SalaConfiguracion, SalaResultado } from './useSala';
+import type { MensajesPrivados } from './chat';
+import type { ConfiguracionDto, ResultadoAccion } from './useSala';
 import { campo } from './estilos';
 import Interruptor from './Interruptor';
 
@@ -9,11 +9,11 @@ import Interruptor from './Interruptor';
 const SEGUNDOS_POR_FICHA = { min: 0.25, max: 2, paso: 0.25, defecto: 1 };
 
 interface PanelPartidaProps {
-  configuracion: SalaConfiguracion;
+  configuracion: ConfiguracionDto;
   /** Pide el cambio al servidor: estos ajustes valen para toda la sala. */
-  onCambiar: (cambios: Partial<SalaConfiguracion>) => void;
+  onCambiar: (cambios: Partial<ConfiguracionDto>) => void;
   /** Cambia el fondo de la sala (subida, Biblioteca o el de por defecto). */
-  onCambiarFondo: (cambio: CambioFondo) => Promise<SalaResultado>;
+  onCambiarFondo: (cambio: CambioFondo) => Promise<ResultadoAccion>;
 }
 
 /**
@@ -44,7 +44,7 @@ const PanelPartida = ({ configuracion, onCambiar, onCambiarFondo }: PanelPartida
       <select
         id="sala-pref-mensajes"
         value={configuracion.mensajes}
-        onChange={(e) => onCambiar({ mensajes: e.target.value as SalaMensajesPrivados })}
+        onChange={(e) => onCambiar({ mensajes: e.target.value as MensajesPrivados })}
         aria-describedby="sala-pref-mensajes-ayuda"
         className={`${campo} max-w-xs`}
       >

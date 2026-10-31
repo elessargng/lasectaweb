@@ -11,10 +11,10 @@ import { iconoDe, useFichas } from './fichas';
 import { nombreMano } from './formasMano';
 import ManoLevantada from './ManoLevantada';
 import type { PersonajeMostrado } from './guiones';
-import type { SalaParticipante } from './useSala';
+import type { ParticipanteDto } from './useSala';
 
 interface CuadroNarradorProps {
-  narrador: SalaParticipante;
+  narrador: ParticipanteDto;
   esYo: boolean;
   /**
    * Visitantes: el botón sobre el retrato para pedir ver el grimorio, o

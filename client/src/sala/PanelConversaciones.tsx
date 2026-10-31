@@ -2,12 +2,12 @@ import { IconoConversar } from './IconosJuego';
 import type { ReactNode } from 'react';
 import { botonSecundario } from './estilos';
 import NombresOyentes from './NombresOyentes';
-import type { SalaConversacion, SalaParticipante } from './useSala';
+import type { ConversacionDto, ParticipanteDto } from './useSala';
 
 interface PanelConversacionesProps {
-  conversaciones: SalaConversacion[];
-  participantes: SalaParticipante[];
-  yo: SalaParticipante;
+  conversaciones: ConversacionDto[];
+  participantes: ParticipanteDto[];
+  yo: ParticipanteDto;
   /** Visitantes y narradores: entrar a escuchar una (sin invitación; los jugadores no lo saben). */
   onEscuchar: (conversacionId: string) => void;
   /** Narradores: entrar en una como uno más (se les ve y se les oye). */

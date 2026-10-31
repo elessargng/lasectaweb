@@ -3,7 +3,7 @@ import type { PersonajeMostrado } from './guiones';
 import { datosAsiento } from './nombresAsiento';
 import { anuncioReloj } from './reloj';
 import type { TipoAviso } from './avisosConfig';
-import type { SalaEstado, SalaParticipante, SalaFase } from './useSala';
+import type { SalaDto, ParticipanteDto, FaseDto } from './useSala';
 
 /**
  * Qué decirle al lector cuando cambia la sala por algo que han hecho otros:
@@ -23,7 +23,7 @@ export interface Aviso {
 }
 
 /** «Preparación», «Noche 2», «Día 2». */
-export const nombreFase = (f: SalaFase) =>
+export const nombreFase = (f: FaseDto) =>
   f.momento === 'preparacion' ? 'Preparación' : `${f.momento === 'noche' ? 'Noche' : 'Día'} ${f.numero}`;
 
 /**
@@ -31,7 +31,7 @@ export const nombreFase = (f: SalaFase) =>
  * votos que hacen falta, ni el recuento, ni quién vota salvo él, ni las manos de los
  * demás. Los narradores y quien ve el grimorio lo ven todo.
  */
-export function votacionOculta(e: SalaEstado): boolean {
+export function votacionOculta(e: SalaDto): boolean {
   if (!e.nominacion?.privada) return false;
   const yo = e.participantes.find((p) => p.id === e.yo);
   return !(yo?.rol === 'narrador' || (yo?.rol === 'visitante' && yo.accesoGrimorio === 'concedido'));
@@ -45,8 +45,8 @@ export const hacenFalta = (votos: number) => `Hacen falta ${votos === 1 ? '1 vot
  * o la baja (manosVigiladas); aquí no se repite.
  */
 export function avisosDeCambio(
-  anterior: SalaEstado,
-  nuevo: SalaEstado,
+  anterior: SalaDto,
+  nuevo: SalaDto,
   vigilados: Set<string> = new Set(),
   /** Los personajes del guion: para el nombre de una mano que es un personaje. */
   personajes?: Map<string, PersonajeMostrado>,
@@ -54,7 +54,7 @@ export function avisosDeCambio(
   const yo = nuevo.yo;
   const antes = new Map(anterior.participantes.map((p) => [p.id, p]));
   const ahora = new Map(nuevo.participantes.map((p) => [p.id, p]));
-  const narra = (p?: SalaParticipante) => p?.rol === 'narrador';
+  const narra = (p?: ParticipanteDto) => p?.rol === 'narrador';
   const avisos: Aviso[] = [];
   const avisa = (tipo: TipoAviso, texto: string) => {
     avisos.push({ tipo, texto });
@@ -113,7 +113,7 @@ export function avisosDeCambio(
     const n = ids.map(nombreDe);
     return n.length <= 1 ? (n[0] ?? '') : `${n.slice(0, -1).join(', ')} y ${n[n.length - 1]}`;
   };
-  const suConversacion = (e: SalaEstado, id: string) =>
+  const suConversacion = (e: SalaDto, id: string) =>
     e.conversaciones.find((c) => c.miembros.includes(id) || c.oyentes.includes(id));
   const miAntes = suConversacion(anterior, yo);
   const miAhora = suConversacion(nuevo, yo);
@@ -187,7 +187,7 @@ export function avisosDeCambio(
   }
 
   // Asientos: quién se sienta y quién se levanta (o se va y lo deja libre).
-  const asientoDe = (e: SalaEstado, id: string) => e.asientos.findIndex((a) => a.ocupante === id) + 1;
+  const asientoDe = (e: SalaDto, id: string) => e.asientos.findIndex((a) => a.ocupante === id) + 1;
   for (const a of anterior.asientos) {
     if (!a.ocupante || a.ocupante === yo || asientoDe(nuevo, a.ocupante)) continue;
     const quien = antes.get(a.ocupante);
@@ -204,7 +204,7 @@ export function avisosDeCambio(
     if (quien) avisa('asientos', `${quien.nombre} se sienta en el asiento ${asientoDe(nuevo, a.ocupante)}.`);
   }
 
-  const forma = (p: SalaParticipante) => nombreMano(p.formaMano, personajes).toLocaleLowerCase('es');
+  const forma = (p: ParticipanteDto) => nombreMano(p.formaMano, personajes).toLocaleLowerCase('es');
   // La propia, bajada sola al empezar una nominación por no tener ya voto
   const miMano = { antes: antes.get(yo)?.manoLevantada, ahora: ahora.get(yo)?.manoLevantada };
   const nominacionNueva =
@@ -256,7 +256,7 @@ export function avisosDeCambio(
   // Fichas: quién (o qué asiento) muere, revive o lleva la calavera (al cambiar de
   // fase se quita la calavera: ya se ha dicho que anochece).
   // «Bea» si hay alguien sentado; si no, «la ficha del asiento 3». A uno mismo, «Has muerto».
-  const quien = (e: SalaEstado, asientoId: string) => {
+  const quien = (e: SalaDto, asientoId: string) => {
     const { numero, ocupante } = datosAsiento(e, asientoId);
     return ocupante ? (ocupante.id === yo ? null : ocupante.nombre) : `la ficha del asiento ${numero}`;
   };
@@ -295,7 +295,7 @@ export function avisosDeCambio(
   // Nominación: de qué ficha a qué ficha, la cuenta atrás y el cierre.
   const nomAntes = anterior.nominacion;
   const nomAhora = nuevo.nominacion;
-  const nominacionDe = (e: SalaEstado, id: string) => {
+  const nominacionDe = (e: SalaDto, id: string) => {
     const { numero, ocupante } = datosAsiento(e, id);
     return ocupante ? ocupante.nombre : `el asiento ${numero}`;
   };
@@ -340,7 +340,7 @@ export function avisosDeCambio(
       }
       // Un muerto que vota gasta su único voto: se dice (su vela se apaga)
       // (la Banshee con su habilidad, o con el Voudon vivo, no lo gasta)
-      const gastado = (e: SalaEstado) => !!e.asientos.find((a) => a.id === id)?.votoGastado;
+      const gastado = (e: SalaDto) => !!e.asientos.find((a) => a.id === id)?.votoGastado;
       const gasta = typeof resultado === 'number' && gastado(nuevo) && !gastado(anterior) ? ', gasta su voto' : '';
       // Si su voto no vale 1 (Banshee, Burócrata, Ladrón), se dice cuánto
       const valor = votAhora.valores?.[id];
@@ -373,8 +373,8 @@ export function avisosDeCambio(
 
 /** Las manos que se vigilan: siempre que la levantan o la bajan, para leerlo al momento (assertive). */
 export function manosVigiladas(
-  anterior: SalaEstado,
-  nuevo: SalaEstado,
+  anterior: SalaDto,
+  nuevo: SalaDto,
   vigilados: Set<string>,
   personajes?: Map<string, PersonajeMostrado>,
 ): string[] {

@@ -1,13 +1,13 @@
 import { randomUUID } from 'crypto';
+import { type IdNarradorVirtual } from '../../contrato/narradorVirtual';
 import {
   SALA_PARTIDAS_NOVATO,
   usuarioDe,
-  type IdNarradorVirtual,
   type Persona,
-  type SalaFormaMano,
-  type SalaParticipante,
-  type SalaRol,
-} from '../../contrato/sala';
+  type FormaMano,
+  type ParticipanteDto,
+  type Rol,
+} from '../../contrato/participante';
 import { esAvatarSalaGuardado } from '../../utils/salaAvatarStorage';
 
 /** Margen para volver tras una desconexión (recarga, red caída) sin perder el papel. */
@@ -75,7 +75,7 @@ const esLaMisma = (persona: Persona, llegada: SalaLlegada) =>
  * Un participante, como lo lleva la sala: sin el acceso al grimorio, que es de la
  * partida (ver AccesoGrimorio; VistaPartida lo añade al mandarlo).
  */
-export type Participante = Omit<SalaParticipante, 'accesoGrimorio'>;
+export type Participante = Omit<ParticipanteDto, 'accesoGrimorio'>;
 
 /** Un participante ha cambiado de papel. */
 export type OyenteRol = (participanteId: string) => void;
@@ -354,7 +354,7 @@ export class Participantes {
    * Cambia el papel de alguien. No comprueba permisos: eso lo hace quien lo pide
    * (ver `salaAcciones`).
    */
-  cambiarRol(id: string, rol: SalaRol): void {
+  cambiarRol(id: string, rol: Rol): void {
     const participante = this.buscar(id);
     if (!participante) return;
     const cambia = participante.rol !== rol;
@@ -389,7 +389,7 @@ export class Participantes {
     }
   }
 
-  elegirFormaMano(id: string, forma: SalaFormaMano): void {
+  elegirFormaMano(id: string, forma: FormaMano): void {
     const participante = this.buscar(id);
     if (participante) participante.formaMano = forma;
   }

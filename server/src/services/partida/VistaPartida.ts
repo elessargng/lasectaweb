@@ -4,18 +4,14 @@ import { identidadDe } from './Grimorio';
 import type { Participante } from '../sala/Participantes';
 import { NPC_TOR } from './personajesEspeciales';
 import { farolesVacios } from './Faroles';
-import type {
-  SalaAsiento,
-  SalaConversacion,
-  SalaEstado,
-  SalaInvitacion,
-  SalaNominacion,
-  } from '../../contrato/sala';
+import type { JugadorDto } from '../../contrato/jugador';
+import type { NominacionDto } from '../../contrato/partida';
+import type { ConversacionDto, SalaDto, InvitacionDto } from '../../contrato/sala';
 
 /** Lo que la vista necesita de fuera de la partida: las conversaciones, el vídeo y los permisos. */
 export interface ContextoVista {
-  conversaciones: SalaConversacion[];
-  invitacionesDe: (participanteId: string) => SalaInvitacion[];
+  conversaciones: ConversacionDto[];
+  invitacionesDe: (participanteId: string) => InvitacionDto[];
   /** Hay videollamada en la sala. */
   video: boolean;
   /** Las acciones que puede usar ahora un participante (ver salaAcciones). */
@@ -24,7 +20,7 @@ export interface ContextoVista {
 
 /** Una ficha sin su personaje ni su alineamiento: así la ven quienes no son su jugador ni narran. */
 // Lo que un jugador no ve de una ficha: de las ajenas, el personaje y los faroles; de ninguna, los recordatorios ni la nota.
-const sinPersonaje = (a: SalaAsiento): SalaAsiento => ({
+const sinPersonaje = (a: JugadorDto): JugadorDto => ({
   ...a,
   personaje: null,
   alineamiento: null,
@@ -33,14 +29,14 @@ const sinPersonaje = (a: SalaAsiento): SalaAsiento => ({
   faroles: farolesVacios(),
   farolEnUso: null,
 });
-const sinRecordatorios = (a: SalaAsiento): SalaAsiento => ({ ...a, recordatorios: [], nota: null });
+const sinRecordatorios = (a: JugadorDto): JugadorDto => ({ ...a, recordatorios: [], nota: null });
 
 /**
  * La nominación como la ve quien no ve el grimorio en una votación secreta (Organ
  * Grinder): sin los votos que hacen falta ni el recuento; de lo que vota cada
  * asiento, solo lo suyo (cuánto vale su voto, no por dónde va el recuento).
  */
-const nominacionSecreta = (n: SalaNominacion, miAsiento: string | null): SalaNominacion => {
+const nominacionSecreta = (n: NominacionDto, miAsiento: string | null): NominacionDto => {
   const v = n.votacion;
   const mio = miAsiento && v && miAsiento in v.resultados ? v.resultados[miAsiento] : undefined;
   return {
@@ -133,7 +129,7 @@ export class VistaPartida {
   }
 
   /** El estado de la sala tal como lo ve este participante. */
-  para(yo: Participante): SalaEstado {
+  para(yo: Participante): SalaDto {
     const { partida, contexto, comun } = this;
     const narra = yo.rol === 'narrador';
     const veGrimorio = narra || (yo.rol === 'visitante' && partida.acceso.de(yo.id) === 'concedido');
@@ -201,7 +197,7 @@ export class VistaPartida {
   }
 
   /** Un asiento como lo ve quien no ve el grimorio (un jugador o un visitante sin acceso). */
-  private asientoSinGrimorio(a: SalaAsiento, yo: Participante, ocultarVotos: boolean, ocultarVotacion: boolean): SalaAsiento {
+  private asientoSinGrimorio(a: JugadorDto, yo: Participante, ocultarVotos: boolean, ocultarVotacion: boolean): JugadorDto {
     return {
       // La muerte pendiente (de la noche, por anunciar) es del grimorio: los demás no la ven
       ...(this.reveladas.has(a.id)
@@ -222,7 +218,7 @@ export class VistaPartida {
   }
 
   /** El viajero que es de verdad el de un asiento (los viajeros son públicos), o null. */
-  private viajeroDe(a: SalaAsiento): string | null {
+  private viajeroDe(a: JugadorDto): string | null {
     const id = identidadDe(a);
     return id && this.partida.guion.personaje(id)?.tipo === 'traveller' ? id : null;
   }
@@ -232,7 +228,7 @@ export class VistaPartida {
    * viajeros, que son públicos. Se ve quién es de verdad (un Alcalde con «Is The
    * Apprentice» se ve como Aprendiz); el alineamiento de un viajero, no.
    */
-  private comoLaVenTodos(a: SalaAsiento): SalaAsiento {
+  private comoLaVenTodos(a: JugadorDto): JugadorDto {
     const viajero = this.viajeroDe(a);
     return viajero ? { ...sinPersonaje(a), personaje: viajero } : sinPersonaje(a);
   }
@@ -244,7 +240,7 @@ export class VistaPartida {
    * bolsa), como los demás. Con Tor, no sabe quién es hasta que muere: la ve como los
    * demás; muerto, ve quién es de verdad.
    */
-  private comoLaVeSuJugador(a: SalaAsiento): SalaAsiento {
+  private comoLaVeSuJugador(a: JugadorDto): JugadorDto {
     if (this.tor && !a.muerto) return this.comoLaVenTodos(a);
     // Con Tor, al morir sabe quién es de verdad (un Borracho con ficha de aldeano: Borracho)
     if (this.tor) return { ...sinRecordatorios(a), personaje: identidadDe(a) };

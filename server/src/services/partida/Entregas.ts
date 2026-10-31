@@ -1,11 +1,12 @@
-import type { SalaAlineamiento, SalaFichaEnviada, SalaGrimorioEnviado } from '../../contrato/sala';
+import type { FichaEnviadaDto, GrimorioEnviadoDto } from '../../contrato/grimorio';
+import type { Alineamiento } from '../../contrato/jugador';
 import type { Diario } from './eventos';
 import type { Jugador } from './Jugador';
 
 /** Lo que sabe un jugador de su ficha. */
 export interface FichaEntregada {
   personaje: string | null;
-  alineamiento: SalaAlineamiento | null;
+  alineamiento: Alineamiento | null;
 }
 
 /**
@@ -21,7 +22,7 @@ export class Entregas {
    * Los grimorios enviados, por asiento: el último, y a quién estaba sentado
    * entonces (si se sienta otro, no lo ve).
    */
-  private grimoriosEnviados = new Map<string, { ocupante: string; grimorio: SalaGrimorioEnviado }>();
+  private grimoriosEnviados = new Map<string, { ocupante: string; grimorio: GrimorioEnviadoDto }>();
   /** Con el Gardener: los personajes repartidos aún no se han entregado a los jugadores. */
   private retenidas = false;
 
@@ -46,7 +47,7 @@ export class Entregas {
    * ser esa (el personaje, si es uno solo, y el alineamiento, si se le dice). Así
    * es como se entera de un cambio: lo que el narrador cambie en el grimorio no lo ve.
    */
-  comunicarFicha(asientoId: string, personajes: string[], alineamiento: SalaAlineamiento | null): void {
+  comunicarFicha(asientoId: string, personajes: string[], alineamiento: Alineamiento | null): void {
     const antes = this.fichaEntregada(asientoId);
     this.entregadas.set(asientoId, {
       personaje: personajes.length === 1 ? personajes[0] : antes.personaje,
@@ -68,14 +69,14 @@ export class Entregas {
   }
 
   /** Envía un grimorio (sus fichas y los faroles) a quien se sienta en un asiento y lo apunta en el diario. No comprueba las fichas. */
-  enviarGrimorio(asientoId: string, fichas: SalaFichaEnviada[], faroles: string[] = []): void {
+  enviarGrimorio(asientoId: string, fichas: FichaEnviadaDto[], faroles: string[] = []): void {
     const ocupante = this.plaza().find((a) => a.id === asientoId)?.participanteId;
     if (ocupante) this.grimoriosEnviados.set(asientoId, { ocupante, grimorio: { hora: Date.now(), fichas, faroles } });
     this.diario.anotar({ tipo: 'grimorio', asiento: this.diario.asiento(asientoId) });
   }
 
   /** El último grimorio enviado a un participante (si sigue en el asiento al que se envió), o null. */
-  grimorioRecibidoPor(participanteId: string): SalaGrimorioEnviado | null {
+  grimorioRecibidoPor(participanteId: string): GrimorioEnviadoDto | null {
     const asiento = this.plaza().find((a) => a.participanteId === participanteId);
     const enviado = asiento ? this.grimoriosEnviados.get(asiento.id) : undefined;
     return enviado && enviado.ocupante === participanteId ? enviado.grimorio : null;

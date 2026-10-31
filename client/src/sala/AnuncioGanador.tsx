@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom';
 import { ID_GANADOR } from './ids';
-import type { SalaAlineamiento } from './useSala';
+import type { Alineamiento } from './useSala';
 
 /**
  * Al terminar de revelar el grimorio: el bando ganador, en grande y en una sola
@@ -13,7 +13,7 @@ import type { SalaAlineamiento } from './useSala';
  *
  * Debajo, lo que ha pasado (ver causasFinal.ts): «Exterminador: ha matado al demonio…».
  */
-const AnuncioGanador = ({ ganador, causas = [] }: { ganador: SalaAlineamiento; causas?: { nombre: string; lang: string; texto: string }[] }) =>
+const AnuncioGanador = ({ ganador, causas = [] }: { ganador: Alineamiento; causas?: { nombre: string; lang: string; texto: string }[] }) =>
   createPortal(
     <div className="sala-ganador pointer-events-none fixed inset-x-0 top-[30vh] z-30 flex justify-center" data-bando={ganador}>
       <div className="sala-ganador-franja flex w-full flex-col items-center gap-2 px-4 py-5">

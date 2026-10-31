@@ -7,8 +7,8 @@ import {
   canalPrivado,
   LARGO_MAXIMO_MENSAJE,
   participantesDePrivado,
-  SalaMensaje,
-  SalaSusurro,
+  MensajeChatDto,
+  SusurroDto,
 } from '../../contrato/chat';
 import type { SalaDeJuego } from '../SalaDeJuego';
 import type { Sala } from '../sala/Sala';
@@ -24,10 +24,10 @@ export class ChatError extends Error {
 
 /** Lo que pasa al mandar un mensaje: el mensaje, a quién le llega y, si es un susurro, las ondas. */
 export interface EnvioMensaje {
-  mensaje: SalaMensaje;
+  mensaje: MensajeChatDto;
   /** ids de los participantes que pueden leerlo (incluido quien lo escribe). */
   lectores: string[];
-  susurro: SalaSusurro | null;
+  susurro: SusurroDto | null;
 }
 
 /**
@@ -80,7 +80,7 @@ export class ChatService {
   }
 
   /** Los mensajes que alguien puede leer, del más antiguo al más reciente. */
-  historial(yo: Participante): SalaMensaje[] {
+  historial(yo: Participante): MensajeChatDto[] {
     return this.repositorio.deCanales((canal) => this.puedeLeer(yo, canal));
   }
 
@@ -107,7 +107,7 @@ export class ChatService {
       canal = canalPrivado(yo.id, otro.id);
     }
 
-    const mensaje: SalaMensaje = { id: randomUUID(), canal, autor: yo.id, autorNombre: yo.nombre, texto: limpio, hora: this.ahora() };
+    const mensaje: MensajeChatDto = { id: randomUUID(), canal, autor: yo.id, autorNombre: yo.nombre, texto: limpio, hora: this.ahora() };
     this.repositorio.guardar(mensaje);
     // En privado, los dos y, si son jugadores, los narradores
     const lectores = this.sala.participantes.participantes().filter((p) => this.puedeLeer(p, canal)).map((p) => p.id);
@@ -149,7 +149,7 @@ export class ChatService {
   }
 
   /** Entre dos jugadores sentados, las ondas del susurro (más intensas cuanto más largo). */
-  private susurro(yo: Participante, otro: Participante, texto: string): SalaSusurro | null {
+  private susurro(yo: Participante, otro: Participante, texto: string): SusurroDto | null {
     if (yo.rol !== 'jugador' || otro.rol !== 'jugador') return null;
     const mesa = this.partida.plaza();
     const desde = mesa.find((a) => a.participanteId === yo.id)?.id;

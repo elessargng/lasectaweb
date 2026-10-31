@@ -3,7 +3,7 @@
  * cliente, alias @contrato, y el narrador virtual). Solo valores puros.
  */
 import { repartoAjustado } from './reparto';
-import type { SalaDistribucion } from './sala';
+import type { DistribucionDto } from './partida';
 
 /** Lo que hace falta de cada personaje para elegirlo. */
 export interface PersonajeParaBolsa {
@@ -47,7 +47,7 @@ export function barajar<T>(lista: readonly T[], azar: () => number): T[] {
  */
 export function llenarAlAzar<P extends PersonajeParaBolsa>(
   personajes: P[],
-  distribucion: SalaDistribucion,
+  distribucion: DistribucionDto,
   npcs: string[],
   azar: () => number = Math.random,
 ): BolsaAlAzar<P> | null {

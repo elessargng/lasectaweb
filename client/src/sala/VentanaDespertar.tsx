@@ -7,12 +7,12 @@ import { botonPrincipal, botonSecundario } from './estilos';
 import type { PersonajeMostrado } from './guiones';
 import { ID_TITULO_DESPERTAR } from './ids';
 import { BotoneraDespertar, EditorAdjunto, HistorialDespertar, type Propuesta } from './PiezasDespertar';
-import type { SalaDespertar, SalaEstado, SalaResultado } from './useSala';
+import type { DespertarDto, SalaDto, ResultadoAccion } from './useSala';
 
 interface VentanaDespertarProps {
-  estado: SalaEstado;
+  estado: SalaDto;
   /** Los despertares que el narrador tiene abiertos en la ventana, en orden. */
-  abiertos: SalaDespertar[];
+  abiertos: DespertarDto[];
   /** El que se ve (id de asiento). */
   activo: string;
   /** Asientos con mensajes del jugador que el narrador aún no ha visto. */
@@ -22,7 +22,7 @@ interface VentanaDespertarProps {
   /** Todos los personajes del guion (y por id, para pintar los mensajes). */
   personajes: PersonajeMostrado[];
   porId: Map<string, PersonajeMostrado>;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onError: (mensaje: string) => void;
   onEnviado: (texto: string) => void;
   /** Visitantes que ven el grimorio: solo leen lo que se dicen (no mandan nada). */

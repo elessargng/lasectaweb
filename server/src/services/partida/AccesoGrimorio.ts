@@ -1,8 +1,8 @@
-import type { SalaAccesoGrimorio } from '../../contrato/sala';
+import type { EstadoAccesoGrimorio } from '../../contrato/participante';
 
 /**
  * Quién ha pedido ver el grimorio del narrador y a quién se le ha concedido (ver
- * SalaParticipante.accesoGrimorio). Lo concedido se recuerda por el «recuerdo» de
+ * ParticipanteDto.accesoGrimorio). Lo concedido se recuerda por el «recuerdo» de
  * cada uno (su cuenta o su navegador, ver Participantes.recuerdoDe), así que lo
  * recupera si sale de la sala y vuelve; lo solicitado es de su participante y se
  * pierde al salir. No comprueba permisos.
@@ -18,13 +18,13 @@ export class AccesoGrimorio {
     private readonly recuerdoDe: (participanteId: string) => string | null,
   ) {}
 
-  de(participanteId: string): SalaAccesoGrimorio {
+  de(participanteId: string): EstadoAccesoGrimorio {
     const recuerdo = this.recuerdoDe(participanteId);
     if (recuerdo && this.concedidos.has(recuerdo)) return 'concedido';
     return this.solicitados.has(participanteId) ? 'solicitado' : 'ninguno';
   }
 
-  cambiar(participanteId: string, acceso: SalaAccesoGrimorio): void {
+  cambiar(participanteId: string, acceso: EstadoAccesoGrimorio): void {
     const recuerdo = this.recuerdoDe(participanteId);
     if (!recuerdo) return;
     this.solicitados.delete(participanteId);

@@ -4,11 +4,11 @@ import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario, campo } from './estilos';
 import { datosAsiento, describirAsiento } from './nombresAsiento';
-import { SENALAMIENTO, type SalaEstado, type SalaResultado } from './useSala';
+import { SENALAMIENTO, type SalaDto, type ResultadoAccion } from './useSala';
 
 interface DialogoSenalamientoProps {
-  estado: SalaEstado;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  estado: SalaDto;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onCerrar: () => void;
 }
 

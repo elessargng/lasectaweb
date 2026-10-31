@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario, campo } from './estilos';
-import type { Persona, SalaResultado } from './useSala';
+import type { Persona, ResultadoAccion } from './useSala';
 
 /** A quién se puede elegir: un participante o, p. ej., un asiento (sin `persona`). */
 interface Candidato {
@@ -21,7 +21,7 @@ interface DialogoElegirParticipanteProps<C extends Candidato> {
   candidatos: C[];
   /** Algo más que decir de cada candidato («asiento 3»). */
   detalle?: (p: C) => string;
-  onElegir: (participanteId: string) => Promise<SalaResultado>;
+  onElegir: (participanteId: string) => Promise<ResultadoAccion>;
   onCerrar: () => void;
 }
 

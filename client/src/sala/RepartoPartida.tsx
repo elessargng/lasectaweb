@@ -4,13 +4,13 @@ import { useAriaLive } from './avisosConfig';
 import { firmaDelReparto, problemasDelReparto, repartoAjustado } from './comprobarReparto';
 import { botonSecundario } from './estilos';
 import { contarBolsa, identidadDe, TIPOS_REPARTO, useFichas } from './fichas';
-import type { SalaAsiento, SalaDistribucion, SalaResultado } from './useSala';
+import type { JugadorDto, DistribucionDto, ResultadoAccion } from './useSala';
 
 interface RepartoPartidaProps {
-  distribucion: SalaDistribucion;
+  distribucion: DistribucionDto;
   /** La bolsa (solo el narrador); null para los demás. */
   bolsa: string[] | null;
-  asientos: SalaAsiento[];
+  asientos: JugadorDto[];
   /** Los NPCs en juego (el Centinela altera la preparación). */
   npcs: string[];
   /** El reparto dado por bueno a mano aunque no cuadre (su firma), o null. */
@@ -20,7 +20,7 @@ interface RepartoPartidaProps {
    * la noche 1, el juego puede cambiar los personajes y ya no tiene por qué cuadrar.
    */
   preparacion: boolean;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onError: (mensaje: string) => void;
   /** En una línea (en la cabecera de la hoja del guion): los vivos y cuántos de cada tipo. */
   resumido?: boolean;

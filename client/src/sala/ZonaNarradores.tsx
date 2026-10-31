@@ -8,16 +8,16 @@ import CuadroNarrador from './CuadroNarrador';
 import { useFichas } from './fichas';
 import { botonPrincipal, botonSecundario } from './estilos';
 import { ID_SIN_NARRADOR } from './ids';
-import type { SalaEstado, SalaParticipante, SalaResultado } from './useSala';
+import type { SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
 
 interface ZonaNarradoresProps {
-  estado: SalaEstado;
+  estado: SalaDto;
   /** Pide una acción a la sala (ver `useSala`). */
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   /** Para avisar de errores de las acciones. */
   onError: (mensaje: string) => void;
   /** Escribir y conversar con un narrador (lo que se pueda). */
-  contacto?: (participante: SalaParticipante) => ContactoParticipante | undefined;
+  contacto?: (participante: ParticipanteDto) => ContactoParticipante | undefined;
   /** Lo que se ve y se oye de cada uno en la mesa. */
   pistas?: Map<string, PistasParticipante>;
   /** Abre el diálogo para añadir un narrador virtual (ver DialogoNarradorVirtual). */

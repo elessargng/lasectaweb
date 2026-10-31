@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
-import type { SalaAlineamiento, SalaRecordatorio } from '../../contrato/sala';
+import type { Recordatorio } from '../../contrato/grimorio';
+import type { Alineamiento } from '../../contrato/jugador';
 
 /**
  * Quién juega a un jugador: una persona de la sala (un participante sentado) o
@@ -23,7 +24,7 @@ export class Jugador {
   /** El personaje de su ficha (id del catálogo o del guion), o null si no tiene. */
   personaje: string | null = null;
   /** Su alineamiento si el narrador lo ha cambiado; null: el de su tipo (ver Grimorio.alineamiento). */
-  alineamiento: SalaAlineamiento | null = null;
+  alineamiento: Alineamiento | null = null;
   /** Está muerto (lleva sudario). */
   muerto = false;
   /** Muerto de noche, a falta de que el narrador lo anuncie: aún no cuenta como muerto. */
@@ -34,7 +35,7 @@ export class Jugador {
    * Las fichas recordatorio que el narrador le ha puesto, en el orden en que se
    * pusieron: su estado en el grimorio («Poisoned», «Is The Drunk», «No Ability»…).
    */
-  recordatorios: SalaRecordatorio[] = [];
+  recordatorios: Recordatorio[] = [];
 
   /** El participante que lo juega, o null (nadie). */
   get participanteId(): string | null {

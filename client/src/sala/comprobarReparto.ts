@@ -1,5 +1,5 @@
 import { FORASTEROS } from '@contrato/reparto';
-import type { SalaDistribucion } from './useSala';
+import type { DistribucionDto } from './useSala';
 
 /**
  * Comprobar el reparto de la partida (aldeanos, forasteros, esbirros y demonios)
@@ -14,7 +14,7 @@ export { repartoAjustado } from '@contrato/reparto';
  * Cuántos forasteros puede haber con los personajes que alteran la preparación
  * (de menos a más), o 'cualquiera'. Sin reparto (menos de 5 jugadores), null.
  */
-function forasterosPosibles(distribucion: SalaDistribucion, presentes: string[]): number[] | 'cualquiera' | null {
+function forasterosPosibles(distribucion: DistribucionDto, presentes: string[]): number[] | 'cualquiera' | null {
   const { jugadores, aldeanos, forasteros } = distribucion;
   if (aldeanos === null || forasteros === null) return null;
   // Los forasteros que puede haber de más o de menos: la suma de lo de cada personaje
@@ -38,7 +38,7 @@ function forasterosPosibles(distribucion: SalaDistribucion, presentes: string[])
  */
 export function descuadres(
   cuentas: Record<string, number>,
-  distribucion: SalaDistribucion,
+  distribucion: DistribucionDto,
   presentes: string[],
 ): { forasteros: boolean; esbirros: boolean } {
   const posibles = forasterosPosibles(distribucion, presentes);
@@ -62,7 +62,7 @@ const enumerar = (numeros: number[]) =>
  */
 export function problemasDelReparto(
   cuentas: Record<string, number>,
-  distribucion: SalaDistribucion,
+  distribucion: DistribucionDto,
   presentes: string[],
 ): string[] {
   const { aldeanos, forasteros, esbirros, demonios } = distribucion;

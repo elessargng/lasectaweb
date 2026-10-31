@@ -1,4 +1,5 @@
-import type { SalaAlineamiento, SalaRevelacion } from '../../contrato/sala';
+import type { Alineamiento } from '../../contrato/jugador';
+import type { RevelacionDto } from '../../contrato/partida';
 import type { Jugador } from './Jugador';
 
 /**
@@ -7,7 +8,7 @@ import type { Jugador } from './Jugador';
  * revelando una a una. No comprueba permisos.
  */
 export class Revelacion {
-  private actual: { ganador: SalaAlineamiento; causas: string[]; reveladas: string[] } | null = null;
+  private actual: { ganador: Alineamiento; causas: string[]; reveladas: string[] } | null = null;
 
   constructor(
     /** Los jugadores de la plaza, en orden. */
@@ -15,7 +16,7 @@ export class Revelacion {
   ) {}
 
   /** La revelación del grimorio en curso (o acabada), o null. */
-  revelacion(): SalaRevelacion | null {
+  revelacion(): RevelacionDto | null {
     const r = this.actual;
     if (!r) return null;
     const mesa = this.plaza();
@@ -27,7 +28,7 @@ export class Revelacion {
   }
 
   /** Empieza a revelar el grimorio: ha ganado ese bando y todas las fichas se dan la vuelta. */
-  empezar(ganador: SalaAlineamiento, causas: string[]): void {
+  empezar(ganador: Alineamiento, causas: string[]): void {
     this.actual = { ganador, causas, reveladas: [] };
   }
 

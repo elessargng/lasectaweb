@@ -1,4 +1,4 @@
-import type { SalaEnvioDespertar } from '../../../contrato/sala';
+import type { EnvioDespertar } from '../../../contrato/despertar';
 import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { Opcion, RasgoOpcion } from '../estrategias/EstrategiaNarrador';
 import { describirEnvio } from '../grimorio';
@@ -22,7 +22,7 @@ import { numeroDe } from './informacionFalsa';
 
 /** Lo que se le ha dado a cada uno droison (para ser coherente), por `asiento:personaje`. */
 export interface RecuerdosNarrador {
-  droison: Map<string, { verdadera: SalaEnvioDespertar; dada: SalaEnvioDespertar }>;
+  droison: Map<string, { verdadera: EnvioDespertar; dada: EnvioDespertar }>;
   /** Lo que ha pasado en la partida, para contarlo al revelar el grimorio. */
   cronica: Cronica;
 }
@@ -31,13 +31,13 @@ export const recuerdosNuevos = (): RecuerdosNarrador => ({ droison: new Map(), c
 
 const clave = (asiento: string, personaje: string) => `${asiento}:${personaje}`;
 
-const forma = (e: SalaEnvioDespertar) => JSON.stringify([e.ficha, e.tarjeta, e.jugadores, e.personajes, e.texto]);
-export const mismoEnvio = (a: SalaEnvioDespertar, b: SalaEnvioDespertar) => forma(a) === forma(b);
+const forma = (e: EnvioDespertar) => JSON.stringify([e.ficha, e.tarjeta, e.jugadores, e.personajes, e.texto]);
+export const mismoEnvio = (a: EnvioDespertar, b: EnvioDespertar) => forma(a) === forma(b);
 
 const tipoMalvado = ({ partida }: SalaDeJuego, personaje: string) => ['minion', 'demon'].includes(partida.guion.personaje(personaje)?.tipo ?? '');
 
 /** Si una información señala al mal: un número mayor que cero, un «Sí», o enseña a un esbirro o un demonio. */
-export function destapaAlMal(juego: SalaDeJuego, envio: SalaEnvioDespertar): boolean {
+export function destapaAlMal(juego: SalaDeJuego, envio: EnvioDespertar): boolean {
   const n = numeroDe(envio);
   if (n !== null) return n > 0;
   if (envio.ficha === 'si' || envio.ficha === 'no') return envio.ficha === 'si';
@@ -57,7 +57,7 @@ export function ventajaDelMal(juego: SalaDeJuego): number {
 const entre = (min: number, max: number, x: number) => Math.min(max, Math.max(min, x));
 
 /** La probabilidad de decirle la verdad a quien está droison. */
-export function probabilidadVerdad(juego: SalaDeJuego, asiento: string, personaje: string, verdadera: SalaEnvioDespertar, recuerdos: RecuerdosNarrador): number {
+export function probabilidadVerdad(juego: SalaDeJuego, asiento: string, personaje: string, verdadera: EnvioDespertar, recuerdos: RecuerdosNarrador): number {
   // A lo mismo que otra noche, lo mismo: si entonces fue la verdad, otra vez; si fue mentira, otra vez mentira
   const antes = recuerdos.droison.get(clave(asiento, personaje));
   if (antes && mismoEnvio(antes.verdadera, verdadera)) return mismoEnvio(antes.dada, verdadera) ? 0.95 : 0.05;
@@ -70,10 +70,10 @@ export function opcionesFalsas(
   juego: SalaDeJuego,
   asiento: string,
   personaje: string,
-  verdadera: SalaEnvioDespertar,
-  falsas: SalaEnvioDespertar[],
+  verdadera: EnvioDespertar,
+  falsas: EnvioDespertar[],
   recuerdos: RecuerdosNarrador,
-): Opcion<SalaEnvioDespertar>[] {
+): Opcion<EnvioDespertar>[] {
   const { partida } = juego;
   const antes = recuerdos.droison.get(clave(asiento, personaje));
   const n = numeroDe(verdadera);
@@ -106,7 +106,7 @@ export function opcionesFalsas(
 }
 
 /** Apunta lo que se le ha dado (para ser coherente las noches siguientes). */
-export function recordarDroison(recuerdos: RecuerdosNarrador, asiento: string, personaje: string, verdadera: SalaEnvioDespertar, dada: SalaEnvioDespertar): void {
+export function recordarDroison(recuerdos: RecuerdosNarrador, asiento: string, personaje: string, verdadera: EnvioDespertar, dada: EnvioDespertar): void {
   recuerdos.droison.set(clave(asiento, personaje), { verdadera, dada });
   if (!mismoEnvio(verdadera, dada)) recuerdos.cronica.falsas.add(asiento);
 }

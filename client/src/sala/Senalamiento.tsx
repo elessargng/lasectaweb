@@ -6,7 +6,7 @@ import Mano from './Mano';
 import type { EstiloMano } from './marcas';
 import { resultadoSenalamiento } from './senales';
 import { tocarCuentaAtras } from './sonidos';
-import type { SalaEstado, SalaSenalamiento } from './useSala';
+import type { SalaDto, SenalamientoDto } from './useSala';
 
 /** Lo que dura el sonido de la cuenta atrás (3, 2, 1, 0): suena en los últimos segundos. */
 const SONIDO_MS = 4000;
@@ -29,8 +29,8 @@ const enCirculo = (i: number, total: number) => {
 };
 
 interface ManosSenalamientoProps {
-  estado: SalaEstado;
-  senalamiento: SalaSenalamiento;
+  estado: SalaDto;
+  senalamiento: SenalamientoDto;
   /** Mi asiento, si señalo: mi ficha señalada lleva mi marca. */
   miAsiento: string | null;
 }
@@ -91,8 +91,8 @@ export function ManosSenalamiento({ estado, senalamiento, miAsiento }: ManosSena
 }
 
 interface PanelSenalamientoProps {
-  estado: SalaEstado;
-  senalamiento: SalaSenalamiento;
+  estado: SalaDto;
+  senalamiento: SenalamientoDto;
   congelado: boolean;
   /** Reloj del servidor menos el de aquí (ms). */
   desfase: number;

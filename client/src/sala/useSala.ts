@@ -1,45 +1,39 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { notifySessionExpired } from '../utils/session';
-import type { SalaEstado, SalaResultado } from '@contrato/sala';
-import type { SalaMensaje, SalaSusurro } from '@contrato/chat';
+import type { SalaDto, ResultadoAccion } from '@contrato/sala';
+import type { MensajeChatDto, SusurroDto } from '@contrato/chat';
 import type { GuionResuelto } from './guiones';
 
-// El contrato con el servidor (lo que manda por el socket): server/src/contrato/sala.ts.
+// El contrato con el servidor (lo que manda, los Dto): server/src/contrato/, por temas.
 // Se reexporta aquí para que la sala lo siga importando de useSala.
 export type {
   MensajeDespertar,
-  Persona,
-  SalaAvisoHabilidad,
-  SalaEleccionDespertar,
-  SalaEnvioDespertar,
-  SalaHabilidadNoche,
-  SalaOpcionDespertar,
-  SalaRegistro,
-  SalaAlineamiento,
-  SalaAsiento,
-  SalaConfiguracion,
-  SalaConversacion,
-  SalaDespertar,
-  SalaDistribucion,
-  SalaEstado,
-  SalaFase,
-  SalaFichaEnviada,
-  SalaFormaMano as FormaMano,
-  SalaGrimorioEnviado,
-  SalaInvitacion,
-  SalaNominacion,
-  SalaParticipante,
-  SalaRecordatorio,
-  SalaRegistroVotacion,
-  SalaReloj,
-  SalaResultado,
-  SalaRevelacion,
-  SalaRol,
-  SalaSenalamiento,
-  SalaVotacion,
-} from '@contrato/sala';
-export { SALA_SENALAMIENTO as SENALAMIENTO, usuarioDe } from '@contrato/sala';
+  AvisoHabilidad,
+  EleccionDespertar,
+  EnvioDespertar,
+  HabilidadNocheDto,
+  OpcionDespertar,
+  Registro,
+  DespertarDto,
+} from '@contrato/despertar';
+export type { FichaEnviadaDto, GrimorioEnviadoDto, Recordatorio } from '@contrato/grimorio';
+export type { Alineamiento, JugadorDto } from '@contrato/jugador';
+export type { Persona, FormaMano, ParticipanteDto, Rol } from '@contrato/participante';
+export type {
+  ConfiguracionDto,
+  DistribucionDto,
+  FaseDto,
+  NominacionDto,
+  RegistroVotacionDto,
+  RelojDto,
+  RevelacionDto,
+  SenalamientoDto,
+  VotacionDto,
+} from '@contrato/partida';
+export type { ConversacionDto, SalaDto, InvitacionDto, ResultadoAccion } from '@contrato/sala';
+export { usuarioDe } from '@contrato/participante';
+export { SALA_SENALAMIENTO as SENALAMIENTO } from '@contrato/partida';
 
 /** El pase para conectarse al servidor de vídeo. */
 export type PaseVideo = { ok: true; url: string; token: string } | { ok: false; error: string };
@@ -79,27 +73,27 @@ export function useSala(
   perfil: { alias: string; avatar: string },
   avisos: {
     /** Cada estado nuevo junto al anterior, para avisar de cambios. */
-    alCambiar?: (anterior: SalaEstado | null, nuevo: SalaEstado) => void;
+    alCambiar?: (anterior: SalaDto | null, nuevo: SalaDto) => void;
     /** El servidor no deja entrar como invitado con ese nombre: ya lo usa otro. */
     alNombreOcupado?: () => void;
     /** Ha cambiado el guion de la sala (no al entrar, cuando llega el que ya había). */
     alCambiarGuion?: (guion: GuionResuelto | null) => void;
     /** Ha llegado un mensaje de texto (también los propios). */
-    alMensaje?: (mensaje: SalaMensaje) => void;
+    alMensaje?: (mensaje: MensajeChatDto) => void;
     /** Dos jugadores se han escrito en privado: las ondas de un asiento al otro. */
-    alSusurro?: (susurro: SalaSusurro) => void;
+    alSusurro?: (susurro: SusurroDto) => void;
     /** El narrador virtual dice algo (para oírlo con la voz del navegador). */
     alVoz?: (texto: string) => void;
   } = {},
 ) {
-  const [estado, setEstado] = useState<SalaEstado | null>(null);
+  const [estado, setEstado] = useState<SalaDto | null>(null);
   const [conexion, setConexion] = useState<SalaConexion>('conectando');
   // El guion de la sala: llega aparte del estado (solo al entrar y cuando cambia).
   const [guion, setGuion] = useState<GuionResuelto | null>(null);
   // Diferencia entre el reloj del servidor y el de aquí (ms), para las cuentas atrás.
   const [desfaseReloj, setDesfaseReloj] = useState(0);
   // Los mensajes de texto que se pueden leer (el historial llega al entrar y se le añaden los nuevos).
-  const [mensajes, setMensajes] = useState<SalaMensaje[]>([]);
+  const [mensajes, setMensajes] = useState<MensajeChatDto[]>([]);
   const socketRef = useRef<Socket | null>(null);
   const avisosRef = useRef(avisos);
   const perfilRef = useRef(perfil);
@@ -123,7 +117,7 @@ export function useSala(
     });
     socketRef.current = socket;
 
-    let anterior: SalaEstado | null = null;
+    let anterior: SalaDto | null = null;
     let expulsada = false;
     let guionRecibido = false;
     socket.on('sala:guion', (nuevo: GuionResuelto | null) => {
@@ -131,18 +125,18 @@ export function useSala(
       guionRecibido = true;
       setGuion(nuevo);
     });
-    socket.on('sala:estado', (nuevo: SalaEstado) => {
+    socket.on('sala:estado', (nuevo: SalaDto) => {
       avisosRef.current.alCambiar?.(anterior, nuevo);
       anterior = nuevo;
       setEstado(nuevo);
       setDesfaseReloj(nuevo.ahora - Date.now());
     });
-    socket.on('chat:historial', (lista: SalaMensaje[]) => setMensajes(lista));
-    socket.on('chat:mensaje', (mensaje: SalaMensaje) => {
+    socket.on('chat:historial', (lista: MensajeChatDto[]) => setMensajes(lista));
+    socket.on('chat:mensaje', (mensaje: MensajeChatDto) => {
       setMensajes((previos) => (previos.some((m) => m.id === mensaje.id) ? previos : [...previos, mensaje]));
       avisosRef.current.alMensaje?.(mensaje);
     });
-    socket.on('sala:susurro', (susurro: SalaSusurro) => avisosRef.current.alSusurro?.(susurro));
+    socket.on('sala:susurro', (susurro: SusurroDto) => avisosRef.current.alSusurro?.(susurro));
     socket.on('sala:voz', ({ texto }: { texto: string }) => avisosRef.current.alVoz?.(texto));
     socket.on('connect', () => {
       expulsada = false;
@@ -183,7 +177,7 @@ export function useSala(
    */
   const pedir = useCallback(
     (accion: string, datos?: unknown) =>
-      new Promise<SalaResultado>((resolve) => {
+      new Promise<ResultadoAccion>((resolve) => {
         const socket = socketRef.current;
         if (!socket?.connected) {
           resolve({ ok: false, error: 'No hay conexión con la sala.' });
@@ -191,7 +185,7 @@ export function useSala(
         }
         socket
           .timeout(5000)
-          .emit('sala:accion', { accion, datos }, (err: Error | null, r: SalaResultado) =>
+          .emit('sala:accion', { accion, datos }, (err: Error | null, r: ResultadoAccion) =>
             resolve(err ? { ok: false, error: 'La sala no ha respondido. Inténtalo de nuevo.' } : r),
           );
       }),
@@ -204,7 +198,7 @@ export function useSala(
    */
   const enviarMensaje = useCallback(
     (para: string, texto: string) =>
-      new Promise<SalaResultado>((resolve) => {
+      new Promise<ResultadoAccion>((resolve) => {
         const socket = socketRef.current;
         if (!socket?.connected) {
           resolve({ ok: false, error: 'No hay conexión con la sala.' });
@@ -212,7 +206,7 @@ export function useSala(
         }
         socket
           .timeout(5000)
-          .emit('chat:enviar', { para, texto }, (err: Error | null, r: SalaResultado) =>
+          .emit('chat:enviar', { para, texto }, (err: Error | null, r: ResultadoAccion) =>
             resolve(err ? { ok: false, error: 'La sala no ha respondido. Inténtalo de nuevo.' } : r),
           );
       }),
@@ -221,7 +215,7 @@ export function useSala(
 
   /** Pide al servidor algo con respuesta (ack), con un tiempo máximo; nunca falla. */
   const pedirAlSocket = useCallback(
-    <T extends SalaResultado>(evento: string, datos?: unknown) =>
+    <T extends ResultadoAccion>(evento: string, datos?: unknown) =>
       new Promise<T>((resolve) => {
         const socket = socketRef.current;
         if (!socket?.connected) {
@@ -238,7 +232,7 @@ export function useSala(
 
   /** El pase para el vídeo de la mesa («principal») o de una conversación (su id). */
   const pedirPaseVideo = useCallback(
-    (sala: string) => pedirAlSocket<SalaResultado & Partial<{ url: string; token: string }>>('video:pase', { sala }) as Promise<PaseVideo>,
+    (sala: string) => pedirAlSocket<ResultadoAccion & Partial<{ url: string; token: string }>>('video:pase', { sala }) as Promise<PaseVideo>,
     [pedirAlSocket],
   );
   /**
@@ -246,25 +240,25 @@ export function useSala(
    * retirar la invitación o la petición, escuchar (visitantes y narradores), entrar
    * sin invitación (narradores) y salir.
    */
-  const invitarAConversar = useCallback((con: string) => pedirAlSocket<SalaResultado>('conversacion:invitar', { con }), [pedirAlSocket]);
-  const pedirUnirse = useCallback((con: string) => pedirAlSocket<SalaResultado>('conversacion:pedirUnirse', { con }), [pedirAlSocket]);
+  const invitarAConversar = useCallback((con: string) => pedirAlSocket<ResultadoAccion>('conversacion:invitar', { con }), [pedirAlSocket]);
+  const pedirUnirse = useCallback((con: string) => pedirAlSocket<ResultadoAccion>('conversacion:pedirUnirse', { con }), [pedirAlSocket]);
   const responderInvitacion = useCallback(
-    (invitacion: string, aceptar: boolean) => pedirAlSocket<SalaResultado>('conversacion:responder', { invitacion, aceptar }),
+    (invitacion: string, aceptar: boolean) => pedirAlSocket<ResultadoAccion>('conversacion:responder', { invitacion, aceptar }),
     [pedirAlSocket],
   );
   const cancelarInvitacion = useCallback(
-    (invitacion: string) => pedirAlSocket<SalaResultado>('conversacion:cancelar', { invitacion }),
+    (invitacion: string) => pedirAlSocket<ResultadoAccion>('conversacion:cancelar', { invitacion }),
     [pedirAlSocket],
   );
   const escucharConversacion = useCallback(
-    (conversacion: string) => pedirAlSocket<SalaResultado>('conversacion:escuchar', { conversacion }),
+    (conversacion: string) => pedirAlSocket<ResultadoAccion>('conversacion:escuchar', { conversacion }),
     [pedirAlSocket],
   );
   const entrarConversacion = useCallback(
-    (conversacion: string) => pedirAlSocket<SalaResultado>('conversacion:entrar', { conversacion }),
+    (conversacion: string) => pedirAlSocket<ResultadoAccion>('conversacion:entrar', { conversacion }),
     [pedirAlSocket],
   );
-  const salirConversacion = useCallback(() => pedirAlSocket<SalaResultado>('conversacion:salir', {}), [pedirAlSocket]);
+  const salirConversacion = useCallback(() => pedirAlSocket<ResultadoAccion>('conversacion:salir', {}), [pedirAlSocket]);
 
   /** Vuelve a pedir los mensajes que se pueden leer (al cambiar de papel cambian). */
   const pedirHistorial = useCallback(() => {

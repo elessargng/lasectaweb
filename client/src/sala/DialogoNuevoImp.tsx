@@ -4,14 +4,14 @@ import { useAriaLive } from './avisosConfig';
 import { nombreDeAsiento } from './despertar';
 import { botonPrincipal, botonSecundario } from './estilos';
 import type { PersonajeMostrado } from './guiones';
-import type { SalaEstado, SalaResultado } from './useSala';
+import type { SalaDto, ResultadoAccion } from './useSala';
 
 interface DialogoNuevoImpProps {
-  estado: SalaEstado;
+  estado: SalaDto;
   /** El asiento del Imp que se ha elegido a sí mismo (muere esta noche). */
   muere: string;
   porId: Map<string, PersonajeMostrado>;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   /** Confirmar al lector quién es el nuevo. */
   onElegido: (texto: string) => void;
   /** Ahora no (Escape): se puede elegir luego, vuelve a salir. */

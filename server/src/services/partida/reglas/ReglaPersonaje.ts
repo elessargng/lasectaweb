@@ -1,4 +1,4 @@
-import type { SalaAlineamiento } from '../../../contrato/sala';
+import type { Alineamiento } from '../../../contrato/jugador';
 import type { PersonajeDeGuion } from '../../../types/guiones';
 import type { Jugador } from '../Jugador';
 
@@ -9,7 +9,7 @@ export interface ContextoReglas {
   /** Quién es de verdad el de un asiento: el de su «Is The …» o, sin él, el de su ficha. */
   identidad(asiento: Jugador): string | null;
   /** El alineamiento de un asiento: el puesto por el narrador o el de su tipo. */
-  alineamiento(asiento: Jugador): SalaAlineamiento | null;
+  alineamiento(asiento: Jugador): Alineamiento | null;
   /** Un personaje de la partida (del guion o del catálogo). */
   personaje(id: string): PersonajeDeGuion | undefined;
 }

@@ -1,5 +1,5 @@
 import { enumerar } from './despertar';
-import type { SalaEstado } from './useSala';
+import type { SalaDto } from './useSala';
 
 /**
  * Para el lector, con quién conversa alguien en privado: «con Ana y Luis»,
@@ -7,7 +7,7 @@ import type { SalaEstado } from './useSala';
  * (como miembro; quien solo escucha no cuenta). De noche, un jugador solo ve
  * las conversaciones en las que está: de las demás no sabe nada.
  */
-export function conQuienConversa(estado: SalaEstado, id: string): string | undefined {
+export function conQuienConversa(estado: SalaDto, id: string): string | undefined {
   const suya = estado.conversaciones.find((c) => c.miembros.includes(id));
   if (!suya) return undefined;
   const otros = suya.miembros.filter((m) => m !== id);

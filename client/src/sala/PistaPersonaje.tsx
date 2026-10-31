@@ -2,11 +2,11 @@ import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { alineamientoDe } from './fichas';
 import { nombreDeTipo, type PersonajeMostrado } from './guiones';
-import type { SalaAlineamiento } from './useSala';
+import type { Alineamiento } from './useSala';
 
 interface PistaPersonajeProps {
   personaje: PersonajeMostrado;
-  alineamiento: SalaAlineamiento | null;
+  alineamiento: Alineamiento | null;
   /** La ficha junto a la que sale. */
   ancla: HTMLElement;
 }

@@ -1,4 +1,4 @@
-import type { SalaNominacion, SalaRegistroVotacion } from '../../contrato/sala';
+import type { NominacionDto, RegistroVotacionDto } from '../../contrato/partida';
 import type { Participante } from '../sala/Participantes';
 import type { Jugador } from './Jugador';
 
@@ -9,13 +9,13 @@ import type { Jugador } from './Jugador';
 export const SALA_CUENTA_ATRAS_MS = 4000;
 
 /** La nominación tal como se guarda: los votos que hacen falta se calculan al pedirla. */
-type NominacionInterna = Omit<SalaNominacion, 'votosNecesarios' | 'votosNecesariosPorDefecto' | 'privada'> & {
+type NominacionInterna = Omit<NominacionDto, 'votosNecesarios' | 'votosNecesariosPorDefecto' | 'privada'> & {
   /** Quien tiene la palabra (los demás jugadores callan), o null: hablan todos. */
   palabra: string | null;
   /** Los votos que ha fijado el narrador; null: los de por defecto. */
   votosElegidos: number | null;
   /** Su entrada del registro, que se completa al terminar la votación. */
-  registro: SalaRegistroVotacion | null;
+  registro: RegistroVotacionDto | null;
   /** Los asientos de muertos que ya no tenían voto al empezar la votación (para la votación secreta). */
   gastadosAlVotar?: string[];
   /** Las cuentas cuyo voto se ha contado en esta votación (para descontarlo si se reinicia). */
@@ -81,14 +81,14 @@ export class Nominaciones {
   private nominacionEnCurso: NominacionInterna | null = null;
   /** Lo siguiente que toca en la nominación: el fin de la cuenta atrás o el próximo paso de la votación. */
   private temporizador: NodeJS.Timeout | null = null;
-  private registro: SalaRegistroVotacion[] = [];
+  private registro: RegistroVotacionDto[] = [];
   /** Los votos de la votación de hoy que más tuvo (de las que llegaron a los necesarios), o null. */
   private maximoDelDia: number | null = null;
 
   constructor(private readonly entorno: EntornoVotacion) {}
 
   /** El registro de nominaciones y votaciones, en el orden en que se nominó. */
-  votaciones(): SalaRegistroVotacion[] {
+  votaciones(): RegistroVotacionDto[] {
     return this.registro.map((v) => ({ ...v, votantes: v.votantes && [...v.votantes] }));
   }
 
@@ -211,7 +211,7 @@ export class Nominaciones {
   }
 
   /** La nominación en curso (una copia), con los votos que hacen falta. */
-  nominacion(): SalaNominacion | null {
+  nominacion(): NominacionDto | null {
     const actual = this.nominacionVigente();
     if (!actual) return null;
     const { votosElegidos: _, registro: __, palabra: ___, porDefectoAlTerminar, ...resto } = actual;
@@ -261,14 +261,14 @@ export class Nominaciones {
   /**
    * Empieza una nominación (sustituye a la que hubiera) y la apunta en el
    * registro, con su día (si no se llega a votar, queda sin votos). Si el nominado
-   * es un viajero, es una expulsión (ver SalaNominacion.expulsion). Baja todas
+   * es un viajero, es una expulsión (ver NominacionDto.expulsion). Baja todas
    * las manos que hubiera levantadas. No comprueba permisos.
    */
   nominar(desde: string, hasta: string): void {
     this.pararTemporizador();
     const nominado = this.entorno.plaza().find((a) => a.id === hasta);
     const expulsion = !!nominado && this.entorno.llevaViajero(nominado);
-    const registro: SalaRegistroVotacion = {
+    const registro: RegistroVotacionDto = {
       hora: Date.now(),
       dia: this.entorno.dia(),
       nomina: this.describirAsiento(desde),

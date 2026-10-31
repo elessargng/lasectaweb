@@ -1,4 +1,5 @@
-import type { MensajeDespertar, SalaEnvioDespertar, SalaOpcionDespertar, SalaRegistroVotacion } from '../../contrato/sala';
+import type { MensajeDespertar, EnvioDespertar, OpcionDespertar } from '../../contrato/despertar';
+import type { RegistroVotacionDto } from '../../contrato/partida';
 import { droison } from '../partida/reglas/ReglaPersonaje';
 import type { Opcion } from './estrategias/EstrategiaNarrador';
 import type { SalaDeJuego } from '../SalaDeJuego';
@@ -56,7 +57,7 @@ export interface Grimorio {
   personajes: { id: string; nombre: string; tipo: string }[];
   /** Los faroles que tiene el demonio (los del narrador). */
   farolesDemonio: string[];
-  votaciones: SalaRegistroVotacion[];
+  votaciones: RegistroVotacionDto[];
 }
 
 /** El número (1, 2…) de cada asiento, por su id. */
@@ -133,7 +134,7 @@ export function opcionesDeAsientos(juego: SalaDeJuego, asientos: readonly Jugado
 }
 
 /** Lo que se le manda a alguien en su despertar, en palabras: «tarjeta esteJugadorEs; ficha dos; jugadores 3 y 5; personajes Chef». */
-export function describirEnvio(juego: SalaDeJuego, envio: SalaEnvioDespertar): string {
+export function describirEnvio(juego: SalaDeJuego, envio: EnvioDespertar): string {
   const { partida } = juego;
   const numero = numeros(partida.plaza());
   const partes = [
@@ -147,7 +148,7 @@ export function describirEnvio(juego: SalaDeJuego, envio: SalaEnvioDespertar): s
 }
 
 /** Una respuesta propuesta de un despertar, con cómo registra cada uno para que salga. */
-export function describirOpcion(juego: SalaDeJuego, { envio, registros }: SalaOpcionDespertar): string {
+export function describirOpcion(juego: SalaDeJuego, { envio, registros }: OpcionDespertar): string {
   const { partida } = juego;
   const numero = numeros(partida.plaza());
   const como = registros.map((r) => `el asiento ${numero.get(r.asiento) ?? r.asiento} registra como ${r.como}`);

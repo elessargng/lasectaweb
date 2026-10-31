@@ -1,4 +1,5 @@
-import { NUM_FAROLES, type SalaHabilidadNoche } from '../../../contrato/sala';
+import { type HabilidadNocheDto } from '../../../contrato/despertar';
+import { NUM_FAROLES } from '../../../contrato/jugador';
 import type { ContextoEtapa } from '../etapas/Etapa';
 import { describirPersonaje, opcionesDeAsientos } from '../grimorio';
 import { indiceRecordatorio, tipoReal } from '../mesaDeJuego';
@@ -69,7 +70,7 @@ async function decirCero(ctx: ContextoEtapa, asientoId: string): Promise<false> 
  * Cumple lo que falta de una fila del orden de noche. Devuelve si ha puesto algo
  * (y entonces se vuelve a preparar) o false si no le toca (esa fila no se despierta).
  */
-export async function cumplirRequisitos(ctx: ContextoEtapa, fila: SalaHabilidadNoche): Promise<boolean> {
+export async function cumplirRequisitos(ctx: ContextoEtapa, fila: HabilidadNocheDto): Promise<boolean> {
   const { partida } = ctx.juego;
   let puesto = false;
   const faltan = fila.avisos.flatMap((a) => (a.tipo === 'faltaRecordatorio' ? [a] : []));

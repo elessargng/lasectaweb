@@ -4,11 +4,11 @@ import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario } from './estilos';
 import { IconoLuna } from './IconosJuego';
-import type { SalaResultado } from './useSala';
+import type { ResultadoAccion } from './useSala';
 
 interface DialogoFinalProps {
   /** Ir a la noche (la partida sigue). */
-  onNoche: () => Promise<SalaResultado>;
+  onNoche: () => Promise<ResultadoAccion>;
   /** Revelar el grimorio (la partida termina): abre su diálogo. */
   onRevelar: () => void;
   onCerrar: () => void;

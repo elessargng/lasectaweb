@@ -8,17 +8,17 @@ import { listaFaroles } from './fichas';
 import type { PersonajeMostrado } from './guiones';
 import { nombreDeAsiento, textoEleccion } from './despertar';
 import { BotoneraDespertar, EditorAdjunto, HistorialDespertar, MensajeVisto } from './PiezasDespertar';
-import type { SalaDespertar, SalaEstado, SalaResultado } from './useSala';
-import { FICHAS_RESPUESTA_GUIADA } from '@contrato/sala';
+import type { DespertarDto, SalaDto, ResultadoAccion } from './useSala';
+import { FICHAS_RESPUESTA_GUIADA } from '@contrato/despertar';
 
 interface DespertarJugadorProps {
-  estado: SalaEstado;
-  despertar: SalaDespertar;
+  estado: SalaDto;
+  despertar: DespertarDto;
   /** Mis faroles, si soy el demonio (para copiar los que me enseña el narrador); si no, null. */
   faroles: (string | null)[] | null;
   personajes: PersonajeMostrado[];
   porId: Map<string, PersonajeMostrado>;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onError: (mensaje: string) => void;
   onEnviado: (texto: string) => void;
   /** La cierra (Escape o «Cerrar»); se vuelve a abrir desde la fase de la cabecera. */

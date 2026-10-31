@@ -8,7 +8,7 @@ import { TIPOS_REPARTO, useFichas } from './fichas';
 import type { PersonajeMostrado } from './guiones';
 import CasillaFarol from './CasillaFarol';
 import RejillaFichas from './RejillaFichas';
-import type { SalaAsiento, SalaResultado } from './useSala';
+import type { JugadorDto, ResultadoAccion } from './useSala';
 import Interruptor from './Interruptor';
 
 interface DialogoFarolesProps {
@@ -16,8 +16,8 @@ interface DialogoFarolesProps {
   faroles: (string | null)[];
   /** La bolsa y las fichas de la mesa: lo que está en juego («asignado»). */
   bolsa: string[];
-  asientos: SalaAsiento[];
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  asientos: JugadorDto[];
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onCerrar: () => void;
 }
 

@@ -17,15 +17,15 @@ import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario, campo } from './estilos';
 import { TIPOS_REPARTO, useFichas } from './fichas';
 import { nombreDeAsiento } from './despertar';
-import type { SalaEstado, SalaResultado } from './useSala';
+import type { SalaDto, ResultadoAccion } from './useSala';
 
 interface DialogoArtistaProps {
-  estado: SalaEstado;
+  estado: SalaDto;
   /** Mi asiento: de él se dice «tú». */
   miAsiento: string;
   /** Pregunta libre (Jarvis la entiende); si no, se monta con piezas. */
   libre: boolean;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onCerrar: () => void;
 }
 

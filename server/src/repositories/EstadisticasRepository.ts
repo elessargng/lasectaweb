@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { DatabaseRepository } from './DatabaseRepository';
 import type { AsientoPartida, RegistroPartida } from '../services/estadisticas/SeguimientoPartida';
-import type { SalaRegistroVotacion } from '../contrato/sala';
+import type { RegistroVotacionDto } from '../contrato/partida';
 import type { EntradaDiario } from '../contrato/diario';
 
 /** Lo que ha hecho alguien en una partida (como jugador o como narrador), con la partida. */
@@ -70,7 +70,7 @@ export interface PartidaGuardada {
   mesa: AsientoPartida[] | null;
   narradoresNombres: string[] | null;
   npcs: string[] | null;
-  votaciones: SalaRegistroVotacion[] | null;
+  votaciones: RegistroVotacionDto[] | null;
   /** null en las partidas de antes de guardar el diario. */
   diario: EntradaDiario[] | null;
 }
@@ -184,7 +184,7 @@ export class EstadisticasRepository {
       mesa: jsonLista<AsientoPartida>(p.mesa),
       narradoresNombres: jsonLista<string>(p.narradoresNombres),
       npcs: jsonLista<string>(p.npcs),
-      votaciones: jsonLista<SalaRegistroVotacion>(p.votaciones),
+      votaciones: jsonLista<RegistroVotacionDto>(p.votaciones),
       diario: jsonLista<EntradaDiario>(p.diario),
     }));
   }

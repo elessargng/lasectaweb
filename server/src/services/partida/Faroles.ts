@@ -1,4 +1,4 @@
-import { NUM_FAROLES } from '../../contrato/sala';
+import { NUM_FAROLES } from '../../contrato/jugador';
 import type { Jugador } from './Jugador';
 import type { Diario } from './eventos';
 
@@ -18,7 +18,7 @@ function ponerEnCasilla(casillas: (string | null)[], posicion: number, personaje
  * en el diario. No comprueba permisos ni el guion.
  */
 export class Faroles {
-  /** Los faroles que el narrador prepara para el demonio (ver SalaEstado.faroles). */
+  /** Los faroles que el narrador prepara para el demonio (ver SalaDto.faroles). */
   private delNarrador: (string | null)[] = farolesVacios();
 
   /**

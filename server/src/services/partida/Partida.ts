@@ -1,10 +1,7 @@
 import { randomUUID } from 'crypto';
-import type {
-  SalaAlineamiento,
-  SalaEleccionDespertar,
-  SalaEnvioDespertar,
-  SalaFichaEnviada,
-} from '../../contrato/sala';
+import type { EleccionDespertar, EnvioDespertar } from '../../contrato/despertar';
+import type { FichaEnviadaDto } from '../../contrato/grimorio';
+import type { Alineamiento } from '../../contrato/jugador';
 import type { AsientoDiario, HechoDiario } from '../../contrato/diario';
 import type { GuionResuelto } from '../../types/guiones';
 import type { Participante } from '../sala/Participantes';
@@ -153,7 +150,7 @@ export class Partida {
     veGrimorio: (id) => this.acceso.de(id) === 'concedido',
     despertar: (asientoId) => void this.despertares.despertar(asientoId),
   });
-  /** Recordatorios del orden de noche cambiados a mano (ver SalaEstado.recordatoriosNoche). */
+  /** Recordatorios del orden de noche cambiados a mano (ver SalaDto.recordatoriosNoche). */
   private recordatorios: Record<string, boolean> = {};
 
   /**
@@ -350,8 +347,8 @@ export class Partida {
    */
   mandarDelNarrador(
     asientoId: string,
-    envio: SalaEnvioDespertar,
-    { eleccion, guiado = false }: { eleccion?: SalaEleccionDespertar; guiado?: boolean } = {},
+    envio: EnvioDespertar,
+    { eleccion, guiado = false }: { eleccion?: EleccionDespertar; guiado?: boolean } = {},
   ): void {
     this.despertares.enviar(asientoId, { ...envio, autor: 'narrador', guiado, ...(eleccion ? { eleccion } : {}) });
     if (envio.tarjeta === 'tuEres') this.entregas.comunicarFicha(asientoId, envio.personajes, envio.alineamiento);
@@ -371,7 +368,7 @@ export class Partida {
   private enviarGrimorioDeLaMesa(asientoId: string): void {
     const mesa = this.plaza();
     if (!mesa.find((a) => a.id === asientoId)?.participanteId) return;
-    const fichas: SalaFichaEnviada[] = mesa.map((a) => ({
+    const fichas: FichaEnviadaDto[] = mesa.map((a) => ({
       asientoId: a.id,
       personaje: a.personaje,
       alineamiento: a.alineamiento,
@@ -499,7 +496,7 @@ export class Partida {
    * Empieza a revelar el grimorio: ha ganado ese bando (y lo que haya pasado, ver
    * CAUSAS_FIN_PARTIDA) y todas las fichas se dan la vuelta.
    */
-  empezarRevelacion(ganador: SalaAlineamiento, causas: string[] = [], esbirros: Record<string, string> = {}): void {
+  empezarRevelacion(ganador: Alineamiento, causas: string[] = [], esbirros: Record<string, string> = {}): void {
     // Se acaba todo lo que corre: la nominación (y su cuenta atrás o votación), el reloj y el señalamiento
     this.nominaciones.cerrarNominacion();
     this.reloj.quitarReloj();

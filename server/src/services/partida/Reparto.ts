@@ -1,4 +1,4 @@
-import type { SalaDistribucion } from '../../contrato/sala';
+import type { DistribucionDto } from '../../contrato/partida';
 import { barajar } from './azar';
 import { Bolsa } from './Bolsa';
 import { repartoPara } from './distribucion';
@@ -23,7 +23,7 @@ export interface EntornoReparto {
 export class Reparto {
   /** Los personajes para repartir. */
   readonly bolsa: Bolsa;
-  /** El reparto dado por bueno a mano (ver SalaEstado.setupAceptado). */
+  /** El reparto dado por bueno a mano (ver SalaDto.setupAceptado). */
   private setupAceptadoActual: string | null = null;
 
   constructor(private readonly entorno: EntornoReparto) {
@@ -53,7 +53,7 @@ export class Reparto {
    * El reparto de la partida: los jugadores (asientos, sin los viajeros: los
    * puestos a mano y los de la bolsa) y cuántos de cada tipo (ver repartoPara).
    */
-  distribucion(): SalaDistribucion {
+  distribucion(): DistribucionDto {
     const mesa = this.entorno.plaza();
     const viajeros = mesa.filter((a) => this.llevaViajero(a)).length + this.bolsa.viajeros();
     const jugadores = Math.max(0, mesa.length - viajeros);

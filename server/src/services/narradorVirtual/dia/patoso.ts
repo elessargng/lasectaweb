@@ -1,4 +1,4 @@
-import type { SalaPatoso } from '../../../contrato/sala';
+import type { Patoso } from '../../../contrato/narradorVirtual';
 import { droison } from '../../partida/reglas/ReglaPersonaje';
 import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { ContextoEtapa } from '../etapas/Etapa';
@@ -18,7 +18,7 @@ import { identidadDe } from '../../partida/Grimorio';
  */
 
 /** Los muertos que pueden declararse Patoso hasta `hasta` (sin repetir a quien ya puede). */
-export function abrirPatosos(juego: SalaDeJuego, asientos: string[], hasta: SalaPatoso['hasta']): void {
+export function abrirPatosos(juego: SalaDeJuego, asientos: string[], hasta: Patoso['hasta']): void {
   const narrador = juego.narrador.actual();
   if (!narrador || !asientos.length) return;
   const nuevos = asientos.filter((id) => !narrador.patosos.some((p) => p.asiento === id)).map((asiento) => ({ asiento, hasta }));
@@ -36,7 +36,7 @@ export function quitarPatoso(juego: SalaDeJuego, asientoId: string): void {
  * no pueden. El Patoso de verdad que no lo ha hecho elige ahora (lo decide su
  * estrategia) y se cuenta. Devuelve el ganador si con eso se acaba la partida.
  */
-export async function cerrarPatosos(ctx: ContextoEtapa, hasta: SalaPatoso['hasta']): Promise<Ganador | null> {
+export async function cerrarPatosos(ctx: ContextoEtapa, hasta: Patoso['hasta']): Promise<Ganador | null> {
   const { juego } = ctx;
   const { partida, narrador } = juego;
   const cierran = narrador.actual()?.patosos.filter((p) => p.hasta === hasta) ?? [];

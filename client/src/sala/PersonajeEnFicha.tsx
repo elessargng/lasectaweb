@@ -2,7 +2,7 @@ import { useId } from 'react';
 import { urlDelServidor } from '../utils/api';
 import { iconoDe } from './fichas';
 import type { PersonajeMostrado } from './guiones';
-import type { SalaAlineamiento } from './useSala';
+import type { Alineamiento } from './useSala';
 
 /**
  * El nombre va en mayúsculas siguiendo el borde de abajo de la ficha (un arco
@@ -23,7 +23,7 @@ const PersonajeEnFicha = ({
   alineamiento,
 }: {
   personaje: PersonajeMostrado;
-  alineamiento: SalaAlineamiento | null;
+  alineamiento: Alineamiento | null;
 }) => {
   const icono = iconoDe(personaje, alineamiento);
   // Cada ficha, su arco (los id del SVG son de toda la página)

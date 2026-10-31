@@ -1,5 +1,6 @@
 import type { AsientoDiario, EntradaDiario, HechoDiario } from '../../contrato/diario';
-import type { SalaAlineamiento, SalaRegistroVotacion } from '../../contrato/sala';
+import type { Alineamiento } from '../../contrato/jugador';
+import type { RegistroVotacionDto } from '../../contrato/partida';
 
 /**
  * Lo que va pasando en la partida, para quien quiera enterarse sin que la sala
@@ -29,7 +30,7 @@ export interface FotoAsiento {
   personaje: string | null;
   /** La ficha que lleva, si no es quien es de verdad (el Borracho que se cree Lavandera). */
   ficha: string | null;
-  alineamiento: SalaAlineamiento | null;
+  alineamiento: Alineamiento | null;
   muerto: boolean;
 }
 
@@ -59,13 +60,13 @@ export type EventoPartida =
   /** Se revela el grimorio: la partida ha terminado. */
   | {
       tipo: 'partidaTerminada';
-      ganador: SalaAlineamiento;
+      ganador: Alineamiento;
       /** Lo que ha pasado (CAUSAS_FIN_PARTIDA) y, si es de alguien concreto (el esbirro que cazó a la Doncel), su cuenta. */
       causas: { id: string; userId?: string | null }[];
       mesa: FotoAsiento[];
       narradores: { userId: string | null; nombre: string }[];
       npcs: string[];
-      votaciones: SalaRegistroVotacion[];
+      votaciones: RegistroVotacionDto[];
       guion: string | null;
       edicion: string | null;
       /** Hasta qué día (o noche) se jugó. */

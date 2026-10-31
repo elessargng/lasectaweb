@@ -1,4 +1,4 @@
-import type { SalaEnvioDespertar, SalaHabilidadNoche } from '../../../contrato/sala';
+import type { EnvioDespertar, HabilidadNocheDto } from '../../../contrato/despertar';
 import { habilidadesDelGuion } from '../../partida/habilidades';
 import { OK } from '../../partida/habilidades/HabilidadNocturna';
 import type { ContextoEtapa } from '../etapas/Etapa';
@@ -14,7 +14,7 @@ import { ponerRecordatorio } from './requisitos';
  * manda. Droison, según su estrategia (y lo que aconseja criterioDroison), la de
  * verdad o una falsa con su misma forma. Con el Alcalde, además, decide si muere él o rebota a otro.
  */
-export async function resolverRevision(ctx: ContextoEtapa, fila: SalaHabilidadNoche): Promise<boolean> {
+export async function resolverRevision(ctx: ContextoEtapa, fila: HabilidadNocheDto): Promise<boolean> {
   const alcalde = fila.avisos.find((a) => a.tipo === 'alcalde');
   if (alcalde && 'asiento' in alcalde) await alcaldeAtacado(ctx, fila.personaje, alcalde.asiento);
   const envio = fila.opciones.length ? ((await droison(ctx, fila)) ?? (await elegirOpcion(ctx, fila))) : OK;
@@ -22,7 +22,7 @@ export async function resolverRevision(ctx: ContextoEtapa, fila: SalaHabilidadNo
 }
 
 /** Una de las respuestas propuestas (la primera es la de verdad; las demás, registrando como otro). */
-function elegirOpcion(ctx: ContextoEtapa, fila: SalaHabilidadNoche): Promise<SalaEnvioDespertar> {
+function elegirOpcion(ctx: ContextoEtapa, fila: HabilidadNocheDto): Promise<EnvioDespertar> {
   return ctx.decidir({
     motivo: 'revision',
     pregunta: `Qué se le dice a ${describirPersonaje(ctx.juego, fila.personaje)}: alguien puede registrar como otro.`,
@@ -40,7 +40,7 @@ function elegirOpcion(ctx: ContextoEtapa, fila: SalaHabilidadNoche): Promise<Sal
  * lo que aconseja criterioDroison), y se apunta para ser coherente otras noches.
  * Null si no está droison o no se sabe inventar una falsa.
  */
-async function droison(ctx: ContextoEtapa, fila: SalaHabilidadNoche): Promise<SalaEnvioDespertar | null> {
+async function droison(ctx: ContextoEtapa, fila: HabilidadNocheDto): Promise<EnvioDespertar | null> {
   const { partida } = ctx.juego;
   if (!fila.avisos.some((a) => a.tipo === 'envenenado' || a.tipo === 'borracho')) return null;
   const habilidad = habilidadesDelGuion(partida.guion.actual()?.edicion ?? null).get(fila.personaje);

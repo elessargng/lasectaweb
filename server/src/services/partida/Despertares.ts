@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
-import type { MensajeDespertar, SalaDespertar, SalaFase } from '../../contrato/sala';
+import type { MensajeDespertar, DespertarDto } from '../../contrato/despertar';
+import type { FaseDto } from '../../contrato/partida';
 import type { Diario } from './eventos';
 import type { Jugador } from './Jugador';
 
@@ -25,7 +26,7 @@ export class Despertares {
     /** Los jugadores de la plaza como están ahora. */
     private readonly plaza: () => readonly Jugador[],
     /** La fase de la partida, para fechar los mensajes. */
-    private readonly fase: () => SalaFase,
+    private readonly fase: () => FaseDto,
     private readonly diario: Diario,
   ) {}
 
@@ -41,7 +42,7 @@ export class Despertares {
   }
 
   /** Todos los despertares, en el orden en que se abrieron. */
-  despertares(): SalaDespertar[] {
+  despertares(): DespertarDto[] {
     return this.alDia().map((h) => ({ asiento: h.asiento, mensajes: h.mensajes.map((m) => ({ ...m })) }));
   }
 

@@ -1,17 +1,17 @@
 import { IconoLuna, IconoPergamino, IconoSol } from './IconosJuego';
 import { nombreFase } from './avisosSala';
 import MenuDesplegable from './MenuDesplegable';
-import type { SalaFase } from './useSala';
+import type { FaseDto } from './useSala';
 
 /** A dónde vuelve la máquina del tiempo (como el servidor, Fases.anterior): «la noche 1», «el día 1», «la preparación». */
-function nombreFaseAnterior({ momento, numero }: SalaFase): string | null {
+function nombreFaseAnterior({ momento, numero }: FaseDto): string | null {
   if (momento === 'preparacion') return null;
   if (momento === 'dia') return `la noche ${numero}`;
   return numero <= 1 ? 'la preparación' : `el día ${numero - 1}`;
 }
 
 interface FasePartidaProps {
-  fase: SalaFase;
+  fase: FaseDto;
   /**
    * Narradores: la máquina del tiempo, volver a la fase anterior (si se han
    * precipitado). Con ella, la fase es un botón que la despliega; sin ella, solo se ve.

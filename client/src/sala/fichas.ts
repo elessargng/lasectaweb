@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { PersonajeMostrado, Texto } from './guiones';
-import { RECORDATORIO_TEXTO } from '@contrato/sala';
-import type { SalaAlineamiento, SalaAsiento, SalaRecordatorio } from './useSala';
+import { RECORDATORIO_TEXTO } from '@contrato/grimorio';
+import type { Alineamiento, JugadorDto, Recordatorio } from './useSala';
 
 /**
  * Los personajes en las fichas de la mesa: qué personajes se pueden poner (los
@@ -14,8 +14,8 @@ import type { SalaAlineamiento, SalaAsiento, SalaRecordatorio } from './useSala'
  * texto, el que se escribió, de hasta RECORDATORIO_TEXTO_MAX (van en redondo en
  * una ficha pequeña). Vienen del contrato con el servidor.
  */
-export { RECORDATORIO_TEXTO, SALA_RECORDATORIO_TEXTO_MAX as RECORDATORIO_TEXTO_MAX } from '@contrato/sala';
-export const esRecordatorioTexto = (r: SalaRecordatorio) => r.personaje === RECORDATORIO_TEXTO;
+export { RECORDATORIO_TEXTO, SALA_RECORDATORIO_TEXTO_MAX as RECORDATORIO_TEXTO_MAX } from '@contrato/grimorio';
+export const esRecordatorioTexto = (r: Recordatorio) => r.personaje === RECORDATORIO_TEXTO;
 
 /**
  * Los iconos de un recordatorio con texto propio que no son de un personaje (los
@@ -29,7 +29,7 @@ export const ICONOS_LIBRES = [
 export const ICONO_LIBRE_INICIAL = ICONOS_LIBRES[0].id;
 
 /** El largo máximo de la nota de un asiento. */
-export { SALA_NOTA_LARGO_MAX as NOTA_LARGO_MAX } from '@contrato/sala';
+export { SALA_NOTA_LARGO_MAX as NOTA_LARGO_MAX } from '@contrato/grimorio';
 
 /** Los tipos que pueden ir en la ficha de un jugador (no los legendarios ni los lóricos). */
 export const TIPOS_EN_FICHA = ['townsfolk', 'outsider', 'minion', 'demon', 'traveller'];
@@ -37,22 +37,22 @@ export const TIPOS_EN_FICHA = ['townsfolk', 'outsider', 'minion', 'demon', 'trav
 /** Lo que lleva una ficha: el personaje (id) y su alineamiento si se ha cambiado (null: el de su tipo). */
 export interface ContenidoFicha {
   personaje: string | null;
-  alineamiento: SalaAlineamiento | null;
+  alineamiento: Alineamiento | null;
 }
 
 /** El alineamiento de un tipo si nadie lo cambia: los viajeros no tienen (null). */
-export function alineamientoDeTipo(tipo: string): SalaAlineamiento | null {
+export function alineamientoDeTipo(tipo: string): Alineamiento | null {
   if (tipo === 'townsfolk' || tipo === 'outsider') return 'bueno';
   if (tipo === 'minion' || tipo === 'demon') return 'malvado';
   return null;
 }
 
 /** El alineamiento que tiene la ficha: el elegido o, si no, el de su tipo. */
-export const alineamientoDe = (p: PersonajeMostrado, elegido: SalaAlineamiento | null) =>
+export const alineamientoDe = (p: PersonajeMostrado, elegido: Alineamiento | null) =>
   elegido ?? alineamientoDeTipo(p.tipo);
 
 /** El icono según el alineamiento: el bueno o el malvado (si lo hay) o, sin alineamiento, el de por defecto. */
-export function iconoDe(p: PersonajeMostrado, elegido: SalaAlineamiento | null): string | null {
+export function iconoDe(p: PersonajeMostrado, elegido: Alineamiento | null): string | null {
   const alineamiento = alineamientoDe(p, elegido);
   if (alineamiento === 'bueno') return p.iconoBueno ?? p.icono;
   if (alineamiento === 'malvado') return p.iconoMalvado ?? p.icono;
@@ -75,8 +75,8 @@ export interface ContextoFichas {
   todos: PersonajeMostrado[];
   todosPorId: Map<string, PersonajeMostrado>;
   /** Los recordatorios que ha puesto el jugador en su grimorio propio, por asiento. */
-  notasRecordatorios: Record<string, SalaRecordatorio[]>;
-  anotarRecordatorios: (asientoId: string, recordatorios: SalaRecordatorio[]) => void;
+  notasRecordatorios: Record<string, Recordatorio[]>;
+  anotarRecordatorios: (asientoId: string, recordatorios: Recordatorio[]) => void;
   /** La nota que ha escrito el jugador en su grimorio propio, por asiento. */
   notasEscritas: Record<string, string>;
   /** Escribe la nota de un asiento en el grimorio propio; con null, la borra. */
@@ -125,21 +125,21 @@ export const FichasContexto = createContext<ContextoFichas>({
  * (solo le llegan a quien ve el grimorio) y, con grimorio propio, los anotados.
  */
 export function recordatoriosDeFicha(
-  asiento: SalaAsiento,
-  anotados: Record<string, SalaRecordatorio[]> | null,
-): SalaRecordatorio[] {
+  asiento: JugadorDto,
+  anotados: Record<string, Recordatorio[]> | null,
+): Recordatorio[] {
   return [...(asiento.recordatorios ?? []), ...(anotados?.[asiento.id] ?? [])];
 }
 
 /** El texto de un recordatorio en el idioma de quien mira (el original si no hay traducción). */
-export function textoRecordatorio(r: SalaRecordatorio, personaje: PersonajeMostrado | undefined): Texto {
+export function textoRecordatorio(r: Recordatorio, personaje: PersonajeMostrado | undefined): Texto {
   // El texto propio está escrito aquí, en español
   if (esRecordatorioTexto(r)) return { texto: r.texto, lang: 'es' };
   return personaje?.recordatorios[r.indice] ?? { texto: r.texto, lang: 'en' };
 }
 
 /** Para el lector: «Envenenado (Envenenador)». */
-export function describirRecordatorio(r: SalaRecordatorio, personaje: PersonajeMostrado | undefined): string {
+export function describirRecordatorio(r: Recordatorio, personaje: PersonajeMostrado | undefined): string {
   const texto = textoRecordatorio(r, personaje).texto;
   return personaje ? `${texto} (${personaje.nombre.texto})` : texto;
 }
@@ -189,14 +189,14 @@ export function gruposViajeros(viajeros: PersonajeMostrado[], delGuion: Personaj
  * otro personaje (el que cree ser, o la habilidad que ha ganado). Se mira su
  * texto original, que es el mismo en cualquier idioma. Uno con texto propio nunca lo es.
  */
-export const esRecordatorioDeIdentidad = (r: SalaRecordatorio) => !esRecordatorioTexto(r) && /^is the\b/i.test(r.texto.trim());
+export const esRecordatorioDeIdentidad = (r: Recordatorio) => !esRecordatorioTexto(r) && /^is the\b/i.test(r.texto.trim());
 
 /**
  * Quién es de verdad el de un asiento: el personaje de su «Is The …» (el último)
  * o, sin él, el de su ficha. Solo lo sabe quien ve los recordatorios (el
  * grimorio): a los jugadores no les llegan.
  */
-export function identidadDe(asiento: SalaAsiento): { personaje: string | null; porRecordatorio: boolean } {
+export function identidadDe(asiento: JugadorDto): { personaje: string | null; porRecordatorio: boolean } {
   const r = [...(asiento.recordatorios ?? [])].reverse().find(esRecordatorioDeIdentidad);
   return r ? { personaje: r.personaje, porRecordatorio: true } : { personaje: asiento.personaje, porRecordatorio: false };
 }
@@ -207,7 +207,7 @@ export function identidadDe(asiento: SalaAsiento): { personaje: string | null; p
  * Marioneta con la de un aldeano, malvada). Un viajero de verdad (el Aprendiz)
  * es del bando de la habilidad que gana: el de su ficha. null: el de su ficha.
  */
-export function alineamientoReal(asiento: SalaAsiento, porId: Map<string, PersonajeMostrado>): SalaAlineamiento | null {
+export function alineamientoReal(asiento: JugadorDto, porId: Map<string, PersonajeMostrado>): Alineamiento | null {
   if (asiento.alineamiento) return asiento.alineamiento;
   const { personaje, porRecordatorio } = identidadDe(asiento);
   const real = porRecordatorio && personaje ? porId.get(personaje) : undefined;

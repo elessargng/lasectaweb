@@ -1,5 +1,7 @@
 import type { RespuestaArtista } from './artista';
-import type { FichaDespertar, SalaAlineamiento, SalaFase, TarjetaDespertar } from './sala';
+import type { FichaDespertar, TarjetaDespertar } from './despertar';
+import type { Alineamiento } from './jugador';
+import type { FaseDto } from './partida';
 
 /**
  * El diario de la partida: todo lo que se hace en ella, por noches y días, para
@@ -25,7 +27,7 @@ export type HechoDiario =
       jugadores: AsientoDiario[];
       personajes: string[];
       texto: string | null;
-      alineamiento: SalaAlineamiento | null;
+      alineamiento: Alineamiento | null;
       eleccion: number | null;
     }
   /** Muere (de noche, cuando se le pone la muerte, aunque se anuncie al amanecer). */
@@ -34,7 +36,7 @@ export type HechoDiario =
   | { tipo: 'ejecucion'; asiento: AsientoDiario }
   /** Su ficha pasa a ser otra (null: se le quita). */
   | { tipo: 'personaje'; asiento: AsientoDiario; personaje: string | null }
-  | { tipo: 'alineamiento'; asiento: AsientoDiario; alineamiento: SalaAlineamiento }
+  | { tipo: 'alineamiento'; asiento: AsientoDiario; alineamiento: Alineamiento }
   /** Se le pone (o se le quita) un recordatorio. */
   | { tipo: 'recordatorio'; asiento: AsientoDiario; personaje: string; texto: string; quitado: boolean }
   /** El narrador le envía una copia del grimorio. */
@@ -56,7 +58,7 @@ export type HechoDiario =
 
 /** Un hecho del diario, con cuándo pasó. */
 export type EntradaDiario = HechoDiario & {
-  fase: { momento: SalaFase['momento']; numero: number };
+  fase: { momento: FaseDto['momento']; numero: number };
   /** ms */
   hora: number;
 };

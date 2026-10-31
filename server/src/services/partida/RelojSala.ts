@@ -1,4 +1,4 @@
-import type { SalaReloj } from '../../contrato/sala';
+import type { RelojDto } from '../../contrato/partida';
 
 /** El reloj del narrador: cuánto puede durar (segundos) y cuánto se sigue viendo al acabar (ms). */
 export const SALA_RELOJ = { minSegundos: 5, maxSegundos: 60 * 60, mensajeMax: 120 };
@@ -11,10 +11,10 @@ const SALA_RELOJ_TRAS_FIN_MS = 15_000;
 export class RelojSala {
   /** Hora (ms) del último gong del narrador, o null. */
   private ultimoGong: number | null = null;
-  /** El reloj del narrador (ver SalaEstado.reloj), o null. */
-  private relojActual: SalaReloj | null = null;
+  /** El reloj del narrador (ver SalaDto.reloj), o null. */
+  private relojActual: RelojDto | null = null;
 
-  /** Hora (ms) del último gong (ver SalaEstado.gong), o null. */
+  /** Hora (ms) del último gong (ver SalaDto.gong), o null. */
   gong(): number | null {
     return this.ultimoGong;
   }
@@ -28,7 +28,7 @@ export class RelojSala {
    * El reloj del narrador, o null. Acabado, se sigue viendo un rato (con su
    * «¡Tiempo!»); después ya no se manda, para que no lo vea quien entra.
    */
-  reloj(): SalaReloj | null {
+  reloj(): RelojDto | null {
     if (this.relojActual && Date.now() - this.relojActual.fin > SALA_RELOJ_TRAS_FIN_MS) this.relojActual = null;
     return this.relojActual;
   }

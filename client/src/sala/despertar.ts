@@ -15,9 +15,9 @@ import {
 import { IconoCalavera, IconoEspadas, IconoGente, IconoHuella, IconoLuna, IconoMascaras, IconoOjo, IconoPalma, type IconoSala, IconoSinVer } from './IconosJuego';
 import type { PersonajeMostrado } from './guiones';
 import { datosAsiento, describirAsiento } from './nombresAsiento';
-import type { MensajeDespertar, SalaAlineamiento, SalaDespertar, SalaEnvioDespertar, SalaEstado } from './useSala';
+import type { MensajeDespertar, Alineamiento, DespertarDto, EnvioDespertar, SalaDto } from './useSala';
 
-export const NOMBRE_BANDO: Record<SalaAlineamiento, string> = { bueno: 'Bueno', malvado: 'Malvado' };
+export const NOMBRE_BANDO: Record<Alineamiento, string> = { bueno: 'Bueno', malvado: 'Malvado' };
 
 /**
  * Lo que se puede mandar al despertar a alguien de noche. Es el mismo catálogo
@@ -88,14 +88,14 @@ export interface Envio {
   jugadores?: string[];
   personajes?: string[];
   texto?: string;
-  alineamiento?: SalaAlineamiento | null;
+  alineamiento?: Alineamiento | null;
 }
 
 /** «Elige un jugador», «Elige 2 jugadores» (lo que pide una habilidad). */
 export const textoEleccion = (cantidad: number) => `Elige ${cantidad} ${cantidad === 1 ? 'jugador' : 'jugadores'}`;
 
 /** «asiento 3 (Bea)» con mayúscula: así empieza una frase o una línea. */
-export const nombreDeAsiento = (estado: SalaEstado, asientoId: string) => {
+export const nombreDeAsiento = (estado: SalaDto, asientoId: string) => {
   const { numero, ocupante } = datosAsiento(estado, asientoId);
   const texto = numero > 0 ? describirAsiento(numero, ocupante) : 'un asiento que ya no está';
   return texto.charAt(0).toLocaleUpperCase('es') + texto.slice(1);
@@ -110,8 +110,8 @@ export const enumerar = (nombres: string[]) =>
  * Imp». (Los nombres en inglés no llevan su idioma aquí: es texto de un aviso.)
  */
 export function describirMensaje(
-  m: SalaEnvioDespertar & Partial<Pick<MensajeDespertar, 'eleccion'>>,
-  estado: SalaEstado,
+  m: EnvioDespertar & Partial<Pick<MensajeDespertar, 'eleccion'>>,
+  estado: SalaDto,
   personajes: Map<string, PersonajeMostrado>,
 ): string {
   // «Haz una elección» de una habilidad: cuántos
@@ -130,7 +130,7 @@ export function describirMensaje(
 }
 
 /** Quién manda un mensaje: «Narrador», «Tú» o el asiento del jugador. */
-export const autorDe = (m: MensajeDespertar, estado: SalaEstado) =>
+export const autorDe = (m: MensajeDespertar, estado: SalaDto) =>
   m.autor === 'narrador'
     ? 'Narrador'
     : estado.asientos.find((a) => a.id === m.autor)?.ocupante === estado.yo
@@ -141,4 +141,4 @@ export const autorDe = (m: MensajeDespertar, estado: SalaEstado) =>
  * Lo último del despertar es un «Entendido» (del jugador o del narrador): ya está
  * hablado. En la mesa, la luna de su ficha es un pulgar arriba.
  */
-export const esEntendido = (d: SalaDespertar) => d.mensajes[d.mensajes.length - 1]?.ficha === 'entendido';
+export const esEntendido = (d: DespertarDto) => d.mensajes[d.mensajes.length - 1]?.ficha === 'entendido';

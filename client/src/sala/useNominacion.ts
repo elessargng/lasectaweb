@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { ID_CUENTA_ATRAS, ID_REINICIAR, idFichaNominar } from './ids';
 import { datosAsiento, describirAsiento } from './nombresAsiento';
-import type { SalaEstado, SalaResultado } from './useSala';
+import type { SalaDto, ResultadoAccion } from './useSala';
 
 interface Opciones {
-  estado: SalaEstado;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  estado: SalaDto;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onError: (mensaje: string) => void;
   onAnuncio: (mensaje: string) => void;
 }

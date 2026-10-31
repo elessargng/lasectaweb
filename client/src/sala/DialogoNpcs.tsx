@@ -5,14 +5,14 @@ import { useAriaLive } from './avisosConfig';
 import { botonSecundario } from './estilos';
 import type { PersonajeMostrado } from './guiones';
 import RejillaFichas from './RejillaFichas';
-import type { SalaResultado } from './useSala';
+import type { ResultadoAccion } from './useSala';
 
 interface DialogoNpcsProps {
   /** Los NPCs en juego (ids). */
   npcs: string[];
   /** Los legendarios y lóricos que se pueden poner. */
   disponibles: PersonajeMostrado[];
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onCerrar: () => void;
 }
 

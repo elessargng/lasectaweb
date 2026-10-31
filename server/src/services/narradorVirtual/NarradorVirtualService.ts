@@ -1,4 +1,8 @@
-import { NARRADORES_VIRTUALES, type GuionNarradorVirtual, type IdNarradorVirtual } from '../../contrato/sala';
+import {
+  NARRADORES_VIRTUALES,
+  type GuionNarradorVirtual,
+  type IdNarradorVirtual,
+} from '../../contrato/narradorVirtual';
 import type { SalaDeJuego } from '../SalaDeJuego';
 import type { EstrategiaNarrador } from './estrategias/EstrategiaNarrador';
 import { TontoYTu } from './estrategias/TontoYTu';

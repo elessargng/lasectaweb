@@ -1,5 +1,5 @@
 import { useRef, useState, type MouseEvent, type PointerEvent } from 'react';
-import type { SalaResultado } from './useSala';
+import type { ResultadoAccion } from './useSala';
 
 /** Lo que hay que mover el puntero para que deje de ser un clic y sea un arrastre (px). */
 const UMBRAL = 6;
@@ -15,7 +15,7 @@ interface Arrastre {
 interface Opciones {
   /** Se puede (narradores con el Gardener en juego, sin editar ni revelar). */
   activo: boolean;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onError: (mensaje: string) => void;
   /** Se ha hecho: lo que se anuncia (desde y hasta, ids de asiento). */
   onHecho: (desde: string, hasta: string) => void;

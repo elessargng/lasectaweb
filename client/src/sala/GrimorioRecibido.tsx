@@ -4,10 +4,10 @@ import { createPortal } from 'react-dom';
 import Dialog from '../components/Dialog';
 import MiniGrimorio from './MiniGrimorio';
 import { botonIcono, botonPrincipal } from './estilos';
-import type { SalaGrimorioEnviado } from './useSala';
+import type { GrimorioEnviadoDto } from './useSala';
 
 interface GrimorioRecibidoProps {
-  grimorio: SalaGrimorioEnviado;
+  grimorio: GrimorioEnviadoDto;
   nombres: Record<string, string>;
   /** Con grimorio propio: copia los personajes y los recordatorios en él. Sin esto, no sale. */
   onCopiar?: () => void;

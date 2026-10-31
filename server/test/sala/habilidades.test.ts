@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { SalaDeJuego } from '../../src/services/SalaDeJuego';
-import type { SalaHabilidadNoche } from '../../src/contrato/sala';
+import type { HabilidadNocheDto } from '../../src/contrato/despertar';
 import { Arnes } from './arnes';
 import { ficha } from '../../src/services/partida/habilidades/HabilidadNocturna';
 import { guionDePrueba, guionTroubleBrewing, invitado } from './guionDePrueba';
@@ -21,7 +21,7 @@ function mesa(...personajes: string[]) {
   });
   partida.irANoche();
   const asiento = (i: number) => partida.plaza()[i];
-  const fila = (personaje: string): SalaHabilidadNoche | undefined => partida.guiado.habilidadesNoche().find((h) => h.personaje === personaje);
+  const fila = (personaje: string): HabilidadNocheDto | undefined => partida.guiado.habilidadesNoche().find((h) => h.personaje === personaje);
   const recordatorio = (i: number, personaje: string, texto: string) => {
     const indice = partida.guion.personaje(personaje)!.recordatorios.indexOf(texto);
     partida.grimorio.ponerRecordatorio(asiento(i).id, { personaje, indice, texto });

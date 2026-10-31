@@ -1,4 +1,4 @@
-import type { SalaResultado } from '../../contrato/sala';
+import type { ResultadoAccion } from '../../contrato/sala';
 
 /**
  * Lo que el narrador virtual necesita de fuera, como interfaces (se le inyectan):
@@ -10,7 +10,7 @@ import type { SalaResultado } from '../../contrato/sala';
  * mismas acciones de la sala (y los mismos permisos), y la sala se difunde a todos.
  */
 export interface MesaNarrador {
-  accion(nombre: string, datos?: unknown): Promise<SalaResultado>;
+  accion(nombre: string, datos?: unknown): Promise<ResultadoAccion>;
 }
 
 /** Programa algo para dentro de un rato; devuelve cómo cancelarlo. */

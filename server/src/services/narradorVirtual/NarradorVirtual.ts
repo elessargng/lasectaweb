@@ -1,4 +1,4 @@
-import type { SalaNarradorVirtual } from '../../contrato/sala';
+import type { NarradorVirtualDto } from '../../contrato/narradorVirtual';
 import type { NarradorVirtualRepository } from '../../repositories/NarradorVirtualRepository';
 import type { Partida } from '../partida/Partida';
 import type { Sala } from '../sala/Sala';
@@ -18,13 +18,13 @@ export class NarradorVirtual {
   ) {}
 
   /** El narrador virtual de la sala, si lo hay (y su participante sigue en ella). */
-  actual(): SalaNarradorVirtual | null {
+  actual(): NarradorVirtualDto | null {
     const narrador = this.repositorio.actual();
     return narrador && this.sala.participantes.buscar(narrador.participante) ? narrador : null;
   }
 
   /** Entra un narrador virtual y se guarda quién lo añadió. Devuelve su participante. */
-  anadir(datos: Pick<SalaNarradorVirtual, 'id' | 'creador' | 'guion' | 'jugadores'>, nombre: string, avatar: string): string {
+  anadir(datos: Pick<NarradorVirtualDto, 'id' | 'creador' | 'guion' | 'jugadores'>, nombre: string, avatar: string): string {
     const participante = this.sala.participantes.anadirVirtual(nombre, avatar, datos.id);
     this.repositorio.guardar({
       ...datos,
@@ -41,12 +41,12 @@ export class NarradorVirtual {
   }
 
   /** Cambia lo que lleva de la partida (su etapa, su frase, el día…). */
-  actualizar(cambios: Partial<Omit<SalaNarradorVirtual, 'id' | 'participante' | 'creador' | 'guion' | 'jugadores'>>): void {
+  actualizar(cambios: Partial<Omit<NarradorVirtualDto, 'id' | 'participante' | 'creador' | 'guion' | 'jugadores'>>): void {
     this.repositorio.actualizar(cambios);
   }
 
   /** Otro narrador virtual sigue la partida del que hay (Jarvis deja a «Tonto y tú»): con su id, su nombre y su avatar. */
-  relevar(id: SalaNarradorVirtual['id'], nombre: string, avatar: string): void {
+  relevar(id: NarradorVirtualDto['id'], nombre: string, avatar: string): void {
     const narrador = this.repositorio.actual();
     if (!narrador) return;
     this.repositorio.guardar({ ...narrador, id });

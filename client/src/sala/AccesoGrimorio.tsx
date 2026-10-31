@@ -1,12 +1,12 @@
 import { useRef } from 'react';
 import { botonPrincipal, botonSecundario } from './estilos';
 import { idNombreNarrador } from './ids';
-import type { SalaEstado, SalaParticipante, SalaResultado } from './useSala';
+import type { SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
 
 interface AccesoGrimorioProps {
-  estado: SalaEstado;
-  yo: SalaParticipante;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  estado: SalaDto;
+  yo: ParticipanteDto;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onError: (mensaje: string) => void;
 }
 
@@ -30,7 +30,7 @@ const AccesoGrimorio = ({ estado, yo, pedir, onError }: AccesoGrimorioProps) => 
     if (piden.length === 0) return null;
 
     // La fila respondida desaparece: el foco va al título (o, si ya no queda nada, al propio nombre).
-    const responder = async (p: SalaParticipante, conceder: boolean) => {
+    const responder = async (p: ParticipanteDto, conceder: boolean) => {
       if (!(await actuar('narrador:accesoGrimorio', { participanteId: p.id, conceder }))) return;
       window.setTimeout(() => {
         (tituloRef.current ?? document.getElementById(idNombreNarrador(yo.id)))?.focus();

@@ -4,11 +4,11 @@ import { IconoGente, IconoLibroSecreto } from './IconosJuego';
 import ConAyuda from './ConAyuda';
 import { useEffect, useRef, useState } from 'react';
 import { botonIcono } from './estilos';
-import { usuarioDe, type SalaParticipante, type SalaRol } from './useSala';
+import { usuarioDe, type ParticipanteDto, type Rol } from './useSala';
 import ImagenAvatar from './ImagenAvatar';
 import VolumenParticipante from './VolumenParticipante';
 
-const GRUPOS: { rol: SalaRol; titulo: string }[] = [
+const GRUPOS: { rol: Rol; titulo: string }[] = [
   { rol: 'narrador', titulo: 'Narradores' },
   { rol: 'jugador', titulo: 'Jugadores' },
   { rol: 'visitante', titulo: 'Visitantes' },
@@ -31,7 +31,7 @@ const Distintivo = ({ tono = 'normal', children }: { tono?: keyof typeof TONOS; 
 );
 
 interface ListaParticipantesProps {
-  participantes: SalaParticipante[];
+  participantes: ParticipanteDto[];
   yo: string;
   /** Quienes escuchan una conversación (solo llega a narradores y visitantes): una oreja delante. */
   escuchando: Set<string>;

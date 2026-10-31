@@ -1,21 +1,21 @@
 import { describirMensaje, enumerar, nombreDeAsiento, type Envio } from './despertar';
 import { textoRecordatorio } from './fichas';
 import type { PersonajeMostrado } from './guiones';
-import type { SalaAvisoHabilidad, SalaEnvioDespertar, SalaEstado, SalaHabilidadNoche, SalaOpcionDespertar, SalaRegistro } from './useSala';
+import type { AvisoHabilidad, EnvioDespertar, SalaDto, HabilidadNocheDto, OpcionDespertar, Registro } from './useSala';
 
 /**
- * El despertar guiado del orden de noche (ver SalaHabilidadNoche en el contrato):
+ * El despertar guiado del orden de noche (ver HabilidadNocheDto en el contrato):
  * cómo se dice cada cosa que avisa el servidor. Los nombres de los personajes y
  * de los recordatorios, en el idioma elegido.
  */
 export interface ContextoHabilidades {
-  estado: SalaEstado;
+  estado: SalaDto;
   porId: Map<string, PersonajeMostrado>;
   /** La posición de un recordatorio (por su texto en el original) entre los de su personaje, o -1. */
   indiceRecordatorio: (personaje: string, texto: string) => number;
 }
 
-const COMO: Record<SalaRegistro, string> = {
+const COMO: Record<Registro, string> = {
   bueno: 'bueno',
   malvado: 'malvado',
   demonio: 'el demonio',
@@ -41,7 +41,7 @@ const asientoConPersonaje = (c: ContextoHabilidades, asientoId: string) => {
 };
 
 /** Un aviso del despertar guiado, en una frase. */
-export function describirAviso(c: ContextoHabilidades, aviso: SalaAvisoHabilidad): string {
+export function describirAviso(c: ContextoHabilidades, aviso: AvisoHabilidad): string {
   switch (aviso.tipo) {
     case 'faltaRecordatorio': {
       const personaje = c.porId.get(aviso.personaje);
@@ -75,7 +75,7 @@ export function describirAviso(c: ContextoHabilidades, aviso: SalaAvisoHabilidad
 }
 
 /** Una respuesta posible: lo que se manda y, si sale de cómo registra alguien, cómo («si Asiento 3 (Bea) registra como malvado»). */
-export function describirOpcion(c: ContextoHabilidades, opcion: SalaOpcionDespertar): { mensaje: string; registros: string } {
+export function describirOpcion(c: ContextoHabilidades, opcion: OpcionDespertar): { mensaje: string; registros: string } {
   const registros = opcion.registros.map((r) => `${nombreDeAsiento(c.estado, r.asiento)} registra como ${COMO[r.como]}`);
   return {
     mensaje: describirMensaje(opcion.envio, c.estado, c.porId),
@@ -84,7 +84,7 @@ export function describirOpcion(c: ContextoHabilidades, opcion: SalaOpcionDesper
 }
 
 /** Lo que manda el servidor, como lo que se elige al mandar algo (sin lo que no lleva). */
-export const aEnvio = (e: SalaEnvioDespertar): Envio => ({
+export const aEnvio = (e: EnvioDespertar): Envio => ({
   ...(e.ficha ? { ficha: e.ficha } : {}),
   ...(e.tarjeta ? { tarjeta: e.tarjeta } : {}),
   ...(e.jugadores.length ? { jugadores: e.jugadores } : {}),
@@ -94,7 +94,7 @@ export const aEnvio = (e: SalaEnvioDespertar): Envio => ({
 });
 
 /** Lo que pone en la fila del orden de noche, según cómo está. */
-export const ESTADO_HABILIDAD: Record<SalaHabilidadNoche['estado'], string> = {
+export const ESTADO_HABILIDAD: Record<HabilidadNocheDto['estado'], string> = {
   listo: 'Listo',
   falta: 'Falta algo',
   revisar: 'Para revisar',

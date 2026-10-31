@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { botonPrincipal, botonSecundario } from './estilos';
 import { formatoReloj, RELOJ_TRAS_FIN_MS } from './reloj';
 import { tocarGong } from './sonidos';
-import type { SalaReloj } from './useSala';
+import type { RelojDto } from './useSala';
 
 interface RelojSalaProps {
-  reloj: SalaReloj;
+  reloj: RelojDto;
   /** Reloj del servidor menos el de aquí (ms). */
   desfase: number;
   /** Aviso al lector al acabar el tiempo. */
@@ -23,7 +23,7 @@ const AVISO_FINAL_MS = 10_000;
 export const ID_CANCELAR_RELOJ = 'sala-reloj-cancelar';
 
 /** Lo que queda (ms, puede ser negativo), con el reloj del servidor. */
-const queda = (reloj: SalaReloj, desfase: number) => reloj.fin - (Date.now() + desfase);
+const queda = (reloj: RelojDto, desfase: number) => reloj.fin - (Date.now() + desfase);
 
 /**
  * El reloj del narrador, en grande en el centro de la mesa, para todos: lo que

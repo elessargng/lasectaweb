@@ -1,13 +1,13 @@
 import { randomUUID } from 'crypto';
 import type { Participante } from '../sala/Participantes';
-import type { SalaFase, SalaSenalamiento } from '../../contrato/sala';
+import type { FaseDto, SenalamientoDto } from '../../contrato/partida';
 import type { Jugador } from './Jugador';
 
 /** Lo que el señalamiento necesita saber de la sala. */
 export interface EntornoSenalamiento {
   /** Los jugadores de la plaza como están ahora. */
   plaza(): readonly Jugador[];
-  fase(): SalaFase;
+  fase(): FaseDto;
   /** El asiento en el que se sienta un participante, o null. */
   jugadorDe(participanteId: string): Jugador | null;
   /** Un visitante ve el grimorio del narrador. */
@@ -22,8 +22,8 @@ export interface EntornoSenalamiento {
  * los que señalan y quien ve el grimorio. No comprueba permisos.
  */
 export class Senalamientos {
-  /** El señalamiento (ver SalaEstado.senalamiento), o null. */
-  private actual: SalaSenalamiento | null = null;
+  /** El señalamiento (ver SalaDto.senalamiento), o null. */
+  private actual: SenalamientoDto | null = null;
 
   constructor(private readonly entorno: EntornoSenalamiento) {}
 
@@ -31,7 +31,7 @@ export class Senalamientos {
    * El señalamiento, o null. Al leerlo se pone al día: los asientos que ya no
    * existen salen, y con la cuenta atrás acabada queda congelado.
    */
-  senalamiento(): SalaSenalamiento | null {
+  senalamiento(): SenalamientoDto | null {
     const s = this.actual;
     if (!s) return null;
     const ids = new Set(this.entorno.plaza().map((a) => a.id));
@@ -62,7 +62,7 @@ export class Senalamientos {
    * los que señalan. `segundos` null: sin cuenta atrás. No valida los datos.
    */
   empezar(datos: {
-    tipo?: SalaSenalamiento['tipo'];
+    tipo?: SenalamientoDto['tipo'];
     mensaje: string;
     segundos: number | null;
     senaladores: string[];
@@ -114,11 +114,11 @@ export class Senalamientos {
   }
 
   /** El señalamiento tal cual, para que la máquina del tiempo lo devuelva. */
-  instantanea(): SalaSenalamiento | null {
+  instantanea(): SenalamientoDto | null {
     return this.actual;
   }
 
-  restaurar(senalamiento: SalaSenalamiento): void {
+  restaurar(senalamiento: SenalamientoDto): void {
     this.actual = senalamiento;
   }
 }

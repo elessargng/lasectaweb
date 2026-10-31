@@ -15,14 +15,14 @@ import {
   sinLeerDe,
   otroDelPrivado,
   privadosPropios,
-  type SalaMensaje,
+  type MensajeChatDto,
 } from './chat';
-import type { SalaEstado, SalaParticipante, SalaResultado } from './useSala';
+import type { SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
 
 interface PanelChatProps {
-  estado: SalaEstado;
-  yo: SalaParticipante;
-  mensajes: SalaMensaje[];
+  estado: SalaDto;
+  yo: ParticipanteDto;
+  mensajes: MensajeChatDto[];
   /** La conversación que se ve (un canal), o null: la primera. */
   activo: string | null;
   /** Conversaciones privadas abiertas aunque aún no tengan mensajes. */
@@ -30,7 +30,7 @@ interface PanelChatProps {
   /** Hasta cuándo (ms) se ha leído cada canal: lo que llegue después cuenta como sin leer. */
   leidoHasta: Record<string, number>;
   onElegir: (canal: string) => void;
-  onEnviar: (para: string, texto: string) => Promise<SalaResultado>;
+  onEnviar: (para: string, texto: string) => Promise<ResultadoAccion>;
   /** El campo de escribir: quien abre una conversación le lleva el foco. */
   entradaRef: RefObject<HTMLInputElement | null>;
 }
@@ -50,7 +50,7 @@ function colorDeAutor(id: string): string {
 }
 
 /** Dos mensajes seguidos de la misma persona (a quien sea, en menos de 5 minutos) van juntos, sin repetir nombre. */
-const vaJunto = (m: SalaMensaje, anterior: SalaMensaje | undefined) =>
+const vaJunto = (m: MensajeChatDto, anterior: MensajeChatDto | undefined) =>
   !!anterior && anterior.autor === m.autor && anterior.canal === m.canal && m.hora - anterior.hora < 5 * 60 * 1000;
 
 /**

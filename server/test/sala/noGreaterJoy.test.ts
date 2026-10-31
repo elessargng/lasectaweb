@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SalaDeJuego } from '../../src/services/SalaDeJuego';
-import type { SalaHabilidadNoche } from '../../src/contrato/sala';
+import type { HabilidadNocheDto } from '../../src/contrato/despertar';
 import { describirPreguntaArtista, leerPreguntaArtista, type PreguntaArtista } from '../../src/contrato/artista';
 import { ficha } from '../../src/services/partida/habilidades/HabilidadNocturna';
 import { contestar } from '../../src/services/narradorVirtual/dia/artista';
@@ -22,7 +22,7 @@ function mesa(...personajes: string[]) {
   });
   partida.irANoche();
   const asiento = (i: number) => partida.plaza()[i];
-  const fila = (personaje: string): SalaHabilidadNoche | undefined => partida.guiado.habilidadesNoche().find((h) => h.personaje === personaje);
+  const fila = (personaje: string): HabilidadNocheDto | undefined => partida.guiado.habilidadesNoche().find((h) => h.personaje === personaje);
   const ultimo = (i: number) => partida.despertares.despertares().find((d) => d.asiento === asiento(i).id)?.mensajes.slice(-1)[0];
   const elegir = (i: number, ...elegidos: number[]) => {
     const jugadores = elegidos.map((e) => asiento(e).id);

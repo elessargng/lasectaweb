@@ -1,5 +1,6 @@
 import type { EntradaDiario } from '../../contrato/diario';
-import { CAUSAS_CON_VICTORIA, type SalaAlineamiento, type SalaRegistroVotacion } from '../../contrato/sala';
+import { type Alineamiento } from '../../contrato/jugador';
+import { CAUSAS_CON_VICTORIA, type RegistroVotacionDto } from '../../contrato/partida';
 
 /** Una causa de final y, si es de alguien concreto (el esbirro que cazó a la Doncel), su cuenta. */
 export interface CausaFinal {
@@ -13,7 +14,7 @@ export interface FotoJugador {
   userId: string;
   /** Quien es de verdad (su «Is The …»), o null sin personaje. */
   personaje: string | null;
-  alineamiento: SalaAlineamiento | null;
+  alineamiento: Alineamiento | null;
   muerto: boolean;
 }
 
@@ -23,8 +24,8 @@ export interface RegistroJugador {
   /** Los roles con los que ha empezado la partida o algún día, sin repetir, por orden. */
   roles: string[];
   rolFinal: string | null;
-  alineamientoInicial: SalaAlineamiento | null;
-  alineamientoFinal: SalaAlineamiento | null;
+  alineamientoInicial: Alineamiento | null;
+  alineamientoFinal: Alineamiento | null;
   gano: boolean | null;
   vivo: boolean | null;
   /** Las causas de final (CAUSAS_FIN_PARTIDA) de los roles que ha jugado. */
@@ -47,7 +48,7 @@ export interface AsientoPartida {
   personaje: string | null;
   /** La ficha que llevaba, si no era quien era de verdad (el Borracho que se creía Lavandera). */
   ficha: string | null;
-  alineamiento: SalaAlineamiento | null;
+  alineamiento: Alineamiento | null;
   muerto: boolean;
 }
 
@@ -56,7 +57,7 @@ export interface RegistroPartida {
   fecha: Date;
   guion: string | null;
   edicion: string | null;
-  ganador: SalaAlineamiento;
+  ganador: Alineamiento;
   /** Hasta qué día (o noche) se jugó. */
   dias: number;
   causas: string[];
@@ -67,7 +68,7 @@ export interface RegistroPartida {
   mesa: AsientoPartida[];
   narradoresNombres: string[];
   npcs: string[];
-  votaciones: SalaRegistroVotacion[];
+  votaciones: RegistroVotacionDto[];
   /** Todo lo que se hizo en ella, por noches y días (ver contrato/diario). */
   diario: EntradaDiario[];
 }
@@ -80,7 +81,7 @@ export interface InstantaneaSeguimiento {
 
 interface Seguido {
   roles: string[];
-  alineamientoInicial: SalaAlineamiento | null;
+  alineamientoInicial: Alineamiento | null;
   /** La última vez que se le vio en la mesa. */
   ultima: FotoJugador;
   nominaciones: number;
@@ -143,7 +144,7 @@ export class SeguimientoPartida {
    * Termina la partida: lo de cada uno, con cómo acaba (los que siguen en la mesa)
    * o como se le vio por última vez (los que se fueron antes).
    */
-  terminar(finales: FotoJugador[], ganador: SalaAlineamiento, causas: CausaFinal[]): RegistroJugador[] {
+  terminar(finales: FotoJugador[], ganador: Alineamiento, causas: CausaFinal[]): RegistroJugador[] {
     for (const foto of finales) this.seguido(foto).ultima = foto;
     const registros = [...this.seguidos].map(([userId, s]) => {
       const final = s.ultima;

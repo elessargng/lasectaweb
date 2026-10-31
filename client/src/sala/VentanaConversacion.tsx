@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, typ
 import { botonSecundario } from './estilos';
 import TeclaAtajo from './TeclaAtajo';
 import type { Atajo } from './atajos';
-import type { SalaConversacion, SalaParticipante } from './useSala';
+import type { ConversacionDto, ParticipanteDto } from './useSala';
 import type { PistasParticipante } from './useVideollamada';
 import VideoPista from './VideoPista';
 import NombresOyentes from './NombresOyentes';
@@ -11,8 +11,8 @@ import ImagenAvatar from './ImagenAvatar';
 import BordeHabla from './BordeHabla';
 
 interface VentanaConversacionProps {
-  conversacion: SalaConversacion;
-  participantes: SalaParticipante[];
+  conversacion: ConversacionDto;
+  participantes: ParticipanteDto[];
   yo: string;
   /** Lo que se ve y se oye en la conversación, por participante. */
   pistas: Map<string, PistasParticipante>;
@@ -67,10 +67,10 @@ const VentanaConversacion = ({
 
   const miembros = conversacion.miembros
     .map((id) => participantes.find((p) => p.id === id))
-    .filter((p): p is SalaParticipante => !!p);
+    .filter((p): p is ParticipanteDto => !!p);
   const oyentes = conversacion.oyentes
     .map((id) => participantes.find((p) => p.id === id))
-    .filter((p): p is SalaParticipante => !!p);
+    .filter((p): p is ParticipanteDto => !!p);
   const escucho = conversacion.oyentes.includes(yo);
   const otros = miembros.filter((p) => p.id !== yo).map((p) => p.nombre);
 

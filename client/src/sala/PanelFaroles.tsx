@@ -6,7 +6,7 @@ import DialogoPersonaje from './DialogoPersonaje';
 import { botonIcono, botonPrincipal, botonSecundario } from './estilos';
 import { useFichas } from './fichas';
 import CasillaFarol from './CasillaFarol';
-import type { SalaEstado, SalaResultado } from './useSala';
+import type { SalaDto, ResultadoAccion } from './useSala';
 
 interface PanelFarolesProps {
   /**
@@ -17,8 +17,8 @@ interface PanelFarolesProps {
   modo: 'narrador' | 'visitante' | 'jugador' | 'esbirro';
   /** Las 3 casillas (id de personaje o null). */
   faroles: (string | null)[];
-  estado: SalaEstado;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  estado: SalaDto;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onError: (mensaje: string) => void;
   /** Confirmar al lector un cambio («Farol 2: Monje.»). */
   onAnuncio: (texto: string) => void;

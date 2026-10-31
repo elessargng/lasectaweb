@@ -1,15 +1,15 @@
 import { useImperativeHandle, useRef, type Ref } from 'react';
 import { createPortal } from 'react-dom';
 import SplashCursor, { type SplashCursorHandle } from '../components/SplashCursor';
-import type { SalaAlineamiento } from './useSala';
+import type { Alineamiento } from './useSala';
 
 export interface HumoRevelacionHandle {
   /** Una bocanada de humo sobre el elemento (la ficha), del color de su bando. */
-  soltar: (ancla: HTMLElement, alineamiento: SalaAlineamiento) => void;
+  soltar: (ancla: HTMLElement, alineamiento: Alineamiento) => void;
 }
 
 /** El humo de cada bando: azul el bueno, rojo el malvado (el segundo, el de los bordes). */
-const COLORES: Record<SalaAlineamiento, string[]> = {
+const COLORES: Record<Alineamiento, string[]> = {
   bueno: ['#3b82f6', '#93c5fd'],
   malvado: ['#dc2626', '#f87171'],
 };

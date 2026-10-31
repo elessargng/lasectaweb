@@ -6,7 +6,7 @@ import { useAriaLive } from './avisosConfig';
 import { botonSecundario } from './estilos';
 import SelectorFondoBiblioteca from './SelectorFondoBiblioteca';
 import { FONDO_LA_SECTA } from './fondos';
-import type { SalaResultado } from './useSala';
+import type { ResultadoAccion } from './useSala';
 
 /** Cómo se cambia el fondo (ver la acción narrador:cambiarFondo del servidor). */
 export type CambioFondo = { predeterminado: true } | { imagen: string } | { biblioteca: string };
@@ -14,7 +14,7 @@ export type CambioFondo = { predeterminado: true } | { imagen: string } | { bibl
 interface FondoSalaProps {
   /** El fondo actual (ruta en el servidor), o null: el de por defecto. */
   fondo: string | null;
-  onCambiar: (cambio: CambioFondo) => Promise<SalaResultado>;
+  onCambiar: (cambio: CambioFondo) => Promise<ResultadoAccion>;
 }
 
 /** Lado máximo con el que se sube un fondo: de sobra para una pantalla grande. */

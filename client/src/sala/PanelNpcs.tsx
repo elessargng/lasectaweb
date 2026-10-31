@@ -8,7 +8,7 @@ import { botonPrincipal } from './estilos';
 import type { PersonajeMostrado, ReglaDjinnMostrada } from './guiones';
 import CasillaFarol from './CasillaFarol';
 import { colocarDesplegable } from './colocarDesplegable';
-import type { SalaResultado } from './useSala';
+import type { ResultadoAccion } from './useSala';
 
 interface PanelNpcsProps {
   /** Los NPCs en juego (ids), en el orden en que se añadieron. */
@@ -26,7 +26,7 @@ interface PanelNpcsProps {
   rolStormcatcher: PersonajeMostrado | null;
   /** Los personajes buenos del guion, para nombrar el del Storm Catcher. */
   buenos: PersonajeMostrado[];
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onError: (mensaje: string) => void;
 }
 

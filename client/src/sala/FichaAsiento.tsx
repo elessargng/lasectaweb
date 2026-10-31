@@ -23,14 +23,14 @@ import type { PersonajeMostrado } from './guiones';
 import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { idFichaNominar, idRevelarFicha } from './ids';
 import { describirAsiento } from './nombresAsiento';
-import type { SalaAlineamiento, SalaAsiento, SalaParticipante, SalaResultado } from './useSala';
+import type { Alineamiento, JugadorDto, ParticipanteDto, ResultadoAccion } from './useSala';
 
 interface FichaAsientoProps {
-  asiento: SalaAsiento;
+  asiento: JugadorDto;
   /** Su número en la mesa (1 es el de las 12). */
   numero: number;
   /** Quien está sentado (o se ve sentado, si se le está moviendo), o null. */
-  ocupante: SalaParticipante | null;
+  ocupante: ParticipanteDto | null;
   /**
    * - narrador: botón con las opciones de la partida (matar o revivir…).
    * - grimorio: jugador con grimorio; botón para cambiar la ficha en su grimorio
@@ -38,7 +38,7 @@ interface FichaAsientoProps {
    * - ver: solo se ve.
    */
   modo: 'narrador' | 'grimorio' | 'ver';
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onError: (mensaje: string) => void;
   /** El narrador puede abrir una nominación desde esta ficha («Nominar a…»). */
   onNominar?: () => void;
@@ -67,7 +67,7 @@ interface FichaAsientoProps {
    */
   revelando?: { revelada: boolean; onRevelar?: () => void };
   /** Al revelarse (no si ya lo estaba): suelta el humo de su bando sobre la ficha. */
-  onHumo?: (ancla: HTMLElement, alineamiento: SalaAlineamiento) => void;
+  onHumo?: (ancla: HTMLElement, alineamiento: Alineamiento) => void;
   /** Hay una nominación abierta: la ficha se gira y enseña la esfera del reloj. */
   reloj?: boolean;
   /** Es de noche: matar deja la muerte pendiente y antes se elige quién mata (un recordatorio). */
@@ -100,7 +100,7 @@ interface FichaAsientoProps {
   onLilmonsta?: () => void;
 }
 
-const NOMBRE_ALINEAMIENTO: Record<SalaAlineamiento, string> = { bueno: 'bueno', malvado: 'malvado' };
+const NOMBRE_ALINEAMIENTO: Record<Alineamiento, string> = { bueno: 'bueno', malvado: 'malvado' };
 
 /**
  * La ficha de un asiento. Cada asiento tiene la suya, haya alguien sentado o no:
@@ -419,7 +419,7 @@ const FichaAsiento = ({
     const r = await pedir('narrador:cambiarPersonaje', { asientoId: asiento.id, personajeId });
     if (!r.ok) onError(r.error);
   };
-  const ponerAlineamiento = async (alineamiento: SalaAlineamiento) => {
+  const ponerAlineamiento = async (alineamiento: Alineamiento) => {
     if (modo !== 'narrador') {
       anotar(asiento.id, { personaje: contenido.personaje, alineamiento });
       return false;
@@ -432,7 +432,7 @@ const FichaAsiento = ({
 
   // Cambiar alineamiento: al contrario del que tiene; un viajero sin decidir, a cualquiera de los dos.
   const actual = personaje ? alineamientoDe(personaje, contenido.alineamiento) : null;
-  const destinos: SalaAlineamiento[] = !personaje ? ['malvado'] : actual === null ? ['bueno', 'malvado'] : [actual === 'bueno' ? 'malvado' : 'bueno'];
+  const destinos: Alineamiento[] = !personaje ? ['malvado'] : actual === null ? ['bueno', 'malvado'] : [actual === 'bueno' ? 'malvado' : 'bueno'];
   // Sin guion no salen ni «Cambiar ficha» ni el alineamiento: no hay personajes que poner.
   const opcionesAlineamiento: OpcionMenu[] = !hayGuion ? [] : destinos.map((a) => ({
     id: `alineamiento-${a}`,

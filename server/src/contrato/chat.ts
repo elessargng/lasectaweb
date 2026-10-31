@@ -25,13 +25,13 @@ export function participantesDePrivado(canal: string): [string, string] | null {
  * Mensajes privados entre jugadores (lo fija el narrador): ninguno, solo con los
  * vecinos de mesa, o con todos. Con un narrador siempre se puede.
  */
-export type SalaMensajesPrivados = 'ninguno' | 'vecinos' | 'todos';
-export const MENSAJES_PRIVADOS: SalaMensajesPrivados[] = ['ninguno', 'vecinos', 'todos'];
+export type MensajesPrivados = 'ninguno' | 'vecinos' | 'todos';
+export const MENSAJES_PRIVADOS: MensajesPrivados[] = ['ninguno', 'vecinos', 'todos'];
 
 /** Lo más largo que puede ser un mensaje. */
 export const LARGO_MAXIMO_MENSAJE = 500;
 
-export interface SalaMensaje {
+export interface MensajeChatDto {
   id: string;
   canal: string;
   /** id del participante que lo escribe. */
@@ -47,7 +47,7 @@ export interface SalaMensaje {
  * Un mensaje privado entre dos jugadores sentados: todos ven que se han dicho
  * algo (unas ondas de un asiento al otro), no qué. La intensidad crece con el largo.
  */
-export interface SalaSusurro {
+export interface SusurroDto {
   /** Asientos de quien escribe y de quien lo recibe. */
   desde: string;
   hasta: string;

@@ -1,4 +1,4 @@
-import type { SalaEnvioDespertar } from '../../../contrato/sala';
+import type { EnvioDespertar } from '../../../contrato/despertar';
 import { droison } from '../../partida/reglas/ReglaPersonaje';
 import type { SalaDeJuego } from '../../SalaDeJuego';
 import { FRASES, type MuerteRevelada, type NocheRevelada } from '../frases';
@@ -12,7 +12,7 @@ interface NocheApuntada {
   noche: number;
   /** Cada elección, sus asientos (la Pitonisa elige dos de una vez). */
   eligio: string[][];
-  infos: { envio: SalaEnvioDespertar; falsa: boolean }[];
+  infos: { envio: EnvioDespertar; falsa: boolean }[];
   droison: 'envenenado' | 'borracho' | null;
 }
 
@@ -37,7 +37,7 @@ export interface Cronica {
 export const cronicaNueva = (): Cronica => ({ noches: new Map(), falsas: new Set(), muertes: new Map(), antes: new Map(), ultimaNoche: 0 });
 
 /** Si un mensaje del narrador es información (un número, un sí o un no, un alineamiento, «Este jugador es»). */
-const esInformacion = (m: SalaEnvioDespertar): boolean =>
+const esInformacion = (m: EnvioDespertar): boolean =>
   numeroDe(m) !== null || ['si', 'no', 'bueno', 'malvado'].includes(m.ficha ?? '') || m.tarjeta === 'esteJugadorEs';
 
 /**
@@ -136,7 +136,7 @@ const listaConA = (nombres: string[]) => {
 };
 
 /** Una información en palabras: «un 1», «un sí», «a Ana o a Luis como Lavandera». */
-function describirInformacion(envio: SalaEnvioDespertar, nombre: (asiento: string) => string, nombreP: (id: string) => string): string {
+function describirInformacion(envio: EnvioDespertar, nombre: (asiento: string) => string, nombreP: (id: string) => string): string {
   const n = numeroDe(envio);
   if (n !== null) return `un ${n}`;
   if (envio.ficha === 'si') return 'un sí';

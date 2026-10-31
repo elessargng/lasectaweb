@@ -5,7 +5,7 @@ import { SalaDeJuego } from '../services/SalaDeJuego';
 import { limpiarAvatarSala, limpiarNombreSala, SALA_AVATAR_INVITADO, SalaLlegada } from '../services/sala/Participantes';
 import { VistaPartida } from '../services/partida/VistaPartida';
 import { EstadisticasPartida } from '../services/estadisticas/EstadisticasPartida';
-import { SalaResultado } from '../contrato/sala';
+import { ResultadoAccion } from '../contrato/sala';
 import { ChatError, ChatService } from '../services/chat/ChatService';
 import { ConversacionError, ConversacionService } from '../services/conversaciones/ConversacionService';
 import { PaseVideo, VideollamadaError, VideollamadaService } from '../services/videollamada/VideollamadaService';
@@ -216,8 +216,8 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
 
     // Mensajes de texto: { para: 'general' | 'visitantes' | id de participante, texto }.
     // Le llega a quien puede leerlo; si es un susurro entre jugadores, las ondas a todos.
-    socket.on('chat:enviar', (peticion: { para?: unknown; texto?: unknown } | null, ack?: (r: SalaResultado) => void) => {
-      const responder = (r: SalaResultado) => typeof ack === 'function' && ack(r);
+    socket.on('chat:enviar', (peticion: { para?: unknown; texto?: unknown } | null, ack?: (r: ResultadoAccion) => void) => {
+      const responder = (r: ResultadoAccion) => typeof ack === 'function' && ack(r);
       const p = yo();
       if (!p || typeof peticion?.para !== 'string' || typeof peticion.texto !== 'string') {
         responder({ ok: false, error: 'Mensaje desconocido.' });
@@ -238,8 +238,8 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     socket.on('chat:historial', miHistorial);
 
     // Videollamada: el pase para la mesa («principal») o para su conversación privada.
-    socket.on('video:pase', async (peticion: { sala?: unknown } | null, ack?: (r: SalaResultado & Partial<PaseVideo>) => void) => {
-      const responder = (r: SalaResultado & Partial<PaseVideo>) => typeof ack === 'function' && ack(r);
+    socket.on('video:pase', async (peticion: { sala?: unknown } | null, ack?: (r: ResultadoAccion & Partial<PaseVideo>) => void) => {
+      const responder = (r: ResultadoAccion & Partial<PaseVideo>) => typeof ack === 'function' && ack(r);
       const p = yo();
       if (!videollamada) return responder({ ok: false, error: 'Esta sala no tiene videollamada.' });
       if (!p || typeof peticion?.sala !== 'string') return responder({ ok: false, error: 'Petición desconocida.' });
@@ -256,8 +256,8 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
       evento: string,
       hacer: (yoId: string, datos: Record<string, unknown>) => void,
     ) =>
-      socket.on(evento, (datos: Record<string, unknown> | null, ack?: (r: SalaResultado) => void) => {
-        const responder = (r: SalaResultado) => typeof ack === 'function' && ack(r);
+      socket.on(evento, (datos: Record<string, unknown> | null, ack?: (r: ResultadoAccion) => void) => {
+        const responder = (r: ResultadoAccion) => typeof ack === 'function' && ack(r);
         const p = yo();
         if (!p) return responder({ ok: false, error: 'Ya no estás en la sala.' });
         try {
@@ -281,7 +281,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     enConversaciones('conversacion:salir', (yoId) => conversaciones.salir(yoId));
 
     // Una sola puerta para todas las acciones: { accion, datos } y respuesta por ack.
-    socket.on('sala:accion', async (peticion: { accion?: unknown; datos?: unknown } | null, ack?: (r: SalaResultado) => void) => {
+    socket.on('sala:accion', async (peticion: { accion?: unknown; datos?: unknown } | null, ack?: (r: ResultadoAccion) => void) => {
       const nombre = typeof peticion?.accion === 'string' ? peticion.accion : '';
       const { expulsar: expulsados = [], ...resultado } = await ejecutarAccion(
         juego,

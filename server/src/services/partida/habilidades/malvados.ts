@@ -1,4 +1,5 @@
-import { NUM_FAROLES, type SalaEnvioDespertar } from '../../../contrato/sala';
+import { type EnvioDespertar } from '../../../contrato/despertar';
+import { NUM_FAROLES } from '../../../contrato/jugador';
 import { falta, listoVarios, tarjeta, tipoDe, type ContextoNoche, type HabilidadNocturna, type Resultado } from './HabilidadNocturna';
 import type { TramoNoche } from './HabilidadNocturna';
 import type { Jugador } from '../Jugador';
@@ -58,7 +59,7 @@ class Esbirros extends InformacionMalvada {
   protected informar(ctx: ContextoNoche): Resultado {
     const demonios = deTipo(ctx, 'demon');
     const esbirros = deTipo(ctx, 'minion');
-    const envios: SalaEnvioDespertar[] = [
+    const envios: EnvioDespertar[] = [
       ...(demonios.length ? [tarjeta('demonio', { jugadores: ids(demonios) })] : []),
       ...(esbirros.length > 1 ? [tarjeta('esbirros', { jugadores: ids(esbirros) })] : []),
     ];

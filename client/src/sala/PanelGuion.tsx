@@ -2,7 +2,7 @@ import { X } from 'lucide-react';
 import { IconoLuna, IconoSol } from './IconosJuego';
 import { Fragment, useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { ESTADO_HABILIDAD } from './habilidadesNoche';
-import type { SalaHabilidadNoche } from './useSala';
+import type { HabilidadNocheDto } from './useSala';
 import { urlDelServidor } from '../utils/api';
 import SelectorIdioma from './SelectorIdioma';
 import {
@@ -60,7 +60,7 @@ export interface RecordatoriosNoche {
  * guion que lo tenga): un botón para despertarlo según su habilidad y cómo está.
  */
 export interface DespertarFila {
-  estado: SalaHabilidadNoche['estado'];
+  estado: HabilidadNocheDto['estado'];
   /** Lo que avisa el servidor, ya en frases. */
   avisos: string[];
   onPulsar: () => void;

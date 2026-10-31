@@ -9,13 +9,13 @@ import MiniGrimorio, { nombresDeAsientos } from './MiniGrimorio';
 import { nombreDeAsiento } from './despertar';
 import { botonIcono, botonPrincipal, botonSecundario } from './estilos';
 import { alineamientoDe, describirRecordatorio, RECORDATORIO_TEXTO, useFichas } from './fichas';
-import type { SalaAlineamiento, SalaEstado, SalaFichaEnviada, SalaRecordatorio, SalaResultado } from './useSala';
+import type { Alineamiento, SalaDto, FichaEnviadaDto, Recordatorio, ResultadoAccion } from './useSala';
 
 /** Los personajes que ven el grimorio del narrador: se les envía desde su despertar. */
 export const PERSONAJES_GRIMORIO = ['spy', 'widow'];
 
 /** Una copia del grimorio de ahora, tal como lo ve el narrador. */
-const copiaDelGrimorio = (estado: SalaEstado): SalaFichaEnviada[] =>
+const copiaDelGrimorio = (estado: SalaDto): FichaEnviadaDto[] =>
   estado.asientos.map((a) => ({
     asientoId: a.id,
     personaje: a.personaje,
@@ -25,10 +25,10 @@ const copiaDelGrimorio = (estado: SalaEstado): SalaFichaEnviada[] =>
   }));
 
 interface EnviarGrimorioProps {
-  estado: SalaEstado;
+  estado: SalaDto;
   /** El asiento al que se envía (quien se sienta en él lo verá). */
   destino: string;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   /** Se ha enviado: lo que se anuncia. */
   onEnviado: (texto: string) => void;
   onCerrar: () => void;
@@ -75,13 +75,13 @@ const EnviarGrimorio = ({ estado, destino, pedir, onEnviado, onCerrar }: EnviarG
   const numero = ficha ? fichas.indexOf(ficha) + 1 : 0;
   const nombreFicha = ficha ? `asiento ${numero} (${nombres[ficha.asientoId] ?? ''})` : '';
   const personaje = ficha?.personaje ? todosPorId.get(ficha.personaje) : undefined;
-  const cambiar = (cambio: Partial<SalaFichaEnviada>) =>
+  const cambiar = (cambio: Partial<FichaEnviadaDto>) =>
     setFichas((fs) => fs.map((f) => (f.asientoId === elegida ? { ...f, ...cambio } : f)));
-  const ponerRecordatorio = (r: Omit<SalaRecordatorio, 'id'>) =>
+  const ponerRecordatorio = (r: Omit<Recordatorio, 'id'>) =>
     setFichas((fs) =>
       fs.map((f) => (f.asientoId === elegida ? { ...f, recordatorios: [...f.recordatorios, { id: crypto.randomUUID(), ...r }] } : f)),
     );
-  const quitarRecordatorio = (asientoId: string, r: SalaRecordatorio) =>
+  const quitarRecordatorio = (asientoId: string, r: Recordatorio) =>
     setFichas((fs) => fs.map((f) => (f.asientoId === asientoId ? { ...f, recordatorios: f.recordatorios.filter((x) => x.id !== r.id) } : f)));
   const elegir = (que: 'personaje' | 'recordatorio') => {
     venimosDe.current = que;
@@ -142,7 +142,7 @@ const EnviarGrimorio = ({ estado, destino, pedir, onEnviado, onCerrar }: EnviarG
     );
   }
 
-  const alineamiento: SalaAlineamiento | null = personaje ? alineamientoDe(personaje, ficha!.alineamiento) : (ficha?.alineamiento ?? null);
+  const alineamiento: Alineamiento | null = personaje ? alineamientoDe(personaje, ficha!.alineamiento) : (ficha?.alineamiento ?? null);
   const boton = (que: 'personaje' | 'recordatorio') => (venimosDe.current === que ? volverRef : undefined);
 
   return createPortal(

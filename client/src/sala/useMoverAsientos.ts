@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
 import { idAsaMover } from './ids';
-import type { SalaAsiento, SalaParticipante, SalaResultado } from './useSala';
+import type { JugadorDto, ParticipanteDto, ResultadoAccion } from './useSala';
 
 interface Movimiento {
   /** Asiento del que se coge al jugador. */
@@ -15,11 +15,11 @@ interface Movimiento {
 }
 
 interface Opciones {
-  asientos: SalaAsiento[];
-  participantes: SalaParticipante[];
+  asientos: JugadorDto[];
+  participantes: ParticipanteDto[];
   /** La mesa: dentro están los asientos, marcados con data-asiento. */
   mesaRef: RefObject<HTMLElement | null>;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onError: (mensaje: string) => void;
   onAnuncio: (mensaje: string) => void;
 }
@@ -49,7 +49,7 @@ export function useMoverAsientos({ asientos, participantes, mesaRef, pedir, onEr
     movimiento && ocupanteDe(movimiento.desde) && asientos.some((a) => a.id === movimiento.hasta) ? movimiento : null;
 
   /** Quién se ve en cada asiento, con el movimiento provisional aplicado. */
-  const ocupanteVisible = (asiento: SalaAsiento): string | null => {
+  const ocupanteVisible = (asiento: JugadorDto): string | null => {
     if (!activo || activo.desde === activo.hasta) return asiento.ocupante;
     if (asiento.id === activo.desde) return ocupanteDe(activo.hasta);
     if (asiento.id === activo.hasta) return ocupanteDe(activo.desde);

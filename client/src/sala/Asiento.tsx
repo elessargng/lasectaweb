@@ -10,14 +10,14 @@ import { idNombreAsiento } from './ids';
 import { carpetaSilla, useMarcas } from './marcas';
 import type { ReactNode } from 'react';
 import type { Texto } from './guiones';
-import type { SalaParticipante } from './useSala';
+import type { ParticipanteDto } from './useSala';
 
 interface AsientoProps {
   id: string;
   /** Su número en la mesa (1 es el de las 12). */
   numero: number;
   /** Quien está sentado, o null si está libre. */
-  ocupante: SalaParticipante | null;
+  ocupante: ParticipanteDto | null;
   esYo: boolean;
   /** Mostrar «Sentarse» (libre y quien mira puede sentarse). */
   puedeSentarse: boolean;

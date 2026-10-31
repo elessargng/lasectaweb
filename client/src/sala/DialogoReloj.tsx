@@ -4,10 +4,10 @@ import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario, campo } from './estilos';
 import { anuncioReloj, duracionReloj, RELOJ } from './reloj';
-import type { SalaResultado } from './useSala';
+import type { ResultadoAccion } from './useSala';
 
 interface DialogoRelojProps {
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   /** Confirmación para el lector, al ponerlo (lo propio no llega con los avisos de la sala). */
   onPuesto: (texto: string) => void;
   onCerrar: () => void;

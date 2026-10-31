@@ -1,4 +1,4 @@
-import type { SalaFase, SalaSenalamiento } from '../../contrato/sala';
+import type { FaseDto, SenalamientoDto } from '../../contrato/partida';
 import type { HiloDespertar } from './Despertares';
 import { PASOS_DE_FASE_MAX } from './eventos';
 
@@ -11,16 +11,16 @@ export interface Recuerdo {
   marcas?: { asiento: string; votos: number | null }[];
   maximoDelDia?: number | null;
   hilos?: HiloDespertar[];
-  senalamiento?: SalaSenalamiento | null;
+  senalamiento?: SenalamientoDto | null;
 }
 
 interface Paso {
-  antes: SalaFase;
-  despues: SalaFase;
+  antes: FaseDto;
+  despues: FaseDto;
   recuerdo: Recuerdo;
 }
 
-const igual = (a: SalaFase, b: SalaFase) => a.momento === b.momento && a.numero === b.numero && a.reinicios === b.reinicios;
+const igual = (a: FaseDto, b: FaseDto) => a.momento === b.momento && a.numero === b.numero && a.reinicios === b.reinicios;
 
 /**
  * En qué momento está la partida (la preparación y, después, noche 1, día 1,
@@ -28,11 +28,11 @@ const igual = (a: SalaFase, b: SalaFase) => a.momento === b.momento && a.numero 
  * al cambiar de fase: quien la usa le da lo que hay que recordar (ver Recuerdo).
  */
 export class Fases {
-  private fase: SalaFase = { momento: 'preparacion', numero: 0, reinicios: 0 };
+  private fase: FaseDto = { momento: 'preparacion', numero: 0, reinicios: 0 };
   /** Los cambios de fase hechos, para volver atrás (los más antiguos se olvidan). */
   private pasos: Paso[] = [];
 
-  actual(): SalaFase {
+  actual(): FaseDto {
     return { ...this.fase };
   }
 
@@ -47,7 +47,7 @@ export class Fases {
     this.cambiar({ ...this.fase, momento: 'dia' }, recuerdo);
   }
 
-  private cambiar(despues: SalaFase, recuerdo: Recuerdo): void {
+  private cambiar(despues: FaseDto, recuerdo: Recuerdo): void {
     this.pasos.push({ antes: this.actual(), despues: { ...despues }, recuerdo });
     if (this.pasos.length > PASOS_DE_FASE_MAX) this.pasos.shift();
     this.fase = despues;
@@ -57,7 +57,7 @@ export class Fases {
    * La fase a la que se volvería con la máquina del tiempo: del día N, la noche N;
    * de la noche N, el día anterior (de la noche 1, la preparación). null en la preparación.
    */
-  anterior(): SalaFase | null {
+  anterior(): FaseDto | null {
     const { momento, numero, reinicios } = this.fase;
     if (momento === 'preparacion') return null;
     if (momento === 'dia') return { momento: 'noche', numero, reinicios };
@@ -69,7 +69,7 @@ export class Fases {
    * que se hizo, devuelve también lo que se recordó al hacerlo; si no, recuerdo
    * null. null si no hay a dónde volver.
    */
-  volver(): { fase: SalaFase; recuerdo: Recuerdo | null } | null {
+  volver(): { fase: FaseDto; recuerdo: Recuerdo | null } | null {
     const anterior = this.anterior();
     if (!anterior) return null;
     const ultimo = this.pasos[this.pasos.length - 1];

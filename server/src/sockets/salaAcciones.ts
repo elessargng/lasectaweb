@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { ChatRepository } from '../repositories/ChatRepository';
 import { datosDeDataUrl, guardarFondoSala } from '../utils/salaFondoStorage';
 import { ProveedorVideo } from '../services/videollamada/ProveedorVideo';
-import { MENSAJES_PRIVADOS, SalaMensajesPrivados } from '../contrato/chat';
+import { MENSAJES_PRIVADOS, MensajesPrivados } from '../contrato/chat';
 import { limpiarAvatarSala, limpiarNombreSala, type Participante } from '../services/sala/Participantes';
 import { SALA_RELOJ } from '../services/partida/RelojSala';
 import type { SalaDeJuego } from '../services/SalaDeJuego';
@@ -21,33 +21,32 @@ import {
   GUIONES_NARRADOR_VIRTUAL,
   JUGADORES_NARRADOR_VIRTUAL,
   NARRADORES_VIRTUALES,
-  SALA_SENALAMIENTO,
   type GuionNarradorVirtual,
   type IdNarradorVirtual,
-  type SalaResultado,
-} from '../contrato/sala';
+} from '../contrato/narradorVirtual';
+import { SALA_SENALAMIENTO } from '../contrato/partida';
+import { type ResultadoAccion } from '../contrato/sala';
 import {
   ADJUNTOS_DESPERTAR,
-  CAUSAS_DE_ESBIRRO,
-  CAUSAS_FIN_PARTIDA,
   FICHAS_DESPERTAR,
   FICHAS_RESPUESTA_GUIADA,
   FichaDespertar,
-  ICONOS_RECORDATORIO_TEXTO,
   MensajeDespertar,
-  NUM_FAROLES,
-  RECORDATORIO_TEXTO,
-  SALA_ESTILOS_MANO,
-  SALA_FORMAS_MANO,
-  SALA_NOTA_LARGO_MAX,
-  SALA_RECORDATORIO_TEXTO_MAX,
-  SalaEleccionDespertar,
-  SalaEnvioDespertar,
-  SalaFichaEnviada,
-  SalaFormaMano,
+  EleccionDespertar,
+  EnvioDespertar,
   TARJETAS_DESPERTAR,
   TarjetaDespertar,
-} from '../contrato/sala';
+} from '../contrato/despertar';
+import {
+  ICONOS_RECORDATORIO_TEXTO,
+  RECORDATORIO_TEXTO,
+  SALA_NOTA_LARGO_MAX,
+  SALA_RECORDATORIO_TEXTO_MAX,
+  FichaEnviadaDto,
+} from '../contrato/grimorio';
+import { NUM_FAROLES } from '../contrato/jugador';
+import { SALA_ESTILOS_MANO, SALA_FORMAS_MANO, FormaMano } from '../contrato/participante';
+import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA } from '../contrato/partida';
 import { guardarAvatarSala } from '../utils/salaAvatarStorage';
 import { GuionResuelto, PersonajeDeGuion, TIPOS_NPC, TipoPersonaje } from '../types/guiones';
 import { GuionInvalidoError } from '../services/guiones/errores';
@@ -59,7 +58,7 @@ import { diaVirtual, noPuedeNominar, nominoHoy } from '../services/narradorVirtu
 
 
 /** Lo que devuelve una acción: el resultado y, si saca a alguien de la sala, qué conexiones cerrar. */
-export type SalaEfecto = SalaResultado & { expulsar?: string[] };
+export type SalaEfecto = ResultadoAccion & { expulsar?: string[] };
 
 /**
  * Lo que necesitan los guiones de la sala. Es una interfaz (la implementa
@@ -133,7 +132,7 @@ function leerMensajeDespertar(
   juego: SalaDeJuego,
   datos: unknown,
   conTarjetas: boolean,
-): { error: string } | SalaEnvioDespertar {
+): { error: string } | EnvioDespertar {
   const { sala, partida } = juego;
   const { ficha, tarjeta, jugadores, personajes, texto, alineamiento } =
     (datos as {
@@ -179,7 +178,7 @@ function asientosDelEnvio(datos: unknown): string[] {
   if (Array.isArray(asientoIds)) return asientoIds.every((id) => typeof id === 'string') ? [...new Set(asientoIds as string[])] : [];
   return typeof asientoId === 'string' ? [asientoId] : [];
 }
-function errorDeEleccion(pide: SalaEleccionDespertar, mensaje: { ficha: FichaDespertar | null; jugadores: string[] }, asientoId: string): string | null {
+function errorDeEleccion(pide: EleccionDespertar, mensaje: { ficha: FichaDespertar | null; jugadores: string[] }, asientoId: string): string | null {
   const cuantos = pide.cantidad === 1 ? 'un jugador' : `${pide.cantidad} jugadores`;
   if (mensaje.ficha !== 'jugador' || mensaje.jugadores.length !== pide.cantidad) return `Elige ${cuantos}.`;
   if (!pide.puedeElegirse && mensaje.jugadores.includes(asientoId)) return 'No puedes elegirte a ti.';
@@ -420,7 +419,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       if (typeof forma !== 'string' || (!SALA_FORMAS_MANO.includes(forma) && !partida.guion.personaje(forma))) {
         return { ok: false, error: 'Forma de mano desconocida.' };
       }
-      sala.participantes.elegirFormaMano(yo.id, forma as SalaFormaMano);
+      sala.participantes.elegirFormaMano(yo.id, forma as FormaMano);
       return { ok: true };
     },
   },
@@ -573,7 +572,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /**
    * Con narrador virtual: un muerto se declara Patoso (lo sea o no) y elige a un vivo,
-   * mientras puede (ver SalaNarradorVirtual.patosos). datos: { asientoId } del elegido.
+   * mientras puede (ver NarradorVirtualDto.patosos). datos: { asientoId } del elegido.
    */
   'jugador:patoso': {
     puede: (juego, yo) => {
@@ -677,8 +676,8 @@ export const SALA_ACCIONES: Record<string, Accion> = {
         cambios.segundosPorFicha = segundos;
       }
       if (mensajes !== undefined) {
-        if (!MENSAJES_PRIVADOS.includes(mensajes as SalaMensajesPrivados)) return { ok: false, error: 'Ajuste desconocido.' };
-        cambios.mensajes = mensajes as SalaMensajesPrivados;
+        if (!MENSAJES_PRIVADOS.includes(mensajes as MensajesPrivados)) return { ok: false, error: 'Ajuste desconocido.' };
+        cambios.mensajes = mensajes as MensajesPrivados;
       }
       if (ocultarCamarasConversacion !== undefined) {
         if (typeof ocultarCamarasConversacion !== 'boolean') return { ok: false, error: 'Ajuste desconocido.' };
@@ -948,7 +947,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   },
 
   /**
-   * El despertar guiado (ver SalaHabilidadNoche): despierta al de una fila del orden
+   * El despertar guiado (ver HabilidadNocheDto): despierta al de una fila del orden
    * de noche según su habilidad, si está listo. datos: { personajeId }.
    */
   'narrador:despertarHabilidad': {
@@ -1329,7 +1328,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * Envía un grimorio (el Espía, la Viuda) a quien se sienta en un asiento: una
    * copia del de la partida que el narrador puede haber cambiado. Se comprueba que
    * cada ficha sea de un asiento de la mesa y lleve personajes del guion.
-   * datos: { asientoId, fichas: SalaFichaEnviada[], faroles?: string[] }.
+   * datos: { asientoId, fichas: FichaEnviadaDto[], faroles?: string[] }.
    */
   'narrador:enviarGrimorio': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().some((a) => a.participanteId),
@@ -1342,7 +1341,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       if (!destino.participanteId) return { ok: false, error: 'En ese asiento no hay nadie a quien enviárselo.' };
       if (!Array.isArray(fichas) || fichas.length > SALA_ASIENTOS.max) return { ok: false, error: 'El grimorio no es válido.' };
       const mesa = new Set(partida.plaza().map((a) => a.id));
-      const limpias: SalaFichaEnviada[] = [];
+      const limpias: FichaEnviadaDto[] = [];
       for (const f of fichas as Record<string, unknown>[]) {
         if (!f || typeof f.asientoId !== 'string' || !mesa.has(f.asientoId)) return { ok: false, error: 'El grimorio no es válido.' };
         const personaje = f.personaje === null ? null : typeof f.personaje === 'string' && partida.guion.personaje(f.personaje) ? f.personaje : undefined;

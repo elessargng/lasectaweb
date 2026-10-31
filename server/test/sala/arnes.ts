@@ -5,7 +5,7 @@ import { io as conectar, type Socket } from 'socket.io-client';
 import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
 import { iniciarSalaSocket, SALA_SOCKET_PATH } from '../../src/sockets/salaSocket';
 import type { DependenciasSala } from '../../src/sockets/salaAcciones';
-import type { SalaEstado, SalaResultado } from '../../src/contrato/sala';
+import type { SalaDto, ResultadoAccion } from '../../src/contrato/sala';
 import { guionDePrueba } from './guionDePrueba';
 
 const ESPERA_MAX_MS = 2000;
@@ -14,21 +14,21 @@ const ESPERA_MAX_MS = 2000;
 export class Cliente {
   /** Cuántos estados le han llegado (cada difusión manda uno a cada conexión). */
   recibidos = 0;
-  private ultimo: SalaEstado | null = null;
+  private ultimo: SalaDto | null = null;
   private avisos: (() => void)[] = [];
 
   constructor(
     readonly nombre: string,
     readonly socket: Socket,
   ) {
-    socket.on('sala:estado', (estado: SalaEstado) => {
+    socket.on('sala:estado', (estado: SalaDto) => {
       this.ultimo = estado;
       this.recibidos += 1;
       for (const avisar of this.avisos.splice(0)) avisar();
     });
   }
 
-  get estado(): SalaEstado {
+  get estado(): SalaDto {
     if (!this.ultimo) throw new Error(`${this.nombre} aún no ha recibido el estado`);
     return this.ultimo;
   }
@@ -47,7 +47,7 @@ export class Cliente {
    * Espera a que el estado cumpla algo (lo que hace solo el narrador virtual llega
    * cuando llega, no tras una acción de este cliente).
    */
-  async esperarQue(cumple: (estado: SalaEstado) => boolean, espera = ESPERA_MAX_MS): Promise<void> {
+  async esperarQue(cumple: (estado: SalaDto) => boolean, espera = ESPERA_MAX_MS): Promise<void> {
     const limite = Date.now() + espera;
     while (!this.ultimo || !cumple(this.ultimo)) {
       if (Date.now() > limite) throw new Error(`${this.nombre}: el estado no ha llegado a lo esperado a tiempo`);
@@ -122,16 +122,16 @@ export class Arnes {
    * Pide una acción y, si sale bien, espera a que el estado nuevo les llegue a
    * todos (cada acción que sale bien se difunde una vez). Falla si la acción falla.
    */
-  async accion(cliente: Cliente, accion: string, datos?: unknown): Promise<SalaResultado> {
+  async accion(cliente: Cliente, accion: string, datos?: unknown): Promise<ResultadoAccion> {
     const resultado = await this.intentar(cliente, accion, datos);
     if (!resultado.ok) throw new Error(`${cliente.nombre} no ha podido ${accion}: ${resultado.error}`);
     return resultado;
   }
 
   /** Como accion, pero devuelve el resultado aunque falle. */
-  async intentar(cliente: Cliente, accion: string, datos?: unknown): Promise<SalaResultado> {
+  async intentar(cliente: Cliente, accion: string, datos?: unknown): Promise<ResultadoAccion> {
     const antes = this.recuento();
-    const resultado = await new Promise<SalaResultado>((resolver) =>
+    const resultado = await new Promise<ResultadoAccion>((resolver) =>
       cliente.socket.emit('sala:accion', { accion, datos }, resolver),
     );
     if (resultado.ok) await this.esperarA(antes);

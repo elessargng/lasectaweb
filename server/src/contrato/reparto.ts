@@ -3,7 +3,7 @@
  * cliente, alias @contrato): cuántos forasteros cambian los personajes que alteran
  * la preparación y el reparto que toca con ellos. Solo valores puros.
  */
-import type { SalaDistribucion } from './sala';
+import type { DistribucionDto } from './partida';
 
 /**
  * Cuántos forasteros de más (o de menos) puede haber por cada personaje que
@@ -30,7 +30,7 @@ export const FORASTEROS: Record<string, (jugadores: number) => number[] | 'cualq
  * de más o de menos ya puestos, y los aldeanos compensando. Los que dejan elegir
  * (el Ermitaño, el Padrino, el Centinela…) no lo cambian. Sin reparto (menos de 5), el mismo.
  */
-export function repartoAjustado(distribucion: SalaDistribucion, presentes: string[]): SalaDistribucion {
+export function repartoAjustado(distribucion: DistribucionDto, presentes: string[]): DistribucionDto {
   const { jugadores, aldeanos, forasteros } = distribucion;
   if (aldeanos === null || forasteros === null) return distribucion;
   let desvio = 0;

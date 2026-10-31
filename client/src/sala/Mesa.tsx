@@ -50,7 +50,7 @@ import DialogoIntercambio from './DialogoIntercambio';
 import DialogoPatoso from './DialogoPatoso';
 import DialogoRegistroEspia from './DialogoRegistroEspia';
 import { useNominacion } from './useNominacion';
-import type { SalaEstado, SalaParticipante, SalaRecordatorio, SalaResultado } from './useSala';
+import type { SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
 
 export interface TamanosMesa {
   avatar: number;
@@ -67,7 +67,7 @@ export interface FocoAsiento {
 const ASIENTOS_MAX = 20;
 
 interface MesaProps {
-  estado: SalaEstado;
+  estado: SalaDto;
   /** Mostrar en el centro los botones para añadir y eliminar asientos. */
   editando: boolean;
   /** Jugador con grimorio: puede cambiar las fichas en su grimorio. */
@@ -79,7 +79,7 @@ interface MesaProps {
   /** Los tamaños con los que se está pintando (para la vista previa de las preferencias). */
   onTamanos: (tamanos: TamanosMesa) => void;
   /** Pide una acción a la sala (ver `useSala`). */
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onError: (mensaje: string) => void;
   /** Avisos solo para el lector, con su tipo (p. ej. que otro te ha levantado del asiento). */
   onAnuncio: (tipo: TipoAviso, mensaje: string) => void;
@@ -94,7 +94,7 @@ interface MesaProps {
   /** Reloj del servidor menos el de aquí (ms), para la cuenta atrás. */
   desfaseReloj: number;
   /** Escribir y conversar con quien se sienta (lo que se pueda). */
-  contacto?: (participante: SalaParticipante) => ContactoParticipante | undefined;
+  contacto?: (participante: ParticipanteDto) => ContactoParticipante | undefined;
   /** Lo que se ve y se oye de cada uno en la mesa (cámaras, quién habla). */
   pistas: Map<string, PistasParticipante>;
   /** Susurros en curso: ondas de un asiento a otro. */
@@ -127,7 +127,7 @@ interface MesaProps {
    * Visitantes y narradores: a quién siguen (id) y cómo seguir o dejar de seguir
    * al jugador de una ficha. null si no pueden seguir a nadie.
    */
-  seguimiento: { siguiendo: string | null; onAlternar: (jugador: SalaParticipante) => void } | null;
+  seguimiento: { siguiendo: string | null; onAlternar: (jugador: ParticipanteDto) => void } | null;
 }
 
 /**
@@ -430,8 +430,8 @@ const Mesa = ({
   for (const id of probables) enJuego.add(id);
   // Quitar un recordatorio: el narrador, de la partida; un jugador, de su grimorio.
   // El botón desaparece: el foco vuelve a la ficha, que dice los que quedan.
-  const anotadoPorMi = (asientoId: string, r: SalaRecordatorio) => !!notasRecordatorios[asientoId]?.some((x) => x.id === r.id);
-  const quitarRecordatorio = async (asientoId: string, r: SalaRecordatorio) => {
+  const anotadoPorMi = (asientoId: string, r: Recordatorio) => !!notasRecordatorios[asientoId]?.some((x) => x.id === r.id);
+  const quitarRecordatorio = async (asientoId: string, r: Recordatorio) => {
     if (anotadoPorMi(asientoId, r)) {
       anotarRecordatorios(asientoId, (notasRecordatorios[asientoId] ?? []).filter((x) => x.id !== r.id));
     } else {
@@ -487,7 +487,7 @@ const Mesa = ({
   };
 
   // Seguir al jugador de una ficha (no a uno mismo, ni editando asientos o revelando el grimorio)
-  const seguirA = (ocupante: SalaParticipante | null) => {
+  const seguirA = (ocupante: ParticipanteDto | null) => {
     if (!seguimiento || editando || estado.revelacion || !ocupante || ocupante.id === estado.yo || ocupante.rol !== 'jugador') return undefined;
     return { siguiendo: seguimiento.siguiendo === ocupante.id, onAlternar: () => seguimiento.onAlternar(ocupante) };
   };

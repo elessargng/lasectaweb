@@ -7,11 +7,11 @@ import { botonSecundario, campo } from './estilos';
 import { describirAsiento } from './nombresAsiento';
 import { identidadDe, useFichas } from './fichas';
 import Interruptor from './Interruptor';
-import type { SalaAlineamiento, SalaEstado, SalaResultado } from './useSala';
+import type { Alineamiento, SalaDto, ResultadoAccion } from './useSala';
 
 interface DialogoRevelarProps {
-  estado: SalaEstado;
-  pedir: (accion: string, datos?: unknown) => Promise<SalaResultado>;
+  estado: SalaDto;
+  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onCerrar: () => void;
 }
 
@@ -41,7 +41,7 @@ const DialogoRevelar = ({ estado, pedir, onCerrar }: DialogoRevelarProps) => {
     return [{ id: a.id, texto: `${describirAsiento(i + 1, ocupante ?? null)}: ${todosPorId.get(quien)?.nombre.texto ?? quien}` }];
   });
 
-  const elegir = async (ganador: SalaAlineamiento) => {
+  const elegir = async (ganador: Alineamiento) => {
     if (enviando) return;
     const sinEsbirro = CAUSAS_FINAL.find((c) => c.esbirro && causas.includes(c.personaje) && !esbirros[c.personaje]);
     if (sinEsbirro) {

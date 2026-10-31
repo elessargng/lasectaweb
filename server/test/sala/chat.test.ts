@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { canalPrivado } from '../../src/contrato/chat';
-import type { SalaParticipante } from '../../src/contrato/sala';
+import type { ParticipanteDto } from '../../src/contrato/participante';
 import type { ChatRepository } from '../../src/repositories/ChatRepository';
 import { ChatService } from '../../src/services/chat/ChatService';
 import type { SalaDeJuego } from '../../src/services/SalaDeJuego';
 
 /** Solo lo que mira `puedeLeer`: el papel y el acceso al grimorio. */
-const persona = (id: string, rol: SalaParticipante['rol'], accesoGrimorio: SalaParticipante['accesoGrimorio'] = 'ninguno') =>
-  ({ id, rol, accesoGrimorio }) as SalaParticipante;
+const persona = (id: string, rol: ParticipanteDto['rol'], accesoGrimorio: ParticipanteDto['accesoGrimorio'] = 'ninguno') =>
+  ({ id, rol, accesoGrimorio }) as ParticipanteDto;
 
 const ana = persona('ana', 'jugador');
 const bea = persona('bea', 'jugador');
