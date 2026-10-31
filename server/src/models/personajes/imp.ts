@@ -10,6 +10,7 @@ import {
   type Resultado,
 } from '../partida/habilidades/HabilidadNocturna';
 import type { Jugador } from '../partida/Jugador';
+import { desenlaceDespertar } from './Objetivo';
 
 /**
  * El Imp: mata al elegido (su «Dead» y la muerte pendiente), o a quien le llegue
@@ -28,8 +29,8 @@ export class Imp extends EligeYMarca {
     if (elegido.muerto) return listo(OK, sinEfectos(), avisos);
     const desenlaces = ctx.objetivo(elegido).recibe({ origen: 'demonio', personaje: this.personaje, efecto: 'matar' });
     if (desenlaces.length > 1) {
-      const dto = desenlaces.map((d) => ({ muere: d.a?.id ?? null, ...(d.gasta ? { gasta: d.gasta } : {}) }));
-      return revisar([{ envio: OK, registros: [] }], [...avisos, { tipo: 'desenlaces', jugador: elegido.id, desenlaces: dto }]);
+      const lista = desenlaces.map(desenlaceDespertar);
+      return revisar([{ envio: OK, registros: [] }], [...avisos, { tipo: 'desenlaces', jugador: elegido.id, desenlaces: lista }]);
     }
     const [{ a, gasta }] = desenlaces;
     const efectos: Efectos = {

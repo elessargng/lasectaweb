@@ -339,7 +339,7 @@ describe('la noche del narrador virtual', () => {
         const muere = await exterminar(m.ctx, id, m.asiento(objetivo).id);
         // La muerte se pone al contarlo
         const ganador = await contarDisparo(m.ctx, id, m.asiento(objetivo).id, muere);
-        return { muere, muerto: m.asiento(objetivo).muerto, ganador, m };
+        return { muere: muere !== null, muerto: m.asiento(objetivo).muerto, ganador, m };
       };
       expect(await dispara('slayer', 'imp')).toMatchObject({ muere: true, muerto: true, ganador: 'bueno' });
       expect(await dispara('slayer', 'saint')).toMatchObject({ muere: false, muerto: false });
@@ -376,7 +376,7 @@ describe('la noche del narrador virtual', () => {
       ]);
       // Sin morir nadie: «… y…» y la partida continúa
       const chef = m.asiento('chef').id;
-      expect(await contarDisparo(m.ctx, id, chef, false)).toBeNull();
+      expect(await contarDisparo(m.ctx, id, chef, null)).toBeNull();
       expect(m.frases.slice(-2)).toEqual([expect.stringMatching(/ y…$/), 'La partida continúa.']);
       expect(m.asiento('chef').muerto).toBe(false);
     });

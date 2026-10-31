@@ -1,3 +1,4 @@
+import type { DesenlaceDespertar } from '../compartido/despertar';
 import type { Jugador } from '../partida/Jugador';
 import type { Posibles } from './Percepcion';
 
@@ -51,3 +52,6 @@ export function sinRepetir(desenlaces: readonly Desenlace[]): Posibles<Desenlace
   const clave = (d: Desenlace) => `${d.a?.id ?? ''}|${d.gasta ? `${d.gasta.asiento}:${d.gasta.personaje}:${d.gasta.texto}` : ''}`;
   return desenlaces.filter((d, i) => desenlaces.findIndex((o) => clave(o) === clave(d)) === i);
 }
+
+/** Cómo se cuenta un desenlace al narrador: quién muere (por su asiento) y quien gasta su habilidad. */
+export const desenlaceDespertar = (d: Desenlace): DesenlaceDespertar => ({ muere: d.a?.id ?? null, ...(d.gasta ? { gasta: d.gasta } : {}) });

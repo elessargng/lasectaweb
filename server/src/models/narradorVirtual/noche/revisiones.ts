@@ -3,7 +3,8 @@ import type { HabilidadNoche } from '../../partida/DespertarGuiado';
 import { habilidadesDelGuion } from '../../partida/habilidades';
 import { OK } from '../../partida/habilidades/HabilidadNocturna';
 import type { ContextoEtapa } from '../etapas/Etapa';
-import { describirAsiento, describirEnvio, describirOpcion, describirPersonaje } from '../grimorio';
+import { elegirDesenlace } from '../desenlaces';
+import { describirEnvio, describirOpcion, describirPersonaje } from '../grimorio';
 import { contextoNoche } from '../plazaDeJuego';
 import { destapaAlMal, opcionesFalsas, probabilidadVerdad, recordarDroison } from './criterioDroison';
 import { informacionesFalsas } from './informacionFalsa';
@@ -18,7 +19,7 @@ import { ponerRecordatorio } from './requisitos';
  */
 export async function resolverRevision(ctx: ContextoEtapa, fila: HabilidadNoche): Promise<boolean> {
   const desenlaces = fila.avisos.find((a) => a.tipo === 'desenlaces');
-  if (desenlaces?.tipo === 'desenlaces') await elegirDesenlace(ctx, fila.personaje, desenlaces.desenlaces);
+  if (desenlaces?.tipo === 'desenlaces') await aplicarDesenlace(ctx, fila.personaje, desenlaces.desenlaces);
   const envio = fila.opciones.length ? ((await droison(ctx, fila)) ?? (await elegirOpcion(ctx, fila))) : OK;
   return (await ctx.plaza.accion('narrador:resolverHabilidad', { personajeId: fila.personaje, ...envio })).ok;
 }
@@ -74,26 +75,9 @@ async function droison(ctx: ContextoEtapa, fila: HabilidadNoche): Promise<EnvioD
   return dada;
 }
 
-/**
- * Lo que hace el demonio puede acabar de varias maneras (el Alcalde la rebota):
- * su estrategia elige una (la primera, la que toca sin el narrador) y se aplica.
- */
-async function elegirDesenlace(ctx: ContextoEtapa, demonio: string, desenlaces: DesenlaceDespertar[]): Promise<void> {
-  const { juego } = ctx;
-  const asiento = (id: string) => juego.partida.plaza().find((a) => a.id === id);
-  const elegido = await ctx.decidir({
-    motivo: 'desenlace',
-    pregunta: 'El demonio ha atacado: a quién le llega al final.',
-    opciones: desenlaces.map((d, i) => {
-      const quien = d.muere ? asiento(d.muere) : undefined;
-      return {
-        clave: `d${i + 1}`,
-        descripcion: quien ? `Muere ${describirAsiento(juego, quien)}.` : 'No muere nadie.',
-        valor: d,
-        ...(i === 0 ? { rasgos: ['verdad' as const] } : {}),
-      };
-    }),
-  });
+/** Lo que hace el demonio puede acabar de varias maneras (el Alcalde la rebota): se elige una y se aplica. */
+async function aplicarDesenlace(ctx: ContextoEtapa, demonio: string, desenlaces: DesenlaceDespertar[]): Promise<void> {
+  const elegido = await elegirDesenlace(ctx, 'El demonio ha atacado: a quién le llega al final.', desenlaces);
   if (elegido.gasta) await ponerRecordatorio(ctx, elegido.gasta.asiento, elegido.gasta.personaje, elegido.gasta.texto);
   if (!elegido.muere) return;
   await ponerRecordatorio(ctx, elegido.muere, demonio, 'Dead');

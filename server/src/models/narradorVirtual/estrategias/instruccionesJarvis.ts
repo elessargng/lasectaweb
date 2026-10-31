@@ -37,7 +37,7 @@ const POR_MOTIVO: Record<MotivoDecision, string> = {
     'La mentira que recibe. Que sea creíble y coherente con lo dicho otras noches; mejor si confirma el farol de un ' +
     'malvado o inculpa a un bueno, sin dejar la partida sin solución.',
   desenlace:
-    'El demonio ha atacado y puede acabar de varias maneras (al Alcalde, la muerte le puede rebotar a otro jugador; ' +
+    'Han atacado a alguien y puede acabar de varias maneras (al Alcalde, la muerte del demonio le puede rebotar a otro jugador; ' +
     'si le llega a uno protegido, no muere nadie). La primera es la que toca sin ti. Elige pensando en el equilibrio.',
   espiaComoAldeano: 'El Espía nomina a la Virgen: si registra como aldeano, el Espía es ejecutado al momento.',
   registraComoDemonio: 'El Exterminador dispara a quien puede registrar como demonio (la Reclusa): si registra como tal, muere.',
