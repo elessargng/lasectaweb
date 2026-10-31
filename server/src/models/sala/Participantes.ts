@@ -1,7 +1,6 @@
 import { randomUUID } from 'crypto';
 import { type IdNarradorVirtual } from '../compartido/narradorVirtual';
 import { SALA_PARTIDAS_NOVATO, usuarioDe, type Persona, type FormaMano, type Rol } from '../compartido/participante';
-import { esAvatarSalaGuardado } from '../../infra/almacenamiento/salaAvatarStorage';
 
 /** Margen para volver tras una desconexión (recarga, red caída) sin perder el papel. */
 export const SALA_GRACIA_MS = 20_000;
@@ -29,15 +28,6 @@ export const SALA_AVATARES = [
 
 /** El que llevan los invitados mientras no elijan otro: el logo de La Secta. */
 export const SALA_AVATAR_INVITADO = '/logo-2.png';
-
-/**
- * El avatar elegido si es uno de los permitidos (predefinido, o una imagen
- * propia subida a la sala); si no, null (el por defecto).
- */
-export function limpiarAvatarSala(valor: unknown): string | null {
-  if (typeof valor !== 'string') return null;
-  return SALA_AVATARES.includes(valor) || esAvatarSalaGuardado(valor) ? valor : null;
-}
 
 /** Quién se conecta, según el token o el nombre de invitado. */
 export interface SalaLlegada {

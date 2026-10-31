@@ -12,6 +12,8 @@ import type { Nominacion } from '../models/partida/Nominaciones';
 import type { HiloDespertar } from '../models/partida/Despertares';
 import type { FichaEnviada, GrimorioEnviado } from '../models/partida/Entregas';
 import type { HabilidadNoche } from '../models/partida/DespertarGuiado';
+import type { EstadoNarradorVirtual } from '../models/narradorVirtual/NarradorVirtual';
+import type { NarradorVirtualDto } from './dto/narradorVirtual';
 import type { DespertarDto, HabilidadNocheDto } from './dto/despertar';
 import type { FichaEnviadaDto, GrimorioEnviadoDto } from './dto/grimorio';
 import type { ConversacionDto, SalaDto, InvitacionDto } from './dto/sala';
@@ -127,6 +129,20 @@ const habilidadNocheDto = (h: HabilidadNoche): HabilidadNocheDto => ({
   avisos: h.avisos.map((a) => ({ ...a })),
   opciones: h.opciones.map((o) => ({ envio: { ...o.envio }, registros: o.registros.map((r) => ({ ...r })) })),
 });
+const narradorVirtualDto = (n: EstadoNarradorVirtual): NarradorVirtualDto => ({
+  id: n.id,
+  participante: n.participante,
+  creador: n.creador,
+  guion: n.guion,
+  jugadores: n.jugadores,
+  etapa: n.etapa,
+  frase: n.frase,
+  turno: n.turno,
+  listos: [...n.listos],
+  exterminadores: [...n.exterminadores],
+  artistas: [...n.artistas],
+  patosos: n.patosos.map((p) => ({ ...p })),
+});
 const conversacionDto = (c: Conversacion): ConversacionDto => ({ id: c.id, miembros: [...c.miembros], oyentes: [...c.oyentes] });
 const invitacionDto = (i: Invitacion): InvitacionDto => ({ id: i.id, de: i.de, para: i.para, ...(i.conversacion && { conversacion: i.conversacion }) });
 
@@ -220,7 +236,7 @@ export class VistaPartida {
       recordatoriosNoche: partida.recordatoriosNoche(),
       votaciones: partida.nominaciones.votaciones(),
       senalamiento: siHay(partida.senalamientos.senalamiento(), senalamientoDto),
-      narradorVirtual: juego.narrador.actual(),
+      narradorVirtual: siHay(juego.narrador.actual(), narradorVirtualDto),
     };
   }
 

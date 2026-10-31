@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
+import { SALA_AVATARES } from '../../models/sala/Participantes';
 
 /**
  * Avatares personalizados de la sala: imágenes que sube cada participante solo
@@ -34,6 +35,15 @@ function carpeta(): string {
 /** Si la ruta es la de un avatar de sala guardado aquí (y existe). */
 export function esAvatarSalaGuardado(ruta: string): boolean {
   return RUTA_PUBLICA.test(ruta) && fs.existsSync(path.join(carpeta(), path.basename(ruta)));
+}
+
+/**
+ * El avatar elegido si es uno de los permitidos (predefinido, o una imagen
+ * propia subida a la sala); si no, null (el por defecto).
+ */
+export function limpiarAvatarSala(valor: unknown): string | null {
+  if (typeof valor !== 'string') return null;
+  return SALA_AVATARES.includes(valor) || esAvatarSalaGuardado(valor) ? valor : null;
 }
 
 /**

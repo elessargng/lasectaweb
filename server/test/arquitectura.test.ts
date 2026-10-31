@@ -29,32 +29,12 @@ function importsDe(archivo: string): string[] {
 /** Los que importan algo de views: lo que hay que corregir. */
 const usaVistas = (archivo: string) => importsDe(archivo).some((i) => i === 'views' || i.startsWith('views/'));
 
-/**
- * Los que aún usan un Dto (se van quitando servicio a servicio). Esta lista solo
- * puede menguar: si se arregla uno, el test pide quitarlo de aquí.
- */
-const PENDIENTES = [
-  'models/narradorVirtual/NarradorVirtual.ts',
-  'models/narradorVirtual/puertos.ts',
-];
-
-/**
- * El narrador virtual guarda su estado (un Dto) en un «repositorio» que solo existe en
- * memoria: es estado del dominio, no persistencia. Se arregla con el resto del narrador.
- */
-const PENDIENTES_DOMINIO = ['models/SalaDeJuego.ts', 'models/narradorVirtual/NarradorVirtual.ts'];
-
 describe('arquitectura', () => {
   const capas = ['models', 'services'].flatMap(archivos);
 
-  it('el dominio y los servicios no usan los Dto (salvo los pendientes de arreglar)', () => {
-    const nuevos = capas.filter((f) => usaVistas(f) && !PENDIENTES.includes(f));
-    expect(nuevos, 'Estos archivos usan views/: el Dto se monta en la vista, no en el dominio').toEqual([]);
-  });
-
-  it('la lista de pendientes solo mengua: los ya arreglados salen de ella', () => {
-    const arreglados = PENDIENTES.filter((f) => !usaVistas(f));
-    expect(arreglados, 'Ya no usan views/: quítalos de PENDIENTES').toEqual([]);
+  it('el dominio y los servicios no usan los Dto: los monta la vista', () => {
+    const fuera = capas.filter(usaVistas);
+    expect(fuera, 'Estos archivos usan views/: el Dto se monta en la vista, no aquí').toEqual([]);
   });
 
   it('lo que comparte el dominio con el cliente (models/compartido) solo usa models/compartido', () => {
@@ -71,10 +51,8 @@ describe('arquitectura', () => {
     expect(fuera).toEqual([]);
   });
 
-  it('el dominio no usa los servicios, los controladores ni los repositorios (salvo los pendientes)', () => {
-    const usaCapasDeFuera = (f: string) => importsDe(f).some((i) => /^(services|controllers|repositories)(\/|$)/.test(i));
-    const fuera = archivos('models').filter((f) => usaCapasDeFuera(f) && !PENDIENTES_DOMINIO.includes(f));
+  it('el dominio no usa los servicios, los controladores, los repositorios ni la infraestructura', () => {
+    const fuera = archivos('models').filter((f) => importsDe(f).some((i) => /^(services|controllers|repositories|infra)(\/|$)/.test(i)));
     expect(fuera).toEqual([]);
-    expect(PENDIENTES_DOMINIO.filter((f) => !usaCapasDeFuera(f)), 'Ya están bien: quítalos de PENDIENTES_DOMINIO').toEqual([]);
   });
 });

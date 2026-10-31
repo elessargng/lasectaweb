@@ -1,5 +1,3 @@
-import type { ResultadoAccion } from '../../views/dto/sala';
-
 /**
  * Lo que el narrador virtual necesita de fuera, como interfaces (se le inyectan):
  * así no sabe de sockets ni de relojes, y en los tests se le dan unos falsos.
@@ -10,8 +8,11 @@ import type { ResultadoAccion } from '../../views/dto/sala';
  * acciones de la sala (y los mismos permisos), y la sala se difunde a todos.
  */
 export interface Narrador {
-  accion(nombre: string, datos?: unknown): Promise<ResultadoAccion>;
+  accion(nombre: string, datos?: unknown): Promise<RespuestaAccion>;
 }
+
+/** Lo que contesta la sala a una acción: hecha (con lo que devuelva) o no, y por qué. */
+export type RespuestaAccion = { ok: true; valor?: string } | { ok: false; error: string };
 
 /** Programa algo para dentro de un rato; devuelve cómo cancelarlo. */
 export interface Temporizador {

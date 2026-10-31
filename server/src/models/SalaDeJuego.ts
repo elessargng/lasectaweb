@@ -1,4 +1,3 @@
-import { NarradorVirtualEnMemoria, type NarradorVirtualRepository } from '../repositories/NarradorVirtualRepository';
 import { NarradorVirtual } from './narradorVirtual/NarradorVirtual';
 import { Partida } from './partida/Partida';
 import { Sala } from './sala/Sala';
@@ -14,14 +13,7 @@ export class SalaDeJuego {
   /** Quién está en la sala y en qué asiento se sienta cada jugador. */
   readonly sala = new Sala();
   /** La partida que se juega en la sala. */
-  readonly partida = new Partida(this.sala, { hayNarradorVirtual: () => !!this.narrador.actual() });
+  readonly partida: Partida = new Partida(this.sala, { hayNarradorVirtual: () => !!this.narrador.actual() });
   /** El narrador virtual, si lo hay: su participante es de la sala; lo que lleva, de la partida. */
-  readonly narrador: NarradorVirtual;
-
-  constructor(
-    /** Dónde se guarda el narrador virtual de la sala (ver NarradorVirtualService). */
-    narradoresVirtuales: NarradorVirtualRepository = new NarradorVirtualEnMemoria(),
-  ) {
-    this.narrador = new NarradorVirtual(narradoresVirtuales, this.sala, this.partida);
-  }
+  readonly narrador: NarradorVirtual = new NarradorVirtual(this.sala, this.partida);
 }
