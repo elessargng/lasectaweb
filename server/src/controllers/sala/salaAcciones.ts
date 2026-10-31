@@ -565,22 +565,22 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     puede: (juego, yo) => {
       const { partida } = juego;
       const dia = diaVirtual(juego);
-      return !!dia && !!partida.jugadorDe(yo.id) && !dia.exterminadores.includes(yo.id) && !partida.nominaciones.nominacion();
+      return !!dia && !!partida.jugadorDe(yo.id) && !partida.declaraciones.hecha('exterminar', yo.id) && !partida.nominaciones.nominacion();
     },
-    noPuede: ({ narrador }, yo) => (narrador.actual()?.exterminadores.includes(yo.id) ? 'Ya has disparado en esta partida.' : 'Ahora no se puede disparar.'),
+    noPuede: ({ partida }, yo) => (partida.declaraciones.hecha('exterminar', yo.id) ? 'Ya has disparado en esta partida.' : 'Ahora no se puede disparar.'),
     hacer: alNarradorVirtual('exterminar'),
   },
 
   /**
    * Con narrador virtual: un muerto se declara Patoso (lo sea o no) y elige a un vivo,
-   * mientras puede (ver NarradorVirtualDto.patosos). datos: { jugadorId } del elegido.
+   * mientras puede (ver Declaraciones.enPlazo). datos: { jugadorId } del elegido.
    */
   'jugador:patoso': {
     puede: (juego, yo) => {
       const { partida } = juego;
       const narrador = juego.narrador.actual();
       const mio = partida.jugadorDe(yo.id)?.id;
-      return !!narrador && narrador.etapa !== 'revelando' && !!mio && narrador.patosos.some((p) => p.jugador === mio);
+      return !!narrador && narrador.etapa !== 'revelando' && !!mio && partida.declaraciones.enPlazo('patoso', mio);
     },
     noPuede: 'Ya no puedes declararte Patoso.',
     hacer: alNarradorVirtual('patoso'),
@@ -597,10 +597,10 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       const { partida } = juego;
       const dia = diaVirtual(juego);
       const jugador = partida.jugadorDe(yo.id);
-      return !!dia && !!jugador && !jugador.muerto && !dia.artistas.includes(yo.id);
+      return !!dia && !!jugador && !jugador.muerto && !partida.declaraciones.hecha('artista', yo.id);
     },
-    noPuede: ({ narrador }, yo) =>
-      narrador.actual()?.artistas.includes(yo.id) ? 'Ya has hecho tu pregunta de Artista.' : 'Ahora no se puede preguntar como Artista.',
+    noPuede: ({ partida }, yo) =>
+      partida.declaraciones.hecha('artista', yo.id) ? 'Ya has hecho tu pregunta de Artista.' : 'Ahora no se puede preguntar como Artista.',
     hacer: async (_sala, yo, datos, { narradorVirtual }) => {
       if (!narradorVirtual) return { ok: false, error: 'Esta sala no tiene narradores virtuales.' };
       const r = await narradorVirtual.preguntarArtista(yo.id, datos);

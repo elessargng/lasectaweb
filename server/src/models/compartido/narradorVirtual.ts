@@ -49,8 +49,3 @@ export type EtapaNarradorVirtual =
   | 'violinista'
   | 'revelando';
 
-/** Un muerto que puede declararse Patoso y hasta cuándo (cuando se acaba esa noche o ese día). */
-export interface Patoso {
-  jugador: string;
-  hasta: 'amanecer' | 'anochecer';
-}

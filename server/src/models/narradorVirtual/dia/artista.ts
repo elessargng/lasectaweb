@@ -78,8 +78,7 @@ export async function preguntarComoArtista(
   partida.anotar({ tipo: 'artista', asiento: partida.asientoDiario(asiento.id), pregunta: enPalabras, respuesta });
   if (respuesta === 'reformular') return { respuesta };
   if (artista) await ponerRecordatorio(ctx, asiento.id, 'artist', 'No Ability');
-  const narrador = juego.narrador.actual();
-  if (narrador) juego.narrador.actualizar({ artistas: [...narrador.artistas, jugador] });
+  partida.declaraciones.apuntar('artista', jugador);
   return { respuesta };
 }
 

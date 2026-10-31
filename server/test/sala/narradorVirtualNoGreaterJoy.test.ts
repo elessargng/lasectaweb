@@ -107,7 +107,6 @@ describe('narrador virtual con No Greater Joy', () => {
     expect(r.ok && ['si', 'no'].includes(r.valor ?? '')).toBe(true);
     // Si es el Artista de verdad (sano: en este guion nadie envenena), la verdad
     if (ana.miAsiento?.personaje === 'artist') expect(r).toEqual({ ok: true, valor: 'si' });
-    expect(ana.estado.narradorVirtual?.artistas).toContain(ana.id);
     expect(ana.estado.acciones).not.toContain('jugador:artista');
     expect((await arnes.intentar(ana, 'jugador:artista', { pregunta: HAY_DEMONIO })).ok).toBe(false);
     expect(bea.estado.acciones).toContain('jugador:artista');
@@ -131,7 +130,6 @@ describe('narrador virtual con No Greater Joy', () => {
     for (const c of jugadores) await arnes.intentar(c, 'jugador:listo');
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'noche', 5000);
     await nominado.esperarQue((e) => e.acciones.includes('jugador:patoso'));
-    expect(ana.estado.narradorVirtual?.patosos).toEqual([{ jugador: nominado.miAsiento!.id, hasta: 'amanecer' }]);
     // Solo él, y solo a un vivo que no sea él
     expect(ana.estado.acciones).not.toContain('jugador:patoso');
     expect((await arnes.intentar(nominado, 'jugador:patoso', { jugadorId: nominado.miAsiento!.id })).ok).toBe(false);

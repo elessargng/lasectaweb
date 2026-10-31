@@ -8,6 +8,7 @@ import type { Participante } from '../sala/Participantes';
 import type { Sala } from '../sala/Sala';
 import { AccesoGrimorio } from './AccesoGrimorio';
 import { Configuracion } from './Configuracion';
+import { Declaraciones } from './Declaraciones';
 import { DespertarGuiado } from './DespertarGuiado';
 import { Despertares } from './Despertares';
 import { Entregas } from './Entregas';
@@ -150,6 +151,8 @@ export class Partida {
     veGrimorio: (id) => this.acceso.de(id) === 'concedido',
     despertar: (jugadorId) => void this.despertares.despertar(jugadorId),
   });
+  /** Las declaraciones del día: quién ha disparado como Exterminador, quién puede declararse Patoso… */
+  readonly declaraciones = new Declaraciones();
   /** Recordatorios del orden de noche cambiados a mano (ver SalaDto.recordatoriosNoche). */
   private recordatorios: Record<string, boolean> = {};
 
@@ -399,6 +402,7 @@ export class Partida {
     this.acceso.nuevaPartida();
     this.despertares.cerrarTodos();
     this.guiado.olvidar();
+    this.declaraciones.olvidar();
     this.recordatorios = {};
     this.fases.nuevaPartida();
   }

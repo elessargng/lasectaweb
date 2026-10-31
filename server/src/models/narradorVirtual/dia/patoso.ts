@@ -1,4 +1,4 @@
-import type { Patoso } from '../../compartido/narradorVirtual';
+import type { Plazo } from '../../partida/Declaraciones';
 import { droison } from '../../partida/reglas/ReglaPersonaje';
 import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { ContextoEtapa } from '../etapas/Etapa';
@@ -18,17 +18,13 @@ import { identidadDe } from '../../partida/Grimorio';
  */
 
 /** Los muertos que pueden declararse Patoso hasta `hasta` (sin repetir a quien ya puede). */
-export function abrirPatosos(juego: SalaDeJuego, jugadores: string[], hasta: Patoso['hasta']): void {
-  const narrador = juego.narrador.actual();
-  if (!narrador || !jugadores.length) return;
-  const nuevos = jugadores.filter((id) => !narrador.patosos.some((p) => p.jugador === id)).map((jugador) => ({ jugador, hasta }));
-  if (nuevos.length) juego.narrador.actualizar({ patosos: [...narrador.patosos, ...nuevos] });
+export function abrirPatosos(juego: SalaDeJuego, jugadores: string[], hasta: Plazo['hasta']): void {
+  if (juego.narrador.actual()) juego.partida.declaraciones.abrir('patoso', jugadores, hasta);
 }
 
 /** Ya no puede declararse Patoso (lo ha hecho, o se ha acabado su momento). */
 export function quitarPatoso(juego: SalaDeJuego, jugadorId: string): void {
-  const narrador = juego.narrador.actual();
-  if (narrador) juego.narrador.actualizar({ patosos: narrador.patosos.filter((p) => p.jugador !== jugadorId) });
+  juego.partida.declaraciones.cerrar('patoso', jugadorId);
 }
 
 /**
@@ -36,10 +32,10 @@ export function quitarPatoso(juego: SalaDeJuego, jugadorId: string): void {
  * no pueden. El Patoso de verdad que no lo ha hecho elige ahora (lo decide su
  * estrategia) y se cuenta. Devuelve el ganador si con eso se acaba la partida.
  */
-export async function cerrarPatosos(ctx: ContextoEtapa, hasta: Patoso['hasta']): Promise<Ganador | null> {
+export async function cerrarPatosos(ctx: ContextoEtapa, hasta: Plazo['hasta']): Promise<Ganador | null> {
   const { juego } = ctx;
-  const { partida, narrador } = juego;
-  const cierran = narrador.actual()?.patosos.filter((p) => p.hasta === hasta) ?? [];
+  const { partida } = juego;
+  const cierran = partida.declaraciones.abiertos('patoso', hasta);
   for (const { jugador: asiento } of cierran) {
     quitarPatoso(juego, asiento);
     const patoso = partida.plaza().find((a) => a.id === asiento);

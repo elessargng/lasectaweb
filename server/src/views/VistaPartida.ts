@@ -139,9 +139,6 @@ const narradorVirtualDto = (n: EstadoNarradorVirtual): NarradorVirtualDto => ({
   frase: n.frase,
   turno: n.turno,
   listos: [...n.listos],
-  exterminadores: [...n.exterminadores],
-  artistas: [...n.artistas],
-  patosos: n.patosos.map((p) => ({ ...p })),
 });
 const conversacionDto = (c: Conversacion): ConversacionDto => ({ id: c.id, miembros: [...c.miembros], oyentes: [...c.oyentes] });
 const invitacionDto = (i: Invitacion): InvitacionDto => ({ id: i.id, de: i.de, para: i.para, ...(i.conversacion && { conversacion: i.conversacion }) });

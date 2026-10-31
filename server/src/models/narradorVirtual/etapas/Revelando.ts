@@ -28,7 +28,7 @@ export class Revelando implements Etapa {
     const { partida, narrador } = ctx.juego;
     if (!this.yaDicho) ctx.decir(FRASES.revelamos());
     // Se acaba la partida: nadie más puede declararse Patoso
-    narrador.actualizar({ patosos: [] });
+    partida.declaraciones.cerrarTodos();
     // Si acaba antes de la noche en que lo sería, la Mujer Escarlata que ha heredado se revela ya como el Imp
     await escarlataAImp(ctx);
     if (!(await ctx.plaza.accion('narrador:revelarGrimorio', { ganador: this.ganador })).ok) return;

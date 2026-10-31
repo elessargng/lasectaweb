@@ -33,8 +33,7 @@ export async function exterminar(ctx: ContextoEtapa, tirador: string, jugadorId:
     });
   }
   if (identidadDe(desde) === 'slayer') await ponerRecordatorio(ctx, desde.id, 'slayer', 'No Ability');
-  const narrador = juego.narrador.actual();
-  if (narrador) juego.narrador.actualizar({ exterminadores: [...narrador.exterminadores, tirador] });
+  partida.declaraciones.apuntar('exterminar', tirador);
   return esExterminador && !objetivo.muerto && registraComoDemonio;
 }
 

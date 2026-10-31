@@ -331,7 +331,7 @@ describe('narrador virtual', () => {
     await arnes.accion(ana, 'jugador:seguirNominando');
     expect(ana.estado.narradorVirtual?.listos).not.toContain(ana.id);
     await arnes.accion(ana, 'jugador:exterminar', { jugadorId: bea.miAsiento!.id });
-    expect(ana.estado.narradorVirtual?.exterminadores).toContain(ana.id);
+    expect(ana.estado.acciones).not.toContain('jugador:exterminar');
     // Lo cuenta con pausas y acaba en que la partida continúa o, si era el demonio, en el grimorio
     await ana.esperarQue((e) => e.narradorVirtual?.frase === 'La partida continúa.' || e.narradorVirtual?.etapa === 'revelando', 5000);
     expect((await arnes.intentar(ana, 'jugador:exterminar', { jugadorId: bea.miAsiento!.id })).ok).toBe(false);

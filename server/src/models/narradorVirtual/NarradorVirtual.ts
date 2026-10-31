@@ -1,4 +1,4 @@
-import type { EtapaNarradorVirtual, GuionNarradorVirtual, IdNarradorVirtual, Patoso } from '../compartido/narradorVirtual';
+import type { EtapaNarradorVirtual, GuionNarradorVirtual, IdNarradorVirtual } from '../compartido/narradorVirtual';
 import type { TurnoNominacion } from '../compartido/partida';
 import type { Partida } from '../partida/Partida';
 import type { Sala } from '../sala/Sala';
@@ -19,12 +19,6 @@ export interface EstadoNarradorVirtual {
   turno: TurnoNominacion | null;
   /** Los jugadores listos para pasar a la noche (quien ya ha nominado lo está siempre). */
   listos: string[];
-  /** Quienes ya se han declarado Exterminador y han disparado (una vez por partida). */
-  exterminadores: string[];
-  /** Quienes ya le han hecho su pregunta de Artista (una vez por partida). */
-  artistas: string[];
-  /** Los muertos que aún pueden declararse Patoso, y hasta cuándo. */
-  patosos: Patoso[];
 }
 
 /**
@@ -57,9 +51,6 @@ export class NarradorVirtual {
       frase: null,
       turno: null,
       listos: [],
-      exterminadores: [],
-      artistas: [],
-      patosos: [],
     };
     return participante;
   }
