@@ -11,7 +11,7 @@ import { resolverRevision } from '../noche/revisiones';
 import { duracionPrivados, Privados } from './Dia';
 import { comprobarFinal, escarlataAImp } from '../final/comprobarFinal';
 import { apuntarNoche } from '../final/cronica';
-import { abrirPatosos, cerrarPatosos } from '../dia/patoso';
+import { abrirPatosos, cerrarPatosos } from '../../personajes/patoso';
 import { Revelando } from './Revelando';
 import type { ContextoEtapa, Etapa } from './Etapa';
 import { identidadDe } from '../../partida/Grimorio';

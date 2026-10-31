@@ -51,6 +51,14 @@ describe('arquitectura', () => {
     expect(fuera).toEqual([]);
   });
 
+  it('los servicios y los controladores no conocen a ningún personaje: usan la lista de models/personajes', () => {
+    const comunes = ['models/personajes', 'models/personajes/DeclaracionDia', 'models/personajes/idPersonaje'];
+    const fuera = ['services', 'controllers'].flatMap(archivos).filter((f) =>
+      importsDe(f).some((i) => i.startsWith('models/personajes') && !comunes.includes(i)),
+    );
+    expect(fuera, 'Estos archivos usan un personaje concreto: que lo traiga su archivo y vaya en la lista').toEqual([]);
+  });
+
   it('el dominio no usa los servicios, los controladores, los repositorios ni la infraestructura', () => {
     const fuera = archivos('models').filter((f) => importsDe(f).some((i) => /^(services|controllers|repositories|infra)(\/|$)/.test(i)));
     expect(fuera).toEqual([]);

@@ -5,16 +5,18 @@ import {
   type PreguntaArtista,
   type QuienArtista,
   type RespuestaArtista,
-} from '../../compartido/artista';
-import { droison } from '../../partida/reglas/ReglaPersonaje';
-import type { SalaDeJuego } from '../../SalaDeJuego';
-import type { ContextoEtapa } from '../etapas/Etapa';
-import { esDemonio } from '../final/comprobarFinal';
-import type { Cronica } from '../final/cronica';
-import { contextoNoche, nombreDeAsiento, tipoReal } from '../plazaDeJuego';
-import { ponerRecordatorio } from '../noche/requisitos';
-import { identidadDe } from '../../partida/Grimorio';
-import type { Jugador } from '../../partida/Jugador';
+} from '../compartido/artista';
+import { droison } from '../partida/reglas/ReglaPersonaje';
+import type { SalaDeJuego } from '../SalaDeJuego';
+import type { ContextoEtapa } from '../narradorVirtual/etapas/Etapa';
+import { esDemonio } from '../narradorVirtual/final/comprobarFinal';
+import type { Cronica } from '../narradorVirtual/final/cronica';
+import { contextoNoche, nombreDeAsiento, tipoReal } from '../narradorVirtual/plazaDeJuego';
+import { ponerRecordatorio } from '../narradorVirtual/noche/requisitos';
+import { identidadDe } from '../partida/Grimorio';
+import type { Jugador } from '../partida/Jugador';
+import { diaVirtual } from '../narradorVirtual/dia/reglasDia';
+import type { DeclaracionDia } from './DeclaracionDia';
 
 /**
  * La pregunta del Artista (una vez por partida y persona, lo sea o no, como el
@@ -34,9 +36,9 @@ export async function preguntarComoArtista(
   const asiento = partida.jugadorDe(jugador);
   if (!asiento) return { error: 'No estás sentado.' };
   const { texto, pregunta } = (datos as { texto?: unknown; pregunta?: unknown } | null) ?? {};
-  const artista = identidadDe(asiento) === 'artist';
-  const sano = artista && !droison(contextoNoche(juego), asiento);
-  const quien = `${nombreDeAsiento(juego, asiento.id)} (${artista ? (sano ? 'el Artista, sano' : 'el Artista, envenenado o borracho') : `no es el Artista: es ${identidadDe(asiento) ?? 'nadie'}`})`;
+  const esArtista = identidadDe(asiento) === 'artist';
+  const sano = esArtista && !droison(contextoNoche(juego), asiento);
+  const quien = `${nombreDeAsiento(juego, asiento.id)} (${esArtista ? (sano ? 'el Artista, sano' : 'el Artista, envenenado o borracho') : `no es el Artista: es ${identidadDe(asiento) ?? 'nadie'}`})`;
 
   let respuesta: RespuestaArtista;
   let enPalabras: string;
@@ -77,8 +79,8 @@ export async function preguntarComoArtista(
 
   partida.anotar({ tipo: 'artista', asiento: partida.asientoDiario(asiento.id), pregunta: enPalabras, respuesta });
   if (respuesta === 'reformular') return { respuesta };
-  if (artista) await ponerRecordatorio(ctx, asiento.id, 'artist', 'No Ability');
-  partida.declaraciones.apuntar('artista', jugador);
+  if (esArtista) await ponerRecordatorio(ctx, asiento.id, 'artist', 'No Ability');
+  partida.declaraciones.apuntar(artista.id, jugador);
   return { respuesta };
 }
 
@@ -132,3 +134,25 @@ export function contestar(juego: SalaDeJuego, cronica: Cronica, p: PreguntaArtis
       );
   }
 }
+
+/**
+ * Preguntar como Artista: de día, vivo, una vez por partida y persona (salvo que
+ * le pida que la reformule). En privado: no se cuenta a la plaza. datos: { texto }
+ * (libre) o { pregunta } (montada, ver models/compartido/artista); contesta en
+ * `valor`: 'si', 'no' o 'reformular'.
+ */
+export const artista: DeclaracionDia = {
+  id: 'artista',
+  publica: false,
+  puede: (juego, yo) => {
+    const { partida } = juego;
+    const jugador = partida.jugadorDe(yo.id);
+    return !!diaVirtual(juego) && !!jugador && !jugador.muerto && !partida.declaraciones.hecha(artista.id, yo.id);
+  },
+  noPuede: ({ partida }, yo) =>
+    partida.declaraciones.hecha(artista.id, yo.id) ? 'Ya has hecho tu pregunta de Artista.' : 'Ahora no se puede preguntar como Artista.',
+  async declarar(ctx, yo, datos) {
+    const r = await preguntarComoArtista(ctx, yo, datos);
+    return 'error' in r ? r : { valor: r.respuesta };
+  },
+};

@@ -1,12 +1,14 @@
-import { droison } from '../../partida/reglas/ReglaPersonaje';
-import type { ContextoEtapa } from '../etapas/Etapa';
-import { apuntarMuerteDeDia } from '../final/cronica';
-import { comprobarFinal, type Ganador } from '../final/comprobarFinal';
-import { duracionFrase, FRASES, PAUSA_MS } from '../frases';
-import { contextoNoche, nombreDeAsiento, tipoReal } from '../plazaDeJuego';
-import { ponerRecordatorio } from '../noche/requisitos';
+import { droison } from '../partida/reglas/ReglaPersonaje';
+import type { ContextoEtapa } from '../narradorVirtual/etapas/Etapa';
+import { apuntarMuerteDeDia } from '../narradorVirtual/final/cronica';
+import { comprobarFinal, type Ganador } from '../narradorVirtual/final/comprobarFinal';
+import { duracionFrase, FRASES, PAUSA_MS } from '../narradorVirtual/frases';
+import { contextoNoche, nombreDeAsiento, tipoReal } from '../narradorVirtual/plazaDeJuego';
+import { ponerRecordatorio } from '../narradorVirtual/noche/requisitos';
 import { abrirPatosos } from './patoso';
-import { identidadDe } from '../../partida/Grimorio';
+import { identidadDe } from '../partida/Grimorio';
+import { diaVirtual } from '../narradorVirtual/dia/reglasDia';
+import { otroJugador, type DeclaracionDia } from './DeclaracionDia';
 
 /**
  * Un jugador se declara Exterminador y dispara a otro (una vez por partida y
@@ -33,7 +35,7 @@ export async function exterminar(ctx: ContextoEtapa, tirador: string, jugadorId:
     });
   }
   if (identidadDe(desde) === 'slayer') await ponerRecordatorio(ctx, desde.id, 'slayer', 'No Ability');
-  partida.declaraciones.apuntar('exterminar', tirador);
+  partida.declaraciones.apuntar(exterminador.id, tirador);
   return esExterminador && !objetivo.muerto && registraComoDemonio;
 }
 
@@ -77,3 +79,20 @@ export async function contarDisparo(ctx: ContextoEtapa, tirador: string, jugador
   ctx.decir(FRASES.partidaContinua());
   return null;
 }
+
+/** Disparar como Exterminador: de día, sin nominación en marcha, una vez por partida y persona. datos: { jugadorId }. */
+export const exterminador: DeclaracionDia = {
+  id: 'exterminar',
+  publica: true,
+  puede: (juego, yo) => {
+    const { partida } = juego;
+    return !!diaVirtual(juego) && !!partida.jugadorDe(yo.id) && !partida.declaraciones.hecha(exterminador.id, yo.id) && !partida.nominaciones.nominacion();
+  },
+  noPuede: ({ partida }, yo) => (partida.declaraciones.hecha(exterminador.id, yo.id) ? 'Ya has disparado en esta partida.' : 'Ahora no se puede disparar.'),
+  async declarar(ctx, yo, datos) {
+    const elegido = otroJugador(ctx.juego, yo, datos, 'No puedes dispararte a ti.');
+    if ('error' in elegido) return elegido;
+    const muere = await exterminar(ctx, yo, elegido.jugadorId);
+    return { contar: () => contarDisparo(ctx, yo, elegido.jugadorId, muere) };
+  },
+};

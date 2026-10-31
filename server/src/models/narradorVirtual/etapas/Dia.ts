@@ -7,7 +7,7 @@ import { Noche } from './Noche';
 import { Revelando } from './Revelando';
 import { comprobarFinal, type Ganador } from '../final/comprobarFinal';
 import { apuntarMuerteDeDia } from '../final/cronica';
-import { abrirPatosos, cerrarPatosos } from '../dia/patoso';
+import { abrirPatosos, cerrarPatosos } from '../../personajes/patoso';
 
 /** Lo que dura la puesta en común (ms). */
 const PUESTA_EN_COMUN_MS = 60_000;

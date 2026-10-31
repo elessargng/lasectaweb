@@ -20,7 +20,7 @@ import type { Decision } from '../../src/models/narradorVirtual/estrategias/Estr
 import { comprobarFinal } from '../../src/models/narradorVirtual/final/comprobarFinal';
 import { Revelando } from '../../src/models/narradorVirtual/etapas/Revelando';
 import { Violinista } from '../../src/models/narradorVirtual/etapas/Violinista';
-import { contarDisparo, exterminar } from '../../src/models/narradorVirtual/dia/exterminar';
+import { contarDisparo, exterminar } from '../../src/models/personajes/exterminador';
 import { duracionPrivados, PuestaEnComun, TRAS_GONG_MS } from '../../src/models/narradorVirtual/etapas/Dia';
 import { FRASES } from '../../src/models/narradorVirtual/frases';
 import { contextoNoche } from '../../src/models/narradorVirtual/plazaDeJuego';

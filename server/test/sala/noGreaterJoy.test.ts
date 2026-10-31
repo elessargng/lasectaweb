@@ -7,7 +7,7 @@ import {
   type PreguntaArtista,
 } from '../../src/models/compartido/artista';
 import { ficha } from '../../src/models/partida/habilidades/HabilidadNocturna';
-import { contestar } from '../../src/models/narradorVirtual/dia/artista';
+import { contestar } from '../../src/models/personajes/artista';
 import { cronicaNueva } from '../../src/models/narradorVirtual/final/cronica';
 import { guionNoGreaterJoy, invitado } from './guionDePrueba';
 
