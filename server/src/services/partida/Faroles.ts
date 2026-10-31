@@ -22,10 +22,10 @@ export class Faroles {
   private delNarrador: (string | null)[] = farolesVacios();
 
   /**
-   * Los faroles de cada asiento, con quién estaba sentado al ponerlos: si se
-   * sienta otro (o se levanta), dejan de valer, como los despertares.
+   * Los faroles de cada jugador (por su id; van con él si cambia de silla), con
+   * quién lo jugaba al ponerlos: si lo juega otro (o nadie), dejan de valer, como los despertares.
    */
-  private deAsientos = new Map<string, { ocupante: string | null; faroles: (string | null)[]; enUso: string | null }>();
+  private deJugadores = new Map<string, { ocupante: string | null; faroles: (string | null)[]; enUso: string | null }>();
 
   constructor(
     /** La mesa como está ahora. */
@@ -46,16 +46,16 @@ export class Faroles {
     this.diario.anotar({ tipo: 'farol', asiento: null, posicion, personaje: personajeId });
   }
 
-  /** Los faroles del asiento, si siguen siendo de quien se sienta en él. */
-  deAsiento(asiento: Asiento): (string | null)[] {
-    const f = this.deAsientos.get(asiento.id);
-    return f && f.ocupante === asiento.ocupante ? [...f.faroles] : farolesVacios();
+  /** Los faroles del asiento, si siguen siendo de quien juega a su jugador. */
+  deAsiento({ jugador }: Asiento): (string | null)[] {
+    const f = this.deJugadores.get(jugador.id);
+    return f && f.ocupante === jugador.participanteId ? [...f.faroles] : farolesVacios();
   }
 
-  /** El farol que dice usar el asiento, si sigue siendo de quien se sienta en él (y sigue entre sus faroles). */
-  enUso(asiento: Asiento): string | null {
-    const f = this.deAsientos.get(asiento.id);
-    return f && f.ocupante === asiento.ocupante ? f.enUso : null;
+  /** El farol que dice usar el asiento, si sigue siendo de quien juega a su jugador (y sigue entre sus faroles). */
+  enUso({ jugador }: Asiento): string | null {
+    const f = this.deJugadores.get(jugador.id);
+    return f && f.ocupante === jugador.participanteId ? f.enUso : null;
   }
 
   /** Pone un farol en una casilla de un asiento (o la vacía). Si el que usaba ya no está, deja de usarlo. */
@@ -83,18 +83,13 @@ export class Faroles {
     return null;
   }
 
-  private guardar(asiento: Asiento, faroles: (string | null)[], enUso: string | null): void {
-    this.deAsientos.set(asiento.id, { ocupante: asiento.ocupante, faroles, enUso: enUso && faroles.includes(enUso) ? enUso : null });
+  private guardar({ jugador }: Asiento, faroles: (string | null)[], enUso: string | null): void {
+    this.deJugadores.set(jugador.id, { ocupante: jugador.participanteId, faroles, enUso: enUso && faroles.includes(enUso) ? enUso : null });
   }
 
   /** Otra partida (u otro guion): todos vacíos. */
   vaciar(): void {
     this.delNarrador = farolesVacios();
-    this.deAsientos.clear();
-  }
-
-  /** Los asientos han cambiado de sitio (ver Partida.llevarFichas): cada farol va con el suyo. */
-  remapear(a: (asientoId: string) => string): void {
-    this.deAsientos = new Map([...this.deAsientos].map(([k, v]) => [a(k), v] as const));
+    this.deJugadores.clear();
   }
 }

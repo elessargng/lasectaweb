@@ -3,28 +3,26 @@ import { RECORDATORIO_TEXTO, type SalaAlineamiento, type SalaAsiento, type SalaR
 import type { AsientoDiario, HechoDiario } from '../../contrato/diario';
 import type { PersonajeDeGuion } from '../../types/guiones';
 import type { Asiento } from '../sala/Sala';
+import type { Jugador } from './Jugador';
 
 /**
- * La ficha de un asiento de la mesa: lo que es de la partida (personaje, muerte,
- * calavera, recordatorios…). Cada asiento tiene la suya, haya alguien sentado o no.
+ * La ficha de un asiento tal como se ve en el grimorio: lo de su jugador
+ * (personaje, muerte, voto), la calavera si la lleva y los apuntes del narrador
+ * (recordatorios y nota). Es para leer: se cambia con el Grimorio.
  */
 export type Ficha = Pick<
   SalaAsiento,
   'muerto' | 'muertePendiente' | 'votoGastado' | 'marcado' | 'votosMarca' | 'personaje' | 'alineamiento' | 'recordatorios' | 'nota'
 >;
 
-/** Una ficha como al principio: viva, sin personaje, sin calavera y sin recordatorios. */
-const fichaNueva = (): Ficha => ({
-  muerto: false,
-  muertePendiente: false,
-  votoGastado: false,
-  marcado: false,
-  votosMarca: null,
-  personaje: null,
-  alineamiento: null,
-  recordatorios: [],
-  nota: null,
-});
+/**
+ * Lo que el narrador apunta junto a un jugador: las fichas recordatorio (en el
+ * orden en que se pusieron) y su nota. No es del jugador: es del grimorio.
+ */
+interface Apuntes {
+  recordatorios: SalaRecordatorio[];
+  nota: string | null;
+}
 
 /**
  * Un recordatorio «Is The …» (el del Borracho, el Alquimista, el Filósofo, la
@@ -49,13 +47,13 @@ export function identidadDe(ficha: Pick<Ficha, 'personaje' | 'recordatorios'>): 
  * Al anunciar una muerte de noche, el «Dead» con el que la marcó quien lo mató (el
  * demonio, el Asesino…) ya no hace falta: se quita (no los de texto propio).
  */
-function quitarMarcaDeMuerte(ficha: Ficha): void {
-  ficha.recordatorios = ficha.recordatorios.filter((r) => r.personaje === RECORDATORIO_TEXTO || !/^dead$/i.test(r.texto.trim()));
+function quitarMarcaDeMuerte(apuntes: Apuntes): void {
+  apuntes.recordatorios = apuntes.recordatorios.filter((r) => r.personaje === RECORDATORIO_TEXTO || !/^dead$/i.test(r.texto.trim()));
 }
 
 /** Lo que el grimorio necesita saber de la sala y de la partida. */
 export interface EntornoGrimorio {
-  /** Los asientos de la mesa, en orden. */
+  /** Los asientos de la mesa, en orden, cada uno con su jugador. */
   asientos(): Asiento[];
   /** Un personaje del guion (o del catálogo). */
   personaje(id: string): PersonajeDeGuion | undefined;
@@ -67,33 +65,51 @@ export interface EntornoGrimorio {
 }
 
 /**
- * El grimorio: la ficha de cada asiento de la mesa y lo que el narrador (o las
- * reglas) hacen con ellas. No comprueba permisos ni que el personaje esté en el guion.
+ * El grimorio: lo que el narrador (o las reglas) hacen con los jugadores de la
+ * mesa (darles personaje, matarlos…), sus apuntes junto a cada uno y la calavera.
+ * Se pide por asiento, pero todo va con el jugador: si cambia de silla, se lo lleva.
+ * No comprueba permisos ni que el personaje esté en el guion.
  */
 export class Grimorio {
-  private porAsiento = new Map<string, Ficha>();
+  /** Por jugador (su id). */
+  private apuntes = new Map<string, Apuntes>();
+  /** Quién lleva la calavera (solo uno en la mesa) y con cuántos votos se le puso. */
+  private marca: { jugador: string; votos: number | null } | null = null;
 
   constructor(private readonly entorno: EntornoGrimorio) {}
 
-  /** La ficha de un asiento, para leerla (la de un asiento nuevo, como al principio). */
+  /** La ficha de un asiento, para leerla (la de un asiento que no existe, como al principio). */
   ficha(asientoId: string): Readonly<Ficha> {
-    return this.de(asientoId);
+    const jugador = this.jugador(asientoId);
+    const apuntes = jugador ? this.apuntesDe(jugador) : { recordatorios: [], nota: null };
+    const marcado = !!jugador && this.marca?.jugador === jugador.id;
+    return {
+      personaje: jugador?.personaje ?? null,
+      alineamiento: jugador?.alineamiento ?? null,
+      muerto: jugador?.muerto ?? false,
+      muertePendiente: jugador?.muertePendiente ?? false,
+      votoGastado: jugador?.votoGastado ?? false,
+      marcado,
+      votosMarca: marcado ? this.marca!.votos : null,
+      recordatorios: apuntes.recordatorios,
+      nota: apuntes.nota,
+    };
   }
 
-  private de(asientoId: string): Ficha {
-    let ficha = this.porAsiento.get(asientoId);
-    if (!ficha) this.porAsiento.set(asientoId, (ficha = fichaNueva()));
-    return ficha;
+  /** El jugador de un asiento, o null si el asiento no existe. */
+  private jugador(asientoId: string): Jugador | null {
+    return this.entorno.asientos().find((a) => a.id === asientoId)?.jugador ?? null;
   }
 
-  /** La ficha de un asiento que existe, para cambiarla; null si el asiento no existe. */
-  private existente(asientoId: string): Ficha | null {
-    return this.entorno.asientos().some((a) => a.id === asientoId) ? this.de(asientoId) : null;
+  private apuntesDe(jugador: Jugador): Apuntes {
+    let apuntes = this.apuntes.get(jugador.id);
+    if (!apuntes) this.apuntes.set(jugador.id, (apuntes = { recordatorios: [], nota: null }));
+    return apuntes;
   }
 
-  /** Las fichas de la mesa, en orden. */
-  private todas(): Ficha[] {
-    return this.entorno.asientos().map((a) => this.de(a.id));
+  /** Los jugadores de la mesa, en orden. */
+  private jugadores(): Jugador[] {
+    return this.entorno.asientos().map((a) => a.jugador);
   }
 
   /**
@@ -111,15 +127,15 @@ export class Grimorio {
   }
 
   /**
-   * Pone un personaje en la ficha de un asiento (o se lo quita, con null). El
+   * Pone un personaje al jugador de un asiento (o se lo quita, con null). El
    * alineamiento vuelve a ser el de su tipo.
    */
   cambiarPersonaje(asientoId: string, personaje: string | null): void {
-    const ficha = this.existente(asientoId);
-    if (!ficha) return;
-    ficha.personaje = personaje;
-    ficha.alineamiento = null;
-    this.identidadAutomatica(ficha);
+    const jugador = this.jugador(asientoId);
+    if (!jugador) return;
+    jugador.personaje = personaje;
+    jugador.alineamiento = null;
+    this.identidadAutomatica(jugador);
     this.entorno.anotar({ tipo: 'personaje', asiento: this.entorno.asientoDiario(asientoId), personaje });
   }
 
@@ -128,11 +144,13 @@ export class Grimorio {
    * era cada uno (los «Is The …» del reparto anterior) ya no vale.
    */
   repartir(asientoId: string, personaje: string | null): void {
-    const ficha = this.de(asientoId);
-    ficha.personaje = personaje;
-    ficha.alineamiento = null;
-    ficha.recordatorios = ficha.recordatorios.filter((r) => !esIdentidad(r));
-    this.identidadAutomatica(ficha);
+    const jugador = this.jugador(asientoId);
+    if (!jugador) return;
+    jugador.personaje = personaje;
+    jugador.alineamiento = null;
+    const apuntes = this.apuntesDe(jugador);
+    apuntes.recordatorios = apuntes.recordatorios.filter((r) => !esIdentidad(r));
+    this.identidadAutomatica(jugador);
   }
 
   /**
@@ -140,34 +158,34 @@ export class Grimorio {
    * solo: luego el narrador le cambia la ficha por la habilidad que gana y sigue
    * sabiéndose quién es.
    */
-  private identidadAutomatica(ficha: Ficha): void {
-    const p = ficha.personaje ? this.entorno.personaje(ficha.personaje) : undefined;
+  private identidadAutomatica(jugador: Jugador): void {
+    const p = jugador.personaje ? this.entorno.personaje(jugador.personaje) : undefined;
     if (!p || p.tipo !== 'traveller') return;
     const indice = p.recordatorios.findIndex(esRecordatorioDeIdentidad);
     if (indice < 0) return;
-    if (ficha.recordatorios.some((r) => r.personaje === p.id && r.indice === indice)) return;
-    ficha.recordatorios.push({ id: randomUUID(), personaje: p.id, indice, texto: p.recordatorios[indice] });
+    const { recordatorios } = this.apuntesDe(jugador);
+    if (recordatorios.some((r) => r.personaje === p.id && r.indice === indice)) return;
+    recordatorios.push({ id: randomUUID(), personaje: p.id, indice, texto: p.recordatorios[indice] });
   }
 
   /**
-   * Intercambia el personaje y el alineamiento de dos fichas (con el Gardener, el
-   * narrador decide quién tiene qué). Lo demás (muerte, calavera, recordatorios)
-   * es del asiento y se queda.
+   * Intercambia el personaje y el alineamiento de dos jugadores (con el Gardener, el
+   * narrador decide quién tiene qué). Lo demás (muerte, calavera, recordatorios) se queda.
    */
   intercambiarFichas(desdeId: string, hastaId: string): void {
     if (desdeId === hastaId) return;
-    const desde = this.existente(desdeId);
-    const hasta = this.existente(hastaId);
+    const desde = this.jugador(desdeId);
+    const hasta = this.jugador(hastaId);
     if (!desde || !hasta) return;
     [desde.personaje, hasta.personaje] = [hasta.personaje, desde.personaje];
     [desde.alineamiento, hasta.alineamiento] = [hasta.alineamiento, desde.alineamiento];
   }
 
-  /** Pone una ficha recordatorio junto a la de un asiento (y lo apunta en el diario, si `anotar`). */
+  /** Pone una ficha recordatorio junto al jugador de un asiento (y lo apunta en el diario, si `anotar`). */
   ponerRecordatorio(asientoId: string, recordatorio: Omit<SalaRecordatorio, 'id'>, { anotar = true }: { anotar?: boolean } = {}): void {
-    const ficha = this.existente(asientoId);
-    if (!ficha) return;
-    ficha.recordatorios.push({ id: randomUUID(), ...recordatorio });
+    const jugador = this.jugador(asientoId);
+    if (!jugador) return;
+    this.apuntesDe(jugador).recordatorios.push({ id: randomUUID(), ...recordatorio });
     if (!anotar) return;
     const { personaje, texto } = recordatorio;
     this.entorno.anotar({ tipo: 'recordatorio', asiento: this.entorno.asientoDiario(asientoId), personaje, texto, quitado: false });
@@ -175,18 +193,20 @@ export class Grimorio {
 
   /** Quita una ficha recordatorio. */
   quitarRecordatorio(asientoId: string, recordatorioId: string): void {
-    const ficha = this.existente(asientoId);
-    const quitado = ficha?.recordatorios.find((r) => r.id === recordatorioId);
-    if (!ficha || !quitado) return;
-    ficha.recordatorios = ficha.recordatorios.filter((r) => r !== quitado);
+    const jugador = this.jugador(asientoId);
+    const apuntes = jugador ? this.apuntesDe(jugador) : null;
+    const quitado = apuntes?.recordatorios.find((r) => r.id === recordatorioId);
+    if (!apuntes || !quitado) return;
+    apuntes.recordatorios = apuntes.recordatorios.filter((r) => r !== quitado);
     const { personaje, texto } = quitado;
     this.entorno.anotar({ tipo: 'recordatorio', asiento: this.entorno.asientoDiario(asientoId), personaje, texto, quitado: true });
   }
 
-  /** Quita de todas las fichas los recordatorios de ese personaje con ese índice (sin apuntarlo en el diario). */
+  /** Quita de toda la mesa los recordatorios de ese personaje con ese índice (sin apuntarlo en el diario). */
   quitarDeTodas(personaje: string, indice: number): void {
-    for (const ficha of this.todas()) {
-      ficha.recordatorios = ficha.recordatorios.filter((r) => !(r.personaje === personaje && r.indice === indice));
+    for (const jugador of this.jugadores()) {
+      const apuntes = this.apuntesDe(jugador);
+      apuntes.recordatorios = apuntes.recordatorios.filter((r) => !(r.personaje === personaje && r.indice === indice));
     }
   }
 
@@ -202,7 +222,7 @@ export class Grimorio {
     if (texto === undefined) return null;
     const iguales = new Set(textos.flatMap((t, i) => (t === texto ? [i] : [])));
     const puestos = this.entorno.asientos().flatMap((a) =>
-      this.de(a.id)
+      this.apuntesDe(a.jugador)
         .recordatorios.filter((r) => r.personaje === personajeId && iguales.has(r.indice))
         .map((r) => ({ asientoId: a.id, recordatorioId: r.id })),
     );
@@ -211,50 +231,45 @@ export class Grimorio {
   }
 
   /**
-   * Escribe la nota de un asiento (sustituye la que hubiera); con null, la borra.
+   * Escribe la nota del jugador de un asiento (sustituye la que hubiera); con null, la borra.
    * Devuelve false si el asiento no existe.
    */
   escribirNota(asientoId: string, texto: string | null): boolean {
-    const ficha = this.existente(asientoId);
-    if (!ficha) return false;
-    ficha.nota = texto;
+    const jugador = this.jugador(asientoId);
+    if (!jugador) return false;
+    this.apuntesDe(jugador).nota = texto;
     return true;
   }
 
-  /** Cambia el alineamiento de la ficha de un asiento. */
+  /** Cambia el alineamiento del jugador de un asiento. */
   cambiarAlineamiento(asientoId: string, alineamiento: SalaAlineamiento): void {
-    const ficha = this.existente(asientoId);
-    if (!ficha) return;
-    ficha.alineamiento = alineamiento;
+    const jugador = this.jugador(asientoId);
+    if (!jugador) return;
+    jugador.alineamiento = alineamiento;
     this.entorno.anotar({ tipo: 'alineamiento', asiento: this.entorno.asientoDiario(asientoId), alineamiento });
   }
 
   /**
-   * Mata o revive la ficha de un asiento; al morir pierde la calavera. De noche,
+   * Mata o revive al jugador de un asiento; al morir pierde la calavera. De noche,
    * la muerte queda pendiente (solo la ven quienes ven el grimorio) hasta que el
    * narrador la hace efectiva (confirmarMuerte). Revivir quita también la pendiente.
    */
   cambiarVida(asientoId: string, muerto: boolean, { anotar = true }: { anotar?: boolean } = {}): void {
-    const ficha = this.existente(asientoId);
-    if (!ficha) return;
+    const jugador = this.jugador(asientoId);
+    if (!jugador) return;
     // Para el diario, muere cuando se le pone la muerte (de noche, aunque se anuncie después)
-    const estabaMuerto = ficha.muerto || ficha.muertePendiente;
+    const estabaMuerto = jugador.muerto || jugador.muertePendiente;
     if (anotar && estabaMuerto !== muerto) {
       this.entorno.anotar({ tipo: muerto ? 'muere' : 'revive', asiento: this.entorno.asientoDiario(asientoId) });
     }
-    if (muerto && this.entorno.noche() && !ficha.muerto) {
-      ficha.muertePendiente = true;
+    if (!muerto) {
+      jugador.revivir();
       return;
     }
-    if (muerto && ficha.muertePendiente) quitarMarcaDeMuerte(ficha);
-    // Al morir (o revivir) tiene su voto
-    if (ficha.muerto !== muerto) ficha.votoGastado = false;
-    ficha.muerto = muerto;
-    ficha.muertePendiente = false;
-    if (muerto) {
-      ficha.marcado = false;
-      ficha.votosMarca = null;
-    }
+    const estabaPendiente = jugador.muertePendiente;
+    if (!jugador.morir(this.entorno.noche())) return;
+    if (estabaPendiente) quitarMarcaDeMuerte(this.apuntesDe(jugador));
+    this.quitarCalavera(jugador);
   }
 
   /**
@@ -262,66 +277,58 @@ export class Grimorio {
    * se le quita el «Dead» de quien lo mató (ya no hace falta).
    */
   confirmarMuerte(asientoId: string): boolean {
-    const ficha = this.existente(asientoId);
-    if (!ficha?.muertePendiente) return false;
-    quitarMarcaDeMuerte(ficha);
-    ficha.muertePendiente = false;
-    ficha.muerto = true;
-    ficha.votoGastado = false;
-    ficha.marcado = false;
-    ficha.votosMarca = null;
+    const jugador = this.jugador(asientoId);
+    if (!jugador?.confirmarMuerte()) return false;
+    quitarMarcaDeMuerte(this.apuntesDe(jugador));
+    this.quitarCalavera(jugador);
     return true;
   }
 
-  /** Quita o devuelve el voto a la ficha de un muerto. Devuelve false si no está muerta. */
+  /** Quita o devuelve el voto al jugador muerto de un asiento. Devuelve false si no está muerto. */
   cambiarVoto(asientoId: string, gastado: boolean): boolean {
-    const ficha = this.existente(asientoId);
-    if (!ficha?.muerto) return false;
-    ficha.votoGastado = gastado;
-    return true;
+    return !!this.jugador(asientoId)?.cambiarVoto(gastado);
   }
 
   /** El Barquero: todos los muertos recuperan su voto. Devuelve cuántos lo recuperan. */
   devolverVotos(): number {
-    const sinVoto = this.todas().filter((f) => f.muerto && f.votoGastado);
-    for (const ficha of sinVoto) ficha.votoGastado = false;
+    const sinVoto = this.jugadores().filter((j) => j.muerto && j.votoGastado);
+    for (const jugador of sinVoto) jugador.cambiarVoto(false);
     return sinVoto.length;
   }
 
-  /** Pone o quita la calavera a la ficha de un asiento. Solo puede llevarla una: ponérsela se la quita a las demás. */
+  /** Pone o quita la calavera al jugador de un asiento. Solo puede llevarla uno: ponérsela se la quita a los demás. */
   marcar(asientoId: string, marcado: boolean, votos: number | null = null): void {
     if (marcado) this.desmarcar();
-    const ficha = this.existente(asientoId);
-    if (!ficha) return;
-    ficha.marcado = marcado;
-    ficha.votosMarca = marcado ? votos : null;
+    const jugador = this.jugador(asientoId);
+    if (!jugador) return;
+    if (marcado) this.marca = { jugador: jugador.id, votos };
+    else this.quitarCalavera(jugador);
+  }
+
+  private quitarCalavera(jugador: Jugador): void {
+    if (this.marca?.jugador === jugador.id) this.marca = null;
   }
 
   /** Quita la calavera a quien la lleve. */
   desmarcar(): void {
-    for (const ficha of this.todas()) {
-      ficha.marcado = false;
-      ficha.votosMarca = null;
-    }
+    this.marca = null;
   }
 
-  /** Si alguna ficha lleva la calavera. */
+  /** Si alguien lleva la calavera. */
   hayMarca(): boolean {
-    return this.todas().some((f) => f.marcado);
+    return this.marca !== null;
   }
 
-  /** Se ha quitado el asiento: su ficha, con él. */
-  olvidar(asientoId: string): void {
-    this.porAsiento.delete(asientoId);
+  /** Se ha quitado un asiento: lo apuntado de su jugador, con él. */
+  olvidar(jugador: Jugador): void {
+    this.apuntes.delete(jugador.id);
+    this.quitarCalavera(jugador);
   }
 
-  /** Otra partida: todas las fichas como al principio. */
+  /** Otra partida: todos los jugadores como al principio, sin apuntes ni calavera. */
   limpiar(): void {
-    this.porAsiento.clear();
-  }
-
-  /** Los asientos han cambiado de sitio (ver Sala.alMover): cada ficha va con su jugador. */
-  remapear(a: (asientoId: string) => string): void {
-    this.porAsiento = new Map([...this.porAsiento].map(([k, v]) => [a(k), v] as const));
+    for (const jugador of this.jugadores()) jugador.nuevaPartida();
+    this.apuntes.clear();
+    this.marca = null;
   }
 }

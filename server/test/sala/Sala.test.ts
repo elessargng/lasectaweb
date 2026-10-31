@@ -21,7 +21,7 @@ describe('Sala', () => {
   it('empieza con los asientos iniciales, todos libres', () => {
     const sala = new Sala();
     expect(sala.asientos()).toHaveLength(SALA_ASIENTOS.inicial);
-    expect(sala.asientos().every((a) => a.ocupante === null)).toBe(true);
+    expect(sala.asientos().every((a) => a.jugador.participanteId === null)).toBe(true);
   });
 
   it('al sentarse se pasa a jugador y al levantarse, a visitante', () => {
@@ -43,7 +43,7 @@ describe('Sala', () => {
   it('el asiento se libera solo cuando su jugador deja de serlo', () => {
     const { sala, ids } = salaConJugadores('Ana');
     sala.participantes.cambiarRol(ids[0], 'narrador');
-    expect(sala.asientos()[0].ocupante).toBeNull();
+    expect(sala.asientos()[0].jugador.participanteId).toBeNull();
   });
 
   it('al quitar el último asiento, quien estaba sentado vuelve a visitante', () => {
@@ -57,8 +57,8 @@ describe('Sala', () => {
     const { sala, ids, movimientos } = salaConJugadores('Ana', 'Bea');
     const [uno, dos] = sala.asientos();
     expect(sala.moverOcupante(uno.id, dos.id)).toBeNull();
-    expect(uno.ocupante).toBe(ids[1]);
-    expect(dos.ocupante).toBe(ids[0]);
+    expect(uno.jugador.participanteId).toBe(ids[1]);
+    expect(dos.jugador.participanteId).toBe(ids[0]);
     expect(movimientos).toEqual([new Map([[uno.id, dos.id], [dos.id, uno.id]])]);
   });
 
@@ -68,19 +68,43 @@ describe('Sala', () => {
     expect(sala.moverOcupante(uno.id, uno.id)).toBeNull();
     expect(movimientos).toHaveLength(0);
     expect(sala.moverOcupante(uno.id, tres.id)).toBeNull();
-    expect(uno.ocupante).toBeNull();
-    expect(tres.ocupante).toBe(ids[0]);
+    expect(uno.jugador.participanteId).toBeNull();
+    expect(tres.jugador.participanteId).toBe(ids[0]);
     expect(sala.moverOcupante(uno.id, tres.id)).toBe('Ya no hay nadie en ese asiento.');
+  });
+
+  it('al levantarse, su jugador se queda en el asiento sin nadie, y quien se sienta pasa a jugarlo', () => {
+    const { sala, ids } = salaConJugadores('Ana');
+    const [uno] = sala.asientos();
+    const jugador = uno.jugador;
+    jugador.morir(false);
+    sala.levantar(ids[0]);
+    expect(uno.jugador).toBe(jugador);
+    expect(jugador.ocupante).toEqual({ tipo: 'vacio' });
+    const bea = sala.participantes.conectar('s-bea', 'c-bea', invitado('Bea'), siempreViva).id;
+    expect(sala.sentar(bea, uno.id)).toBeNull();
+    expect(uno.jugador).toBe(jugador);
+    expect(jugador.ocupante).toEqual({ tipo: 'humano', participanteId: bea });
+    expect(jugador.muerto).toBe(true);
+  });
+
+  it('al cambiarse de silla se lleva a su jugador; el de la otra silla pasa a la suya', () => {
+    const { sala } = salaConJugadores('Ana');
+    const [uno, , tres] = sala.asientos();
+    const [deAna, libre] = [uno.jugador, tres.jugador];
+    sala.moverOcupante(uno.id, tres.id);
+    expect(tres.jugador).toBe(deAna);
+    expect(uno.jugador).toBe(libre);
   });
 
   it('al mezclar, cada uno sigue sentado una vez y el aviso dice dónde ha ido', () => {
     const { sala, ids, movimientos } = salaConJugadores('Ana', 'Bea', 'Carlos');
-    const antes = new Map(sala.asientos().map((a) => [a.id, a.ocupante]));
+    const antes = new Map(sala.asientos().map((a) => [a.id, a.jugador.participanteId]));
     expect(sala.mezclar()).toBe(3);
-    const ocupantes = sala.asientos().flatMap((a) => a.ocupante ?? []);
+    const ocupantes = sala.asientos().flatMap((a) => a.jugador.participanteId ?? []);
     expect([...ocupantes].sort()).toEqual([...ids].sort());
     const [destino] = movimientos;
-    for (const [desde, hasta] of destino) expect(sala.asiento(hasta)?.ocupante).toBe(antes.get(desde));
+    for (const [desde, hasta] of destino) expect(sala.asiento(hasta)?.jugador.participanteId).toBe(antes.get(desde));
   });
 
   it('los vecinos son el ocupado más cercano a cada lado, saltando los libres', () => {

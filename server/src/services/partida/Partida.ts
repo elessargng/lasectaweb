@@ -52,10 +52,10 @@ export class Partida {
     private readonly sala: Sala,
     private readonly entorno: EntornoPartida,
   ) {
-    // Al cambiar de silla, cada jugador se lleva su ficha
+    // Al cambiar de silla, cada jugador se lleva lo que aún va por asiento
     this.sala.alMover((destino) => this.llevarFichas(destino));
-    // Un asiento que se quita se lleva lo que tenía en el grimorio
-    this.sala.alQuitar((asientoId) => this.grimorio.olvidar(asientoId));
+    // Un asiento que se quita se lleva lo que su jugador tenía en el grimorio
+    this.sala.alQuitar((asiento) => this.grimorio.olvidar(asiento.jugador));
     // El acceso al grimorio es de los visitantes: al cambiar de papel se pierde (y se vuelve a pedir)
     this.sala.participantes.alCambiarRol((id) => this.acceso.cambiar(id, 'ninguno'));
     this.sala.participantes.alExpulsar((id, recuerdo) => this.acceso.alExpulsar(id, recuerdo));
@@ -69,7 +69,7 @@ export class Partida {
   readonly fases = new Fases();
   /** Quién ha pedido ver el grimorio y a quién se le ha concedido. */
   readonly acceso = new AccesoGrimorio((id) => this.sala.participantes.recuerdoDe(id));
-  /** La ficha de cada asiento y lo que se hace con ellas (ver Grimorio). */
+  /** Lo que se hace con los jugadores de la mesa, los apuntes del narrador y la calavera (ver Grimorio). */
   readonly grimorio = new Grimorio({
     asientos: () => this.sala.asientos(),
     personaje: (id) => this.guion.personaje(id),
@@ -164,7 +164,8 @@ export class Partida {
    */
   mesa(): SalaAsiento[] {
     return this.sala.asientos().map((a) => ({
-      ...a,
+      id: a.id,
+      ocupante: a.jugador.participanteId,
       ...this.grimorio.ficha(a.id),
       faroles: this.faroles.deAsiento(a),
       farolEnUso: this.faroles.enUso(a),
@@ -565,17 +566,14 @@ export class Partida {
   }
 
   /**
-   * Lleva lo de cada ficha (personaje, alineamiento, muerte, voto, calavera,
-   * recordatorios, la nota; y lo que va por asiento: lo entregado, los faroles, el
-   * grimorio enviado, los despertares, lo revelado, la nominación) del asiento de
-   * cada clave al de su valor. Al cambiar de sitio a los jugadores, su ficha va con
-   * ellos: cambian de silla, no de personaje. `destino` es una permutación de la mesa.
+   * Lleva lo que aún va por asiento (lo entregado, el grimorio enviado, los
+   * despertares, lo revelado, la nominación) del asiento de cada clave al de su
+   * valor: al cambiar de silla, todo va con el jugador. Lo del grimorio y los
+   * faroles ya van con él. `destino` es una permutación de la mesa.
    */
   private llevarFichas(destino: Map<string, string>): void {
     const a = (id: string) => destino.get(id) ?? id;
-    this.grimorio.remapear(a);
     this.entregas.remapear(a);
-    this.faroles.remapear(a);
     this.despertares.remapear(a);
     this.guiado.remapear(a);
     this.revelacion.remapear(a);
