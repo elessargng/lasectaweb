@@ -13,7 +13,7 @@ import { imp } from '../../personajes/imp';
 import { investigador } from '../../personajes/investigador';
 import { lavandera } from '../../personajes/lavandera';
 import { mayordomo } from '../../personajes/mayordomo';
-import { monje } from '../../personajes/monje';
+import { monjeDeNoche } from '../../personajes/monje';
 import { mujerEscarlata } from '../../personajes/mujerEscarlata';
 import { relojero } from '../../personajes/relojero';
 import { sabio } from '../../personajes/sabio';
@@ -23,7 +23,7 @@ const TROUBLE_BREWING: readonly HabilidadNocturna[] = [
   esbirros,
   demonios,
   envenenador,
-  monje,
+  monjeDeNoche,
   mayordomo,
   imp,
   adivina,

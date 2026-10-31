@@ -15,6 +15,10 @@ import { revolucionario } from './revolucionario';
 import { voudon } from './voudon';
 import type { Jugador } from '../partida/Jugador';
 import { percepcionReal, type Percepcion } from './Percepcion';
+import { anteElDemonioReal, type AnteElDemonio } from './AnteElDemonio';
+import { alcalde } from './alcalde';
+import { monje } from './monje';
+import { soldado } from './soldado';
 
 /**
  * Las reglas de los personajes, en el orden en que se consultan: el Voudon antes
@@ -37,6 +41,10 @@ export const REGLAS: readonly ReglaPersonaje[] = [
   // Cómo registran
   reclusa,
   espia,
+  // Ante el demonio: quien desvía antes que quien protege (protegido, no rebota)
+  alcalde,
+  soldado,
+  monje,
 ];
 
 /** Un recordatorio que hay que poner al ejecutar (o al nominar): de qué personaje y con qué texto. */
@@ -146,6 +154,11 @@ export class Reglas {
     if (droison(this.ctx, jugador)) return base;
     const id = this.ctx.identidad(jugador);
     return this.reglas.reduce((p, r) => (r.personaje === id && r.alterarPercepcion ? r.alterarPercepcion(this.ctx, p) : p), base);
+  }
+
+  /** Lo que le pasa a un jugador si un demonio lo ataca: lo de base, con lo que cambie cada regla. */
+  anteElDemonio(jugador: Jugador): AnteElDemonio {
+    return this.reglas.reduce((a, r) => r.alterarAnteElDemonio?.(this.ctx, jugador, a) ?? a, anteElDemonioReal());
   }
 
   /** Los personajes barajados, en el orden en que se reparten (ver ReglaPersonaje.repartir). */

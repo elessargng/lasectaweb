@@ -82,6 +82,7 @@ export class Partida {
     personaje: (id) => this.guion.personaje(id),
     personajesDelGuion: () => this.guion.actual()?.personajes ?? [],
     percepcion: (jugador) => this.reglas.percepcion(jugador),
+    anteElDemonio: (jugador) => this.reglas.anteElDemonio(jugador),
   };
   /** Las reglas de los personajes (ver models/personajes). */
   private readonly reglas = new Reglas(this.contextoReglas);
