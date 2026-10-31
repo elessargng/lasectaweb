@@ -268,7 +268,7 @@ export class Partida {
    */
   irANoche(): void {
     const calavera = this.grimorio.calavera();
-    const marcadas = this.plaza().filter((a) => a.id === calavera?.jugador);
+    const marcadas = this.plaza().filter((a) => a.id === calavera?.jugadorId);
     this.avisar({
       tipo: 'anochece',
       desdePreparacion: this.fases.actual().momento === 'preparacion',
@@ -277,7 +277,7 @@ export class Partida {
     });
     // Para poder volver: lo que se quita al anochecer
     this.fases.anochecer({
-      marcas: calavera ? [{ asiento: calavera.jugador, votos: calavera.votos }] : [],
+      marcas: calavera ? [{ asiento: calavera.jugadorId, votos: calavera.votos }] : [],
       maximoDelDia: this.nominaciones.recordDelDia(),
     });
     // Otra noche: el despertar guiado empieza de cero

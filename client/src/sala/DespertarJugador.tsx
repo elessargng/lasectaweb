@@ -119,7 +119,7 @@ const DespertarJugador = ({
           <EditorAdjunto
             key={ultimo!.id}
             pendiente={{ base: { ficha: 'jugador' }, titulo: textoEleccion(pide.cantidad), adjunto: { jugadores: true } }}
-            asientos={estado.asientos.map((a) => ({ id: a.id, nombre: nombreDeAsiento(estado, a.id) }))}
+            asientos={estado.plaza.map((a) => ({ id: a.id, nombre: nombreDeAsiento(estado, a.id) }))}
             excluidos={pide.puedeElegirse ? [] : [despertar.jugador]}
             cantidad={pide.cantidad}
             personajes={personajes}

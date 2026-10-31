@@ -40,7 +40,7 @@ export class Cliente {
 
   /** El asiento en el que estoy sentado (como lo veo yo). */
   get miAsiento() {
-    return this.estado.asientos.find((a) => a.ocupante === this.id);
+    return this.estado.plaza.find((a) => a.participanteId === this.id);
   }
 
   /**

@@ -40,7 +40,7 @@ export function useMoverAsientos({ asientos, participantes, mesaRef, pedir, onEr
   // (el id es el de su jugador, que se cambia de silla con él).
   const focoPendienteRef = useRef<{ asiento: string; numero: number } | null>(null);
 
-  const ocupanteDe = (jugadorId: string) => asientos.find((a) => a.id === jugadorId)?.ocupante ?? null;
+  const ocupanteDe = (jugadorId: string) => asientos.find((a) => a.id === jugadorId)?.participanteId ?? null;
   const nombreDe = (id: string | null) => participantes.find((p) => p.id === id)?.nombre ?? '';
   const numeroDe = (jugadorId: string) => asientos.findIndex((a) => a.id === jugadorId) + 1;
 
@@ -50,10 +50,10 @@ export function useMoverAsientos({ asientos, participantes, mesaRef, pedir, onEr
 
   /** Quién se ve en cada asiento, con el movimiento provisional aplicado. */
   const ocupanteVisible = (asiento: JugadorDto): string | null => {
-    if (!activo || activo.desde === activo.hasta) return asiento.ocupante;
+    if (!activo || activo.desde === activo.hasta) return asiento.participanteId;
     if (asiento.id === activo.desde) return ocupanteDe(activo.hasta);
     if (asiento.id === activo.hasta) return ocupanteDe(activo.desde);
-    return asiento.ocupante;
+    return asiento.participanteId;
   };
 
   useEffect(() => {

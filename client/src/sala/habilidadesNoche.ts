@@ -35,7 +35,7 @@ const nombrePersonaje = (c: ContextoHabilidades, id: string | null | undefined) 
 
 /** «Asiento 3 (Bea), Reclusa»: el asiento y su personaje (el de su ficha). */
 const asientoConPersonaje = (c: ContextoHabilidades, jugadorId: string) => {
-  const personaje = c.estado.asientos.find((a) => a.id === jugadorId)?.personaje;
+  const personaje = c.estado.plaza.find((a) => a.id === jugadorId)?.personaje;
   const nombre = nombreDeAsiento(c.estado, jugadorId);
   return personaje ? `${nombre}, ${nombrePersonaje(c, personaje)}` : nombre;
 };

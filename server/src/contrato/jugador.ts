@@ -5,13 +5,13 @@
 import type { Recordatorio } from './grimorio';
 
 /**
- * Un asiento de la mesa (las sillas de la partida). Cada asiento tiene su ficha,
- * haya alguien sentado o no: la muerte y la calavera son de la ficha.
+ * Un jugador de la plaza, lo juegue alguien o no (su silla está libre): su ficha,
+ * su muerte, su voto y sus faroles. Su asiento es su posición en `SalaDto.plaza`.
  */
 export interface JugadorDto {
   id: string;
-  /** id del participante sentado (un jugador), o null si está libre. */
-  ocupante: string | null;
+  /** id del participante que lo juega, o null si no lo juega nadie. */
+  participanteId: string | null;
   /** Su ficha está muerta (lleva sudario). */
   muerto: boolean;
   /**
@@ -25,13 +25,9 @@ export interface JugadorDto {
    * vuelve a false.
    */
   votoGastado: boolean;
-  /** Su ficha lleva la calavera (solo una de la mesa). */
-  marcado: boolean;
-  /** Con cuántos votos se le puso la calavera (desde una nominación ya votada), o null. */
-  votosMarca: number | null;
   /**
    * El personaje de su ficha (id del catálogo o del guion), o null si no tiene.
-   * Solo lo ven los narradores y quien se sienta en ese asiento (el suyo).
+   * Solo lo ven los narradores y quien lo juega.
    */
   personaje: string | null;
   /**
@@ -46,14 +42,9 @@ export interface JugadorDto {
    */
   recordatorios: Recordatorio[];
   /**
-   * La nota del narrador sobre este asiento (texto libre), o null. Es del
-   * grimorio, como los recordatorios: la ven los narradores y quien ve el grimorio.
-   */
-  nota: string | null;
-  /**
-   * Los faroles que el jugador de este asiento se ha puesto (o ha copiado de
-   * los del narrador): siempre 3 casillas, cada una un id de personaje o null.
-   * Los ven quien se sienta ahí y quien ve el personaje del asiento.
+   * Los faroles que se ha puesto (o ha copiado de los del narrador): siempre 3
+   * casillas, cada una un id de personaje o null. Los ven quien lo juega y quien
+   * ve su personaje.
    */
   faroles: (string | null)[];
   /**
@@ -63,7 +54,7 @@ export interface JugadorDto {
   farolEnUso: string | null;
 }
 
-/** Cuántos faroles hay: los del narrador y los de cada asiento. */
+/** Cuántos faroles hay: los del narrador y los de cada jugador. */
 export const NUM_FAROLES = 3;
 
 export type Alineamiento = 'bueno' | 'malvado';

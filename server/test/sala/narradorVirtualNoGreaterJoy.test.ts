@@ -47,8 +47,8 @@ describe('narrador virtual con No Greater Joy', () => {
       const [ana] = jugadores;
       await arnes.accion(ana, 'sala:anadirNarradorVirtual', { ...NGJ, jugadores: n });
       await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'esperandoJugadores');
-      for (const [i, c] of jugadores.entries()) await arnes.accion(c, 'sala:sentarse', { jugadorId: c.estado.asientos[i].id });
-      for (const c of jugadores) await c.esperarQue((e) => !!e.asientos.find((a) => a.ocupante === e.yo)?.personaje);
+      for (const [i, c] of jugadores.entries()) await arnes.accion(c, 'sala:sentarse', { jugadorId: c.estado.plaza[i].id });
+      for (const c of jugadores) await c.esperarQue((e) => !!e.plaza.find((a) => a.participanteId === e.yo)?.personaje);
       const tipos = new Map(guionNoGreaterJoy().personajes.map((p) => [p.id, p.tipo]));
       // Cada uno ve el suyo (el Borracho, el aldeano que cree ser)
       const repartidos = jugadores.map((c) => c.miAsiento!.personaje!);
@@ -67,14 +67,14 @@ describe('narrador virtual con No Greater Joy', () => {
     const [ana] = jugadores;
     await arnes.accion(ana, 'sala:anadirNarradorVirtual', NGJ);
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'esperandoJugadores');
-    for (const [i, c] of jugadores.entries()) await arnes.accion(c, 'sala:sentarse', { jugadorId: c.estado.asientos[i].id });
+    for (const [i, c] of jugadores.entries()) await arnes.accion(c, 'sala:sentarse', { jugadorId: c.estado.plaza[i].id });
     let seguir = true;
     const contestar = async (c: Cliente) => {
       while (seguir) {
         const ultimo = c.estado.despertares[0]?.mensajes.slice(-1)[0];
         if (ultimo?.autor === 'narrador' && ultimo.eleccion) {
           const { cantidad, puedeElegirse } = ultimo.eleccion;
-          const elegidos = c.estado.asientos.filter((a) => puedeElegirse || a.ocupante !== c.id).slice(0, cantidad).map((a) => a.id);
+          const elegidos = c.estado.plaza.filter((a) => puedeElegirse || a.participanteId !== c.id).slice(0, cantidad).map((a) => a.id);
           await arnes.intentar(c, 'despertar:enviar', { ficha: 'jugador', jugadores: elegidos });
         } else if (ultimo?.autor === 'narrador') {
           await arnes.intentar(c, 'despertar:enviar', { ficha: 'entendido' });
@@ -126,7 +126,7 @@ describe('narrador virtual con No Greater Joy', () => {
     await arnes.accion(nominado, 'jugador:voto');
     await ana.esperarQue((e) => !!e.nominacion?.votacion, 6000);
     for (const c of jugadores) await arnes.intentar(c, 'sala:levantarMano', { levantada: true });
-    await ana.esperarQue((e) => !e.nominacion && !!e.asientos.find((a) => a.id === nominado.miAsiento!.id)?.marcado, 15000);
+    await ana.esperarQue((e) => !e.nominacion && e.calavera?.jugadorId === nominado.miAsiento!.id, 15000);
     expect(nominado.estado.acciones).not.toContain('jugador:patoso');
     for (const c of jugadores) await arnes.intentar(c, 'jugador:listo');
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'noche', 5000);

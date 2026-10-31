@@ -50,7 +50,7 @@ const leerQuien = (valor: string): QuienArtista => {
  */
 const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoArtistaProps) => {
   const { personajes, todosPorId } = useFichas();
-  const asientos = estado.asientos;
+  const asientos = estado.plaza;
   const [texto, setTexto] = useState('');
   const [tipo, setTipo] = useState<TipoPreguntaArtista>('es');
   const [quien, setQuien] = useState('tipo:demon');

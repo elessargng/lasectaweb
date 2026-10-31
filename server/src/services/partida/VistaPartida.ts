@@ -18,18 +18,17 @@ export interface ContextoVista {
   accionesDe: (participante: Participante) => string[];
 }
 
-/** Una ficha sin su personaje ni su alineamiento: así la ven quienes no son su jugador ni narran. */
-// Lo que un jugador no ve de una ficha: de las ajenas, el personaje y los faroles; de ninguna, los recordatorios ni la nota.
+/** Una ficha sin su personaje ni su alineamiento: así la ven quienes no la juegan ni narran. */
+// Lo que un jugador no ve de una ficha: de las ajenas, el personaje y los faroles; de ninguna, los recordatorios.
 const sinPersonaje = (a: JugadorDto): JugadorDto => ({
   ...a,
   personaje: null,
   alineamiento: null,
   recordatorios: [],
-  nota: null,
   faroles: farolesVacios(),
   farolEnUso: null,
 });
-const sinRecordatorios = (a: JugadorDto): JugadorDto => ({ ...a, recordatorios: [], nota: null });
+const sinRecordatorios = (a: JugadorDto): JugadorDto => ({ ...a, recordatorios: [] });
 
 /**
  * La nominación como la ve quien no ve el grimorio en una votación secreta (Organ
@@ -60,7 +59,9 @@ const nominacionSecreta = (n: NominacionDto, miAsiento: string | null): Nominaci
  */
 export class VistaPartida {
   private readonly participantes;
-  private readonly asientos;
+  private readonly plaza: JugadorDto[];
+  private readonly calavera;
+  private readonly notas;
   private readonly nominacion;
   private readonly revelacion;
   /** Lo que se lee igual para todos (luego cada uno ve una parte). */
@@ -86,26 +87,21 @@ export class VistaPartida {
     this.partida = partida;
     // Con su acceso al grimorio (es de la partida, no del participante)
     this.participantes = sala.participantes.participantes().map((p) => ({ ...p, accesoGrimorio: partida.acceso.de(p.id) }));
-    // Cada jugador de la plaza como asiento del contrato: lo suyo, lo del grimorio y sus faroles
-    const calavera = partida.grimorio.calavera();
-    this.asientos = partida.plaza().map((j) => {
-      const marcado = calavera?.jugador === j.id;
-      return {
-        id: j.id,
-        ocupante: j.participanteId,
-        muerto: j.muerto,
-        muertePendiente: j.muertePendiente,
-        votoGastado: j.votoGastado,
-        marcado,
-        votosMarca: marcado ? calavera.votos : null,
-        personaje: j.personaje,
-        alineamiento: j.alineamiento,
-        recordatorios: [...j.recordatorios],
-        nota: partida.grimorio.nota(j.id),
-        faroles: partida.faroles.deJugador(j),
-        farolEnUso: partida.faroles.enUso(j),
-      };
-    });
+    // Cada jugador de la plaza con sus faroles; la calavera y las notas, del grimorio
+    this.plaza = partida.plaza().map((j) => ({
+      id: j.id,
+      participanteId: j.participanteId,
+      muerto: j.muerto,
+      muertePendiente: j.muertePendiente,
+      votoGastado: j.votoGastado,
+      personaje: j.personaje,
+      alineamiento: j.alineamiento,
+      recordatorios: [...j.recordatorios],
+      faroles: partida.faroles.deJugador(j),
+      farolEnUso: partida.faroles.enUso(j),
+    }));
+    this.calavera = partida.grimorio.calavera();
+    this.notas = partida.grimorio.notas();
     this.nominacion = partida.nominaciones.nominacion();
     this.revelacion = partida.revelacion.revelacion();
     this.reveladas = new Set(this.revelacion?.reveladas ?? []);
@@ -143,7 +139,10 @@ export class VistaPartida {
         ocultarVotacion
           ? this.participantes.map((p) => (p.id === yo.id ? p : { ...p, manoLevantada: false, dosManos: false }))
           : this.participantes,
-      asientos: veGrimorio ? this.asientos : this.asientos.map((a) => this.asientoSinGrimorio(a, yo, ocultarVotos, ocultarVotacion)),
+      plaza: veGrimorio ? this.plaza : this.plaza.map((a) => this.sinGrimorio(a, yo, ocultarVotacion)),
+      // Votación secreta: con cuántos votos se puso la calavera no se sabe
+      calavera: this.calavera && ocultarVotos ? { ...this.calavera, votos: null } : this.calavera,
+      notas: veGrimorio ? this.notas : {},
       configuracion: comun.configuracion,
       nominacion: ocultarVotacion && this.nominacion ? nominacionSecreta(this.nominacion, miAsiento) : this.nominacion,
       fase: comun.fase,
@@ -196,28 +195,26 @@ export class VistaPartida {
     };
   }
 
-  /** Un asiento como lo ve quien no ve el grimorio (un jugador o un visitante sin acceso). */
-  private asientoSinGrimorio(a: JugadorDto, yo: Participante, ocultarVotos: boolean, ocultarVotacion: boolean): JugadorDto {
+  /** Un jugador como lo ve quien no ve el grimorio (un jugador o un visitante sin acceso). */
+  private sinGrimorio(a: JugadorDto, yo: Participante, ocultarVotacion: boolean): JugadorDto {
     return {
       // La muerte pendiente (de la noche, por anunciar) es del grimorio: los demás no la ven
       ...(this.reveladas.has(a.id)
         ? a
         : this.retenidas
           ? sinPersonaje(a)
-          : a.ocupante === yo.id
+          : a.participanteId === yo.id
             ? this.comoLaVeSuJugador(a)
             : this.comoLaVenTodos(a)),
       muertePendiente: false,
-      // Votación secreta: con cuántos votos se puso la calavera no se sabe, y mientras
-      // se vota, el voto de los muertos ajenos se ve como estaba al empezar
-      ...(ocultarVotos && {
-        votosMarca: null,
-        votoGastado: ocultarVotacion && this.gastadosAlVotar && a.ocupante !== yo.id ? this.gastadosAlVotar.has(a.id) : a.votoGastado,
-      }),
+      // Votación secreta: mientras se vota, el voto de los muertos ajenos se ve como estaba al empezar
+      ...(ocultarVotacion &&
+        this.gastadosAlVotar &&
+        a.participanteId !== yo.id && { votoGastado: this.gastadosAlVotar.has(a.id) }),
     };
   }
 
-  /** El viajero que es de verdad el de un asiento (los viajeros son públicos), o null. */
+  /** El viajero que es de verdad un jugador (los viajeros son públicos), o null. */
   private viajeroDe(a: JugadorDto): string | null {
     const id = identidadDe(a);
     return id && this.partida.guion.personaje(id)?.tipo === 'traveller' ? id : null;

@@ -422,7 +422,7 @@ describe('SalaDeJuego', () => {
       partida.irANoche();
       expect(partida.volverAtras()).toBe(true);
       expect(partida.fases.actual()).toMatchObject({ momento: 'dia', numero: 1 });
-      expect(partida.grimorio.calavera()).toEqual({ jugador: asiento(1).id, votos: 3 });
+      expect(partida.grimorio.calavera()).toEqual({ jugadorId: asiento(1).id, votos: 3 });
       expect(partida.volverAtras()).toBe(true);
       expect(partida.fases.actual()).toMatchObject({ momento: 'noche', numero: 1 });
       expect(partida.volverAtras()).toBe(true);

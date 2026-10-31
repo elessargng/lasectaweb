@@ -31,13 +31,13 @@ const DialogoRevelar = ({ estado, pedir, onCerrar }: DialogoRevelarProps) => {
   const ariaLive = useAriaLive('errores');
 
   // Los de la lista que están en juego: quien es de verdad cada uno (su «Is The …»)
-  const enJuego = new Set(estado.asientos.map((a) => identidadDe(a).personaje));
+  const enJuego = new Set(estado.plaza.map((a) => identidadDe(a).personaje));
   const posibles = CAUSAS_FINAL.filter((c) => enJuego.has(c.personaje));
   // Los asientos que son esbirros de verdad, para elegir cuál descubrió a la Doncel
-  const asientosEsbirro = estado.asientos.flatMap((a, i) => {
+  const asientosEsbirro = estado.plaza.flatMap((a, i) => {
     const quien = identidadDe(a).personaje;
     if (!quien || todosPorId.get(quien)?.tipo !== 'minion') return [];
-    const ocupante = estado.participantes.find((p) => p.id === a.ocupante);
+    const ocupante = estado.participantes.find((p) => p.id === a.participanteId);
     return [{ id: a.id, texto: `${describirAsiento(i + 1, ocupante ?? null)}: ${todosPorId.get(quien)?.nombre.texto ?? quien}` }];
   });
 

@@ -28,7 +28,7 @@ const DialogoNuevoImp = ({ estado, muere, porId, pedir, onElegido, onCerrar }: D
   const [error, setError] = useState('');
   const ariaLive = useAriaLive('errores');
   const esEsbirro = (personaje: string | null) => !!personaje && porId.get(personaje)?.tipo === 'minion';
-  const vivos = estado.asientos.filter((a) => a.id !== muere && !a.muerto && !a.muertePendiente);
+  const vivos = estado.plaza.filter((a) => a.id !== muere && !a.muerto && !a.muertePendiente);
   const candidatos = [...vivos.filter((a) => esEsbirro(a.personaje)), ...vivos.filter((a) => !esEsbirro(a.personaje))];
 
   const elegir = async (jugadorId: string) => {

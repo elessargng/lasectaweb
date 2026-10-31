@@ -8,7 +8,7 @@
  * aquí, la sala entera tal como se envía (SalaDto).
  */
 import type { DespertarDto, HabilidadNocheDto } from './despertar';
-import type { GrimorioEnviadoDto } from './grimorio';
+import type { CalaveraDto, GrimorioEnviadoDto } from './grimorio';
 import type { JugadorDto } from './jugador';
 import type { NarradorVirtualDto } from './narradorVirtual';
 import type { ParticipanteDto } from './participante';
@@ -48,8 +48,18 @@ export interface SalaDto {
    */
   palabra: string | null;
   participantes: ParticipanteDto[];
-  /** Los asientos de la mesa, en orden: el primero a las 12 y siguiendo como las agujas del reloj. */
-  asientos: JugadorDto[];
+  /**
+   * Los jugadores de la plaza, en orden: el asiento N es plaza[N-1], el primero a
+   * las 12 y siguiendo como las agujas del reloj.
+   */
+  plaza: JugadorDto[];
+  /** Quién lleva la calavera, o null. Para todos (en una votación secreta, sin los votos). */
+  calavera: CalaveraDto | null;
+  /**
+   * Las notas del narrador sobre los jugadores (por id de jugador; sin nota, no
+   * está). Son del grimorio: solo para los narradores y quien ve el grimorio.
+   */
+  notas: Record<string, string>;
   configuracion: ConfiguracionDto;
   nominacion: NominacionDto | null;
   fase: FaseDto;

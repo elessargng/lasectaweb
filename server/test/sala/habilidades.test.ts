@@ -367,7 +367,7 @@ describe('despertar guiado por el socket', () => {
     const ana = await arnes.entrar('Ana');
     await arnes.accion(narradora, 'sala:hacerseNarrador');
     await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'troublebrewing' });
-    const asientos = () => narradora.estado.asientos;
+    const asientos = () => narradora.estado.plaza;
     await arnes.accion(ana, 'sala:sentarse', { jugadorId: asientos()[0].id });
     await arnes.accion(narradora, 'narrador:cambiarPersonaje', { jugadorId: asientos()[0].id, personajeId: 'poisoner' });
     await arnes.accion(narradora, 'narrador:irANoche');
@@ -380,7 +380,7 @@ describe('despertar guiado por el socket', () => {
     expect(dos).toEqual({ ok: false, error: 'Elige un jugador.' });
     expect((await arnes.intentar(ana, 'despertar:enviar', { ficha: 'entendido' })).ok).toBe(false);
     await arnes.accion(ana, 'despertar:enviar', { ficha: 'jugador', jugadores: [asientos()[1].id] });
-    expect(narradora.estado.asientos[1].recordatorios.map((r) => r.texto)).toEqual(['Poisoned']);
+    expect(narradora.estado.plaza[1].recordatorios.map((r) => r.texto)).toEqual(['Poisoned']);
     expect(ana.estado.despertares[0].mensajes.slice(-1)[0]).toMatchObject({ autor: 'narrador', ficha: 'entendido' });
   });
 
@@ -392,7 +392,7 @@ describe('despertar guiado por el socket', () => {
     const ana = await arnes.entrar('Ana');
     await arnes.accion(narradora, 'sala:hacerseNarrador');
     await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'troublebrewing' });
-    const asientos = () => narradora.estado.asientos;
+    const asientos = () => narradora.estado.plaza;
     await arnes.accion(ana, 'sala:sentarse', { jugadorId: asientos()[0].id });
     await arnes.accion(narradora, 'narrador:cambiarPersonaje', { jugadorId: asientos()[0].id, personajeId: 'chef' });
     await arnes.accion(narradora, 'narrador:irANoche');

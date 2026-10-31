@@ -133,7 +133,7 @@ export function describirMensaje(
 export const autorDe = (m: MensajeDespertar, estado: SalaDto) =>
   m.autor === 'narrador'
     ? 'Narrador'
-    : estado.asientos.find((a) => a.id === m.autor)?.ocupante === estado.yo
+    : estado.plaza.find((a) => a.id === m.autor)?.participanteId === estado.yo
       ? 'Tú'
       : nombreDeAsiento(estado, m.autor);
 

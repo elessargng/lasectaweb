@@ -187,21 +187,21 @@ export function avisosDeCambio(
   }
 
   // Asientos: quién se sienta y quién se levanta (o se va y lo deja libre).
-  const asientoDe = (e: SalaDto, id: string) => e.asientos.findIndex((a) => a.ocupante === id) + 1;
-  for (const a of anterior.asientos) {
-    if (!a.ocupante || a.ocupante === yo || asientoDe(nuevo, a.ocupante)) continue;
-    const quien = antes.get(a.ocupante);
-    const actual = ahora.get(a.ocupante);
-    const numero = asientoDe(anterior, a.ocupante);
+  const asientoDe = (e: SalaDto, id: string) => e.plaza.findIndex((a) => a.participanteId === id) + 1;
+  for (const a of anterior.plaza) {
+    if (!a.participanteId || a.participanteId === yo || asientoDe(nuevo, a.participanteId)) continue;
+    const quien = antes.get(a.participanteId);
+    const actual = ahora.get(a.participanteId);
+    const numero = asientoDe(anterior, a.participanteId);
     if (!quien) continue;
     if (!actual) avisa('asientos', `${quien.nombre} se ha ido y deja libre el asiento ${numero}.`);
     // Si se ha levantado para narrar, ya se ha dicho que ahora narra.
     else if (!narra(actual)) avisa('asientos', `${quien.nombre} se levanta del asiento ${numero}.`);
   }
-  for (const a of nuevo.asientos) {
-    if (!a.ocupante || a.ocupante === yo || asientoDe(anterior, a.ocupante)) continue;
-    const quien = ahora.get(a.ocupante);
-    if (quien) avisa('asientos', `${quien.nombre} se sienta en el asiento ${asientoDe(nuevo, a.ocupante)}.`);
+  for (const a of nuevo.plaza) {
+    if (!a.participanteId || a.participanteId === yo || asientoDe(anterior, a.participanteId)) continue;
+    const quien = ahora.get(a.participanteId);
+    if (quien) avisa('asientos', `${quien.nombre} se sienta en el asiento ${asientoDe(nuevo, a.participanteId)}.`);
   }
 
   const forma = (p: ParticipanteDto) => nombreMano(p.formaMano, personajes).toLocaleLowerCase('es');
@@ -210,7 +210,7 @@ export function avisosDeCambio(
   const nominacionNueva =
     !!nuevo.nominacion && (nuevo.nominacion.desde !== anterior.nominacion?.desde || nuevo.nominacion.hasta !== anterior.nominacion?.hasta);
   if (miMano.antes && !miMano.ahora && nominacionNueva) {
-    const mio = nuevo.asientos.find((a) => a.ocupante === yo);
+    const mio = nuevo.plaza.find((a) => a.participanteId === yo);
     if (mio?.muerto && mio.votoGastado) avisa('miMano', 'Se te baja la mano: ya no te queda voto.');
   }
   // Manos levantadas (las propias las avisa quien la levanta). Con la votación secreta, las
@@ -226,7 +226,7 @@ export function avisosDeCambio(
     const votoContado = (() => {
       const v = nuevo.nominacion?.votacion;
       const pasoAntes = anterior.nominacion?.votacion?.paso ?? 0;
-      return !!v && v.orden.slice(pasoAntes, v.paso).some((id) => nuevo.asientos.find((a) => a.id === id)?.ocupante === p.id);
+      return !!v && v.orden.slice(pasoAntes, v.paso).some((id) => nuevo.plaza.find((a) => a.id === id)?.participanteId === p.id);
     })();
     if (!p.manoLevantada && votoContado) continue;
     avisa('manos', p.manoLevantada ? (p.dosManos ? `${p.nombre} levanta las dos manos.` : `${p.nombre} levanta la mano (${forma(p)}).`) : `${p.nombre} baja la mano.`);
@@ -261,19 +261,20 @@ export function avisosDeCambio(
     return ocupante ? (ocupante.id === yo ? null : ocupante.nombre) : `la ficha del asiento ${numero}`;
   };
   const mayuscula = (t: string) => t.charAt(0).toLocaleUpperCase('es') + t.slice(1);
-  const antesAsiento = new Map(anterior.asientos.map((a) => [a.id, a]));
-  const seMarca = nuevo.asientos.some((a) => a.marcado && !antesAsiento.get(a.id)?.marcado);
+  const antesAsiento = new Map(anterior.plaza.map((a) => [a.id, a]));
+  const marcado = (e: SalaDto, id: string) => e.calavera?.jugadorId === id;
+  const seMarca = nuevo.plaza.some((a) => marcado(nuevo, a.id) && !marcado(anterior, a.id));
   // Los muertos que acaban de votar: eso ya lo dice la votación (y que gastan su voto)
   const votacionAntes = anterior.nominacion?.votacion;
   const votacionAhora = nuevo.nominacion?.votacion;
   const recienVotados = new Set(votacionAhora ? votacionAhora.orden.slice(votacionAntes?.paso ?? 0, votacionAhora.paso) : []);
   // Varios muertos recuperan el voto a la vez (el Barquero): un solo aviso
-  const recuperan = nuevo.asientos.filter((a) => {
+  const recuperan = nuevo.plaza.filter((a) => {
     const previo = antesAsiento.get(a.id);
     return previo?.muerto && a.muerto && previo.votoGastado && !a.votoGastado;
   });
   if (!cambioFase && recuperan.length > 1) avisa('muertes', 'Los muertos recuperan su voto.');
-  for (const a of nuevo.asientos) {
+  for (const a of nuevo.plaza) {
     const previo = antesAsiento.get(a.id);
     if (!previo || cambioFase) continue;
     const q = quien(nuevo, a.id);
@@ -284,10 +285,10 @@ export function avisosDeCambio(
       if (q === null) avisa('muertes', a.votoGastado ? 'Pierdes tu voto.' : 'Recuperas tu voto.');
       else avisa('muertes', `${mayuscula(q)} ${a.votoGastado ? 'pierde' : 'recupera'} su voto.`);
     }
-    if (previo.marcado !== a.marcado) {
+    if (marcado(anterior, a.id) !== marcado(nuevo, a.id)) {
       // Al pasar la calavera a otra ficha, basta con decir a cuál.
       // Al morir se le quita sola: basta con decir que ha muerto.
-      if (a.marcado) avisa('calavera', `Calavera para ${q ?? 'ti'}.`);
+      if (marcado(nuevo, a.id)) avisa('calavera', `Calavera para ${q ?? 'ti'}.`);
       else if (!seMarca && !(a.muerto && !previo.muerto)) avisa('calavera', `Se quita la calavera a ${q ?? 'ti'}.`);
     }
   }
@@ -317,7 +318,7 @@ export function avisosDeCambio(
   } else if (nomAhora && nomAntes && !votacionOculta(nuevo) && !votacionOculta(anterior) && nomAhora.votosNecesarios !== nomAntes.votosNecesarios) {
     // La misma nominación, pero ahora hacen falta otros votos (lo cambia el narrador, o muere alguien)
     avisa('nominaciones', `Ahora ${hacenFalta(nomAhora.votosNecesarios).toLocaleLowerCase('es')}.`);
-  } else if (nomAntes && !nomAhora && !seMarca && !cambioFase && !nuevo.asientos.some((a) => antesAsiento.get(a.id)?.marcado && !a.marcado)) {
+  } else if (nomAntes && !nomAhora && !seMarca && !cambioFase && !nuevo.plaza.some((a) => marcado(anterior, a.id) && !marcado(nuevo, a.id))) {
     // Si se ha cerrado al poner o quitar la calavera, ya se ha dicho eso.
     avisa('nominaciones', nomAntes.expulsion ? 'Expulsión cerrada.' : 'Nominación cerrada.');
   }
@@ -334,13 +335,13 @@ export function avisosDeCambio(
       const resultado = votAhora.resultados[id];
       // Votación secreta: de los demás, solo por dónde va la aguja; de uno mismo, si vota
       if (secreta) {
-        const mio = nuevo.asientos.find((a) => a.id === id)?.ocupante === yo;
+        const mio = nuevo.plaza.find((a) => a.id === id)?.participanteId === yo;
         avisa('votoAVoto', mio ? (typeof resultado === 'number' ? 'Tu voto cuenta.' : 'No votas.') : `${nombre}.`);
         continue;
       }
       // Un muerto que vota gasta su único voto: se dice (su vela se apaga)
       // (la Banshee con su habilidad, o con el Voudon vivo, no lo gasta)
-      const gastado = (e: SalaDto) => !!e.asientos.find((a) => a.id === id)?.votoGastado;
+      const gastado = (e: SalaDto) => !!e.plaza.find((a) => a.id === id)?.votoGastado;
       const gasta = typeof resultado === 'number' && gastado(nuevo) && !gastado(anterior) ? ', gasta su voto' : '';
       // Si su voto no vale 1 (Banshee, Burócrata, Ladrón), se dice cuánto
       const valor = votAhora.valores?.[id];

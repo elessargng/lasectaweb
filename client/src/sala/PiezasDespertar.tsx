@@ -563,7 +563,7 @@ export const BotoneraDespertar = ({
   // despierto; «Este es el demonio» y «Estos son los esbirros», quiénes lo son.
   const porId = new Map(personajes.map((p) => [p.id, p]));
   const asientosDeTipo = (tipo: string) =>
-    estado.asientos.filter((a) => a.personaje && porId.get(a.personaje)?.tipo === tipo).map((a) => a.id);
+    estado.plaza.filter((a) => a.personaje && porId.get(a.personaje)?.tipo === tipo).map((a) => a.id);
   const iniciales = (tarjeta?: string): Pendiente['iniciales'] => {
     if (tarjeta === 'demonio') return { jugadores: asientosDeTipo('demon') };
     if (tarjeta === 'esbirros') return { jugadores: asientosDeTipo('minion') };
@@ -573,7 +573,7 @@ export const BotoneraDespertar = ({
       return faroles.length > 0 ? { personajes: faroles } : undefined;
     }
     if (tarjeta === 'tuEres') {
-      const asiento = estado.asientos.find((a) => a.id === jugadorId);
+      const asiento = estado.plaza.find((a) => a.id === jugadorId);
       const personaje = asiento?.personaje ? porId.get(asiento.personaje) : undefined;
       if (!asiento || !personaje) return undefined;
       return { personajes: [personaje.id], alineamiento: alineamientoDe(personaje, asiento.alineamiento) };
@@ -617,7 +617,7 @@ export const BotoneraDespertar = ({
   };
 
   if (pendiente) {
-    const asientos = estado.asientos.map((a) => ({ id: a.id, nombre: nombreDeAsiento(estado, a.id) }));
+    const asientos = estado.plaza.map((a) => ({ id: a.id, nombre: nombreDeAsiento(estado, a.id) }));
     return (
       <EditorAdjunto
         pendiente={pendiente}

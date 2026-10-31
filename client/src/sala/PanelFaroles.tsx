@@ -46,7 +46,7 @@ const PanelFaroles = ({ modo, faroles, estado, pedir, onError, onAnuncio, fijado
   // La casilla que el jugador está cambiando (índice), o null
   const [cambiando, setCambiando] = useState<number | null>(null);
   const propios = modo === 'jugador' || modo === 'esbirro';
-  const enUso = propios ? (estado.asientos.find((a) => a.ocupante === estado.yo)?.farolEnUso ?? null) : null;
+  const enUso = propios ? (estado.plaza.find((a) => a.participanteId === estado.yo)?.farolEnUso ?? null) : null;
 
   const usar = async (personajeId: string | null) => {
     const r = await pedir('jugador:usarFarol', { personajeId });
@@ -137,7 +137,7 @@ const PanelFaroles = ({ modo, faroles, estado, pedir, onError, onAnuncio, fijado
         <DialogoFaroles
           faroles={faroles}
           bolsa={estado.bolsa}
-          asientos={estado.asientos}
+          asientos={estado.plaza}
           pedir={pedir}
           onCerrar={() => setAsignando(false)}
         />

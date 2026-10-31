@@ -63,13 +63,13 @@ export function canalesComunes(yo: ParticipanteDto): string[] {
 
 /** Los vecinos de un jugador: el más cercano sentado a cada lado de la mesa. */
 function vecinos(estado: SalaDto, id: string): string[] {
-  const mesa = estado.asientos;
-  const i = mesa.findIndex((a) => a.ocupante === id);
+  const mesa = estado.plaza;
+  const i = mesa.findIndex((a) => a.participanteId === id);
   if (i < 0) return [];
   const n = mesa.length;
   const cercano = (paso: number) => {
     for (let k = 1; k < n; k++) {
-      const ocupante = mesa[(i + paso * k + n) % n].ocupante;
+      const ocupante = mesa[(i + paso * k + n) % n].participanteId;
       if (ocupante) return ocupante;
     }
     return null;

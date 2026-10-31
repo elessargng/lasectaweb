@@ -29,7 +29,7 @@ const PanelDiaVirtual = ({ estado, pedir, onError }: PanelDiaVirtualProps) => {
   const narrador = estado.narradorVirtual;
   if (narrador?.etapa !== 'nominaciones') return null;
   const puede = (accion: string) => estado.acciones.includes(accion);
-  const sentados = estado.asientos.filter((a) => a.ocupante).length;
+  const sentados = estado.plaza.filter((a) => a.participanteId).length;
   const miTurno = (puede('jugador:defensa') && 'acusacion') || (puede('jugador:voto') && 'defensa') || null;
 
   // Sin `disabled` mientras responde: el foco no se pierde

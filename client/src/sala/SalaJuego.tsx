@@ -246,9 +246,9 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     if (revAhora && !revAntes && !propia) avisos.push({ tipo: 'revelacion', texto: 'El narrador revela el grimorio.' });
     if (revAhora && !propia) {
       for (const jugadorId of revAhora.reveladas.filter((id) => !revAntes?.reveladas.includes(id))) {
-        const numero = nuevo.asientos.findIndex((a) => a.id === jugadorId) + 1;
-        const asiento = nuevo.asientos[numero - 1];
-        const ocupante = nuevo.participantes.find((p) => p.id === asiento?.ocupante);
+        const numero = nuevo.plaza.findIndex((a) => a.id === jugadorId) + 1;
+        const asiento = nuevo.plaza[numero - 1];
+        const ocupante = nuevo.participantes.find((p) => p.id === asiento?.participanteId);
         // Quién es de verdad (su «Is The …»), no la ficha que llevaba
         const real = asiento ? identidadDe(asiento).personaje : null;
         const personaje = real ? personajesGuionRef.current.get(real) : undefined;
@@ -297,7 +297,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     }
 
     // Mi personaje: al repartir la bolsa (lo único que me llega de mi ficha), se me dice.
-    const miFicha = (e: SalaDto) => e.asientos.find((a) => a.ocupante === e.yo);
+    const miFicha = (e: SalaDto) => e.plaza.find((a) => a.participanteId === e.yo);
     const antes = miFicha(anterior);
     const ahora = miFicha(nuevo);
     if (ahora && (ahora.personaje !== antes?.personaje || ahora.alineamiento !== antes?.alineamiento)) {
@@ -447,25 +447,25 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // Quien ha muerto esta noche (sudario transparente, sin anunciar) ya no cuenta como vivo:
   // no se despierta. Salvo los personajes que actúan precisamente por morir esa noche
   // (el Ravenkeeper, el Sage…, ver actuaAlMorir).
-  const sigueVivo = (a: SalaDto['asientos'][number]) => !a.muerto && !a.muertePendiente;
+  const sigueVivo = (a: SalaDto['plaza'][number]) => !a.muerto && !a.muertePendiente;
   const recordatoriosNoche = (e: SalaDto) => {
     const actua = (id: string) => {
       const p = guion?.personajes.find((x) => x.id === id);
       return !!p && actuaAlMorir(p);
     };
-    const vivos = e.asientos
+    const vivos = e.plaza
       .filter((a) => a.personaje && (sigueVivo(a) || (!a.muerto && actua(a.personaje))))
       .map((a) => a.personaje!);
-    const vivosDeVerdad = e.asientos.filter((a) => a.personaje && sigueVivo(a)).map((a) => a.personaje!);
+    const vivosDeVerdad = e.plaza.filter((a) => a.personaje && sigueVivo(a)).map((a) => a.personaje!);
     const tipoDe = (id: string) => personajesGuionPorId.get(id)?.tipo;
     const automaticos = new Set(vivos);
     if (vivosDeVerdad.some((id) => tipoDe(id) === 'minion')) automaticos.add('esbirros');
     if (vivosDeVerdad.some((id) => tipoDe(id) === 'demon')) automaticos.add('demonios');
     // El Caníbal (vivo) tiene la habilidad del muerto que lleva su recordatorio «Lunch»:
     // ese personaje también se despierta (en su sitio del orden de noche)
-    const canibalVivo = e.asientos.some((a) => sigueVivo(a) && (a.personaje === 'cannibal' || identidadDe(a).personaje === 'cannibal'));
+    const canibalVivo = e.plaza.some((a) => sigueVivo(a) && (a.personaje === 'cannibal' || identidadDe(a).personaje === 'cannibal'));
     const porCanibal = canibalVivo
-      ? e.asientos
+      ? e.plaza
           .filter((a) => a.muerto && a.recordatorios.some((r) => r.personaje === 'cannibal' && /\blunch\b/i.test(r.texto)))
           .flatMap((a) => (identidadDe(a).personaje ? [identidadDe(a).personaje!] : []))
       : [];
@@ -474,7 +474,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     const activo = (id: string) => cambios[id] ?? automaticos.has(id);
     // Los viajeros en juego (vivos o muertos), en el orden de los asientos, sin repetir
     const viajeros = [
-      ...new Set(e.asientos.flatMap((a) => (a.personaje && tipoDe(a.personaje) === 'traveller' ? [a.personaje] : []))),
+      ...new Set(e.plaza.flatMap((a) => (a.personaje && tipoDe(a.personaje) === 'traveller' ? [a.personaje] : []))),
     ];
     return {
       activos: [...new Set([...automaticos, ...Object.keys(cambios)])].filter(activo),
@@ -569,13 +569,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // Un susurro: ondas de un asiento a otro (unos segundos) y, a los demás, quién a quién
   const alSusurro = (s: SusurroDto) => {
     if (!estado) return;
-    const desde = estado.asientos.findIndex((a) => a.id === s.desde);
-    const hasta = estado.asientos.findIndex((a) => a.id === s.hasta);
+    const desde = estado.plaza.findIndex((a) => a.id === s.desde);
+    const hasta = estado.plaza.findIndex((a) => a.id === s.hasta);
     if (desde < 0 || hasta < 0) return;
     const id = ++ondaIdRef.current;
     setOndas((o) => [...o, { id, desde, hasta, intensidad: s.intensidad }]);
     window.setTimeout(() => setOndas((o) => o.filter((x) => x.id !== id)), 3200);
-    const quien = (i: number) => estado.participantes.find((p) => p.id === estado.asientos[i].ocupante);
+    const quien = (i: number) => estado.participantes.find((p) => p.id === estado.plaza[i].participanteId);
     const emisor = quien(desde);
     const receptor = quien(hasta);
     // Los narradores no: leen el mensaje entero (alMensaje)
@@ -757,7 +757,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     preferencias.eleccionDespertar === 'plaza' && estado
       ? (pedido: PedidoEleccion) => {
           const elegidos = pedido.elegidos ?? [];
-          const primera = estado.asientos.find((a) => !pedido.excluidos.includes(a.id) && !elegidos.includes(a.id));
+          const primera = estado.plaza.find((a) => !pedido.excluidos.includes(a.id) && !elegidos.includes(a.id));
           if (!primera) return anunciar('despertar', 'Ya están elegidos todos los jugadores.');
           const volver = (pedido.volver && document.getElementById(pedido.volver)) || document.activeElement;
           setEleccion({ ...pedido, elegidos, faltan: pedido.cuantos ?? 1, volver: volver instanceof HTMLElement ? volver : null });
@@ -821,11 +821,11 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // Callan los jugadores con el silencio pedido o si la palabra la tiene otro (nominando con narrador virtual)
   const callado = (!!estado?.silencio || (!!estado?.palabra && estado.palabra !== yo?.id)) && yo?.rol === 'jugador';
   // Sonido envolvente: cada voz desde el ángulo de su asiento en la plaza (por id de quien se sienta)
-  const asientosSala = estado?.asientos;
+  const asientosSala = estado?.plaza;
   const posicionesVoz = useMemo(() => {
     const posiciones = new Map<string, number>();
     asientosSala?.forEach((a, i, todos) => {
-      if (a.ocupante) posiciones.set(a.ocupante, anguloAsiento(i, todos.length));
+      if (a.participanteId) posiciones.set(a.participanteId, anguloAsiento(i, todos.length));
     });
     return posiciones;
   }, [asientosSala]);
@@ -1129,7 +1129,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   });
   const personajesFichas = personajesGuion.filter((p) => TIPOS_EN_FICHA.includes(p.tipo));
   // Los del catálogo (no del guion) que están en juego: viajeros en alguna ficha y NPCs
-  const idsEnJuego = new Set([...(estado?.asientos.map((a) => a.personaje) ?? []), ...(estado?.npcs ?? [])]);
+  const idsEnJuego = new Set([...(estado?.plaza.map((a) => a.personaje) ?? []), ...(estado?.npcs ?? [])]);
   const enGuion = new Set(personajesGuion.map((p) => p.id));
   const extrasEnJuego = [...viajerosCatalogo, ...npcsDisponibles].filter((p) => !enGuion.has(p.id) && idsEnJuego.has(p.id));
   const contextoFichas: ContextoFichas = {
@@ -1176,7 +1176,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // levantarse, dejar de narrar); salen si el servidor las permite.
   const focoAsientoRef = useRef<FocoAsiento | null>(null);
   const levantarme = async () => {
-    const mio = estado?.asientos.find((a) => a.ocupante === estado.yo);
+    const mio = estado?.plaza.find((a) => a.participanteId === estado.yo);
     if (mio) focoAsientoRef.current = { jugadorId: mio.id, sentado: false };
     const r = await pedir('sala:levantarse');
     if (!r.ok) {
@@ -1213,7 +1213,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const puedeLevantarMano = !!estado?.acciones.includes('sala:levantarMano');
   const manoLevantada = !!yo?.manoLevantada;
   // Muerto y sin voto: no puede levantar la mano (el atajo lo dice sin preguntar al servidor)
-  const asientoPropio = estado?.asientos.find((a) => a.ocupante === estado.yo);
+  const asientoPropio = estado?.plaza.find((a) => a.participanteId === estado.yo);
   // (la Banshee con su habilidad, que puede levantar las dos, vota sin gastarlo). Con el
   // Voudon vivo, solo votan él y los muertos, sin hacerles falta el voto.
   const soyVoudon = asientoPropio?.personaje === 'voudon';
@@ -1642,7 +1642,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
   // Faroles: los del narrador (narradores y visitantes) o, si soy el demonio o un esbirro, los míos.
   // Soy el demonio (o esbirro) si mi ficha lo lleva (o, sin personaje dado, si me lo he anotado).
-  const miAsiento = estado?.asientos.find((a) => a.ocupante === estado.yo);
+  const miAsiento = estado?.plaza.find((a) => a.participanteId === estado.yo);
   const miPersonaje = miAsiento ? (miAsiento.personaje ?? notasGrimorio[miAsiento.id]?.personaje ?? null) : null;
   const soyDemonio = yo?.rol === 'jugador' && !!miPersonaje && personajesGuionPorId.get(miPersonaje)?.tipo === 'demon';
   const soyEsbirro = yo?.rol === 'jugador' && !!miPersonaje && personajesGuionPorId.get(miPersonaje)?.tipo === 'minion';
@@ -1874,7 +1874,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       <RepartoPartida
         distribucion={estado.distribucion}
         bolsa={estado.acciones.includes('narrador:bolsa') ? estado.bolsa : null}
-        asientos={estado.asientos}
+        asientos={estado.plaza}
         npcs={estado.npcs}
         setupAceptado={estado.setupAceptado}
         preparacion={estado.fase.momento === 'preparacion'}
@@ -1966,7 +1966,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                     estado.fase.momento !== 'preparacion' ||
                     estado.bolsa.length > 0 ||
                     estado.votaciones.length > 0 ||
-                    estado.asientos.some((a) => a.personaje || a.muerto || a.marcado || a.recordatorios.length > 0)
+                    estado.calavera !== null ||
+                    estado.plaza.some((a) => a.personaje || a.muerto || a.recordatorios.length > 0)
                   }
                 />
               </div>
@@ -2246,7 +2247,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             participantes={estado.participantes}
             yo={estado.yo}
             pistas={video.privada}
-            muertos={new Set(estado.asientos.filter((a) => a.muerto && a.ocupante).map((a) => a.ocupante!))}
+            muertos={new Set(estado.plaza.filter((a) => a.muerto && a.participanteId).map((a) => a.participanteId!))}
             onSalir={() => void salirDeConversacion()}
             onEntrar={yo?.rol === 'narrador' ? () => void entrar(miConversacion.id) : undefined}
             teclaSalir={atajos.salirConversacion.key}
@@ -2316,7 +2317,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
         {anadiendoVirtual && puedeAnadirVirtual && estado && (
           <DialogoNarradorVirtual
-            sentados={estado.asientos.filter((a) => a.ocupante).length}
+            sentados={estado.plaza.filter((a) => a.participanteId).length}
             noDisponible={{
               jarvis: !cuenta ? 'Necesitas una cuenta.' : undefined,
             }}

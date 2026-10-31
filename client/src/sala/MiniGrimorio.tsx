@@ -9,7 +9,7 @@ import type { SalaDto, FichaEnviadaDto, Recordatorio } from './useSala';
 /** El nombre corto de cada asiento: quien se sienta, o «Asiento 3» si está libre. */
 export const nombresDeAsientos = (estado: SalaDto): Record<string, string> =>
   Object.fromEntries(
-    estado.asientos.map((a, i) => [a.id, estado.participantes.find((p) => p.id === a.ocupante)?.nombre ?? `Asiento ${i + 1}`]),
+    estado.plaza.map((a, i) => [a.id, estado.participantes.find((p) => p.id === a.participanteId)?.nombre ?? `Asiento ${i + 1}`]),
   );
 
 interface MiniGrimorioProps {

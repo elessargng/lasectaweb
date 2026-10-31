@@ -230,7 +230,7 @@ export class Nominaciones implements Etapa {
     if (this.terminando || !narrador || narrador.turno !== null || partida.nominaciones.nominacion()) return;
     const muertos = muertosSentados(juego);
     if (!jugadoresSentados(juego).every((id) => narrador.listos.includes(id) || muertos.includes(id))) return;
-    const marcado = partida.plaza().find((a) => a.id === partida.grimorio.calavera()?.jugador);
+    const marcado = partida.plaza().find((a) => a.id === partida.grimorio.calavera()?.jugadorId);
     if (!marcado) {
       // Sin ejecución: con el Alcalde y tres vivos, se acaba
       await this.terminarDia(ctx, FRASES.nadieEjecutado(), await comprobarFinal(ctx, { sinEjecucion: true }));

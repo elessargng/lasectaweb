@@ -80,10 +80,10 @@ const VentanaDespertar = ({
   const nombre = nombreDeAsiento(estado, actual.jugador);
   // El Espía y la Viuda (su ficha o quien es de verdad) ven el grimorio: se les envía desde aquí
   const [enviandoGrimorio, setEnviandoGrimorio] = useState(false);
-  const asiento = estado.asientos.find((a) => a.id === actual.jugador);
+  const asiento = estado.plaza.find((a) => a.id === actual.jugador);
   const veGrimorio =
     !soloLectura &&
-    !!asiento?.ocupante &&
+    !!asiento?.participanteId &&
     estado.acciones.includes('narrador:enviarGrimorio') &&
     (PERSONAJES_GRIMORIO.includes(asiento.personaje ?? '') || PERSONAJES_GRIMORIO.includes(identidadDe(asiento).personaje ?? ''));
   const conPestanas = abiertos.length > 1;
@@ -92,7 +92,7 @@ const VentanaDespertar = ({
   // A quién más se despierta con cada despertar (por su asiento); al revisar un guiado, a nadie
   const [juntos, setJuntos] = useState<Record<string, string[]>>({});
   const [eligiendoJuntos, setEligiendoJuntos] = useState(false);
-  const conjunto = revision || soloLectura ? [] : (juntos[actual.jugador] ?? []).filter((id) => estado.asientos.some((a) => a.id === id));
+  const conjunto = revision || soloLectura ? [] : (juntos[actual.jugador] ?? []).filter((id) => estado.plaza.some((a) => a.id === id));
   // Al dejar de elegir o al quitar a los demás, el foco vuelve a «Despertar a más jugadores»
   const masRef = useRef<HTMLButtonElement>(null);
   const focoMasRef = useRef(false);
@@ -227,7 +227,7 @@ const VentanaDespertar = ({
             <EditorAdjunto
               key={actual.jugador}
               pendiente={{ base: {}, titulo: 'Despertar también a', adjunto: { jugadores: true }, iniciales: { jugadores: conjunto } }}
-              asientos={estado.asientos.map((a) => ({ id: a.id, nombre: nombreDeAsiento(estado, a.id) }))}
+              asientos={estado.plaza.map((a) => ({ id: a.id, nombre: nombreDeAsiento(estado, a.id) }))}
               excluidos={[actual.jugador]}
               personajes={personajes}
               textos={{ enviar: 'Aceptar', cartas: 'También despiertan' }}

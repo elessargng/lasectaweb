@@ -1848,7 +1848,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       const jugadorId = (datos as { jugadorId?: unknown } | null)?.jugadorId;
       const asiento = partida.plaza().find((a) => a.id === jugadorId);
       if (!asiento) return { ok: false, error: 'Ese asiento ya no existe.' };
-      if (partida.grimorio.calavera()?.jugador !== asiento.id) return { ok: false, error: 'Solo se ejecuta a quien lleva la calavera.' };
+      if (partida.grimorio.calavera()?.jugadorId !== asiento.id) return { ok: false, error: 'Solo se ejecuta a quien lleva la calavera.' };
       // Si quedan dos vivos, no anochece: el narrador elige (valor «final») entre la noche y revelar el grimorio
       const { final } = partida.ejecutar(asiento.id) ?? { final: false };
       return final ? { ok: true, valor: 'final' } : { ok: true };

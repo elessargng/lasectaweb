@@ -66,7 +66,7 @@ const ELEGIR: Record<
     sinCandidatos: 'No hay nadie a quien expulsar.',
     candidatos: (e) => e.participantes.filter((p) => p.rol !== 'narrador'),
     detalle: (e, p) => {
-      const asiento = e.asientos.findIndex((a) => a.ocupante === p.id);
+      const asiento = e.plaza.findIndex((a) => a.participanteId === p.id);
       return asiento >= 0 ? `asiento ${asiento + 1}` : 'visitante';
     },
   },
@@ -76,7 +76,7 @@ const ELEGIR: Record<
     confirmar: 'Levantarlo del asiento',
     sinCandidatos: 'No hay nadie sentado.',
     candidatos: (e) => e.participantes.filter((p) => p.rol === 'jugador'),
-    detalle: (e, p) => `asiento ${e.asientos.findIndex((a) => a.ocupante === p.id) + 1}`,
+    detalle: (e, p) => `asiento ${e.plaza.findIndex((a) => a.participanteId === p.id) + 1}`,
   },
 };
 

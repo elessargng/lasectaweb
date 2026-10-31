@@ -53,15 +53,20 @@ export interface EntornoGrimorio {
  */
 export class Grimorio {
   /** La nota del narrador sobre cada jugador (por su id). */
-  private notas = new Map<string, string>();
+  private notaDe = new Map<string, string>();
   /** Quién lleva la calavera (solo uno en la plaza) y con cuántos votos se le puso. */
-  private conCalavera: { jugador: string; votos: number | null } | null = null;
+  private conCalavera: { jugadorId: string; votos: number | null } | null = null;
 
   constructor(private readonly entorno: EntornoGrimorio) {}
 
   /** La nota del narrador sobre un jugador, o null. */
   nota(jugadorId: string): string | null {
-    return this.notas.get(jugadorId) ?? null;
+    return this.notaDe.get(jugadorId) ?? null;
+  }
+
+  /** Todas las notas, por id de jugador (sin nota, no está). */
+  notas(): Record<string, string> {
+    return Object.fromEntries(this.notaDe);
   }
 
   /** Un jugador de la plaza, o null si ya no está. */
@@ -190,8 +195,8 @@ export class Grimorio {
   escribirNota(jugadorId: string, texto: string | null): boolean {
     const jugador = this.jugador(jugadorId);
     if (!jugador) return false;
-    if (texto === null) this.notas.delete(jugador.id);
-    else this.notas.set(jugador.id, texto);
+    if (texto === null) this.notaDe.delete(jugador.id);
+    else this.notaDe.set(jugador.id, texto);
     return true;
   }
 
@@ -255,12 +260,12 @@ export class Grimorio {
     if (marcado) this.desmarcar();
     const jugador = this.jugador(jugadorId);
     if (!jugador) return;
-    if (marcado) this.conCalavera = { jugador: jugador.id, votos };
+    if (marcado) this.conCalavera = { jugadorId: jugador.id, votos };
     else this.quitarCalavera(jugador);
   }
 
   private quitarCalavera(jugador: Jugador): void {
-    if (this.conCalavera?.jugador === jugador.id) this.conCalavera = null;
+    if (this.conCalavera?.jugadorId === jugador.id) this.conCalavera = null;
   }
 
   /** Quita la calavera a quien la lleve. */
@@ -269,7 +274,7 @@ export class Grimorio {
   }
 
   /** Quién lleva la calavera (el id de su jugador) y con cuántos votos se le puso, o null. */
-  calavera(): { jugador: string; votos: number | null } | null {
+  calavera(): { jugadorId: string; votos: number | null } | null {
     return this.conCalavera && { ...this.conCalavera };
   }
 
@@ -280,14 +285,14 @@ export class Grimorio {
 
   /** Se ha quitado un asiento: la nota de su jugador y su calavera, con él. */
   olvidar(jugador: Jugador): void {
-    this.notas.delete(jugador.id);
+    this.notaDe.delete(jugador.id);
     this.quitarCalavera(jugador);
   }
 
   /** Otra partida: todos los jugadores como al principio, sin notas ni calavera. */
   limpiar(): void {
     for (const jugador of this.entorno.jugadores()) jugador.nuevaPartida();
-    this.notas.clear();
+    this.notaDe.clear();
     this.conCalavera = null;
   }
 }

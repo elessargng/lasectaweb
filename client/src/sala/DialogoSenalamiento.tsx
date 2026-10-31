@@ -64,7 +64,7 @@ const DialogoSenalamiento = ({ estado, pedir, onCerrar }: DialogoSenalamientoPro
         Sin marcar ninguno: todos.
       </p>
       <ul className="flex max-h-48 flex-col gap-1 overflow-y-auto pr-1">
-        {estado.asientos.map((a) => {
+        {estado.plaza.map((a) => {
           const { numero, ocupante } = datosAsiento(estado, a.id);
           const nombre = describirAsiento(numero, ocupante);
           return (

@@ -25,7 +25,7 @@ const idMenuFicha = (participanteId: string) => `sala-ficha-${participanteId}-bo
  * nominación a «Cuenta atrás», y al cancelar, marcar o cerrar a la ficha de quien nominaba.
  */
 export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
-  const { asientos, acciones, nominacion } = estado;
+  const { plaza: asientos, acciones, nominacion } = estado;
   const [eligiendoDesde, setEligiendoDesde] = useState<string | null>(null);
   // Elemento al que llevar el foco cuando se pinte el cambio.
   const focoRef = useRef<string | null>(null);
@@ -156,7 +156,7 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
     panel:
       nominacion && acciones.includes('narrador:cerrarNominacion')
         ? {
-            marcado: !!nominado?.marcado,
+            marcado: !!nominado && estado.calavera?.jugadorId === nominado.id,
             // Expulsión de un viajero: sin calavera (si sale, muere al terminar la votación)
             expulsion: nominacion.expulsion,
             secreta: !!nominacion.privada,
@@ -170,10 +170,10 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
                 }
               : null,
             marcaActual: (() => {
-              const marcado = asientos.find((a) => a.marcado);
-              if (!marcado || nominacion.expulsion) return null;
-              const { numero, ocupante } = datosAsiento(estado, marcado.id);
-              const votos = marcado.votosMarca;
+              const { calavera } = estado;
+              if (!calavera || nominacion.expulsion) return null;
+              const { numero, ocupante } = datosAsiento(estado, calavera.jugadorId);
+              const { votos } = calavera;
               return `${describirAsiento(numero, ocupante)}${votos === null ? '' : `, ${votos === 1 ? '1 voto' : `${votos} votos`}`}`;
             })(),
             // Desmarcar, como marcar, cierra la nominación: el foco vuelve a la ficha de quien nominaba.
@@ -197,7 +197,7 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
               : null,
             // Marcar (o desmarcar) cierra la nominación: el foco vuelve a la ficha de quien nominaba.
             onMarca: async () => {
-              const ok = await actuar('narrador:marcar', { jugadorId: nominacion.hasta, marcado: !nominado?.marcado });
+              const ok = await actuar('narrador:marcar', { jugadorId: nominacion.hasta, marcado: estado.calavera?.jugadorId !== nominacion.hasta });
               if (ok) focoRef.current = idMenuFicha(nominacion.desde);
             },
             onCerrar: async () => {

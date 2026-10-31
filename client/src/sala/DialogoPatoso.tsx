@@ -23,7 +23,7 @@ interface DialogoPatosoProps {
  * cancelar: tiene que elegir. Al abrirse, el foco va al título.
  */
 const DialogoPatoso = ({ estado, miAsiento, obligado, pedir, onCerrar }: DialogoPatosoProps) => {
-  const vivos = estado.asientos.filter((a) => a.id !== miAsiento && !a.muerto && !a.muertePendiente);
+  const vivos = estado.plaza.filter((a) => a.id !== miAsiento && !a.muerto && !a.muertePendiente);
   const [elegido, setElegido] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);

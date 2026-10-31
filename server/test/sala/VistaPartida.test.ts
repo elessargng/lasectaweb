@@ -34,16 +34,16 @@ describe('VistaPartida', () => {
     const { juego, ana, vista, asiento } = partida();
     juego.partida.grimorio.cambiarPersonaje(asiento(0).id, 'voudon');
     juego.partida.grimorio.cambiarAlineamiento(asiento(0).id, 'malvado');
-    expect(vista(ana).asientos[0]).toMatchObject({ personaje: 'voudon', alineamiento: null });
+    expect(vista(ana).plaza[0]).toMatchObject({ personaje: 'voudon', alineamiento: null });
     juego.partida.entregas.comunicarFicha(asiento(0).id, [], 'malvado');
-    expect(vista(ana).asientos[0]).toMatchObject({ personaje: 'voudon', alineamiento: 'malvado' });
+    expect(vista(ana).plaza[0]).toMatchObject({ personaje: 'voudon', alineamiento: 'malvado' });
   });
 
   it('se ve quién es de verdad un viajero aunque lleve otra ficha (el Aprendiz)', () => {
     const { juego, bea, vista, asiento } = partida();
     juego.partida.grimorio.cambiarPersonaje(asiento(0).id, 'apprentice');
     juego.partida.grimorio.cambiarPersonaje(asiento(0).id, 'chef');
-    expect(vista(bea).asientos[0].personaje).toBe('apprentice');
+    expect(vista(bea).plaza[0].personaje).toBe('apprentice');
   });
 
   it('el visitante con el grimorio ve todos los despertares', () => {
@@ -66,8 +66,8 @@ describe('VistaPartida', () => {
     const { juego, narradora, ana, vista, asiento } = partida();
     juego.partida.grimorio.cambiarPersonaje(asiento(4).id, 'organgrinder');
     juego.partida.grimorio.marcar(asiento(1).id, true, 4);
-    expect(vista(narradora).asientos[1].votosMarca).toBe(4);
-    expect(vista(ana).asientos[1].votosMarca).toBeNull();
+    expect(vista(narradora).calavera).toEqual({ jugadorId: asiento(1).id, votos: 4 });
+    expect(vista(ana).calavera).toEqual({ jugadorId: asiento(1).id, votos: null });
   });
 
   it('de noche, un jugador solo ve la conversación en la que está, y nunca quién escucha', () => {

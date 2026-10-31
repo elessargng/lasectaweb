@@ -27,6 +27,8 @@ import type { Alineamiento, JugadorDto, ParticipanteDto, ResultadoAccion } from 
 
 interface FichaAsientoProps {
   asiento: JugadorDto;
+  /** Lleva la calavera. */
+  marcado: boolean;
   /** Su número en la mesa (1 es el de las 12). */
   numero: number;
   /** Quien está sentado (o se ve sentado, si se le está moviendo), o null. */
@@ -123,6 +125,7 @@ const NOMBRE_ALINEAMIENTO: Record<Alineamiento, string> = { bueno: 'bueno', malv
  */
 const FichaAsiento = ({
   asiento,
+  marcado,
   numero,
   ocupante,
   modo,
@@ -238,7 +241,7 @@ const FichaAsiento = ({
         muerto={asiento.muerto}
         muertePendiente={asiento.muertePendiente}
         votoGastado={asiento.votoGastado}
-        marcado={asiento.marcado}
+        marcado={marcado}
         voto={voto}
         bocaAbajo={bocaAbajo}
         reloj={reloj}
@@ -320,7 +323,7 @@ const FichaAsiento = ({
     personaje && `${personaje.nombre.texto}${alineamientoDistinto ? `, ${NOMBRE_ALINEAMIENTO[contenido.alineamiento!]}` : ''}`,
     asiento.muerto && (asiento.votoGastado ? 'muerta, sin voto' : 'muerta, con voto'),
     asiento.muertePendiente && 'muerta esta noche, sin anunciar',
-    asiento.marcado && 'con la calavera',
+    marcado && 'con la calavera',
     ocupante?.manoLevantada &&
       (ocupante.dosManos ? 'las dos manos levantadas' : `mano levantada (${nombreMano(ocupante.formaMano, todosPorId).toLocaleLowerCase('es')})`),
     voto === null && 'no vota',
@@ -404,7 +407,7 @@ const FichaAsiento = ({
 
   // Desde aquí la marca no cierra la nominación (el botón «Marca» de la nominación sí).
   const cambiarMarca = async () => {
-    const r = await pedir('narrador:marcar', { jugadorId: asiento.id, marcado: !asiento.marcado, cerrarNominacion: false });
+    const r = await pedir('narrador:marcar', { jugadorId: asiento.id, marcado: !marcado, cerrarNominacion: false });
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha, que ya dice si lleva la calavera.
     return false;
@@ -489,7 +492,7 @@ const FichaAsiento = ({
   const opciones: OpcionMenu[] =
     modo === 'narrador'
       ? [
-          ...(asiento.marcado ? [{ id: 'ejecutar', etiqueta: `Ejecutar ${quien}`, elegir: ejecutar }] : []),
+          ...(marcado ? [{ id: 'ejecutar', etiqueta: `Ejecutar ${quien}`, elegir: ejecutar }] : []),
           vivo && deNoche
             ? { id: 'vida', etiqueta: `Matar ${quien}`, abreDialogo: true, elegir: () => setMatando(true) }
             : { id: 'vida', etiqueta: vivo ? `Matar ${quien}` : `Revivir ${quien}`, elegir: cambiarVida },
@@ -498,7 +501,7 @@ const FichaAsiento = ({
             ? [{ id: 'voto', etiqueta: asiento.votoGastado ? 'Devolver voto' : 'Quitar voto', elegir: cambiarVoto }]
             : []),
           // De noche no se marca a nadie
-          ...(deNoche ? [] : [{ id: 'marca', etiqueta: asiento.marcado ? 'Desmarcar' : 'Marcar', elegir: cambiarMarca }]),
+          ...(deNoche ? [] : [{ id: 'marca', etiqueta: marcado ? 'Desmarcar' : 'Marcar', elegir: cambiarMarca }]),
           // Solo cuando se puede nominar; si ya nominó hoy se avisa en la opción, pero puede volver a nominar
           ...(onNominar
             ? [{ id: 'nominar', etiqueta: yaNomino ? 'Nominar a… (ya nominó hoy)' : 'Nominar a…', elegir: onNominar }]

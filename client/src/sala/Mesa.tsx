@@ -270,7 +270,7 @@ const Mesa = ({
 }: MesaProps) => {
   const anadirRef = useRef<HTMLButtonElement>(null);
   const [pidiendo, setPidiendo] = useState(false);
-  const { asientos, participantes, yo, acciones } = estado;
+  const { plaza: asientos, participantes, yo, acciones } = estado;
   const total = asientos.length;
   const puedeSentarse = acciones.includes('sala:sentarse');
   // El narrador usa las fichas (matar, revivir…) si el servidor se lo permite; un
@@ -283,7 +283,7 @@ const Mesa = ({
   // botones para señalarlas (o dejar de hacerlo, la que ya señalo); al congelarse, ya no.
   const senalamiento = estado.senalamiento;
   const senalCongelada = useSenalamientoCongelado(senalamiento, desfaseReloj);
-  const miAsiento = asientos.find((a) => a.ocupante === yo)?.id ?? null;
+  const miAsiento = asientos.find((a) => a.participanteId === yo)?.id ?? null;
   // Con narrador virtual: lo que un jugador hace desde la ficha de otro (nominarlo, dispararle)
   const actuarSobre = (accion: string, jugadorId: string) => async () => {
     const r = await pedir(accion, { jugadorId });
@@ -402,7 +402,7 @@ const Mesa = ({
     const personaje = personajeId ? porId.get(personajeId) : undefined;
     return {
       personaje: personaje?.nombre ?? null,
-      marcado: a.marcado,
+      marcado: estado.calavera?.jugadorId === a.id,
       muerto: a.muerto,
       votoGastado: a.votoGastado,
       muertePendiente: a.muertePendiente,
@@ -452,7 +452,7 @@ const Mesa = ({
       else n.delete(jugadorId);
       return n;
     });
-  const notaDe = (a: (typeof asientos)[number]) => (modoFichas === 'grimorio' ? (notasEscritas[a.id] ?? null) : (a.nota ?? null));
+  const notaDe = (a: (typeof asientos)[number]) => (modoFichas === 'grimorio' ? (notasEscritas[a.id] ?? null) : (estado.notas[a.id] ?? null));
   const escriboNotas = modoFichas === 'narrador' || modoFichas === 'grimorio';
   // Guarda la nota de un asiento (con null, la borra) y devuelve el error, o null si ha ido bien
   const guardarNota = async (jugadorId: string, texto: string | null): Promise<string | null> => {
@@ -608,12 +608,12 @@ const Mesa = ({
   useEffect(() => {
     const pendiente = focoAsientoRef.current;
     const antes = miAsientoRef.current;
-    const ahora = asientos.find((a) => a.ocupante === yo)?.id ?? null;
+    const ahora = asientos.find((a) => a.participanteId === yo)?.id ?? null;
     miAsientoRef.current = ahora;
 
     if (pendiente) {
       const asiento = asientos.find((a) => a.id === pendiente.jugadorId);
-      if (asiento && (asiento.ocupante === yo) !== pendiente.sentado) return; // aún no ha llegado
+      if (asiento && (asiento.participanteId === yo) !== pendiente.sentado) return; // aún no ha llegado
       focoAsientoRef.current = null;
       document.getElementById(idNombreAsiento(pendiente.jugadorId))?.focus();
       return;
@@ -659,7 +659,7 @@ const Mesa = ({
   // Sin `disabled` (tiraría el foco al body): se marcan y no hacen nada.
   const sinMas = total >= ASIENTOS_MAX;
   const sinAsientos = total === 0;
-  const pocosParaMezclar = !asientos.some((a) => a.ocupante);
+  const pocosParaMezclar = !asientos.some((a) => a.participanteId);
   // Las fichas solo se ven (sin menú, sin seguir ni despertares): el asiento ya dice lo que lleva la suya
   const capaOculta = modoFichas === 'ver' && !seguimiento && !despertares;
   // Algo en el centro de la mesa (ver abajo): la ciudad se vela para dejarlo leer
@@ -697,9 +697,9 @@ const Mesa = ({
         <ol id="sala-asientos" tabIndex={-1} aria-label="Asientos" className="focus:outline-none">
           {asientos.map((a, i) => {
             // Editando, se ve el movimiento provisional (si se está moviendo a alguien).
-            const visible = editando ? mover.ocupanteVisible(a) : a.ocupante;
+            const visible = editando ? mover.ocupanteVisible(a) : a.participanteId;
             const ocupante = participante(visible);
-            const real = participante(a.ocupante);
+            const real = participante(a.participanteId);
             // Eligiendo en la plaza para el despertar: las elegidas, marcadas (se quitan al pulsarlas); el resto, candidatas
             const eligiendo = eleccion
               ? eleccion.elegidos.includes(a.id)
@@ -828,6 +828,7 @@ const Mesa = ({
                   >
                     <FichaAsiento
                       asiento={a}
+                      marcado={estado.calavera?.jugadorId === a.id}
                       numero={i + 1}
                       ocupante={ocupante}
                       modo={modoFichas}
@@ -900,7 +901,7 @@ const Mesa = ({
                       >
                         <IconoDespertar nueva={despertares.noLeidos.has(a.id)} entendido={despertares.entendidos.has(a.id)} className="w-[72%]" />
                         <span className="sr-only">
-                          {a.ocupante === estado.yo ? 'Tu despertar' : `Despertar de ${nombreDeAsiento(estado, a.id)}`}
+                          {a.participanteId === estado.yo ? 'Tu despertar' : `Despertar de ${nombreDeAsiento(estado, a.id)}`}
                           {despertares.entendidos.has(a.id) ? ', entendido' : ''}
                           {despertares.noLeidos.has(a.id) ? ', mensajes nuevos' : ''}
                         </span>
@@ -958,7 +959,7 @@ const Mesa = ({
           className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 opacity-80"
           style={{ left: arrastrado.x, top: arrastrado.y }}
         >
-          <CuadroAvatar imagen={participante(asientos.find((a) => a.id === arrastrado.desde)?.ocupante ?? null)?.avatar} />
+          <CuadroAvatar imagen={participante(asientos.find((a) => a.id === arrastrado.desde)?.participanteId ?? null)?.avatar} />
         </div>
       )}
 
@@ -996,7 +997,7 @@ const Mesa = ({
             .filter((a) => a.id !== intercambiando)
             .map((a) => ({
               jugadorId: a.id,
-              nombre: describirAsiento(asientos.indexOf(a) + 1, participante(a.ocupante)),
+              nombre: describirAsiento(asientos.indexOf(a) + 1, participante(a.participanteId)),
               personaje: a.personaje ? todosPorId.get(a.personaje) : undefined,
             }))}
           onElegir={(hasta) => void intercambio.intercambiar(intercambiando, hasta)}

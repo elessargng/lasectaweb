@@ -17,7 +17,7 @@ export interface FichaEnviadaDto {
 }
 
 /**
- * Un grimorio enviado (el último) a un asiento: cuándo, sus fichas (en el orden de
+ * Un grimorio enviado (el último) a un jugador: cuándo, sus fichas (en el orden de
  * la mesa) y los faroles del demonio (ids de personaje, hasta NUM_FAROLES).
  */
 export interface GrimorioEnviadoDto {
@@ -26,7 +26,16 @@ export interface GrimorioEnviadoDto {
   faroles: string[];
 }
 
-/** El largo máximo de la nota de un asiento. */
+/**
+ * La calavera: el único jugador marcado para ser ejecutado y con cuántos votos se
+ * le puso (desde una nominación ya votada), o null si se puso a mano.
+ */
+export interface CalaveraDto {
+  jugadorId: string;
+  votos: number | null;
+}
+
+/** El largo máximo de la nota del narrador sobre un jugador. */
 export const SALA_NOTA_LARGO_MAX = 500;
 
 /**

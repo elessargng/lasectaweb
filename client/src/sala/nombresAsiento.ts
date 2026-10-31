@@ -9,17 +9,17 @@ export const describirAsiento = (numero: number, ocupante: ParticipanteDto | nul
  * cada lado (los libres se saltan). Como en el servidor (la Institutriz).
  */
 export function sonVecinos(estado: SalaDto, unoId: string, otroId: string): boolean {
-  const ocupados = estado.asientos.filter((a) => a.ocupante);
-  const i = ocupados.findIndex((a) => a.ocupante === unoId);
+  const ocupados = estado.plaza.filter((a) => a.participanteId);
+  const i = ocupados.findIndex((a) => a.participanteId === unoId);
   const n = ocupados.length;
   if (i < 0 || n < 2) return false;
-  return [ocupados[(i + 1) % n].ocupante, ocupados[(i - 1 + n) % n].ocupante].includes(otroId);
+  return [ocupados[(i + 1) % n].participanteId, ocupados[(i - 1 + n) % n].participanteId].includes(otroId);
 }
 
 /** El número (desde 1) y quien se sienta en un asiento del estado. */
 export function datosAsiento(estado: SalaDto, jugadorId: string) {
-  const i = estado.asientos.findIndex((a) => a.id === jugadorId);
-  const ocupanteId = estado.asientos[i]?.ocupante;
+  const i = estado.plaza.findIndex((a) => a.id === jugadorId);
+  const ocupanteId = estado.plaza[i]?.participanteId;
   const ocupante = ocupanteId ? (estado.participantes.find((p) => p.id === ocupanteId) ?? null) : null;
   return { numero: i + 1, ocupante };
 }

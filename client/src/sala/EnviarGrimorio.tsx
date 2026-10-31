@@ -16,7 +16,7 @@ export const PERSONAJES_GRIMORIO = ['spy', 'widow'];
 
 /** Una copia del grimorio de ahora, tal como lo ve el narrador. */
 const copiaDelGrimorio = (estado: SalaDto): FichaEnviadaDto[] =>
-  estado.asientos.map((a) => ({
+  estado.plaza.map((a) => ({
     jugadorId: a.id,
     personaje: a.personaje,
     alineamiento: a.alineamiento,
