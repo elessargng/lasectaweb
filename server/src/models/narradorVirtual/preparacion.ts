@@ -19,7 +19,7 @@ import {
 } from './bolsa/conceptos';
 import type { Decision } from './estrategias/EstrategiaNarrador';
 import { instruccionesBolsa } from './estrategias/instruccionesJarvis';
-import type { SalaDeJuego } from '../../services/SalaDeJuego';
+import type { SalaDeJuego } from '../SalaDeJuego';
 import type { Azar, Narrador } from './puertos';
 
 /** Lo que ha salido pero no va en la bolsa (el Borracho) y el aldeano que cree ser (su ficha sí va). */

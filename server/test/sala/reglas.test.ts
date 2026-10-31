@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SALA_CUENTA_ATRAS_MS } from '../../src/models/partida/Nominaciones';
-import { SalaDeJuego } from '../../src/services/SalaDeJuego';
+import { SalaDeJuego } from '../../src/models/SalaDeJuego';
 import { Reglas } from '../../src/models/partida/reglas';
 import type { ContextoReglas, ReglaPersonaje } from '../../src/models/partida/reglas/ReglaPersonaje';
 import { guionDePrueba, invitado } from './guionDePrueba';

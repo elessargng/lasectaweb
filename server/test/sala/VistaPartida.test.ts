@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SalaDeJuego } from '../../src/services/SalaDeJuego';
+import { SalaDeJuego } from '../../src/models/SalaDeJuego';
 import { VistaPartida, type ContextoVista } from '../../src/views/VistaPartida';
 import { guionDePrueba, invitado } from './guionDePrueba';
 

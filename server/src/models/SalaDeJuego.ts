@@ -1,7 +1,7 @@
 import { NarradorVirtualEnMemoria, type NarradorVirtualRepository } from '../repositories/NarradorVirtualRepository';
-import { NarradorVirtual } from '../models/narradorVirtual/NarradorVirtual';
-import { Partida } from '../models/partida/Partida';
-import { Sala } from '../models/sala/Sala';
+import { NarradorVirtual } from './narradorVirtual/NarradorVirtual';
+import { Partida } from './partida/Partida';
+import { Sala } from './sala/Sala';
 
 /**
  * La sala de juego, en memoria: se pierde al reiniciar el servidor, como una sala

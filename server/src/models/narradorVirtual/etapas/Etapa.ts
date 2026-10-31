@@ -1,5 +1,5 @@
 import type { EtapaNarradorVirtual } from '../../compartido/narradorVirtual';
-import type { SalaDeJuego } from '../../../services/SalaDeJuego';
+import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { Decision, EstrategiaNarrador, PreguntaSiONo } from '../estrategias/EstrategiaNarrador';
 import { instantaneaGrimorio } from '../grimorio';
 import type { RecuerdosNarrador } from '../noche/criterioDroison';

@@ -5,7 +5,7 @@ import { ProveedorVideo } from '../../services/videollamada/ProveedorVideo';
 import { MENSAJES_PRIVADOS, MensajesPrivados } from '../../models/compartido/chat';
 import { limpiarAvatarSala, limpiarNombreSala, type Participante } from '../../models/sala/Participantes';
 import { SALA_RELOJ } from '../../models/partida/RelojSala';
-import type { SalaDeJuego } from '../../services/SalaDeJuego';
+import type { SalaDeJuego } from '../../models/SalaDeJuego';
 import { SALA_ASIENTOS } from '../../models/sala/Sala';
 import { SALA_SEGUNDOS_POR_FICHA, type Configuracion } from '../../models/partida/Configuracion';
 import { identidadDe } from '../../models/partida/Grimorio';

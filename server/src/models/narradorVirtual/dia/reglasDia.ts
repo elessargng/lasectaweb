@@ -1,6 +1,6 @@
 import type { EtapaNarradorVirtual } from '../../compartido/narradorVirtual';
 import type { Participante } from '../../sala/Participantes';
-import type { SalaDeJuego } from '../../../services/SalaDeJuego';
+import type { SalaDeJuego } from '../../SalaDeJuego';
 
 /**
  * Lo que puede hacer cada jugador en el día del narrador virtual (lo consultan las

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SalaDeJuego } from '../../src/services/SalaDeJuego';
+import { SalaDeJuego } from '../../src/models/SalaDeJuego';
 import { ejecutarAccion, type DependenciasSala } from '../../src/controllers/sala/salaAcciones';
 import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
 import { habilidadesDelGuion } from '../../src/models/partida/habilidades';

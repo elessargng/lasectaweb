@@ -1,4 +1,4 @@
-import type { SalaDeJuego } from '../services/SalaDeJuego';
+import type { SalaDeJuego } from '../models/SalaDeJuego';
 import type { Partida } from '../models/partida/Partida';
 import { identidadDe } from '../models/partida/Grimorio';
 import type { Participante } from '../models/sala/Participantes';

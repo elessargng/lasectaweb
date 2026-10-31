@@ -3,7 +3,7 @@ import {
   type GuionNarradorVirtual,
   type IdNarradorVirtual,
 } from '../../models/compartido/narradorVirtual';
-import type { SalaDeJuego } from '../SalaDeJuego';
+import type { SalaDeJuego } from '../../models/SalaDeJuego';
 import type { EstrategiaNarrador } from '../../models/narradorVirtual/estrategias/EstrategiaNarrador';
 import { TontoYTu } from '../../models/narradorVirtual/estrategias/TontoYTu';
 import { EsperandoJugadores } from '../../models/narradorVirtual/etapas/EsperandoJugadores';

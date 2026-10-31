@@ -9,7 +9,7 @@ import {
   participantesDePrivado,
 } from '../../models/compartido/chat';
 import { MensajeChatDto, SusurroDto } from '../../views/dto/chat';
-import type { SalaDeJuego } from '../SalaDeJuego';
+import type { SalaDeJuego } from '../../models/SalaDeJuego';
 import type { Sala } from '../../models/sala/Sala';
 import type { Partida } from '../../models/partida/Partida';
 

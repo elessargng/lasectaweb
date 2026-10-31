@@ -3,7 +3,7 @@ import { canalPrivado } from '../../src/models/compartido/chat';
 import type { ParticipanteDto } from '../../src/views/dto/participante';
 import type { ChatRepository } from '../../src/repositories/ChatRepository';
 import { ChatService } from '../../src/services/chat/ChatService';
-import type { SalaDeJuego } from '../../src/services/SalaDeJuego';
+import type { SalaDeJuego } from '../../src/models/SalaDeJuego';
 
 /** Solo lo que mira `puedeLeer`: el papel y el acceso al grimorio. */
 const persona = (id: string, rol: ParticipanteDto['rol'], accesoGrimorio: ParticipanteDto['accesoGrimorio'] = 'ninguno') =>

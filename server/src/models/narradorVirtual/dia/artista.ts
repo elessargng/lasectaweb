@@ -7,7 +7,7 @@ import {
   type RespuestaArtista,
 } from '../../compartido/artista';
 import { droison } from '../../partida/reglas/ReglaPersonaje';
-import type { SalaDeJuego } from '../../../services/SalaDeJuego';
+import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { ContextoEtapa } from '../etapas/Etapa';
 import { esDemonio } from '../final/comprobarFinal';
 import type { Cronica } from '../final/cronica';

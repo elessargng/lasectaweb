@@ -1,7 +1,7 @@
 import type { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
-import { SalaDeJuego } from '../../services/SalaDeJuego';
+import { SalaDeJuego } from '../../models/SalaDeJuego';
 import { limpiarAvatarSala, limpiarNombreSala, SALA_AVATAR_INVITADO, SalaLlegada } from '../../models/sala/Participantes';
 import { VistaPartida } from '../../views/VistaPartida';
 import { EstadisticasPartida } from '../../models/estadisticas/EstadisticasPartida';

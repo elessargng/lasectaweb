@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EstadisticasPartida } from '../../src/models/estadisticas/EstadisticasPartida';
 import type { RegistroPartida } from '../../src/models/estadisticas/SeguimientoPartida';
 import { SALA_CUENTA_ATRAS_MS } from '../../src/models/partida/Nominaciones';
-import { SalaDeJuego } from '../../src/services/SalaDeJuego';
+import { SalaDeJuego } from '../../src/models/SalaDeJuego';
 import { conCuenta, guionDePrueba } from './guionDePrueba';
 
 /** Lo que se guarda de cada partida para las estadísticas (al revelar el grimorio). */

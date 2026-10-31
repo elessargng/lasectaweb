@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EstadisticasPartida } from '../../src/models/estadisticas/EstadisticasPartida';
 import { SALA_GRACIA_MS } from '../../src/models/sala/Participantes';
 import { SALA_CUENTA_ATRAS_MS } from '../../src/models/partida/Nominaciones';
-import { SalaDeJuego } from '../../src/services/SalaDeJuego';
+import { SalaDeJuego } from '../../src/models/SalaDeJuego';
 import { BOLSA_DE_SIETE, conCuenta, guionDePrueba, invitado } from './guionDePrueba';
 import { identidadDe } from '../../src/models/partida/Grimorio';
 

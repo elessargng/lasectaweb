@@ -1,5 +1,5 @@
 import { duracionFrase, FRASES, PAUSA_MS } from '../frases';
-import type { SalaDeJuego } from '../../../services/SalaDeJuego';
+import type { SalaDeJuego } from '../../SalaDeJuego';
 import { nombreDeAsiento, vivo } from '../plazaDeJuego';
 import { jugadoresSentados, muertosSentados, noPuedeNominar, nominadoHoy } from '../dia/reglasDia';
 import type { AccionJugador, ContextoEtapa, Etapa } from './Etapa';

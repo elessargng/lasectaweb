@@ -1,6 +1,6 @@
 import type { Patoso } from '../../compartido/narradorVirtual';
 import { droison } from '../../partida/reglas/ReglaPersonaje';
-import type { SalaDeJuego } from '../../../services/SalaDeJuego';
+import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { ContextoEtapa } from '../etapas/Etapa';
 import type { Ganador } from '../final/comprobarFinal';
 import { duracionFrase, FRASES, PAUSA_MS } from '../frases';
