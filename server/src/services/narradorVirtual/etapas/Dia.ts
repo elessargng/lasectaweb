@@ -136,7 +136,7 @@ export class Nominaciones implements Etapa {
       const error = noPuedeNominar(juego, yo);
       if (error) return error;
       const hasta = (datos as { asientoId?: unknown } | null)?.asientoId;
-      if (typeof hasta !== 'string' || !sala.asiento(hasta)) return 'Ese asiento ya no existe.';
+      if (typeof hasta !== 'string' || !sala.jugador(hasta)) return 'Ese asiento ya no existe.';
       if (nominadoHoy(juego, hasta)) return `${nombreDeAsiento(juego, hasta)} ya ha sido nominado hoy.`;
       return this.nominar(ctx, miAsiento.id, hasta, jugador);
     }

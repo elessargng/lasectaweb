@@ -52,10 +52,8 @@ export class Partida {
     private readonly sala: Sala,
     private readonly entorno: EntornoPartida,
   ) {
-    // Al cambiar de silla, cada jugador se lleva lo que aún va por asiento
-    this.sala.alMover((destino) => this.llevarFichas(destino));
     // Un asiento que se quita se lleva lo que su jugador tenía en el grimorio
-    this.sala.alQuitar((asiento) => this.grimorio.olvidar(asiento.jugador));
+    this.sala.alQuitar((jugador) => this.grimorio.olvidar(jugador));
     // El acceso al grimorio es de los visitantes: al cambiar de papel se pierde (y se vuelve a pedir)
     this.sala.participantes.alCambiarRol((id) => this.acceso.cambiar(id, 'ninguno'));
     this.sala.participantes.alExpulsar((id, recuerdo) => this.acceso.alExpulsar(id, recuerdo));
@@ -71,7 +69,7 @@ export class Partida {
   readonly acceso = new AccesoGrimorio((id) => this.sala.participantes.recuerdoDe(id));
   /** Lo que se hace con los jugadores de la mesa, los apuntes del narrador y la calavera (ver Grimorio). */
   readonly grimorio = new Grimorio({
-    asientos: () => this.sala.asientos(),
+    jugadores: () => this.sala.jugadores(),
     personaje: (id) => this.guion.personaje(id),
     noche: () => this.fases.actual().momento === 'noche',
     anotar: (hecho) => this.anotar(hecho),
@@ -133,7 +131,7 @@ export class Partida {
     cambiarPersonaje: (asientoId, personaje) => this.grimorio.cambiarPersonaje(asientoId, personaje),
   });
   /** Los faroles para el demonio (del narrador y de cada asiento). */
-  readonly faroles = new Faroles(() => this.sala.asientos(), this.diario());
+  readonly faroles = new Faroles(() => this.sala.jugadores(), this.diario());
   /** El final de la partida: qué bando ha ganado y qué fichas se han revelado. */
   readonly revelacion = new Revelacion(() => this.mesa());
   /** Los NPCs en juego y lo que traen (Bootlegger, Storm Catcher, silencio). */
@@ -163,12 +161,12 @@ export class Partida {
    * copia para leer: las fichas se cambian en this.grimorio.
    */
   mesa(): SalaAsiento[] {
-    return this.sala.asientos().map((a) => ({
-      id: a.id,
-      ocupante: a.jugador.participanteId,
-      ...this.grimorio.ficha(a.id),
-      faroles: this.faroles.deAsiento(a),
-      farolEnUso: this.faroles.enUso(a),
+    return this.sala.jugadores().map((j) => ({
+      id: j.id,
+      ocupante: j.participanteId,
+      ...this.grimorio.ficha(j.id),
+      faroles: this.faroles.deJugador(j),
+      farolEnUso: this.faroles.enUso(j),
     }));
   }
 
@@ -370,7 +368,7 @@ export class Partida {
     const indice = textos.findIndex((t) => t.toLowerCase() === texto.toLowerCase());
     if (indice < 0) return;
     const sobra = this.grimorio.recordatorioQueSobra(asientoId, personajeId, indice);
-    if (sobra) this.grimorio.quitarRecordatorio(sobra.asientoId, sobra.recordatorioId);
+    if (sobra) this.grimorio.quitarRecordatorio(sobra.jugadorId, sobra.recordatorioId);
     this.grimorio.ponerRecordatorio(asientoId, { personaje: personajeId, indice, texto: textos[indice] });
   }
 
@@ -563,21 +561,6 @@ export class Partida {
     const anochece = !final && !this.entorno.hayNarradorVirtual() && this.reglas.anocheceTrasEjecutar();
     if (anochece) this.irANoche();
     return { anochece, final };
-  }
-
-  /**
-   * Lleva lo que aún va por asiento (lo entregado, el grimorio enviado, los
-   * despertares, lo revelado, la nominación) del asiento de cada clave al de su
-   * valor: al cambiar de silla, todo va con el jugador. Lo del grimorio y los
-   * faroles ya van con él. `destino` es una permutación de la mesa.
-   */
-  private llevarFichas(destino: Map<string, string>): void {
-    const a = (id: string) => destino.get(id) ?? id;
-    this.entregas.remapear(a);
-    this.despertares.remapear(a);
-    this.guiado.remapear(a);
-    this.revelacion.remapear(a);
-    this.nominaciones.remapear(a);
   }
 
   /** No puede votar: no está sentado, o las reglas dicen que no (ver Reglas.puedeVotar). */

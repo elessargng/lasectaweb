@@ -153,7 +153,7 @@ function leerMensajeDespertar(
   const ids = (valor: unknown): string[] | null =>
     Array.isArray(valor) && valor.every((v) => typeof v === 'string') ? [...new Set(valor as string[])] : null;
   const asientos = adjunto.jugadores ? ids(jugadores) : [];
-  if (adjunto.jugadores && (!asientos?.length || asientos.some((a) => !sala.asiento(a)))) {
+  if (adjunto.jugadores && (!asientos?.length || asientos.some((a) => !sala.jugador(a)))) {
     return { error: 'Elige al menos un jugador.' };
   }
   const elegidos = adjunto.personajes ? ids(personajes) : [];
@@ -738,7 +738,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
       const { desde, hasta, comoAldeano } = (datos as { desde?: unknown; hasta?: unknown; comoAldeano?: unknown }) ?? {};
-      if (typeof desde !== 'string' || typeof hasta !== 'string' || !sala.asiento(desde) || !sala.asiento(hasta)) {
+      if (typeof desde !== 'string' || typeof hasta !== 'string' || !sala.jugador(desde) || !sala.jugador(hasta)) {
         return { ok: false, error: 'Ese asiento ya no existe.' };
       }
       // La Virgen: si se ejecuta al momento a quien nomina, «ejecutado» o, si quedan dos vivos, «final» (ver narrador:ejecutar)
@@ -826,7 +826,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       const { sala, partida } = juego;
       const { asientoId, marcado, cerrarNominacion } =
         (datos as { asientoId?: unknown; marcado?: unknown; cerrarNominacion?: unknown }) ?? {};
-      if (typeof asientoId !== 'string' || !sala.asiento(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (typeof marcado !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
       // Si se marca al nominado de una nominación ya votada, se guardan sus votos
       // (el narrador los ve, para saber si otra votación empata).
@@ -909,7 +909,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       const { sala, partida } = juego;
       const narra = yo.rol === 'narrador';
       const asientoIds = narra ? asientosDelEnvio(datos) : [partida.despertares.asientoDespiertoDe(yo.id)].filter((id): id is string => !!id);
-      if (!asientoIds.length || asientoIds.some((id) => !sala.asiento(id))) return { ok: false, error: 'Ese despertar ya no está abierto.' };
+      if (!asientoIds.length || asientoIds.some((id) => !sala.jugador(id))) return { ok: false, error: 'Ese despertar ya no está abierto.' };
       // A uno solo, en su despertar; a varios, también a los que aún no están despiertos (de noche)
       const despiertaMas = asientoIds.length > 1 && partida.fases.actual().momento === 'noche';
       if (!despiertaMas && asientoIds.some((id) => !partida.despertares.hayDespertar(id))) return { ok: false, error: 'Ese despertar ya no está abierto.' };
@@ -989,7 +989,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
       const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
-      if (typeof asientoId !== 'string' || !sala.asiento(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       const error = partida.guiado.elegirNuevoImp(asientoId);
       return error ? { ok: false, error } : { ok: true };
     },
@@ -1114,7 +1114,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       }
       if (d.mensaje !== undefined && typeof d.mensaje !== 'string') return { ok: false, error: 'Mensaje no válido.' };
       const asientos = (lista: unknown) =>
-        Array.isArray(lista) && lista.every((id) => typeof id === 'string' && sala.asiento(id)) ? (lista as string[]) : null;
+        Array.isArray(lista) && lista.every((id) => typeof id === 'string' && sala.jugador(id)) ? (lista as string[]) : null;
       const senaladores = d.senaladores === undefined ? [] : asientos(d.senaladores);
       const objetivos = d.objetivos === undefined ? [] : asientos(d.objetivos);
       if (!senaladores || !objetivos) return { ok: false, error: 'Alguno de esos asientos ya no existe.' };
@@ -1212,7 +1212,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
       const { asientoId, personajeId } = (datos as { asientoId?: unknown; personajeId?: unknown }) ?? {};
-      if (typeof asientoId !== 'string' || !sala.asiento(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (personajeId !== null) {
         const personaje =
           typeof personajeId === 'string' ? partida.guion.personaje(personajeId) : undefined;
@@ -1242,7 +1242,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
       const { desde, hasta } = (datos as { desde?: unknown; hasta?: unknown }) ?? {};
-      if (typeof desde !== 'string' || typeof hasta !== 'string' || !sala.asiento(desde) || !sala.asiento(hasta)) {
+      if (typeof desde !== 'string' || typeof hasta !== 'string' || !sala.jugador(desde) || !sala.jugador(hasta)) {
         return { ok: false, error: 'Ese asiento ya no existe.' };
       }
       if (desde === hasta) return { ok: false, error: 'Elige otra ficha.' };
@@ -1270,10 +1270,10 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       const texto = typeof indice === 'number' && Number.isInteger(indice) ? personaje.recordatorios[indice] : undefined;
       if (texto === undefined) return { ok: false, error: 'Ese recordatorio no existe.' };
       const sobra = partida.grimorio.recordatorioQueSobra(asientoId, personaje.id, indice as number);
-      if (asiento.recordatorios.length >= MAX_RECORDATORIOS && sobra?.asientoId !== asientoId) {
+      if (asiento.recordatorios.length >= MAX_RECORDATORIOS && sobra?.jugadorId !== asientoId) {
         return { ok: false, error: `Una ficha no puede llevar más de ${MAX_RECORDATORIOS} recordatorios.` };
       }
-      if (sobra) partida.grimorio.quitarRecordatorio(sobra.asientoId, sobra.recordatorioId);
+      if (sobra) partida.grimorio.quitarRecordatorio(sobra.jugadorId, sobra.recordatorioId);
       partida.grimorio.ponerRecordatorio(asientoId, { personaje: personaje.id, indice: indice as number, texto });
       return { ok: true };
     },
@@ -1748,7 +1748,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
       const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
-      if (typeof asientoId !== 'string' || !sala.asiento(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       partida.revelacion.revelarFicha(asientoId);
       return { ok: true };
     },
@@ -1809,7 +1809,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
       const { asientoId, alineamiento } = (datos as { asientoId?: unknown; alineamiento?: unknown }) ?? {};
-      if (typeof asientoId !== 'string' || !sala.asiento(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (alineamiento !== 'bueno' && alineamiento !== 'malvado') return { ok: false, error: 'Alineamiento desconocido.' };
       if (!partida.mesa().find((a) => a.id === asientoId)?.personaje) {
         return { ok: false, error: 'Esa ficha no tiene personaje.' };
@@ -1829,7 +1829,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
       const { asientoId, muerto } = (datos as { asientoId?: unknown; muerto?: unknown }) ?? {};
-      if (typeof asientoId !== 'string' || !sala.asiento(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (typeof muerto !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
       partida.grimorio.cambiarVida(asientoId, muerto);
       return { ok: true };
@@ -1866,7 +1866,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
       const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
-      if (typeof asientoId !== 'string' || !sala.asiento(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (!partida.grimorio.confirmarMuerte(asientoId)) return { ok: false, error: 'Esa ficha no tiene una muerte por anunciar.' };
       return { ok: true };
     },
@@ -1882,7 +1882,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
       const { asientoId, gastado } = (datos as { asientoId?: unknown; gastado?: unknown }) ?? {};
-      if (typeof asientoId !== 'string' || !sala.asiento(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (typeof gastado !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
       if (!partida.grimorio.cambiarVoto(asientoId, gastado)) return { ok: false, error: 'Solo los muertos tienen un voto que quitar o devolver.' };
       return { ok: true };

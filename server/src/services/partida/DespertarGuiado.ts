@@ -264,11 +264,4 @@ export class DespertarGuiado {
     this.impQueMuere = null;
     this.colas.clear();
   }
-
-  /** Los asientos han cambiado de sitio (ver Partida.llevarFichas): cada turno va con el suyo. */
-  remapear(a: (asientoId: string) => string): void {
-    for (const t of this.turnos) t.asiento = a(t.asiento);
-    if (this.impQueMuere) this.impQueMuere = a(this.impQueMuere);
-    this.colas = new Map([...this.colas].map(([asiento, cola]) => [a(asiento), cola]));
-  }
 }

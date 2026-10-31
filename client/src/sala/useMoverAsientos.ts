@@ -36,8 +36,9 @@ interface Opciones {
  */
 export function useMoverAsientos({ asientos, participantes, mesaRef, pedir, onError, onAnuncio }: Opciones) {
   const [movimiento, setMovimiento] = useState<Movimiento | null>(null);
-  // Tras soltar con el teclado, el foco va al asa del jugador en su nuevo asiento.
-  const focoPendienteRef = useRef<{ asiento: string; ocupante: string } | null>(null);
+  // Tras soltar con el teclado, el foco va a su asa cuando llega a su nuevo asiento
+  // (el id es el de su jugador, que se cambia de silla con él).
+  const focoPendienteRef = useRef<{ asiento: string; numero: number } | null>(null);
 
   const ocupanteDe = (asientoId: string) => asientos.find((a) => a.id === asientoId)?.ocupante ?? null;
   const nombreDe = (id: string | null) => participantes.find((p) => p.id === id)?.nombre ?? '';
@@ -57,7 +58,7 @@ export function useMoverAsientos({ asientos, participantes, mesaRef, pedir, onEr
 
   useEffect(() => {
     const pendiente = focoPendienteRef.current;
-    if (!pendiente || ocupanteDe(pendiente.asiento) !== pendiente.ocupante) return;
+    if (!pendiente || numeroDe(pendiente.asiento) !== pendiente.numero) return;
     focoPendienteRef.current = null;
     document.getElementById(idAsaMover(pendiente.asiento))?.focus();
   });
@@ -84,13 +85,15 @@ export function useMoverAsientos({ asientos, participantes, mesaRef, pedir, onEr
       if (modo === 'teclado') onAnuncio(`${nombreDe(jugador)} sigue en el asiento ${numeroDe(desde)}.`);
       return;
     }
-    if (modo === 'teclado') focoPendienteRef.current = { asiento: hasta, ocupante: jugador };
+    // El número de destino, antes de que cambie la plaza
+    const numero = numeroDe(hasta);
+    if (modo === 'teclado') focoPendienteRef.current = { asiento: desde, numero };
     const r = await pedir('narrador:asientos', { cambio: 'mover', desde, hasta });
     if (!r.ok) {
       focoPendienteRef.current = null;
       onError(r.error);
     } else if (modo === 'teclado') {
-      onAnuncio(`${nombreDe(jugador)}, al asiento ${numeroDe(hasta)}.`);
+      onAnuncio(`${nombreDe(jugador)}, al asiento ${numero}.`);
     }
   };
 

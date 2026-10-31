@@ -107,19 +107,6 @@ export class Nominaciones {
     this.maximoDelDia = null;
   }
 
-  /** Los asientos han cambiado de sitio (ver Partida.llevarFichas): la nominación los sigue. */
-  remapear(a: (asientoId: string) => string): void {
-    const n = this.nominacionEnCurso;
-    if (!n) return;
-    n.desde = a(n.desde);
-    n.hasta = a(n.hasta);
-    if (n.votacion) {
-      n.votacion.orden = n.votacion.orden.map(a);
-      n.votacion.resultados = Object.fromEntries(Object.entries(n.votacion.resultados).map(([k, v]) => [a(k), v]));
-      if (n.votacion.valores) n.votacion.valores = Object.fromEntries(Object.entries(n.votacion.valores).map(([k, v]) => [a(k), v]));
-    }
-  }
-
   private pararTemporizador(): void {
     if (this.temporizador) clearTimeout(this.temporizador);
     this.temporizador = null;

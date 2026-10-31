@@ -17,7 +17,7 @@ const VACIO: Ocupante = { tipo: 'vacio' };
  * ni comprueba permisos (lo hace el Grimorio).
  */
 export class Jugador {
-  /** Para lo que va con el jugador aunque cambie de asiento (recordatorios, calavera, faroles…). */
+  /** Lo identifica en la plaza: lo que se guarda por él va con él al cambiar de silla. */
   readonly id = randomUUID();
   ocupante: Ocupante = VACIO;
   /** El personaje de su ficha (id del catálogo o del guion), o null si no tiene. */

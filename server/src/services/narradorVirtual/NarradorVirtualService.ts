@@ -169,7 +169,7 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     if (!this.etapa || !narrador.actual()) return 'La sala no tiene narrador virtual.';
     if (accion === 'exterminar' || accion === 'patoso') {
       const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
-      if (typeof asientoId !== 'string' || !sala.asiento(asientoId)) return 'Ese asiento ya no existe.';
+      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return 'Ese asiento ya no existe.';
       const mio = partida.asientoDe(jugador)?.id;
       if (mio === asientoId) return accion === 'exterminar' ? 'No puedes dispararte a ti.' : 'Elige a otro jugador.';
       if (this.contando) return 'Espera a que el narrador termine de contar lo anterior.';

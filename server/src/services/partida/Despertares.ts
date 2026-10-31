@@ -125,9 +125,4 @@ export class Despertares {
   cerrarTodos(): void {
     this.hilos = [];
   }
-
-  /** Los asientos han cambiado de sitio (ver Partida.llevarFichas): cada despertar va con el suyo. */
-  remapear(a: (asientoId: string) => string): void {
-    for (const h of this.hilos) h.asiento = a(h.asiento);
-  }
 }

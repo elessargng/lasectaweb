@@ -86,11 +86,4 @@ export class Entregas {
     this.grimoriosEnviados.clear();
     this.retenidas = false;
   }
-
-  /** Los asientos han cambiado de sitio (ver Partida.llevarFichas): lo entregado y lo enviado va con su ficha. */
-  remapear(a: (asientoId: string) => string): void {
-    const remapear = <V>(m: Map<string, V>) => new Map([...m].map(([k, v]) => [a(k), v] as const));
-    this.entregadas = remapear(this.entregadas);
-    this.grimoriosEnviados = remapear(this.grimoriosEnviados);
-  }
 }

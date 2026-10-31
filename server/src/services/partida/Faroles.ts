@@ -1,5 +1,5 @@
 import { NUM_FAROLES } from '../../contrato/sala';
-import type { Asiento } from '../sala/Sala';
+import type { Jugador } from './Jugador';
 import type { Diario } from './eventos';
 
 /** Las casillas de farol, todas vacías. */
@@ -28,8 +28,8 @@ export class Faroles {
   private deJugadores = new Map<string, { ocupante: string | null; faroles: (string | null)[]; enUso: string | null }>();
 
   constructor(
-    /** La mesa como está ahora. */
-    private readonly mesa: () => Asiento[],
+    /** Los jugadores de la plaza, en orden. */
+    private readonly plaza: () => Jugador[],
     private readonly diario: Diario,
   ) {}
 
@@ -46,44 +46,44 @@ export class Faroles {
     this.diario.anotar({ tipo: 'farol', asiento: null, posicion, personaje: personajeId });
   }
 
-  /** Los faroles del asiento, si siguen siendo de quien juega a su jugador. */
-  deAsiento({ jugador }: Asiento): (string | null)[] {
+  /** Los faroles del jugador, si siguen siendo de quien lo juega. */
+  deJugador(jugador: Jugador): (string | null)[] {
     const f = this.deJugadores.get(jugador.id);
     return f && f.ocupante === jugador.participanteId ? [...f.faroles] : farolesVacios();
   }
 
-  /** El farol que dice usar el asiento, si sigue siendo de quien juega a su jugador (y sigue entre sus faroles). */
-  enUso({ jugador }: Asiento): string | null {
+  /** El farol que dice usar el jugador, si sigue siendo de quien lo juega (y sigue entre sus faroles). */
+  enUso(jugador: Jugador): string | null {
     const f = this.deJugadores.get(jugador.id);
     return f && f.ocupante === jugador.participanteId ? f.enUso : null;
   }
 
   /** Pone un farol en una casilla de un asiento (o la vacía). Si el que usaba ya no está, deja de usarlo. */
-  ponerFarolAsiento(asientoId: string, posicion: number, personajeId: string | null): void {
-    const asiento = this.mesa().find((a) => a.id === asientoId);
-    if (asiento) this.guardar(asiento, ponerEnCasilla(this.deAsiento(asiento), posicion, personajeId), this.enUso(asiento));
-    this.diario.anotar({ tipo: 'farol', asiento: this.diario.asiento(asientoId), posicion, personaje: personajeId });
+  ponerFarolAsiento(jugadorId: string, posicion: number, personajeId: string | null): void {
+    const jugador = this.plaza().find((j) => j.id === jugadorId);
+    if (jugador) this.guardar(jugador, ponerEnCasilla(this.deJugador(jugador), posicion, personajeId), this.enUso(jugador));
+    this.diario.anotar({ tipo: 'farol', asiento: this.diario.asiento(jugadorId), posicion, personaje: personajeId });
   }
 
   /** Cambia de una vez los faroles de un asiento (los que le ha enseñado el narrador). */
-  copiarFaroles(asientoId: string, personajes: string[]): void {
-    const asiento = this.mesa().find((a) => a.id === asientoId);
-    if (asiento) this.guardar(asiento, farolesVacios().map((_, i) => personajes[i] ?? null), this.enUso(asiento));
-    this.diario.anotar({ tipo: 'copiaFaroles', asiento: this.diario.asiento(asientoId), personajes });
+  copiarFaroles(jugadorId: string, personajes: string[]): void {
+    const jugador = this.plaza().find((j) => j.id === jugadorId);
+    if (jugador) this.guardar(jugador, farolesVacios().map((_, i) => personajes[i] ?? null), this.enUso(jugador));
+    this.diario.anotar({ tipo: 'copiaFaroles', asiento: this.diario.asiento(jugadorId), personajes });
   }
 
   /** El asiento dice usar uno de sus faroles (o ninguno, con null). Devuelve el error, si lo hay. */
-  usarFarol(asientoId: string, personajeId: string | null): string | null {
-    const asiento = this.mesa().find((a) => a.id === asientoId);
-    if (!asiento) return 'Ese asiento ya no existe.';
-    const faroles = this.deAsiento(asiento);
+  usarFarol(jugadorId: string, personajeId: string | null): string | null {
+    const jugador = this.plaza().find((j) => j.id === jugadorId);
+    if (!jugador) return 'Ese asiento ya no existe.';
+    const faroles = this.deJugador(jugador);
     if (personajeId !== null && !faroles.includes(personajeId)) return 'Ese personaje no está entre tus faroles.';
-    this.guardar(asiento, faroles, personajeId);
-    this.diario.anotar({ tipo: 'usaFarol', asiento: this.diario.asiento(asientoId), personaje: personajeId });
+    this.guardar(jugador, faroles, personajeId);
+    this.diario.anotar({ tipo: 'usaFarol', asiento: this.diario.asiento(jugadorId), personaje: personajeId });
     return null;
   }
 
-  private guardar({ jugador }: Asiento, faroles: (string | null)[], enUso: string | null): void {
+  private guardar(jugador: Jugador, faroles: (string | null)[], enUso: string | null): void {
     this.deJugadores.set(jugador.id, { ocupante: jugador.participanteId, faroles, enUso: enUso && faroles.includes(enUso) ? enUso : null });
   }
 

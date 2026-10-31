@@ -45,9 +45,4 @@ export class Revelacion {
   olvidar(): void {
     this.actual = null;
   }
-
-  /** Los asientos han cambiado de sitio (ver Partida.llevarFichas): lo revelado va con su ficha. */
-  remapear(a: (asientoId: string) => string): void {
-    if (this.actual) this.actual.reveladas = this.actual.reveladas.map(a);
-  }
 }
