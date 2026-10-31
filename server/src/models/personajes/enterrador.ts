@@ -6,13 +6,14 @@ import {
   RecibeInformacion,
   type ContextoNoche,
 } from '../partida/habilidades/HabilidadNocturna';
+import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 /**
  * Enterrador: esta noche sabe qué personaje fue ejecutado hoy. En juego y vivo (en
  * la ficha —el Borracho que se cree Enterrador también— o de verdad), pone su
  * recordatorio en la ficha del ejecutado.
  */
-export const enterrador: ReglaPersonaje = {
+const regla: ReglaPersonaje = {
   personaje: 'undertaker',
   alEjecutar: (ctx, ejecutado) => (vivoEnJuego(ctx, 'undertaker', ejecutado) ? { texto: 'Die Today', unico: true } : null),
 };
@@ -32,4 +33,6 @@ class Enterrador extends RecibeInformacion {
     return esteJugadorEs(ctx, [ejecutado], ejecutado);
   }
 }
-export const enterradorDeNoche = new Enterrador();
+const deNoche = new Enterrador();
+
+export const enterrador: DefinicionPersonaje = { regla, deNoche };

@@ -38,7 +38,7 @@ import { monje } from './monje';
 import { soldado } from './soldado';
 
 /**
- * Las reglas de los personajes, en el orden en que se consultan: el Voudon antes
+ * Las reglas de los personajes (la `regla` de cada uno), en el orden en que se consultan: el Voudon antes
  * que la Banshee (con él vivo, decide él quién vota) y las de las ejecuciones en
  * el orden en que se ponen sus recordatorios.
  */
@@ -72,7 +72,7 @@ export const REGLAS: readonly ReglaPersonaje[] = [
   marinero,
   soldado,
   monje,
-];
+].flatMap((p) => p.regla ?? []);
 
 /** Un recordatorio que hay que poner al ejecutar (o al nominar): de qué personaje y con qué texto. */
 export interface RecordatorioAlEjecutar {

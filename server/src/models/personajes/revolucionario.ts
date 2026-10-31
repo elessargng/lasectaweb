@@ -1,6 +1,7 @@
 import { randomInt } from 'crypto';
 import { barajar } from '../partida/azar';
 import { tieneRecordatorio, type ContextoReglas, type ReglaPersonaje } from './ReglaPersonaje';
+import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 export const NPC_REVOLUTIONARY = 'revolutionary';
 
@@ -31,10 +32,12 @@ function mismoAlineamiento(ctx: ContextoReglas, personajes: string[], x: number,
  * Revolutionary (legendario): si exactamente dos de los asientos que reciben
  * personaje llevan su recordatorio, les tocan dos del mismo alineamiento.
  */
-export const revolucionario: ReglaPersonaje = {
+const regla: ReglaPersonaje = {
   personaje: NPC_REVOLUTIONARY,
   repartir: (ctx, jugadores, personajes) => {
     const marcados = jugadores.flatMap((a, i) => (tieneRecordatorio(a, NPC_REVOLUTIONARY) ? [i] : []));
     return marcados.length === 2 ? mismoAlineamiento(ctx, personajes, marcados[0], marcados[1]) : personajes;
   },
 };
+
+export const revolucionario: DefinicionPersonaje = { regla };

@@ -7,6 +7,7 @@ import {
   type ContextoNoche,
 } from '../partida/habilidades/HabilidadNocturna';
 import type { Jugador } from '../partida/Jugador';
+import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 /** El Empático: cuántos de sus dos vecinos vivos son malvados. */
 class Empatico extends RecibeInformacion {
@@ -27,4 +28,6 @@ class Empatico extends RecibeInformacion {
     return { opciones };
   }
 }
-export const empatico = new Empatico();
+const deNoche = new Empatico();
+
+export const empatico: DefinicionPersonaje = { deNoche };

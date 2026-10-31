@@ -1,6 +1,7 @@
 import type { AvisoHabilidad } from '../compartido/despertar';
 import { EligeYSabe, esteJugadorEs, type ContextoNoche } from '../partida/habilidades/HabilidadNocturna';
 import type { Jugador } from '../partida/Jugador';
+import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 /** El Ravenkeeper: si muere esta noche, elige a un jugador y sabe quién es. */
 class Cuervero extends EligeYSabe {
@@ -17,4 +18,6 @@ class Cuervero extends EligeYSabe {
     return esteJugadorEs(ctx, [elegido], elegido);
   }
 }
-export const cuervero = new Cuervero();
+const deNoche = new Cuervero();
+
+export const cuervero: DefinicionPersonaje = { deNoche };

@@ -10,6 +10,7 @@ import {
   type Resultado,
 } from '../partida/habilidades/HabilidadNocturna';
 import type { Jugador } from '../partida/Jugador';
+import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 /** Le ha matado el demonio esta noche: muere y lleva el recordatorio de un demonio (su «Dead»). */
 const muereAManosDelDemonio = (ctx: ContextoNoche, jugador: Jugador) =>
@@ -63,4 +64,6 @@ class Sabio extends RecibeInformacion {
     return { opciones: [...opciones.values()] };
   }
 }
-export const sabio = new Sabio();
+const deNoche = new Sabio();
+
+export const sabio: DefinicionPersonaje = { deNoche };

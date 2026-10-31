@@ -1,4 +1,5 @@
 import { droison, lleva, tieneRecordatorio, type ReglaPersonaje } from './ReglaPersonaje';
+import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 /**
  * Virgen (Virgin): la primera vez que la nominan (viva, en su ficha o de verdad)
@@ -7,7 +8,7 @@ import { droison, lleva, tieneRecordatorio, type ReglaPersonaje } from './ReglaP
  * Virgen, la pierde igual pero no pasa nada. Si quien nomina puede registrar como
  * aldeano (ver Percepcion), lo decide el narrador.
  */
-export const virgen: ReglaPersonaje = {
+const regla: ReglaPersonaje = {
   personaje: 'virgin',
   alNominar: (ctx, nominador, nominado, { comoAldeano }) => {
     if (nominado.muerto || !lleva(ctx, nominado, 'virgin') || tieneRecordatorio(nominado, 'virgin', /^no ability$/i)) return null;
@@ -20,3 +21,5 @@ export const virgen: ReglaPersonaje = {
     return { ...pierde, ejecutaAlNominador: aldeano[0] };
   },
 };
+
+export const virgen: DefinicionPersonaje = { regla };

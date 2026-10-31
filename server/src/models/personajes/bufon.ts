@@ -1,10 +1,11 @@
 import { droison, lleva, tieneRecordatorio, type ReglaPersonaje } from './ReglaPersonaje';
+import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 /**
  * Bufón (Fool): sano, la primera vez que iba a morir (de lo que sea) no muere y
  * gasta su habilidad: se le pone su «No Ability», que es lo que recuerda que ya la gastó.
  */
-export const bufon: ReglaPersonaje = {
+const regla: ReglaPersonaje = {
   personaje: 'fool',
   alterarObjetivo: (ctx, jugador, base) =>
     lleva(ctx, jugador, 'fool') && !droison(ctx, jugador) && !tieneRecordatorio(jugador, 'fool', /^no ability$/i)
@@ -14,3 +15,5 @@ export const bufon: ReglaPersonaje = {
         }
       : base,
 };
+
+export const bufon: DefinicionPersonaje = { regla };

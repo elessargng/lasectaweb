@@ -8,6 +8,7 @@ import { opcionesDeAsientos } from '../narradorVirtual/grimorio';
 import { contextoNoche, nombreDeAsiento, vivo } from '../narradorVirtual/plazaDeJuego';
 import { identidadDe } from '../partida/Grimorio';
 import { otroJugador, type DeclaracionDia } from './DeclaracionDia';
+import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 /**
  * El Patoso: cuando se entera de que ha muerto (al ejecutarle, o al amanecer
@@ -20,12 +21,12 @@ import { otroJugador, type DeclaracionDia } from './DeclaracionDia';
 
 /** Los muertos que pueden declararse Patoso hasta `hasta` (sin repetir a quien ya puede). */
 export function abrirPatosos(juego: SalaDeJuego, jugadores: string[], hasta: Plazo['hasta']): void {
-  if (juego.narrador.actual()) juego.partida.declaraciones.abrir(patoso.id, jugadores, hasta);
+  if (juego.narrador.actual()) juego.partida.declaraciones.abrir(deDia.id, jugadores, hasta);
 }
 
 /** Ya no puede declararse Patoso (lo ha hecho, o se ha acabado su momento). */
 export function quitarPatoso(juego: SalaDeJuego, jugadorId: string): void {
-  juego.partida.declaraciones.cerrar(patoso.id, jugadorId);
+  juego.partida.declaraciones.cerrar(deDia.id, jugadorId);
 }
 
 /**
@@ -36,7 +37,7 @@ export function quitarPatoso(juego: SalaDeJuego, jugadorId: string): void {
 export async function cerrarPatosos(ctx: ContextoEtapa, hasta: Plazo['hasta']): Promise<Ganador | null> {
   const { juego } = ctx;
   const { partida } = juego;
-  const cierran = partida.declaraciones.abiertos(patoso.id, hasta);
+  const cierran = partida.declaraciones.abiertos(deDia.id, hasta);
   for (const { jugador: asiento } of cierran) {
     quitarPatoso(juego, asiento);
     const delAsiento = partida.plaza().find((a) => a.id === asiento);
@@ -80,13 +81,13 @@ export async function contarPatoso(ctx: ContextoEtapa, patosoId: string, elegido
  * Declararse Patoso: el muerto que aún está en su plazo (ver abrirPatosos) elige a
  * un jugador vivo. datos: { jugadorId } del elegido.
  */
-export const patoso: DeclaracionDia = {
+const deDia: DeclaracionDia = {
   id: 'patoso',
   publica: true,
   puede: ({ partida, narrador }, yo) => {
     const mio = partida.jugadorDe(yo.id)?.id;
     const etapa = narrador.actual()?.etapa;
-    return !!etapa && etapa !== 'revelando' && !!mio && partida.declaraciones.enPlazo(patoso.id, mio);
+    return !!etapa && etapa !== 'revelando' && !!mio && partida.declaraciones.enPlazo(deDia.id, mio);
   },
   noPuede: () => 'Ya no puedes declararte Patoso.',
   async declarar(ctx, yo, datos) {
@@ -99,3 +100,5 @@ export const patoso: DeclaracionDia = {
     return { contar: () => contarPatoso(ctx, mio, elegido.jugadorId) };
   },
 };
+
+export const patoso: DefinicionPersonaje = { deDia };

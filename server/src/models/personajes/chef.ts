@@ -6,6 +6,7 @@ import {
   type ContextoNoche,
 } from '../partida/habilidades/HabilidadNocturna';
 import type { Jugador } from '../partida/Jugador';
+import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 /** El Chef: cuántas parejas de malvados se sientan juntos. */
 class Chef extends RecibeInformacion {
@@ -29,4 +30,6 @@ class Chef extends RecibeInformacion {
     return { opciones };
   }
 }
-export const chef = new Chef();
+const deNoche = new Chef();
+
+export const chef: DefinicionPersonaje = { deNoche };

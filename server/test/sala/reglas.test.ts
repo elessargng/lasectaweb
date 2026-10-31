@@ -365,7 +365,7 @@ describe('Percepción (cómo registra cada uno)', () => {
     objetivo: (a) => objetivoReal(a),
     droison: (a) => reglas.droison(a),
   };
-  const reglas = new Reglas(ctx, [envenenador, reclusa, espia]);
+  const reglas = new Reglas(ctx, [envenenador, reclusa, espia].flatMap((p) => p.regla ?? []));
   const jugador = (personaje: string, envenenado = false): Jugador =>
     Object.assign(new Jugador(), {
       personaje,

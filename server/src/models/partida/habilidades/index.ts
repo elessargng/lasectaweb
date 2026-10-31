@@ -1,4 +1,5 @@
 import type { HabilidadNocturna } from './HabilidadNocturna';
+import type { DefinicionPersonaje } from '../../personajes/DefinicionPersonaje';
 import { demonios, esbirros } from './malvados';
 import { adivina } from '../../personajes/adivina';
 import { bibliotecario } from '../../personajes/bibliotecario';
@@ -6,24 +7,28 @@ import { camarera } from '../../personajes/camarera';
 import { chef } from '../../personajes/chef';
 import { cuervero } from '../../personajes/cuervero';
 import { empatico } from '../../personajes/empatico';
-import { enterradorDeNoche } from '../../personajes/enterrador';
-import { envenenadorDeNoche } from '../../personajes/envenenador';
-import { espiaDeNoche } from '../../personajes/espia';
+import { enterrador } from '../../personajes/enterrador';
+import { envenenador } from '../../personajes/envenenador';
+import { espia } from '../../personajes/espia';
 import { imp } from '../../personajes/imp';
 import { investigador } from '../../personajes/investigador';
 import { lavandera } from '../../personajes/lavandera';
 import { mayordomo } from '../../personajes/mayordomo';
-import { monjeDeNoche } from '../../personajes/monje';
-import { mujerEscarlataDeNoche } from '../../personajes/mujerEscarlata';
+import { monje } from '../../personajes/monje';
+import { mujerEscarlata } from '../../personajes/mujerEscarlata';
 import { relojero } from '../../personajes/relojero';
 import { sabio } from '../../personajes/sabio';
+
+/** Las de noche de esos personajes, en ese orden. */
+const deNoche = (...personajes: DefinicionPersonaje[]): HabilidadNocturna[] => personajes.flatMap((p) => p.deNoche ?? []);
 
 /** Las habilidades de noche de Trouble Brewing. */
 const TROUBLE_BREWING: readonly HabilidadNocturna[] = [
   esbirros,
   demonios,
-  envenenadorDeNoche,
-  monjeDeNoche,
+  ...deNoche(
+  envenenador,
+  monje,
   mayordomo,
   imp,
   adivina,
@@ -33,9 +38,10 @@ const TROUBLE_BREWING: readonly HabilidadNocturna[] = [
   investigador,
   chef,
   empatico,
-  enterradorDeNoche,
-  espiaDeNoche,
-  mujerEscarlataDeNoche,
+  enterrador,
+  espia,
+  mujerEscarlata,
+  ),
 ];
 
 /**
@@ -43,7 +49,7 @@ const TROUBLE_BREWING: readonly HabilidadNocturna[] = [
  * las del Relojero, la Camarera y el Sabio. El Artista y el Patoso actúan de día
  * (ver models/personajes/DeclaracionDia); el Borracho y el Barón, al preparar.
  */
-const NO_GREATER_JOY: readonly HabilidadNocturna[] = [esbirros, demonios, imp, mujerEscarlataDeNoche, investigador, empatico, relojero, camarera, sabio];
+const NO_GREATER_JOY: readonly HabilidadNocturna[] = [esbirros, demonios, ...deNoche(imp, mujerEscarlata, investigador, empatico, relojero, camarera, sabio)];
 
 /**
  * Las habilidades de noche de cada guion, por su id de predeterminado. Solo

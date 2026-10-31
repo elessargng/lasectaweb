@@ -1,11 +1,12 @@
 import { oTambien, siONo } from './Percepcion';
 import type { ReglaPersonaje } from './ReglaPersonaje';
+import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 /**
  * Reclusa (Recluse): puede registrar como malvada y como esbirro o demonio, aunque
  * esté muerta. Qué personaje malvado, lo elige el narrador entre los del guion.
  */
-export const reclusa: ReglaPersonaje = {
+const regla: ReglaPersonaje = {
   personaje: 'recluse',
   alterarPercepcion: (ctx, base) => ({
     ...base,
@@ -20,3 +21,5 @@ export const reclusa: ReglaPersonaje = {
       ),
   }),
 };
+
+export const reclusa: DefinicionPersonaje = { regla };

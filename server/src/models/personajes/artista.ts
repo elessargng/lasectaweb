@@ -17,6 +17,7 @@ import { identidadDe } from '../partida/Grimorio';
 import type { Jugador } from '../partida/Jugador';
 import { diaVirtual } from '../narradorVirtual/dia/reglasDia';
 import type { DeclaracionDia } from './DeclaracionDia';
+import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 /**
  * La pregunta del Artista (una vez por partida y persona, lo sea o no, como el
@@ -80,7 +81,7 @@ export async function preguntarComoArtista(
   partida.anotar({ tipo: 'artista', asiento: partida.asientoDiario(asiento.id), pregunta: enPalabras, respuesta });
   if (respuesta === 'reformular') return { respuesta };
   if (esArtista) await ponerRecordatorio(ctx, asiento.id, 'artist', 'No Ability');
-  partida.declaraciones.apuntar(artista.id, jugador);
+  partida.declaraciones.apuntar(deDia.id, jugador);
   return { respuesta };
 }
 
@@ -141,18 +142,20 @@ export function contestar(juego: SalaDeJuego, cronica: Cronica, p: PreguntaArtis
  * (libre) o { pregunta } (montada, ver models/compartido/artista); contesta en
  * `valor`: 'si', 'no' o 'reformular'.
  */
-export const artista: DeclaracionDia = {
+const deDia: DeclaracionDia = {
   id: 'artista',
   publica: false,
   puede: (juego, yo) => {
     const { partida } = juego;
     const jugador = partida.jugadorDe(yo.id);
-    return !!diaVirtual(juego) && !!jugador && !jugador.muerto && !partida.declaraciones.hecha(artista.id, yo.id);
+    return !!diaVirtual(juego) && !!jugador && !jugador.muerto && !partida.declaraciones.hecha(deDia.id, yo.id);
   },
   noPuede: ({ partida }, yo) =>
-    partida.declaraciones.hecha(artista.id, yo.id) ? 'Ya has hecho tu pregunta de Artista.' : 'Ahora no se puede preguntar como Artista.',
+    partida.declaraciones.hecha(deDia.id, yo.id) ? 'Ya has hecho tu pregunta de Artista.' : 'Ahora no se puede preguntar como Artista.',
   async declarar(ctx, yo, datos) {
     const r = await preguntarComoArtista(ctx, yo, datos);
     return 'error' in r ? r : { valor: r.respuesta };
   },
 };
+
+export const artista: DefinicionPersonaje = { deDia };

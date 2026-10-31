@@ -1,6 +1,7 @@
 import { droison, tieneRecordatorio, type ReglaPersonaje } from './ReglaPersonaje';
 import { RecibeInformacion, tarjeta, type ContextoNoche } from '../partida/habilidades/HabilidadNocturna';
 import type { Jugador } from '../partida/Jugador';
+import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 /** Con cuántos vivos (contando al demonio que muere) la Mujer Escarlata pasa a ser el demonio. */
 const VIVOS_PARA_HEREDAR = 5;
@@ -12,7 +13,7 @@ const heredado = (jugador: Jugador) => tieneRecordatorio(jugador, 'scarletwoman'
  * o más (contando al que muere), lo hereda: se le pone «Is The Demon» y cuenta como
  * el demonio. Esa noche (o al revelar, si acaba antes) pasa a ser el Imp.
  */
-export const mujerEscarlata: ReglaPersonaje = {
+const regla: ReglaPersonaje = {
   personaje: 'scarletwoman',
   esDemonio: (_ctx, jugador) => heredado(jugador),
   heredarDemonio: (ctx, vivos) => {
@@ -40,4 +41,6 @@ class MujerEscarlata extends RecibeInformacion {
     return { opciones: [{ envio: tarjeta('tuEres', { personajes: ['imp'], alineamiento: 'malvado' }), registros: [] }] };
   }
 }
-export const mujerEscarlataDeNoche = new MujerEscarlata();
+const deNoche = new MujerEscarlata();
+
+export const mujerEscarlata: DefinicionPersonaje = { regla, deNoche };

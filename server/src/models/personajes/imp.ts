@@ -11,6 +11,7 @@ import {
 } from '../partida/habilidades/HabilidadNocturna';
 import type { Jugador } from '../partida/Jugador';
 import { desenlaceDespertar } from './Objetivo';
+import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 /**
  * El Imp: mata al elegido (su «Dead» y la muerte pendiente), o a quien le llegue
@@ -41,4 +42,6 @@ export class Imp extends EligeYMarca {
     return listo(OK, efectos, a ? avisos : [...avisos, { tipo: 'protegido', jugador: elegido.id }]);
   }
 }
-export const imp = new Imp();
+const deNoche = new Imp();
+
+export const imp: DefinicionPersonaje = { deNoche };

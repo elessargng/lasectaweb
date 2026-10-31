@@ -11,6 +11,7 @@ import { diaVirtual } from '../narradorVirtual/dia/reglasDia';
 import { otroJugador, type DeclaracionDia } from './DeclaracionDia';
 import { elegirDesenlace } from '../narradorVirtual/desenlaces';
 import { desenlaceDespertar } from './Objetivo';
+import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 /**
  * Un jugador se declara Exterminador y dispara a otro (una vez por partida y
@@ -40,7 +41,7 @@ export async function exterminar(ctx: ContextoEtapa, tirador: string, jugadorId:
     });
   }
   if (identidadDe(desde) === 'slayer') await ponerRecordatorio(ctx, desde.id, 'slayer', 'No Ability');
-  partida.declaraciones.apuntar(exterminador.id, tirador);
+  partida.declaraciones.apuntar(deDia.id, tirador);
   if (!esExterminador || objetivo.muerto || !registraComoDemonio) return null;
   const desenlaces = noche.objetivo(objetivo).recibe({ origen: 'habilidad', personaje: 'slayer', efecto: 'matar' }).map(desenlaceDespertar);
   const { muere, gasta } = await elegirDesenlace(ctx, `El Exterminador alcanza a ${nombreDeAsiento(juego, objetivo.id)}: a quién le llega al final.`, desenlaces);
@@ -90,14 +91,14 @@ export async function contarDisparo(ctx: ContextoEtapa, tirador: string, jugador
 }
 
 /** Disparar como Exterminador: de día, sin nominación en marcha, una vez por partida y persona. datos: { jugadorId }. */
-export const exterminador: DeclaracionDia = {
+const deDia: DeclaracionDia = {
   id: 'exterminar',
   publica: true,
   puede: (juego, yo) => {
     const { partida } = juego;
-    return !!diaVirtual(juego) && !!partida.jugadorDe(yo.id) && !partida.declaraciones.hecha(exterminador.id, yo.id) && !partida.nominaciones.nominacion();
+    return !!diaVirtual(juego) && !!partida.jugadorDe(yo.id) && !partida.declaraciones.hecha(deDia.id, yo.id) && !partida.nominaciones.nominacion();
   },
-  noPuede: ({ partida }, yo) => (partida.declaraciones.hecha(exterminador.id, yo.id) ? 'Ya has disparado en esta partida.' : 'Ahora no se puede disparar.'),
+  noPuede: ({ partida }, yo) => (partida.declaraciones.hecha(deDia.id, yo.id) ? 'Ya has disparado en esta partida.' : 'Ahora no se puede disparar.'),
   async declarar(ctx, yo, datos) {
     const elegido = otroJugador(ctx.juego, yo, datos, 'No puedes dispararte a ti.');
     if ('error' in elegido) return elegido;
@@ -105,3 +106,5 @@ export const exterminador: DeclaracionDia = {
     return { contar: () => contarDisparo(ctx, yo, elegido.jugadorId, muere) };
   },
 };
+
+export const exterminador: DefinicionPersonaje = { deDia };

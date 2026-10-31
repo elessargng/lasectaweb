@@ -1,5 +1,6 @@
 import { EligeYSabe, numero, type ContextoNoche } from '../partida/habilidades/HabilidadNocturna';
 import type { Jugador } from '../partida/Jugador';
+import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 /**
  * La Camarera: elige a dos jugadores vivos (no a sí misma) y sabe cuántos han
@@ -22,4 +23,6 @@ class Camarera extends EligeYSabe {
     return { opciones: [{ envio: numero(elegidos.filter((a) => despertados.has(a.id)).length), registros: [] }] };
   }
 }
-export const camarera = new Camarera();
+const deNoche = new Camarera();
+
+export const camarera: DefinicionPersonaje = { deNoche };

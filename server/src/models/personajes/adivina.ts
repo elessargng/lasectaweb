@@ -1,6 +1,7 @@
 import { tieneRecordatorio } from './ReglaPersonaje';
 import { EligeYSabe, ficha, pideRecordatorio, registros, segunRegistros, type ContextoNoche } from '../partida/habilidades/HabilidadNocturna';
 import type { Jugador } from '../partida/Jugador';
+import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 /** La Adivina: «Sí» si alguno de los dos es el demonio (o lleva su «Red Herring»). Quien puede registrar como demonio, lo decide el narrador. */
 class Adivina extends EligeYSabe {
@@ -25,4 +26,6 @@ class Adivina extends EligeYSabe {
     return { opciones };
   }
 }
-export const adivina = new Adivina();
+const deNoche = new Adivina();
+
+export const adivina: DefinicionPersonaje = { deNoche };
