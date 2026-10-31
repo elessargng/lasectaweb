@@ -2,6 +2,8 @@ import type { SalaDeJuego } from '../models/SalaDeJuego';
 import type { Partida } from '../models/partida/Partida';
 import { identidadDe } from '../models/partida/Grimorio';
 import type { Participante } from '../models/sala/Participantes';
+import type { EstadoAccesoGrimorio } from '../models/compartido/participante';
+import type { ParticipanteDto } from './dto/participante';
 import { NPC_TOR } from '../models/partida/personajesEspeciales';
 import { farolesVacios } from '../models/partida/Faroles';
 import type { JugadorDto } from './dto/jugador';
@@ -102,6 +104,20 @@ const grimorioEnviadoDto = (g: GrimorioEnviado): GrimorioEnviadoDto => ({
   fichas: g.fichas.map(fichaEnviadaDto),
   faroles: [...g.faroles],
 });
+const participanteDto = (p: Participante, accesoGrimorio: EstadoAccesoGrimorio): ParticipanteDto => ({
+  id: p.id,
+  nombre: p.nombre,
+  persona: { ...p.persona },
+  avatar: p.avatar,
+  rol: p.rol,
+  conectado: p.conectado,
+  manoLevantada: p.manoLevantada,
+  dosManos: p.dosManos,
+  formaMano: p.formaMano,
+  estiloMano: p.estiloMano,
+  sinSonido: p.sinSonido,
+  accesoGrimorio,
+});
 const conversacionDto = (c: Conversacion): ConversacionDto => ({ id: c.id, miembros: [...c.miembros], oyentes: [...c.oyentes] });
 const invitacionDto = (i: Invitacion): InvitacionDto => ({ id: i.id, de: i.de, para: i.para, ...(i.conversacion && { conversacion: i.conversacion }) });
 
@@ -161,7 +177,7 @@ export class VistaPartida {
     const { sala, partida } = juego;
     this.partida = partida;
     // Con su acceso al grimorio (es de la partida, no del participante)
-    this.participantes = sala.participantes.participantes().map((p) => ({ ...p, accesoGrimorio: partida.acceso.de(p.id) }));
+    this.participantes = sala.participantes.participantes().map((p) => participanteDto(p, partida.acceso.de(p.id)));
     // Cada jugador de la plaza con sus faroles; la calavera y las notas, del grimorio
     this.plaza = partida.plaza().map((j) => ({
       id: j.id,

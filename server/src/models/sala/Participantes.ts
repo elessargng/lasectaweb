@@ -1,7 +1,6 @@
 import { randomUUID } from 'crypto';
 import { type IdNarradorVirtual } from '../compartido/narradorVirtual';
 import { SALA_PARTIDAS_NOVATO, usuarioDe, type Persona, type FormaMano, type Rol } from '../compartido/participante';
-import { type ParticipanteDto } from '../../views/dto/participante';
 import { esAvatarSalaGuardado } from '../../infra/almacenamiento/salaAvatarStorage';
 
 /** Margen para volver tras una desconexión (recarga, red caída) sin perder el papel. */
@@ -66,10 +65,30 @@ const esLaMisma = (persona: Persona, llegada: SalaLlegada) =>
   llegada.cuenta ? usuarioDe(persona) === llegada.cuenta.usuarioId : persona.tipo === 'invitado';
 
 /**
- * Un participante, como lo lleva la sala: sin el acceso al grimorio, que es de la
- * partida (ver AccesoGrimorio; VistaPartida lo añade al mandarlo).
+ * Un participante, como lo lleva la sala. Su acceso al grimorio no está aquí: es
+ * de la partida (ver AccesoGrimorio).
  */
-export type Participante = Omit<ParticipanteDto, 'accesoGrimorio'>;
+export interface Participante {
+  /** Identificador dentro de la sala (no es el id de usuario de la web). */
+  id: string;
+  nombre: string;
+  persona: Persona;
+  /** Ruta del avatar que lleva (el de su cuenta, el elegido para la sala o el logo), o null. */
+  avatar: string | null;
+  rol: Rol;
+  /** false mientras se espera a que vuelva tras perder la conexión. */
+  conectado: boolean;
+  /** Jugador con la mano levantada. Al dejar de ser jugador, vuelve a false. */
+  manoLevantada: boolean;
+  /** Con la mano levantada, levanta las dos (la Banshee): su voto cuenta doble. Siempre false con la mano bajada. */
+  dosManos: boolean;
+  /** La forma de su mano al levantarla; se conserva aunque la baje. */
+  formaMano: FormaMano;
+  /** Cómo se ve su mano (su «skin», ver SALA_ESTILOS_MANO): la elige cada uno. */
+  estiloMano: string;
+  /** Ha quitado el sonido: no oye a los demás. */
+  sinSonido: boolean;
+}
 
 /** Un participante ha cambiado de papel. */
 export type OyenteRol = (participanteId: string) => void;

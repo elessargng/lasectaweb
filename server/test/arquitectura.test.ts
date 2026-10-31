@@ -40,7 +40,6 @@ const PENDIENTES = [
   'models/narradorVirtual/noche/revisiones.ts',
   'models/narradorVirtual/puertos.ts',
   'models/partida/DespertarGuiado.ts',
-  'models/sala/Participantes.ts',
 ];
 
 /**
