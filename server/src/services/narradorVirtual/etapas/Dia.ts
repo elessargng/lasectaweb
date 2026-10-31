@@ -1,6 +1,6 @@
 import { duracionFrase, FRASES, PAUSA_MS } from '../frases';
 import type { SalaDeJuego } from '../../SalaDeJuego';
-import { nombreDeAsiento, vivo } from '../mesaDeJuego';
+import { nombreDeAsiento, vivo } from '../plazaDeJuego';
 import { jugadoresSentados, muertosSentados, noPuedeNominar, nominadoHoy } from '../dia/reglasDia';
 import type { AccionJugador, ContextoEtapa, Etapa } from './Etapa';
 import { Noche } from './Noche';
@@ -19,7 +19,7 @@ const PRIVADOS_POR_VIVO_MS = 30_000;
 /** Lo que duran los privados (ms): medio minuto por cada jugador vivo. */
 export const duracionPrivados = ({ partida }: SalaDeJuego): number => partida.plaza().filter(vivo).length * PRIVADOS_POR_VIVO_MS;
 
-/** Una etapa que dura un rato con el reloj de la mesa y luego pasa a la siguiente. */
+/** Una etapa que dura un rato con el reloj de la plaza y luego pasa a la siguiente. */
 abstract class EtapaConReloj implements Etapa {
   abstract readonly id: 'privados' | 'puestaEnComun';
   private cancelar: (() => void) | null = null;
@@ -32,7 +32,7 @@ abstract class EtapaConReloj implements Etapa {
   async alEntrar(ctx: ContextoEtapa): Promise<void> {
     await this.preparar(ctx);
     const ms = this.duracion(ctx);
-    await ctx.mesa.accion('narrador:reloj', { segundos: Math.round(ms / 1000), mensaje: this.mensaje });
+    await ctx.plaza.accion('narrador:reloj', { segundos: Math.round(ms / 1000), mensaje: this.mensaje });
     this.cancelar = ctx.temporizador.programar(ms, () => void ctx.pasarA(this.siguiente()));
   }
 
@@ -55,8 +55,8 @@ export class Privados extends EtapaConReloj {
     // Un día nuevo: solo están listos los muertos (no nominan) y la palabra es de todos
     const { narrador } = ctx.juego;
     narrador.actualizar({ listos: muertosSentados(ctx.juego), turno: null });
-    await ctx.mesa.accion('narrador:darPalabra', { participanteId: null });
-    await ctx.mesa.accion('narrador:privados', { abiertos: true });
+    await ctx.plaza.accion('narrador:darPalabra', { participanteId: null });
+    await ctx.plaza.accion('narrador:privados', { abiertos: true });
   }
 
   protected siguiente(): Etapa {
@@ -78,10 +78,10 @@ export class PuestaEnComun extends EtapaConReloj {
   }
 
   protected async preparar(ctx: ContextoEtapa): Promise<void> {
-    await ctx.mesa.accion('narrador:sonarGong');
+    await ctx.plaza.accion('narrador:sonarGong');
     this.cancelarCierre = ctx.temporizador.programar(TRAS_GONG_MS, () => {
       this.cancelarCierre = null;
-      void ctx.mesa.accion('narrador:privados', { abiertos: false });
+      void ctx.plaza.accion('narrador:privados', { abiertos: false });
     });
   }
 
@@ -119,7 +119,7 @@ export class Nominaciones implements Etapa {
   }
 
   async alEntrar(ctx: ContextoEtapa): Promise<void> {
-    await ctx.mesa.accion('narrador:privados', { abiertos: false });
+    await ctx.plaza.accion('narrador:privados', { abiertos: false });
   }
 
   async alPedir(ctx: ContextoEtapa, jugador: string, accion: AccionJugador, datos: unknown): Promise<string | null> {
@@ -144,7 +144,7 @@ export class Nominaciones implements Etapa {
       if (narrador.turno !== 'acusacion' || nominacion?.desde !== miAsiento.id) return 'Ahora no te toca.';
       const nominado = partida.plaza().find((a) => a.id === nominacion.hasta)?.participanteId ?? null;
       juego.narrador.actualizar({ turno: 'defensa' });
-      await ctx.mesa.accion('narrador:darPalabra', { participanteId: nominado });
+      await ctx.plaza.accion('narrador:darPalabra', { participanteId: nominado });
       ctx.decir(FRASES.defensa(nombreDeAsiento(juego, nominacion.hasta)));
       return null;
     }
@@ -152,9 +152,9 @@ export class Nominaciones implements Etapa {
       if (narrador.turno !== 'defensa' || nominacion?.hasta !== miAsiento.id) return 'Ahora no te toca.';
       this.marcaAlVotar = partida.grimorio.calavera()?.votos ?? null;
       juego.narrador.actualizar({ turno: 'votacion' });
-      await ctx.mesa.accion('narrador:darPalabra', { participanteId: null });
+      await ctx.plaza.accion('narrador:darPalabra', { participanteId: null });
       ctx.decir(FRASES.votosNecesarios(nominacion.votosNecesarios, nombreDeAsiento(juego, nominacion.hasta), this.marcaAlVotar !== null));
-      const r = await ctx.mesa.accion('narrador:cuentaAtras');
+      const r = await ctx.plaza.accion('narrador:cuentaAtras');
       return r.ok ? null : r.error;
     }
     if (accion === 'listo') {
@@ -171,7 +171,7 @@ export class Nominaciones implements Etapa {
 
   private async nominar(ctx: ContextoEtapa, desde: string, hasta: string, jugador: string): Promise<string | null> {
     const { juego } = ctx;
-    let r = await ctx.mesa.accion('narrador:nominar', { desde, hasta });
+    let r = await ctx.plaza.accion('narrador:nominar', { desde, hasta });
     // Un Espía nomina a la Virgen: si registra como aldeano, lo decide su estrategia
     if (r.ok && r.valor === 'comoAldeano') {
       const comoAldeano = await ctx.siONo({
@@ -180,7 +180,7 @@ export class Nominaciones implements Etapa {
         si: 'Registra como aldeano: el Espía es ejecutado.',
         no: 'No registra como aldeano: no pasa nada.',
       });
-      r = await ctx.mesa.accion('narrador:nominar', { desde, hasta, comoAldeano });
+      r = await ctx.plaza.accion('narrador:nominar', { desde, hasta, comoAldeano });
     }
     if (!r.ok) return r.error;
     const quien = nombreDeAsiento(juego, desde);
@@ -191,7 +191,7 @@ export class Nominaciones implements Etapa {
     }
     const narrador = juego.narrador.actual()!;
     juego.narrador.actualizar({ turno: 'acusacion', listos: [...new Set([...narrador.listos, jugador])] });
-    await ctx.mesa.accion('narrador:darPalabra', { participanteId: jugador });
+    await ctx.plaza.accion('narrador:darPalabra', { participanteId: jugador });
     ctx.decir(FRASES.nomina(quien, nombreDeAsiento(juego, hasta)));
     return null;
   }
@@ -210,13 +210,13 @@ export class Nominaciones implements Etapa {
     const { votos } = nominacion.votacion;
     juego.narrador.actualizar({ turno: null });
     if (votos >= nominacion.votosNecesarios) {
-      const r = await ctx.mesa.accion('narrador:marcar', { jugadorId: nominacion.hasta, marcado: true });
+      const r = await ctx.plaza.accion('narrador:marcar', { jugadorId: nominacion.hasta, marcado: true });
       if (r.ok) ctx.decir(FRASES.marcado(nombreDeAsiento(juego, nominacion.hasta)));
     } else if (this.marcaAlVotar !== null && votos === this.marcaAlVotar) {
       // Empata con la marca: nadie queda marcado
-      await ctx.mesa.accion('narrador:desmarcar');
+      await ctx.plaza.accion('narrador:desmarcar');
     } else {
-      await ctx.mesa.accion('narrador:cerrarNominacion');
+      await ctx.plaza.accion('narrador:cerrarNominacion');
     }
     this.marcaAlVotar = null;
     await this.quizaAnochece(ctx);
@@ -237,7 +237,7 @@ export class Nominaciones implements Etapa {
       return;
     }
     const quien = nombreDeAsiento(juego, marcado.id);
-    if ((await ctx.mesa.accion('narrador:ejecutar', { jugadorId: marcado.id })).ok) await this.trasEjecutar(ctx, marcado.id, FRASES.ejecutado(quien));
+    if ((await ctx.plaza.accion('narrador:ejecutar', { jugadorId: marcado.id })).ok) await this.trasEjecutar(ctx, marcado.id, FRASES.ejecutado(quien));
   }
 
   /**
@@ -274,11 +274,11 @@ export class Nominaciones implements Etapa {
       await ctx.pasarA(new Revelando(ganador, true));
       return;
     }
-    if (partida.fases.actual().momento !== 'noche') await ctx.mesa.accion('narrador:irANoche');
+    if (partida.fases.actual().momento !== 'noche') await ctx.plaza.accion('narrador:irANoche');
     await ctx.pasarA(new Noche());
   }
 
-  /** Espera con el reloj de la mesa (si se sale de la etapa antes, no sigue). */
+  /** Espera con el reloj de la plaza (si se sale de la etapa antes, no sigue). */
   private esperar(ctx: ContextoEtapa, ms: number): Promise<void> {
     return new Promise((seguir) => {
       this.cancelarEspera = ctx.temporizador.programar(ms, () => {

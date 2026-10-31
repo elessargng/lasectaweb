@@ -5,7 +5,7 @@ import type { ContextoEtapa } from '../etapas/Etapa';
 import type { Ganador } from '../final/comprobarFinal';
 import { duracionFrase, FRASES, PAUSA_MS } from '../frases';
 import { opcionesDeAsientos } from '../grimorio';
-import { contextoNoche, nombreDeAsiento, vivo } from '../mesaDeJuego';
+import { contextoNoche, nombreDeAsiento, vivo } from '../plazaDeJuego';
 import { identidadDe } from '../../partida/Grimorio';
 
 /**

@@ -4,7 +4,7 @@ import { identidadDe } from '../partida/Grimorio';
 import type { Jugador } from '../partida/Jugador';
 
 /**
- * Consultas a la mesa que usan las etapas del narrador virtual (solo leen; lo que
+ * Consultas a la plaza que usan las etapas del narrador virtual (solo leen; lo que
  * cambia va por las acciones).
  */
 

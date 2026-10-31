@@ -54,13 +54,13 @@ export class Reparto {
    * puestos a mano y los de la bolsa) y cuántos de cada tipo (ver repartoPara).
    */
   distribucion(): DistribucionDto {
-    const mesa = this.entorno.plaza();
-    const viajeros = mesa.filter((a) => this.llevaViajero(a)).length + this.bolsa.viajeros();
-    const jugadores = Math.max(0, mesa.length - viajeros);
+    const plaza = this.entorno.plaza();
+    const viajeros = plaza.filter((a) => this.llevaViajero(a)).length + this.bolsa.viajeros();
+    const jugadores = Math.max(0, plaza.length - viajeros);
     const reparto = repartoPara(jugadores);
     // Los muertos con sudario (público; la muerte pendiente aún no cuenta). Un viajero
     // de la bolsa aún sin repartir está vivo
-    const muertos = mesa.filter((a) => a.muerto);
+    const muertos = plaza.filter((a) => a.muerto);
     const viajerosMuertos = muertos.filter((a) => {
       const id = identidadDe(a);
       return !!id && this.entorno.esViajero(id);

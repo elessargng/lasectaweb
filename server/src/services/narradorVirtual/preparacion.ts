@@ -20,7 +20,7 @@ import {
 import type { Decision } from './estrategias/EstrategiaNarrador';
 import { instruccionesBolsa } from './estrategias/instruccionesJarvis';
 import type { SalaDeJuego } from '../SalaDeJuego';
-import type { Azar, MesaNarrador } from './puertos';
+import type { Azar, Narrador } from './puertos';
 
 /** Lo que ha salido pero no va en la bolsa (el Borracho) y el aldeano que cree ser (su ficha sí va). */
 export interface FueraDeLaBolsa {
@@ -37,13 +37,13 @@ export interface FueraDeLaBolsa {
  */
 export async function prepararPartida(
   juego: SalaDeJuego,
-  mesa: MesaNarrador,
+  plaza: Narrador,
   decidir: <T>(decision: Decision<T>) => Promise<T>,
   { guion, jugadores, azar, recientes }: { guion: GuionNarradorVirtual; jugadores: number; azar: Azar; recientes: readonly (readonly string[])[] },
 ): Promise<{ error: string } | { personajes: string[]; fuera: FueraDeLaBolsa[] }> {
   const { partida } = juego;
   const paso = async (accion: string, datos?: unknown) => {
-    const r = await mesa.accion(accion, datos);
+    const r = await plaza.accion(accion, datos);
     if (!r.ok) throw new Error(r.error);
   };
   try {

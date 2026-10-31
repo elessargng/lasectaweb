@@ -80,6 +80,6 @@ export const instruccionesBolsa = ({ bien, mal }: Conceptos, recientes: string) 
 /** Las de su motivo, o las `propias` de la decisión si las trae. */
 export const instruccionesPara = (motivo: MotivoDecision, pregunta: string, propias?: string) => `${propias ?? POR_MOTIVO[motivo]}\n${pregunta}`;
 
-/** Una opción para el modelo: su descripción y, entre corchetes, lo que la mesa sabe de ella. */
+/** Una opción para el modelo: su descripción y, entre corchetes, lo que la plaza sabe de ella. */
 export const describirParaJarvis = (descripcion: string, rasgos: readonly RasgoOpcion[] = []) =>
   rasgos.length ? `${descripcion} [${rasgos.map((r) => RASGOS[r]).join(', ')}]` : descripcion;

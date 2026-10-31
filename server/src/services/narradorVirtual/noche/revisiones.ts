@@ -3,7 +3,7 @@ import { habilidadesDelGuion } from '../../partida/habilidades';
 import { OK } from '../../partida/habilidades/HabilidadNocturna';
 import type { ContextoEtapa } from '../etapas/Etapa';
 import { describirEnvio, describirOpcion, describirPersonaje, opcionesDeAsientos } from '../grimorio';
-import { contextoNoche, vivo } from '../mesaDeJuego';
+import { contextoNoche, vivo } from '../plazaDeJuego';
 import { destapaAlMal, opcionesFalsas, probabilidadVerdad, recordarDroison } from './criterioDroison';
 import { informacionesFalsas } from './informacionFalsa';
 import { ponerRecordatorio } from './requisitos';
@@ -18,7 +18,7 @@ export async function resolverRevision(ctx: ContextoEtapa, fila: HabilidadNocheD
   const alcalde = fila.avisos.find((a) => a.tipo === 'alcalde');
   if (alcalde && 'jugador' in alcalde) await alcaldeAtacado(ctx, fila.personaje, alcalde.jugador);
   const envio = fila.opciones.length ? ((await droison(ctx, fila)) ?? (await elegirOpcion(ctx, fila))) : OK;
-  return (await ctx.mesa.accion('narrador:resolverHabilidad', { personajeId: fila.personaje, ...envio })).ok;
+  return (await ctx.plaza.accion('narrador:resolverHabilidad', { personajeId: fila.personaje, ...envio })).ok;
 }
 
 /** Una de las respuestas propuestas (la primera es la de verdad; las demás, registrando como otro). */
@@ -88,5 +88,5 @@ async function alcaldeAtacado(ctx: ContextoEtapa, demonio: string, alcaldeId: st
     ? (await ctx.decidir({ motivo: 'alcaldeAQuien', pregunta: 'A quién rebota la muerte del Alcalde.', opciones: opcionesDeAsientos(ctx.juego, otros) })).id
     : alcaldeId;
   await ponerRecordatorio(ctx, muere, demonio, 'Dead');
-  await ctx.mesa.accion('narrador:cambiarVida', { jugadorId: muere, muerto: true });
+  await ctx.plaza.accion('narrador:cambiarVida', { jugadorId: muere, muerto: true });
 }

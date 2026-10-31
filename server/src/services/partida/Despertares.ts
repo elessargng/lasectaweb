@@ -36,8 +36,8 @@ export class Despertares {
    * despertar se cierra (lo dicho era para otro).
    */
   private alDia(): HiloDespertar[] {
-    const mesa = this.plaza();
-    this.hilos = this.hilos.filter((h) => mesa.some((a) => a.id === h.asiento && a.participanteId === h.ocupante));
+    const plaza = this.plaza();
+    this.hilos = this.hilos.filter((h) => plaza.some((a) => a.id === h.asiento && a.participanteId === h.ocupante));
     return this.hilos;
   }
 

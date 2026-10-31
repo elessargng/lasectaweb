@@ -9,8 +9,8 @@ import { guionNoGreaterJoy, invitado } from './guionDePrueba';
 
 /** El despertar guiado de No Greater Joy: el Relojero, la Camarera y el Sabio. */
 
-/** Una mesa de No Greater Joy con esos personajes (uno por asiento, en orden) y sus jugadores, de noche. */
-function mesa(...personajes: string[]) {
+/** Una plaza de No Greater Joy con esos personajes (uno por asiento, en orden) y sus jugadores, de noche. */
+function plaza(...personajes: string[]) {
   const juego = new SalaDeJuego();
   const { sala, partida } = juego;
   partida.cambiarGuion(guionNoGreaterJoy());
@@ -34,18 +34,18 @@ function mesa(...personajes: string[]) {
 
 describe('No Greater Joy', () => {
   it('con 5 jugadores, los esbirros y el demonio no se conocen', () => {
-    const m = mesa('clockmaker', 'imp', 'empath', 'baron', 'sage');
+    const m = plaza('clockmaker', 'imp', 'empath', 'baron', 'sage');
     expect(m.fila('esbirros')).toMatchObject({ estado: 'falta', avisos: [{ tipo: 'pocosJugadores' }] });
     expect(m.fila('demonios')).toMatchObject({ estado: 'falta', avisos: [{ tipo: 'pocosJugadores' }] });
   });
 
-  it('el Relojero cuenta los pasos del demonio a su esbirro más cercano, dando la vuelta a la mesa', () => {
-    expect(mesa('clockmaker', 'imp', 'empath', 'baron', 'sage').fila('clockmaker')?.opciones.map((o) => o.envio.ficha)).toEqual(['dos']);
-    expect(mesa('baron', 'clockmaker', 'empath', 'sage', 'imp').fila('clockmaker')?.opciones.map((o) => o.envio.ficha)).toEqual(['uno']);
+  it('el Relojero cuenta los pasos del demonio a su esbirro más cercano, dando la vuelta a la plaza', () => {
+    expect(plaza('clockmaker', 'imp', 'empath', 'baron', 'sage').fila('clockmaker')?.opciones.map((o) => o.envio.ficha)).toEqual(['dos']);
+    expect(plaza('baron', 'clockmaker', 'empath', 'sage', 'imp').fila('clockmaker')?.opciones.map((o) => o.envio.ficha)).toEqual(['uno']);
   });
 
   it('la Camarera, la última, sabe cuántos de sus dos elegidos han despertado por su habilidad', () => {
-    const m = mesa('chambermaid', 'empath', 'imp', 'clockmaker', 'baron', 'sage');
+    const m = plaza('chambermaid', 'empath', 'imp', 'clockmaker', 'baron', 'sage');
     const { partida } = m.juego;
     expect(partida.guiado.despertar('empath')).toBeNull();
     expect(partida.guiado.despertar('chambermaid')).toBeNull();
@@ -58,7 +58,7 @@ describe('No Greater Joy', () => {
   });
 
   it('el Sabio solo despierta si le mata el demonio, y sabe que es uno de dos', () => {
-    const m = mesa('sage', 'imp', 'empath', 'baron', 'clockmaker');
+    const m = plaza('sage', 'imp', 'empath', 'baron', 'clockmaker');
     const { partida } = m.juego;
     expect(m.fila('sage')).toMatchObject({ estado: 'falta', avisos: [{ tipo: 'noMuere' }] });
     partida.amanecer();
@@ -79,7 +79,7 @@ describe('No Greater Joy', () => {
 
 describe('la pregunta montada del Artista', () => {
   // Asientos 1 a 5: J0 Relojero, J1 Imp, J2 Empático, J3 Barón, J4 Sabio
-  const m = () => mesa('clockmaker', 'imp', 'empath', 'baron', 'sage');
+  const m = () => plaza('clockmaker', 'imp', 'empath', 'baron', 'sage');
   const ids = (x: ReturnType<typeof m>, ...i: number[]) => i.map((n) => x.asiento(n).id);
 
   it('se contesta con el grimorio: en juego, quiénes son, sillas, entre dos y la inicial', () => {

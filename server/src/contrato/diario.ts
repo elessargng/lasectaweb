@@ -10,7 +10,7 @@ import type { FaseDto } from './partida';
  * virtual (el disparo del Exterminador, el Patoso, el Artista) solo sale con él.
  */
 
-/** Un asiento tal como estaba al apuntarlo: su número en la mesa y quien se sentaba (null: libre). */
+/** Un asiento tal como estaba al apuntarlo: su número en la plaza y quien se sentaba (null: libre). */
 export interface AsientoDiario {
   numero: number;
   nombre: string | null;

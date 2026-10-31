@@ -64,7 +64,7 @@ export class Partida {
   readonly fases = new Fases();
   /** Quién ha pedido ver el grimorio y a quién se le ha concedido. */
   readonly acceso = new AccesoGrimorio((id) => this.sala.participantes.recuerdoDe(id));
-  /** Lo que se hace con los jugadores de la mesa, los apuntes del narrador y la calavera (ver Grimorio). */
+  /** Lo que se hace con los jugadores de la plaza, los apuntes del narrador y la calavera (ver Grimorio). */
   readonly grimorio = new Grimorio({
     jugadores: () => this.sala.jugadores(),
     personaje: (id) => this.guion.personaje(id),
@@ -124,7 +124,7 @@ export class Partida {
     porEntender: (jugadorId) => this.despertares.porEntender(jugadorId),
     ponerRecordatorio: (jugadorId, personaje, texto) => this.ponerRecordatorioDe(jugadorId, personaje, texto),
     matarDeNoche: (jugadorId) => this.grimorio.cambiarVida(jugadorId, true),
-    enviarGrimorio: (jugadorId) => this.enviarGrimorioDeLaMesa(jugadorId),
+    enviarGrimorio: (jugadorId) => this.enviarGrimorioDeLaPlaza(jugadorId),
     cambiarPersonaje: (jugadorId, personaje) => this.grimorio.cambiarPersonaje(jugadorId, personaje),
   });
   /** Los faroles para el demonio (del narrador y de cada asiento). */
@@ -230,9 +230,9 @@ export class Partida {
 
   /** Un asiento para el diario: su número y quien se sienta ahora. */
   asientoDiario(jugadorId: string): AsientoDiario {
-    const mesa = this.plaza();
-    const i = mesa.findIndex((a) => a.id === jugadorId);
-    const ocupante = mesa[i]?.participanteId;
+    const plaza = this.plaza();
+    const i = plaza.findIndex((a) => a.id === jugadorId);
+    const ocupante = plaza[i]?.participanteId;
     return { numero: i + 1, nombre: ocupante ? (this.sala.participantes.buscar(ocupante)?.nombre ?? null) : null };
   }
 
@@ -245,8 +245,8 @@ export class Partida {
     return this.cuentaDe(this.plaza().find((a) => a.id === jugadorId)?.participanteId ?? null);
   }
 
-  /** Cómo está ahora la mesa, asiento a asiento (para quien escucha la partida). */
-  private fotoDeLaMesa(): FotoAsiento[] {
+  /** Cómo está ahora la plaza, asiento a asiento (para quien escucha la partida). */
+  private fotoDeLaPlaza(): FotoAsiento[] {
     return this.plaza().map((a, i) => {
       const personaje = identidadDe(a);
       return {
@@ -272,7 +272,7 @@ export class Partida {
     this.avisar({
       tipo: 'anochece',
       desdePreparacion: this.fases.actual().momento === 'preparacion',
-      mesa: this.fotoDeLaMesa(),
+      plaza: this.fotoDeLaPlaza(),
       conCalavera: marcadas.flatMap((a) => this.cuentaDe(a.participanteId) ?? []),
     });
     // Para poder volver: lo que se quita al anochecer
@@ -296,7 +296,7 @@ export class Partida {
    */
   amanecer(): void {
     this.fases.amanecer({ hilos: this.despertares.instantanea(), senalamiento: this.senalamientos.instantanea() });
-    this.avisar({ tipo: 'amanece', mesa: this.fotoDeLaMesa() });
+    this.avisar({ tipo: 'amanece', plaza: this.fotoDeLaPlaza() });
     this.despertares.cerrarTodos();
     // Lo de la noche no se ve de día (y el reloj se quita)
     this.senalamientos.terminar();
@@ -354,7 +354,7 @@ export class Partida {
     if (envio.tarjeta === 'tuEres') this.entregas.comunicarFicha(jugadorId, envio.personajes, envio.alineamiento);
   }
 
-  /** Pone un recordatorio de un personaje por su texto (en el original), único en la mesa (ver recordatorioQueSobra). */
+  /** Pone un recordatorio de un personaje por su texto (en el original), único en la plaza (ver recordatorioQueSobra). */
   private ponerRecordatorioDe(jugadorId: string, personajeId: string, texto: string): void {
     const textos = this.guion.personaje(personajeId)?.recordatorios ?? [];
     const indice = textos.findIndex((t) => t.toLowerCase() === texto.toLowerCase());
@@ -365,10 +365,10 @@ export class Partida {
   }
 
   /** Envía a quien se sienta en un asiento el grimorio tal como está (el Espía); a un asiento libre, nada. */
-  private enviarGrimorioDeLaMesa(jugadorId: string): void {
-    const mesa = this.plaza();
-    if (!mesa.find((a) => a.id === jugadorId)?.participanteId) return;
-    const fichas: FichaEnviadaDto[] = mesa.map((a) => ({
+  private enviarGrimorioDeLaPlaza(jugadorId: string): void {
+    const plaza = this.plaza();
+    if (!plaza.find((a) => a.id === jugadorId)?.participanteId) return;
+    const fichas: FichaEnviadaDto[] = plaza.map((a) => ({
       jugadorId: a.id,
       personaje: a.personaje,
       alineamiento: a.alineamiento,
@@ -421,9 +421,9 @@ export class Partida {
     hasta: string,
     registro: RegistroAlNominar = {},
   ): { pregunta: 'comoAldeano' } | { anochece: boolean; final: boolean } | null {
-    const mesa = this.plaza();
-    const nominador = mesa.find((a) => a.id === desde);
-    const nominado = mesa.find((a) => a.id === hasta);
+    const plaza = this.plaza();
+    const nominador = plaza.find((a) => a.id === desde);
+    const nominado = plaza.find((a) => a.id === hasta);
     // Pedir la expulsión de un viajero no es nominar
     const efectos = nominador && nominado && !this.reparto.llevaViajero(nominado) ? this.reglas.alNominar(nominador, nominado, registro) : null;
     if (efectos && 'pregunta' in efectos) return efectos;
@@ -512,7 +512,7 @@ export class Partida {
         if (!asiento) return { id };
         return { id, userId: this.cuentaDelAsiento(asiento) };
       }),
-      mesa: this.fotoDeLaMesa(),
+      plaza: this.fotoDeLaPlaza(),
       narradores: this.sala.participantes.narradores().map((p) => ({ userId: this.cuentaDe(p.id), nombre: p.nombre })),
       npcs: this.npcs.npcs(),
       votaciones: this.nominaciones.votaciones(),
@@ -572,7 +572,7 @@ export class Partida {
     return this.reglas.soloVecinos();
   }
 
-  /** El Voudon está vivo en la mesa (ver reglas/voudon.ts). */
+  /** El Voudon está vivo en la plaza (ver reglas/voudon.ts). */
   voudonVivo(): boolean {
     return voudonVivo(this.contextoReglas);
   }

@@ -23,7 +23,7 @@ export function participantesDePrivado(canal: string): [string, string] | null {
 
 /**
  * Mensajes privados entre jugadores (lo fija el narrador): ninguno, solo con los
- * vecinos de mesa, o con todos. Con un narrador siempre se puede.
+ * vecinos de plaza, o con todos. Con un narrador siempre se puede.
  */
 export type MensajesPrivados = 'ninguno' | 'vecinos' | 'todos';
 export const MENSAJES_PRIVADOS: MensajesPrivados[] = ['ninguno', 'vecinos', 'todos'];

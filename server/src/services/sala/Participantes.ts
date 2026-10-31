@@ -98,7 +98,7 @@ const esVirtual = (e: Entrada) => e.participante.persona.tipo === 'virtual';
 
 /**
  * Quién está en la sala: las conexiones, los papeles (narrador, jugador,
- * visitante) y las manos. No sabe de la mesa ni de la partida; por eso no
+ * visitante) y las manos. No sabe de la plaza ni de la partida; por eso no
  * comprueba permisos.
  *
  * Cada navegador trae un id de cliente propio y secreto (la «clave»); así, si se

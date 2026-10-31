@@ -153,7 +153,7 @@ export interface ReglaDjinn {
  */
 export const ESPECIAL_REPETIBLE = 'bag-duplicate';
 
-/** Los tipos que van como NPCs de la partida (no se sientan en la mesa). */
+/** Los tipos que van como NPCs de la partida (no se sientan en la plaza). */
 export const TIPOS_NPC: readonly TipoPersonaje[] = ['fabled', 'loric'];
 
 /** Un guion por defecto que se puede elegir. */

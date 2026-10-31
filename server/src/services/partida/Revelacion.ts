@@ -19,10 +19,10 @@ export class Revelacion {
   revelacion(): RevelacionDto | null {
     const r = this.actual;
     if (!r) return null;
-    const mesa = this.plaza();
-    // Solo cuentan los asientos que siguen en la mesa
-    const reveladas = r.reveladas.filter((id) => mesa.some((a) => a.id === id));
-    const terminada = mesa.every((a) => reveladas.includes(a.id));
+    const plaza = this.plaza();
+    // Solo cuentan los asientos que siguen en la plaza
+    const reveladas = r.reveladas.filter((id) => plaza.some((a) => a.id === id));
+    const terminada = plaza.every((a) => reveladas.includes(a.id));
     // Lo que ha pasado dice quién estaba en juego: no se cuenta hasta que todo está revelado
     return { ganador: r.ganador, causas: terminada ? [...r.causas] : [], reveladas, terminada };
   }

@@ -12,14 +12,14 @@ import type { RespuestaArtista } from '../../contrato/artista';
 import { preguntarComoArtista } from './dia/artista';
 import { contarDisparo, exterminar } from './dia/exterminar';
 import { contarPatoso } from './dia/patoso';
-import { vivo } from './mesaDeJuego';
+import { vivo } from './plazaDeJuego';
 import { comprobarFinal, esDemonio, type Ganador } from './final/comprobarFinal';
 import { Revelando } from './etapas/Revelando';
 import { Violinista } from './etapas/Violinista';
 import { FRASES } from './frases';
 import { recuerdosNuevos } from './noche/criterioDroison';
 import { prepararPartida, type FueraDeLaBolsa } from './preparacion';
-import type { Azar, BolsasRecientes, MesaNarrador, ModelosJarvis, Temporizador, Voz } from './puertos';
+import type { Azar, BolsasRecientes, Narrador, ModelosJarvis, Temporizador, Voz } from './puertos';
 import { ConRespaldo } from './estrategias/ConRespaldo';
 import { Jarvis } from './estrategias/Jarvis';
 
@@ -56,7 +56,7 @@ const EN_PARTIDA = ['noche', 'privados', 'puestaEnComun', 'nominaciones'];
 /**
  * El narrador virtual de la sala (servicio de aplicación): lo añade y lo quita, y
  * lleva la partida pasando por sus etapas (patrón Estado). Actúa como un narrador
- * más: todo lo que hace va por las acciones de la sala (`MesaNarrador`), con sus
+ * más: todo lo que hace va por las acciones de la sala (`Narrador`), con sus
  * mismas reglas. Cada vez que cambia la sala (`alCambiarSala`), la etapa en curso
  * mira si le toca hacer algo. Sin nadie en la sala, se va solo.
  */
@@ -77,8 +77,8 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
 
   constructor(
     private readonly juego: SalaDeJuego,
-    /** La mesa del narrador virtual con ese participante. */
-    private readonly mesaDe: (participanteId: string) => MesaNarrador,
+    /** La plaza del narrador virtual con ese participante. */
+    private readonly plazaDe: (participanteId: string) => Narrador,
     private readonly voz: Voz,
     private readonly temporizador: Temporizador,
     /** Manda la sala a todos (lo que cambia el propio narrador virtual sin pasar por una acción: su etapa). */
@@ -111,7 +111,7 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     this.estrategia = estrategia;
     // Si no se pueden leer o apuntar las recientes, la partida sigue igual
     const recientes = (await this.bolsas?.de(creador).catch(() => null)) ?? [];
-    const preparada = await prepararPartida(this.juego, this.mesaDe(participante), (d) => this.contextoDecisiones().decidir(d), {
+    const preparada = await prepararPartida(this.juego, this.plazaDe(participante), (d) => this.contextoDecisiones().decidir(d), {
       guion,
       jugadores,
       azar: this.azar,
@@ -253,7 +253,7 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     if (!narrador) return;
     for (const p of sala.participantes.participantes()) {
       if (p.rol === 'visitante' && partida.acceso.de(p.id) === 'solicitado') {
-        await this.mesaDe(narrador.participante).accion('narrador:accesoGrimorio', { participanteId: p.id, conceder: true });
+        await this.plazaDe(narrador.participante).accion('narrador:accesoGrimorio', { participanteId: p.id, conceder: true });
       }
     }
   }
@@ -302,7 +302,7 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     if (!narrador || !this.estrategia) throw new Error('No hay narrador virtual.');
     return {
       juego: this.juego,
-      mesa: this.mesaDe(narrador.participante),
+      plaza: this.plazaDe(narrador.participante),
       ...this.contextoDecisiones(),
       azar: this.azar,
       temporizador: this.temporizador,
@@ -328,7 +328,7 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     narrador.actualizar({ etapa: etapa.id });
     this.difundir();
     await etapa.alEntrar?.(this.contexto());
-    // Por si ya le toca algo (la mesa ya estaba llena)
+    // Por si ya le toca algo (la plaza ya estaba llena)
     this.alCambiarSala();
   }
 }

@@ -4,7 +4,7 @@ import { elegirVarios } from '../estrategias/EstrategiaNarrador';
 import { FRASES } from '../frases';
 import { describirPersonaje, opcionesDeAsientos } from '../grimorio';
 import { malvadosSeConocen } from '../../partida/habilidades/malvados';
-import { contextoNoche, nombreDeAsiento, sinEntender, todosHanEntendido, tipoReal, vivo } from '../mesaDeJuego';
+import { contextoNoche, nombreDeAsiento, sinEntender, todosHanEntendido, tipoReal, vivo } from '../plazaDeJuego';
 import { planificarNoche } from '../noche/planificarNoche';
 import { cumplirRequisitos, ponerFaroles, ponerRecordatorio } from '../noche/requisitos';
 import { resolverRevision } from '../noche/revisiones';
@@ -109,9 +109,9 @@ export class Noche implements Etapa {
   private async recordarEntendido(ctx: ContextoEtapa, asientos: string[]): Promise<void> {
     const faltan = sinEntender(ctx.juego).filter((id) => asientos.includes(id));
     if (!faltan.length) return;
-    await ctx.mesa.accion('narrador:sonarGong');
+    await ctx.plaza.accion('narrador:sonarGong');
     for (const jugadorId of faltan) {
-      await ctx.mesa.accion('despertar:enviar', { jugadorId, ficha: 'personalizado', texto: RECORDAR_ENTENDIDO });
+      await ctx.plaza.accion('despertar:enviar', { jugadorId, ficha: 'personalizado', texto: RECORDAR_ENTENDIDO });
     }
   }
 
@@ -180,7 +180,7 @@ export class Noche implements Etapa {
       if (fila.estado === 'falta') {
         if (!(await cumplirRequisitos(ctx, fila))) return;
       } else if (fila.estado === 'listo') {
-        if (!(await ctx.mesa.accion('narrador:despertarHabilidad', { personajeId: personaje })).ok) return;
+        if (!(await ctx.plaza.accion('narrador:despertarHabilidad', { personajeId: personaje })).ok) return;
       } else if (fila.estado === 'esperando') {
         await this.esperarEleccion(ctx, fila);
       } else if (fila.estado === 'revisar') {
@@ -208,7 +208,7 @@ export class Noche implements Etapa {
         eleccion.cantidad,
       );
       const jugadores = elegidos.map((a) => a.id);
-      await ctx.mesa.accion('despertar:enviar', { jugadorId: asiento.id, ficha: 'jugador', jugadores });
+      await ctx.plaza.accion('despertar:enviar', { jugadorId: asiento.id, ficha: 'jugador', jugadores });
     }
     // Si aún no se le ha pedido (espera a que entienda lo anterior: ver DespertarGuiado), se le recuerda
     const elegido = () => this.fila(ctx, fila.personaje)?.estado !== 'esperando';
@@ -228,7 +228,7 @@ export class Noche implements Etapa {
       opciones: opcionesDeAsientos(ctx.juego, esbirros),
     });
     const era = identidadDe(nuevo);
-    if ((await ctx.mesa.accion('narrador:nuevoImp', { jugadorId: nuevo.id })).ok && era) ctx.recuerdos.cronica.antes.set(nuevo.id, era);
+    if ((await ctx.plaza.accion('narrador:nuevoImp', { jugadorId: nuevo.id })).ok && era) ctx.recuerdos.cronica.antes.set(nuevo.id, era);
   }
 
   /**
@@ -249,8 +249,8 @@ export class Noche implements Etapa {
     const nombres = muertos.map((a) => nombreDeAsiento(juego, a.id));
     // Antes de que se cierren los despertares: lo que se ha dado y quién ha matado a quién
     apuntarNoche(ctx.recuerdos.cronica, juego);
-    if (!(await ctx.mesa.accion('narrador:amanecer')).ok) return;
-    for (const a of muertos) await ctx.mesa.accion('narrador:confirmarMuerte', { jugadorId: a.id });
+    if (!(await ctx.plaza.accion('narrador:amanecer')).ok) return;
+    for (const a of muertos) await ctx.plaza.accion('narrador:confirmarMuerte', { jugadorId: a.id });
     abrirPatosos(juego, muertos.map((a) => a.id), 'anochecer');
     const buenosDias = partida.fases.actual().numero === 1 ? FRASES.primerDia(duracionPrivados(juego) / 1000) : FRASES.buenosDias(nombres);
     // Si con las muertes de la noche se acaba la partida, se revela

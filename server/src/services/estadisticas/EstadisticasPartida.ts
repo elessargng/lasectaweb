@@ -31,13 +31,13 @@ export class EstadisticasPartida {
     switch (evento.tipo) {
       case 'anochece':
         this.recordarPaso();
-        if (evento.desdePreparacion || !this.seguimiento.estaEmpezada()) this.seguimiento.empezar(fotosDeCuentas(evento.mesa));
+        if (evento.desdePreparacion || !this.seguimiento.estaEmpezada()) this.seguimiento.empezar(fotosDeCuentas(evento.plaza));
         else for (const userId of evento.conCalavera) this.seguimiento.ejecutado(userId);
         return;
       case 'amanece':
         this.recordarPaso();
         // El rol con el que empieza el día cuenta como jugado (los cambios de la noche, no)
-        this.seguimiento.anotarRoles(fotosDeCuentas(evento.mesa));
+        this.seguimiento.anotarRoles(fotosDeCuentas(evento.plaza));
         return;
       case 'nominacion':
         this.seguimiento.nomina(evento.nomina, evento.nominado);
@@ -81,14 +81,14 @@ export class EstadisticasPartida {
 
   /** Se acaba la partida: se guarda lo de cada uno (si se había empezado a jugar) y la mesa, para el historial. */
   private terminar(fin: Extract<EventoPartida, { tipo: 'partidaTerminada' }>): void {
-    const jugadores = this.seguimiento.estaEmpezada() ? this.seguimiento.terminar(fotosDeCuentas(fin.mesa), fin.ganador, fin.causas) : [];
+    const jugadores = this.seguimiento.estaEmpezada() ? this.seguimiento.terminar(fotosDeCuentas(fin.plaza), fin.ganador, fin.causas) : [];
     const narradores = fin.narradores.map((n) => n.userId).filter((id): id is string => !!id);
     const diario = this.diario;
     this.diario = [];
     if (jugadores.length === 0 && narradores.length === 0) return;
     this.guardar({
       diario,
-      mesa: fin.mesa,
+      mesa: fin.plaza,
       narradoresNombres: fin.narradores.map((n) => n.nombre),
       npcs: fin.npcs,
       votaciones: fin.votaciones,

@@ -18,7 +18,7 @@ export interface FichaEnviadaDto {
 
 /**
  * Un grimorio enviado (el último) a un jugador: cuándo, sus fichas (en el orden de
- * la mesa) y los faroles del demonio (ids de personaje, hasta NUM_FAROLES).
+ * la plaza) y los faroles del demonio (ids de personaje, hasta NUM_FAROLES).
  */
 export interface GrimorioEnviadoDto {
   hora: number;

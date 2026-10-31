@@ -11,7 +11,7 @@ import { ConversacionError, ConversacionService } from '../services/conversacion
 import { PaseVideo, VideollamadaError, VideollamadaService } from '../services/videollamada/VideollamadaService';
 import { accionesPermitidas, DependenciasSala, ejecutarAccion } from './salaAcciones';
 import { NarradorVirtualService } from '../services/narradorVirtual/NarradorVirtualService';
-import { temporizadorReal, type MesaNarrador } from '../services/narradorVirtual/puertos';
+import { temporizadorReal, type Narrador } from '../services/narradorVirtual/puertos';
 
 /** Bajo /api para que pase por el mismo proxy que el resto de la API. */
 export const SALA_SOCKET_PATH = '/api/socket.io';
@@ -98,7 +98,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
   };
 
   // El narrador virtual actúa como un narrador más: con las mismas acciones, y la sala se difunde
-  const mesaVirtual = (participanteId: string): MesaNarrador => ({
+  const plazaVirtual = (participanteId: string): Narrador => ({
     accion: async (nombre, datos) => {
       const { expulsar: _expulsar, ...resultado } = await ejecutarAccion(juego, sala.participantes.buscar(participanteId), nombre, datos, depsSala);
       if (resultado.ok) {
@@ -110,7 +110,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
   });
   const narradorVirtual = new NarradorVirtualService(
     juego,
-    mesaVirtual,
+    plazaVirtual,
     {
       decir: (texto) => {
         io.emit('sala:voz', { texto });
@@ -237,7 +237,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     // Al cambiar de papel cambia lo que se puede leer: el cliente pide su historial.
     socket.on('chat:historial', miHistorial);
 
-    // Videollamada: el pase para la mesa («principal») o para su conversación privada.
+    // Videollamada: el pase para la plaza («principal») o para su conversación privada.
     socket.on('video:pase', async (peticion: { sala?: unknown } | null, ack?: (r: ResultadoAccion & Partial<PaseVideo>) => void) => {
       const responder = (r: ResultadoAccion & Partial<PaseVideo>) => typeof ack === 'function' && ack(r);
       const p = yo();

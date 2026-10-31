@@ -118,9 +118,9 @@ export interface ConfiguracionDto {
    */
   fondo: string | null;
   /**
-   * Las cámaras de quien conversa en privado no se ven en la mesa (de entrada,
-   * sí se ocultan). Si no, en la mesa se ve su cámara, sin su voz (de día: de
-   * noche no hay cámaras en la mesa).
+   * Las cámaras de quien conversa en privado no se ven en la plaza (de entrada,
+   * sí se ocultan). Si no, en la plaza se ve su cámara, sin su voz (de día: de
+   * noche no hay cámaras en la plaza).
    */
   ocultarCamarasConversacion: boolean;
 }

@@ -3,7 +3,7 @@ import type { RegistroVotacionDto } from '../../contrato/partida';
 import { droison } from '../partida/reglas/ReglaPersonaje';
 import type { Opcion } from './estrategias/EstrategiaNarrador';
 import type { SalaDeJuego } from '../SalaDeJuego';
-import { contextoNoche, nombreDeAsiento, tipoReal, vivo } from './mesaDeJuego';
+import { contextoNoche, nombreDeAsiento, tipoReal, vivo } from './plazaDeJuego';
 import { identidadDe } from '../partida/Grimorio';
 import type { Jugador } from '../partida/Jugador';
 

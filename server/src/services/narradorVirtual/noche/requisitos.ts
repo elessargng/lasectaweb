@@ -2,7 +2,7 @@ import { type HabilidadNocheDto } from '../../../contrato/despertar';
 import { NUM_FAROLES } from '../../../contrato/jugador';
 import type { ContextoEtapa } from '../etapas/Etapa';
 import { describirPersonaje, opcionesDeAsientos } from '../grimorio';
-import { indiceRecordatorio, tipoReal } from '../mesaDeJuego';
+import { indiceRecordatorio, tipoReal } from '../plazaDeJuego';
 import { identidadDe } from '../../partida/Grimorio';
 import type { Jugador } from '../../partida/Jugador';
 
@@ -20,7 +20,7 @@ const TIPO_DEL_CORRECTO: Record<string, string> = { townsfolk: 'townsfolk', outs
 export async function ponerRecordatorio(ctx: ContextoEtapa, jugadorId: string, personaje: string, texto: string): Promise<boolean> {
   const indice = indiceRecordatorio(ctx.juego, personaje, texto);
   if (indice < 0) return false;
-  return (await ctx.mesa.accion('narrador:ponerRecordatorio', { jugadorId, personajeId: personaje, indice })).ok;
+  return (await ctx.plaza.accion('narrador:ponerRecordatorio', { jugadorId, personajeId: personaje, indice })).ok;
 }
 
 /**
@@ -54,14 +54,14 @@ export async function ponerFaroles(ctx: ContextoEtapa): Promise<boolean> {
       }),
     );
   }
-  for (const [posicion, personajeId] of faroles.entries()) await ctx.mesa.accion('narrador:farol', { posicion, personajeId });
+  for (const [posicion, personajeId] of faroles.entries()) await ctx.plaza.accion('narrador:farol', { posicion, personajeId });
   return faroles.length > 0;
 }
 
 /** Le despierta y le dice «cero» (no hay nadie que enseñarle). La fila no queda hecha: no hace falta. */
 async function decirCero(ctx: ContextoEtapa, jugadorId: string): Promise<false> {
-  if ((await ctx.mesa.accion('narrador:despertar', { jugadorId })).ok) {
-    await ctx.mesa.accion('despertar:enviar', { jugadorId, ficha: 'cero' });
+  if ((await ctx.plaza.accion('narrador:despertar', { jugadorId })).ok) {
+    await ctx.plaza.accion('despertar:enviar', { jugadorId, ficha: 'cero' });
   }
   return false;
 }

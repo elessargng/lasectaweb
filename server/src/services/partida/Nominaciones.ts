@@ -128,11 +128,11 @@ export class Nominaciones {
   private empezarVotacion(): void {
     const n = this.nominacionVigente();
     if (!n) return;
-    const mesa = this.entorno.plaza();
-    const i = mesa.findIndex((a) => a.id === n.hasta);
-    const orden = mesa.map((_, k) => mesa[(i + 1 + k) % mesa.length].id);
+    const plaza = this.entorno.plaza();
+    const i = plaza.findIndex((a) => a.id === n.hasta);
+    const orden = plaza.map((_, k) => plaza[(i + 1 + k) % plaza.length].id);
     n.votacion = { orden, paso: 0, resultados: {}, votos: 0, terminada: false };
-    n.gastadosAlVotar = mesa.filter((a) => a.votoGastado).map((a) => a.id);
+    n.gastadosAlVotar = plaza.filter((a) => a.votoGastado).map((a) => a.id);
     this.entorno.alCambiarSola();
     this.temporizador = setTimeout(() => this.avanzarVotacion(), this.entorno.segundosPorFicha() * 1000);
   }

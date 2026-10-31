@@ -6,10 +6,10 @@ import type { ResultadoAccion } from '../../contrato/sala';
  */
 
 /**
- * La mesa vista por el narrador virtual: hace lo que haría un narrador, con las
- * mismas acciones de la sala (y los mismos permisos), y la sala se difunde a todos.
+ * El narrador virtual en la plaza: hace lo que haría un narrador, con las mismas
+ * acciones de la sala (y los mismos permisos), y la sala se difunde a todos.
  */
-export interface MesaNarrador {
+export interface Narrador {
   accion(nombre: string, datos?: unknown): Promise<ResultadoAccion>;
 }
 

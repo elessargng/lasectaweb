@@ -51,7 +51,7 @@ export type MotivoDecision =
   | 'patoso';
 
 /**
- * Lo que la mesa sabe de una opción y le sirve al narrador para decidir: es la
+ * Lo que la plaza sabe de una opción y le sirve al narrador para decidir: es la
  * verdad, es creíble, inculpa a un bueno, confirma el farol de un malvado, no le
  * cuesta nada al mal, es un forastero, encaja con el concepto de la partida…
  */
@@ -89,7 +89,7 @@ export interface PreguntaSiONo {
   /** Lo que significa cada respuesta. */
   si: string;
   no: string;
-  /** La probabilidad de «sí» que aconseja la mesa (0..1): lo que haría un narrador al azar. */
+  /** La probabilidad de «sí» que aconseja la plaza (0..1): lo que haría un narrador al azar. */
   probabilidad?: number;
 }
 

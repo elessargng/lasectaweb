@@ -3,7 +3,7 @@ import type { Decision, EstrategiaNarrador, PreguntaSiONo } from './EstrategiaNa
 
 /**
  * «Tonto y tú»: elige siempre al azar entre lo que se puede, con el peso que
- * aconseja la mesa en cada opción, y contesta sí o no con la probabilidad que
+ * aconseja la plaza en cada opción, y contesta sí o no con la probabilidad que
  * aconseja (o a cara o cruz). No mira el grimorio.
  */
 export class TontoYTu implements EstrategiaNarrador {

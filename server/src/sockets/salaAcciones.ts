@@ -333,8 +333,8 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       yo.rol === 'jugador'
         ? 'Ya estás sentado.'
         : yo.rol === 'narrador'
-          ? 'Los narradores no se sientan en la mesa.'
-          : 'Quien ha visto el grimorio del narrador no puede sentarse en la mesa.',
+          ? 'Los narradores no se sientan en la plaza.'
+          : 'Quien ha visto el grimorio del narrador no puede sentarse en la plaza.',
     hacer: (juego, yo, datos) => {
       const { sala } = juego;
       const jugadorId = (datos as { jugadorId?: unknown } | null)?.jugadorId;
@@ -820,7 +820,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
         ? 'Solo un narrador puede marcar una ficha.'
         : partida.fases.actual().momento === 'noche'
           ? 'De noche no se marca a nadie.'
-          : 'La mesa no tiene asientos.',
+          : 'La plaza no tiene asientos.',
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
       const { jugadorId, marcado, cerrarNominacion } =
@@ -1100,7 +1100,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    */
   'narrador:senalamiento': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
-    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador puede pedir que se señale.'),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La plaza no tiene asientos.' : 'Solo un narrador puede pedir que se señale.'),
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
       const d = (datos as { mensaje?: unknown; segundos?: unknown; senaladores?: unknown; objetivos?: unknown } | null) ?? {};
@@ -1136,7 +1136,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && !!partida.esbirrosLilmonsta(),
     noPuede: (_sala, yo) =>
       yo.rol === 'narrador'
-        ? "Lil' Monsta se empieza de noche, sin demonio en la mesa y con un esbirro de más."
+        ? "Lil' Monsta se empieza de noche, sin demonio en la plaza y con un esbirro de más."
         : "Solo un narrador puede empezar Lil' Monsta.",
     hacer: (juego) => {
       const { partida } = juego;
@@ -1207,7 +1207,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    */
   'narrador:cambiarPersonaje': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
-    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador puede cambiar las fichas.'),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La plaza no tiene asientos.' : 'Solo un narrador puede cambiar las fichas.'),
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
       const { jugadorId, personajeId } = (datos as { jugadorId?: unknown; personajeId?: unknown }) ?? {};
@@ -1258,7 +1258,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    */
   'narrador:ponerRecordatorio': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
-    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador pone recordatorios.'),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La plaza no tiene asientos.' : 'Solo un narrador pone recordatorios.'),
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
       const { jugadorId, personajeId, indice } = (datos as { jugadorId?: unknown; personajeId?: unknown; indice?: unknown }) ?? {};
@@ -1284,7 +1284,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    */
   'narrador:ponerRecordatorioTexto': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
-    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador pone recordatorios.'),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La plaza no tiene asientos.' : 'Solo un narrador pone recordatorios.'),
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
       const { jugadorId, texto, icono } = (datos as { jugadorId?: unknown; texto?: unknown; icono?: unknown }) ?? {};
@@ -1311,7 +1311,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    */
   'narrador:escribirNota': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
-    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador escribe notas.'),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La plaza no tiene asientos.' : 'Solo un narrador escribe notas.'),
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
       const { jugadorId, texto } = (datos as { jugadorId?: unknown; texto?: unknown }) ?? {};
@@ -1327,7 +1327,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   /**
    * Envía un grimorio (el Espía, la Viuda) a quien se sienta en un asiento: una
    * copia del de la partida que el narrador puede haber cambiado. Se comprueba que
-   * cada ficha sea de un asiento de la mesa y lleve personajes del guion.
+   * cada ficha sea de un asiento de la plaza y lleve personajes del guion.
    * datos: { jugadorId, fichas: FichaEnviadaDto[], faroles?: string[] }.
    */
   'narrador:enviarGrimorio': {
@@ -1340,10 +1340,10 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       if (!destino || typeof jugadorId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
       if (!destino.participanteId) return { ok: false, error: 'En ese asiento no hay nadie a quien enviárselo.' };
       if (!Array.isArray(fichas) || fichas.length > SALA_ASIENTOS.max) return { ok: false, error: 'El grimorio no es válido.' };
-      const mesa = new Set(partida.plaza().map((a) => a.id));
+      const plaza = new Set(partida.plaza().map((a) => a.id));
       const limpias: FichaEnviadaDto[] = [];
       for (const f of fichas as Record<string, unknown>[]) {
-        if (!f || typeof f.jugadorId !== 'string' || !mesa.has(f.jugadorId)) return { ok: false, error: 'El grimorio no es válido.' };
+        if (!f || typeof f.jugadorId !== 'string' || !plaza.has(f.jugadorId)) return { ok: false, error: 'El grimorio no es válido.' };
         const personaje = f.personaje === null ? null : typeof f.personaje === 'string' && partida.guion.personaje(f.personaje) ? f.personaje : undefined;
         if (personaje === undefined) return { ok: false, error: 'Hay un personaje que no está en el guion.' };
         const alineamiento = f.alineamiento === 'bueno' || f.alineamiento === 'malvado' ? f.alineamiento : null;
@@ -1708,7 +1708,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
         ? 'Solo un narrador puede revelar el grimorio.'
         : partida.revelacion.revelacion()
           ? 'Ya se está revelando el grimorio.'
-          : 'La mesa no tiene asientos.',
+          : 'La plaza no tiene asientos.',
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
       const { ganador, causas = [], esbirros = {} } =
@@ -1804,7 +1804,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   /** Cambia el alineamiento de la ficha de un asiento. datos: { jugadorId, alineamiento: 'bueno' | 'malvado' }. */
   'narrador:cambiarAlineamiento': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
-    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador puede cambiar las fichas.'),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La plaza no tiene asientos.' : 'Solo un narrador puede cambiar las fichas.'),
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
       const { jugadorId, alineamiento } = (datos as { jugadorId?: unknown; alineamiento?: unknown }) ?? {};
@@ -1824,7 +1824,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    */
   'narrador:cambiarVida': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
-    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador puede matar o revivir.'),
+    noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La plaza no tiene asientos.' : 'Solo un narrador puede matar o revivir.'),
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
       const { jugadorId, muerto } = (datos as { jugadorId?: unknown; muerto?: unknown }) ?? {};
@@ -1945,12 +1945,12 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       const cambio = (datos as { cambio?: unknown } | null)?.cambio;
       const total = partida.plaza().length;
       if (cambio === 'añadir') {
-        if (total >= SALA_ASIENTOS.max) return { ok: false, error: `La mesa ya tiene el máximo de ${SALA_ASIENTOS.max} asientos.` };
+        if (total >= SALA_ASIENTOS.max) return { ok: false, error: `La plaza ya tiene el máximo de ${SALA_ASIENTOS.max} asientos.` };
         sala.anadirAsiento();
         return { ok: true };
       }
       if (cambio === 'quitar') {
-        if (total <= SALA_ASIENTOS.min) return { ok: false, error: 'La mesa ya no tiene asientos.' };
+        if (total <= SALA_ASIENTOS.min) return { ok: false, error: 'La plaza ya no tiene asientos.' };
         sala.quitarAsiento();
         return { ok: true };
       }

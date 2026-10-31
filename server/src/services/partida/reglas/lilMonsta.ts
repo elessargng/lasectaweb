@@ -20,9 +20,9 @@ export function esbirrosLilmonsta(
 ): string[] | null {
   if (!partida.noche || !partida.enElGuion) return null;
   const tipo = (a: Jugador) => (a.personaje ? ctx.personaje(a.personaje)?.tipo : undefined);
-  const mesa = ctx.plaza();
-  if (mesa.some((a) => tipo(a) === 'demon')) return null;
-  const esbirros = mesa.filter((a) => tipo(a) === 'minion');
+  const plaza = ctx.plaza();
+  if (plaza.some((a) => tipo(a) === 'demon')) return null;
+  const esbirros = plaza.filter((a) => tipo(a) === 'minion');
   const tocan = partida.esbirrosQueTocan;
   if (esbirros.length === 0 || (tocan !== null && esbirros.length <= tocan)) return null;
   const vivos = esbirros.filter((a) => !a.muerto).map((a) => a.id);

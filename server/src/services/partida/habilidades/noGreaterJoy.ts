@@ -28,15 +28,15 @@ class Relojero extends RecibeInformacion {
     super('clockmaker');
   }
 
-  /** Como mucho, media mesa. */
+  /** Como mucho, media plaza. */
   maximoNumero(ctx: ContextoNoche): number {
     return Math.floor(ctx.plaza().length / 2);
   }
 
   protected informacion(ctx: ContextoNoche) {
-    const mesa = ctx.plaza();
-    const n = mesa.length;
-    const posiciones = (tipo: string) => mesa.flatMap((a, i) => (tipoDe(ctx, a) === tipo ? [i] : []));
+    const plaza = ctx.plaza();
+    const n = plaza.length;
+    const posiciones = (tipo: string) => plaza.flatMap((a, i) => (tipoDe(ctx, a) === tipo ? [i] : []));
     const distancias = posiciones('demon').flatMap((d) => posiciones('minion').map((e) => Math.min(Math.abs(d - e), n - Math.abs(d - e))));
     return { opciones: [{ envio: numero(distancias.length ? Math.min(...distancias) : 0), registros: [] }] };
   }
@@ -89,12 +89,12 @@ class Sabio extends RecibeInformacion {
   }
 
   protected informacion(ctx: ContextoNoche, asiento: Jugador) {
-    const mesa = ctx.plaza();
-    const otros = mesa.filter((a) => a.id !== asiento.id);
+    const plaza = ctx.plaza();
+    const otros = plaza.filter((a) => a.id !== asiento.id);
     const demonio = otros.find((a) => tipoDe(ctx, a) === 'demon');
     const pareja = (a: Jugador, b: Jugador, personaje: string): OpcionDespertar => ({
-      // En el orden de la mesa: que no se sepa cuál es
-      envio: tarjeta('esteJugadorEs', { jugadores: mesa.filter((x) => x.id === a.id || x.id === b.id).map((x) => x.id), personajes: [personaje] }),
+      // En el orden de la plaza: que no se sepa cuál es
+      envio: tarjeta('esteJugadorEs', { jugadores: plaza.filter((x) => x.id === a.id || x.id === b.id).map((x) => x.id), personajes: [personaje] }),
       registros: [],
     });
     const ciertas = demonio ? otros.filter((a) => a !== demonio).map((a) => pareja(demonio, a, ctx.identidad(demonio)!)) : [];

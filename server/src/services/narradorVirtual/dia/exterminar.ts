@@ -3,7 +3,7 @@ import type { ContextoEtapa } from '../etapas/Etapa';
 import { apuntarMuerteDeDia } from '../final/cronica';
 import { comprobarFinal, type Ganador } from '../final/comprobarFinal';
 import { duracionFrase, FRASES, PAUSA_MS } from '../frases';
-import { contextoNoche, nombreDeAsiento, tipoReal } from '../mesaDeJuego';
+import { contextoNoche, nombreDeAsiento, tipoReal } from '../plazaDeJuego';
 import { ponerRecordatorio } from '../noche/requisitos';
 import { abrirPatosos } from './patoso';
 import { identidadDe } from '../../partida/Grimorio';
@@ -44,7 +44,7 @@ export async function morirDeUnDisparo(ctx: ContextoEtapa, jugadorId: string): P
   const { partida } = juego;
   const objetivo = partida.plaza().find((a) => a.id === jugadorId);
   if (!objetivo) return;
-  await ctx.mesa.accion('narrador:cambiarVida', { jugadorId, muerto: true });
+  await ctx.plaza.accion('narrador:cambiarVida', { jugadorId, muerto: true });
   apuntarMuerteDeDia(ctx.recuerdos.cronica, juego, jugadorId, 'exterminador');
   abrirPatosos(juego, [jugadorId], 'amanecer');
   const narrador = juego.narrador.actual();

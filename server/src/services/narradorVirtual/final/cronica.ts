@@ -2,7 +2,7 @@ import type { EnvioDespertar } from '../../../contrato/despertar';
 import { droison } from '../../partida/reglas/ReglaPersonaje';
 import type { SalaDeJuego } from '../../SalaDeJuego';
 import { FRASES, type MuerteRevelada, type NocheRevelada } from '../frases';
-import { contextoNoche, nombreDeAsiento, tipoReal } from '../mesaDeJuego';
+import { contextoNoche, nombreDeAsiento, tipoReal } from '../plazaDeJuego';
 import { numeroDe } from '../noche/informacionFalsa';
 import { identidadDe } from '../../partida/Grimorio';
 import type { Jugador } from '../../partida/Jugador';

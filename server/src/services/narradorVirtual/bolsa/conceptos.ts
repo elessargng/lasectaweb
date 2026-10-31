@@ -76,7 +76,7 @@ export const CONCEPTOS_MAL: Record<ConceptoMal, { descripcion: string; esbirro: 
     forasteros: [],
   },
   caos: {
-    descripcion: 'el mal llena la mesa de forasteros que enredan las votaciones y las ejecuciones',
+    descripcion: 'el mal llena la plaza de forasteros que enredan las votaciones y las ejecuciones',
     esbirro: 'baron',
     forasteros: ['saint', 'butler', 'recluse'],
   },

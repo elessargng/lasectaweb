@@ -43,7 +43,7 @@ export interface SalaDto {
   /** El narrador virtual, si lo hay. */
   narradorVirtual: NarradorVirtualDto | null;
   /**
-   * Quien tiene la palabra en la mesa (el narrador virtual, al nominar): los demás
+   * Quien tiene la palabra en la plaza (el narrador virtual, al nominar): los demás
    * jugadores tienen el micrófono cerrado. null: hablan todos.
    */
   palabra: string | null;
@@ -82,7 +82,7 @@ export interface SalaDto {
   setupAceptado: string | null;
   /**
    * El narrador ha pedido silencio (con el Bibliotecario del Infierno en juego):
-   * los jugadores no pueden emitir su micrófono, ni en la mesa ni en las
+   * los jugadores no pueden emitir su micrófono, ni en la plaza ni en las
    * conversaciones. Para todos.
    */
   silencio: boolean;

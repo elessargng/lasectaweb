@@ -4,7 +4,7 @@ import { Noche } from './Noche';
 
 /**
  * Con la partida preparada (asientos, guion y bolsa), espera a que se llene la
- * mesa. Llena, reparte los personajes y empieza la primera noche.
+ * plaza. Llena, reparte los personajes y empieza la primera noche.
  */
 export class EsperandoJugadores implements Etapa {
   readonly id = 'esperandoJugadores' as const;
@@ -13,9 +13,9 @@ export class EsperandoJugadores implements Etapa {
     const { partida } = ctx.juego;
     const asientos = partida.plaza();
     if (asientos.length === 0 || asientos.some((a) => !a.participanteId)) return;
-    const reparto = await ctx.mesa.accion('narrador:asignarPersonajes');
+    const reparto = await ctx.plaza.accion('narrador:asignarPersonajes');
     if (!reparto.ok) return;
-    const noche = await ctx.mesa.accion('narrador:irANoche');
+    const noche = await ctx.plaza.accion('narrador:irANoche');
     if (!noche.ok) return;
     ctx.decir(FRASES.primeraNoche());
     await ctx.pasarA(new Noche());

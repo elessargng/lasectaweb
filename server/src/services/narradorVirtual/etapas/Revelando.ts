@@ -31,7 +31,7 @@ export class Revelando implements Etapa {
     narrador.actualizar({ patosos: [] });
     // Si acaba antes de la noche en que lo sería, la Mujer Escarlata que ha heredado se revela ya como el Imp
     await escarlataAImp(ctx);
-    if (!(await ctx.mesa.accion('narrador:revelarGrimorio', { ganador: this.ganador })).ok) return;
+    if (!(await ctx.plaza.accion('narrador:revelarGrimorio', { ganador: this.ganador })).ok) return;
     const asientos = partida.plaza();
     const demonios = asientos.filter((a) => esDemonio(ctx.juego, a));
     const orden = [...barajar(asientos.filter((a) => !demonios.includes(a)), ctx.azar), ...barajar(demonios, ctx.azar)];
@@ -53,7 +53,7 @@ export class Revelando implements Etapa {
       const asiento = partida.plaza().find((a) => a.id === jugadorId);
       if (!asiento) continue;
       const frase = fraseAlRevelar(ctx.recuerdos.cronica, ctx.juego, asiento);
-      await ctx.mesa.accion('narrador:revelarFicha', { jugadorId });
+      await ctx.plaza.accion('narrador:revelarFicha', { jugadorId });
       ctx.decir(frase);
       espera = Math.max(ENTRE_FICHAS_MS, duracionFrase(frase));
     }

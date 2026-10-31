@@ -54,7 +54,7 @@ export class Violinista implements Etapa {
         })
       ).id;
     if (!this.seguir) return;
-    await ctx.mesa.accion('narrador:senalamiento', {
+    await ctx.plaza.accion('narrador:senalamiento', {
       mensaje: '¿Quién gana? Señala a uno de los dos',
       segundos: SENALAMIENTO_SEGUNDOS,
       objetivos: [demonio.id, bueno],
@@ -62,7 +62,7 @@ export class Violinista implements Etapa {
     await this.esperar(ctx, SENALAMIENTO_SEGUNDOS * 1000 + 500);
     if (!this.seguir) return;
     const senales = Object.values(partida.senalamientos.senalamiento()?.senales ?? {});
-    await ctx.mesa.accion('narrador:terminarSenalamiento');
+    await ctx.plaza.accion('narrador:terminarSenalamiento');
     const alDemonio = senales.filter((s) => s === demonio.id).length;
     const alBueno = senales.filter((s) => s === bueno).length;
     const ganador: Ganador =
@@ -74,18 +74,18 @@ export class Violinista implements Etapa {
   private async eligeElDemonio(ctx: ContextoEtapa, demonio: string, buenos: string[]): Promise<string | null> {
     const { partida } = ctx.juego;
     if (!partida.plaza().find((a) => a.id === demonio)?.participanteId) return null;
-    if (!(await ctx.mesa.accion('narrador:despertar', { jugadorId: demonio })).ok) return null;
-    await ctx.mesa.accion('despertar:enviar', { jugadorId: demonio, ficha: 'personalizado', texto: PIDE_AL_DEMONIO });
+    if (!(await ctx.plaza.accion('narrador:despertar', { jugadorId: demonio })).ok) return null;
+    await ctx.plaza.accion('despertar:enviar', { jugadorId: demonio, ficha: 'personalizado', texto: PIDE_AL_DEMONIO });
     const limite = Date.now() + ELIGE_EL_DEMONIO_MS;
     for (let vuelta = 0; this.seguir && Date.now() < limite && vuelta < ELIGE_EL_DEMONIO_MS / 250; vuelta++) {
       const ultimo = partida.despertares.despertares().find((d) => d.jugador === demonio)?.mensajes.slice(-1)[0];
       if (ultimo && ultimo.autor !== 'narrador' && ultimo.ficha === 'jugador') {
         const elegido = ultimo.jugadores.find((j) => buenos.includes(j));
         if (elegido) {
-          await ctx.mesa.accion('despertar:enviar', { jugadorId: demonio, ficha: 'entendido' });
+          await ctx.plaza.accion('despertar:enviar', { jugadorId: demonio, ficha: 'entendido' });
           return elegido;
         }
-        await ctx.mesa.accion('despertar:enviar', { jugadorId: demonio, ficha: 'personalizado', texto: 'Ese no es un jugador bueno: elige otro.' });
+        await ctx.plaza.accion('despertar:enviar', { jugadorId: demonio, ficha: 'personalizado', texto: 'Ese no es un jugador bueno: elige otro.' });
       }
       await this.esperar(ctx, 250);
     }

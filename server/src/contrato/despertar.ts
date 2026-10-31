@@ -132,7 +132,7 @@ export interface OpcionDespertar {
  * El despertar guiado de una fila del orden de noche (solo con el guion Trouble
  * Brewing, de momento): el personaje despierta según su habilidad. Si elige, solo
  * puede elegir lo que ella le deja y el recordatorio se pone solo; si recibe
- * información, se calcula y se manda sola. Uno por personaje con habilidad y ficha en la mesa,
+ * información, se calcula y se manda sola. Uno por personaje con habilidad y ficha en la plaza,
  * y los de la primera noche para los esbirros y el demonio ('esbirros' y 'demonios').
  */
 export interface HabilidadNocheDto {

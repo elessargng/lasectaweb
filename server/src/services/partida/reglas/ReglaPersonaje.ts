@@ -26,7 +26,7 @@ export type AlNominar = { recordatorio: RecordatorioDeRegla | null; ejecutaAlNom
 /** Un recordatorio que pone una regla sola: de su personaje, por su texto en el original. */
 export interface RecordatorioDeRegla {
   texto: string;
-  /** Solo hay uno en la mesa: se quita de donde estuviera. */
+  /** Solo hay uno en la plaza: se quita de donde estuviera. */
   unico: boolean;
 }
 
@@ -88,7 +88,7 @@ export interface ReglaPersonaje {
 export const lleva = (ctx: ContextoReglas, asiento: Jugador, personajeId: string): boolean =>
   asiento.personaje === personajeId || ctx.identidad(asiento) === personajeId;
 
-/** Ese personaje está vivo en la mesa (en la ficha o de verdad); `salvo`: sin contar ese asiento. */
+/** Ese personaje está vivo en la plaza (en la ficha o de verdad); `salvo`: sin contar ese asiento. */
 export const vivoEnJuego = (ctx: ContextoReglas, personajeId: string, salvo?: Jugador): boolean =>
   ctx.plaza().some((a) => a.id !== salvo?.id && !a.muerto && lleva(ctx, a, personajeId));
 

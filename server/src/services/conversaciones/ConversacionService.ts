@@ -20,7 +20,7 @@ const conversa = (p: Participante) => p.rol === 'jugador' || p.rol === 'narrador
 const escucha = (p: Participante) => p.rol === 'visitante' || p.rol === 'narrador';
 
 /**
- * Las conversaciones privadas de la sala (por voz y vídeo), aparte de la mesa.
+ * Las conversaciones privadas de la sala (por voz y vídeo), aparte de la plaza.
  *
  * - Miembros: jugadores y narradores. Se entra por invitación y solo al aceptarla
  *   (también quien invita, si no estaba ya en una). De día invita cualquier
@@ -43,7 +43,7 @@ const escucha = (p: Participante) => p.rol === 'visitante' || p.rol === 'narrado
  *   Si a quien has llamado entra en otra, tu llamada se cancela sola.
  * - Al cambiar de noche a día (o al revés) se terminan todas y caducan las invitaciones.
  *   Limpiar el grimorio (vuelve a la preparación) no las termina: nadie sale de la suya.
- * - Con la Institutriz viva, un jugador solo conversa con sus vecinos de mesa: quien
+ * - Con la Institutriz viva, un jugador solo conversa con sus vecinos de plaza: quien
  *   entra en una conversación tiene que ser vecino de todos los jugadores que hay en ella.
  * - Quien deja de poder estar (cambia de papel o se va) sale. Si queda un solo
  *   miembro, la conversación sigue hasta que sale él: cada uno decide en sus
@@ -287,7 +287,7 @@ export class ConversacionService {
     if (!this.partida.institutrizViva()) return;
     const jugadores = con.filter((id) => id !== quien && this.sala.participantes.buscar(id)?.rol === 'jugador');
     if (jugadores.some((id) => !this.sala.sonVecinos(quien, id))) {
-      throw new ConversacionError('Con la Institutriz en juego, solo se puede conversar en privado con los vecinos de mesa.');
+      throw new ConversacionError('Con la Institutriz en juego, solo se puede conversar en privado con los vecinos de asiento.');
     }
   }
 

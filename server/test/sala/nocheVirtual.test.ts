@@ -23,7 +23,7 @@ import { Violinista } from '../../src/services/narradorVirtual/etapas/Violinista
 import { contarDisparo, exterminar } from '../../src/services/narradorVirtual/dia/exterminar';
 import { duracionPrivados, PuestaEnComun, TRAS_GONG_MS } from '../../src/services/narradorVirtual/etapas/Dia';
 import { FRASES } from '../../src/services/narradorVirtual/frases';
-import { contextoNoche } from '../../src/services/narradorVirtual/mesaDeJuego';
+import { contextoNoche } from '../../src/services/narradorVirtual/plazaDeJuego';
 import { ficha, numero, tarjeta } from '../../src/services/partida/habilidades/HabilidadNocturna';
 import { conSemilla, guionTroubleBrewing, invitado } from './guionDePrueba';
 import { identidadDe } from '../../src/services/partida/Grimorio';
@@ -35,11 +35,11 @@ const OTRAS_NOCHES = ['poisoner', 'monk', 'scarletwoman', 'imp', 'ravenkeeper', 
 const guion = () => ({ ...guionTroubleBrewing(), primeraNoche: PRIMERA_NOCHE, otrasNoches: OTRAS_NOCHES });
 
 /**
- * Una mesa de Trouble Brewing con esos personajes en asientos libres (por ellos
- * elige el narrador virtual) y el narrador virtual con su contexto: la mesa hace
+ * Una plaza de Trouble Brewing con esos personajes en asientos libres (por ellos
+ * elige el narrador virtual) y el narrador virtual con su contexto: la plaza hace
  * las acciones de verdad y anota cuáles, sin esperas.
  */
-function mesaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDeLaBolsa[] } = {}) {
+function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDeLaBolsa[] } = {}) {
   const juego = new SalaDeJuego();
   const { sala, partida, narrador } = juego;
   partida.cambiarGuion(guion());
@@ -61,7 +61,7 @@ function mesaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDeL
   let siguiente: Etapa | null = null;
   const ctx: ContextoEtapa = {
     juego: juego,
-    mesa: {
+    plaza: {
       accion: async (accion, datos) => {
         const r = await ejecutarAccion(juego, sala.participantes.buscar(bot), accion, datos, deps);
         if (r.ok) hechas.push({ accion, datos });
@@ -133,7 +133,7 @@ describe('la noche del narrador virtual', () => {
 
   it('los faroles del demonio: tres buenos que no están en juego, con un forastero como mucho', async () => {
     for (let semilla = 1; semilla <= 30; semilla++) {
-      const m = mesaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor'], { semilla });
+      const m = plazaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor'], { semilla });
       const { partida } = m.juego;
       await ponerFaroles(m.ctx);
       const faroles = partida.faroles.faroles().filter((f): f is string => !!f);
@@ -149,7 +149,7 @@ describe('la noche del narrador virtual', () => {
   });
 
   it('la información falsa tiene la forma de la verdadera', () => {
-    const m = mesaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
+    const m = plazaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
     const { partida } = m.juego;
     const habilidades = habilidadesDelGuion('troublebrewing');
     const falsas = (personaje: string, verdadera: Parameters<typeof informacionesFalsas>[0]['verdadera']) =>
@@ -173,7 +173,7 @@ describe('la noche del narrador virtual', () => {
     let deVerdad = 0;
     const veces = 60;
     for (let semilla = 1; semilla <= veces; semilla++) {
-      const m = mesaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor'], { semilla });
+      const m = plazaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor'], { semilla });
       const { partida } = m.juego;
       // El Empático (entre el Imp y el Alcalde) tiene un vecino malvado
       const indice = partida.guion.personaje('poisoner')!.recordatorios.indexOf('Poisoned');
@@ -190,7 +190,7 @@ describe('la noche del narrador virtual', () => {
   }, 30_000);
 
   it('la primera noche: faroles, requisitos, el Envenenador antes que nadie, el Espía el último y buenos días', async () => {
-    const m = mesaVirtual(['poisoner', 'imp', 'washerwoman', 'librarian', 'investigator', 'fortuneteller', 'spy']);
+    const m = plazaVirtual(['poisoner', 'imp', 'washerwoman', 'librarian', 'investigator', 'fortuneteller', 'spy']);
     const { partida } = m.juego;
     partida.irANoche();
     const siguiente = await m.noche();
@@ -226,7 +226,7 @@ describe('la noche del narrador virtual', () => {
   });
 
   it('el Envenenador con jugador: primero ve a su demonio y, cuando dice «Entendido», elige', async () => {
-    const m = mesaVirtual(['poisoner', 'imp', 'washerwoman', 'librarian', 'investigator', 'fortuneteller', 'chef']);
+    const m = plazaVirtual(['poisoner', 'imp', 'washerwoman', 'librarian', 'investigator', 'fortuneteller', 'chef']);
     const { sala, partida } = m.juego;
     const { id } = sala.participantes.conectar('s-ana', 'c-ana', invitado('Ana'), () => true);
     const asiento = m.asiento('poisoner').id;
@@ -255,7 +255,7 @@ describe('la noche del narrador virtual', () => {
   });
 
   it('pone al Borracho la primera noche, si salió en la bolsa', async () => {
-    const m = mesaVirtual(['poisoner', 'imp', 'chef', 'empath', 'washerwoman', 'investigator', 'soldier'], { fuera: [{ personaje: 'drunk', creeSer: null }] });
+    const m = plazaVirtual(['poisoner', 'imp', 'chef', 'empath', 'washerwoman', 'investigator', 'soldier'], { fuera: [{ personaje: 'drunk', creeSer: null }] });
     const { partida } = m.juego;
     partida.irANoche();
     await m.noche();
@@ -267,7 +267,7 @@ describe('la noche del narrador virtual', () => {
 
   it('las otras noches: el Monje antes que el Imp, el Imp antes que la información, y se anuncian las muertes', async () => {
     for (const semilla of [1, 2, 3, 4, 5]) {
-      const m = mesaVirtual(['monk', 'imp', 'empath', 'poisoner', 'chef', 'ravenkeeper', 'soldier'], { semilla });
+      const m = plazaVirtual(['monk', 'imp', 'empath', 'poisoner', 'chef', 'ravenkeeper', 'soldier'], { semilla });
       const { partida } = m.juego;
       partida.irANoche();
       await m.noche();
@@ -292,18 +292,18 @@ describe('la noche del narrador virtual', () => {
 
   describe('el final', () => {
     it('sin demonio vivo gana el bueno; con dos vivos, el malvado', async () => {
-      const m = mesaVirtual(['imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
+      const m = plazaVirtual(['imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
       const { partida } = m.juego;
       expect(await comprobarFinal(m.ctx)).toBeNull();
       partida.grimorio.cambiarVida(m.asiento('imp').id, true);
       expect(await comprobarFinal(m.ctx)).toBe('bueno');
-      const otra = mesaVirtual(['imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
+      const otra = plazaVirtual(['imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
       for (const p of ['chef', 'empath', 'monk', 'soldier', 'mayor']) otra.juego.partida.grimorio.cambiarVida(otra.asiento(p).id, true);
       expect(await comprobarFinal(otra.ctx)).toBe('malvado');
     });
 
     it('ejecutar al Santo hace ganar al malvado (salvo droison)', async () => {
-      const m = mesaVirtual(['imp', 'poisoner', 'saint', 'empath', 'monk', 'soldier', 'mayor']);
+      const m = plazaVirtual(['imp', 'poisoner', 'saint', 'empath', 'monk', 'soldier', 'mayor']);
       const { partida } = m.juego;
       partida.grimorio.cambiarVida(m.asiento('saint').id, true);
       expect(await comprobarFinal(m.ctx, { ejecutado: m.asiento('saint').id })).toBe('malvado');
@@ -316,21 +316,21 @@ describe('la noche del narrador virtual', () => {
     });
 
     it('con tres vivos, el Alcalde vivo y sin ejecución, gana el bueno', async () => {
-      const m = mesaVirtual(['imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
+      const m = plazaVirtual(['imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
       const { partida } = m.juego;
       for (const p of ['chef', 'empath', 'monk', 'soldier']) partida.grimorio.cambiarVida(m.asiento(p).id, true);
       expect(await comprobarFinal(m.ctx)).toBeNull();
       expect(await comprobarFinal(m.ctx, { sinEjecucion: true })).toBe('bueno');
       // Sin el Alcalde vivo, no
-      const sin = mesaVirtual(['imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
+      const sin = plazaVirtual(['imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
       for (const p of ['empath', 'monk', 'soldier', 'mayor']) sin.juego.partida.grimorio.cambiarVida(sin.asiento(p).id, true);
       expect(await comprobarFinal(sin.ctx, { sinEjecucion: true })).toBeNull();
     });
 
     it('el Exterminador solo mata al demonio (o a la Reclusa si registra como tal); al Santo, no', async () => {
-      /** Una mesa de día con alguien sentado en el asiento de `tirador`; dispara a `objetivo`. */
+      /** Una plaza de día con alguien sentado en el asiento de `tirador`; dispara a `objetivo`. */
       const dispara = async (tirador: string, objetivo: string, semilla = 1) => {
-        const m = mesaVirtual(['slayer', 'imp', 'saint', 'recluse', 'chef', 'empath', 'poisoner'], { semilla });
+        const m = plazaVirtual(['slayer', 'imp', 'saint', 'recluse', 'chef', 'empath', 'poisoner'], { semilla });
         const { sala, partida } = m.juego;
         const { id } = sala.participantes.conectar('s-t', 'c-t', invitado('Tiradora'), () => true);
         sala.sentar(id, m.asiento(tirador).id);
@@ -356,7 +356,7 @@ describe('la noche del narrador virtual', () => {
     });
 
     it('el disparo se cuenta con pausas: «… y…», «X muere.» y si sigue la partida o se revela', async () => {
-      const m = mesaVirtual(['slayer', 'imp', 'scarletwoman', 'chef', 'empath', 'monk', 'mayor']);
+      const m = plazaVirtual(['slayer', 'imp', 'scarletwoman', 'chef', 'empath', 'monk', 'mayor']);
       const { sala, partida } = m.juego;
       const { id } = sala.participantes.conectar('s-t', 'c-t', invitado('Tiradora'), () => true);
       sala.sentar(id, m.asiento('slayer').id);
@@ -382,19 +382,19 @@ describe('la noche del narrador virtual', () => {
     });
 
     it('la Mujer Escarlata hereda el demonio con cinco vivos o más (contando al que muere)', async () => {
-      const m = mesaVirtual(['imp', 'scarletwoman', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
+      const m = plazaVirtual(['imp', 'scarletwoman', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
       const { partida } = m.juego;
       partida.grimorio.cambiarVida(m.asiento('imp').id, true);
       expect(await comprobarFinal(m.ctx)).toBeNull();
       expect(m.textos('scarletwoman')).toEqual(['Is The Demon']);
       // Con pocos vivos, no: gana el bueno
-      const pocos = mesaVirtual(['imp', 'scarletwoman', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
+      const pocos = plazaVirtual(['imp', 'scarletwoman', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
       for (const p of ['empath', 'monk', 'soldier', 'imp']) pocos.juego.partida.grimorio.cambiarVida(pocos.asiento(p).id, true);
       expect(await comprobarFinal(pocos.ctx)).toBe('bueno');
     });
 
     it('la Mujer Escarlata que hereda pasa a ser el Imp esa noche: se le dice y despierta como el Imp', async () => {
-      const m = mesaVirtual(['imp', 'scarletwoman', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
+      const m = plazaVirtual(['imp', 'scarletwoman', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
       const { partida } = m.juego;
       partida.irANoche();
       await m.noche();
@@ -415,7 +415,7 @@ describe('la noche del narrador virtual', () => {
     });
 
     it('si acaba antes de esa noche, al revelar la Mujer Escarlata que ha heredado ya es el Imp', async () => {
-      const m = mesaVirtual(['imp', 'scarletwoman', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
+      const m = plazaVirtual(['imp', 'scarletwoman', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
       const { partida } = m.juego;
       partida.irANoche();
       partida.amanecer();
@@ -431,7 +431,7 @@ describe('la noche del narrador virtual', () => {
     });
 
     it('revela el grimorio ficha a ficha, con el demonio el último', async () => {
-      const m = mesaVirtual(['imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
+      const m = plazaVirtual(['imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
       const { partida } = m.juego;
       partida.irANoche();
       partida.amanecer();
@@ -449,7 +449,7 @@ describe('la noche del narrador virtual', () => {
     });
 
     it('el Violinista: sin demonio que conteste, elige su estrategia; todos señalan y se revela', async () => {
-      const m = mesaVirtual(['imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
+      const m = plazaVirtual(['imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier', 'mayor']);
       const { partida } = m.juego;
       partida.irANoche();
       partida.amanecer();
@@ -468,7 +468,7 @@ describe('la noche del narrador virtual', () => {
 
 describe('los privados del narrador virtual', () => {
   it('duran medio minuto por cada jugador vivo', () => {
-    const m = mesaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
+    const m = plazaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
     const { partida } = m.juego;
     expect(duracionPrivados(m.juego)).toBe(7 * 30_000);
     partida.grimorio.cambiarVida(m.asiento('chef').id, true);
@@ -484,7 +484,7 @@ describe('los privados del narrador virtual', () => {
   });
 
   it('al acabar suena el gong y, unos segundos después, se cierran', async () => {
-    const m = mesaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
+    const m = plazaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
     const { partida } = m.juego;
     const programados: { ms: number; hacer: () => void }[] = [];
     const ctx = { ...m.ctx, temporizador: { programar: (ms: number, hacer: () => void) => (programados.push({ ms, hacer }), () => {}) } };
@@ -500,10 +500,10 @@ describe('los privados del narrador virtual', () => {
 });
 
 describe('droison con criterio', () => {
-  const mesa = () => mesaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'poisoner', 'soldier', 'mayor']);
+  const plaza = () => plazaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'poisoner', 'soldier', 'mayor']);
 
   it('la verdad que no le cuesta nada al mal se dice más a menudo que la que lo señala', () => {
-    const m = mesa();
+    const m = plaza();
     const empatico = m.asiento('empath').id;
     const inofensiva = probabilidadVerdad(m.juego, empatico, 'empath', numero(0), recuerdosNuevos());
     const destapa = probabilidadVerdad(m.juego, empatico, 'empath', numero(1), recuerdosNuevos());
@@ -513,7 +513,7 @@ describe('droison con criterio', () => {
   });
 
   it('a lo mismo que otra noche, lo mismo: repite la mentira', () => {
-    const m = mesa();
+    const m = plaza();
     const empatico = m.asiento('empath').id;
     const recuerdos = recuerdosNuevos();
     recordarDroison(recuerdos, empatico, 'empath', numero(1), numero(2));
@@ -527,7 +527,7 @@ describe('droison con criterio', () => {
   });
 
   it('las mentiras que confirman el farol que usa un malvado pesan más', () => {
-    const m = mesa();
+    const m = plaza();
     const { partida } = m.juego;
     const envenenador = m.asiento('poisoner').id;
     partida.faroles.ponerFarolAsiento(envenenador, 0, 'monk');
@@ -553,7 +553,7 @@ describe('la bolsa que elige el narrador', () => {
   };
 
   it('hueco a hueco: el demonio, los esbirros, los forasteros y los aldeanos que tocan', async () => {
-    const m = mesaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
+    const m = plazaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
     const { partida } = m.juego;
     const { decidir, preguntas } = laPrimera();
     const bolsa = (await elegirBolsa(partida.guion.actual()!.personajes, partida.reparto.distribucion(), decidir))!;
@@ -567,7 +567,7 @@ describe('la bolsa que elige el narrador', () => {
   });
 
   it('sin grimorio: a cada hueco, los personajes del guion y las decisiones anteriores', async () => {
-    const m = mesaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
+    const m = plazaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
     const { partida } = m.juego;
     const personajes = partida.guion.actual()!.personajes;
     const { decidir, preguntas } = laPrimera();

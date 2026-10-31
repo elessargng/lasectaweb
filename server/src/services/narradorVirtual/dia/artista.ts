@@ -11,7 +11,7 @@ import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { ContextoEtapa } from '../etapas/Etapa';
 import { esDemonio } from '../final/comprobarFinal';
 import type { Cronica } from '../final/cronica';
-import { contextoNoche, nombreDeAsiento, tipoReal } from '../mesaDeJuego';
+import { contextoNoche, nombreDeAsiento, tipoReal } from '../plazaDeJuego';
 import { ponerRecordatorio } from '../noche/requisitos';
 import { identidadDe } from '../../partida/Grimorio';
 import type { Jugador } from '../../partida/Jugador';
@@ -97,13 +97,13 @@ const llana = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCa
 /** La respuesta de verdad a una pregunta montada, con el grimorio y lo apuntado en la crónica (quién eligió a quién). */
 export function contestar(juego: SalaDeJuego, cronica: Cronica, p: PreguntaArtista): boolean {
   const { sala, partida } = juego;
-  const mesa = partida.plaza();
-  const conQuien = mesa.filter((a) => es(juego, a, p.quien));
+  const plaza = partida.plaza();
+  const conQuien = plaza.filter((a) => es(juego, a, p.quien));
   switch (p.tipo) {
     case 'enJuego':
       return conQuien.length > 0;
     case 'es': {
-      const de = p.jugadores.flatMap((id) => mesa.find((a) => a.id === id) ?? []);
+      const de = p.jugadores.flatMap((id) => plaza.find((a) => a.id === id) ?? []);
       return p.todos ? de.every((a) => es(juego, a, p.quien)) : de.some((a) => es(juego, a, p.quien));
     }
     case 'inicial':
@@ -113,14 +113,14 @@ export function contestar(juego: SalaDeJuego, cronica: Cronica, p: PreguntaArtis
         return !!nombre && llana(nombre).startsWith(llana(p.letra));
       });
     case 'silla':
-      return conQuien.some((a) => (mesa.indexOf(a) + 1) % 2 === (p.par ? 0 : 1));
+      return conQuien.some((a) => (plaza.indexOf(a) + 1) % 2 === (p.par ? 0 : 1));
     case 'entre': {
-      const desde = mesa.findIndex((a) => a.id === p.desde);
-      const hasta = mesa.findIndex((a) => a.id === p.hasta);
+      const desde = plaza.findIndex((a) => a.id === p.desde);
+      const hasta = plaza.findIndex((a) => a.id === p.hasta);
       if (desde < 0 || hasta < 0) return false;
       const tramo: Jugador[] = [];
-      for (let i = desde; ; i = (i + 1) % mesa.length) {
-        tramo.push(mesa[i]);
+      for (let i = desde; ; i = (i + 1) % plaza.length) {
+        tramo.push(plaza[i]);
         if (i === hasta) break;
       }
       return tramo.some((a) => conQuien.includes(a));

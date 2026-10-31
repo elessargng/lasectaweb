@@ -2,7 +2,7 @@ import { lleva, vivoEnJuego, type ContextoReglas, type ReglaPersonaje } from './
 
 export const VIAJERO_VOUDON = 'voudon';
 
-/** El Voudon está vivo en la mesa (en la ficha o de verdad). */
+/** El Voudon está vivo en la plaza (en la ficha o de verdad). */
 export const voudonVivo = (ctx: ContextoReglas): boolean => vivoEnJuego(ctx, VIAJERO_VOUDON);
 
 /**

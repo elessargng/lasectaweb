@@ -238,7 +238,7 @@ describe('permisos', () => {
     await arnes.accion(vera, 'sala:solicitarGrimorio');
     await arnes.accion(narradora, 'narrador:accesoGrimorio', { participanteId: vera.id, conceder: true });
     const r = await arnes.intentar(vera, 'sala:sentarse', { jugadorId: idAsiento(3) });
-    expect(r).toEqual({ ok: false, error: 'Quien ha visto el grimorio del narrador no puede sentarse en la mesa.' });
+    expect(r).toEqual({ ok: false, error: 'Quien ha visto el grimorio del narrador no puede sentarse en la plaza.' });
   });
 
   it('una acción que no existe', async () => {

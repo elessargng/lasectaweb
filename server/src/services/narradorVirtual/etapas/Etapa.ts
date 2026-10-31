@@ -4,16 +4,16 @@ import type { Decision, EstrategiaNarrador, PreguntaSiONo } from '../estrategias
 import { instantaneaGrimorio } from '../grimorio';
 import type { RecuerdosNarrador } from '../noche/criterioDroison';
 import type { FueraDeLaBolsa } from '../preparacion';
-import type { Azar, MesaNarrador, Temporizador } from '../puertos';
+import type { Azar, Narrador, Temporizador } from '../puertos';
 
 /** Lo que piden los jugadores al narrador virtual en el día (ver las acciones `jugador:…`). */
 export type AccionJugador = 'nominar' | 'defensa' | 'voto' | 'listo' | 'seguirNominando';
 
 /** Lo que tiene cada etapa a mano para llevar la partida. */
 export interface ContextoEtapa {
-  /** Para leer cómo están la sala y la partida (lo que cambia se hace con `mesa`). */
+  /** Para leer cómo están la sala y la partida (lo que cambia se hace con `plaza`). */
   readonly juego: SalaDeJuego;
-  readonly mesa: MesaNarrador;
+  readonly plaza: Narrador;
   /** Lo que decide su estrategia, con el grimorio del momento. */
   decidir<T>(decision: Decision<T>): Promise<T>;
   siONo(pregunta: PreguntaSiONo): Promise<boolean>;

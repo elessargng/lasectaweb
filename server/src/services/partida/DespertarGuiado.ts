@@ -21,7 +21,7 @@ export interface EntornoDespertarGuiado {
   mandar: (jugadorId: string, envio: EnvioDespertar, eleccion?: EleccionDespertar) => void;
   /** A lo último que se le ha mandado a un asiento aún le falta el «Entendido» (ver Despertares.porEntender). */
   porEntender: (jugadorId: string) => boolean;
-  /** Pone un recordatorio de un personaje (por su texto) en un asiento; único en la mesa. */
+  /** Pone un recordatorio de un personaje (por su texto) en un asiento; único en la plaza. */
   ponerRecordatorio: (jugadorId: string, personaje: string, texto: string) => void;
   /** Mata de noche (la muerte queda pendiente). */
   matarDeNoche: (jugadorId: string) => void;
@@ -102,7 +102,7 @@ export class DespertarGuiado {
     return { estado, avisos, opciones: resultados[0]?.opciones ?? [] };
   }
 
-  /** Cada fila del orden de noche con habilidad y ficha en la mesa: cómo está. Fuera de la noche, ninguna. */
+  /** Cada fila del orden de noche con habilidad y ficha en la plaza: cómo está. Fuera de la noche, ninguna. */
   habilidadesNoche(): HabilidadNocheDto[] {
     if (!this.entorno.noche()) return [];
     return [...this.entorno.habilidades().values()].flatMap((h): HabilidadNocheDto[] => {
@@ -204,14 +204,14 @@ export class DespertarGuiado {
   alElegir(jugadorId: string, elegidos: string[]): void {
     const turno = this.turnos.find((t) => t.asiento === jugadorId && t.estado === 'esperando');
     const habilidad = turno && this.entorno.habilidades().get(turno.personaje);
-    const mesa = this.entorno.ctx.plaza();
-    const asiento = mesa.find((a) => a.id === jugadorId);
+    const plaza = this.entorno.ctx.plaza();
+    const asiento = plaza.find((a) => a.id === jugadorId);
     if (!turno || !habilidad || !asiento) return;
-    const elegidosEnMesa = elegidos.flatMap((id) => mesa.find((a) => a.id === id) ?? []);
+    const elegidosEnPlaza = elegidos.flatMap((id) => plaza.find((a) => a.id === id) ?? []);
     // Con quién ha despertado esta noche por su habilidad (la Camarera)
     const ctx = { ...this.entorno.ctx, despertados: () => this.despertados() };
     // La respuesta a lo que ha elegido es del mismo despertar: no espera en la cola
-    this.aplicar(turno.personaje, asiento, habilidad.alElegir(ctx, asiento, elegidosEnMesa), true);
+    this.aplicar(turno.personaje, asiento, habilidad.alElegir(ctx, asiento, elegidosEnPlaza), true);
   }
 
   /**

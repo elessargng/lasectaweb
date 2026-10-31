@@ -18,9 +18,9 @@ export interface Diario {
 /** Cuántos cambios de fase recuerda la máquina del tiempo del narrador. */
 export const PASOS_DE_FASE_MAX = 20;
 
-/** Un asiento de la mesa en un momento de la partida. */
+/** Un asiento de la plaza en un momento de la partida. */
 export interface FotoAsiento {
-  /** Su número en la mesa (1, el de las 12). */
+  /** Su número en la plaza (1, el de las 12). */
   numero: number;
   /** Quien se sienta (su nombre en la sala), o null si está libre. */
   nombre: string | null;
@@ -36,9 +36,9 @@ export interface FotoAsiento {
 
 export type EventoPartida =
   /** Anochece. `conCalavera`: las cuentas de quien llevaba la calavera al caer la noche (lo ejecutó la plaza). */
-  | { tipo: 'anochece'; desdePreparacion: boolean; mesa: FotoAsiento[]; conCalavera: string[] }
-  /** Amanece: empieza el día con la mesa así. */
-  | { tipo: 'amanece'; mesa: FotoAsiento[] }
+  | { tipo: 'anochece'; desdePreparacion: boolean; plaza: FotoAsiento[]; conCalavera: string[] }
+  /** Amanece: empieza el día con la plaza así. */
+  | { tipo: 'amanece'; plaza: FotoAsiento[] }
   /** Alguien nomina a alguien (sus cuentas, o null sin cuenta o con el asiento libre). */
   | { tipo: 'nominacion'; nomina: string | null; nominado: string | null }
   /** Alguien ha votado (su cuenta, o null). */
@@ -63,7 +63,7 @@ export type EventoPartida =
       ganador: Alineamiento;
       /** Lo que ha pasado (CAUSAS_FIN_PARTIDA) y, si es de alguien concreto (el esbirro que cazó a la Doncel), su cuenta. */
       causas: { id: string; userId?: string | null }[];
-      mesa: FotoAsiento[];
+      plaza: FotoAsiento[];
       narradores: { userId: string | null; nombre: string }[];
       npcs: string[];
       votaciones: RegistroVotacionDto[];

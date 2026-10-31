@@ -69,15 +69,15 @@ export class Senalamientos {
     objetivos: string[];
   }): void {
     const todos = this.entorno.plaza().map((a) => a.id);
-    const deLaMesa = (ids: string[]) => (ids.length ? todos.filter((id) => ids.includes(id)) : todos);
+    const deLaPlaza = (ids: string[]) => (ids.length ? todos.filter((id) => ids.includes(id)) : todos);
     const publico = this.entorno.fase().momento !== 'noche';
     const inicio = Date.now();
     this.actual = {
       id: randomUUID(),
       tipo: datos.tipo ?? 'normal',
       mensaje: datos.mensaje,
-      senaladores: deLaMesa(datos.senaladores),
-      objetivos: deLaMesa(datos.objetivos),
+      senaladores: deLaPlaza(datos.senaladores),
+      objetivos: deLaPlaza(datos.objetivos),
       publico,
       inicio,
       fin: datos.segundos === null ? null : inicio + datos.segundos * 1000,

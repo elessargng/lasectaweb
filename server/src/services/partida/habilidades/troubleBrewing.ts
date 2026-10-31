@@ -149,7 +149,7 @@ class SenalaDosJugadores extends RecibeInformacion {
     if (this.ninguno(ctx)) return { opciones: [{ envio: numero(0), registros: [] }] };
     const bueno = conRecordatorio(ctx, this.personaje, this.correcto)!;
     const malo = conRecordatorio(ctx, this.personaje, 'Wrong')!;
-    // En el orden de la mesa: que no se sepa cuál es
+    // En el orden de la plaza: que no se sepa cuál es
     const jugadores = ctx.plaza().filter((a) => a.id === bueno.id || a.id === malo.id);
     const info = esteJugadorEs(ctx, jugadores, bueno);
     // Si no es de ese tipo (el Espía, la Reclusa…), qué personaje enseñar lo decide el narrador
@@ -184,12 +184,12 @@ class Chef extends RecibeInformacion {
   }
 
   protected informacion(ctx: ContextoNoche) {
-    const mesa = ctx.plaza();
-    const opciones = segunRegistros(ctx, mesa, (a) => alineamientosPosibles(ctx, a), (registro) => {
+    const plaza = ctx.plaza();
+    const opciones = segunRegistros(ctx, plaza, (a) => alineamientosPosibles(ctx, a), (registro) => {
       const malvado = (a: Jugador) => (registro(a) ?? ctx.alineamiento(a)) === 'malvado';
-      const parejas = mesa.length < 2 ? 0 : mesa.filter((a, i) => malvado(a) && malvado(mesa[(i + 1) % mesa.length])).length;
+      const parejas = plaza.length < 2 ? 0 : plaza.filter((a, i) => malvado(a) && malvado(plaza[(i + 1) % plaza.length])).length;
       // Con dos, la pareja se cuenta una vez
-      return numero(mesa.length === 2 ? Math.min(parejas, 1) : parejas);
+      return numero(plaza.length === 2 ? Math.min(parejas, 1) : parejas);
     });
     return { opciones };
   }

@@ -109,7 +109,7 @@ describe('narrador virtual', () => {
     await vi.waitFor(() => expect(voces).toContain(frase));
   });
 
-  it('al llenarse la mesa reparte los personajes y empieza la primera noche', async () => {
+  it('al llenarse la plaza reparte los personajes y empieza la primera noche', async () => {
     arnes = await conTroubleBrewing();
     const jugadores = await entran(7);
     const [ana] = jugadores;

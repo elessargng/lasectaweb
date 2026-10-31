@@ -24,7 +24,7 @@ export interface ContextoNoche extends ContextoReglas {
 
 /** Lo que cambia en la partida al hacerse una habilidad (lo aplica DespertarGuiado). */
 export interface Efectos {
-  /** Recordatorios del personaje de la habilidad que se ponen (cada uno, único en la mesa). */
+  /** Recordatorios del personaje de la habilidad que se ponen (cada uno, único en la plaza). */
   recordatorios: { asiento: string; texto: string }[];
   /** Quien muere esta noche (queda pendiente, como «Matar de noche»), o null. */
   muere: string | null;
@@ -329,7 +329,7 @@ export abstract class EligeYSabe extends Elige {
 }
 
 /**
- * No elige: recibe información, que se calcula con lo que hay en la mesa. Si
+ * No elige: recibe información, que se calcula con lo que hay en la plaza. Si
  * falta algo en el grimorio, no se puede; droison, la revisa el narrador (con la
  * de verdad, si se puede calcular, como propuesta).
  */

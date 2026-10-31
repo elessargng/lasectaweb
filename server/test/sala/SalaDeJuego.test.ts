@@ -201,7 +201,7 @@ describe('SalaDeJuego', () => {
     });
   });
 
-  describe('la mesa', () => {
+  describe('la plaza', () => {
     it('al sentarse pasa a jugador; al levantarse, a visitante', () => {
       const { juego, ids, asiento } = salaConJugadores('Ana');
       const { sala } = juego;
@@ -677,7 +677,7 @@ describe('SalaDeJuego', () => {
       expect(partida.votacionSecreta()).toBe(false);
     });
 
-    it('nominar a un viajero es pedir su expulsión: la mitad de la mesa, votos de 1 y, si sale, muere', () => {
+    it('nominar a un viajero es pedir su expulsión: la mitad de la plaza, votos de 1 y, si sale, muere', () => {
       const { juego, ids, asiento } = salaConJugadores('Ana', 'Bea', 'Ceci', 'Dani');
       const { sala, partida } = juego;
       partida.grimorio.cambiarPersonaje(asiento(1).id, 'butcher');
@@ -762,7 +762,7 @@ describe('SalaDeJuego', () => {
       expect(partida.ejecutar(asiento(0).id)).toEqual({ anochece: false, final: true });
     });
 
-    it('con el Enterrador vivo, el ejecutado lleva su «Die Today» (solo uno en la mesa)', () => {
+    it('con el Enterrador vivo, el ejecutado lleva su «Die Today» (solo uno en la plaza)', () => {
       const { juego, asiento } = salaConJugadores('Ana');
       const { partida } = juego;
       partida.grimorio.cambiarPersonaje(asiento(1).id, 'undertaker');

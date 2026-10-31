@@ -11,7 +11,7 @@ export interface PermisosVideo {
  * El servidor de vídeo (el que reparte las cámaras y los micrófonos). Los
  * servicios solo conocen esta interfaz: hoy es LiveKit, mañana podría ser otro.
  * Una «sala» de vídeo es un espacio donde todos se ven y se oyen: la principal
- * (la mesa) y una por conversación privada.
+ * (la plaza) y una por conversación privada.
  */
 export interface ProveedorVideo {
   /** Dirección a la que se conectan los navegadores. */

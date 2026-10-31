@@ -7,8 +7,8 @@ import { guionDePrueba, guionTroubleBrewing, invitado } from './guionDePrueba';
 
 /** El despertar guiado desde el orden de noche: cada personaje de Trouble Brewing, según su habilidad. */
 
-/** Una mesa de Trouble Brewing con esos personajes (uno por asiento, en orden) y sus jugadores, de noche. */
-function mesa(...personajes: string[]) {
+/** Una plaza de Trouble Brewing con esos personajes (uno por asiento, en orden) y sus jugadores, de noche. */
+function plaza(...personajes: string[]) {
   const juego = new SalaDeJuego();
   const { sala, partida } = juego;
   partida.cambiarGuion(guionTroubleBrewing());
@@ -39,8 +39,8 @@ function mesa(...personajes: string[]) {
 }
 
 describe('despertar guiado', () => {
-  it('solo con Trouble Brewing, solo de noche y solo con la ficha en la mesa', () => {
-    const m = mesa('poisoner', 'chef', 'imp');
+  it('solo con Trouble Brewing, solo de noche y solo con la ficha en la plaza', () => {
+    const m = plaza('poisoner', 'chef', 'imp');
     const { partida } = m.juego;
     expect(partida.guiado.habilidadesNoche().map((h) => h.personaje).sort()).toEqual(['chef', 'demonios', 'esbirros', 'imp', 'poisoner']);
     partida.amanecer();
@@ -52,7 +52,7 @@ describe('despertar guiado', () => {
 
   describe('eligen y marcan', () => {
     it('el Envenenador elige a uno: se le pone «Poisoned» y se le contesta «Entendido»', () => {
-      const m = mesa('poisoner', 'chef', 'imp');
+      const m = plaza('poisoner', 'chef', 'imp');
       const { partida } = m.juego;
       expect(m.fila('poisoner')?.estado).toBe('listo');
       expect(partida.guiado.despertar('poisoner')).toBeNull();
@@ -67,7 +67,7 @@ describe('despertar guiado', () => {
     });
 
     it('el recordatorio es único: la noche siguiente pasa al nuevo elegido', () => {
-      const m = mesa('poisoner', 'chef', 'imp');
+      const m = plaza('poisoner', 'chef', 'imp');
       const { partida } = m.juego;
       partida.guiado.despertar('poisoner');
       m.elegir(0, 1);
@@ -81,14 +81,14 @@ describe('despertar guiado', () => {
     });
 
     it('el Monje no puede elegirse a sí mismo', () => {
-      const m = mesa('monk', 'chef', 'imp');
+      const m = plaza('monk', 'chef', 'imp');
       const { partida } = m.juego;
       partida.guiado.despertar('monk');
       expect(m.ultimo(0)?.eleccion).toEqual({ cantidad: 1, puedeElegirse: false });
     });
 
     it('droison, se le contesta igual pero no se pone nada', () => {
-      const m = mesa('monk', 'chef', 'imp');
+      const m = plaza('monk', 'chef', 'imp');
       const { partida } = m.juego;
       m.recordatorio(0, 'poisoner', 'Poisoned');
       partida.guiado.despertar('monk');
@@ -99,7 +99,7 @@ describe('despertar guiado', () => {
     });
 
     it('el Imp mata: «Dead» y la muerte pendiente', () => {
-      const m = mesa('imp', 'chef', 'poisoner');
+      const m = plaza('imp', 'chef', 'poisoner');
       const { partida } = m.juego;
       partida.guiado.despertar('imp');
       m.elegir(0, 1);
@@ -108,7 +108,7 @@ describe('despertar guiado', () => {
     });
 
     it('al protegido por el Monje, o a un Soldado, no lo mata', () => {
-      const m = mesa('imp', 'chef', 'soldier', 'monk');
+      const m = plaza('imp', 'chef', 'soldier', 'monk');
       const { partida } = m.juego;
       m.recordatorio(1, 'monk', 'Safe');
       partida.guiado.despertar('imp');
@@ -123,7 +123,7 @@ describe('despertar guiado', () => {
     });
 
     it('si elige al Alcalde, lo revisa el narrador', () => {
-      const m = mesa('imp', 'mayor', 'poisoner');
+      const m = plaza('imp', 'mayor', 'poisoner');
       const { partida } = m.juego;
       partida.guiado.despertar('imp');
       m.elegir(0, 1);
@@ -134,7 +134,7 @@ describe('despertar guiado', () => {
     });
 
     it('si el Imp se elige a sí mismo, muere y el narrador dice quién es el nuevo', () => {
-      const m = mesa('imp', 'chef', 'poisoner');
+      const m = plaza('imp', 'chef', 'poisoner');
       const { partida } = m.juego;
       partida.guiado.despertar('imp');
       m.elegir(0, 0);
@@ -149,7 +149,7 @@ describe('despertar guiado', () => {
 
   describe('eligen y saben', () => {
     it('la Adivina necesita su «Red Herring» y dice si alguno es el demonio', () => {
-      const m = mesa('fortuneteller', 'chef', 'imp', 'empath');
+      const m = plaza('fortuneteller', 'chef', 'imp', 'empath');
       const { partida } = m.juego;
       expect(m.fila('fortuneteller')).toMatchObject({ estado: 'falta', avisos: [{ tipo: 'faltaRecordatorio', personaje: 'fortuneteller', texto: 'Red Herring' }] });
       m.recordatorio(3, 'fortuneteller', 'Red Herring');
@@ -167,7 +167,7 @@ describe('despertar guiado', () => {
     });
 
     it('con la Reclusa entre los elegidos, el narrador elige entre «Sí» y «No»', () => {
-      const m = mesa('fortuneteller', 'chef', 'recluse', 'imp', 'empath');
+      const m = plaza('fortuneteller', 'chef', 'recluse', 'imp', 'empath');
       const { partida } = m.juego;
       m.recordatorio(4, 'fortuneteller', 'Red Herring');
       partida.guiado.despertar('fortuneteller');
@@ -180,7 +180,7 @@ describe('despertar guiado', () => {
     });
 
     it('el Ravenkeeper solo despierta si muere esta noche, y sabe quién es el elegido', () => {
-      const m = mesa('ravenkeeper', 'chef', 'imp');
+      const m = plaza('ravenkeeper', 'chef', 'imp');
       const { partida } = m.juego;
       expect(m.fila('ravenkeeper')?.estado).toBe('falta');
       partida.grimorio.cambiarVida(m.asiento(0).id, true);
@@ -196,7 +196,7 @@ describe('despertar guiado', () => {
 
   describe('reciben información', () => {
     it('la Lavandera necesita sus dos recordatorios y recibe los dos jugadores y el personaje', () => {
-      const m = mesa('washerwoman', 'imp', 'chef', 'empath');
+      const m = plaza('washerwoman', 'imp', 'chef', 'empath');
       const { partida } = m.juego;
       expect(m.fila('washerwoman')?.estado).toBe('falta');
       expect(partida.guiado.despertar('washerwoman')).not.toBeNull();
@@ -209,7 +209,7 @@ describe('despertar guiado', () => {
     });
 
     it('droison, lo revisa el narrador con la información de verdad como propuesta', () => {
-      const m = mesa('washerwoman', 'imp', 'chef', 'empath');
+      const m = plaza('washerwoman', 'imp', 'chef', 'empath');
       const { partida } = m.juego;
       m.recordatorio(2, 'washerwoman', 'Townsfolk');
       m.recordatorio(3, 'washerwoman', 'Wrong');
@@ -225,20 +225,20 @@ describe('despertar guiado', () => {
     });
 
     it('el Borracho que cree ser la Lavandera, también se revisa', () => {
-      const m = mesa('washerwoman', 'imp', 'chef');
+      const m = plaza('washerwoman', 'imp', 'chef');
       m.recordatorio(0, 'drunk', 'Is The Drunk');
       expect(m.fila('washerwoman')).toMatchObject({ estado: 'revisar', avisos: [{ tipo: 'borracho' }, expect.anything(), expect.anything()] });
     });
 
     it('el Bibliotecario sin forasteros en juego recibe un cero', () => {
-      const m = mesa('librarian', 'imp', 'chef');
+      const m = plaza('librarian', 'imp', 'chef');
       expect(m.fila('librarian')).toMatchObject({ estado: 'listo', opciones: [{ envio: { ficha: 'cero' } }] });
     });
 
     it('el Chef cuenta las parejas de malvados; con la Reclusa entre dos, el narrador elige', () => {
-      const m = mesa('chef', 'imp', 'poisoner', 'empath');
+      const m = plaza('chef', 'imp', 'poisoner', 'empath');
       expect(m.fila('chef')?.opciones.map((o) => o.envio.ficha)).toEqual(['uno']);
-      const r = mesa('chef', 'imp', 'recluse', 'poisoner');
+      const r = plaza('chef', 'imp', 'recluse', 'poisoner');
       const f = r.fila('chef')!;
       expect(f.estado).toBe('revisar');
       expect(f.opciones.map((o) => o.envio.ficha)).toEqual(['cero', 'dos']);
@@ -249,7 +249,7 @@ describe('despertar guiado', () => {
     });
 
     it('el Empático cuenta sus vecinos vivos malvados (saltándose a los muertos)', () => {
-      const m = mesa('empath', 'chef', 'imp', 'poisoner');
+      const m = plaza('empath', 'chef', 'imp', 'poisoner');
       const { partida } = m.juego;
       expect(m.fila('empath')?.opciones[0].envio.ficha).toBe('uno');
       partida.grimorio.cambiarVida(m.asiento(1).id, true);
@@ -257,7 +257,7 @@ describe('despertar guiado', () => {
     });
 
     it('el Enterrador necesita al ejecutado («Die Today»)', () => {
-      const m = mesa('undertaker', 'chef', 'imp');
+      const m = plaza('undertaker', 'chef', 'imp');
       const { partida } = m.juego;
       expect(m.fila('undertaker')?.estado).toBe('falta');
       m.recordatorio(1, 'undertaker', 'Die Today');
@@ -266,14 +266,14 @@ describe('despertar guiado', () => {
     });
 
     it('el Espía recibe el grimorio', () => {
-      const m = mesa('spy', 'chef', 'imp');
+      const m = plaza('spy', 'chef', 'imp');
       const { partida } = m.juego;
       partida.guiado.despertar('spy');
       expect(partida.entregas.grimorioRecibidoPor(m.ids[0])?.fichas.map((f) => f.personaje)).toEqual(['spy', 'chef', 'imp']);
     });
 
     it('la Mujer Escarlata, con su «Is The Demon», sabe que es el Imp', () => {
-      const m = mesa('scarletwoman', 'chef', 'imp');
+      const m = plaza('scarletwoman', 'chef', 'imp');
       const { partida } = m.juego;
       expect(m.fila('scarletwoman')?.estado).toBe('falta');
       m.recordatorio(0, 'scarletwoman', 'Is The Demon');
@@ -285,16 +285,16 @@ describe('despertar guiado', () => {
   describe('esbirros y demonio', () => {
     const SIETE = ['imp', 'poisoner', 'spy', 'chef', 'empath', 'monk', 'soldier'];
     /** Los mensajes que le han mandado al de un asiento. */
-    const mensajes = (m: ReturnType<typeof mesa>, i: number) => m.juego.partida.despertares.despertares().find((d) => d.jugador === m.asiento(i).id)?.mensajes ?? [];
+    const mensajes = (m: ReturnType<typeof plaza>, i: number) => m.juego.partida.despertares.despertares().find((d) => d.jugador === m.asiento(i).id)?.mensajes ?? [];
 
     it('con menos de 7 jugadores no se despiertan', () => {
-      const m = mesa('imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier');
+      const m = plaza('imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier');
       expect(m.fila('esbirros')).toMatchObject({ estado: 'falta', avisos: [{ tipo: 'pocosJugadores' }] });
       expect(m.fila('demonios')).toMatchObject({ estado: 'falta', avisos: [{ tipo: 'pocosJugadores' }] });
     });
 
     it('cada esbirro ve al demonio y, cuando dice «Entendido», a los esbirros', () => {
-      const m = mesa(...SIETE);
+      const m = plaza(...SIETE);
       const { partida } = m.juego;
       expect(m.fila('esbirros')).toMatchObject({ estado: 'listo', jugador: m.asiento(1).id, jugadores: [m.asiento(1).id, m.asiento(2).id] });
       expect(partida.guiado.despertar('esbirros')).toBeNull();
@@ -312,7 +312,7 @@ describe('despertar guiado', () => {
     });
 
     it('el demonio, con los 3 faroles, ve a sus esbirros y, cuando dice «Entendido», los faroles', () => {
-      const m = mesa(...SIETE);
+      const m = plaza(...SIETE);
       const { partida } = m.juego;
       expect(m.fila('demonios')).toMatchObject({ estado: 'falta', avisos: [{ tipo: 'faltanFaroles' }] });
       ['washerwoman', 'librarian', 'mayor'].forEach((id, i) => partida.faroles.ponerFarol(i, id));
@@ -330,7 +330,7 @@ describe('despertar guiado', () => {
     });
 
     it('una cosa cada vez: al Envenenador no se le pide elegir hasta que entiende quién es su demonio', () => {
-      const m = mesa(...SIETE);
+      const m = plaza(...SIETE);
       const { partida } = m.juego;
       partida.guiado.despertar('esbirros');
       partida.guiado.despertar('poisoner');
@@ -349,7 +349,7 @@ describe('despertar guiado', () => {
     });
 
     it('los viajeros no cuentan como jugadores', () => {
-      const m = mesa('imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier', 'voudon');
+      const m = plaza('imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier', 'voudon');
       expect(m.fila('esbirros')?.avisos).toEqual([{ tipo: 'pocosJugadores' }]);
     });
   });
