@@ -1,4 +1,4 @@
-import { droison, tieneRecordatorio } from '../../partida/reglas/ReglaPersonaje';
+import { droison, tieneRecordatorio } from '../../personajes/ReglaPersonaje';
 import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { ContextoEtapa } from '../etapas/Etapa';
 import { contextoNoche, tipoReal } from '../plazaDeJuego';

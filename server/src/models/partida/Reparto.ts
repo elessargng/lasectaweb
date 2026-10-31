@@ -10,7 +10,7 @@ export interface EntornoReparto {
   /** Los jugadores de la plaza, en orden. */
   plaza(): readonly Jugador[];
   esViajero(personajeId: string): boolean;
-  /** Lo que hacen las reglas con el reparto (el Revolutionary: ver reglas/revolucionario.ts). */
+  /** Lo que hacen las reglas con el reparto (el Revolutionary: ver personajes/revolucionario.ts). */
   reglas(jugadores: Jugador[], personajes: string[]): string[];
   /** Pone en la ficha del asiento el personaje que le ha tocado (ver Grimorio.repartir). */
   darPersonaje(jugadorId: string, personaje: string | null): void;

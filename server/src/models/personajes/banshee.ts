@@ -1,5 +1,5 @@
 import { tieneRecordatorio, type ReglaPersonaje } from './ReglaPersonaje';
-import type { Jugador } from '../Jugador';
+import type { Jugador } from '../partida/Jugador';
 
 /** La Banshee muerta con su recordatorio «Has Ability» en la ficha. */
 const conHabilidad = (jugador: Jugador) => jugador.muerto && tieneRecordatorio(jugador, 'banshee', /has ability/i);

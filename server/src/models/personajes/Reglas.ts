@@ -1,6 +1,9 @@
 import { banshee } from './banshee';
 import { burocrata } from './burocrata';
-import { canibal, carnicero, enterrador, leviatan } from './ejecuciones';
+import { canibal } from './canibal';
+import { carnicero } from './carnicero';
+import { enterrador } from './enterrador';
+import { leviatan } from './leviatan';
 import { virgen } from './virgen';
 import { institutriz } from './institutriz';
 import { ladron } from './ladron';
@@ -8,7 +11,7 @@ import { organGrinder } from './organGrinder';
 import type { ContextoReglas, RegistroAlNominar, ReglaPersonaje } from './ReglaPersonaje';
 import { revolucionario } from './revolucionario';
 import { voudon } from './voudon';
-import type { Jugador } from '../Jugador';
+import type { Jugador } from '../partida/Jugador';
 
 /**
  * Las reglas de los personajes, en el orden en que se consultan: el Voudon antes

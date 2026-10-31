@@ -1,6 +1,6 @@
-import type { Senalamiento } from '../Senalamientos';
+import type { Senalamiento } from '../partida/Senalamientos';
 import type { ContextoReglas } from './ReglaPersonaje';
-import type { Jugador } from '../Jugador';
+import type { Jugador } from '../partida/Jugador';
 
 /**
  * Lil' Monsta (demonio): no hay ficha de demonio; cada noche los esbirros eligen

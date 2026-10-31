@@ -1,4 +1,4 @@
-import { droison } from '../partida/reglas/ReglaPersonaje';
+import { droison } from './ReglaPersonaje';
 import type { ContextoEtapa } from '../narradorVirtual/etapas/Etapa';
 import { apuntarMuerteDeDia } from '../narradorVirtual/final/cronica';
 import { comprobarFinal, type Ganador } from '../narradorVirtual/final/comprobarFinal';

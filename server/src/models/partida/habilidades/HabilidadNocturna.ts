@@ -8,7 +8,7 @@ import type {
   TarjetaDespertar,
 } from '../../compartido/despertar';
 import type { Alineamiento } from '../../compartido/jugador';
-import { droison, tieneRecordatorio, type ContextoReglas } from '../reglas/ReglaPersonaje';
+import { droison, tieneRecordatorio, type ContextoReglas } from '../../personajes/ReglaPersonaje';
 import type { Jugador } from '../Jugador';
 
 /** Lo que una habilidad puede consultar de la partida: lo mismo que las reglas y los faroles. Tampoco cambia la sala: responde. */

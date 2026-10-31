@@ -1,5 +1,5 @@
 import { randomInt } from 'crypto';
-import { barajar } from '../azar';
+import { barajar } from '../partida/azar';
 import { tieneRecordatorio, type ContextoReglas, type ReglaPersonaje } from './ReglaPersonaje';
 
 export const NPC_REVOLUTIONARY = 'revolutionary';

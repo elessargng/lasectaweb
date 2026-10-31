@@ -6,7 +6,7 @@ import {
   type QuienArtista,
   type RespuestaArtista,
 } from '../compartido/artista';
-import { droison } from '../partida/reglas/ReglaPersonaje';
+import { droison } from './ReglaPersonaje';
 import type { SalaDeJuego } from '../SalaDeJuego';
 import type { ContextoEtapa } from '../narradorVirtual/etapas/Etapa';
 import { esDemonio } from '../narradorVirtual/final/comprobarFinal';

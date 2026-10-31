@@ -1,5 +1,5 @@
 import type { AvisoHabilidad, OpcionDespertar, Registro } from '../../compartido/despertar';
-import { tieneRecordatorio } from '../reglas/ReglaPersonaje';
+import { tieneRecordatorio } from '../../personajes/ReglaPersonaje';
 import {
   alineamientosPosibles,
   conRecordatorio,

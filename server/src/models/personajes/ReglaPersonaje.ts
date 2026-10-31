@@ -1,6 +1,6 @@
-import type { Alineamiento } from '../../compartido/jugador';
-import type { PersonajeDeGuion } from '../../guiones';
-import type { Jugador } from '../Jugador';
+import type { Alineamiento } from '../compartido/jugador';
+import type { PersonajeDeGuion } from '../guiones';
+import type { Jugador } from '../partida/Jugador';
 
 /** Lo que una regla puede consultar de la partida. Las reglas no cambian la sala: responden. */
 export interface ContextoReglas {
@@ -33,7 +33,7 @@ export interface RecordatorioDeRegla {
 /**
  * Lo que un personaje cambia de la partida. Cada personaje con reglas propias
  * implementa solo lo que le toca; la sala (ver Reglas) pregunta a todos. Un
- * personaje nuevo con reglas propias es una regla más en la lista de index.ts.
+ * personaje nuevo con reglas propias es una regla más en la lista de Reglas.ts.
  */
 export interface ReglaPersonaje {
   /** El personaje (id del catálogo). */

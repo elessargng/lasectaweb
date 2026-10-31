@@ -21,10 +21,10 @@ import { habilidadesDelGuion } from './habilidades';
 import { Nominaciones } from './Nominaciones';
 import { Npcs } from './Npcs';
 import { NPC_GARDENER } from './personajesEspeciales';
-import { Reglas } from './reglas';
-import type { ContextoReglas, RegistroAlNominar } from './reglas/ReglaPersonaje';
-import { cuidadorLilmonsta, DEMONIO_LILMONSTA, esbirrosLilmonsta, recordatorioLilmonsta } from './reglas/lilMonsta';
-import { voudonVivo } from './reglas/voudon';
+import { Reglas } from '../personajes/Reglas';
+import type { ContextoReglas, RegistroAlNominar } from '../personajes/ReglaPersonaje';
+import { cuidadorLilmonsta, DEMONIO_LILMONSTA, esbirrosLilmonsta, recordatorioLilmonsta } from '../personajes/lilMonsta';
+import { voudonVivo } from '../personajes/voudon';
 import { RelojSala } from './RelojSala';
 import { Reparto } from './Reparto';
 import { Revelacion } from './Revelacion';
@@ -80,7 +80,7 @@ export class Partida {
     alineamiento: (jugador) => this.grimorio.alineamiento(jugador),
     personaje: (id) => this.guion.personaje(id),
   };
-  /** Las reglas de los personajes (ver reglas/). */
+  /** Las reglas de los personajes (ver models/personajes). */
   private readonly reglas = new Reglas(this.contextoReglas);
   /** Las nominaciones y votaciones del día (y quién tiene la palabra). */
   readonly nominaciones = new Nominaciones({
@@ -407,7 +407,7 @@ export class Partida {
     this.fases.nuevaPartida();
   }
 
-  /** Las votaciones son secretas (el Organ Grinder, ver reglas/organGrinder.ts). */
+  /** Las votaciones son secretas (el Organ Grinder, ver personajes/organGrinder.ts). */
   votacionSecreta(): boolean {
     return this.reglas.votacionSecreta();
   }
@@ -474,7 +474,7 @@ export class Partida {
     return error;
   }
 
-  /** Lil' Monsta: si todos los esbirros sentados señalan al mismo, ese lo cuida (ver reglas/lilMonsta.ts). */
+  /** Lil' Monsta: si todos los esbirros sentados señalan al mismo, ese lo cuida (ver personajes/lilMonsta.ts). */
   private resolverLilmonsta(): void {
     const s = this.senalamientos.senalamiento();
     const cuidador = s && cuidadorLilmonsta(this.contextoReglas, s);
@@ -487,7 +487,7 @@ export class Partida {
     this.grimorio.ponerRecordatorio(cuidador, { personaje: DEMONIO_LILMONSTA, indice: r.indice, texto: r.texto });
   }
 
-  /** Se puede empezar Lil' Monsta: los asientos de los esbirros vivos, o null (ver reglas/lilMonsta.ts). */
+  /** Se puede empezar Lil' Monsta: los asientos de los esbirros vivos, o null (ver personajes/lilMonsta.ts). */
   esbirrosLilmonsta(): string[] | null {
     return esbirrosLilmonsta(this.contextoReglas, {
       noche: this.fases.actual().momento === 'noche',
@@ -570,18 +570,18 @@ export class Partida {
 
   /**
    * Los jugadores solo pueden conversar en privado con sus vecinos (la Institutriz
-   * viva). Se llama así por ella, que es quien lo pide (ver reglas/institutriz.ts).
+   * viva). Se llama así por ella, que es quien lo pide (ver personajes/institutriz.ts).
    */
   institutrizViva(): boolean {
     return this.reglas.soloVecinos();
   }
 
-  /** El Voudon está vivo en la plaza (ver reglas/voudon.ts). */
+  /** El Voudon está vivo en la plaza (ver personajes/voudon.ts). */
   voudonVivo(): boolean {
     return voudonVivo(this.contextoReglas);
   }
 
-  /** Puede votar con las dos manos (dos votos): la Banshee con su habilidad (ver reglas/banshee.ts). */
+  /** Puede votar con las dos manos (dos votos): la Banshee con su habilidad (ver personajes/banshee.ts). */
   puedeVotarDoble(participanteId: string): boolean {
     const jugador = this.jugadorDe(participanteId);
     return !!jugador && this.reglas.votaDoble(jugador);

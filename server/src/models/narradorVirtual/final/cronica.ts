@@ -1,5 +1,5 @@
 import type { EnvioDespertar } from '../../compartido/despertar';
-import { droison } from '../../partida/reglas/ReglaPersonaje';
+import { droison } from '../../personajes/ReglaPersonaje';
 import type { SalaDeJuego } from '../../SalaDeJuego';
 import { FRASES, type MuerteRevelada, type NocheRevelada } from '../frases';
 import { contextoNoche, nombreDeAsiento, tipoReal } from '../plazaDeJuego';
