@@ -33,10 +33,8 @@ export type MotivoDecision =
   | 'droisonVerdad'
   /** La información falsa que se le da. */
   | 'informacionFalsa'
-  /** El demonio ataca al Alcalde: si la muerte rebota. */
-  | 'alcaldeRebota'
-  /** A quién rebota. */
-  | 'alcaldeAQuien'
+  /** Lo que ha hecho el demonio puede acabar de varias maneras (el Alcalde la rebota): a quién le llega. */
+  | 'desenlace'
   /** El Espía nomina a la Virgen: si registra como aldeano. */
   | 'espiaComoAldeano'
   /** El Exterminador dispara a la Reclusa: si registra como demonio. */

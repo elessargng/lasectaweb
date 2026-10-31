@@ -12,9 +12,9 @@ import {
 import type { Jugador } from '../partida/Jugador';
 
 /**
- * El Imp: el elegido muere (su «Dead» y la muerte pendiente), salvo que se salve
- * (ver AnteElDemonio); si puede rebotar a otro, lo decide el narrador. Si se elige
- * a sí mismo, muere y el narrador dice quién es el nuevo Imp.
+ * El Imp: mata al elegido (su «Dead» y la muerte pendiente), o a quien le llegue
+ * (ver Objetivo): puede no llegarle a nadie, y con varios desenlaces decide el
+ * narrador. Si se elige a sí mismo, muere y el narrador dice quién es el nuevo Imp.
  */
 export class Imp extends EligeYMarca {
   constructor() {
@@ -22,13 +22,22 @@ export class Imp extends EligeYMarca {
   }
 
   protected marcar(ctx: ContextoNoche, jugador: Jugador, elegido: Jugador, avisos: AvisoHabilidad[]): Resultado {
-    const muere: Efectos = { ...sinEfectos(), recordatorios: [{ asiento: elegido.id, texto: this.recordatorio }], muere: elegido.id };
-    if (elegido.id === jugador.id) return listo(OK, { ...muere, nuevoImp: true }, avisos);
+    if (elegido.id === jugador.id) {
+      return listo(OK, { ...sinEfectos(), recordatorios: [{ asiento: elegido.id, texto: this.recordatorio }], muere: elegido.id, nuevoImp: true }, avisos);
+    }
     if (elegido.muerto) return listo(OK, sinEfectos(), avisos);
-    const desenlace = ctx.anteElDemonio(elegido).atacado({ demonio: this.personaje, efecto: 'matar' });
-    if (desenlace[0] === 'seSalva') return listo(OK, sinEfectos(), [...avisos, { tipo: 'protegido', jugador: elegido.id }]);
-    if (desenlace.includes('rebota')) return revisar([{ envio: OK, registros: [] }], [...avisos, { tipo: 'alcalde', jugador: elegido.id }]);
-    return listo(OK, muere, avisos);
+    const desenlaces = ctx.objetivo(elegido).recibe({ origen: 'demonio', personaje: this.personaje, efecto: 'matar' });
+    if (desenlaces.length > 1) {
+      const dto = desenlaces.map((d) => ({ muere: d.a?.id ?? null, ...(d.gasta ? { gasta: d.gasta } : {}) }));
+      return revisar([{ envio: OK, registros: [] }], [...avisos, { tipo: 'desenlaces', jugador: elegido.id, desenlaces: dto }]);
+    }
+    const [{ a, gasta }] = desenlaces;
+    const efectos: Efectos = {
+      ...sinEfectos(),
+      recordatorios: [...(a ? [{ asiento: a.id, texto: this.recordatorio }] : []), ...(gasta ? [gasta] : [])],
+      muere: a?.id ?? null,
+    };
+    return listo(OK, efectos, a ? avisos : [...avisos, { tipo: 'protegido', jugador: elegido.id }]);
   }
 }
 export const imp = new Imp();

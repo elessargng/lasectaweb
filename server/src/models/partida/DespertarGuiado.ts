@@ -164,7 +164,7 @@ export class DespertarGuiado {
       this.guardar({ personaje, asiento: jugador.id, estado: 'revisar', avisos, opciones });
       return;
     }
-    for (const r of efectos.recordatorios) this.entorno.ponerRecordatorio(r.asiento, personaje, r.texto);
+    for (const r of efectos.recordatorios) this.entorno.ponerRecordatorio(r.asiento, r.personaje ?? personaje, r.texto);
     if (efectos.muere) this.entorno.matarDeNoche(efectos.muere);
     if (efectos.grimorio) this.entorno.enviarGrimorio(jugador.id);
     if (efectos.nuevoImp) this.impQueMuere = jugador.id;

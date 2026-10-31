@@ -36,8 +36,9 @@ const POR_MOTIVO: Record<MotivoDecision, string> = {
   informacionFalsa:
     'La mentira que recibe. Que sea creíble y coherente con lo dicho otras noches; mejor si confirma el farol de un ' +
     'malvado o inculpa a un bueno, sin dejar la partida sin solución.',
-  alcaldeRebota: 'El demonio ataca al Alcalde: decide si muere él o la muerte rebota a otro jugador.',
-  alcaldeAQuien: 'A quién rebota la muerte del Alcalde.',
+  desenlace:
+    'El demonio ha atacado y puede acabar de varias maneras (al Alcalde, la muerte le puede rebotar a otro jugador; ' +
+    'si le llega a uno protegido, no muere nadie). La primera es la que toca sin ti. Elige pensando en el equilibrio.',
   espiaComoAldeano: 'El Espía nomina a la Virgen: si registra como aldeano, el Espía es ejecutado al momento.',
   registraComoDemonio: 'El Exterminador dispara a quien puede registrar como demonio (la Reclusa): si registra como tal, muere.',
   violinistaBueno: 'El Violinista: el jugador bueno que se enfrenta al demonio; todos votarán entre los dos.',

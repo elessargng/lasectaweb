@@ -15,7 +15,7 @@ import { revolucionario } from './revolucionario';
 import { voudon } from './voudon';
 import type { Jugador } from '../partida/Jugador';
 import { percepcionReal, type Percepcion } from './Percepcion';
-import { anteElDemonioReal, type AnteElDemonio } from './AnteElDemonio';
+import { objetivoReal, type Objetivo } from './Objetivo';
 import { alcalde } from './alcalde';
 import { monje } from './monje';
 import { soldado } from './soldado';
@@ -41,7 +41,7 @@ export const REGLAS: readonly ReglaPersonaje[] = [
   // Cómo registran
   reclusa,
   espia,
-  // Ante el demonio: quien desvía antes que quien protege (protegido, no rebota)
+  // A quién le llega: quien desvía antes que quien protege (protegido, no rebota)
   alcalde,
   soldado,
   monje,
@@ -156,9 +156,9 @@ export class Reglas {
     return this.reglas.reduce((p, r) => (r.personaje === id && r.alterarPercepcion ? r.alterarPercepcion(this.ctx, p) : p), base);
   }
 
-  /** Lo que le pasa a un jugador si un demonio lo ataca: lo de base, con lo que cambie cada regla. */
-  anteElDemonio(jugador: Jugador): AnteElDemonio {
-    return this.reglas.reduce((a, r) => r.alterarAnteElDemonio?.(this.ctx, jugador, a) ?? a, anteElDemonioReal());
+  /** A quién le llega lo que le hacen a un jugador: a él, con lo que cambie cada regla. */
+  objetivo(jugador: Jugador): Objetivo {
+    return this.reglas.reduce((o, r) => r.alterarObjetivo?.(this.ctx, jugador, o) ?? o, objetivoReal(jugador));
   }
 
   /** Los personajes barajados, en el orden en que se reparten (ver ReglaPersonaje.repartir). */

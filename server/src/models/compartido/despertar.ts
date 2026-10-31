@@ -115,7 +115,9 @@ export type Registro = 'bueno' | 'malvado' | 'demonio' | 'noDemonio' | 'esbirro'
  * - registro: en lo que se calcula entra quien puede registrar como otra cosa (`jugador`);
  * - sinEfecto: estaba droison al elegir; se le ha contestado sin poner el recordatorio;
  * - protegido: el demonio ha elegido a uno protegido (`jugador`): no muere;
- * - alcalde: el demonio ha elegido al Alcalde (`jugador`): decide el narrador;
+ * - desenlaces: lo que ha hecho el demonio a `jugador` puede acabar de varias maneras
+ *   (el Alcalde la rebota): a quién le llega en cada una (null: a nadie) y el
+ *   recordatorio de quien gasta su habilidad; decide el narrador, la primera sin él;
  * - elegido: a quién ha elegido (`jugadores`);
  * - pocosJugadores: hay menos de 7 jugadores: los esbirros y el demonio no se despiertan;
  * - faltanFaroles: el narrador aún no ha puesto los 3 faroles del demonio.
@@ -123,8 +125,15 @@ export type Registro = 'bueno' | 'malvado' | 'demonio' | 'noDemonio' | 'esbirro'
 export type AvisoHabilidad =
   | { tipo: 'faltaRecordatorio'; personaje: string; texto: string }
   | { tipo: 'envenenado' | 'borracho' | 'muerto' | 'noMuere' | 'sinEfecto' | 'pocosJugadores' | 'faltanFaroles' }
-  | { tipo: 'registro' | 'protegido' | 'alcalde'; jugador: string }
+  | { tipo: 'registro' | 'protegido'; jugador: string }
+  | { tipo: 'desenlaces'; jugador: string; desenlaces: DesenlaceDespertar[] }
   | { tipo: 'elegido'; jugadores: string[] };
+
+/** Un desenlace posible de lo que hace el demonio: quién muere (null: nadie) y quien gasta su habilidad, con su recordatorio. */
+export interface DesenlaceDespertar {
+  muere: string | null;
+  gasta?: { asiento: string; personaje: string; texto: string };
+}
 
 /** Una respuesta posible: lo que se manda y, con quien puede registrar como otra cosa, cómo registra cada uno para que salga. */
 export interface OpcionDespertar {

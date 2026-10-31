@@ -128,6 +128,12 @@ describe('despertar guiado', () => {
       partida.guiado.despertar('imp');
       m.elegir(0, 1);
       expect(m.fila('imp')?.estado).toBe('revisar');
+      // Muere él (lo de verdad, primero) o rebota al Envenenador
+      expect(m.fila('imp')?.avisos).toContainEqual({
+        tipo: 'desenlaces',
+        jugador: m.asiento(1).id,
+        desenlaces: [{ muere: m.asiento(1).id }, { muere: m.asiento(2).id }],
+      });
       expect(m.asiento(1).muertePendiente).toBe(false);
       expect(partida.guiado.resolver('imp', m.fila('imp')!.opciones[0].envio)).toBeNull();
       expect(m.fila('imp')?.estado).toBe('hecho');

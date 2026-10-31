@@ -1,5 +1,5 @@
 import { EligeYMarca } from '../partida/habilidades/HabilidadNocturna';
-import { aSalvo } from './AnteElDemonio';
+import { A_NADIE } from './Objetivo';
 import { tieneRecordatorio, type ReglaPersonaje } from './ReglaPersonaje';
 
 /**
@@ -8,7 +8,8 @@ import { tieneRecordatorio, type ReglaPersonaje } from './ReglaPersonaje';
  */
 export const monje: ReglaPersonaje = {
   personaje: 'monk',
-  alterarAnteElDemonio: (_ctx, jugador, base) => (tieneRecordatorio(jugador, 'monk', /^safe$/i) ? aSalvo() : base),
+  alterarObjetivo: (_ctx, jugador, base) =>
+    tieneRecordatorio(jugador, 'monk', /^safe$/i) ? { recibe: (accion) => (accion.origen === 'demonio' ? A_NADIE : base.recibe(accion)) } : base,
 };
 
 /** De noche, protege a otro del demonio (su «Safe»). */

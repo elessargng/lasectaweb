@@ -25,8 +25,11 @@ export interface ContextoNoche extends ContextoReglas {
 
 /** Lo que cambia en la partida al hacerse una habilidad (lo aplica DespertarGuiado). */
 export interface Efectos {
-  /** Recordatorios del personaje de la habilidad que se ponen (cada uno, único en la plaza). */
-  recordatorios: { asiento: string; texto: string }[];
+  /**
+   * Recordatorios que se ponen (cada uno, único en la plaza): del personaje de la
+   * habilidad o, si se dice, de otro (el «No Ability» de quien se salva gastándola).
+   */
+  recordatorios: { asiento: string; texto: string; personaje?: string }[];
   /** Quien muere esta noche (queda pendiente, como «Matar de noche»), o null. */
   muere: string | null;
   /** El demonio se ha elegido a sí mismo: el narrador dice quién es el nuevo. */

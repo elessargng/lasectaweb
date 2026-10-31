@@ -9,7 +9,7 @@ import { percepcionReal } from '../../src/models/personajes/Percepcion';
 import { reclusa } from '../../src/models/personajes/reclusa';
 import { espia } from '../../src/models/personajes/espia';
 import type { PersonajeDeGuion } from '../../src/models/guiones';
-import { anteElDemonioReal } from '../../src/models/personajes/AnteElDemonio';
+import { objetivoReal } from '../../src/models/personajes/Objetivo';
 import { REGLAS } from '../../src/models/personajes/Reglas';
 
 /** Las reglas de los personajes que cambian la partida, vistas desde fuera (la sala). */
@@ -318,7 +318,7 @@ describe('Reglas (cómo se combinan)', () => {
     personaje: () => undefined,
     personajesDelGuion: () => [],
     percepcion: (a) => percepcionReal(ctx, a),
-    anteElDemonio: () => anteElDemonioReal(),
+    objetivo: (a) => objetivoReal(a),
   };
 
   it('sin reglas: vota quien no es un muerto sin voto, y hace falta la mitad', () => {
@@ -360,7 +360,7 @@ describe('Percepción (cómo registra cada uno)', () => {
     personaje: (id) => guion.find((p) => p.id === id),
     personajesDelGuion: () => guion,
     percepcion: (a) => reglas.percepcion(a),
-    anteElDemonio: (a) => reglas.anteElDemonio(a),
+    objetivo: (a) => objetivoReal(a),
   };
   const reglas = new Reglas(ctx, [reclusa, espia]);
   const jugador = (personaje: string, envenenado = false): Jugador =>
@@ -400,41 +400,51 @@ describe('Percepción (cómo registra cada uno)', () => {
   });
 });
 
-describe('Ante el demonio (quién se salva)', () => {
+describe('A quién le llega (quién se salva o lo desvía)', () => {
+  let plaza: Jugador[] = [];
   const ctx: ContextoReglas = {
-    plaza: () => [],
+    plaza: () => plaza,
     identidad: (a) => a.personaje,
     alineamiento: () => 'bueno',
     personaje: () => undefined,
     personajesDelGuion: () => [],
     percepcion: (a) => percepcionReal(ctx, a),
-    anteElDemonio: (a) => reglas.anteElDemonio(a),
+    objetivo: (a) => reglas.objetivo(a),
   };
   const reglas = new Reglas(ctx, REGLAS);
   const envenenado = { id: 'p', personaje: 'poisoner', indice: 0, texto: 'Poisoned' };
   const seguro = { id: 's', personaje: 'monk', indice: 0, texto: 'Safe' };
-  const jugador = (personaje: string, recordatorios: Jugador['recordatorios'] = []): Jugador => Object.assign(new Jugador(), { personaje, recordatorios });
-  const matar = { demonio: 'imp', efecto: 'matar' } as const;
-  const envenenar = { demonio: 'pukka', efecto: 'envenenar' } as const;
+  const jugador = (personaje: string, recordatorios: Jugador['recordatorios'] = []): Jugador =>
+    Object.assign(new Jugador(), { id: personaje, personaje, recordatorios });
+  const matar = { origen: 'demonio', personaje: 'imp', efecto: 'matar' } as const;
+  const envenenar = { origen: 'demonio', personaje: 'pukka', efecto: 'envenenar' } as const;
+  const ejecutar = { origen: 'ejecucion', personaje: null, efecto: 'matar' } as const;
+  const a = (j: Jugador, accion: Parameters<ReturnType<typeof reglas.objetivo>['recibe']>[0]) =>
+    reglas.objetivo(j).recibe(accion).map((d) => d.a?.personaje ?? null);
 
-  it('sin protección, le afecta', () => {
-    expect(reglas.anteElDemonio(jugador('chef')).atacado(matar)).toEqual(['afecta']);
+  it('sin nadie que lo cambie, le llega a él', () => {
+    expect(a(jugador('chef'), matar)).toEqual(['chef']);
   });
 
-  it('con el «Safe» del Monje, se salva de cualquier demonio y de todo lo que haga', () => {
-    expect(reglas.anteElDemonio(jugador('chef', [seguro])).atacado(matar)).toEqual(['seSalva']);
-    expect(reglas.anteElDemonio(jugador('chef', [seguro])).atacado(envenenar)).toEqual(['seSalva']);
+  it('con el «Safe» del Monje, no le llega nada de ningún demonio; la ejecución, sí', () => {
+    const chef = jugador('chef', [seguro]);
+    expect(a(chef, matar)).toEqual([null]);
+    expect(a(chef, envenenar)).toEqual([null]);
+    expect(a(chef, ejecutar)).toEqual(['chef']);
   });
 
-  it('el Soldado se salva si está sano', () => {
-    expect(reglas.anteElDemonio(jugador('soldier')).atacado(envenenar)).toEqual(['seSalva']);
-    expect(reglas.anteElDemonio(jugador('soldier', [envenenado])).atacado(matar)).toEqual(['afecta']);
+  it('el Soldado sano se salva del demonio; envenenado, no', () => {
+    expect(a(jugador('soldier'), envenenar)).toEqual([null]);
+    expect(a(jugador('soldier', [envenenado]), matar)).toEqual(['soldier']);
   });
 
-  it('al Alcalde sano, la muerte le puede rebotar (lo de base, primero); protegido por el Monje, se salva', () => {
-    expect(reglas.anteElDemonio(jugador('mayor')).atacado(matar)).toEqual(['afecta', 'rebota']);
-    expect(reglas.anteElDemonio(jugador('mayor')).atacado(envenenar)).toEqual(['afecta']);
-    expect(reglas.anteElDemonio(jugador('mayor', [envenenado])).atacado(matar)).toEqual(['afecta']);
-    expect(reglas.anteElDemonio(jugador('mayor', [seguro])).atacado(matar)).toEqual(['seSalva']);
+  it('al Alcalde sano, el demonio que lo mata puede rebotar a cualquier otro vivo (no a sí mismo); al protegido, no muere nadie', () => {
+    const alcalde = jugador('mayor');
+    plaza = [jugador('imp'), alcalde, jugador('chef'), jugador('soldier'), jugador('empath', [seguro]), Object.assign(jugador('saint'), { muerto: true })];
+    expect(a(alcalde, matar)).toEqual(['mayor', 'chef', null]);
+    expect(a(alcalde, envenenar)).toEqual(['mayor']);
+    expect(a(alcalde, ejecutar)).toEqual(['mayor']);
+    expect(a(jugador('mayor', [envenenado]), matar)).toEqual(['mayor']);
+    expect(a(jugador('mayor', [seguro]), matar)).toEqual([null]);
   });
 });

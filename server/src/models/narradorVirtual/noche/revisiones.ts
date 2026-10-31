@@ -1,10 +1,10 @@
-import type { EnvioDespertar } from '../../compartido/despertar';
+import type { DesenlaceDespertar, EnvioDespertar } from '../../compartido/despertar';
 import type { HabilidadNoche } from '../../partida/DespertarGuiado';
 import { habilidadesDelGuion } from '../../partida/habilidades';
 import { OK } from '../../partida/habilidades/HabilidadNocturna';
 import type { ContextoEtapa } from '../etapas/Etapa';
-import { describirEnvio, describirOpcion, describirPersonaje, opcionesDeAsientos } from '../grimorio';
-import { contextoNoche, vivo } from '../plazaDeJuego';
+import { describirAsiento, describirEnvio, describirOpcion, describirPersonaje } from '../grimorio';
+import { contextoNoche } from '../plazaDeJuego';
 import { destapaAlMal, opcionesFalsas, probabilidadVerdad, recordarDroison } from './criterioDroison';
 import { informacionesFalsas } from './informacionFalsa';
 import { ponerRecordatorio } from './requisitos';
@@ -13,11 +13,12 @@ import { ponerRecordatorio } from './requisitos';
  * Lo que revisa el narrador en el despertar guiado (droison, alguien que puede
  * registrar como otro, el Alcalde): su estrategia elige una de las opciones y la
  * manda. Droison, según su estrategia (y lo que aconseja criterioDroison), la de
- * verdad o una falsa con su misma forma. Con el Alcalde, además, decide si muere él o rebota a otro.
+ * verdad o una falsa con su misma forma. Si lo que ha hecho el demonio puede acabar de
+ * varias maneras (el Alcalde), además, decide cuál.
  */
 export async function resolverRevision(ctx: ContextoEtapa, fila: HabilidadNoche): Promise<boolean> {
-  const alcalde = fila.avisos.find((a) => a.tipo === 'alcalde');
-  if (alcalde && 'jugador' in alcalde) await alcaldeAtacado(ctx, fila.personaje, alcalde.jugador);
+  const desenlaces = fila.avisos.find((a) => a.tipo === 'desenlaces');
+  if (desenlaces?.tipo === 'desenlaces') await elegirDesenlace(ctx, fila.personaje, desenlaces.desenlaces);
   const envio = fila.opciones.length ? ((await droison(ctx, fila)) ?? (await elegirOpcion(ctx, fila))) : OK;
   return (await ctx.plaza.accion('narrador:resolverHabilidad', { personajeId: fila.personaje, ...envio })).ok;
 }
@@ -73,21 +74,28 @@ async function droison(ctx: ContextoEtapa, fila: HabilidadNoche): Promise<EnvioD
   return dada;
 }
 
-/** El demonio ataca al Alcalde: muere él o la muerte rebota a otro vivo (no al demonio). */
-async function alcaldeAtacado(ctx: ContextoEtapa, demonio: string, alcaldeId: string): Promise<void> {
-  const { partida } = ctx.juego;
-  const otros = partida.plaza().filter((a) => vivo(a) && a.id !== alcaldeId && a.personaje !== demonio);
-  const rebota =
-    otros.length > 0 &&
-    (await ctx.siONo({
-      motivo: 'alcaldeRebota',
-      pregunta: 'El demonio ataca al Alcalde: ¿la muerte rebota a otro jugador?',
-      si: 'Muere otro jugador en su lugar.',
-      no: 'Muere el Alcalde.',
-    }));
-  const muere = rebota
-    ? (await ctx.decidir({ motivo: 'alcaldeAQuien', pregunta: 'A quién rebota la muerte del Alcalde.', opciones: opcionesDeAsientos(ctx.juego, otros) })).id
-    : alcaldeId;
-  await ponerRecordatorio(ctx, muere, demonio, 'Dead');
-  await ctx.plaza.accion('narrador:cambiarVida', { jugadorId: muere, muerto: true });
+/**
+ * Lo que hace el demonio puede acabar de varias maneras (el Alcalde la rebota):
+ * su estrategia elige una (la primera, la que toca sin el narrador) y se aplica.
+ */
+async function elegirDesenlace(ctx: ContextoEtapa, demonio: string, desenlaces: DesenlaceDespertar[]): Promise<void> {
+  const { juego } = ctx;
+  const asiento = (id: string) => juego.partida.plaza().find((a) => a.id === id);
+  const elegido = await ctx.decidir({
+    motivo: 'desenlace',
+    pregunta: 'El demonio ha atacado: a quién le llega al final.',
+    opciones: desenlaces.map((d, i) => {
+      const quien = d.muere ? asiento(d.muere) : undefined;
+      return {
+        clave: `d${i + 1}`,
+        descripcion: quien ? `Muere ${describirAsiento(juego, quien)}.` : 'No muere nadie.',
+        valor: d,
+        ...(i === 0 ? { rasgos: ['verdad' as const] } : {}),
+      };
+    }),
+  });
+  if (elegido.gasta) await ponerRecordatorio(ctx, elegido.gasta.asiento, elegido.gasta.personaje, elegido.gasta.texto);
+  if (!elegido.muere) return;
+  await ponerRecordatorio(ctx, elegido.muere, demonio, 'Dead');
+  await ctx.plaza.accion('narrador:cambiarVida', { jugadorId: elegido.muere, muerto: true });
 }

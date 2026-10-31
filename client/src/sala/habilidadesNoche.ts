@@ -66,8 +66,10 @@ export function describirAviso(c: ContextoHabilidades, aviso: AvisoHabilidad): s
       return `${asientoConPersonaje(c, aviso.jugador)}, puede registrar como otra cosa.`;
     case 'protegido':
       return `${asientoConPersonaje(c, aviso.jugador)}, está protegido: no muere.`;
-    case 'alcalde':
-      return `Ha elegido al Alcalde (${nombreDeAsiento(c.estado, aviso.jugador)}): decide si muere o si muere otro.`;
+    case 'desenlaces': {
+      const maneras = aviso.desenlaces.map((d) => (d.muere ? `muere ${nombreDeAsiento(c.estado, d.muere)}` : 'no muere nadie'));
+      return `Ha elegido a ${asientoConPersonaje(c, aviso.jugador)}; puede acabar así: ${enumerar(maneras)}. Decide tú y ponlo en el grimorio.`;
+    }
     case 'elegido':
       return `Ha elegido a ${enumerar(aviso.jugadores.map((id) => nombreDeAsiento(c.estado, id)))}.`;
     case 'pocosJugadores':
