@@ -1,7 +1,24 @@
-import type { AvisoHabilidad, EleccionDespertar, EnvioDespertar, OpcionDespertar } from '../compartido/despertar';
-import type { HabilidadNocheDto } from '../../views/dto/despertar';
+import type { AvisoHabilidad, EleccionDespertar, EnvioDespertar, EstadoHabilidad, OpcionDespertar } from '../compartido/despertar';
 import { tarjeta, type ContextoNoche, type HabilidadNocturna, type Resultado } from './habilidades/HabilidadNocturna';
 import type { Jugador } from './Jugador';
+
+
+/**
+ * Cómo está el despertar guiado de una fila del orden de noche: quién despierta,
+ * qué le falta y lo que se propone mandarle.
+ */
+export interface HabilidadNoche {
+  /** El personaje, o 'esbirros' / 'demonios'. */
+  personaje: string;
+  /** El jugador que despierta (el de la ficha); con 'esbirros' o 'demonios', el primero. */
+  jugador: string;
+  /** Todos los que despiertan: el de la ficha o, con 'esbirros' y 'demonios', cada uno. */
+  jugadores: string[];
+  estado: EstadoHabilidad;
+  avisos: AvisoHabilidad[];
+  /** Lo que se propone mandar (revisar: una o varias, la primera es la de verdad). */
+  opciones: OpcionDespertar[];
+}
 
 /** Lo que el despertar guiado necesita de la sala. */
 export interface EntornoDespertarGuiado {
@@ -98,9 +115,9 @@ export class DespertarGuiado {
   }
 
   /** Cada fila del orden de noche con habilidad y ficha en la plaza: cómo está. Fuera de la noche, ninguna. */
-  habilidadesNoche(): HabilidadNocheDto[] {
+  habilidadesNoche(): HabilidadNoche[] {
     if (!this.entorno.noche()) return [];
-    return [...this.entorno.habilidades().values()].flatMap((h): HabilidadNocheDto[] => {
+    return [...this.entorno.habilidades().values()].flatMap((h): HabilidadNoche[] => {
       const jugadores = this.asientosDe(h);
       if (!jugadores.length) return [];
       const fila = { personaje: h.personaje, jugador: jugadores[0].id, jugadores: jugadores.map((a) => a.id) };

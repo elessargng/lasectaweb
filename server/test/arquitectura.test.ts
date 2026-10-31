@@ -35,11 +35,7 @@ const usaVistas = (archivo: string) => importsDe(archivo).some((i) => i === 'vie
  */
 const PENDIENTES = [
   'models/narradorVirtual/NarradorVirtual.ts',
-  'models/narradorVirtual/etapas/Noche.ts',
-  'models/narradorVirtual/noche/requisitos.ts',
-  'models/narradorVirtual/noche/revisiones.ts',
   'models/narradorVirtual/puertos.ts',
-  'models/partida/DespertarGuiado.ts',
 ];
 
 /**

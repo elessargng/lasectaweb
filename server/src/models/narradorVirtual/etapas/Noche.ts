@@ -1,4 +1,4 @@
-import type { HabilidadNocheDto } from '../../../views/dto/despertar';
+import type { HabilidadNoche } from '../../partida/DespertarGuiado';
 import { habilidadesDelGuion } from '../../partida/habilidades';
 import { elegirVarios } from '../estrategias/EstrategiaNarrador';
 import { FRASES } from '../frases';
@@ -166,7 +166,7 @@ export class Noche implements Etapa {
     await ponerRecordatorio(ctx, borracho.id, 'drunk', 'Is The Drunk');
   }
 
-  private fila(ctx: ContextoEtapa, personaje: string): HabilidadNocheDto | undefined {
+  private fila(ctx: ContextoEtapa, personaje: string): HabilidadNoche | undefined {
     const { partida } = ctx.juego;
     return partida.guiado.habilidadesNoche().find((h) => h.personaje === personaje);
   }
@@ -192,7 +192,7 @@ export class Noche implements Etapa {
   }
 
   /** Espera a que elija; por un asiento libre, elige él (cuenta como un jugador). */
-  private async esperarEleccion(ctx: ContextoEtapa, fila: HabilidadNocheDto): Promise<void> {
+  private async esperarEleccion(ctx: ContextoEtapa, fila: HabilidadNoche): Promise<void> {
     const { partida } = ctx.juego;
     const eleccion = habilidadesDelGuion(partida.guion.actual()?.edicion ?? null).get(fila.personaje)?.eleccion;
     const jugador = partida.plaza().find((a) => a.id === fila.jugador);

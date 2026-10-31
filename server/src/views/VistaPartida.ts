@@ -11,7 +11,8 @@ import type { NominacionDto } from './dto/partida';
 import type { Nominacion } from '../models/partida/Nominaciones';
 import type { HiloDespertar } from '../models/partida/Despertares';
 import type { FichaEnviada, GrimorioEnviado } from '../models/partida/Entregas';
-import type { DespertarDto } from './dto/despertar';
+import type { HabilidadNoche } from '../models/partida/DespertarGuiado';
+import type { DespertarDto, HabilidadNocheDto } from './dto/despertar';
 import type { FichaEnviadaDto, GrimorioEnviadoDto } from './dto/grimorio';
 import type { ConversacionDto, SalaDto, InvitacionDto } from './dto/sala';
 import type { Conversacion, Invitacion } from '../models/conversaciones';
@@ -117,6 +118,14 @@ const participanteDto = (p: Participante, accesoGrimorio: EstadoAccesoGrimorio):
   estiloMano: p.estiloMano,
   sinSonido: p.sinSonido,
   accesoGrimorio,
+});
+const habilidadNocheDto = (h: HabilidadNoche): HabilidadNocheDto => ({
+  personaje: h.personaje,
+  jugador: h.jugador,
+  jugadores: [...h.jugadores],
+  estado: h.estado,
+  avisos: h.avisos.map((a) => ({ ...a })),
+  opciones: h.opciones.map((o) => ({ envio: { ...o.envio }, registros: o.registros.map((r) => ({ ...r })) })),
 });
 const conversacionDto = (c: Conversacion): ConversacionDto => ({ id: c.id, miembros: [...c.miembros], oyentes: [...c.oyentes] });
 const invitacionDto = (i: Invitacion): InvitacionDto => ({ id: i.id, de: i.de, para: i.para, ...(i.conversacion && { conversacion: i.conversacion }) });
@@ -269,7 +278,7 @@ export class VistaPartida {
       // El registro de votaciones es solo para los narradores.
       votaciones: narra ? comun.votaciones : [],
       recordatoriosNoche: narra ? comun.recordatoriosNoche : {},
-      habilidadesNoche: narra ? partida.guiado.habilidadesNoche() : [],
+      habilidadesNoche: narra ? partida.guiado.habilidadesNoche().map(habilidadNocheDto) : [],
       nuevoImp: narra ? partida.guiado.nuevoImp() : null,
       // Los despertares: los narradores y los visitantes que ven el grimorio, todos; un
       // jugador, solo el de su asiento (nadie más sabe a quién se despierta).

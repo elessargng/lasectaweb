@@ -63,7 +63,7 @@ export interface MensajeDespertar {
   /** «Tú eres»: el alineamiento, si se dice. */
   alineamiento: Alineamiento | null;
   /**
-   * «Haz una elección» de una habilidad (el despertar guiado, ver HabilidadNocheDto):
+   * «Haz una elección» de una habilidad (el despertar guiado):
    * a cuántos jugadores elige y si puede elegirse a sí mismo. El jugador solo puede
    * contestar con la ficha «Jugador» y justo esos. null: una elección libre.
    */

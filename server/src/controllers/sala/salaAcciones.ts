@@ -947,7 +947,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   },
 
   /**
-   * El despertar guiado (ver HabilidadNocheDto): despierta al de una fila del orden
+   * El despertar guiado (ver HabilidadNoche): despierta al de una fila del orden
    * de noche según su habilidad, si está listo. datos: { personajeId }.
    */
   'narrador:despertarHabilidad': {
