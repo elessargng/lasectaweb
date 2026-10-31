@@ -9,7 +9,7 @@ import type { Alineamiento } from './jugador';
  * ve de ella (el narrador puede cambiarlo antes de enviarlo).
  */
 export interface FichaEnviadaDto {
-  asientoId: string;
+  jugadorId: string;
   personaje: string | null;
   alineamiento: Alineamiento | null;
   muerto: boolean;

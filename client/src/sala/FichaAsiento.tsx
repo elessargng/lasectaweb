@@ -362,7 +362,7 @@ const FichaAsiento = ({
   // Revivir quita también una muerte pendiente
   const vivo = !asiento.muerto && !asiento.muertePendiente;
   const cambiarVida = async () => {
-    const r = await pedir('narrador:cambiarVida', { asientoId: asiento.id, muerto: vivo });
+    const r = await pedir('narrador:cambiarVida', { jugadorId: asiento.id, muerto: vivo });
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha, que ya dice su estado.
     return false;
@@ -370,33 +370,33 @@ const FichaAsiento = ({
   // De noche: primero el recordatorio de quien lo mata; la muerte queda pendiente
   const matarDeNoche = async (recordatorio: { personaje: PersonajeMostrado; indice: number } | null) => {
     if (recordatorio) {
-      const r = await pedir('narrador:ponerRecordatorio', { asientoId: asiento.id, personajeId: recordatorio.personaje.id, indice: recordatorio.indice });
+      const r = await pedir('narrador:ponerRecordatorio', { jugadorId: asiento.id, personajeId: recordatorio.personaje.id, indice: recordatorio.indice });
       if (!r.ok) {
         onError(r.error);
         return;
       }
     }
-    const r = await pedir('narrador:cambiarVida', { asientoId: asiento.id, muerto: true });
+    const r = await pedir('narrador:cambiarVida', { jugadorId: asiento.id, muerto: true });
     if (!r.ok) onError(r.error);
   };
   // Ejecutar al que lleva la calavera: muere, se le ponen los recordatorios de las
   // ejecuciones (el Caníbal, el Enterrador…) y anochece, salvo con el Carnicero vivo o si
   // quedan dos vivos (entonces el narrador elige: noche o revelar el grimorio, ver SalaJuego)
   const ejecutar = async () => {
-    const r = await pedir('narrador:ejecutar', { asientoId: asiento.id });
+    const r = await pedir('narrador:ejecutar', { jugadorId: asiento.id });
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha, que ya dice que ha muerto.
     return false;
   };
   const confirmarMuerte = async () => {
-    const r = await pedir('narrador:confirmarMuerte', { asientoId: asiento.id });
+    const r = await pedir('narrador:confirmarMuerte', { jugadorId: asiento.id });
     if (!r.ok) onError(r.error);
     return false;
   };
 
   // El voto que le queda a un muerto: el narrador se lo quita o se lo devuelve a mano.
   const cambiarVoto = async () => {
-    const r = await pedir('narrador:cambiarVoto', { asientoId: asiento.id, gastado: !asiento.votoGastado });
+    const r = await pedir('narrador:cambiarVoto', { jugadorId: asiento.id, gastado: !asiento.votoGastado });
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha, que ya dice si le queda el voto.
     return false;
@@ -404,7 +404,7 @@ const FichaAsiento = ({
 
   // Desde aquí la marca no cierra la nominación (el botón «Marca» de la nominación sí).
   const cambiarMarca = async () => {
-    const r = await pedir('narrador:marcar', { asientoId: asiento.id, marcado: !asiento.marcado, cerrarNominacion: false });
+    const r = await pedir('narrador:marcar', { jugadorId: asiento.id, marcado: !asiento.marcado, cerrarNominacion: false });
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha, que ya dice si lleva la calavera.
     return false;
@@ -416,7 +416,7 @@ const FichaAsiento = ({
       anotar(asiento.id, { personaje: personajeId, alineamiento: null });
       return;
     }
-    const r = await pedir('narrador:cambiarPersonaje', { asientoId: asiento.id, personajeId });
+    const r = await pedir('narrador:cambiarPersonaje', { jugadorId: asiento.id, personajeId });
     if (!r.ok) onError(r.error);
   };
   const ponerAlineamiento = async (alineamiento: Alineamiento) => {
@@ -424,7 +424,7 @@ const FichaAsiento = ({
       anotar(asiento.id, { personaje: contenido.personaje, alineamiento });
       return false;
     }
-    const r = await pedir('narrador:cambiarAlineamiento', { asientoId: asiento.id, alineamiento });
+    const r = await pedir('narrador:cambiarAlineamiento', { jugadorId: asiento.id, alineamiento });
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha, que ya dice su alineamiento.
     return false;
@@ -454,15 +454,15 @@ const FichaAsiento = ({
       // Únicos, como en la partida: si ya están todos los iguales, se quita uno (antes de otra ficha)
       const iguales = new Set(p.recordatorios.flatMap((r, i) => (r.texto === texto ? [i] : [])));
       const puestos = Object.entries(notasRecordatorios).flatMap(([a, lista]) =>
-        lista.filter((r) => r.personaje === p.id && iguales.has(r.indice)).map((r) => ({ asientoId: a, id: r.id })),
+        lista.filter((r) => r.personaje === p.id && iguales.has(r.indice)).map((r) => ({ jugadorId: a, id: r.id })),
       );
-      const sobra = puestos.length >= iguales.size ? (puestos.find((x) => x.asientoId !== asiento.id) ?? puestos[0]) : undefined;
+      const sobra = puestos.length >= iguales.size ? (puestos.find((x) => x.jugadorId !== asiento.id) ?? puestos[0]) : undefined;
       const sin = (a: string) => (notasRecordatorios[a] ?? []).filter((r) => r.id !== sobra?.id);
-      if (sobra && sobra.asientoId !== asiento.id) anotarRecordatorios(sobra.asientoId, sin(sobra.asientoId));
+      if (sobra && sobra.jugadorId !== asiento.id) anotarRecordatorios(sobra.jugadorId, sin(sobra.jugadorId));
       anotarRecordatorios(asiento.id, [...sin(asiento.id), { id: crypto.randomUUID(), personaje: p.id, indice, texto }]);
       return;
     }
-    const r = await pedir('narrador:ponerRecordatorio', { asientoId: asiento.id, personajeId: p.id, indice });
+    const r = await pedir('narrador:ponerRecordatorio', { jugadorId: asiento.id, personajeId: p.id, indice });
     if (!r.ok) onError(r.error);
   };
   // Con texto propio: igual, pero sin personaje (va en redondo en la ficha)
@@ -472,7 +472,7 @@ const FichaAsiento = ({
       anotarRecordatorios(asiento.id, [...(notasRecordatorios[asiento.id] ?? []), nuevo]);
       return;
     }
-    const r = await pedir('narrador:ponerRecordatorioTexto', { asientoId: asiento.id, texto, icono });
+    const r = await pedir('narrador:ponerRecordatorioTexto', { jugadorId: asiento.id, texto, icono });
     if (!r.ok) onError(r.error);
   };
   const opcionRecordatorio: OpcionMenu = {

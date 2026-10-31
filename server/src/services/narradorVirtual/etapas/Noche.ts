@@ -110,8 +110,8 @@ export class Noche implements Etapa {
     const faltan = sinEntender(ctx.juego).filter((id) => asientos.includes(id));
     if (!faltan.length) return;
     await ctx.mesa.accion('narrador:sonarGong');
-    for (const asientoId of faltan) {
-      await ctx.mesa.accion('despertar:enviar', { asientoId, ficha: 'personalizado', texto: RECORDAR_ENTENDIDO });
+    for (const jugadorId of faltan) {
+      await ctx.mesa.accion('despertar:enviar', { jugadorId, ficha: 'personalizado', texto: RECORDAR_ENTENDIDO });
     }
   }
 
@@ -195,7 +195,7 @@ export class Noche implements Etapa {
   private async esperarEleccion(ctx: ContextoEtapa, fila: HabilidadNocheDto): Promise<void> {
     const { partida } = ctx.juego;
     const eleccion = habilidadesDelGuion(partida.guion.actual()?.edicion ?? null).get(fila.personaje)?.eleccion;
-    const asiento = partida.plaza().find((a) => a.id === fila.asiento);
+    const asiento = partida.plaza().find((a) => a.id === fila.jugador);
     if (eleccion && asiento && !asiento.participanteId) {
       const posibles = partida.plaza().filter((a) => eleccion.puedeElegirse || a.id !== asiento.id);
       const elegidos = await elegirVarios(
@@ -208,12 +208,12 @@ export class Noche implements Etapa {
         eleccion.cantidad,
       );
       const jugadores = elegidos.map((a) => a.id);
-      await ctx.mesa.accion('despertar:enviar', { asientoId: asiento.id, ficha: 'jugador', jugadores });
+      await ctx.mesa.accion('despertar:enviar', { jugadorId: asiento.id, ficha: 'jugador', jugadores });
     }
     // Si aún no se le ha pedido (espera a que entienda lo anterior: ver DespertarGuiado), se le recuerda
     const elegido = () => this.fila(ctx, fila.personaje)?.estado !== 'esperando';
     while (!(await this.hastaComoMucho(ctx, elegido, ESPERA_ENTENDIDO_MS))) {
-      const sinElegir = fila.asientos.filter((id) => !partida.guiado.eleccionPendiente(id));
+      const sinElegir = fila.jugadores.filter((id) => !partida.guiado.eleccionPendiente(id));
       if (sinElegir.length) await this.recordarEntendido(ctx, sinElegir);
     }
   }
@@ -228,7 +228,7 @@ export class Noche implements Etapa {
       opciones: opcionesDeAsientos(ctx.juego, esbirros),
     });
     const era = identidadDe(nuevo);
-    if ((await ctx.mesa.accion('narrador:nuevoImp', { asientoId: nuevo.id })).ok && era) ctx.recuerdos.cronica.antes.set(nuevo.id, era);
+    if ((await ctx.mesa.accion('narrador:nuevoImp', { jugadorId: nuevo.id })).ok && era) ctx.recuerdos.cronica.antes.set(nuevo.id, era);
   }
 
   /**
@@ -250,7 +250,7 @@ export class Noche implements Etapa {
     // Antes de que se cierren los despertares: lo que se ha dado y quién ha matado a quién
     apuntarNoche(ctx.recuerdos.cronica, juego);
     if (!(await ctx.mesa.accion('narrador:amanecer')).ok) return;
-    for (const a of muertos) await ctx.mesa.accion('narrador:confirmarMuerte', { asientoId: a.id });
+    for (const a of muertos) await ctx.mesa.accion('narrador:confirmarMuerte', { jugadorId: a.id });
     abrirPatosos(juego, muertos.map((a) => a.id), 'anochecer');
     const buenosDias = partida.fases.actual().numero === 1 ? FRASES.primerDia(duracionPrivados(juego) / 1000) : FRASES.buenosDias(nombres);
     // Si con las muertes de la noche se acaba la partida, se revela

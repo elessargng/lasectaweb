@@ -70,7 +70,7 @@ export class Partida {
     personaje: (id) => this.guion.personaje(id),
     noche: () => this.fases.actual().momento === 'noche',
     anotar: (hecho) => this.anotar(hecho),
-    asientoDiario: (asientoId) => this.asientoDiario(asientoId),
+    asientoDiario: (jugadorId) => this.asientoDiario(jugadorId),
   });
   /** Lo que las reglas de los personajes pueden consultar de la partida. */
   private readonly contextoReglas: ContextoReglas = {
@@ -94,7 +94,7 @@ export class Partida {
     dia: () => this.fases.actual().numero,
     segundosPorFicha: () => this.configuracion.actual().segundosPorFicha,
     sinVoto: (id) => this.sinVoto(id),
-    cambiarVoto: (asientoId, gastado) => this.grimorio.cambiarVoto(asientoId, gastado),
+    cambiarVoto: (jugadorId, gastado) => this.grimorio.cambiarVoto(jugadorId, gastado),
     votaSinGastar: (asiento) => this.reglas.votaSinGastar(asiento),
     mayoria: (vivos) => this.reglas.mayoria(vivos),
     valorDelVoto: (asiento, ocupante) => this.reglas.valorDelVoto(asiento, ocupante.dosManos),
@@ -103,7 +103,7 @@ export class Partida {
       this.avisar({ tipo: 'nominacion', nomina: this.cuentaDelAsiento(desde), nominado: this.cuentaDelAsiento(hasta) }),
     alVotar: (cuenta) => this.avisar({ tipo: 'voto', userId: cuenta }),
     alDesvotar: (cuenta) => this.avisar({ tipo: 'desvoto', userId: cuenta }),
-    alExpulsar: (asientoId) => this.grimorio.cambiarVida(asientoId, true),
+    alExpulsar: (jugadorId) => this.grimorio.cambiarVida(jugadorId, true),
     alCambiarSola: () => this.alCambiarSola(),
   });
   /** El gong y el reloj del narrador. */
@@ -119,13 +119,13 @@ export class Partida {
     ctx: { ...this.contextoReglas, faroles: () => this.faroles.faroles() },
     habilidades: () => habilidadesDelGuion(this.guion.actual()?.edicion ?? null),
     noche: () => this.fases.actual().momento === 'noche',
-    despertar: (asientoId) => this.despertares.despertar(asientoId),
-    mandar: (asientoId, envio, eleccion) => this.mandarDelNarrador(asientoId, envio, { eleccion, guiado: true }),
-    porEntender: (asientoId) => this.despertares.porEntender(asientoId),
-    ponerRecordatorio: (asientoId, personaje, texto) => this.ponerRecordatorioDe(asientoId, personaje, texto),
-    matarDeNoche: (asientoId) => this.grimorio.cambiarVida(asientoId, true),
-    enviarGrimorio: (asientoId) => this.enviarGrimorioDeLaMesa(asientoId),
-    cambiarPersonaje: (asientoId, personaje) => this.grimorio.cambiarPersonaje(asientoId, personaje),
+    despertar: (jugadorId) => this.despertares.despertar(jugadorId),
+    mandar: (jugadorId, envio, eleccion) => this.mandarDelNarrador(jugadorId, envio, { eleccion, guiado: true }),
+    porEntender: (jugadorId) => this.despertares.porEntender(jugadorId),
+    ponerRecordatorio: (jugadorId, personaje, texto) => this.ponerRecordatorioDe(jugadorId, personaje, texto),
+    matarDeNoche: (jugadorId) => this.grimorio.cambiarVida(jugadorId, true),
+    enviarGrimorio: (jugadorId) => this.enviarGrimorioDeLaMesa(jugadorId),
+    cambiarPersonaje: (jugadorId, personaje) => this.grimorio.cambiarPersonaje(jugadorId, personaje),
   });
   /** Los faroles para el demonio (del narrador y de cada asiento). */
   readonly faroles = new Faroles(() => this.sala.jugadores(), this.diario());
@@ -140,7 +140,7 @@ export class Partida {
     plaza: () => this.plaza(),
     esViajero: (id) => this.guion.esViajero(id),
     reglas: (asientos, personajes) => this.reglas.repartir(asientos, personajes),
-    darPersonaje: (asientoId, personaje) => this.grimorio.repartir(asientoId, personaje),
+    darPersonaje: (jugadorId, personaje) => this.grimorio.repartir(jugadorId, personaje),
   });
   /** El señalamiento en curso. */
   readonly senalamientos = new Senalamientos({
@@ -148,7 +148,7 @@ export class Partida {
     fase: () => this.fases.actual(),
     jugadorDe: (id) => this.jugadorDe(id),
     veGrimorio: (id) => this.acceso.de(id) === 'concedido',
-    despertar: (asientoId) => void this.despertares.despertar(asientoId),
+    despertar: (jugadorId) => void this.despertares.despertar(jugadorId),
   });
   /** Recordatorios del orden de noche cambiados a mano (ver SalaDto.recordatoriosNoche). */
   private recordatorios: Record<string, boolean> = {};
@@ -225,13 +225,13 @@ export class Partida {
 
   /** El diario, para las piezas que apuntan lo que se hace con ellas. */
   private diario(): Diario {
-    return { anotar: (hecho) => this.anotar(hecho), asiento: (asientoId) => this.asientoDiario(asientoId) };
+    return { anotar: (hecho) => this.anotar(hecho), asiento: (jugadorId) => this.asientoDiario(jugadorId) };
   }
 
   /** Un asiento para el diario: su número y quien se sienta ahora. */
-  asientoDiario(asientoId: string): AsientoDiario {
+  asientoDiario(jugadorId: string): AsientoDiario {
     const mesa = this.plaza();
-    const i = mesa.findIndex((a) => a.id === asientoId);
+    const i = mesa.findIndex((a) => a.id === jugadorId);
     const ocupante = mesa[i]?.participanteId;
     return { numero: i + 1, nombre: ocupante ? (this.sala.participantes.buscar(ocupante)?.nombre ?? null) : null };
   }
@@ -241,8 +241,8 @@ export class Partida {
     return this.sala.participantes.cuentaDe(participanteId);
   }
 
-  private cuentaDelAsiento(asientoId: string): string | null {
-    return this.cuentaDe(this.plaza().find((a) => a.id === asientoId)?.participanteId ?? null);
+  private cuentaDelAsiento(jugadorId: string): string | null {
+    return this.cuentaDe(this.plaza().find((a) => a.id === jugadorId)?.participanteId ?? null);
   }
 
   /** Cómo está ahora la mesa, asiento a asiento (para quien escucha la partida). */
@@ -346,36 +346,36 @@ export class Partida {
    * con «Tú eres», su ficha pasa a ser la que se le dice.
    */
   mandarDelNarrador(
-    asientoId: string,
+    jugadorId: string,
     envio: EnvioDespertar,
     { eleccion, guiado = false }: { eleccion?: EleccionDespertar; guiado?: boolean } = {},
   ): void {
-    this.despertares.enviar(asientoId, { ...envio, autor: 'narrador', guiado, ...(eleccion ? { eleccion } : {}) });
-    if (envio.tarjeta === 'tuEres') this.entregas.comunicarFicha(asientoId, envio.personajes, envio.alineamiento);
+    this.despertares.enviar(jugadorId, { ...envio, autor: 'narrador', guiado, ...(eleccion ? { eleccion } : {}) });
+    if (envio.tarjeta === 'tuEres') this.entregas.comunicarFicha(jugadorId, envio.personajes, envio.alineamiento);
   }
 
   /** Pone un recordatorio de un personaje por su texto (en el original), único en la mesa (ver recordatorioQueSobra). */
-  private ponerRecordatorioDe(asientoId: string, personajeId: string, texto: string): void {
+  private ponerRecordatorioDe(jugadorId: string, personajeId: string, texto: string): void {
     const textos = this.guion.personaje(personajeId)?.recordatorios ?? [];
     const indice = textos.findIndex((t) => t.toLowerCase() === texto.toLowerCase());
     if (indice < 0) return;
-    const sobra = this.grimorio.recordatorioQueSobra(asientoId, personajeId, indice);
+    const sobra = this.grimorio.recordatorioQueSobra(jugadorId, personajeId, indice);
     if (sobra) this.grimorio.quitarRecordatorio(sobra.jugadorId, sobra.recordatorioId);
-    this.grimorio.ponerRecordatorio(asientoId, { personaje: personajeId, indice, texto: textos[indice] });
+    this.grimorio.ponerRecordatorio(jugadorId, { personaje: personajeId, indice, texto: textos[indice] });
   }
 
   /** Envía a quien se sienta en un asiento el grimorio tal como está (el Espía); a un asiento libre, nada. */
-  private enviarGrimorioDeLaMesa(asientoId: string): void {
+  private enviarGrimorioDeLaMesa(jugadorId: string): void {
     const mesa = this.plaza();
-    if (!mesa.find((a) => a.id === asientoId)?.participanteId) return;
+    if (!mesa.find((a) => a.id === jugadorId)?.participanteId) return;
     const fichas: FichaEnviadaDto[] = mesa.map((a) => ({
-      asientoId: a.id,
+      jugadorId: a.id,
       personaje: a.personaje,
       alineamiento: a.alineamiento,
       muerto: a.muerto,
       recordatorios: a.recordatorios.map((r) => ({ ...r, id: randomUUID() })),
     }));
-    this.entregas.enviarGrimorio(asientoId, fichas);
+    this.entregas.enviarGrimorio(jugadorId, fichas);
   }
 
   /**
@@ -531,8 +531,8 @@ export class Partida {
    * se revela el grimorio. Devuelve si ha anochecido y si quedan dos, o null si
    * el asiento no existe.
    */
-  ejecutar(asientoId: string): { anochece: boolean; final: boolean } | null {
-    const asiento = this.plaza().find((a) => a.id === asientoId);
+  ejecutar(jugadorId: string): { anochece: boolean; final: boolean } | null {
+    const asiento = this.plaza().find((a) => a.id === jugadorId);
     if (!asiento) return null;
     // Los recordatorios de los personajes que funcionan con las ejecuciones (ver Reglas)
     for (const { personaje, texto, unico } of this.reglas.recordatoriosAlEjecutar(asiento)) {

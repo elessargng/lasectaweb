@@ -37,8 +37,8 @@ beforeEach(async () => {
   vera = await arnes.entrar('Vera');
   await arnes.accion(narradora, 'sala:hacerseNarrador');
   await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'prueba' });
-  await arnes.accion(ana, 'sala:sentarse', { asientoId: idAsiento(0) });
-  await arnes.accion(bea, 'sala:sentarse', { asientoId: idAsiento(1) });
+  await arnes.accion(ana, 'sala:sentarse', { jugadorId: idAsiento(0) });
+  await arnes.accion(bea, 'sala:sentarse', { jugadorId: idAsiento(1) });
 });
 
 afterEach(async () => {
@@ -76,14 +76,14 @@ describe('lo que ve cada uno', () => {
     it('el jugador no se entera de que la narradora le cambia el personaje', async () => {
       const entregado = ana.miAsiento?.personaje;
       const otro = BOLSA_DE_SIETE.find((id) => id !== entregado)!;
-      await arnes.accion(narradora, 'narrador:cambiarPersonaje', { asientoId: idAsiento(0), personajeId: otro });
+      await arnes.accion(narradora, 'narrador:cambiarPersonaje', { jugadorId: idAsiento(0), personajeId: otro });
       expect(asiento(narradora, 0).personaje).toBe(otro);
       expect(ana.miAsiento?.personaje).toBe(entregado);
     });
 
     it('los recordatorios y la nota no los ve el jugador, ni en su ficha', async () => {
-      await arnes.accion(narradora, 'narrador:ponerRecordatorio', { asientoId: idAsiento(0), personajeId: 'poisoner', indice: 0 });
-      await arnes.accion(narradora, 'narrador:escribirNota', { asientoId: idAsiento(0), texto: 'Sospechosa' });
+      await arnes.accion(narradora, 'narrador:ponerRecordatorio', { jugadorId: idAsiento(0), personajeId: 'poisoner', indice: 0 });
+      await arnes.accion(narradora, 'narrador:escribirNota', { jugadorId: idAsiento(0), texto: 'Sospechosa' });
       expect(asiento(narradora, 0).recordatorios).toHaveLength(1);
       expect(asiento(narradora, 0).nota).toBe('Sospechosa');
       expect(ana.miAsiento).toMatchObject({ recordatorios: [], nota: null });
@@ -91,14 +91,14 @@ describe('lo que ve cada uno', () => {
 
     it('al revelar el grimorio, todos ven las fichas reveladas', async () => {
       await arnes.accion(narradora, 'narrador:revelarGrimorio', { ganador: 'bueno' });
-      await arnes.accion(narradora, 'narrador:revelarFicha', { asientoId: idAsiento(1) });
+      await arnes.accion(narradora, 'narrador:revelarFicha', { jugadorId: idAsiento(1) });
       expect(asiento(vera, 1).personaje).toBe(asiento(narradora, 1).personaje);
       expect(asiento(vera, 2).personaje).toBeNull();
     });
   });
 
   it('los viajeros son públicos', async () => {
-    await arnes.accion(narradora, 'narrador:cambiarPersonaje', { asientoId: idAsiento(5), personajeId: 'voudon' });
+    await arnes.accion(narradora, 'narrador:cambiarPersonaje', { jugadorId: idAsiento(5), personajeId: 'voudon' });
     expect(asiento(ana, 5).personaje).toBe('voudon');
     expect(asiento(vera, 5).personaje).toBe('voudon');
   });
@@ -117,7 +117,7 @@ describe('lo que ve cada uno', () => {
     await repartir();
     expect(ana.miAsiento?.personaje).toBeNull();
     await alDia();
-    await arnes.accion(narradora, 'narrador:cambiarVida', { asientoId: idAsiento(0), muerto: true });
+    await arnes.accion(narradora, 'narrador:cambiarVida', { jugadorId: idAsiento(0), muerto: true });
     expect(ana.miAsiento?.personaje).toBe(asiento(narradora, 0).personaje);
   });
 
@@ -162,7 +162,7 @@ describe('lo que ve cada uno', () => {
 
   it('la muerte pendiente de la noche solo la ve quien ve el grimorio', async () => {
     await arnes.accion(narradora, 'narrador:irANoche');
-    await arnes.accion(narradora, 'narrador:cambiarVida', { asientoId: idAsiento(1), muerto: true });
+    await arnes.accion(narradora, 'narrador:cambiarVida', { jugadorId: idAsiento(1), muerto: true });
     expect(asiento(narradora, 1).muertePendiente).toBe(true);
     expect(asiento(bea, 1).muertePendiente).toBe(false);
     expect(asiento(ana, 1).muertePendiente).toBe(false);
@@ -170,12 +170,12 @@ describe('lo que ve cada uno', () => {
 
   it('un despertar lo ven la narradora y el jugador despierto, nadie más', async () => {
     await arnes.accion(narradora, 'narrador:irANoche');
-    await arnes.accion(narradora, 'narrador:despertar', { asientoId: idAsiento(0) });
+    await arnes.accion(narradora, 'narrador:despertar', { jugadorId: idAsiento(0) });
     expect(narradora.estado.despertares).toHaveLength(1);
     // El jugador no se entera hasta que la narradora le manda algo
     expect(ana.estado.despertares).toEqual([]);
     expect(ana.estado.acciones).not.toContain('despertar:enviar');
-    await arnes.accion(narradora, 'despertar:enviar', { asientoId: idAsiento(0), ficha: 'entendido' });
+    await arnes.accion(narradora, 'despertar:enviar', { jugadorId: idAsiento(0), ficha: 'entendido' });
     expect(ana.estado.despertares).toHaveLength(1);
     expect(bea.estado.despertares).toEqual([]);
     expect(vera.estado.despertares).toEqual([]);
@@ -183,13 +183,13 @@ describe('lo que ve cada uno', () => {
 
   it('la narradora manda lo mismo a varios: despierta a los que aún no lo estaban', async () => {
     await arnes.accion(narradora, 'narrador:irANoche');
-    await arnes.accion(narradora, 'narrador:despertar', { asientoId: idAsiento(0) });
-    await arnes.accion(narradora, 'despertar:enviar', { asientoIds: [idAsiento(0), idAsiento(1)], tarjeta: 'habilidad' });
-    expect(narradora.estado.despertares.map((d) => d.asiento)).toEqual([idAsiento(0), idAsiento(1)]);
+    await arnes.accion(narradora, 'narrador:despertar', { jugadorId: idAsiento(0) });
+    await arnes.accion(narradora, 'despertar:enviar', { jugadorIds: [idAsiento(0), idAsiento(1)], tarjeta: 'habilidad' });
+    expect(narradora.estado.despertares.map((d) => d.jugador)).toEqual([idAsiento(0), idAsiento(1)]);
     for (const c of [ana, bea]) expect(c.estado.despertares[0].mensajes).toMatchObject([{ autor: 'narrador', tarjeta: 'habilidad' }]);
     expect(vera.estado.despertares).toEqual([]);
     // A uno solo, solo en su despertar
-    const cerrado = await arnes.intentar(narradora, 'despertar:enviar', { asientoId: idAsiento(2), ficha: 'si' });
+    const cerrado = await arnes.intentar(narradora, 'despertar:enviar', { jugadorId: idAsiento(2), ficha: 'si' });
     expect(cerrado).toEqual({ ok: false, error: 'Ese despertar ya no está abierto.' });
   });
 
@@ -203,7 +203,7 @@ describe('lo que ve cada uno', () => {
   });
 
   it('en una votación secreta (Organ Grinder), quien no ve el grimorio no ve las manos ni el recuento', async () => {
-    await arnes.accion(narradora, 'narrador:cambiarPersonaje', { asientoId: idAsiento(4), personajeId: 'organgrinder' });
+    await arnes.accion(narradora, 'narrador:cambiarPersonaje', { jugadorId: idAsiento(4), personajeId: 'organgrinder' });
     await alDia();
     await arnes.accion(narradora, 'narrador:nominar', { desde: idAsiento(0), hasta: idAsiento(1) });
     await arnes.accion(ana, 'sala:levantarMano', { levantada: true });
@@ -236,7 +236,7 @@ describe('permisos', () => {
   it('quien ha visto el grimorio no puede sentarse', async () => {
     await arnes.accion(vera, 'sala:solicitarGrimorio');
     await arnes.accion(narradora, 'narrador:accesoGrimorio', { participanteId: vera.id, conceder: true });
-    const r = await arnes.intentar(vera, 'sala:sentarse', { asientoId: idAsiento(3) });
+    const r = await arnes.intentar(vera, 'sala:sentarse', { jugadorId: idAsiento(3) });
     expect(r).toEqual({ ok: false, error: 'Quien ha visto el grimorio del narrador no puede sentarse en la mesa.' });
   });
 

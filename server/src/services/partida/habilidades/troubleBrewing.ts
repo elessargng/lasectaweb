@@ -32,7 +32,7 @@ import type { Jugador } from '../Jugador';
 /** «Este jugador es» con quien es de verdad; si puede registrar como otro, el narrador lo revisa. */
 function esteJugadorEs(ctx: ContextoNoche, jugadores: readonly Jugador[], quien: Jugador) {
   const id = ctx.identidad(quien);
-  const avisos: AvisoHabilidad[] = dudoso(ctx, quien) ? [{ tipo: 'registro', asiento: quien.id }] : [];
+  const avisos: AvisoHabilidad[] = dudoso(ctx, quien) ? [{ tipo: 'registro', jugador: quien.id }] : [];
   const opciones: OpcionDespertar[] = id
     ? [{ envio: tarjeta('esteJugadorEs', { jugadores: jugadores.map((a) => a.id), personajes: [id] }), registros: [] }]
     : [];
@@ -63,9 +63,9 @@ export class Imp extends EligeYMarca {
     const muere: Efectos = { ...sinEfectos(), recordatorios: [{ asiento: elegido.id, texto: this.recordatorio }], muere: elegido.id };
     if (elegido.id === asiento.id) return listo(OK, { ...muere, nuevoImp: true }, avisos);
     if (elegido.muerto) return listo(OK, sinEfectos(), avisos);
-    if (protegido(ctx, elegido)) return listo(OK, sinEfectos(), [...avisos, { tipo: 'protegido', asiento: elegido.id }]);
+    if (protegido(ctx, elegido)) return listo(OK, sinEfectos(), [...avisos, { tipo: 'protegido', jugador: elegido.id }]);
     if (ctx.identidad(elegido) === 'mayor' && !droison(ctx, elegido)) {
-      return revisar([{ envio: OK, registros: [] }], [...avisos, { tipo: 'alcalde', asiento: elegido.id }]);
+      return revisar([{ envio: OK, registros: [] }], [...avisos, { tipo: 'alcalde', jugador: elegido.id }]);
     }
     return listo(OK, muere, avisos);
   }

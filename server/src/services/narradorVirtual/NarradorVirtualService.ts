@@ -172,20 +172,20 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     const { sala, partida, narrador } = this.juego;
     if (!this.etapa || !narrador.actual()) return 'La sala no tiene narrador virtual.';
     if (accion === 'exterminar' || accion === 'patoso') {
-      const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
-      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return 'Ese asiento ya no existe.';
+      const jugadorId = (datos as { jugadorId?: unknown } | null)?.jugadorId;
+      if (typeof jugadorId !== 'string' || !sala.jugador(jugadorId)) return 'Ese asiento ya no existe.';
       const mio = partida.jugadorDe(jugador)?.id;
-      if (mio === asientoId) return accion === 'exterminar' ? 'No puedes dispararte a ti.' : 'Elige a otro jugador.';
+      if (mio === jugadorId) return accion === 'exterminar' ? 'No puedes dispararte a ti.' : 'Elige a otro jugador.';
       if (this.contando) return 'Espera a que el narrador termine de contar lo anterior.';
       const ctx = this.contexto();
       let contar: Promise<Ganador | null>;
       if (accion === 'patoso') {
         if (!mio) return 'No estás sentado.';
-        if (!vivo(partida.plaza().find((a) => a.id === asientoId)!)) return 'Elige a un jugador vivo.';
-        contar = contarPatoso(ctx, mio, asientoId);
+        if (!vivo(partida.plaza().find((a) => a.id === jugadorId)!)) return 'Elige a un jugador vivo.';
+        contar = contarPatoso(ctx, mio, jugadorId);
       } else {
-        const muere = await exterminar(ctx, jugador, asientoId);
-        contar = contarDisparo(ctx, jugador, asientoId, muere);
+        const muere = await exterminar(ctx, jugador, jugadorId);
+        contar = contarDisparo(ctx, jugador, jugadorId, muere);
       }
       // Se cuenta con pausas (sin hacer esperar a quien lo pide); si se acaba la partida, se revela
       this.contando = true;
@@ -286,9 +286,9 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     }
   }
 
-  private async abandonado(asientoId: string): Promise<void> {
+  private async abandonado(jugadorId: string): Promise<void> {
     const { partida } = this.juego;
-    const asiento = partida.plaza().find((a) => a.id === asientoId);
+    const asiento = partida.plaza().find((a) => a.id === jugadorId);
     if (!asiento || asiento.participanteId || !this.etapa || !EN_PARTIDA.includes(this.etapa.id)) return;
     if (esDemonio(this.juego, asiento) && !asiento.muerto) {
       await this.pasarA(new Revelando('bueno'));

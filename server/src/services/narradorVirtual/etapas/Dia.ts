@@ -135,7 +135,7 @@ export class Nominaciones implements Etapa {
     if (accion === 'nominar') {
       const error = noPuedeNominar(juego, yo);
       if (error) return error;
-      const hasta = (datos as { asientoId?: unknown } | null)?.asientoId;
+      const hasta = (datos as { jugadorId?: unknown } | null)?.jugadorId;
       if (typeof hasta !== 'string' || !sala.jugador(hasta)) return 'Ese asiento ya no existe.';
       if (nominadoHoy(juego, hasta)) return `${nombreDeAsiento(juego, hasta)} ya ha sido nominado hoy.`;
       return this.nominar(ctx, miAsiento.id, hasta, jugador);
@@ -210,7 +210,7 @@ export class Nominaciones implements Etapa {
     const { votos } = nominacion.votacion;
     juego.narrador.actualizar({ turno: null });
     if (votos >= nominacion.votosNecesarios) {
-      const r = await ctx.mesa.accion('narrador:marcar', { asientoId: nominacion.hasta, marcado: true });
+      const r = await ctx.mesa.accion('narrador:marcar', { jugadorId: nominacion.hasta, marcado: true });
       if (r.ok) ctx.decir(FRASES.marcado(nombreDeAsiento(juego, nominacion.hasta)));
     } else if (this.marcaAlVotar !== null && votos === this.marcaAlVotar) {
       // Empata con la marca: nadie queda marcado
@@ -237,7 +237,7 @@ export class Nominaciones implements Etapa {
       return;
     }
     const quien = nombreDeAsiento(juego, marcado.id);
-    if ((await ctx.mesa.accion('narrador:ejecutar', { asientoId: marcado.id })).ok) await this.trasEjecutar(ctx, marcado.id, FRASES.ejecutado(quien));
+    if ((await ctx.mesa.accion('narrador:ejecutar', { jugadorId: marcado.id })).ok) await this.trasEjecutar(ctx, marcado.id, FRASES.ejecutado(quien));
   }
 
   /**

@@ -28,7 +28,7 @@ function mesa(...personajes: string[]) {
   };
   const textos = (i: number) => asiento(i).recordatorios.map((r) => r.texto);
   /** Lo último que le ha mandado el narrador al de un asiento. */
-  const ultimo = (i: number) => partida.despertares.despertares().find((d) => d.asiento === asiento(i).id)?.mensajes.slice(-1)[0];
+  const ultimo = (i: number) => partida.despertares.despertares().find((d) => d.jugador === asiento(i).id)?.mensajes.slice(-1)[0];
   /** El de un asiento elige (como el socket: lo que contesta queda en su despertar y luego se hace lo de su habilidad). */
   const elegir = (i: number, ...elegidos: number[]) => {
     const jugadores = elegidos.map((e) => asiento(e).id);
@@ -114,7 +114,7 @@ describe('despertar guiado', () => {
       partida.guiado.despertar('imp');
       m.elegir(0, 1);
       expect(m.asiento(1).muertePendiente).toBe(false);
-      expect(m.fila('imp')?.avisos).toContainEqual({ tipo: 'protegido', asiento: m.asiento(1).id });
+      expect(m.fila('imp')?.avisos).toContainEqual({ tipo: 'protegido', jugador: m.asiento(1).id });
       partida.amanecer();
       partida.irANoche();
       partida.guiado.despertar('imp');
@@ -175,8 +175,8 @@ describe('despertar guiado', () => {
       const f = m.fila('fortuneteller')!;
       expect(f.estado).toBe('revisar');
       expect(f.opciones.map((o) => o.envio.ficha)).toEqual(['no', 'si']);
-      expect(f.opciones[1].registros).toEqual([{ asiento: m.asiento(2).id, como: 'demonio' }]);
-      expect(f.avisos).toContainEqual({ tipo: 'registro', asiento: m.asiento(2).id });
+      expect(f.opciones[1].registros).toEqual([{ jugador: m.asiento(2).id, como: 'demonio' }]);
+      expect(f.avisos).toContainEqual({ tipo: 'registro', jugador: m.asiento(2).id });
     });
 
     it('el Ravenkeeper solo despierta si muere esta noche, y sabe quién es el elegido', () => {
@@ -243,8 +243,8 @@ describe('despertar guiado', () => {
       expect(f.estado).toBe('revisar');
       expect(f.opciones.map((o) => o.envio.ficha)).toEqual(['cero', 'dos']);
       expect(f.opciones.map((o) => o.registros)).toEqual([
-        [{ asiento: r.asiento(2).id, como: 'bueno' }],
-        [{ asiento: r.asiento(2).id, como: 'malvado' }],
+        [{ jugador: r.asiento(2).id, como: 'bueno' }],
+        [{ jugador: r.asiento(2).id, como: 'malvado' }],
       ]);
     });
 
@@ -285,7 +285,7 @@ describe('despertar guiado', () => {
   describe('esbirros y demonio', () => {
     const SIETE = ['imp', 'poisoner', 'spy', 'chef', 'empath', 'monk', 'soldier'];
     /** Los mensajes que le han mandado al de un asiento. */
-    const mensajes = (m: ReturnType<typeof mesa>, i: number) => m.juego.partida.despertares.despertares().find((d) => d.asiento === m.asiento(i).id)?.mensajes ?? [];
+    const mensajes = (m: ReturnType<typeof mesa>, i: number) => m.juego.partida.despertares.despertares().find((d) => d.jugador === m.asiento(i).id)?.mensajes ?? [];
 
     it('con menos de 7 jugadores no se despiertan', () => {
       const m = mesa('imp', 'poisoner', 'chef', 'empath', 'monk', 'soldier');
@@ -296,7 +296,7 @@ describe('despertar guiado', () => {
     it('cada esbirro ve al demonio y, cuando dice «Entendido», a los esbirros', () => {
       const m = mesa(...SIETE);
       const { partida } = m.juego;
-      expect(m.fila('esbirros')).toMatchObject({ estado: 'listo', asiento: m.asiento(1).id, asientos: [m.asiento(1).id, m.asiento(2).id] });
+      expect(m.fila('esbirros')).toMatchObject({ estado: 'listo', jugador: m.asiento(1).id, jugadores: [m.asiento(1).id, m.asiento(2).id] });
       expect(partida.guiado.despertar('esbirros')).toBeNull();
       for (const i of [1, 2]) {
         // Una cosa cada vez: lo segundo espera a que entienda lo primero
@@ -308,7 +308,7 @@ describe('despertar guiado', () => {
         ]);
       }
       expect(m.fila('esbirros')?.estado).toBe('hecho');
-      expect(partida.despertares.despertares().map((d) => d.asiento)).toEqual([m.asiento(1).id, m.asiento(2).id]);
+      expect(partida.despertares.despertares().map((d) => d.jugador)).toEqual([m.asiento(1).id, m.asiento(2).id]);
     });
 
     it('el demonio, con los 3 faroles, ve a sus esbirros y, cuando dice «Entendido», los faroles', () => {
@@ -368,8 +368,8 @@ describe('despertar guiado por el socket', () => {
     await arnes.accion(narradora, 'sala:hacerseNarrador');
     await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'troublebrewing' });
     const asientos = () => narradora.estado.asientos;
-    await arnes.accion(ana, 'sala:sentarse', { asientoId: asientos()[0].id });
-    await arnes.accion(narradora, 'narrador:cambiarPersonaje', { asientoId: asientos()[0].id, personajeId: 'poisoner' });
+    await arnes.accion(ana, 'sala:sentarse', { jugadorId: asientos()[0].id });
+    await arnes.accion(narradora, 'narrador:cambiarPersonaje', { jugadorId: asientos()[0].id, personajeId: 'poisoner' });
     await arnes.accion(narradora, 'narrador:irANoche');
     expect(narradora.estado.habilidadesNoche.find((h) => h.personaje === 'poisoner')?.estado).toBe('listo');
     expect(ana.estado.habilidadesNoche).toEqual([]);
@@ -393,8 +393,8 @@ describe('despertar guiado por el socket', () => {
     await arnes.accion(narradora, 'sala:hacerseNarrador');
     await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'troublebrewing' });
     const asientos = () => narradora.estado.asientos;
-    await arnes.accion(ana, 'sala:sentarse', { asientoId: asientos()[0].id });
-    await arnes.accion(narradora, 'narrador:cambiarPersonaje', { asientoId: asientos()[0].id, personajeId: 'chef' });
+    await arnes.accion(ana, 'sala:sentarse', { jugadorId: asientos()[0].id });
+    await arnes.accion(narradora, 'narrador:cambiarPersonaje', { jugadorId: asientos()[0].id, personajeId: 'chef' });
     await arnes.accion(narradora, 'narrador:irANoche');
 
     await arnes.accion(narradora, 'narrador:despertarHabilidad', { personajeId: 'chef' });
@@ -405,7 +405,7 @@ describe('despertar guiado por el socket', () => {
     await arnes.accion(ana, 'despertar:enviar', { ficha: 'entendido' });
 
     // Si después el narrador le manda algo a mano, contesta con lo que quiera
-    await arnes.accion(narradora, 'despertar:enviar', { asientoId: asientos()[0].id, tarjeta: 'habilidad' });
+    await arnes.accion(narradora, 'despertar:enviar', { jugadorId: asientos()[0].id, tarjeta: 'habilidad' });
     expect(ana.estado.despertares[0].mensajes.slice(-1)[0]).toMatchObject({ autor: 'narrador', guiado: false });
     await arnes.accion(ana, 'despertar:enviar', { ficha: 'si' });
   });

@@ -210,7 +210,7 @@ export function segunRegistros(
   for (const c of combinaciones) {
     const envio = calcular((a) => c.get(a.id) ?? null);
     const clave = JSON.stringify(envio);
-    if (!opciones.has(clave)) opciones.set(clave, { envio, registros: [...c].map(([asiento, como]) => ({ asiento, como })) });
+    if (!opciones.has(clave)) opciones.set(clave, { envio, registros: [...c].map(([jugador, como]) => ({ jugador, como })) });
   }
   return [...opciones.values()];
 }
@@ -231,7 +231,7 @@ export function informar(
   // Con varias respuestas, quién puede registrar como otra cosa (una vez cada uno)
   const registran =
     info.opciones.length > 1
-      ? [...new Set(info.opciones.flatMap((o) => o.registros.map((r) => r.asiento)))].map((id): AvisoHabilidad => ({ tipo: 'registro', asiento: id }))
+      ? [...new Set(info.opciones.flatMap((o) => o.registros.map((r) => r.jugador)))].map((id): AvisoHabilidad => ({ tipo: 'registro', jugador: id }))
       : [];
   const avisos = [...previos, ...(estaDroison ? [{ tipo: estaDroison } as AvisoHabilidad] : []), ...(info.avisos ?? []), ...registran];
   const dudas = avisos.some((a) => a.tipo === 'registro');
@@ -298,7 +298,7 @@ export class EligeYMarca extends Elige {
   }
 
   alElegir(ctx: ContextoNoche, asiento: Jugador, [elegido]: Jugador[]): Resultado {
-    const avisos: AvisoHabilidad[] = [{ tipo: 'elegido', asientos: [elegido.id] }];
+    const avisos: AvisoHabilidad[] = [{ tipo: 'elegido', jugadores: [elegido.id] }];
     const estaDroison = droison(ctx, asiento);
     if (estaDroison) return listo(OK, sinEfectos(), [...avisos, { tipo: estaDroison }, { tipo: 'sinEfecto' }]);
     return this.marcar(ctx, asiento, elegido, avisos);
@@ -321,7 +321,7 @@ export abstract class EligeYSabe extends Elige {
   }
 
   alElegir(ctx: ContextoNoche, asiento: Jugador, elegidos: Jugador[]): Resultado {
-    return informar(ctx, asiento, this.saber(ctx, asiento, elegidos), [{ tipo: 'elegido', asientos: elegidos.map((a) => a.id) }], true);
+    return informar(ctx, asiento, this.saber(ctx, asiento, elegidos), [{ tipo: 'elegido', jugadores: elegidos.map((a) => a.id) }], true);
   }
 
   /** Lo que sabe por los que ha elegido. */

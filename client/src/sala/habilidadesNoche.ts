@@ -34,9 +34,9 @@ export const esFilaFija = (id: string) => id in FILAS_FIJAS;
 const nombrePersonaje = (c: ContextoHabilidades, id: string | null | undefined) => (id ? (c.porId.get(id)?.nombre.texto ?? id) : '');
 
 /** «Asiento 3 (Bea), Reclusa»: el asiento y su personaje (el de su ficha). */
-const asientoConPersonaje = (c: ContextoHabilidades, asientoId: string) => {
-  const personaje = c.estado.asientos.find((a) => a.id === asientoId)?.personaje;
-  const nombre = nombreDeAsiento(c.estado, asientoId);
+const asientoConPersonaje = (c: ContextoHabilidades, jugadorId: string) => {
+  const personaje = c.estado.asientos.find((a) => a.id === jugadorId)?.personaje;
+  const nombre = nombreDeAsiento(c.estado, jugadorId);
   return personaje ? `${nombre}, ${nombrePersonaje(c, personaje)}` : nombre;
 };
 
@@ -60,13 +60,13 @@ export function describirAviso(c: ContextoHabilidades, aviso: AvisoHabilidad): s
     case 'sinEfecto':
       return 'Como está droison, se le ha contestado sin poner el recordatorio.';
     case 'registro':
-      return `${asientoConPersonaje(c, aviso.asiento)}, puede registrar como otra cosa.`;
+      return `${asientoConPersonaje(c, aviso.jugador)}, puede registrar como otra cosa.`;
     case 'protegido':
-      return `${asientoConPersonaje(c, aviso.asiento)}, está protegido: no muere.`;
+      return `${asientoConPersonaje(c, aviso.jugador)}, está protegido: no muere.`;
     case 'alcalde':
-      return `Ha elegido al Alcalde (${nombreDeAsiento(c.estado, aviso.asiento)}): decide si muere o si muere otro.`;
+      return `Ha elegido al Alcalde (${nombreDeAsiento(c.estado, aviso.jugador)}): decide si muere o si muere otro.`;
     case 'elegido':
-      return `Ha elegido a ${enumerar(aviso.asientos.map((id) => nombreDeAsiento(c.estado, id)))}.`;
+      return `Ha elegido a ${enumerar(aviso.jugadores.map((id) => nombreDeAsiento(c.estado, id)))}.`;
     case 'pocosJugadores':
       return 'Hay menos de 7 jugadores: no se despiertan.';
     case 'faltanFaroles':
@@ -76,7 +76,7 @@ export function describirAviso(c: ContextoHabilidades, aviso: AvisoHabilidad): s
 
 /** Una respuesta posible: lo que se manda y, si sale de cómo registra alguien, cómo («si Asiento 3 (Bea) registra como malvado»). */
 export function describirOpcion(c: ContextoHabilidades, opcion: OpcionDespertar): { mensaje: string; registros: string } {
-  const registros = opcion.registros.map((r) => `${nombreDeAsiento(c.estado, r.asiento)} registra como ${COMO[r.como]}`);
+  const registros = opcion.registros.map((r) => `${nombreDeAsiento(c.estado, r.jugador)} registra como ${COMO[r.como]}`);
   return {
     mensaje: describirMensaje(opcion.envio, c.estado, c.porId),
     registros: registros.length ? `Si ${enumerar(registros)}.` : '',

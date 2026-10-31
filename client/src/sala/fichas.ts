@@ -70,17 +70,17 @@ export interface ContextoFichas {
   porId: Map<string, PersonajeMostrado>;
   /** El grimorio propio del jugador: lo que ha anotado en cada ficha (por asiento). */
   notas: Record<string, ContenidoFicha>;
-  anotar: (asientoId: string, contenido: ContenidoFicha) => void;
+  anotar: (jugadorId: string, contenido: ContenidoFicha) => void;
   /** Todos los personajes del guion (también legendarios y lóricos): los recordatorios pueden ser de cualquiera. */
   todos: PersonajeMostrado[];
   todosPorId: Map<string, PersonajeMostrado>;
   /** Los recordatorios que ha puesto el jugador en su grimorio propio, por asiento. */
   notasRecordatorios: Record<string, Recordatorio[]>;
-  anotarRecordatorios: (asientoId: string, recordatorios: Recordatorio[]) => void;
+  anotarRecordatorios: (jugadorId: string, recordatorios: Recordatorio[]) => void;
   /** La nota que ha escrito el jugador en su grimorio propio, por asiento. */
   notasEscritas: Record<string, string>;
   /** Escribe la nota de un asiento en el grimorio propio; con null, la borra. */
-  escribirNota: (asientoId: string, nota: string | null) => void;
+  escribirNota: (jugadorId: string, nota: string | null) => void;
 }
 
 /**

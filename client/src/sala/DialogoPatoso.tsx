@@ -35,7 +35,7 @@ const DialogoPatoso = ({ estado, miAsiento, obligado, pedir, onCerrar }: Dialogo
     if (!elegido) return setError('Elige a un jugador vivo.');
     setEnviando(true);
     setError('');
-    const r = await pedir('jugador:patoso', { asientoId: elegido });
+    const r = await pedir('jugador:patoso', { jugadorId: elegido });
     setEnviando(false);
     if (r.ok) onCerrar();
     else setError(r.error);

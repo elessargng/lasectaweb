@@ -14,10 +14,10 @@ export const ETAPAS_DIA: readonly EtapaNarradorVirtual[] = ['privados', 'puestaE
 const deHoy = ({ partida }: SalaDeJuego) => partida.nominaciones.votaciones().filter((v) => v.dia === partida.fases.actual().numero && !v.expulsion);
 
 /** Si el de ese asiento ya ha nominado hoy. */
-export const nominoHoy = (juego: SalaDeJuego, asientoId: string): boolean => deHoy(juego).some((v) => v.nominaAsiento === asientoId);
+export const nominoHoy = (juego: SalaDeJuego, jugadorId: string): boolean => deHoy(juego).some((v) => v.nominaAsiento === jugadorId);
 
 /** Si el de ese asiento ya ha sido nominado hoy. */
-export const nominadoHoy = (juego: SalaDeJuego, asientoId: string): boolean => deHoy(juego).some((v) => v.nominadoAsiento === asientoId);
+export const nominadoHoy = (juego: SalaDeJuego, jugadorId: string): boolean => deHoy(juego).some((v) => v.nominadoAsiento === jugadorId);
 
 /** El día del narrador virtual (en alguna etapa del día), o null. */
 export function diaVirtual(juego: SalaDeJuego) {

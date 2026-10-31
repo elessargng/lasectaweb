@@ -245,8 +245,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     const revAhora = nuevo.revelacion;
     if (revAhora && !revAntes && !propia) avisos.push({ tipo: 'revelacion', texto: 'El narrador revela el grimorio.' });
     if (revAhora && !propia) {
-      for (const asientoId of revAhora.reveladas.filter((id) => !revAntes?.reveladas.includes(id))) {
-        const numero = nuevo.asientos.findIndex((a) => a.id === asientoId) + 1;
+      for (const jugadorId of revAhora.reveladas.filter((id) => !revAntes?.reveladas.includes(id))) {
+        const numero = nuevo.asientos.findIndex((a) => a.id === jugadorId) + 1;
         const asiento = nuevo.asientos[numero - 1];
         const ocupante = nuevo.participantes.find((p) => p.id === asiento?.ocupante);
         // Quién es de verdad (su «Is The …»), no la ficha que llevaba
@@ -341,7 +341,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     // algo al jugador que tenía su ventana cerrada, se le vuelve a abrir. (Al jugador el
     // despertar le llega con lo primero que le manda el narrador, no al abrirlo.)
     const soyNarrador = nuevo.participantes.some((p) => p.id === nuevo.yo && p.rol === 'narrador');
-    const hilosAntes = new Map(anterior.despertares.map((d) => [d.asiento, d]));
+    const hilosAntes = new Map(anterior.despertares.map((d) => [d.jugador, d]));
     // Al amanecer se acaban los despertares de la noche: se cierran sus ventanas y, si
     // el foco estaba en una (que desaparece), va al título de la sala.
     if (nuevo.fase.momento !== 'noche' && anterior.fase.momento === 'noche' && anterior.despertares.length) {
@@ -355,7 +355,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     const veoTodos = nuevo.participantes.some((p) => p.id === nuevo.yo && p.rol === 'visitante');
     let suenaDespertar = false;
     for (const d of nuevo.despertares) {
-      const antes = hilosAntes.get(d.asiento);
+      const antes = hilosAntes.get(d.jugador);
       const yaDichos = new Set(antes?.mensajes.map((m) => m.id));
       const nuevos = d.mensajes.filter((m) => !yaDichos.has(m.id));
       for (const m of nuevos) {
@@ -365,7 +365,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
         }
         // Un visitante que ve el grimorio oye los dos lados, con quién es cada uno
         else if (veoTodos && m.autor === 'narrador') {
-          avisos.push({ tipo: 'despertar', texto: `El narrador a ${nombreDeAsiento(nuevo, d.asiento)}: ${texto}.` });
+          avisos.push({ tipo: 'despertar', texto: `El narrador a ${nombreDeAsiento(nuevo, d.jugador)}: ${texto}.` });
         } else if (veoTodos) {
           avisos.push({ tipo: 'despertar', texto: `${nombreDeAsiento(nuevo, m.autor)}: ${texto}.` });
         } else if (!soyNarrador && m.autor === 'narrador') avisos.push({ tipo: 'despertar', texto: `El narrador: ${texto}.` });
@@ -382,15 +382,15 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       const ultimo = d.mensajes[d.mensajes.length - 1];
       if (!soyNarrador && !veoTodos && nuevos.length > 0 && esEntendido(d) && ultimo.autor !== 'narrador') {
         setWakeCerradoJugador(true);
-        if (antes) focoPendienteRef.current = idLunaFicha(d.asiento);
+        if (antes) focoPendienteRef.current = idLunaFicha(d.jugador);
       }
       if (soyNarrador && propia && esEntendido(d) && ultimo.autor === 'narrador' && nuevos.includes(ultimo)) {
-        entendidosPorCerrarRef.current.push(d.asiento);
+        entendidosPorCerrarRef.current.push(d.jugador);
       }
       if (soyNarrador && !propia && !antes) {
-        avisos.push({ tipo: 'despertar', texto: `Otro narrador despierta a ${nombreDeAsiento(nuevo, d.asiento)}.` });
+        avisos.push({ tipo: 'despertar', texto: `Otro narrador despierta a ${nombreDeAsiento(nuevo, d.jugador)}.` });
       }
-      if (veoTodos && !antes) avisos.push({ tipo: 'despertar', texto: `El narrador despierta a ${nombreDeAsiento(nuevo, d.asiento)}.` });
+      if (veoTodos && !antes) avisos.push({ tipo: 'despertar', texto: `El narrador despierta a ${nombreDeAsiento(nuevo, d.jugador)}.` });
     }
     if (suenaDespertar) tocarDespertar();
     // El despertar guiado: al elegir el jugador, lo que se ha hecho solo o que hay que
@@ -507,13 +507,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // los esbirros, el de cada uno)
   const despertarHabilidad = async (h: HabilidadNocheDto) => {
     if (h.estado !== 'listo') {
-      for (const asientoId of h.asientos) await abrirDespertar(asientoId);
+      for (const jugadorId of h.jugadores) await abrirDespertar(jugadorId);
       return;
     }
     const r = await pedirPropio('narrador:despertarHabilidad', { personajeId: h.personaje });
     if (!r.ok) return setAviso(r.error);
     const nombre = nombreHabilidad(personajesGuionPorId, h.personaje);
-    if (esFilaFija(h.personaje)) return anunciar('despertar', `${nombre}: ${h.asientos.length === 1 ? 'despertado' : 'despertados'}.`);
+    if (esFilaFija(h.personaje)) return anunciar('despertar', `${nombre}: ${h.jugadores.length === 1 ? 'despertado' : 'despertados'}.`);
     const enviado = h.opciones[0] ? describirMensaje(h.opciones[0].envio, estado!, personajesGuionPorId) : '';
     anunciar('despertar', enviado ? `${nombre}: enviado ${enviado}.` : `${nombre}: despertado.`);
   };
@@ -524,7 +524,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       e.habilidadesNoche
         .filter((h) => h.estado === 'revisar')
         .map((h): [string, Revision] => [
-          h.asiento,
+          h.jugador,
           {
             personajeId: h.personaje,
             nombre: personajesGuionPorId.get(h.personaje)?.nombre ?? { texto: h.personaje, lang: 'en' },
@@ -693,44 +693,44 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // Los visitantes que ven el grimorio también ven los despertares (solo para leer)
   const veoDespertares = narro || (yo?.rol === 'visitante' && yo.accesoGrimorio === 'concedido');
   const abiertosNarrador = veoDespertares
-    ? wakesAbiertos.map((id) => despertares.find((d) => d.asiento === id)).filter((d): d is DespertarDto => !!d)
+    ? wakesAbiertos.map((id) => despertares.find((d) => d.jugador === id)).filter((d): d is DespertarDto => !!d)
     : [];
-  const activoNarrador = abiertosNarrador.some((d) => d.asiento === wakeActivo) ? wakeActivo : (abiertosNarrador[0]?.asiento ?? null);
-  const ultimaDelJugador = (asientoId: string) =>
-    Math.max(0, ...(despertares.find((d) => d.asiento === asientoId)?.mensajes ?? []).filter((m) => m.autor !== 'narrador').map((m) => m.hora));
+  const activoNarrador = abiertosNarrador.some((d) => d.jugador === wakeActivo) ? wakeActivo : (abiertosNarrador[0]?.jugador ?? null);
+  const ultimaDelJugador = (jugadorId: string) =>
+    Math.max(0, ...(despertares.find((d) => d.jugador === jugadorId)?.mensajes ?? []).filter((m) => m.autor !== 'narrador').map((m) => m.hora));
   const noLeidos = new Set(
     despertares
-      .filter((d) => d.asiento !== activoNarrador && ultimaDelJugador(d.asiento) > (leidoWake[d.asiento] ?? 0))
-      .map((d) => d.asiento),
+      .filter((d) => d.jugador !== activoNarrador && ultimaDelJugador(d.jugador) > (leidoWake[d.jugador] ?? 0))
+      .map((d) => d.jugador),
   );
-  const marcarLeido = (asientoId: string | null) => {
-    if (asientoId) setLeidoWake((l) => ({ ...l, [asientoId]: ultimaDelJugador(asientoId) }));
+  const marcarLeido = (jugadorId: string | null) => {
+    if (jugadorId) setLeidoWake((l) => ({ ...l, [jugadorId]: ultimaDelJugador(jugadorId) }));
   };
-  const activarDespertar = (asientoId: string) => {
-    if (asientoId !== activoNarrador) marcarLeido(activoNarrador);
-    setWakeActivo(asientoId);
+  const activarDespertar = (jugadorId: string) => {
+    if (jugadorId !== activoNarrador) marcarLeido(activoNarrador);
+    setWakeActivo(jugadorId);
   };
   // Abre (o crea, de noche) el despertar de un asiento y lleva el foco a su ventana
-  const abrirDespertar = async (asientoId: string) => {
+  const abrirDespertar = async (jugadorId: string) => {
     if (!estado) return;
-    if (!estado.despertares.some((d) => d.asiento === asientoId)) {
-      const r = await pedirPropio('narrador:despertar', { asientoId });
+    if (!estado.despertares.some((d) => d.jugador === jugadorId)) {
+      const r = await pedirPropio('narrador:despertar', { jugadorId });
       if (!r.ok) {
         setAviso(r.error);
         return;
       }
     }
-    setWakesAbiertos((a) => (a.includes(asientoId) ? a : [...a, asientoId]));
-    activarDespertar(asientoId);
+    setWakesAbiertos((a) => (a.includes(jugadorId) ? a : [...a, jugadorId]));
+    activarDespertar(jugadorId);
     focoPendienteRef.current = ID_TITULO_DESPERTAR;
   };
   // Cierra su ventana (el despertar sigue): el foco va al siguiente abierto o a la luna de la ficha
-  const cerrarDespertar = (asientoId: string) => {
-    marcarLeido(asientoId);
-    const quedan = abiertosNarrador.map((d) => d.asiento).filter((id) => id !== asientoId);
+  const cerrarDespertar = (jugadorId: string) => {
+    marcarLeido(jugadorId);
+    const quedan = abiertosNarrador.map((d) => d.jugador).filter((id) => id !== jugadorId);
     setWakesAbiertos(quedan);
     setWakeActivo(quedan[0] ?? null);
-    focoPendienteRef.current = quedan.length ? ID_TITULO_DESPERTAR : idLunaFicha(asientoId);
+    focoPendienteRef.current = quedan.length ? ID_TITULO_DESPERTAR : idLunaFicha(jugadorId);
   };
   const miDespertar = yo?.rol === 'jugador' ? despertares[0] : undefined;
   const despiertoYo = !!miDespertar && !wakeCerradoJugador;
@@ -775,20 +775,20 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     window.setTimeout(() => anunciar('despertar', aviso), 100);
   };
   // Si faltan más, se sigue en la plaza con el elegido marcado (y el foco en su ficha)
-  const elegidoEnPlaza = (asientoId: string) => {
+  const elegidoEnPlaza = (jugadorId: string) => {
     if (!eleccion || !estado) return;
-    eleccion.onElegido(asientoId);
-    const anadido = `Añadido: ${nombreDeAsiento(estado, asientoId)}.`;
+    eleccion.onElegido(jugadorId);
+    const anadido = `Añadido: ${nombreDeAsiento(estado, jugadorId)}.`;
     const faltan = eleccion.faltan - 1;
     if (faltan <= 0) return terminarEleccion(anadido);
-    setEleccion({ ...eleccion, elegidos: [...eleccion.elegidos, asientoId], faltan });
+    setEleccion({ ...eleccion, elegidos: [...eleccion.elegidos, jugadorId], faltan });
     anunciar('despertar', `${anadido} ${textoEleccion(faltan)}.`);
   };
-  const quitadoEnPlaza = (asientoId: string) => {
+  const quitadoEnPlaza = (jugadorId: string) => {
     if (!eleccion?.onQuitado || !estado) return;
-    eleccion.onQuitado(asientoId);
-    setEleccion({ ...eleccion, elegidos: eleccion.elegidos.filter((id) => id !== asientoId), faltan: eleccion.faltan + 1 });
-    anunciar('despertar', `Quitado: ${nombreDeAsiento(estado, asientoId)}.`);
+    eleccion.onQuitado(jugadorId);
+    setEleccion({ ...eleccion, elegidos: eleccion.elegidos.filter((id) => id !== jugadorId), faltan: eleccion.faltan + 1 });
+    anunciar('despertar', `Quitado: ${nombreDeAsiento(estado, jugadorId)}.`);
   };
   const cancelarEleccion = () => terminarEleccion('Elección cancelada.');
   // Escape cancela mientras se elige (el despertar del jugador, escondido, no lo atiende)
@@ -1139,19 +1139,19 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     viajeros: [...personajesFichas.filter((p) => p.tipo === 'traveller'), ...viajerosCatalogo],
     porId: new Map([...personajesFichas, ...viajerosCatalogo].map((p) => [p.id, p])),
     notas: notasGrimorio,
-    anotar: (asientoId, contenido) => setNotasGrimorio((n) => ({ ...n, [asientoId]: contenido })),
+    anotar: (jugadorId, contenido) => setNotasGrimorio((n) => ({ ...n, [jugadorId]: contenido })),
     // Los del guion y los del catálogo que están en juego (viajeros en una ficha, NPCs):
     // también llevan recordatorios
     todos: [...personajesGuion, ...extrasEnJuego],
     todosPorId: new Map([...personajesGuion, ...viajerosCatalogo, ...npcsDisponibles].map((p) => [p.id, p])),
     notasRecordatorios,
-    anotarRecordatorios: (asientoId, lista) => setNotasRecordatorios((n) => ({ ...n, [asientoId]: lista })),
+    anotarRecordatorios: (jugadorId, lista) => setNotasRecordatorios((n) => ({ ...n, [jugadorId]: lista })),
     notasEscritas,
-    escribirNota: (asientoId, nota) =>
+    escribirNota: (jugadorId, nota) =>
       setNotasEscritas((n) => {
         const nuevas = { ...n };
-        if (nota === null) delete nuevas[asientoId];
-        else nuevas[asientoId] = nota;
+        if (nota === null) delete nuevas[jugadorId];
+        else nuevas[jugadorId] = nota;
         return nuevas;
       }),
   };
@@ -1177,7 +1177,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const focoAsientoRef = useRef<FocoAsiento | null>(null);
   const levantarme = async () => {
     const mio = estado?.asientos.find((a) => a.ocupante === estado.yo);
-    if (mio) focoAsientoRef.current = { asientoId: mio.id, sentado: false };
+    if (mio) focoAsientoRef.current = { jugadorId: mio.id, sentado: false };
     const r = await pedir('sala:levantarse');
     if (!r.ok) {
       focoAsientoRef.current = null;
@@ -1353,9 +1353,9 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
   // «Entendido» con su tecla, sin pasar por «Enviar»: el jugador, en su despertar; el
   // narrador, en la ventana de despertar que tiene delante. Al llegar, se cierra como siempre.
-  const despertarEntendido = narro ? activoNarrador : miDespertar ? miDespertar.asiento : null;
+  const despertarEntendido = narro ? activoNarrador : miDespertar ? miDespertar.jugador : null;
   const mandarEntendido = async () => {
-    const r = await pedirPropio('despertar:enviar', narro ? { ficha: 'entendido', asientoId: despertarEntendido } : { ficha: 'entendido' });
+    const r = await pedirPropio('despertar:enviar', narro ? { ficha: 'entendido', jugadorId: despertarEntendido } : { ficha: 'entendido' });
     if (r.ok) anunciar('despertar', 'Enviado: Entendido.');
     else setAviso(r.error);
   };
@@ -1824,7 +1824,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     const asientos = entendidosPorCerrarRef.current;
     if (!asientos.length) return;
     entendidosPorCerrarRef.current = [];
-    for (const id of asientos) if (abiertosNarrador.some((d) => d.asiento === id)) cerrarDespertar(id);
+    for (const id of asientos) if (abiertosNarrador.some((d) => d.jugador === id)) cerrarDespertar(id);
   });
 
   // Tras pintar un cambio de narradores: llevar el foco a donde toca, o
@@ -2192,18 +2192,18 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   despertares={
                     veoDespertares
                       ? {
-                          hilos: new Set(despertares.map((d) => d.asiento)),
+                          hilos: new Set(despertares.map((d) => d.jugador)),
                           noLeidos,
-                          entendidos: new Set(despertares.filter(esEntendido).map((d) => d.asiento)),
+                          entendidos: new Set(despertares.filter(esEntendido).map((d) => d.jugador)),
                           onAbrir: (id) => void abrirDespertar(id),
                         }
                       : miDespertar
                         ? // El jugador despertado: la luna en su ficha le vuelve a abrir su despertar
                           // (se le abre solo cuando el narrador le escribe: no hay «sin leer»)
                           {
-                            hilos: new Set([miDespertar.asiento]),
+                            hilos: new Set([miDespertar.jugador]),
                             noLeidos: new Set(),
-                            entendidos: esEntendido(miDespertar) ? new Set([miDespertar.asiento]) : new Set(),
+                            entendidos: esEntendido(miDespertar) ? new Set([miDespertar.jugador]) : new Set(),
                             onAbrir: () => setWakeCerradoJugador(false),
                           }
                         : null

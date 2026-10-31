@@ -63,7 +63,7 @@ export async function preguntarComoArtista(
     );
     if (!leida) return { error: 'Esa pregunta no se entiende.' };
     const verdad = contestar(juego, ctx.recuerdos.cronica, leida);
-    enPalabras = describirPreguntaArtista(leida, { asiento: (id) => nombreDeAsiento(juego, id), personaje: (id) => partida.guion.personaje(id)?.nombre ?? id });
+    enPalabras = describirPreguntaArtista(leida, { jugador: (id) => nombreDeAsiento(juego, id), personaje: (id) => partida.guion.personaje(id)?.nombre ?? id });
     const si = sano
       ? verdad
       : await ctx.siONo({
@@ -103,7 +103,7 @@ export function contestar(juego: SalaDeJuego, cronica: Cronica, p: PreguntaArtis
     case 'enJuego':
       return conQuien.length > 0;
     case 'es': {
-      const de = p.asientos.flatMap((id) => mesa.find((a) => a.id === id) ?? []);
+      const de = p.jugadores.flatMap((id) => mesa.find((a) => a.id === id) ?? []);
       return p.todos ? de.every((a) => es(juego, a, p.quien)) : de.some((a) => es(juego, a, p.quien));
     }
     case 'inicial':

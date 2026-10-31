@@ -43,11 +43,11 @@ export class Despertares {
 
   /** Todos los despertares, en el orden en que se abrieron. */
   despertares(): DespertarDto[] {
-    return this.alDia().map((h) => ({ asiento: h.asiento, mensajes: h.mensajes.map((m) => ({ ...m })) }));
+    return this.alDia().map((h) => ({ jugador: h.asiento, mensajes: h.mensajes.map((m) => ({ ...m })) }));
   }
 
-  hayDespertar(asientoId: string): boolean {
-    return this.alDia().some((h) => h.asiento === asientoId);
+  hayDespertar(jugadorId: string): boolean {
+    return this.alDia().some((h) => h.asiento === jugadorId);
   }
 
   /**
@@ -61,10 +61,10 @@ export class Despertares {
   }
 
   /** Abre el despertar de un asiento (si ya lo tiene, no hace nada). Devuelve el error, si lo hay. */
-  despertar(asientoId: string): string | null {
-    const asiento = this.plaza().find((a) => a.id === asientoId);
+  despertar(jugadorId: string): string | null {
+    const asiento = this.plaza().find((a) => a.id === jugadorId);
     if (!asiento) return 'Ese asiento ya no existe.';
-    if (!this.hayDespertar(asientoId)) this.hilos.push({ asiento: asientoId, ocupante: asiento.participanteId, mensajes: [] });
+    if (!this.hayDespertar(jugadorId)) this.hilos.push({ asiento: jugadorId, ocupante: asiento.participanteId, mensajes: [] });
     return null;
   }
 
@@ -72,8 +72,8 @@ export class Despertares {
    * Lo último que el narrador ha mandado a un asiento lo mandó el despertar guiado
    * (ver MensajeDespertar.guiado).
    */
-  respuestaGuiada(asientoId: string): boolean {
-    const hilo = this.alDia().find((h) => h.asiento === asientoId);
+  respuestaGuiada(jugadorId: string): boolean {
+    const hilo = this.alDia().find((h) => h.asiento === jugadorId);
     return !!hilo && !![...hilo.mensajes].reverse().find((m) => m.autor === 'narrador')?.guiado;
   }
 
@@ -81,8 +81,8 @@ export class Despertares {
    * A lo último del despertar de un asiento le falta el «Entendido»: es del narrador
    * y no es un «Entendido» suyo (a lo que ha elegido el jugador). Sin despertar, no.
    */
-  porEntender(asientoId: string): boolean {
-    const ultimo = this.alDia().find((h) => h.asiento === asientoId)?.mensajes.slice(-1)[0];
+  porEntender(jugadorId: string): boolean {
+    const ultimo = this.alDia().find((h) => h.asiento === jugadorId)?.mensajes.slice(-1)[0];
     return !!ultimo && ultimo.autor === 'narrador' && ultimo.ficha !== 'entendido';
   }
 
@@ -91,17 +91,17 @@ export class Despertares {
    * `guiado`, no lo es) y lo apunta en el diario. Sin despertar, nada. No valida: lo hace quien lo llama.
    */
   enviar(
-    asientoId: string,
+    jugadorId: string,
     mensaje: Omit<MensajeDespertar, 'id' | 'hora' | 'fase' | 'eleccion' | 'guiado'> & Partial<Pick<MensajeDespertar, 'eleccion' | 'guiado'>>,
   ): void {
-    const hilo = this.alDia().find((h) => h.asiento === asientoId);
+    const hilo = this.alDia().find((h) => h.asiento === jugadorId);
     if (!hilo) return;
     const { momento, numero } = this.fase();
     hilo.mensajes.push({ eleccion: null, guiado: false, ...mensaje, id: randomUUID(), hora: Date.now(), fase: { momento, numero } });
     if (hilo.mensajes.length > SALA_MENSAJES_DESPERTAR_MAX) hilo.mensajes.shift();
     this.diario.anotar({
       tipo: 'despertar',
-      asiento: this.diario.asiento(asientoId),
+      asiento: this.diario.asiento(jugadorId),
       delNarrador: mensaje.autor === 'narrador',
       ficha: mensaje.ficha,
       tarjeta: mensaje.tarjeta,

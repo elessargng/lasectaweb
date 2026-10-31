@@ -53,7 +53,7 @@ export function apuntarNoche(cronica: Cronica, juego: SalaDeJuego): void {
   const asientos = partida.plaza();
   const despertares = partida.despertares.despertares();
   const ctx = contextoNoche(juego);
-  for (const { asiento, mensajes } of despertares) {
+  for (const { jugador: asiento, mensajes } of despertares) {
     const a = asientos.find((x) => x.id === asiento);
     if (!a) continue;
     // Cada elección: lo primero con jugadores que llega tras pedírsela
@@ -78,10 +78,10 @@ export function apuntarNoche(cronica: Cronica, juego: SalaDeJuego): void {
   // Quién eligió a cada muerto: si fue un demonio, a sus manos (o se mató él, el Imp que pasa)
   for (const muerto of asientos.filter((a) => a.muertePendiente)) {
     const demonio = despertares.find((d) => {
-      const quien = asientos.find((x) => x.id === d.asiento);
+      const quien = asientos.find((x) => x.id === d.jugador);
       return !!quien && tipoReal(juego, quien) === 'demon' && d.mensajes.some((m) => m.ficha === 'jugador' && m.jugadores.includes(muerto.id));
     });
-    const causa = !demonio ? 'otra' : demonio.asiento === muerto.id ? 'suicidio' : 'demonio';
+    const causa = !demonio ? 'otra' : demonio.jugador === muerto.id ? 'suicidio' : 'demonio';
     cronica.muertes.set(muerto.id, { momento: 'noche', numero: noche, causa });
   }
 }

@@ -14,7 +14,7 @@ const limitarTamano = (ancho: number, alto: number): Tamano => ({
 });
 
 interface NotaAsientoProps {
-  asientoId: string;
+  jugadorId: string;
   /** «asiento 4 (Ana)», para los nombres de la nota y de sus botones. */
   nombre: string;
   /** La nota, o null si no tiene. */
@@ -55,7 +55,7 @@ const botonNota =
  * Escribiendo, Control (o Cmd) + Intro guarda y Escape lo deja como estaba; el
  * foco vuelve a la tarjeta (o a la ficha, si ya no hay nota).
  */
-const NotaAsiento = ({ asientoId, nombre, nota, editable, lado, plegada, editando, onPlegar, onEditar, onTerminar, onGuardar }: NotaAsientoProps) => {
+const NotaAsiento = ({ jugadorId, nombre, nota, editable, lado, plegada, editando, onPlegar, onEditar, onTerminar, onGuardar }: NotaAsientoProps) => {
   const [borrador, setBorrador] = useState('');
   const [borrando, setBorrando] = useState(false);
   const [error, setError] = useState('');
@@ -68,7 +68,7 @@ const NotaAsiento = ({ asientoId, nombre, nota, editable, lado, plegada, editand
   const [tamano, setTamano] = useState<Tamano | null>(null);
   const tarjetaRef = useRef<HTMLElement>(null);
   const arrastreRef = useRef<({ x: number; y: number } & Tamano) | null>(null);
-  const id = `sala-nota-${asientoId}`;
+  const id = `sala-nota-${jugadorId}`;
 
   // Si el texto no cabe en la tarjeta recogida (fijada no se mide: ya se ve entero)
   useLayoutEffect(() => {
@@ -96,7 +96,7 @@ const NotaAsiento = ({ asientoId, nombre, nota, editable, lado, plegada, editand
     window.setTimeout(() => {
       const destino =
         cual === 'ficha'
-          ? `sala-ficha-${asientoId}-boton`
+          ? `sala-ficha-${jugadorId}-boton`
           : cual === 'pestana'
             ? `${id}-pestana`
             : editable

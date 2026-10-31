@@ -18,17 +18,17 @@ import { identidadDe } from '../../partida/Grimorio';
  */
 
 /** Los muertos que pueden declararse Patoso hasta `hasta` (sin repetir a quien ya puede). */
-export function abrirPatosos(juego: SalaDeJuego, asientos: string[], hasta: Patoso['hasta']): void {
+export function abrirPatosos(juego: SalaDeJuego, jugadores: string[], hasta: Patoso['hasta']): void {
   const narrador = juego.narrador.actual();
-  if (!narrador || !asientos.length) return;
-  const nuevos = asientos.filter((id) => !narrador.patosos.some((p) => p.asiento === id)).map((asiento) => ({ asiento, hasta }));
+  if (!narrador || !jugadores.length) return;
+  const nuevos = jugadores.filter((id) => !narrador.patosos.some((p) => p.jugador === id)).map((jugador) => ({ jugador, hasta }));
   if (nuevos.length) juego.narrador.actualizar({ patosos: [...narrador.patosos, ...nuevos] });
 }
 
 /** Ya no puede declararse Patoso (lo ha hecho, o se ha acabado su momento). */
-export function quitarPatoso(juego: SalaDeJuego, asientoId: string): void {
+export function quitarPatoso(juego: SalaDeJuego, jugadorId: string): void {
   const narrador = juego.narrador.actual();
-  if (narrador) juego.narrador.actualizar({ patosos: narrador.patosos.filter((p) => p.asiento !== asientoId) });
+  if (narrador) juego.narrador.actualizar({ patosos: narrador.patosos.filter((p) => p.jugador !== jugadorId) });
 }
 
 /**
@@ -40,7 +40,7 @@ export async function cerrarPatosos(ctx: ContextoEtapa, hasta: Patoso['hasta']):
   const { juego } = ctx;
   const { partida, narrador } = juego;
   const cierran = narrador.actual()?.patosos.filter((p) => p.hasta === hasta) ?? [];
-  for (const { asiento } of cierran) {
+  for (const { jugador: asiento } of cierran) {
     quitarPatoso(juego, asiento);
     const patoso = partida.plaza().find((a) => a.id === asiento);
     const vivos = partida.plaza().filter(vivo);

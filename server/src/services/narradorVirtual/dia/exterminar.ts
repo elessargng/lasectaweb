@@ -15,11 +15,11 @@ import { identidadDe } from '../../partida/Grimorio';
  * El Exterminador de verdad pierde su habilidad («No Ability»). Devuelve si muere;
  * la muerte no se pone aquí, sino al contarlo (ver contarDisparo).
  */
-export async function exterminar(ctx: ContextoEtapa, tirador: string, asientoId: string): Promise<boolean> {
+export async function exterminar(ctx: ContextoEtapa, tirador: string, jugadorId: string): Promise<boolean> {
   const { juego } = ctx;
   const { partida } = juego;
   const desde = partida.jugadorDe(tirador);
-  const objetivo = partida.plaza().find((a) => a.id === asientoId);
+  const objetivo = partida.plaza().find((a) => a.id === jugadorId);
   if (!desde || !objetivo) return false;
   const noche = contextoNoche(juego);
   const esExterminador = identidadDe(desde) === 'slayer' && !droison(noche, desde);
@@ -39,14 +39,14 @@ export async function exterminar(ctx: ContextoEtapa, tirador: string, asientoId:
 }
 
 /** Muere de un disparo del Exterminador: ya no nomina (queda listo para la noche) y puede declararse Patoso hasta el amanecer. */
-export async function morirDeUnDisparo(ctx: ContextoEtapa, asientoId: string): Promise<void> {
+export async function morirDeUnDisparo(ctx: ContextoEtapa, jugadorId: string): Promise<void> {
   const { juego } = ctx;
   const { partida } = juego;
-  const objetivo = partida.plaza().find((a) => a.id === asientoId);
+  const objetivo = partida.plaza().find((a) => a.id === jugadorId);
   if (!objetivo) return;
-  await ctx.mesa.accion('narrador:cambiarVida', { asientoId, muerto: true });
-  apuntarMuerteDeDia(ctx.recuerdos.cronica, juego, asientoId, 'exterminador');
-  abrirPatosos(juego, [asientoId], 'amanecer');
+  await ctx.mesa.accion('narrador:cambiarVida', { jugadorId, muerto: true });
+  apuntarMuerteDeDia(ctx.recuerdos.cronica, juego, jugadorId, 'exterminador');
+  abrirPatosos(juego, [jugadorId], 'amanecer');
   const narrador = juego.narrador.actual();
   const ocupante = objetivo.participanteId;
   if (narrador && ocupante && !narrador.listos.includes(ocupante)) juego.narrador.actualizar({ listos: [...narrador.listos, ocupante] });
@@ -58,21 +58,21 @@ export async function morirDeUnDisparo(ctx: ContextoEtapa, asientoId: string): P
  * continúa.» o, si se acaba (sin demonio, salvo que lo herede la Mujer Escarlata),
  * el ganador para revelar. Lo que tarda cada parte se espera antes de seguir.
  */
-export async function contarDisparo(ctx: ContextoEtapa, tirador: string, asientoId: string, muere: boolean): Promise<Ganador | null> {
+export async function contarDisparo(ctx: ContextoEtapa, tirador: string, jugadorId: string, muere: boolean): Promise<Ganador | null> {
   const { juego } = ctx;
   const { partida } = juego;
   const desde = partida.jugadorDe(tirador);
   if (!desde) return null;
-  partida.anotar({ tipo: 'exterminador', asiento: partida.asientoDiario(desde.id), objetivo: partida.asientoDiario(asientoId), muere });
+  partida.anotar({ tipo: 'exterminador', asiento: partida.asientoDiario(desde.id), objetivo: partida.asientoDiario(jugadorId), muere });
   const decirYEsperar = async (frase: string) => {
     ctx.decir(frase);
     await new Promise<void>((seguir) => ctx.temporizador.programar(duracionFrase(frase) + PAUSA_MS, seguir));
   };
-  await decirYEsperar(FRASES.disparo(nombreDeAsiento(juego, desde.id), nombreDeAsiento(juego, asientoId)));
+  await decirYEsperar(FRASES.disparo(nombreDeAsiento(juego, desde.id), nombreDeAsiento(juego, jugadorId)));
   if (muere) {
-    await morirDeUnDisparo(ctx, asientoId);
+    await morirDeUnDisparo(ctx, jugadorId);
     const ganador = await comprobarFinal(ctx);
-    await decirYEsperar(FRASES.muere(nombreDeAsiento(juego, asientoId)));
+    await decirYEsperar(FRASES.muere(nombreDeAsiento(juego, jugadorId)));
     if (ganador) return ganador;
   }
   ctx.decir(FRASES.partidaContinua());

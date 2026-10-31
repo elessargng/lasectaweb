@@ -16,18 +16,18 @@ export interface EntornoDespertarGuiado {
   /** Es de noche. */
   noche: () => boolean;
   /** Abre el despertar de un asiento (ver Despertares.despertar). */
-  despertar: (asientoId: string) => string | null;
+  despertar: (jugadorId: string) => string | null;
   /** Manda algo del narrador a un asiento (con `eleccion`, se le pide que elija). */
-  mandar: (asientoId: string, envio: EnvioDespertar, eleccion?: EleccionDespertar) => void;
+  mandar: (jugadorId: string, envio: EnvioDespertar, eleccion?: EleccionDespertar) => void;
   /** A lo último que se le ha mandado a un asiento aún le falta el «Entendido» (ver Despertares.porEntender). */
-  porEntender: (asientoId: string) => boolean;
+  porEntender: (jugadorId: string) => boolean;
   /** Pone un recordatorio de un personaje (por su texto) en un asiento; único en la mesa. */
-  ponerRecordatorio: (asientoId: string, personaje: string, texto: string) => void;
+  ponerRecordatorio: (jugadorId: string, personaje: string, texto: string) => void;
   /** Mata de noche (la muerte queda pendiente). */
-  matarDeNoche: (asientoId: string) => void;
+  matarDeNoche: (jugadorId: string) => void;
   /** Envía el grimorio de la partida a quien se sienta en el asiento. */
-  enviarGrimorio: (asientoId: string) => void;
-  cambiarPersonaje: (asientoId: string, personaje: string) => void;
+  enviarGrimorio: (jugadorId: string) => void;
+  cambiarPersonaje: (jugadorId: string, personaje: string) => void;
 }
 
 /** Lo que ya se ha hecho esta noche con una habilidad. */
@@ -108,7 +108,7 @@ export class DespertarGuiado {
     return [...this.entorno.habilidades().values()].flatMap((h): HabilidadNocheDto[] => {
       const asientos = this.asientosDe(h);
       if (!asientos.length) return [];
-      const fila = { personaje: h.personaje, asiento: asientos[0].id, asientos: asientos.map((a) => a.id) };
+      const fila = { personaje: h.personaje, jugador: asientos[0].id, jugadores: asientos.map((a) => a.id) };
       const turno = this.turnoDe(h.personaje, asientos[0].id);
       if (turno) return [{ ...fila, estado: turno.estado, avisos: turno.avisos, opciones: turno.opciones }];
       return [{ ...fila, ...this.preparar(h, asientos) }];
@@ -169,43 +169,43 @@ export class DespertarGuiado {
    * pone a la cola. El «Entendido» del narrador (a lo que ha elegido) no es un
    * despertar: va siempre, y cierra lo anterior.
    */
-  private entregar(asientoId: string, { envio, eleccion }: Envio): void {
+  private entregar(jugadorId: string, { envio, eleccion }: Envio): void {
     if (envio.ficha === 'entendido') {
-      this.entorno.mandar(asientoId, envio);
-      this.alEntender(asientoId);
+      this.entorno.mandar(jugadorId, envio);
+      this.alEntender(jugadorId);
       return;
     }
-    const cola = this.colas.get(asientoId) ?? [];
-    const ocupado = !!this.entorno.ctx.plaza().find((a) => a.id === asientoId)?.participanteId;
-    if (ocupado && (cola.length || this.entorno.porEntender(asientoId))) this.colas.set(asientoId, [...cola, { envio, eleccion }]);
-    else this.entorno.mandar(asientoId, envio, eleccion);
+    const cola = this.colas.get(jugadorId) ?? [];
+    const ocupado = !!this.entorno.ctx.plaza().find((a) => a.id === jugadorId)?.participanteId;
+    if (ocupado && (cola.length || this.entorno.porEntender(jugadorId))) this.colas.set(jugadorId, [...cola, { envio, eleccion }]);
+    else this.entorno.mandar(jugadorId, envio, eleccion);
   }
 
   /** Lo último de un asiento ya está entendido: se le manda lo siguiente de su cola, si hay. */
-  alEntender(asientoId: string): void {
-    const [siguiente, ...resto] = this.colas.get(asientoId) ?? [];
+  alEntender(jugadorId: string): void {
+    const [siguiente, ...resto] = this.colas.get(jugadorId) ?? [];
     if (!siguiente) return;
-    if (resto.length) this.colas.set(asientoId, resto);
-    else this.colas.delete(asientoId);
-    this.entorno.mandar(asientoId, siguiente.envio, siguiente.eleccion);
+    if (resto.length) this.colas.set(jugadorId, resto);
+    else this.colas.delete(jugadorId);
+    this.entorno.mandar(jugadorId, siguiente.envio, siguiente.eleccion);
   }
 
 
 
   /** Lo que tiene que elegir el de un asiento (se le ha pedido y aún no ha contestado), o null. */
-  eleccionPendiente(asientoId: string): EleccionDespertar | null {
+  eleccionPendiente(jugadorId: string): EleccionDespertar | null {
     // Mientras la petición espera en la cola, aún no se le ha pedido
-    if (this.colas.get(asientoId)?.some((e) => e.eleccion)) return null;
-    const turno = this.turnos.find((t) => t.asiento === asientoId && t.estado === 'esperando');
+    if (this.colas.get(jugadorId)?.some((e) => e.eleccion)) return null;
+    const turno = this.turnos.find((t) => t.asiento === jugadorId && t.estado === 'esperando');
     return (turno && this.entorno.habilidades().get(turno.personaje)?.eleccion) ?? null;
   }
 
   /** El de un asiento ha elegido (ya comprobado: ver eleccionPendiente): se hace lo que diga su habilidad. */
-  alElegir(asientoId: string, elegidos: string[]): void {
-    const turno = this.turnos.find((t) => t.asiento === asientoId && t.estado === 'esperando');
+  alElegir(jugadorId: string, elegidos: string[]): void {
+    const turno = this.turnos.find((t) => t.asiento === jugadorId && t.estado === 'esperando');
     const habilidad = turno && this.entorno.habilidades().get(turno.personaje);
     const mesa = this.entorno.ctx.plaza();
-    const asiento = mesa.find((a) => a.id === asientoId);
+    const asiento = mesa.find((a) => a.id === jugadorId);
     if (!turno || !habilidad || !asiento) return;
     const elegidosEnMesa = elegidos.flatMap((id) => mesa.find((a) => a.id === id) ?? []);
     // Con quién ha despertado esta noche por su habilidad (la Camarera)
@@ -247,13 +247,13 @@ export class DespertarGuiado {
   }
 
   /** El nuevo Imp: su ficha pasa a ser la del Imp y se le despierta para decírselo. Devuelve el error, si lo hay. */
-  elegirNuevoImp(asientoId: string): string | null {
+  elegirNuevoImp(jugadorId: string): string | null {
     if (!this.impQueMuere) return 'No hay que elegir un nuevo Imp.';
-    if (asientoId === this.impQueMuere) return 'Elige a otro jugador.';
-    this.entorno.cambiarPersonaje(asientoId, 'imp');
-    const error = this.entorno.despertar(asientoId);
+    if (jugadorId === this.impQueMuere) return 'Elige a otro jugador.';
+    this.entorno.cambiarPersonaje(jugadorId, 'imp');
+    const error = this.entorno.despertar(jugadorId);
     if (error) return error;
-    this.entregar(asientoId, { envio: tarjeta('tuEres', { personajes: ['imp'], alineamiento: 'malvado' }) });
+    this.entregar(jugadorId, { envio: tarjeta('tuEres', { personajes: ['imp'], alineamiento: 'malvado' }) });
     this.impQueMuere = null;
     return null;
   }

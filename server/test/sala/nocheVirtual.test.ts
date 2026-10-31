@@ -221,7 +221,7 @@ describe('la noche del narrador virtual', () => {
     expect(orden[orden.length - 1]).toBe('spy');
     // El Bibliotecario sin forasteros (aunque el Espía pudiera registrar como uno): «cero»
     const bibliotecario = m.asiento('librarian').id;
-    expect(m.hechas).toContainEqual({ accion: 'despertar:enviar', datos: { asientoId: bibliotecario, ficha: 'cero' } });
+    expect(m.hechas).toContainEqual({ accion: 'despertar:enviar', datos: { jugadorId: bibliotecario, ficha: 'cero' } });
     expect(partida.plaza().some((a) => a.recordatorios.some((r) => r.personaje === 'librarian'))).toBe(false);
   });
 
@@ -234,7 +234,7 @@ describe('la noche del narrador virtual', () => {
     partida.irANoche();
     const noche = new Noche();
     await noche.alEntrar!(m.ctx);
-    const mensajes = () => partida.despertares.despertares().find((d) => d.asiento === asiento)?.mensajes ?? [];
+    const mensajes = () => partida.despertares.despertares().find((d) => d.jugador === asiento)?.mensajes ?? [];
     const hasta = async (cumple: () => boolean) => {
       const limite = Date.now() + 3000;
       while (!cumple()) {
@@ -411,7 +411,7 @@ describe('la noche del narrador virtual', () => {
       // Se le dijo «Tú eres el Imp» y luego despertó como el Imp (a elegir)
       const despertados = m.despertados();
       expect(despertados.indexOf('imp')).toBeGreaterThan(despertados.indexOf('scarletwoman'));
-      expect(m.hechas).toContainEqual({ accion: 'narrador:cambiarPersonaje', datos: { asientoId: escarlata, personajeId: 'imp' } });
+      expect(m.hechas).toContainEqual({ accion: 'narrador:cambiarPersonaje', datos: { jugadorId: escarlata, personajeId: 'imp' } });
     });
 
     it('si acaba antes de esa noche, al revelar la Mujer Escarlata que ha heredado ya es el Imp', async () => {
@@ -439,7 +439,7 @@ describe('la noche del narrador virtual', () => {
       expect(partida.revelacion.revelacion()?.ganador).toBe('bueno');
       const limite = Date.now() + 3000;
       while (m.hechas.filter((h) => h.accion === 'narrador:revelarFicha').length < 7 && Date.now() < limite) await new Promise((r) => setTimeout(r, 5));
-      const orden = m.hechas.filter((h) => h.accion === 'narrador:revelarFicha').map((h) => (h.datos as { asientoId: string }).asientoId);
+      const orden = m.hechas.filter((h) => h.accion === 'narrador:revelarFicha').map((h) => (h.datos as { jugadorId: string }).jugadorId);
       expect(orden).toHaveLength(7);
       expect(orden[6]).toBe(m.asiento('imp').id);
       expect(m.frases).toContain('Revelamos el grimorio.');

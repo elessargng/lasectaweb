@@ -31,13 +31,13 @@ const DialogoNuevoImp = ({ estado, muere, porId, pedir, onElegido, onCerrar }: D
   const vivos = estado.asientos.filter((a) => a.id !== muere && !a.muerto && !a.muertePendiente);
   const candidatos = [...vivos.filter((a) => esEsbirro(a.personaje)), ...vivos.filter((a) => !esEsbirro(a.personaje))];
 
-  const elegir = async (asientoId: string) => {
+  const elegir = async (jugadorId: string) => {
     if (enviando) return;
     setEnviando(true);
     setError('');
-    const r = await pedir('narrador:nuevoImp', { asientoId });
+    const r = await pedir('narrador:nuevoImp', { jugadorId });
     setEnviando(false);
-    if (r.ok) onElegido(`${nombreDeAsiento(estado, asientoId)} es el nuevo Imp.`);
+    if (r.ok) onElegido(`${nombreDeAsiento(estado, jugadorId)} es el nuevo Imp.`);
     else setError(r.error);
   };
 

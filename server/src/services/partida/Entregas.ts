@@ -47,17 +47,17 @@ export class Entregas {
    * ser esa (el personaje, si es uno solo, y el alineamiento, si se le dice). Así
    * es como se entera de un cambio: lo que el narrador cambie en el grimorio no lo ve.
    */
-  comunicarFicha(asientoId: string, personajes: string[], alineamiento: Alineamiento | null): void {
-    const antes = this.fichaEntregada(asientoId);
-    this.entregadas.set(asientoId, {
+  comunicarFicha(jugadorId: string, personajes: string[], alineamiento: Alineamiento | null): void {
+    const antes = this.fichaEntregada(jugadorId);
+    this.entregadas.set(jugadorId, {
       personaje: personajes.length === 1 ? personajes[0] : antes.personaje,
       alineamiento: alineamiento ?? antes.alineamiento,
     });
   }
 
   /** La ficha que se entregó a un asiento en el último reparto (sin reparto, vacía). */
-  fichaEntregada(asientoId: string): FichaEntregada {
-    return this.entregadas.get(asientoId) ?? { personaje: null, alineamiento: null };
+  fichaEntregada(jugadorId: string): FichaEntregada {
+    return this.entregadas.get(jugadorId) ?? { personaje: null, alineamiento: null };
   }
 
   fichasRetenidas(): boolean {
@@ -69,10 +69,10 @@ export class Entregas {
   }
 
   /** Envía un grimorio (sus fichas y los faroles) a quien se sienta en un asiento y lo apunta en el diario. No comprueba las fichas. */
-  enviarGrimorio(asientoId: string, fichas: FichaEnviadaDto[], faroles: string[] = []): void {
-    const ocupante = this.plaza().find((a) => a.id === asientoId)?.participanteId;
-    if (ocupante) this.grimoriosEnviados.set(asientoId, { ocupante, grimorio: { hora: Date.now(), fichas, faroles } });
-    this.diario.anotar({ tipo: 'grimorio', asiento: this.diario.asiento(asientoId) });
+  enviarGrimorio(jugadorId: string, fichas: FichaEnviadaDto[], faroles: string[] = []): void {
+    const ocupante = this.plaza().find((a) => a.id === jugadorId)?.participanteId;
+    if (ocupante) this.grimoriosEnviados.set(jugadorId, { ocupante, grimorio: { hora: Date.now(), fichas, faroles } });
+    this.diario.anotar({ tipo: 'grimorio', asiento: this.diario.asiento(jugadorId) });
   }
 
   /** El último grimorio enviado a un participante (si sigue en el asiento al que se envió), o null. */

@@ -13,7 +13,7 @@ export interface EntornoReparto {
   /** Lo que hacen las reglas con el reparto (el Revolutionary: ver reglas/revolucionario.ts). */
   reglas(asientos: Jugador[], personajes: string[]): string[];
   /** Pone en la ficha del asiento el personaje que le ha tocado (ver Grimorio.repartir). */
-  darPersonaje(asientoId: string, personaje: string | null): void;
+  darPersonaje(jugadorId: string, personaje: string | null): void;
 }
 
 /**

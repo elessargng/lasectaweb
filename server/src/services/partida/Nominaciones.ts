@@ -50,7 +50,7 @@ export interface EntornoVotacion {
   /** No puede votar (muerto sin voto; con el Voudon vivo, los vivos que no son él). */
   sinVoto(participanteId: string): boolean;
   /** Gasta (o devuelve) el voto de la ficha muerta de un asiento. */
-  cambiarVoto(asientoId: string, gastado: boolean): void;
+  cambiarVoto(jugadorId: string, gastado: boolean): void;
   /** Un muerto que vota desde este asiento no gasta su voto (la Banshee con su habilidad, el Voudon vivo). */
   votaSinGastar(asiento: Jugador): boolean;
   /** Los votos que hacen falta con tantas fichas vivas (la mitad o, con el Voudon vivo, 1). */
@@ -67,7 +67,7 @@ export interface EntornoVotacion {
   alVotar(cuenta: string | null): void;
   alDesvotar(cuenta: string | null): void;
   /** Sale la expulsión de un viajero: muere al momento. */
-  alExpulsar(asientoId: string): void;
+  alExpulsar(jugadorId: string): void;
   /** La votación ha avanzado sola (con el tiempo): hay que mandar el estado a todos. */
   alCambiarSola(): void;
 }
@@ -114,8 +114,8 @@ export class Nominaciones {
   }
 
   /** «Bea» o, si está libre, «asiento 3», como lo verá el narrador en el registro. */
-  private describirAsiento(asientoId: string): string {
-    const i = this.entorno.plaza().findIndex((a) => a.id === asientoId);
+  private describirAsiento(jugadorId: string): string {
+    const i = this.entorno.plaza().findIndex((a) => a.id === jugadorId);
     const ocupante = this.entorno.plaza()[i]?.participanteId;
     const nombre = ocupante ? this.entorno.buscar(ocupante)?.nombre : undefined;
     return nombre || `asiento ${i + 1}`;
@@ -146,8 +146,8 @@ export class Nominaciones {
     const n = this.nominacionVigente();
     const v = n?.votacion;
     if (!n || !v || v.terminada) return;
-    const asientoId = v.orden[v.paso];
-    const asiento = this.entorno.plaza().find((a) => a.id === asientoId);
+    const jugadorId = v.orden[v.paso];
+    const asiento = this.entorno.plaza().find((a) => a.id === jugadorId);
     const ocupante = asiento?.participanteId ? this.entorno.buscar(asiento.participanteId) : undefined;
     // La Banshee con su habilidad, y los muertos con el Voudon vivo, votan sin gastar el
     // voto de muerto (ni les hace falta); con el Voudon, los vivos no votan (salvo él)
@@ -158,7 +158,7 @@ export class Nominaciones {
     if (vota) {
       const valor = n.expulsion ? 1 : this.entorno.valorDelVoto(asiento!, ocupante);
       v.votos += valor;
-      if (valor !== 1) v.valores = { ...v.valores, [asientoId]: valor };
+      if (valor !== 1) v.valores = { ...v.valores, [jugadorId]: valor };
       const cuenta = this.entorno.cuentaDe(ocupante.id);
       this.entorno.alVotar(cuenta);
       n.votantesContados = [...(n.votantesContados ?? []), cuenta];
@@ -167,7 +167,7 @@ export class Nominaciones {
       ocupante.dosManos = false;
       if (asiento?.muerto && !conservaVoto) this.entorno.cambiarVoto(asiento.id, true);
     }
-    v.resultados[asientoId] = vota ? v.votos : null;
+    v.resultados[jugadorId] = vota ? v.votos : null;
     v.paso += 1;
     if (v.paso >= v.orden.length) {
       v.terminada = true;

@@ -42,13 +42,13 @@ export function resultadoSenalamiento(estado: SalaDto, s: SenalamientoDto): stri
  * Lo que se dice de una ficha en el señalamiento (para el lector, con el resto de
  * lo que lleva): a quién señala y quién la señala. null si nada.
  */
-export function senalDeFicha(estado: SalaDto, s: SenalamientoDto, asientoId: string): string | null {
+export function senalDeFicha(estado: SalaDto, s: SenalamientoDto, jugadorId: string): string | null {
   const nombre = (id: string) => nombreDeAsiento(estado, id).replace(/^A/, 'a');
-  const senala = s.senales[asientoId];
+  const senala = s.senales[jugadorId];
   const por = Object.entries(s.senales)
-    .filter(([, hasta]) => hasta === asientoId)
-    .map(([desde]) => (desde === asientoId ? 'sí mismo' : nombre(desde)));
-  const partes = [senala && `señala a ${senala === asientoId ? 'sí mismo' : nombre(senala)}`, por.length > 0 && `señalada por ${enumerar(por)}`];
+    .filter(([, hasta]) => hasta === jugadorId)
+    .map(([desde]) => (desde === jugadorId ? 'sí mismo' : nombre(desde)));
+  const partes = [senala && `señala a ${senala === jugadorId ? 'sí mismo' : nombre(senala)}`, por.length > 0 && `señalada por ${enumerar(por)}`];
   const texto = partes.filter(Boolean).join(', ');
   return texto || null;
 }

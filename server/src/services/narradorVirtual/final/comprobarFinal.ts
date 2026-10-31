@@ -26,10 +26,10 @@ export async function escarlataAImp(ctx: ContextoEtapa): Promise<void> {
   for (const a of partida.plaza()) {
     if (identidadDe(a) !== 'scarletwoman' || !tieneRecordatorio(a, 'scarletwoman', /^is the demon$/i)) continue;
     ctx.recuerdos.cronica.antes.set(a.id, 'scarletwoman');
-    await ctx.mesa.accion('narrador:cambiarPersonaje', { asientoId: a.id, personajeId: 'imp' });
+    await ctx.mesa.accion('narrador:cambiarPersonaje', { jugadorId: a.id, personajeId: 'imp' });
     // Su «Is The Demon» la hace seguir siendo la Mujer Escarlata (es un recordatorio de identidad): fuera
     for (const r of a.recordatorios.filter((r) => r.personaje === 'scarletwoman' && /^is the demon$/i.test(r.texto))) {
-      await ctx.mesa.accion('narrador:quitarRecordatorio', { asientoId: a.id, recordatorioId: r.id });
+      await ctx.mesa.accion('narrador:quitarRecordatorio', { jugadorId: a.id, recordatorioId: r.id });
     }
   }
 }

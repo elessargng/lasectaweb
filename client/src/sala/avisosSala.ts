@@ -256,8 +256,8 @@ export function avisosDeCambio(
   // Fichas: quién (o qué asiento) muere, revive o lleva la calavera (al cambiar de
   // fase se quita la calavera: ya se ha dicho que anochece).
   // «Bea» si hay alguien sentado; si no, «la ficha del asiento 3». A uno mismo, «Has muerto».
-  const quien = (e: SalaDto, asientoId: string) => {
-    const { numero, ocupante } = datosAsiento(e, asientoId);
+  const quien = (e: SalaDto, jugadorId: string) => {
+    const { numero, ocupante } = datosAsiento(e, jugadorId);
     return ocupante ? (ocupante.id === yo ? null : ocupante.nombre) : `la ficha del asiento ${numero}`;
   };
   const mayuscula = (t: string) => t.charAt(0).toLocaleUpperCase('es') + t.slice(1);

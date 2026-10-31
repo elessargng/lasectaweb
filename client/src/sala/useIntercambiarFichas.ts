@@ -49,13 +49,13 @@ export function useIntercambiarFichas({ activo, pedir, onError, onHecho }: Opcio
   };
 
   /** Lo que lleva la capa de cada ficha. */
-  const propsFicha = (asientoId: string) =>
+  const propsFicha = (jugadorId: string) =>
     activo
       ? {
-          'data-ficha': asientoId,
+          'data-ficha': jugadorId,
           onPointerDown: (e: PointerEvent<HTMLElement>) => {
             if (e.button !== 0) return;
-            inicio.current = { desde: asientoId, x: e.clientX, y: e.clientY };
+            inicio.current = { desde: jugadorId, x: e.clientX, y: e.clientY };
           },
           onPointerMove: (e: PointerEvent<HTMLElement>) => {
             const i = inicio.current;

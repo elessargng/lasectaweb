@@ -23,7 +23,7 @@ function mesa(...personajes: string[]) {
   partida.irANoche();
   const asiento = (i: number) => partida.plaza()[i];
   const fila = (personaje: string): HabilidadNocheDto | undefined => partida.guiado.habilidadesNoche().find((h) => h.personaje === personaje);
-  const ultimo = (i: number) => partida.despertares.despertares().find((d) => d.asiento === asiento(i).id)?.mensajes.slice(-1)[0];
+  const ultimo = (i: number) => partida.despertares.despertares().find((d) => d.jugador === asiento(i).id)?.mensajes.slice(-1)[0];
   const elegir = (i: number, ...elegidos: number[]) => {
     const jugadores = elegidos.map((e) => asiento(e).id);
     partida.despertares.enviar(asiento(i).id, { ...ficha('jugador'), jugadores, autor: asiento(i).id });
@@ -88,9 +88,9 @@ describe('la pregunta montada del Artista', () => {
     const demonio = { por: 'tipo', tipo: 'demon' } as const;
     expect(c({ tipo: 'enJuego', quien: { por: 'personaje', personaje: 'sage' } })).toBe(true);
     expect(c({ tipo: 'enJuego', quien: { por: 'personaje', personaje: 'artist' } })).toBe(false);
-    expect(c({ tipo: 'es', asientos: ids(x, 0, 1), todos: false, quien: demonio })).toBe(true);
-    expect(c({ tipo: 'es', asientos: ids(x, 1, 3), todos: true, quien: { por: 'alineamiento', alineamiento: 'malvado' } })).toBe(true);
-    expect(c({ tipo: 'es', asientos: ids(x, 1, 2), todos: true, quien: { por: 'alineamiento', alineamiento: 'malvado' } })).toBe(false);
+    expect(c({ tipo: 'es', jugadores: ids(x, 0, 1), todos: false, quien: demonio })).toBe(true);
+    expect(c({ tipo: 'es', jugadores: ids(x, 1, 3), todos: true, quien: { por: 'alineamiento', alineamiento: 'malvado' } })).toBe(true);
+    expect(c({ tipo: 'es', jugadores: ids(x, 1, 2), todos: true, quien: { por: 'alineamiento', alineamiento: 'malvado' } })).toBe(false);
     // El Imp, en la silla 2
     expect(c({ tipo: 'silla', quien: demonio, par: true })).toBe(true);
     // Entre el 5 y el 1, dando la vuelta: 5 y 1; entre el 1 y el 3: 1, 2 y 3
@@ -112,15 +112,15 @@ describe('la pregunta montada del Artista', () => {
 
   it('se lee y se dice en palabras; lo que no vale, no se lee', () => {
     const asientos = ['a1', 'a2', 'a3'];
-    const nombres = { asiento: (id: string) => ({ a1: 'Paco', a2: 'Marta', a3: 'Pepe' })[id] ?? id, personaje: () => 'Mayor', yo: 'a3' };
+    const nombres = { jugador: (id: string) => ({ a1: 'Paco', a2: 'Marta', a3: 'Pepe' })[id] ?? id, personaje: () => 'Mayor', yo: 'a3' };
     const leer = (p: unknown) => leerPreguntaArtista(p, asientos, ['mayor']);
     const di = (p: unknown) => describirPreguntaArtista(leer(p)!, nombres);
-    expect(di({ tipo: 'es', asientos: ['a1', 'a2'], todos: false, quien: { por: 'tipo', tipo: 'demon' } })).toBe('¿Es alguno de Paco o Marta el demonio?');
-    expect(di({ tipo: 'es', asientos: ['a1', 'a2'], todos: true, quien: { por: 'alineamiento', alineamiento: 'malvado' } })).toBe('¿Son Paco y Marta malvados?');
+    expect(di({ tipo: 'es', jugadores: ['a1', 'a2'], todos: false, quien: { por: 'tipo', tipo: 'demon' } })).toBe('¿Es alguno de Paco o Marta el demonio?');
+    expect(di({ tipo: 'es', jugadores: ['a1', 'a2'], todos: true, quien: { por: 'alineamiento', alineamiento: 'malvado' } })).toBe('¿Son Paco y Marta malvados?');
     expect(di({ tipo: 'enJuego', quien: { por: 'personaje', personaje: 'mayor' } })).toBe('¿Está el Mayor en juego?');
     expect(di({ tipo: 'inicial', quien: { por: 'tipo', tipo: 'demon' }, letra: 'p' })).toBe('¿Empieza por «P» el nombre del demonio?');
     expect(di({ tipo: 'eligio', quien: { por: 'alineamiento', alineamiento: 'bueno' }, a: 'a3', cuando: 'anoche' })).toBe('¿Te eligió algún bueno anoche?');
-    expect(leer({ tipo: 'es', asientos: [], todos: false, quien: { por: 'tipo', tipo: 'demon' } })).toBeNull();
+    expect(leer({ tipo: 'es', jugadores: [], todos: false, quien: { por: 'tipo', tipo: 'demon' } })).toBeNull();
     expect(leer({ tipo: 'enJuego', quien: { por: 'personaje', personaje: 'imp' } })).toBeNull();
     expect(leer({ tipo: 'inicial', quien: { por: 'tipo', tipo: 'demon' }, letra: '12' })).toBeNull();
   });

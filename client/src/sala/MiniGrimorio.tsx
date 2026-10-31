@@ -20,9 +20,9 @@ interface MiniGrimorioProps {
   nombres: Record<string, string>;
   /** Para editar: la ficha elegida y cómo elegir otra (las fichas son botones). Sin esto, solo se ven. */
   elegida?: string | null;
-  onElegir?: (asientoId: string) => void;
+  onElegir?: (jugadorId: string) => void;
   /** Quitar un recordatorio pulsándolo (al editar). */
-  onQuitarRecordatorio?: (asientoId: string, r: Recordatorio) => void;
+  onQuitarRecordatorio?: (jugadorId: string, r: Recordatorio) => void;
 }
 
 /**
@@ -71,7 +71,7 @@ const MiniGrimorio = ({ fichas, faroles = [], nombres, elegida, onElegir, onQuit
           // El centro de la ficha, dejando sitio para el nombre por fuera
           const radio = lado / 2 - ficha * 0.72;
           const personaje = f.personaje ? todosPorId.get(f.personaje) : undefined;
-          const nombre = nombres[f.asientoId] ?? `Asiento ${i + 1}`;
+          const nombre = nombres[f.jugadorId] ?? `Asiento ${i + 1}`;
           const descripcion = [
             `${i + 1}, ${nombre}`,
             personaje ? personaje.nombre.texto : 'sin personaje',
@@ -87,7 +87,7 @@ const MiniGrimorio = ({ fichas, faroles = [], nombres, elegida, onElegir, onQuit
           // Los recordatorios, por dentro de la ficha, apilados hacia el centro
           const radioRec = radio - ficha / 2 - recordatorio / 2 - 2;
           return (
-            <li key={f.asientoId} className="contents">
+            <li key={f.jugadorId} className="contents">
               <div
                 className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
                 style={{ left: lado / 2 + x * radio, top: lado / 2 + y * radio }}
@@ -95,11 +95,11 @@ const MiniGrimorio = ({ fichas, faroles = [], nombres, elegida, onElegir, onQuit
                 {onElegir ? (
                   <button
                     type="button"
-                    aria-pressed={elegida === f.asientoId}
+                    aria-pressed={elegida === f.jugadorId}
                     aria-label={descripcion}
-                    onClick={() => onElegir(f.asientoId)}
+                    onClick={() => onElegir(f.jugadorId)}
                     className={`block rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
-                      elegida === f.asientoId ? 'ring-2 ring-gold-bright ring-offset-2 ring-offset-background' : 'hover:brightness-110'
+                      elegida === f.jugadorId ? 'ring-2 ring-gold-bright ring-offset-2 ring-offset-background' : 'hover:brightness-110'
                     }`}
                   >
                     {contenido}
@@ -118,7 +118,7 @@ const MiniGrimorio = ({ fichas, faroles = [], nombres, elegida, onElegir, onQuit
                 style={{ left: lado / 2 + x * radioRec, top: lado / 2 + y * radioRec }}
                 hacia={{ x: -x, y: -y }}
                 puedeQuitar={() => !!onQuitarRecordatorio}
-                onQuitar={(r) => onQuitarRecordatorio?.(f.asientoId, r)}
+                onQuitar={(r) => onQuitarRecordatorio?.(f.jugadorId, r)}
                 // Al editar se quitan también desde el panel de la ficha elegida; aquí, para el lector, se repetirían
                 soloRaton
               />

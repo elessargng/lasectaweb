@@ -186,7 +186,7 @@ export class VistaPartida {
       despertares: veGrimorio
         ? comun.despertares
         : yo.rol === 'jugador'
-          ? comun.despertares.filter((d) => d.asiento === partida.despertares.asientoDespiertoDe(yo.id))
+          ? comun.despertares.filter((d) => d.jugador === partida.despertares.asientoDespiertoDe(yo.id))
           : [],
       grimorioRecibido: yo.rol === 'jugador' ? partida.entregas.grimorioRecibidoPor(yo.id) : null,
       narradorVirtual: comun.narradorVirtual,

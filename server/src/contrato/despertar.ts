@@ -51,11 +51,11 @@ export const ADJUNTOS_DESPERTAR: Partial<Record<FichaDespertar | TarjetaDesperta
 /** Lo que se manda mientras alguien está despierto: una ficha o una tarjeta, con lo que lleve. */
 export interface MensajeDespertar {
   id: string;
-  /** 'narrador', o el id del asiento del jugador que contesta. */
+  /** 'narrador', o el id del jugador que contesta. */
   autor: string;
   ficha: FichaDespertar | null;
   tarjeta: TarjetaDespertar | null;
-  /** ids de asiento. */
+  /** ids de jugador. */
   jugadores: string[];
   /** ids de personaje. */
   personajes: string[];
@@ -108,24 +108,24 @@ export type Registro = 'bueno' | 'malvado' | 'demonio' | 'noDemonio';
  * - envenenado / borracho: el que despierta está droison;
  * - muerto: el de la ficha está muerto;
  * - noMuere: el Ravenkeeper no muere esta noche;
- * - registro: en lo que se calcula entra un Espía o una Reclusa (`asiento`);
+ * - registro: en lo que se calcula entra un Espía o una Reclusa (`jugador`);
  * - sinEfecto: estaba droison al elegir; se le ha contestado sin poner el recordatorio;
- * - protegido: el demonio ha elegido a uno protegido (`asiento`): no muere;
- * - alcalde: el demonio ha elegido al Alcalde (`asiento`): decide el narrador;
- * - elegido: a quién ha elegido (`asientos`);
+ * - protegido: el demonio ha elegido a uno protegido (`jugador`): no muere;
+ * - alcalde: el demonio ha elegido al Alcalde (`jugador`): decide el narrador;
+ * - elegido: a quién ha elegido (`jugadores`);
  * - pocosJugadores: hay menos de 7 jugadores: los esbirros y el demonio no se despiertan;
  * - faltanFaroles: el narrador aún no ha puesto los 3 faroles del demonio.
  */
 export type AvisoHabilidad =
   | { tipo: 'faltaRecordatorio'; personaje: string; texto: string }
   | { tipo: 'envenenado' | 'borracho' | 'muerto' | 'noMuere' | 'sinEfecto' | 'pocosJugadores' | 'faltanFaroles' }
-  | { tipo: 'registro' | 'protegido' | 'alcalde'; asiento: string }
-  | { tipo: 'elegido'; asientos: string[] };
+  | { tipo: 'registro' | 'protegido' | 'alcalde'; jugador: string }
+  | { tipo: 'elegido'; jugadores: string[] };
 
 /** Una respuesta posible: lo que se manda y, con un Espía o una Reclusa, cómo registra cada uno para que salga. */
 export interface OpcionDespertar {
   envio: EnvioDespertar;
-  registros: { asiento: string; como: Registro }[];
+  registros: { jugador: string; como: Registro }[];
 }
 
 /**
@@ -138,10 +138,10 @@ export interface OpcionDespertar {
 export interface HabilidadNocheDto {
   /** El personaje, o 'esbirros' / 'demonios'. */
   personaje: string;
-  /** El asiento que despierta (el de la ficha); con 'esbirros' o 'demonios', el primero. */
-  asiento: string;
+  /** El jugador que despierta (el de la ficha); con 'esbirros' o 'demonios', el primero. */
+  jugador: string;
   /** Todos los que despiertan: el de la ficha o, con 'esbirros' y 'demonios', cada uno. */
-  asientos: string[];
+  jugadores: string[];
   estado: EstadoHabilidad;
   avisos: AvisoHabilidad[];
   /** Lo que se propone mandar (revisar: una o varias, la primera es la de verdad). */
@@ -149,13 +149,13 @@ export interface HabilidadNocheDto {
 }
 
 /**
- * Un despertar: lo que se dicen el narrador y el jugador de un asiento (o el
- * asiento, si está libre). Se abre de noche y dura hasta limpiar el grimorio;
- * se pueden tener varios a la vez, uno por asiento. Cerrar su ventana es cosa de
- * cada uno (en su navegador): el despertar sigue. Solo lo reciben los narradores
- * y el jugador de ese asiento.
+ * Un despertar: lo que se dicen el narrador y un jugador (aunque no lo juegue
+ * nadie). Se abre de noche y dura hasta limpiar el grimorio; se pueden tener
+ * varios a la vez, uno por jugador. Cerrar su ventana es cosa de cada uno (en su
+ * navegador): el despertar sigue. Solo lo reciben los narradores y quien juega a
+ * ese jugador.
  */
 export interface DespertarDto {
-  asiento: string;
+  jugador: string;
   mensajes: MensajeDespertar[];
 }

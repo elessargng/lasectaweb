@@ -7,8 +7,8 @@ interface DialogoIntercambioProps {
   /** «asiento 3 (Ana)», la ficha que se intercambia. */
   ficha: string;
   /** Las demás fichas: su asiento y su personaje (si tiene). */
-  otras: { asientoId: string; nombre: string; personaje: PersonajeMostrado | undefined }[];
-  onElegir: (asientoId: string) => void;
+  otras: { jugadorId: string; nombre: string; personaje: PersonajeMostrado | undefined }[];
+  onElegir: (jugadorId: string) => void;
   onCerrar: () => void;
 }
 
@@ -26,11 +26,11 @@ const DialogoIntercambio = ({ ficha, otras, onElegir, onCerrar }: DialogoInterca
         </h2>
         <ul className="flex flex-col gap-1 overflow-y-auto px-6 pb-4">
           {otras.map((o) => (
-            <li key={o.asientoId}>
+            <li key={o.jugadorId}>
               <button
                 type="button"
                 onClick={() => {
-                  onElegir(o.asientoId);
+                  onElegir(o.jugadorId);
                   onCerrar();
                 }}
                 className="sala-opcion flex w-full items-center justify-between gap-3 rounded px-3 py-2 text-left"

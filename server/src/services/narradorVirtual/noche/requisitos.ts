@@ -17,10 +17,10 @@ import type { Jugador } from '../../partida/Jugador';
 const TIPO_DEL_CORRECTO: Record<string, string> = { townsfolk: 'townsfolk', outsider: 'outsider', minion: 'minion' };
 
 /** Pone un recordatorio de un personaje (por su texto) en un asiento. */
-export async function ponerRecordatorio(ctx: ContextoEtapa, asientoId: string, personaje: string, texto: string): Promise<boolean> {
+export async function ponerRecordatorio(ctx: ContextoEtapa, jugadorId: string, personaje: string, texto: string): Promise<boolean> {
   const indice = indiceRecordatorio(ctx.juego, personaje, texto);
   if (indice < 0) return false;
-  return (await ctx.mesa.accion('narrador:ponerRecordatorio', { asientoId, personajeId: personaje, indice })).ok;
+  return (await ctx.mesa.accion('narrador:ponerRecordatorio', { jugadorId, personajeId: personaje, indice })).ok;
 }
 
 /**
@@ -59,9 +59,9 @@ export async function ponerFaroles(ctx: ContextoEtapa): Promise<boolean> {
 }
 
 /** Le despierta y le dice «cero» (no hay nadie que enseñarle). La fila no queda hecha: no hace falta. */
-async function decirCero(ctx: ContextoEtapa, asientoId: string): Promise<false> {
-  if ((await ctx.mesa.accion('narrador:despertar', { asientoId })).ok) {
-    await ctx.mesa.accion('despertar:enviar', { asientoId, ficha: 'cero' });
+async function decirCero(ctx: ContextoEtapa, jugadorId: string): Promise<false> {
+  if ((await ctx.mesa.accion('narrador:despertar', { jugadorId })).ok) {
+    await ctx.mesa.accion('despertar:enviar', { jugadorId, ficha: 'cero' });
   }
   return false;
 }
@@ -76,8 +76,8 @@ export async function cumplirRequisitos(ctx: ContextoEtapa, fila: HabilidadNoche
   const faltan = fila.avisos.flatMap((a) => (a.tipo === 'faltaRecordatorio' ? [a] : []));
   if (fila.avisos.some((a) => a.tipo === 'faltanFaroles')) puesto = (await ponerFaroles(ctx)) || puesto;
   const asientos = partida.plaza();
-  const yo = asientos.find((a) => a.id === fila.asiento);
-  const otros = asientos.filter((a) => a.id !== fila.asiento);
+  const yo = asientos.find((a) => a.id === fila.jugador);
+  const otros = asientos.filter((a) => a.id !== fila.jugador);
   // El correcto antes que el «Wrong» (que no puede caer en el mismo)
   let correcto: Jugador | null = null;
   for (const { personaje, texto } of [...faltan].sort((a, b) => Number(a.texto === 'Wrong') - Number(b.texto === 'Wrong'))) {

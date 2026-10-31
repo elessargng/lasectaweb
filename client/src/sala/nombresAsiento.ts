@@ -17,8 +17,8 @@ export function sonVecinos(estado: SalaDto, unoId: string, otroId: string): bool
 }
 
 /** El número (desde 1) y quien se sienta en un asiento del estado. */
-export function datosAsiento(estado: SalaDto, asientoId: string) {
-  const i = estado.asientos.findIndex((a) => a.id === asientoId);
+export function datosAsiento(estado: SalaDto, jugadorId: string) {
+  const i = estado.asientos.findIndex((a) => a.id === jugadorId);
   const ocupanteId = estado.asientos[i]?.ocupante;
   const ocupante = ocupanteId ? (estado.participantes.find((p) => p.id === ocupanteId) ?? null) : null;
   return { numero: i + 1, ocupante };

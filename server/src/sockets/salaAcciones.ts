@@ -172,16 +172,16 @@ function leerMensajeDespertar(
   };
 }
 /** Si lo elegido no es lo que pide la habilidad (cuántos y si puede elegirse a sí mismo): el error, o null. */
-/** A qué asientos manda el narrador: `asientoIds` (sin repetir) o, si no, `asientoId`. */
+/** A qué asientos manda el narrador: `jugadorIds` (sin repetir) o, si no, `jugadorId`. */
 function asientosDelEnvio(datos: unknown): string[] {
-  const { asientoId, asientoIds } = (datos as { asientoId?: unknown; asientoIds?: unknown } | null) ?? {};
-  if (Array.isArray(asientoIds)) return asientoIds.every((id) => typeof id === 'string') ? [...new Set(asientoIds as string[])] : [];
-  return typeof asientoId === 'string' ? [asientoId] : [];
+  const { jugadorId, jugadorIds } = (datos as { jugadorId?: unknown; jugadorIds?: unknown } | null) ?? {};
+  if (Array.isArray(jugadorIds)) return jugadorIds.every((id) => typeof id === 'string') ? [...new Set(jugadorIds as string[])] : [];
+  return typeof jugadorId === 'string' ? [jugadorId] : [];
 }
-function errorDeEleccion(pide: EleccionDespertar, mensaje: { ficha: FichaDespertar | null; jugadores: string[] }, asientoId: string): string | null {
+function errorDeEleccion(pide: EleccionDespertar, mensaje: { ficha: FichaDespertar | null; jugadores: string[] }, jugadorId: string): string | null {
   const cuantos = pide.cantidad === 1 ? 'un jugador' : `${pide.cantidad} jugadores`;
   if (mensaje.ficha !== 'jugador' || mensaje.jugadores.length !== pide.cantidad) return `Elige ${cuantos}.`;
-  if (!pide.puedeElegirse && mensaje.jugadores.includes(asientoId)) return 'No puedes elegirte a ti.';
+  if (!pide.puedeElegirse && mensaje.jugadores.includes(jugadorId)) return 'No puedes elegirte a ti.';
   return null;
 }
 /** Comprueba una casilla de farol: su posición y un personaje del guion (o null, para vaciarla). */
@@ -286,7 +286,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
-  /** Un visitante se sienta en un asiento libre y pasa a jugador. datos: { asientoId }. */
+  /** Un visitante se sienta en un asiento libre y pasa a jugador. datos: { jugadorId }. */
   /** Un visitante pide ver el grimorio del narrador (los narradores lo aceptan o lo rechazan). */
   'sala:solicitarGrimorio': {
     // Con narrador virtual, lo concede él al momento
@@ -337,8 +337,8 @@ export const SALA_ACCIONES: Record<string, Accion> = {
           : 'Quien ha visto el grimorio del narrador no puede sentarse en la mesa.',
     hacer: (juego, yo, datos) => {
       const { sala } = juego;
-      const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
-      const error = typeof asientoId === 'string' ? sala.sentar(yo.id, asientoId) : 'Asiento desconocido.';
+      const jugadorId = (datos as { jugadorId?: unknown } | null)?.jugadorId;
+      const error = typeof jugadorId === 'string' ? sala.sentar(yo.id, jugadorId) : 'Asiento desconocido.';
       return error ? { ok: false, error } : { ok: true };
     },
   },
@@ -507,7 +507,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /**
    * Con narrador virtual, de día: un jugador vivo nomina a otro (una vez al día, y a
-   * cada uno se le nomina una vez). datos: { asientoId } del nominado.
+   * cada uno se le nomina una vez). datos: { jugadorId } del nominado.
    */
   'jugador:nominar': {
     puede: (juego, yo) => !noPuedeNominar(juego, yo),
@@ -558,7 +558,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /**
    * Con narrador virtual, de día: un jugador se declara Exterminador y dispara a
-   * otro (una vez por partida). datos: { asientoId }.
+   * otro (una vez por partida). datos: { jugadorId }.
    */
   'jugador:exterminar': {
     puede: (juego, yo) => {
@@ -572,14 +572,14 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /**
    * Con narrador virtual: un muerto se declara Patoso (lo sea o no) y elige a un vivo,
-   * mientras puede (ver NarradorVirtualDto.patosos). datos: { asientoId } del elegido.
+   * mientras puede (ver NarradorVirtualDto.patosos). datos: { jugadorId } del elegido.
    */
   'jugador:patoso': {
     puede: (juego, yo) => {
       const { partida } = juego;
       const narrador = juego.narrador.actual();
       const mio = partida.jugadorDe(yo.id)?.id;
-      return !!narrador && narrador.etapa !== 'revelando' && !!mio && narrador.patosos.some((p) => p.asiento === mio);
+      return !!narrador && narrador.etapa !== 'revelando' && !!mio && narrador.patosos.some((p) => p.jugador === mio);
     },
     noPuede: 'Ya no puedes declararte Patoso.',
     hacer: alNarradorVirtual('patoso'),
@@ -810,7 +810,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   /**
    * Pone o quita la calavera a la ficha de un asiento (solo una puede llevarla).
    * Desde el panel de la nominación, además la cierra; desde el menú de la ficha
-   * no (cerrarNominacion: false). datos: { asientoId, marcado: boolean, cerrarNominacion?: boolean }.
+   * no (cerrarNominacion: false). datos: { jugadorId, marcado: boolean, cerrarNominacion?: boolean }.
    */
   'narrador:marcar': {
     // De noche no se marca a nadie: la calavera es de las ejecuciones del día
@@ -823,15 +823,15 @@ export const SALA_ACCIONES: Record<string, Accion> = {
           : 'La mesa no tiene asientos.',
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
-      const { asientoId, marcado, cerrarNominacion } =
-        (datos as { asientoId?: unknown; marcado?: unknown; cerrarNominacion?: unknown }) ?? {};
-      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      const { jugadorId, marcado, cerrarNominacion } =
+        (datos as { jugadorId?: unknown; marcado?: unknown; cerrarNominacion?: unknown }) ?? {};
+      if (typeof jugadorId !== 'string' || !sala.jugador(jugadorId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (typeof marcado !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
       // Si se marca al nominado de una nominación ya votada, se guardan sus votos
       // (el narrador los ve, para saber si otra votación empata).
       const n = partida.nominaciones.nominacion();
-      const votos = n?.votacion?.terminada && n.hasta === asientoId ? n.votacion.votos : null;
-      partida.grimorio.marcar(asientoId, marcado, votos);
+      const votos = n?.votacion?.terminada && n.hasta === jugadorId ? n.votacion.votos : null;
+      partida.grimorio.marcar(jugadorId, marcado, votos);
       if (cerrarNominacion !== false) partida.nominaciones.cerrarNominacion();
       return { ok: true };
     },
@@ -878,7 +878,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * Abre de noche el despertar de un asiento (también de uno libre: cuenta como un
    * jugador más), para mandarle información y que conteste. Se pueden tener
    * varios a la vez; si ya lo tiene, no hace nada. El jugador no se entera hasta
-   * que el narrador le manda algo (ver Despertares.asientoDespiertoDe). datos: { asientoId }.
+   * que el narrador le manda algo (ver Despertares.asientoDespiertoDe). datos: { jugadorId }.
    */
   'narrador:despertar': {
     // De día, solo el narrador virtual con el Violinista (el demonio elige en secreto)
@@ -886,19 +886,19 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'Solo se despierta a alguien de noche.' : 'Solo un narrador puede despertar a alguien.'),
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
-      const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
-      if (typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
-      const error = partida.despertares.despertar(asientoId);
+      const jugadorId = (datos as { jugadorId?: unknown } | null)?.jugadorId;
+      if (typeof jugadorId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
+      const error = partida.despertares.despertar(jugadorId);
       return error ? { ok: false, error } : { ok: true };
     },
   },
 
   /**
    * Un mensaje en un despertar: el narrador manda una ficha o una tarjeta al de un
-   * asiento (o lo mismo a varios: `asientoIds`, y de noche se despierta a los que aún
+   * asiento (o lo mismo a varios: `jugadorIds`, y de noche se despierta a los que aún
    * no lo estaban); el jugador, solo fichas al narrador (en el suyo). datos: {
-   * asientoId | asientoIds (solo el narrador), ficha | tarjeta, jugadores?:
-   * asientoId[], personajes?: id[], texto?, alineamiento? } (según lo que lleve).
+   * jugadorId | jugadorIds (solo el narrador), ficha | tarjeta, jugadores?:
+   * jugadorId[], personajes?: id[], texto?, alineamiento? } (según lo que lleve).
    */
   'despertar:enviar': {
     puede: ({ partida }, yo) =>
@@ -907,40 +907,40 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (juego, yo, datos) => {
       const { sala, partida } = juego;
       const narra = yo.rol === 'narrador';
-      const asientoIds = narra ? asientosDelEnvio(datos) : [partida.despertares.asientoDespiertoDe(yo.id)].filter((id): id is string => !!id);
-      if (!asientoIds.length || asientoIds.some((id) => !sala.jugador(id))) return { ok: false, error: 'Ese despertar ya no está abierto.' };
+      const jugadorIds = narra ? asientosDelEnvio(datos) : [partida.despertares.asientoDespiertoDe(yo.id)].filter((id): id is string => !!id);
+      if (!jugadorIds.length || jugadorIds.some((id) => !sala.jugador(id))) return { ok: false, error: 'Ese despertar ya no está abierto.' };
       // A uno solo, en su despertar; a varios, también a los que aún no están despiertos (de noche)
-      const despiertaMas = asientoIds.length > 1 && partida.fases.actual().momento === 'noche';
-      if (!despiertaMas && asientoIds.some((id) => !partida.despertares.hayDespertar(id))) return { ok: false, error: 'Ese despertar ya no está abierto.' };
+      const despiertaMas = jugadorIds.length > 1 && partida.fases.actual().momento === 'noche';
+      if (!despiertaMas && jugadorIds.some((id) => !partida.despertares.hayDespertar(id))) return { ok: false, error: 'Ese despertar ya no está abierto.' };
       const mensaje = leerMensajeDespertar(juego, datos, narra);
       if ('error' in mensaje) return { ok: false, error: mensaje.error };
       // Si su habilidad le ha pedido que elija (el despertar guiado), solo contesta con
       // quienes elige. Por un asiento libre (cuenta como un jugador) elige el narrador.
-      const destinos = asientoIds.map((asientoId) => {
-        const libre = !partida.plaza().find((a) => a.id === asientoId)?.participanteId;
-        const pide = !narra || libre ? partida.guiado.eleccionPendiente(asientoId) : null;
-        return { asientoId, pide, eligiendo: !!pide && (!narra || mensaje.ficha === 'jugador') };
+      const destinos = jugadorIds.map((jugadorId) => {
+        const libre = !partida.plaza().find((a) => a.id === jugadorId)?.participanteId;
+        const pide = !narra || libre ? partida.guiado.eleccionPendiente(jugadorId) : null;
+        return { jugadorId, pide, eligiendo: !!pide && (!narra || mensaje.ficha === 'jugador') };
       });
-      for (const { asientoId, pide, eligiendo } of destinos) {
+      for (const { jugadorId, pide, eligiendo } of destinos) {
         if (pide && eligiendo) {
-          const error = errorDeEleccion(pide, mensaje, asientoId);
+          const error = errorDeEleccion(pide, mensaje, jugadorId);
           if (error) return { ok: false, error };
         }
         // A lo demás del despertar guiado, el jugador solo contesta «Entendido» o con un texto
-        if (!narra && !pide && partida.despertares.respuestaGuiada(asientoId) && !(mensaje.ficha && FICHAS_RESPUESTA_GUIADA.includes(mensaje.ficha))) {
+        if (!narra && !pide && partida.despertares.respuestaGuiada(jugadorId) && !(mensaje.ficha && FICHAS_RESPUESTA_GUIADA.includes(mensaje.ficha))) {
           return { ok: false, error: 'Contesta «Entendido» o escribe un mensaje al narrador.' };
         }
       }
-      for (const { asientoId, eligiendo } of destinos) {
-        if (!partida.despertares.hayDespertar(asientoId)) partida.despertares.despertar(asientoId);
+      for (const { jugadorId, eligiendo } of destinos) {
+        if (!partida.despertares.hayDespertar(jugadorId)) partida.despertares.despertar(jugadorId);
         // «Tú eres»: su ficha pasa a ser la que se le dice (con alineamiento, solo si se le dice)
         // Lo que escribe el narrador virtual en un despertar guiado (que diga «Entendido»)
         // lo sigue siendo: el jugador sigue contestando solo «Entendido» o un texto
-        if (narra) partida.mandarDelNarrador(asientoId, mensaje, { guiado: yo.persona.tipo === 'virtual' && partida.despertares.respuestaGuiada(asientoId) });
-        else partida.despertares.enviar(asientoId, { ...mensaje, autor: asientoId });
-        if (eligiendo) partida.guiado.alElegir(asientoId, mensaje.jugadores);
+        if (narra) partida.mandarDelNarrador(jugadorId, mensaje, { guiado: yo.persona.tipo === 'virtual' && partida.despertares.respuestaGuiada(jugadorId) });
+        else partida.despertares.enviar(jugadorId, { ...mensaje, autor: jugadorId });
+        if (eligiendo) partida.guiado.alElegir(jugadorId, mensaje.jugadores);
         // Entendido lo anterior (lo dice el jugador, o el narrador a lo que eligió): le llega lo siguiente de su cola
-        if (mensaje.ficha === 'entendido') partida.guiado.alEntender(asientoId);
+        if (mensaje.ficha === 'entendido') partida.guiado.alEntender(jugadorId);
       }
       return { ok: true };
     },
@@ -981,15 +981,15 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
-  /** El Imp se ha elegido a sí mismo: el narrador dice quién es el nuevo. datos: { asientoId }. */
+  /** El Imp se ha elegido a sí mismo: el narrador dice quién es el nuevo. datos: { jugadorId }. */
   'narrador:nuevoImp': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && !!partida.guiado.nuevoImp(),
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'No hay que elegir un nuevo Imp.' : 'Solo un narrador elige al nuevo Imp.'),
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
-      const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
-      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
-      const error = partida.guiado.elegirNuevoImp(asientoId);
+      const jugadorId = (datos as { jugadorId?: unknown } | null)?.jugadorId;
+      if (typeof jugadorId !== 'string' || !sala.jugador(jugadorId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      const error = partida.guiado.elegirNuevoImp(jugadorId);
       return error ? { ok: false, error } : { ok: true };
     },
   },
@@ -1096,7 +1096,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   /**
    * Empieza un señalamiento (sustituye al que hubiera): quiénes señalan, a
    * quiénes (listas vacías: todos), el mensaje y la cuenta atrás (null: sin ella).
-   * datos: { mensaje?, segundos: number | null, senaladores?: asientoId[], objetivos?: asientoId[] }.
+   * datos: { mensaje?, segundos: number | null, senaladores?: jugadorId[], objetivos?: jugadorId[] }.
    */
   'narrador:senalamiento': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
@@ -1165,7 +1165,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /**
    * El jugador de un asiento que señala elige a quién (o deja de señalar), mientras
-   * no se congele. datos: { asientoId: string | null }.
+   * no se congele. datos: { jugadorId: string | null }.
    */
   'jugador:senalar': {
     puede: (juego, yo) => {
@@ -1177,9 +1177,9 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     noPuede: 'No te toca señalar.',
     hacer: (juego, yo, datos) => {
       const { partida } = juego;
-      const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
-      if (asientoId !== null && typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
-      const error = partida.senalar(yo.id, asientoId);
+      const jugadorId = (datos as { jugadorId?: unknown } | null)?.jugadorId;
+      if (jugadorId !== null && typeof jugadorId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
+      const error = partida.senalar(yo.id, jugadorId);
       return error ? { ok: false, error } : { ok: true };
     },
   },
@@ -1203,22 +1203,22 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /**
    * Pone un personaje del guion en la ficha de un asiento (aldeanos, forasteros,
-   * esbirros, demonios o viajeros), o se lo quita. datos: { asientoId, personajeId: string | null }.
+   * esbirros, demonios o viajeros), o se lo quita. datos: { jugadorId, personajeId: string | null }.
    */
   'narrador:cambiarPersonaje': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador puede cambiar las fichas.'),
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
-      const { asientoId, personajeId } = (datos as { asientoId?: unknown; personajeId?: unknown }) ?? {};
-      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      const { jugadorId, personajeId } = (datos as { jugadorId?: unknown; personajeId?: unknown }) ?? {};
+      if (typeof jugadorId !== 'string' || !sala.jugador(jugadorId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (personajeId !== null) {
         const personaje =
           typeof personajeId === 'string' ? partida.guion.personaje(personajeId) : undefined;
         if (!personaje) return { ok: false, error: 'Ese personaje no está en el guion.' };
         if (!TIPOS_EN_FICHA.includes(personaje.tipo)) return { ok: false, error: 'Ese personaje no puede ir en una ficha.' };
       }
-      partida.grimorio.cambiarPersonaje(asientoId, personajeId as string | null);
+      partida.grimorio.cambiarPersonaje(jugadorId, personajeId as string | null);
       return { ok: true };
     },
   },
@@ -1254,42 +1254,42 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * Pone una ficha recordatorio junto a la de un asiento: uno de los recordatorios
    * de un personaje del guion (esté en juego o no). Cada una es única: si ya
    * estaba puesta (todas, si el personaje tiene varias iguales), se quita la de
-   * antes (ver recordatorioQueSobra). datos: { asientoId, personajeId, indice }.
+   * antes (ver recordatorioQueSobra). datos: { jugadorId, personajeId, indice }.
    */
   'narrador:ponerRecordatorio': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador pone recordatorios.'),
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
-      const { asientoId, personajeId, indice } = (datos as { asientoId?: unknown; personajeId?: unknown; indice?: unknown }) ?? {};
-      const asiento = partida.plaza().find((a) => a.id === asientoId);
-      if (!asiento || typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
+      const { jugadorId, personajeId, indice } = (datos as { jugadorId?: unknown; personajeId?: unknown; indice?: unknown }) ?? {};
+      const asiento = partida.plaza().find((a) => a.id === jugadorId);
+      if (!asiento || typeof jugadorId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
       const personaje = typeof personajeId === 'string' ? partida.guion.personaje(personajeId) : undefined;
       if (!personaje) return { ok: false, error: 'Ese personaje no está en el guion.' };
       const texto = typeof indice === 'number' && Number.isInteger(indice) ? personaje.recordatorios[indice] : undefined;
       if (texto === undefined) return { ok: false, error: 'Ese recordatorio no existe.' };
-      const sobra = partida.grimorio.recordatorioQueSobra(asientoId, personaje.id, indice as number);
-      if (asiento.recordatorios.length >= MAX_RECORDATORIOS && sobra?.jugadorId !== asientoId) {
+      const sobra = partida.grimorio.recordatorioQueSobra(jugadorId, personaje.id, indice as number);
+      if (asiento.recordatorios.length >= MAX_RECORDATORIOS && sobra?.jugadorId !== jugadorId) {
         return { ok: false, error: `Una ficha no puede llevar más de ${MAX_RECORDATORIOS} recordatorios.` };
       }
       if (sobra) partida.grimorio.quitarRecordatorio(sobra.jugadorId, sobra.recordatorioId);
-      partida.grimorio.ponerRecordatorio(asientoId, { personaje: personaje.id, indice: indice as number, texto });
+      partida.grimorio.ponerRecordatorio(jugadorId, { personaje: personaje.id, indice: indice as number, texto });
       return { ok: true };
     },
   },
 
   /**
    * Pone un recordatorio con texto propio (sin personaje): lo que escriba el
-   * narrador, corto, porque va en redondo en una ficha pequeña. datos: { asientoId, texto, icono? }.
+   * narrador, corto, porque va en redondo en una ficha pequeña. datos: { jugadorId, texto, icono? }.
    */
   'narrador:ponerRecordatorioTexto': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador pone recordatorios.'),
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
-      const { asientoId, texto, icono } = (datos as { asientoId?: unknown; texto?: unknown; icono?: unknown }) ?? {};
-      const asiento = partida.plaza().find((a) => a.id === asientoId);
-      if (!asiento || typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
+      const { jugadorId, texto, icono } = (datos as { jugadorId?: unknown; texto?: unknown; icono?: unknown }) ?? {};
+      const asiento = partida.plaza().find((a) => a.id === jugadorId);
+      if (!asiento || typeof jugadorId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
       const limpio = typeof texto === 'string' ? texto.replace(/\s+/g, ' ').trim() : '';
       if (!limpio) return { ok: false, error: 'Escribe el texto del recordatorio.' };
       if ([...limpio].length > SALA_RECORDATORIO_TEXTO_MAX) {
@@ -1300,27 +1300,27 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       }
       const conIcono = leerIconoRecordatorio(juego, icono);
       if (conIcono === undefined) return { ok: false, error: 'Ese icono no está en el guion.' };
-      partida.grimorio.ponerRecordatorio(asientoId, { personaje: RECORDATORIO_TEXTO, indice: -1, texto: limpio, ...(conIcono ? { icono: conIcono } : {}) });
+      partida.grimorio.ponerRecordatorio(jugadorId, { personaje: RECORDATORIO_TEXTO, indice: -1, texto: limpio, ...(conIcono ? { icono: conIcono } : {}) });
       return { ok: true };
     },
   },
 
   /**
    * Escribe la nota de un asiento (texto libre; sustituye la que hubiera).
-   * datos: { asientoId, texto }.
+   * datos: { jugadorId, texto }.
    */
   'narrador:escribirNota': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador escribe notas.'),
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
-      const { asientoId, texto } = (datos as { asientoId?: unknown; texto?: unknown }) ?? {};
-      if (typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
+      const { jugadorId, texto } = (datos as { jugadorId?: unknown; texto?: unknown }) ?? {};
+      if (typeof jugadorId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
       // Se respetan los saltos de línea; solo se quitan los espacios de los extremos
       const limpio = typeof texto === 'string' ? texto.replace(/\r\n?/g, '\n').trim() : '';
       if (!limpio) return { ok: false, error: 'La nota está vacía.' };
       if (limpio.length > SALA_NOTA_LARGO_MAX) return { ok: false, error: `Una nota puede tener como mucho ${SALA_NOTA_LARGO_MAX} caracteres.` };
-      return partida.grimorio.escribirNota(asientoId, limpio) ? { ok: true } : { ok: false, error: 'Ese asiento ya no existe.' };
+      return partida.grimorio.escribirNota(jugadorId, limpio) ? { ok: true } : { ok: false, error: 'Ese asiento ya no existe.' };
     },
   },
 
@@ -1328,22 +1328,22 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * Envía un grimorio (el Espía, la Viuda) a quien se sienta en un asiento: una
    * copia del de la partida que el narrador puede haber cambiado. Se comprueba que
    * cada ficha sea de un asiento de la mesa y lleve personajes del guion.
-   * datos: { asientoId, fichas: FichaEnviadaDto[], faroles?: string[] }.
+   * datos: { jugadorId, fichas: FichaEnviadaDto[], faroles?: string[] }.
    */
   'narrador:enviarGrimorio': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().some((a) => a.participanteId),
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'No hay nadie sentado.' : 'Solo un narrador envía el grimorio.'),
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
-      const { asientoId, fichas } = (datos as { asientoId?: unknown; fichas?: unknown }) ?? {};
-      const destino = partida.plaza().find((a) => a.id === asientoId);
-      if (!destino || typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
+      const { jugadorId, fichas } = (datos as { jugadorId?: unknown; fichas?: unknown }) ?? {};
+      const destino = partida.plaza().find((a) => a.id === jugadorId);
+      if (!destino || typeof jugadorId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
       if (!destino.participanteId) return { ok: false, error: 'En ese asiento no hay nadie a quien enviárselo.' };
       if (!Array.isArray(fichas) || fichas.length > SALA_ASIENTOS.max) return { ok: false, error: 'El grimorio no es válido.' };
       const mesa = new Set(partida.plaza().map((a) => a.id));
       const limpias: FichaEnviadaDto[] = [];
       for (const f of fichas as Record<string, unknown>[]) {
-        if (!f || typeof f.asientoId !== 'string' || !mesa.has(f.asientoId)) return { ok: false, error: 'El grimorio no es válido.' };
+        if (!f || typeof f.jugadorId !== 'string' || !mesa.has(f.jugadorId)) return { ok: false, error: 'El grimorio no es válido.' };
         const personaje = f.personaje === null ? null : typeof f.personaje === 'string' && partida.guion.personaje(f.personaje) ? f.personaje : undefined;
         if (personaje === undefined) return { ok: false, error: 'Hay un personaje que no está en el guion.' };
         const alineamiento = f.alineamiento === 'bueno' || f.alineamiento === 'malvado' ? f.alineamiento : null;
@@ -1365,39 +1365,39 @@ export const SALA_ACCIONES: Record<string, Accion> = {
           if (!del || original === undefined) return { ok: false, error: 'Hay un recordatorio que no está en el guion.' };
           limpios.push({ id: randomUUID(), personaje: del.id, indice, texto: original });
         }
-        limpias.push({ asientoId: f.asientoId, personaje, alineamiento, muerto: f.muerto === true, recordatorios: limpios });
+        limpias.push({ jugadorId: f.jugadorId, personaje, alineamiento, muerto: f.muerto === true, recordatorios: limpios });
       }
       // Los faroles del demonio (los que el narrador haya dejado en la copia)
       const faroles = (datos as { faroles?: unknown }).faroles ?? [];
       if (!Array.isArray(faroles) || faroles.length > NUM_FAROLES) return { ok: false, error: 'Los faroles no son válidos.' };
       if (faroles.some((id) => typeof id !== 'string' || !partida.guion.personaje(id))) return { ok: false, error: 'Hay un farol que no está en el guion.' };
-      partida.entregas.enviarGrimorio(asientoId, limpias, faroles as string[]);
+      partida.entregas.enviarGrimorio(jugadorId, limpias, faroles as string[]);
       return { ok: true };
     },
   },
 
-  /** Borra la nota de un asiento. datos: { asientoId }. */
+  /** Borra la nota de un asiento. datos: { jugadorId }. */
   'narrador:borrarNota': {
     puede: esNarrador,
     noPuede: 'Solo un narrador borra notas.',
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
-      const { asientoId } = (datos as { asientoId?: unknown }) ?? {};
-      if (typeof asientoId !== 'string') return { ok: false, error: 'Petición desconocida.' };
-      partida.grimorio.escribirNota(asientoId, null);
+      const { jugadorId } = (datos as { jugadorId?: unknown }) ?? {};
+      if (typeof jugadorId !== 'string') return { ok: false, error: 'Petición desconocida.' };
+      partida.grimorio.escribirNota(jugadorId, null);
       return { ok: true };
     },
   },
 
-  /** Quita una ficha recordatorio. datos: { asientoId, recordatorioId }. */
+  /** Quita una ficha recordatorio. datos: { jugadorId, recordatorioId }. */
   'narrador:quitarRecordatorio': {
     puede: esNarrador,
     noPuede: 'Solo un narrador quita recordatorios.',
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
-      const { asientoId, recordatorioId } = (datos as { asientoId?: unknown; recordatorioId?: unknown }) ?? {};
-      if (typeof asientoId !== 'string' || typeof recordatorioId !== 'string') return { ok: false, error: 'Petición desconocida.' };
-      partida.grimorio.quitarRecordatorio(asientoId, recordatorioId);
+      const { jugadorId, recordatorioId } = (datos as { jugadorId?: unknown; recordatorioId?: unknown }) ?? {};
+      if (typeof jugadorId !== 'string' || typeof recordatorioId !== 'string') return { ok: false, error: 'Petición desconocida.' };
+      partida.grimorio.quitarRecordatorio(jugadorId, recordatorioId);
       return { ok: true };
     },
   },
@@ -1655,17 +1655,17 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     noPuede: 'No tienes ningún despertar abierto.',
     hacer: (juego, yo, datos) => {
       const { partida } = juego;
-      const asientoId = partida.despertares.asientoDespiertoDe(yo.id);
+      const jugadorId = partida.despertares.asientoDespiertoDe(yo.id);
       const personajes = (datos as { personajes?: unknown } | null)?.personajes;
-      if (!asientoId || !Array.isArray(personajes)) return { ok: false, error: 'No hay faroles que copiar.' };
+      if (!jugadorId || !Array.isArray(personajes)) return { ok: false, error: 'No hay faroles que copiar.' };
       const mismos = (m: MensajeDespertar) =>
         m.autor === 'narrador' &&
         m.tarjeta === 'noEnJuego' &&
         m.personajes.length === personajes.length &&
         m.personajes.every((id, i) => id === personajes[i]);
-      const hilo = partida.despertares.despertares().find((d) => d.asiento === asientoId);
+      const hilo = partida.despertares.despertares().find((d) => d.jugador === jugadorId);
       if (!hilo?.mensajes.some(mismos)) return { ok: false, error: 'El narrador no te ha enseñado esos personajes.' };
-      partida.faroles.copiarFaroles(asientoId, (personajes as string[]).slice(0, NUM_FAROLES));
+      partida.faroles.copiarFaroles(jugadorId, (personajes as string[]).slice(0, NUM_FAROLES));
       return { ok: true };
     },
   },
@@ -1740,15 +1740,15 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
-  /** Revela la ficha de un asiento, para todos. datos: { asientoId }. */
+  /** Revela la ficha de un asiento, para todos. datos: { jugadorId }. */
   'narrador:revelarFicha': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && !!partida.revelacion.revelacion() && !partida.revelacion.revelacion()!.terminada,
     noPuede: 'No se está revelando el grimorio.',
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
-      const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
-      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
-      partida.revelacion.revelarFicha(asientoId);
+      const jugadorId = (datos as { jugadorId?: unknown } | null)?.jugadorId;
+      if (typeof jugadorId !== 'string' || !sala.jugador(jugadorId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      partida.revelacion.revelarFicha(jugadorId);
       return { ok: true };
     },
   },
@@ -1801,36 +1801,36 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     },
   },
 
-  /** Cambia el alineamiento de la ficha de un asiento. datos: { asientoId, alineamiento: 'bueno' | 'malvado' }. */
+  /** Cambia el alineamiento de la ficha de un asiento. datos: { jugadorId, alineamiento: 'bueno' | 'malvado' }. */
   'narrador:cambiarAlineamiento': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador puede cambiar las fichas.'),
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
-      const { asientoId, alineamiento } = (datos as { asientoId?: unknown; alineamiento?: unknown }) ?? {};
-      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      const { jugadorId, alineamiento } = (datos as { jugadorId?: unknown; alineamiento?: unknown }) ?? {};
+      if (typeof jugadorId !== 'string' || !sala.jugador(jugadorId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (alineamiento !== 'bueno' && alineamiento !== 'malvado') return { ok: false, error: 'Alineamiento desconocido.' };
-      if (!partida.plaza().find((a) => a.id === asientoId)?.personaje) {
+      if (!partida.plaza().find((a) => a.id === jugadorId)?.personaje) {
         return { ok: false, error: 'Esa ficha no tiene personaje.' };
       }
-      partida.grimorio.cambiarAlineamiento(asientoId, alineamiento);
+      partida.grimorio.cambiarAlineamiento(jugadorId, alineamiento);
       return { ok: true };
     },
   },
 
   /**
    * Mata o revive la ficha de un asiento (haya alguien sentado o no). De noche, matar
-   * deja la muerte pendiente (ver Grimorio.cambiarVida). datos: { asientoId, muerto: boolean }.
+   * deja la muerte pendiente (ver Grimorio.cambiarVida). datos: { jugadorId, muerto: boolean }.
    */
   'narrador:cambiarVida': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador puede matar o revivir.'),
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
-      const { asientoId, muerto } = (datos as { asientoId?: unknown; muerto?: unknown }) ?? {};
-      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      const { jugadorId, muerto } = (datos as { jugadorId?: unknown; muerto?: unknown }) ?? {};
+      if (typeof jugadorId !== 'string' || !sala.jugador(jugadorId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (typeof muerto !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
-      partida.grimorio.cambiarVida(asientoId, muerto);
+      partida.grimorio.cambiarVida(jugadorId, muerto);
       return { ok: true };
     },
   },
@@ -1838,15 +1838,15 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   /**
    * Ejecuta al que lleva la calavera: muere, se le ponen los recordatorios de los
    * personajes que funcionan con las ejecuciones y anochece (salvo con el Carnicero
-   * vivo). Ver Partida.ejecutar. datos: { asientoId }.
+   * vivo). Ver Partida.ejecutar. datos: { jugadorId }.
    */
   'narrador:ejecutar': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.grimorio.hayMarca(),
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'Nadie lleva la calavera.' : 'Solo un narrador puede ejecutar.'),
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
-      const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
-      const asiento = partida.plaza().find((a) => a.id === asientoId);
+      const jugadorId = (datos as { jugadorId?: unknown } | null)?.jugadorId;
+      const asiento = partida.plaza().find((a) => a.id === jugadorId);
       if (!asiento) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (partida.grimorio.calavera()?.jugador !== asiento.id) return { ok: false, error: 'Solo se ejecuta a quien lleva la calavera.' };
       // Si quedan dos vivos, no anochece: el narrador elige (valor «final») entre la noche y revelar el grimorio
@@ -1857,33 +1857,33 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /**
    * Hace efectiva la muerte pendiente de un asiento (la de la noche): el narrador la
-   * anuncia y ya la ven todos. datos: { asientoId }.
+   * anuncia y ya la ven todos. datos: { jugadorId }.
    */
   'narrador:confirmarMuerte': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().some((a) => a.muertePendiente),
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'No hay ninguna muerte por anunciar.' : 'Solo un narrador puede anunciar una muerte.'),
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
-      const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
-      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
-      if (!partida.grimorio.confirmarMuerte(asientoId)) return { ok: false, error: 'Esa ficha no tiene una muerte por anunciar.' };
+      const jugadorId = (datos as { jugadorId?: unknown } | null)?.jugadorId;
+      if (typeof jugadorId !== 'string' || !sala.jugador(jugadorId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      if (!partida.grimorio.confirmarMuerte(jugadorId)) return { ok: false, error: 'Esa ficha no tiene una muerte por anunciar.' };
       return { ok: true };
     },
   },
 
   /**
    * Quita o devuelve a mano el voto de un muerto (el que le queda): se apaga o se
-   * enciende su vela. datos: { asientoId, gastado: boolean }.
+   * enciende su vela. datos: { jugadorId, gastado: boolean }.
    */
   'narrador:cambiarVoto': {
     puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().some((a) => a.muerto),
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'No hay ningún muerto.' : 'Solo un narrador quita o devuelve votos.'),
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
-      const { asientoId, gastado } = (datos as { asientoId?: unknown; gastado?: unknown }) ?? {};
-      if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
+      const { jugadorId, gastado } = (datos as { jugadorId?: unknown; gastado?: unknown }) ?? {};
+      if (typeof jugadorId !== 'string' || !sala.jugador(jugadorId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (typeof gastado !== 'boolean') return { ok: false, error: 'Estado desconocido.' };
-      if (!partida.grimorio.cambiarVoto(asientoId, gastado)) return { ok: false, error: 'Solo los muertos tienen un voto que quitar o devolver.' };
+      if (!partida.grimorio.cambiarVoto(jugadorId, gastado)) return { ok: false, error: 'Solo los muertos tienen un voto que quitar o devolver.' };
       return { ok: true };
     },
   },
@@ -1935,7 +1935,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * Añade o quita un asiento al final del círculo, mezcla a quienes están
    * sentados o mueve a uno a otro asiento (intercambiándolos si está ocupado).
    * datos: { cambio: 'añadir' | 'quitar' | 'mezclar' } o
-   * { cambio: 'mover', desde: asientoId, hasta: asientoId }.
+   * { cambio: 'mover', desde: jugadorId, hasta: jugadorId }.
    */
   'narrador:asientos': {
     puede: esNarrador,

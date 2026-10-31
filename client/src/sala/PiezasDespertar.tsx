@@ -504,7 +504,7 @@ export const EditorAdjunto = ({
 interface BotoneraDespertarProps {
   estado: SalaDto;
   /** El narrador: el asiento del despertar al que manda. El jugador: null (va al suyo). */
-  asientoId: string | null;
+  jugadorId: string | null;
   /** Todos los personajes del guion. */
   personajes: PersonajeMostrado[];
   /** Con las tarjetas (el narrador) o solo las fichas (el jugador despierto). */
@@ -545,7 +545,7 @@ const adjuntoDe = (envio: Envio) => tarjetaDespertar(envio.tarjeta ?? null)?.adj
  */
 export const BotoneraDespertar = ({
   estado,
-  asientoId,
+  jugadorId,
   personajes,
   conTarjetas,
   tituloFichas,
@@ -573,7 +573,7 @@ export const BotoneraDespertar = ({
       return faroles.length > 0 ? { personajes: faroles } : undefined;
     }
     if (tarjeta === 'tuEres') {
-      const asiento = estado.asientos.find((a) => a.id === asientoId);
+      const asiento = estado.asientos.find((a) => a.id === jugadorId);
       const personaje = asiento?.personaje ? porId.get(asiento.personaje) : undefined;
       if (!asiento || !personaje) return undefined;
       return { personajes: [personaje.id], alineamiento: alineamientoDe(personaje, asiento.alineamiento) };
@@ -593,7 +593,7 @@ export const BotoneraDespertar = ({
       ? await pedir('narrador:resolverHabilidad', { ...envio, personajeId: revision.personajeId })
       : await pedir(
           'despertar:enviar',
-          asientoId ? (conjunto.length ? { ...envio, asientoIds: [asientoId, ...conjunto] } : { ...envio, asientoId }) : envio,
+          jugadorId ? (conjunto.length ? { ...envio, jugadorIds: [jugadorId, ...conjunto] } : { ...envio, jugadorId }) : envio,
         );
     if (r.ok) {
       onEnviado(conjunto.length ? `Enviado a los ${conjunto.length + 1}: ${titulo}.` : `Enviado: ${titulo}.`);

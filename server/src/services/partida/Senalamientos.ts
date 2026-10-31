@@ -13,7 +13,7 @@ export interface EntornoSenalamiento {
   /** Un visitante ve el grimorio del narrador. */
   veGrimorio(participanteId: string): boolean;
   /** Despierta a un asiento (de noche, los que señalan). */
-  despertar(asientoId: string): void;
+  despertar(jugadorId: string): void;
 }
 
 /**

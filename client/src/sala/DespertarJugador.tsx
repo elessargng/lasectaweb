@@ -120,7 +120,7 @@ const DespertarJugador = ({
             key={ultimo!.id}
             pendiente={{ base: { ficha: 'jugador' }, titulo: textoEleccion(pide.cantidad), adjunto: { jugadores: true } }}
             asientos={estado.asientos.map((a) => ({ id: a.id, nombre: nombreDeAsiento(estado, a.id) }))}
-            excluidos={pide.puedeElegirse ? [] : [despertar.asiento]}
+            excluidos={pide.puedeElegirse ? [] : [despertar.jugador]}
             cantidad={pide.cantidad}
             personajes={personajes}
             onEnviar={async (envio) => {
@@ -132,7 +132,7 @@ const DespertarJugador = ({
         ) : (
           <BotoneraDespertar
             estado={estado}
-            asientoId={null}
+            jugadorId={null}
             personajes={personajes}
             conTarjetas={false}
             tituloFichas="Contestar"

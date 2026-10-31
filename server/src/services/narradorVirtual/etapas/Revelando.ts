@@ -47,13 +47,13 @@ export class Revelando implements Etapa {
     // Tras «Revelamos el grimorio», un respiro antes de la primera
     const { partida } = ctx.juego;
     let espera = ENTRE_FICHAS_MS;
-    for (const asientoId of orden) {
+    for (const jugadorId of orden) {
       await new Promise<void>((listo) => (this.cancelar = ctx.temporizador.programar(espera, listo)));
       if (!this.seguir) return;
-      const asiento = partida.plaza().find((a) => a.id === asientoId);
+      const asiento = partida.plaza().find((a) => a.id === jugadorId);
       if (!asiento) continue;
       const frase = fraseAlRevelar(ctx.recuerdos.cronica, ctx.juego, asiento);
-      await ctx.mesa.accion('narrador:revelarFicha', { asientoId });
+      await ctx.mesa.accion('narrador:revelarFicha', { jugadorId });
       ctx.decir(frase);
       espera = Math.max(ENTRE_FICHAS_MS, duracionFrase(frase));
     }

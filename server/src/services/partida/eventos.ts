@@ -12,7 +12,7 @@ import type { RegistroVotacionDto } from '../../contrato/partida';
 export interface Diario {
   anotar(hecho: HechoDiario): void;
   /** Un asiento como se apunta: su número y quien se sienta ahora. */
-  asiento(asientoId: string): AsientoDiario;
+  asiento(jugadorId: string): AsientoDiario;
 }
 
 /** Cuántos cambios de fase recuerda la máquina del tiempo del narrador. */

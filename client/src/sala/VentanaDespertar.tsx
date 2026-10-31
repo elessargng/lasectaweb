@@ -17,8 +17,8 @@ interface VentanaDespertarProps {
   activo: string;
   /** Asientos con mensajes del jugador que el narrador aún no ha visto. */
   noLeidos: Set<string>;
-  onActivar: (asientoId: string) => void;
-  onCerrar: (asientoId: string) => void;
+  onActivar: (jugadorId: string) => void;
+  onCerrar: (jugadorId: string) => void;
   /** Todos los personajes del guion (y por id, para pintar los mensajes). */
   personajes: PersonajeMostrado[];
   porId: Map<string, PersonajeMostrado>;
@@ -42,7 +42,7 @@ export interface Revision {
   propuestas: Propuesta[];
 }
 
-const idPestana = (asientoId: string) => `sala-despertar-pestana-${asientoId}`;
+const idPestana = (jugadorId: string) => `sala-despertar-pestana-${jugadorId}`;
 const ID_PANEL = 'sala-despertar-panel';
 
 /**
@@ -76,23 +76,23 @@ const VentanaDespertar = ({
   revisiones,
 }: VentanaDespertarProps) => {
   const [minimizada, setMinimizada] = useState(false);
-  const actual = abiertos.find((d) => d.asiento === activo) ?? abiertos[0];
-  const nombre = nombreDeAsiento(estado, actual.asiento);
+  const actual = abiertos.find((d) => d.jugador === activo) ?? abiertos[0];
+  const nombre = nombreDeAsiento(estado, actual.jugador);
   // El Espía y la Viuda (su ficha o quien es de verdad) ven el grimorio: se les envía desde aquí
   const [enviandoGrimorio, setEnviandoGrimorio] = useState(false);
-  const asiento = estado.asientos.find((a) => a.id === actual.asiento);
+  const asiento = estado.asientos.find((a) => a.id === actual.jugador);
   const veGrimorio =
     !soloLectura &&
     !!asiento?.ocupante &&
     estado.acciones.includes('narrador:enviarGrimorio') &&
     (PERSONAJES_GRIMORIO.includes(asiento.personaje ?? '') || PERSONAJES_GRIMORIO.includes(identidadDe(asiento).personaje ?? ''));
   const conPestanas = abiertos.length > 1;
-  const revision = revisiones?.get(actual.asiento);
+  const revision = revisiones?.get(actual.jugador);
 
   // A quién más se despierta con cada despertar (por su asiento); al revisar un guiado, a nadie
   const [juntos, setJuntos] = useState<Record<string, string[]>>({});
   const [eligiendoJuntos, setEligiendoJuntos] = useState(false);
-  const conjunto = revision || soloLectura ? [] : (juntos[actual.asiento] ?? []).filter((id) => estado.asientos.some((a) => a.id === id));
+  const conjunto = revision || soloLectura ? [] : (juntos[actual.jugador] ?? []).filter((id) => estado.asientos.some((a) => a.id === id));
   // Al dejar de elegir o al quitar a los demás, el foco vuelve a «Despertar a más jugadores»
   const masRef = useRef<HTMLButtonElement>(null);
   const focoMasRef = useRef(false);
@@ -102,7 +102,7 @@ const VentanaDespertar = ({
     masRef.current?.focus();
   });
   const cambiarJuntos = (ids: string[]) => {
-    setJuntos((j) => ({ ...j, [actual.asiento]: ids }));
+    setJuntos((j) => ({ ...j, [actual.jugador]: ids }));
     setEligiendoJuntos(false);
     focoMasRef.current = true;
     onEnviado(ids.length ? `Lo que mandes llegará también a ${enumerar(ids.map((id) => nombreDeAsiento(estado, id)))}.` : `Solo a ${nombre}.`);
@@ -120,7 +120,7 @@ const VentanaDespertar = ({
     const destino = destinos[e.key];
     if (destino === undefined) return;
     e.preventDefault();
-    const id = abiertos[destino].asiento;
+    const id = abiertos[destino].jugador;
     onActivar(id);
     document.getElementById(idPestana(id))?.focus();
   };
@@ -147,7 +147,7 @@ const VentanaDespertar = ({
           {minimizada ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
           {minimizada ? 'Ampliar' : 'Minimizar'}
         </button>
-        <button type="button" onClick={() => onCerrar(actual.asiento)} className={boton}>
+        <button type="button" onClick={() => onCerrar(actual.jugador)} className={boton}>
           <X size={14} />
           Cerrar
         </button>
@@ -156,24 +156,24 @@ const VentanaDespertar = ({
       {conPestanas && (
         <div role="tablist" aria-label="Despertares abiertos" className="flex flex-wrap gap-1 border-b border-outline-ghost">
           {abiertos.map((d, i) => {
-            const elegida = d.asiento === actual.asiento;
+            const elegida = d.jugador === actual.jugador;
             return (
               <button
-                key={d.asiento}
-                id={idPestana(d.asiento)}
+                key={d.jugador}
+                id={idPestana(d.jugador)}
                 type="button"
                 role="tab"
                 aria-selected={elegida}
                 aria-controls={ID_PANEL}
                 tabIndex={elegida ? 0 : -1}
-                onClick={() => onActivar(d.asiento)}
+                onClick={() => onActivar(d.jugador)}
                 onKeyDown={(e) => alTeclear(e, i)}
                 className={`-mb-px flex items-center gap-1 rounded-t border border-b-0 px-3 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
                   elegida ? 'border-gold/60 bg-theme-container text-gold-bright' : 'border-outline-ghost text-on-surface-muted hover:text-on-surface-bright'
                 }`}
               >
-                {nombreDeAsiento(estado, d.asiento)}
-                {noLeidos.has(d.asiento) && (
+                {nombreDeAsiento(estado, d.jugador)}
+                {noLeidos.has(d.jugador) && (
                   <>
                     <span aria-hidden="true" className="h-2 w-2 rounded-full bg-gold-bright" />
                     <span className="sr-only">, mensajes nuevos</span>
@@ -189,7 +189,7 @@ const VentanaDespertar = ({
         <div
           id={ID_PANEL}
           role={conPestanas ? 'tabpanel' : undefined}
-          aria-labelledby={conPestanas ? idPestana(actual.asiento) : undefined}
+          aria-labelledby={conPestanas ? idPestana(actual.jugador) : undefined}
           className="flex flex-col gap-3"
         >
           {revision && !soloLectura && (
@@ -225,10 +225,10 @@ const VentanaDespertar = ({
           {/* key: al cambiar de despertar, lo que se estaba eligiendo no pasa al otro */}
           {!soloLectura && eligiendoJuntos && (
             <EditorAdjunto
-              key={actual.asiento}
+              key={actual.jugador}
               pendiente={{ base: {}, titulo: 'Despertar también a', adjunto: { jugadores: true }, iniciales: { jugadores: conjunto } }}
               asientos={estado.asientos.map((a) => ({ id: a.id, nombre: nombreDeAsiento(estado, a.id) }))}
-              excluidos={[actual.asiento]}
+              excluidos={[actual.jugador]}
               personajes={personajes}
               textos={{ enviar: 'Aceptar', cartas: 'También despiertan' }}
               onEnviar={async (envio) => {
@@ -243,11 +243,11 @@ const VentanaDespertar = ({
           )}
           {!soloLectura && !eligiendoJuntos && (
             <BotoneraDespertar
-              key={`${actual.asiento}-${revision?.personajeId ?? ''}`}
+              key={`${actual.jugador}-${revision?.personajeId ?? ''}`}
               conjunto={conjunto}
               revision={revision ? { personajeId: revision.personajeId, propuestas: revision.propuestas } : undefined}
               estado={estado}
-              asientoId={actual.asiento}
+              jugadorId={actual.jugador}
               personajes={personajes}
               conTarjetas
               tituloFichas="Fichas"
@@ -268,7 +268,7 @@ const VentanaDespertar = ({
           {enviandoGrimorio && (
             <EnviarGrimorio
               estado={estado}
-              destino={actual.asiento}
+              destino={actual.jugador}
               pedir={pedir}
               onEnviado={onEnviado}
               onCerrar={() => setEnviandoGrimorio(false)}

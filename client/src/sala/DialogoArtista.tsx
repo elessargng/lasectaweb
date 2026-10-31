@@ -69,7 +69,7 @@ const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoAr
   const ariaLive = useAriaLive('errores');
 
   const nombres = {
-    asiento: (id: string) => nombreDeAsiento(estado, id),
+    jugador: (id: string) => nombreDeAsiento(estado, id),
     personaje: (id: string) => todosPorId.get(id)?.nombre.texto ?? id,
     yo: miAsiento,
   };
@@ -82,7 +82,7 @@ const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoAr
         return { tipo, quien: q };
       case 'es':
         // En el orden de la mesa
-        return elegidos.length ? { tipo, quien: q, asientos: asientos.filter((x) => elegidos.includes(x.id)).map((x) => x.id), todos } : null;
+        return elegidos.length ? { tipo, quien: q, jugadores: asientos.filter((x) => elegidos.includes(x.id)).map((x) => x.id), todos } : null;
       case 'inicial':
         return letraValida ? { tipo, quien: q, letra: letra.toUpperCase() } : null;
       case 'silla':

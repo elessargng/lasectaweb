@@ -33,9 +33,9 @@ export class Revelacion {
   }
 
   /** Revela la ficha de un asiento (todos verán su personaje). */
-  revelarFicha(asientoId: string): void {
+  revelarFicha(jugadorId: string): void {
     const r = this.actual;
-    if (r && !r.reveladas.includes(asientoId) && this.plaza().some((a) => a.id === asientoId)) r.reveladas.push(asientoId);
+    if (r && !r.reveladas.includes(jugadorId) && this.plaza().some((a) => a.id === jugadorId)) r.reveladas.push(jugadorId);
   }
 
   /** Revela de una vez las que quedan. */

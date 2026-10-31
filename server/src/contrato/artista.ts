@@ -23,7 +23,7 @@ export type QuienArtista =
   | { por: 'alineamiento'; alineamiento: 'bueno' | 'malvado' };
 
 /**
- * Las preguntas que se pueden montar. Cuentan todos los asientos, vivos o muertos
+ * Las preguntas que se pueden montar. Cuentan todos los jugadores, vivos o muertos
  * (y los libres, que también son jugadores); las sillas se cuentan desde la 1, la
  * de las 12, en el sentido de las agujas del reloj.
  */
@@ -31,7 +31,7 @@ export type PreguntaArtista =
   /** ¿Está el Alcalde en juego? ¿Hay algún forastero en juego? */
   | { tipo: 'enJuego'; quien: QuienArtista }
   /** ¿Es Paco o Marta el demonio? (`todos`: ¿Son Paco y Marta malvados?) */
-  | { tipo: 'es'; asientos: string[]; todos: boolean; quien: QuienArtista }
+  | { tipo: 'es'; jugadores: string[]; todos: boolean; quien: QuienArtista }
   /** ¿Empieza por «P» el nombre del demonio? */
   | { tipo: 'inicial'; quien: QuienArtista; letra: string }
   /** ¿Se sienta el demonio en una silla par? */
@@ -65,31 +65,31 @@ function leerQuien(x: unknown, personajes: readonly string[]): QuienArtista | nu
 }
 
 /**
- * Lee una pregunta montada (de lo que manda el cliente), con los asientos de la
- * mesa y los personajes del guion; null si no vale.
+ * Lee una pregunta montada (de lo que manda el cliente), con los jugadores de la
+ * plaza y los personajes del guion; null si no vale.
  */
-export function leerPreguntaArtista(x: unknown, asientos: readonly string[], personajes: readonly string[]): PreguntaArtista | null {
+export function leerPreguntaArtista(x: unknown, jugadores: readonly string[], personajes: readonly string[]): PreguntaArtista | null {
   const p = x as Record<string, unknown> | null;
   if (!p || typeof p !== 'object') return null;
   const quien = leerQuien(p.quien, personajes);
   if (!quien) return null;
-  const asiento = (id: unknown): id is string => esTexto(id) && asientos.includes(id);
+  const esJugador = (id: unknown): id is string => esTexto(id) && jugadores.includes(id);
   switch (p.tipo) {
     case 'enJuego':
       return { tipo: 'enJuego', quien };
     case 'es': {
-      const lista = Array.isArray(p.asientos) ? [...new Set(p.asientos)] : [];
-      if (!lista.length || lista.length > asientos.length || !lista.every(asiento)) return null;
-      return { tipo: 'es', asientos: lista, todos: p.todos === true, quien };
+      const lista = Array.isArray(p.jugadores) ? [...new Set(p.jugadores)] : [];
+      if (!lista.length || lista.length > jugadores.length || !lista.every(esJugador)) return null;
+      return { tipo: 'es', jugadores: lista, todos: p.todos === true, quien };
     }
     case 'inicial':
       return esTexto(p.letra) && /^\p{L}$/u.test(p.letra) ? { tipo: 'inicial', quien, letra: p.letra.toUpperCase() } : null;
     case 'silla':
       return typeof p.par === 'boolean' ? { tipo: 'silla', quien, par: p.par } : null;
     case 'entre':
-      return asiento(p.desde) && asiento(p.hasta) ? { tipo: 'entre', quien, desde: p.desde, hasta: p.hasta } : null;
+      return esJugador(p.desde) && esJugador(p.hasta) ? { tipo: 'entre', quien, desde: p.desde, hasta: p.hasta } : null;
     case 'eligio':
-      return asiento(p.a) && (p.cuando === 'anoche' || p.cuando === 'algunaNoche') ? { tipo: 'eligio', quien, a: p.a, cuando: p.cuando } : null;
+      return esJugador(p.a) && (p.cuando === 'anoche' || p.cuando === 'algunaNoche') ? { tipo: 'eligio', quien, a: p.a, cuando: p.cuando } : null;
     default:
       return null;
   }
@@ -98,11 +98,11 @@ export function leerPreguntaArtista(x: unknown, asientos: readonly string[], per
 const TIPO_SINGULAR: Record<TipoArtista, string> = { townsfolk: 'aldeano', outsider: 'forastero', minion: 'esbirro', demon: 'demonio' };
 const TIPO_PLURAL: Record<TipoArtista, string> = { townsfolk: 'aldeanos', outsider: 'forasteros', minion: 'esbirros', demon: 'demonios' };
 
-/** Cómo se nombran los asientos y los personajes al decir la pregunta. */
+/** Cómo se nombran los jugadores y los personajes al decir la pregunta. */
 export interface NombresArtista {
-  asiento(id: string): string;
+  jugador(id: string): string;
   personaje(id: string): string;
-  /** El asiento de quien pregunta: de él se dice «te» / «tú». */
+  /** El jugador que pregunta: de él se dice «te» / «tú». */
   yo?: string | null;
 }
 
@@ -127,12 +127,12 @@ function lista(nombres: string[], y: 'y' | 'o'): string {
 
 /** La pregunta en palabras: «¿Es Paco o Marta el demonio?». */
 export function describirPreguntaArtista(p: PreguntaArtista, n: NombresArtista): string {
-  const nombre = (id: string) => (id === n.yo ? 'tú' : n.asiento(id));
+  const nombre = (id: string) => (id === n.yo ? 'tú' : n.jugador(id));
   switch (p.tipo) {
     case 'enJuego':
       return p.quien.por === 'personaje' ? `¿Está el ${n.personaje(p.quien.personaje)} en juego?` : `¿Hay ${sujeto(p.quien, n).replace(/^el /, 'algún ')} en juego?`;
     case 'es': {
-      const quienes = p.asientos.map(nombre);
+      const quienes = p.jugadores.map(nombre);
       if (quienes.length === 1) return quienes[0] === 'tú' ? `¿Eres ${atributo(p.quien, n, false)}?` : `¿Es ${quienes[0]} ${atributo(p.quien, n, false)}?`;
       return p.todos
         ? `¿Son ${lista(quienes, 'y')} ${atributo(p.quien, n, true)}?`

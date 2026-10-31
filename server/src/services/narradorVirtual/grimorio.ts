@@ -101,7 +101,7 @@ export function instantaneaGrimorio(juego: SalaDeJuego): Grimorio {
         votoGastado: a.votoGastado,
         recordatorios: a.recordatorios.map((r) => ({ personaje: r.personaje, texto: r.texto })),
         ...(malvado ? { faroles: partida.faroles.deJugador(a).filter((f): f is string => !!f), farolEnUso: partida.faroles.enUso(a) } : {}),
-        despertar: (despertares.find((d) => d.asiento === a.id)?.mensajes ?? []).map((m) => mensaje(m, numero)),
+        despertar: (despertares.find((d) => d.jugador === a.id)?.mensajes ?? []).map((m) => mensaje(m, numero)),
       };
     }),
     personajes: (partida.guion.actual()?.personajes ?? []).map((p) => ({ id: p.id, nombre: p.nombre, tipo: p.tipo })),
@@ -151,6 +151,6 @@ export function describirEnvio(juego: SalaDeJuego, envio: EnvioDespertar): strin
 export function describirOpcion(juego: SalaDeJuego, { envio, registros }: OpcionDespertar): string {
   const { partida } = juego;
   const numero = numeros(partida.plaza());
-  const como = registros.map((r) => `el asiento ${numero.get(r.asiento) ?? r.asiento} registra como ${r.como}`);
+  const como = registros.map((r) => `el asiento ${numero.get(r.jugador) ?? r.jugador} registra como ${r.como}`);
   return `${describirEnvio(juego, envio)}${como.length ? ` (${como.join(', ')})` : ''}`;
 }

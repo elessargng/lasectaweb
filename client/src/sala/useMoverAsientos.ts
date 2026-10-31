@@ -40,9 +40,9 @@ export function useMoverAsientos({ asientos, participantes, mesaRef, pedir, onEr
   // (el id es el de su jugador, que se cambia de silla con él).
   const focoPendienteRef = useRef<{ asiento: string; numero: number } | null>(null);
 
-  const ocupanteDe = (asientoId: string) => asientos.find((a) => a.id === asientoId)?.ocupante ?? null;
+  const ocupanteDe = (jugadorId: string) => asientos.find((a) => a.id === jugadorId)?.ocupante ?? null;
   const nombreDe = (id: string | null) => participantes.find((p) => p.id === id)?.nombre ?? '';
-  const numeroDe = (asientoId: string) => asientos.findIndex((a) => a.id === asientoId) + 1;
+  const numeroDe = (jugadorId: string) => asientos.findIndex((a) => a.id === jugadorId) + 1;
 
   // Si mientras tanto el jugador se ha ido o el asiento ya no existe, no hay movimiento.
   const activo =
@@ -108,18 +108,18 @@ export function useMoverAsientos({ asientos, participantes, mesaRef, pedir, onEr
     return mejor?.id ?? null;
   };
 
-  /** Lo que lleva el asa del asiento `asientoId` (solo los ocupados la tienen). */
-  const propsAsa = (asientoId: string) => ({
-    id: idAsaMover(asientoId),
-    cogido: activo?.desde === asientoId,
+  /** Lo que lleva el asa del asiento `jugadorId` (solo los ocupados la tienen). */
+  const propsAsa = (jugadorId: string) => ({
+    id: idAsaMover(jugadorId),
+    cogido: activo?.desde === jugadorId,
     onPointerDown: (e: PointerEvent<HTMLButtonElement>) => {
       if (e.button !== 0) return;
       e.preventDefault();
       e.currentTarget.setPointerCapture(e.pointerId);
-      setMovimiento({ desde: asientoId, hasta: asientoId, modo: 'puntero', x: e.clientX, y: e.clientY });
+      setMovimiento({ desde: jugadorId, hasta: jugadorId, modo: 'puntero', x: e.clientX, y: e.clientY });
     },
     onPointerMove: (e: PointerEvent<HTMLButtonElement>) => {
-      if (activo?.modo !== 'puntero' || activo.desde !== asientoId) return;
+      if (activo?.modo !== 'puntero' || activo.desde !== jugadorId) return;
       const hasta = asientoBajo(e.clientX, e.clientY) ?? activo.hasta;
       setMovimiento({ ...activo, hasta, x: e.clientX, y: e.clientY });
     },
@@ -128,15 +128,15 @@ export function useMoverAsientos({ asientos, participantes, mesaRef, pedir, onEr
     },
     onPointerCancel: () => cancelar(false),
     onKeyDown: (e: KeyboardEvent<HTMLButtonElement>) => {
-      const cogidoAqui = activo?.modo === 'teclado' && activo.desde === asientoId;
+      const cogidoAqui = activo?.modo === 'teclado' && activo.desde === jugadorId;
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         if (cogidoAqui) {
           soltar();
         } else {
-          setMovimiento({ desde: asientoId, hasta: asientoId, modo: 'teclado', x: 0, y: 0 });
+          setMovimiento({ desde: jugadorId, hasta: jugadorId, modo: 'teclado', x: 0, y: 0 });
           onAnuncio(
-            `Has cogido a ${nombreDe(ocupanteDe(asientoId))}, en el asiento ${numeroDe(asientoId)}. ` +
+            `Has cogido a ${nombreDe(ocupanteDe(jugadorId))}, en el asiento ${numeroDe(jugadorId)}. ` +
               'Elige asiento con las flechas; Intro para soltar, Escape para cancelar.',
           );
         }
@@ -157,7 +157,7 @@ export function useMoverAsientos({ asientos, participantes, mesaRef, pedir, onEr
     },
     // Salir con Tab (o el foco a otra parte) cancela el movimiento con teclado.
     onBlur: () => {
-      if (activo?.modo === 'teclado' && activo.desde === asientoId) cancelar(true);
+      if (activo?.modo === 'teclado' && activo.desde === jugadorId) cancelar(true);
     },
   });
 

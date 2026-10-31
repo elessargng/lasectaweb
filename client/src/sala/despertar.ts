@@ -95,8 +95,8 @@ export interface Envio {
 export const textoEleccion = (cantidad: number) => `Elige ${cantidad} ${cantidad === 1 ? 'jugador' : 'jugadores'}`;
 
 /** «asiento 3 (Bea)» con mayúscula: así empieza una frase o una línea. */
-export const nombreDeAsiento = (estado: SalaDto, asientoId: string) => {
-  const { numero, ocupante } = datosAsiento(estado, asientoId);
+export const nombreDeAsiento = (estado: SalaDto, jugadorId: string) => {
+  const { numero, ocupante } = datosAsiento(estado, jugadorId);
   const texto = numero > 0 ? describirAsiento(numero, ocupante) : 'un asiento que ya no está';
   return texto.charAt(0).toLocaleUpperCase('es') + texto.slice(1);
 };

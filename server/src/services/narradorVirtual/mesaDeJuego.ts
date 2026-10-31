@@ -19,10 +19,10 @@ export const tipoReal = (juego: SalaDeJuego, asiento: Jugador): string | undefin
 export const vivo = (asiento: Jugador): boolean => !asiento.muerto && !asiento.muertePendiente;
 
 /** Cómo se le nombra en voz alta: quien se sienta o, libre, su asiento. */
-export function nombreDeAsiento(juego: SalaDeJuego, asientoId: string): string {
+export function nombreDeAsiento(juego: SalaDeJuego, jugadorId: string): string {
   const { sala, partida } = juego;
   const asientos = partida.plaza();
-  const i = asientos.findIndex((a) => a.id === asientoId);
+  const i = asientos.findIndex((a) => a.id === jugadorId);
   const ocupante = asientos[i]?.participanteId;
   return (ocupante && sala.participantes.buscar(ocupante)?.nombre) || `el asiento ${i + 1}`;
 }
@@ -48,11 +48,11 @@ export function sinEntender(juego: SalaDeJuego): string[] {
   const asientos = partida.plaza();
   return partida.despertares.despertares()
     .filter((d) => {
-      if (!asientos.find((a) => a.id === d.asiento)?.participanteId) return false;
+      if (!asientos.find((a) => a.id === d.jugador)?.participanteId) return false;
       const ultimo = d.mensajes[d.mensajes.length - 1];
       return !!ultimo && ultimo.ficha !== 'entendido';
     })
-    .map((d) => d.asiento);
+    .map((d) => d.jugador);
 }
 
 /** Si todos los despertados de esta noche han contestado «Entendido». */

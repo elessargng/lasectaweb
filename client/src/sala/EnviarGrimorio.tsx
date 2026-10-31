@@ -17,7 +17,7 @@ export const PERSONAJES_GRIMORIO = ['spy', 'widow'];
 /** Una copia del grimorio de ahora, tal como lo ve el narrador. */
 const copiaDelGrimorio = (estado: SalaDto): FichaEnviadaDto[] =>
   estado.asientos.map((a) => ({
-    asientoId: a.id,
+    jugadorId: a.id,
     personaje: a.personaje,
     alineamiento: a.alineamiento,
     muerto: a.muerto,
@@ -52,7 +52,7 @@ const EnviarGrimorio = ({ estado, destino, pedir, onEnviado, onCerrar }: EnviarG
   const [nombres] = useState(() => nombresDeAsientos(estado));
   const nombreDestino = nombreDeAsiento(estado, destino);
   const [fichas, setFichas] = useState(copia);
-  const [elegida, setElegida] = useState<string | null>(copia[0]?.asientoId ?? null);
+  const [elegida, setElegida] = useState<string | null>(copia[0]?.jugadorId ?? null);
   const [eligiendo, setEligiendo] = useState<'personaje' | 'recordatorio' | null>(null);
   // Los faroles de la copia; y cuál se está eligiendo (su posición, o una nueva al final)
   const [farolesCopia] = useState(() => estado.faroles.filter((id): id is string => !!id && todosPorId.has(id)));
@@ -71,18 +71,18 @@ const EnviarGrimorio = ({ estado, destino, pedir, onEnviado, onCerrar }: EnviarG
     }
   }, [eligiendo]);
 
-  const ficha = fichas.find((f) => f.asientoId === elegida) ?? null;
+  const ficha = fichas.find((f) => f.jugadorId === elegida) ?? null;
   const numero = ficha ? fichas.indexOf(ficha) + 1 : 0;
-  const nombreFicha = ficha ? `asiento ${numero} (${nombres[ficha.asientoId] ?? ''})` : '';
+  const nombreFicha = ficha ? `asiento ${numero} (${nombres[ficha.jugadorId] ?? ''})` : '';
   const personaje = ficha?.personaje ? todosPorId.get(ficha.personaje) : undefined;
   const cambiar = (cambio: Partial<FichaEnviadaDto>) =>
-    setFichas((fs) => fs.map((f) => (f.asientoId === elegida ? { ...f, ...cambio } : f)));
+    setFichas((fs) => fs.map((f) => (f.jugadorId === elegida ? { ...f, ...cambio } : f)));
   const ponerRecordatorio = (r: Omit<Recordatorio, 'id'>) =>
     setFichas((fs) =>
-      fs.map((f) => (f.asientoId === elegida ? { ...f, recordatorios: [...f.recordatorios, { id: crypto.randomUUID(), ...r }] } : f)),
+      fs.map((f) => (f.jugadorId === elegida ? { ...f, recordatorios: [...f.recordatorios, { id: crypto.randomUUID(), ...r }] } : f)),
     );
-  const quitarRecordatorio = (asientoId: string, r: Recordatorio) =>
-    setFichas((fs) => fs.map((f) => (f.asientoId === asientoId ? { ...f, recordatorios: f.recordatorios.filter((x) => x.id !== r.id) } : f)));
+  const quitarRecordatorio = (jugadorId: string, r: Recordatorio) =>
+    setFichas((fs) => fs.map((f) => (f.jugadorId === jugadorId ? { ...f, recordatorios: f.recordatorios.filter((x) => x.id !== r.id) } : f)));
   const elegir = (que: 'personaje' | 'recordatorio') => {
     venimosDe.current = que;
     setEligiendo(que);
@@ -92,7 +92,7 @@ const EnviarGrimorio = ({ estado, destino, pedir, onEnviado, onCerrar }: EnviarG
     if (enviando) return;
     setEnviando(true);
     setError('');
-    const r = await pedir('narrador:enviarGrimorio', { asientoId: destino, fichas, faroles });
+    const r = await pedir('narrador:enviarGrimorio', { jugadorId: destino, fichas, faroles });
     setEnviando(false);
     if (!r.ok) {
       setError(r.error);
@@ -178,7 +178,7 @@ const EnviarGrimorio = ({ estado, destino, pedir, onEnviado, onCerrar }: EnviarG
             {ficha ? (
               <>
                 <h3 id="sala-enviar-grimorio-ficha" className="rotulo">
-                  Asiento {numero} · {nombres[ficha.asientoId]}
+                  Asiento {numero} · {nombres[ficha.jugadorId]}
                 </h3>
                 <p className="text-sm">
                   {personaje ? <span lang={personaje.nombre.lang}>{personaje.nombre.texto}</span> : <span className="text-on-surface-muted">Sin personaje</span>}
@@ -225,7 +225,7 @@ const EnviarGrimorio = ({ estado, destino, pedir, onEnviado, onCerrar }: EnviarG
                           <span className="min-w-0 truncate">{describirRecordatorio(r, todosPorId.get(r.personaje))}</span>
                           <button
                             type="button"
-                            onClick={() => quitarRecordatorio(ficha.asientoId, r)}
+                            onClick={() => quitarRecordatorio(ficha.jugadorId, r)}
                             aria-label={`Quitar ${describirRecordatorio(r, todosPorId.get(r.personaje))}`}
                             className="rounded p-0.5 text-on-surface-muted hover:text-blood-pale focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
                           >

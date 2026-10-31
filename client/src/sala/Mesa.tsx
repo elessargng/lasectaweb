@@ -58,7 +58,7 @@ export interface TamanosMesa {
 }
 
 export interface FocoAsiento {
-  asientoId: string;
+  jugadorId: string;
   /** Cómo debe quedar: sentado (true) o levantado (false). */
   sentado: boolean;
 }
@@ -107,7 +107,7 @@ interface MesaProps {
    * de un asiento. null para los demás.
    */
   /** `entendidos`: los asientos cuyo jugador ha contestado «Entendido» (la luna pasa a pulgar arriba). */
-  despertares: { hilos: Set<string>; noLeidos: Set<string>; entendidos: Set<string>; onAbrir: (asientoId: string) => void } | null;
+  despertares: { hilos: Set<string>; noLeidos: Set<string>; entendidos: Set<string>; onAbrir: (jugadorId: string) => void } | null;
   /**
    * Eligiendo a un jugador en la plaza para el despertar (ver elegirEnPlaza): las
    * fichas son botones para elegirlo (menos las ya elegidas) y el centro de la mesa
@@ -119,8 +119,8 @@ interface MesaProps {
     excluidos: string[];
     /** Los ya elegidos: marcados y, con `onQuitar`, se quitan al pulsarlos. */
     elegidos: string[];
-    onElegir: (asientoId: string) => void;
-    onQuitar?: (asientoId: string) => void;
+    onElegir: (jugadorId: string) => void;
+    onQuitar?: (jugadorId: string) => void;
     onCancelar: () => void;
   } | null;
   /**
@@ -285,8 +285,8 @@ const Mesa = ({
   const senalCongelada = useSenalamientoCongelado(senalamiento, desfaseReloj);
   const miAsiento = asientos.find((a) => a.ocupante === yo)?.id ?? null;
   // Con narrador virtual: lo que un jugador hace desde la ficha de otro (nominarlo, dispararle)
-  const actuarSobre = (accion: string, asientoId: string) => async () => {
-    const r = await pedir(accion, { asientoId });
+  const actuarSobre = (accion: string, jugadorId: string) => async () => {
+    const r = await pedir(accion, { jugadorId });
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha
     return false;
@@ -304,8 +304,8 @@ const Mesa = ({
   if ((dialogoVirtual === 'patoso' && !puedePatoso) || (dialogoVirtual === 'artista' && !puedeArtista && estado.narradorVirtual?.etapa === 'noche')) {
     setDialogoVirtual(null);
   }
-  const opcionesJugador = (asientoId: string): OpcionMenu[] =>
-    asientoId === miAsiento
+  const opcionesJugador = (jugadorId: string): OpcionMenu[] =>
+    jugadorId === miAsiento
       ? [
           ...(puedeArtista
             ? [{ id: 'jugador:artista', etiqueta: 'Preguntar como Artista', abreDialogo: true, elegir: () => setDialogoVirtual('artista') }]
@@ -313,27 +313,27 @@ const Mesa = ({
           ...(puedePatoso ? [{ id: 'jugador:patoso', etiqueta: 'Declararte Patoso', abreDialogo: true, elegir: () => setDialogoVirtual('patoso') }] : []),
         ]
       : [
-          ...(acciones.includes('jugador:nominar') ? [{ id: 'jugador:nominar', etiqueta: 'Nominar', elegir: actuarSobre('jugador:nominar', asientoId) }] : []),
+          ...(acciones.includes('jugador:nominar') ? [{ id: 'jugador:nominar', etiqueta: 'Nominar', elegir: actuarSobre('jugador:nominar', jugadorId) }] : []),
           ...(acciones.includes('jugador:exterminar')
-            ? [{ id: 'jugador:exterminar', etiqueta: 'Exterminar jugador', elegir: actuarSobre('jugador:exterminar', asientoId) }]
+            ? [{ id: 'jugador:exterminar', etiqueta: 'Exterminar jugador', elegir: actuarSobre('jugador:exterminar', jugadorId) }]
             : []),
         ];
   const listos = new Set(estado.narradorVirtual?.etapa === 'nominaciones' ? estado.narradorVirtual.listos : []);
   const senalo =
     !!senalamiento && !senalCongelada && !!miAsiento && senalamiento.senaladores.includes(miAsiento) && acciones.includes('jugador:senalar');
   const miSenal = senalamiento && miAsiento ? (senalamiento.senales[miAsiento] ?? null) : null;
-  const senalar = async (asientoId: string) => {
-    const hasta = miSenal === asientoId ? null : asientoId;
-    const r = await pedir('jugador:senalar', { asientoId: hasta });
+  const senalar = async (jugadorId: string) => {
+    const hasta = miSenal === jugadorId ? null : jugadorId;
+    const r = await pedir('jugador:senalar', { jugadorId: hasta });
     if (!r.ok) return onError(r.error);
     onAnuncio('senalamientos', hasta ? `Señalas al ${nombreDeAsiento(estado, hasta).replace(/^A/, 'a')}.` : 'Ya no señalas a nadie.');
   };
-  const eligiendoSenal = (asientoId: string) =>
-    senalo && senalamiento!.objetivos.includes(asientoId)
+  const eligiendoSenal = (jugadorId: string) =>
+    senalo && senalamiento!.objetivos.includes(jugadorId)
       ? {
           papel: 'candidata' as const,
-          onPulsar: () => void senalar(asientoId),
-          accion: miSenal === asientoId ? 'Dejar de señalar' : 'Señalar',
+          onPulsar: () => void senalar(jugadorId),
+          accion: miSenal === jugadorId ? 'Dejar de señalar' : 'Señalar',
         }
       : undefined;
   // El narrador lo termina: el botón desaparece, el foco va a la lista de asientos
@@ -379,11 +379,11 @@ const Mesa = ({
 
   // El narrador despierta (de noche) al jugador de una ficha, o a la ficha si el
   // asiento está libre (cuenta como un jugador más), o abre su despertar si ya lo tiene.
-  const despertarDe = (asientoId: string) => {
+  const despertarDe = (jugadorId: string) => {
     if (modoFichas !== 'narrador' || editando || !despertares) return undefined;
-    const abierto = despertares.hilos.has(asientoId);
+    const abierto = despertares.hilos.has(jugadorId);
     if (!abierto && !acciones.includes('narrador:despertar')) return undefined;
-    return { abierto, onAbrir: () => despertares.onAbrir(asientoId) };
+    return { abierto, onAbrir: () => despertares.onAbrir(jugadorId) };
   };
   const ariaLiveAsientos = useAriaLive('editarAsientos');
   // Lo que lleva cada ficha, para leerlo con el nombre del asiento: el personaje que
@@ -430,37 +430,37 @@ const Mesa = ({
   for (const id of probables) enJuego.add(id);
   // Quitar un recordatorio: el narrador, de la partida; un jugador, de su grimorio.
   // El botón desaparece: el foco vuelve a la ficha, que dice los que quedan.
-  const anotadoPorMi = (asientoId: string, r: Recordatorio) => !!notasRecordatorios[asientoId]?.some((x) => x.id === r.id);
-  const quitarRecordatorio = async (asientoId: string, r: Recordatorio) => {
-    if (anotadoPorMi(asientoId, r)) {
-      anotarRecordatorios(asientoId, (notasRecordatorios[asientoId] ?? []).filter((x) => x.id !== r.id));
+  const anotadoPorMi = (jugadorId: string, r: Recordatorio) => !!notasRecordatorios[jugadorId]?.some((x) => x.id === r.id);
+  const quitarRecordatorio = async (jugadorId: string, r: Recordatorio) => {
+    if (anotadoPorMi(jugadorId, r)) {
+      anotarRecordatorios(jugadorId, (notasRecordatorios[jugadorId] ?? []).filter((x) => x.id !== r.id));
     } else {
-      const res = await pedir('narrador:quitarRecordatorio', { asientoId, recordatorioId: r.id });
+      const res = await pedir('narrador:quitarRecordatorio', { jugadorId, recordatorioId: r.id });
       if (!res.ok) return onError(res.error);
     }
-    window.setTimeout(() => document.getElementById(`sala-ficha-${asientoId}-boton`)?.focus(), 0);
+    window.setTimeout(() => document.getElementById(`sala-ficha-${jugadorId}-boton`)?.focus(), 0);
   };
   // La nota de cada asiento: la del narrador (a quien ve el grimorio) o, con grimorio
   // propio, la del jugador (en su navegador). La escriben el narrador y el jugador con grimorio.
   // Se ve como un pósit junto al cuadro que cada uno pliega o despliega en su pantalla.
   const [notaEditando, setNotaEditando] = useState<string | null>(null);
   const [notasPlegadas, setNotasPlegadas] = useState<ReadonlySet<string>>(() => new Set());
-  const plegarNota = (asientoId: string, plegada: boolean) =>
+  const plegarNota = (jugadorId: string, plegada: boolean) =>
     setNotasPlegadas((s) => {
       const n = new Set(s);
-      if (plegada) n.add(asientoId);
-      else n.delete(asientoId);
+      if (plegada) n.add(jugadorId);
+      else n.delete(jugadorId);
       return n;
     });
   const notaDe = (a: (typeof asientos)[number]) => (modoFichas === 'grimorio' ? (notasEscritas[a.id] ?? null) : (a.nota ?? null));
   const escriboNotas = modoFichas === 'narrador' || modoFichas === 'grimorio';
   // Guarda la nota de un asiento (con null, la borra) y devuelve el error, o null si ha ido bien
-  const guardarNota = async (asientoId: string, texto: string | null): Promise<string | null> => {
+  const guardarNota = async (jugadorId: string, texto: string | null): Promise<string | null> => {
     if (modoFichas === 'grimorio') {
-      escribirNota(asientoId, texto);
+      escribirNota(jugadorId, texto);
       return null;
     }
-    const r = texto === null ? await pedir('narrador:borrarNota', { asientoId }) : await pedir('narrador:escribirNota', { asientoId, texto });
+    const r = texto === null ? await pedir('narrador:borrarNota', { jugadorId }) : await pedir('narrador:escribirNota', { jugadorId, texto });
     return r.ok ? null : r.error;
   };
 
@@ -481,8 +481,8 @@ const Mesa = ({
   }, [recibido?.hora]);
   const copiarRecibido = () => {
     for (const f of recibido?.fichas ?? []) {
-      anotar(f.asientoId, { personaje: f.personaje, alineamiento: f.alineamiento });
-      anotarRecordatorios(f.asientoId, f.recordatorios.map((r) => ({ ...r, id: crypto.randomUUID() })));
+      anotar(f.jugadorId, { personaje: f.personaje, alineamiento: f.alineamiento });
+      anotarRecordatorios(f.jugadorId, f.recordatorios.map((r) => ({ ...r, id: crypto.randomUUID() })));
     }
   };
 
@@ -548,13 +548,13 @@ const Mesa = ({
   const puedeRevelar = acciones.includes('narrador:revelarFicha');
   // La ficha revelada deja de ser un botón: el foco va a la siguiente boca abajo (en
   // el sentido del reloj) o, si era la última, al bando ganador.
-  const revelar = async (asientoId: string) => {
-    const r = await pedir('narrador:revelarFicha', { asientoId });
+  const revelar = async (jugadorId: string) => {
+    const r = await pedir('narrador:revelarFicha', { jugadorId });
     if (!r.ok) {
       onError(r.error);
       return;
     }
-    const i = asientos.findIndex((a) => a.id === asientoId);
+    const i = asientos.findIndex((a) => a.id === jugadorId);
     const siguiente = [...asientos.slice(i + 1), ...asientos.slice(0, i)].find(
       (a) => !revelacion?.reveladas.includes(a.id),
     );
@@ -564,10 +564,10 @@ const Mesa = ({
   // nombre del primer asiento, y se confirma
   const gardener = todosPorId.get('gardener');
   // Hace efectiva una muerte de la noche (el sudario semitransparente): ya la ven todos
-  const anunciarMuerte = async (asientoId: string) => {
-    const r = await pedir('narrador:confirmarMuerte', { asientoId });
+  const anunciarMuerte = async (jugadorId: string) => {
+    const r = await pedir('narrador:confirmarMuerte', { jugadorId });
     if (!r.ok) onError(r.error);
-    else onAnuncio('muertes', `Muerte anunciada: ${nombreDeAsiento(estado, asientoId)}.`);
+    else onAnuncio('muertes', `Muerte anunciada: ${nombreDeAsiento(estado, jugadorId)}.`);
   };
   const entregarFichas = async () => {
     const r = await pedir('narrador:entregarFichas');
@@ -612,10 +612,10 @@ const Mesa = ({
     miAsientoRef.current = ahora;
 
     if (pendiente) {
-      const asiento = asientos.find((a) => a.id === pendiente.asientoId);
+      const asiento = asientos.find((a) => a.id === pendiente.jugadorId);
       if (asiento && (asiento.ocupante === yo) !== pendiente.sentado) return; // aún no ha llegado
       focoAsientoRef.current = null;
-      document.getElementById(idNombreAsiento(pendiente.asientoId))?.focus();
+      document.getElementById(idNombreAsiento(pendiente.jugadorId))?.focus();
       return;
     }
 
@@ -637,9 +637,9 @@ const Mesa = ({
     }
   });
 
-  const sentarse = async (asientoId: string) => {
-    focoAsientoRef.current = { asientoId, sentado: true };
-    const r = await pedir('sala:sentarse', { asientoId });
+  const sentarse = async (jugadorId: string) => {
+    focoAsientoRef.current = { jugadorId, sentado: true };
+    const r = await pedir('sala:sentarse', { jugadorId });
     if (!r.ok) {
       focoAsientoRef.current = null;
       onError(r.error);
@@ -788,7 +788,7 @@ const Mesa = ({
                     {/* La nota: un pósit hacia fuera de la mesa (a la izquierda o a la derecha del cuadro) */}
                     {!editando && (
                       <NotaAsiento
-                        asientoId={a.id}
+                        jugadorId={a.id}
                         nombre={describirAsiento(i + 1, ocupante)}
                         nota={notaDe(a)}
                         editable={escriboNotas}
@@ -995,7 +995,7 @@ const Mesa = ({
           otras={asientos
             .filter((a) => a.id !== intercambiando)
             .map((a) => ({
-              asientoId: a.id,
+              jugadorId: a.id,
               nombre: describirAsiento(asientos.indexOf(a) + 1, participante(a.ocupante)),
               personaje: a.personaje ? todosPorId.get(a.personaje) : undefined,
             }))}

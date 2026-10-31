@@ -16,7 +16,7 @@ import { ponerRecordatorio } from './requisitos';
  */
 export async function resolverRevision(ctx: ContextoEtapa, fila: HabilidadNocheDto): Promise<boolean> {
   const alcalde = fila.avisos.find((a) => a.tipo === 'alcalde');
-  if (alcalde && 'asiento' in alcalde) await alcaldeAtacado(ctx, fila.personaje, alcalde.asiento);
+  if (alcalde && 'jugador' in alcalde) await alcaldeAtacado(ctx, fila.personaje, alcalde.jugador);
   const envio = fila.opciones.length ? ((await droison(ctx, fila)) ?? (await elegirOpcion(ctx, fila))) : OK;
   return (await ctx.mesa.accion('narrador:resolverHabilidad', { personajeId: fila.personaje, ...envio })).ok;
 }
@@ -59,16 +59,16 @@ async function droison(ctx: ContextoEtapa, fila: HabilidadNocheDto): Promise<Env
     }`,
     si: 'Recibe la información de verdad.',
     no: 'Recibe una información falsa.',
-    probabilidad: probabilidadVerdad(juego, fila.asiento, fila.personaje, verdadera, recuerdos),
+    probabilidad: probabilidadVerdad(juego, fila.jugador, fila.personaje, verdadera, recuerdos),
   });
   const dada = verdad
     ? verdadera
     : await ctx.decidir({
         motivo: 'informacionFalsa',
         pregunta: `La información falsa que recibe ${quien} (la de verdad sería: ${describirEnvio(juego, verdadera)}).`,
-        opciones: opcionesFalsas(juego, fila.asiento, fila.personaje, verdadera, falsas, recuerdos),
+        opciones: opcionesFalsas(juego, fila.jugador, fila.personaje, verdadera, falsas, recuerdos),
       });
-  recordarDroison(recuerdos, fila.asiento, fila.personaje, verdadera, dada);
+  recordarDroison(recuerdos, fila.jugador, fila.personaje, verdadera, dada);
   return dada;
 }
 
@@ -88,5 +88,5 @@ async function alcaldeAtacado(ctx: ContextoEtapa, demonio: string, alcaldeId: st
     ? (await ctx.decidir({ motivo: 'alcaldeAQuien', pregunta: 'A quién rebota la muerte del Alcalde.', opciones: opcionesDeAsientos(ctx.juego, otros) })).id
     : alcaldeId;
   await ponerRecordatorio(ctx, muere, demonio, 'Dead');
-  await ctx.mesa.accion('narrador:cambiarVida', { asientoId: muere, muerto: true });
+  await ctx.mesa.accion('narrador:cambiarVida', { jugadorId: muere, muerto: true });
 }

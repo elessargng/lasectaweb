@@ -13,8 +13,8 @@ export interface PedidoEleccion {
   /** Lo que se dice al empezar en lugar de «Elige en la plaza un jugador para…» (el despertar guiado: «Elige 2 jugadores»). */
   aviso?: string;
   /** Cada asiento elegido. */
-  onElegido: (asientoId: string) => void;
-  onQuitado?: (asientoId: string) => void;
+  onElegido: (jugadorId: string) => void;
+  onQuitado?: (jugadorId: string) => void;
   /** id de lo que recibe el foco al volver (si no, lo que lo tenía al empezar). */
   volver?: string;
 }

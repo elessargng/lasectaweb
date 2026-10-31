@@ -32,8 +32,8 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
 
   // Si el asiento que nominaba ya no existe, no se está eligiendo.
   const desde = eligiendoDesde && asientos.some((a) => a.id === eligiendoDesde) ? eligiendoDesde : null;
-  const nombreDe = (asientoId: string) => {
-    const { numero, ocupante } = datosAsiento(estado, asientoId);
+  const nombreDe = (jugadorId: string) => {
+    const { numero, ocupante } = datosAsiento(estado, jugadorId);
     return describirAsiento(numero, ocupante);
   };
 
@@ -197,7 +197,7 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
               : null,
             // Marcar (o desmarcar) cierra la nominación: el foco vuelve a la ficha de quien nominaba.
             onMarca: async () => {
-              const ok = await actuar('narrador:marcar', { asientoId: nominacion.hasta, marcado: !nominado?.marcado });
+              const ok = await actuar('narrador:marcar', { jugadorId: nominacion.hasta, marcado: !nominado?.marcado });
               if (ok) focoRef.current = idMenuFicha(nominacion.desde);
             },
             onCerrar: async () => {
