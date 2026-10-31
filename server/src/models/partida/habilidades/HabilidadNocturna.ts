@@ -344,3 +344,13 @@ export abstract class RecibeInformacion extends Habilidad {
   /** Lo que se le manda (las opciones; sin ninguna, nada) y lo que cambia (el grimorio del Espía). */
   protected abstract informacion(ctx: ContextoNoche, jugador: Jugador): { opciones: OpcionDespertar[]; avisos?: AvisoHabilidad[]; efectos?: Efectos };
 }
+
+/** «Este jugador es» con quien es de verdad; si puede registrar como otro, el narrador lo revisa. */
+export function esteJugadorEs(ctx: ContextoNoche, jugadores: readonly Jugador[], quien: Jugador) {
+  const id = ctx.identidad(quien);
+  const avisos: AvisoHabilidad[] = dudoso(ctx, quien) ? [{ tipo: 'registro', jugador: quien.id }] : [];
+  const opciones: OpcionDespertar[] = id
+    ? [{ envio: tarjeta('esteJugadorEs', { jugadores: jugadores.map((a) => a.id), personajes: [id] }), registros: [] }]
+    : [];
+  return { opciones, avisos };
+}
