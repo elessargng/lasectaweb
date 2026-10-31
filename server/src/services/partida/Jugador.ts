@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import type { SalaAlineamiento } from '../../contrato/sala';
+import type { SalaAlineamiento, SalaRecordatorio } from '../../contrato/sala';
 
 /**
  * Quién juega a un jugador: una persona de la sala (un participante sentado) o
@@ -30,6 +30,11 @@ export class Jugador {
   muertePendiente = false;
   /** Muerto, ya ha gastado el único voto que le queda. Al morir o revivir vuelve a false. */
   votoGastado = false;
+  /**
+   * Las fichas recordatorio que el narrador le ha puesto, en el orden en que se
+   * pusieron: su estado en el grimorio («Poisoned», «Is The Drunk», «No Ability»…).
+   */
+  recordatorios: SalaRecordatorio[] = [];
 
   /** El participante que lo juega, o null (nadie). */
   get participanteId(): string | null {
@@ -83,8 +88,9 @@ export class Jugador {
     return true;
   }
 
-  /** Otra partida: vivo, sin personaje y con su voto. Quien lo juega sigue. */
+  /** Otra partida: vivo, sin personaje, con su voto y sin recordatorios. Quien lo juega sigue. */
   nuevaPartida(): void {
+    this.recordatorios = [];
     this.personaje = null;
     this.alineamiento = null;
     this.muerto = false;

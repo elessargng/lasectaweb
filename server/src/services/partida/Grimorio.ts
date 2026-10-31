@@ -5,23 +5,14 @@ import type { PersonajeDeGuion } from '../../types/guiones';
 import type { Jugador } from './Jugador';
 
 /**
- * La ficha de un asiento tal como se ve en el grimorio: lo de su jugador
- * (personaje, muerte, voto), la calavera si la lleva y los apuntes del narrador
- * (recordatorios y nota). Es para leer: se cambia con el Grimorio.
+ * La ficha de un jugador tal como se ve en el grimorio: lo suyo (personaje, muerte,
+ * voto, recordatorios), la calavera si la lleva y la nota del narrador. Es para
+ * leer: se cambia con el Grimorio.
  */
 export type Ficha = Pick<
   SalaAsiento,
   'muerto' | 'muertePendiente' | 'votoGastado' | 'marcado' | 'votosMarca' | 'personaje' | 'alineamiento' | 'recordatorios' | 'nota'
 >;
-
-/**
- * Lo que el narrador apunta junto a un jugador: las fichas recordatorio (en el
- * orden en que se pusieron) y su nota. No es del jugador: es del grimorio.
- */
-interface Apuntes {
-  recordatorios: SalaRecordatorio[];
-  nota: string | null;
-}
 
 /**
  * Un recordatorio «Is The …» (el del Borracho, el Alquimista, el Filósofo, la
@@ -46,8 +37,8 @@ export function identidadDe(ficha: Pick<Ficha, 'personaje' | 'recordatorios'>): 
  * Al anunciar una muerte de noche, el «Dead» con el que la marcó quien lo mató (el
  * demonio, el Asesino…) ya no hace falta: se quita (no los de texto propio).
  */
-function quitarMarcaDeMuerte(apuntes: Apuntes): void {
-  apuntes.recordatorios = apuntes.recordatorios.filter((r) => r.personaje === RECORDATORIO_TEXTO || !/^dead$/i.test(r.texto.trim()));
+function quitarMarcaDeMuerte(jugador: Jugador): void {
+  jugador.recordatorios = jugador.recordatorios.filter((r) => r.personaje === RECORDATORIO_TEXTO || !/^dead$/i.test(r.texto.trim()));
 }
 
 /** Lo que el grimorio necesita saber de la sala y de la partida. */
@@ -65,12 +56,13 @@ export interface EntornoGrimorio {
 
 /**
  * El grimorio: lo que el narrador (o las reglas) hacen con los jugadores de la
- * plaza (darles personaje, matarlos…), sus apuntes junto a cada uno y la calavera.
+ * plaza (darles personaje, recordatorios, matarlos…), la nota del narrador sobre
+ * cada uno y la calavera.
  * No comprueba permisos ni que el personaje esté en el guion.
  */
 export class Grimorio {
-  /** Por jugador. */
-  private apuntes = new Map<string, Apuntes>();
+  /** La nota del narrador sobre cada jugador (por su id). */
+  private notas = new Map<string, string>();
   /** Quién lleva la calavera (solo uno en la plaza) y con cuántos votos se le puso. */
   private marca: { jugador: string; votos: number | null } | null = null;
 
@@ -79,7 +71,6 @@ export class Grimorio {
   /** La ficha de un jugador, para leerla (la de uno que no está, como al principio). */
   ficha(jugadorId: string): Readonly<Ficha> {
     const jugador = this.jugador(jugadorId);
-    const apuntes = jugador ? this.apuntesDe(jugador) : { recordatorios: [], nota: null };
     const marcado = !!jugador && this.marca?.jugador === jugador.id;
     return {
       personaje: jugador?.personaje ?? null,
@@ -89,20 +80,14 @@ export class Grimorio {
       votoGastado: jugador?.votoGastado ?? false,
       marcado,
       votosMarca: marcado ? this.marca!.votos : null,
-      recordatorios: apuntes.recordatorios,
-      nota: apuntes.nota,
+      recordatorios: jugador?.recordatorios ?? [],
+      nota: (jugador && this.notas.get(jugador.id)) ?? null,
     };
   }
 
   /** Un jugador de la plaza, o null si ya no está. */
   private jugador(jugadorId: string): Jugador | null {
     return this.entorno.jugadores().find((j) => j.id === jugadorId) ?? null;
-  }
-
-  private apuntesDe(jugador: Jugador): Apuntes {
-    let apuntes = this.apuntes.get(jugador.id);
-    if (!apuntes) this.apuntes.set(jugador.id, (apuntes = { recordatorios: [], nota: null }));
-    return apuntes;
   }
 
   /**
@@ -141,8 +126,7 @@ export class Grimorio {
     if (!jugador) return;
     jugador.personaje = personaje;
     jugador.alineamiento = null;
-    const apuntes = this.apuntesDe(jugador);
-    apuntes.recordatorios = apuntes.recordatorios.filter((r) => !esIdentidad(r));
+    jugador.recordatorios = jugador.recordatorios.filter((r) => !esIdentidad(r));
     this.identidadAutomatica(jugador);
   }
 
@@ -156,7 +140,7 @@ export class Grimorio {
     if (!p || p.tipo !== 'traveller') return;
     const indice = p.recordatorios.findIndex(esRecordatorioDeIdentidad);
     if (indice < 0) return;
-    const { recordatorios } = this.apuntesDe(jugador);
+    const { recordatorios } = jugador;
     if (recordatorios.some((r) => r.personaje === p.id && r.indice === indice)) return;
     recordatorios.push({ id: randomUUID(), personaje: p.id, indice, texto: p.recordatorios[indice] });
   }
@@ -178,7 +162,7 @@ export class Grimorio {
   ponerRecordatorio(jugadorId: string, recordatorio: Omit<SalaRecordatorio, 'id'>, { anotar = true }: { anotar?: boolean } = {}): void {
     const jugador = this.jugador(jugadorId);
     if (!jugador) return;
-    this.apuntesDe(jugador).recordatorios.push({ id: randomUUID(), ...recordatorio });
+    jugador.recordatorios.push({ id: randomUUID(), ...recordatorio });
     if (!anotar) return;
     const { personaje, texto } = recordatorio;
     this.entorno.anotar({ tipo: 'recordatorio', asiento: this.entorno.asientoDiario(jugadorId), personaje, texto, quitado: false });
@@ -187,10 +171,9 @@ export class Grimorio {
   /** Quita una ficha recordatorio. */
   quitarRecordatorio(jugadorId: string, recordatorioId: string): void {
     const jugador = this.jugador(jugadorId);
-    const apuntes = jugador ? this.apuntesDe(jugador) : null;
-    const quitado = apuntes?.recordatorios.find((r) => r.id === recordatorioId);
-    if (!apuntes || !quitado) return;
-    apuntes.recordatorios = apuntes.recordatorios.filter((r) => r !== quitado);
+    const quitado = jugador?.recordatorios.find((r) => r.id === recordatorioId);
+    if (!jugador || !quitado) return;
+    jugador.recordatorios = jugador.recordatorios.filter((r) => r !== quitado);
     const { personaje, texto } = quitado;
     this.entorno.anotar({ tipo: 'recordatorio', asiento: this.entorno.asientoDiario(jugadorId), personaje, texto, quitado: true });
   }
@@ -198,8 +181,7 @@ export class Grimorio {
   /** Quita de toda la plaza los recordatorios de ese personaje con ese índice (sin apuntarlo en el diario). */
   quitarDeTodas(personaje: string, indice: number): void {
     for (const jugador of this.entorno.jugadores()) {
-      const apuntes = this.apuntesDe(jugador);
-      apuntes.recordatorios = apuntes.recordatorios.filter((r) => !(r.personaje === personaje && r.indice === indice));
+      jugador.recordatorios = jugador.recordatorios.filter((r) => !(r.personaje === personaje && r.indice === indice));
     }
   }
 
@@ -215,8 +197,7 @@ export class Grimorio {
     if (texto === undefined) return null;
     const iguales = new Set(textos.flatMap((t, i) => (t === texto ? [i] : [])));
     const puestos = this.entorno.jugadores().flatMap((j) =>
-      this.apuntesDe(j)
-        .recordatorios.filter((r) => r.personaje === personajeId && iguales.has(r.indice))
+      j.recordatorios.filter((r) => r.personaje === personajeId && iguales.has(r.indice))
         .map((r) => ({ jugadorId: j.id, recordatorioId: r.id })),
     );
     if (puestos.length < iguales.size) return null;
@@ -230,7 +211,8 @@ export class Grimorio {
   escribirNota(jugadorId: string, texto: string | null): boolean {
     const jugador = this.jugador(jugadorId);
     if (!jugador) return false;
-    this.apuntesDe(jugador).nota = texto;
+    if (texto === null) this.notas.delete(jugador.id);
+    else this.notas.set(jugador.id, texto);
     return true;
   }
 
@@ -261,7 +243,7 @@ export class Grimorio {
     }
     const estabaPendiente = jugador.muertePendiente;
     if (!jugador.morir(this.entorno.noche())) return;
-    if (estabaPendiente) quitarMarcaDeMuerte(this.apuntesDe(jugador));
+    if (estabaPendiente) quitarMarcaDeMuerte(jugador);
     this.quitarCalavera(jugador);
   }
 
@@ -272,7 +254,7 @@ export class Grimorio {
   confirmarMuerte(jugadorId: string): boolean {
     const jugador = this.jugador(jugadorId);
     if (!jugador?.confirmarMuerte()) return false;
-    quitarMarcaDeMuerte(this.apuntesDe(jugador));
+    quitarMarcaDeMuerte(jugador);
     this.quitarCalavera(jugador);
     return true;
   }
@@ -312,16 +294,16 @@ export class Grimorio {
     return this.marca !== null;
   }
 
-  /** Se ha quitado un asiento: lo apuntado de su jugador, con él. */
+  /** Se ha quitado un asiento: la nota de su jugador y su calavera, con él. */
   olvidar(jugador: Jugador): void {
-    this.apuntes.delete(jugador.id);
+    this.notas.delete(jugador.id);
     this.quitarCalavera(jugador);
   }
 
-  /** Otra partida: todos los jugadores como al principio, sin apuntes ni calavera. */
+  /** Otra partida: todos los jugadores como al principio, sin notas ni calavera. */
   limpiar(): void {
     for (const jugador of this.entorno.jugadores()) jugador.nuevaPartida();
-    this.apuntes.clear();
+    this.notas.clear();
     this.marca = null;
   }
 }
