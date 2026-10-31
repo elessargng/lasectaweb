@@ -36,6 +36,8 @@ export const guionDePrueba = (): GuionResuelto => ({
     personaje('matron', 'townsfolk'),
     personaje('virgin', 'townsfolk', ['No Ability']),
     personaje('drunk', 'outsider', ['Is The Drunk']),
+    personaje('fool', 'townsfolk', ['No Ability']),
+    personaje('sailor', 'townsfolk', ['Drunk']),
     personaje('poisoner', 'minion', ['Poisoned']),
     personaje('spy', 'minion'),
     personaje('organgrinder', 'minion', ['About To Die', 'Drunk']),

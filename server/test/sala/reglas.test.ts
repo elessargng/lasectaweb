@@ -438,6 +438,15 @@ describe('A quién le llega (quién se salva o lo desvía)', () => {
     expect(a(jugador('soldier', [envenenado]), matar)).toEqual(['soldier']);
   });
 
+  it('el Marinero sano no muere de nada; el Bufón sano, la primera vez, tampoco (y gasta su habilidad)', () => {
+    expect(a(jugador('sailor'), ejecutar)).toEqual([null]);
+    expect(a(jugador('sailor', [envenenado]), ejecutar)).toEqual(['sailor']);
+    expect(reglas.objetivo(jugador('fool')).recibe(matar)).toEqual([{ a: null, gasta: { asiento: 'fool', personaje: 'fool', texto: 'No Ability' } }]);
+    expect(a(jugador('fool', [{ id: 'n', personaje: 'fool', indice: 0, texto: 'No Ability' }]), ejecutar)).toEqual(['fool']);
+    expect(a(jugador('fool', [seguro]), matar)).toEqual([null]);
+    expect(reglas.objetivo(jugador('fool', [seguro])).recibe(matar)[0].gasta).toBeUndefined();
+  });
+
   it('al Alcalde sano, el demonio que lo mata puede rebotar a cualquier otro vivo (no a sí mismo); al protegido, no muere nadie', () => {
     const alcalde = jugador('mayor');
     plaza = [jugador('imp'), alcalde, jugador('chef'), jugador('soldier'), jugador('empath', [seguro]), Object.assign(jugador('saint'), { muerto: true })];
@@ -446,5 +455,24 @@ describe('A quién le llega (quién se salva o lo desvía)', () => {
     expect(a(alcalde, ejecutar)).toEqual(['mayor']);
     expect(a(jugador('mayor', [envenenado]), matar)).toEqual(['mayor']);
     expect(a(jugador('mayor', [seguro]), matar)).toEqual([null]);
+  });
+});
+
+describe('al ejecutar, a quién le llega', () => {
+  it('el Bufón no muere la primera vez (se le pone su «No Ability»); la segunda, sí. El Marinero, nunca', () => {
+    const { juego, asiento } = salaConJugadores('Ana', 'Bea', 'Cris', 'Dani');
+    const { partida } = juego;
+    partida.grimorio.cambiarPersonaje(asiento(0).id, 'fool');
+    partida.grimorio.cambiarPersonaje(asiento(1).id, 'sailor');
+    alDia(juego);
+    partida.ejecutar(asiento(0).id);
+    expect(asiento(0).muerto).toBe(false);
+    expect(textos(juego, 0)).toEqual(['No Ability']);
+    alDia(juego);
+    partida.ejecutar(asiento(0).id);
+    expect(asiento(0).muerto).toBe(true);
+    alDia(juego);
+    partida.ejecutar(asiento(1).id);
+    expect(asiento(1).muerto).toBe(false);
   });
 });

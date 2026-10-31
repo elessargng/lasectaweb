@@ -17,6 +17,8 @@ import type { Jugador } from '../partida/Jugador';
 import { percepcionReal, type Percepcion } from './Percepcion';
 import { objetivoReal, type Objetivo } from './Objetivo';
 import { alcalde } from './alcalde';
+import { bufon } from './bufon';
+import { marinero } from './marinero';
 import { monje } from './monje';
 import { soldado } from './soldado';
 
@@ -41,8 +43,12 @@ export const REGLAS: readonly ReglaPersonaje[] = [
   // Cómo registran
   reclusa,
   espia,
-  // A quién le llega: quien desvía antes que quien protege (protegido, no rebota)
+  // A quién le llega: se consulta de la última a la primera. Quien protege, antes
+  // que quien se salva gastando su habilidad (protegido, el Bufón no la gasta) y que
+  // quien desvía (protegido, no rebota)
   alcalde,
+  bufon,
+  marinero,
   soldado,
   monje,
 ];

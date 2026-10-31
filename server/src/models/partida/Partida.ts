@@ -536,9 +536,9 @@ export class Partida {
   }
 
   /**
-   * Ejecuta al de un asiento (el que lleva la calavera): muere como al matarlo y
-   * se le ponen los recordatorios de los personajes que funcionan con las
-   * ejecuciones (ver Reglas). Luego anochece, salvo si una regla lo impide (el
+   * Ejecuta al de un asiento (el que lleva la calavera): muere como al matarlo,
+   * salvo que no le llegue (ver Objetivo: el Marinero, el Bufón), y se le ponen los
+   * recordatorios de los personajes que funcionan con las ejecuciones (ver Reglas). Luego anochece, salvo si una regla lo impide (el
    * Carnicero vivo: puede haber otra ejecución) o si quedan solo dos
    * jugadores vivos (`final`): entonces decide el narrador si se va a la noche o
    * se revela el grimorio. Devuelve si ha anochecido y si quedan dos, o null si
@@ -557,7 +557,10 @@ export class Partida {
     }
     this.avisar({ tipo: 'ejecucion', userId: this.cuentaDe(jugador.participanteId) });
     this.anotar({ tipo: 'ejecucion', asiento: this.asientoDiario(jugador.id) });
-    this.grimorio.cambiarVida(jugador.id, true, { anotar: false });
+    // Ninguna regla deja elegir al ejecutar: el primer desenlace, el que toca
+    const [{ a, gasta }] = this.reglas.objetivo(jugador).recibe({ origen: 'ejecucion', personaje: null, efecto: 'matar' });
+    if (gasta) this.ponerRecordatorioDe(gasta.asiento, gasta.personaje, gasta.texto);
+    if (a) this.grimorio.cambiarVida(a.id, true, { anotar: false });
     // Los vivos que quedan: los asientos (también los libres, que cuentan como jugadores)
     // sin muerte, sin contar a los viajeros
     const vivos = this.plaza().filter((a) => !a.muerto && !a.muertePendiente && !this.reparto.llevaViajero(a)).length;
