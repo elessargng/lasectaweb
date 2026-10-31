@@ -1,14 +1,14 @@
 import { randomUUID } from 'crypto';
-import { ChatRepository } from '../repositories/ChatRepository';
-import { datosDeDataUrl, guardarFondoSala } from '../utils/salaFondoStorage';
-import { ProveedorVideo } from '../services/videollamada/ProveedorVideo';
-import { MENSAJES_PRIVADOS, MensajesPrivados } from '../contrato/chat';
-import { limpiarAvatarSala, limpiarNombreSala, type Participante } from '../services/sala/Participantes';
-import { SALA_RELOJ } from '../services/partida/RelojSala';
-import type { SalaDeJuego } from '../services/SalaDeJuego';
-import { SALA_ASIENTOS } from '../services/sala/Sala';
-import { SALA_SEGUNDOS_POR_FICHA, type Configuracion } from '../services/partida/Configuracion';
-import { identidadDe } from '../services/partida/Grimorio';
+import { ChatRepository } from '../../repositories/ChatRepository';
+import { datosDeDataUrl, guardarFondoSala } from '../../utils/salaFondoStorage';
+import { ProveedorVideo } from '../../services/videollamada/ProveedorVideo';
+import { MENSAJES_PRIVADOS, MensajesPrivados } from '../../contrato/chat';
+import { limpiarAvatarSala, limpiarNombreSala, type Participante } from '../../services/sala/Participantes';
+import { SALA_RELOJ } from '../../services/partida/RelojSala';
+import type { SalaDeJuego } from '../../services/SalaDeJuego';
+import { SALA_ASIENTOS } from '../../services/sala/Sala';
+import { SALA_SEGUNDOS_POR_FICHA, type Configuracion } from '../../services/partida/Configuracion';
+import { identidadDe } from '../../services/partida/Grimorio';
 import {
   NPC_BOOTLEGGER,
   NPC_FERRYMAN,
@@ -16,16 +16,16 @@ import {
   NPC_POPE,
   NPC_SILENCIO,
   NPC_STORMCATCHER,
-} from '../services/partida/personajesEspeciales';
+} from '../../services/partida/personajesEspeciales';
 import {
   GUIONES_NARRADOR_VIRTUAL,
   JUGADORES_NARRADOR_VIRTUAL,
   NARRADORES_VIRTUALES,
   type GuionNarradorVirtual,
   type IdNarradorVirtual,
-} from '../contrato/narradorVirtual';
-import { SALA_SENALAMIENTO } from '../contrato/partida';
-import { type ResultadoAccion } from '../contrato/sala';
+} from '../../contrato/narradorVirtual';
+import { SALA_SENALAMIENTO } from '../../contrato/partida';
+import { type ResultadoAccion } from '../../contrato/sala';
 import {
   ADJUNTOS_DESPERTAR,
   FICHAS_DESPERTAR,
@@ -36,25 +36,25 @@ import {
   EnvioDespertar,
   TARJETAS_DESPERTAR,
   TarjetaDespertar,
-} from '../contrato/despertar';
+} from '../../contrato/despertar';
 import {
   ICONOS_RECORDATORIO_TEXTO,
   RECORDATORIO_TEXTO,
   SALA_NOTA_LARGO_MAX,
   SALA_RECORDATORIO_TEXTO_MAX,
   FichaEnviadaDto,
-} from '../contrato/grimorio';
-import { NUM_FAROLES } from '../contrato/jugador';
-import { SALA_ESTILOS_MANO, SALA_FORMAS_MANO, FormaMano } from '../contrato/participante';
-import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA } from '../contrato/partida';
-import { guardarAvatarSala } from '../utils/salaAvatarStorage';
-import { GuionResuelto, PersonajeDeGuion, TIPOS_NPC, TipoPersonaje } from '../types/guiones';
-import { GuionInvalidoError } from '../services/guiones/errores';
-import type { RegistroPartida } from '../services/estadisticas/SeguimientoPartida';
-import type { AccionSuelta, ServicioNarradorVirtual } from '../services/narradorVirtual/NarradorVirtualService';
-import type { Azar, ClienteJev, DatosJev, Temporizador } from '../services/narradorVirtual/puertos';
-import type { AccionJugador } from '../services/narradorVirtual/etapas/Etapa';
-import { diaVirtual, noPuedeNominar, nominoHoy } from '../services/narradorVirtual/dia/reglasDia';
+} from '../../contrato/grimorio';
+import { NUM_FAROLES } from '../../contrato/jugador';
+import { SALA_ESTILOS_MANO, SALA_FORMAS_MANO, FormaMano } from '../../contrato/participante';
+import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA } from '../../contrato/partida';
+import { guardarAvatarSala } from '../../utils/salaAvatarStorage';
+import { GuionResuelto, PersonajeDeGuion, TIPOS_NPC, TipoPersonaje } from '../../types/guiones';
+import { GuionInvalidoError } from '../../services/guiones/errores';
+import type { RegistroPartida } from '../../services/estadisticas/SeguimientoPartida';
+import type { AccionSuelta, ServicioNarradorVirtual } from '../../services/narradorVirtual/NarradorVirtualService';
+import type { Azar, ClienteJev, DatosJev, Temporizador } from '../../services/narradorVirtual/puertos';
+import type { AccionJugador } from '../../services/narradorVirtual/etapas/Etapa';
+import { diaVirtual, noPuedeNominar, nominoHoy } from '../../services/narradorVirtual/dia/reglasDia';
 
 
 /** Lo que devuelve una acción: el resultado y, si saca a alguien de la sala, qué conexiones cerrar. */

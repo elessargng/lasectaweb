@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { AuthRequest } from '../middlewares/auth';
+import { AuthRequest } from './middlewares/auth';
 import { SalaConfiguracionRepository } from '../repositories/SalaConfiguracionRepository';
 
 /** Tope de lo que ocupa una configuración (preferencias, avisos y atajos caben de sobra). */

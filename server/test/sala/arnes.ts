@@ -3,8 +3,8 @@ import { createServer, type Server as HttpServer } from 'http';
 import type { AddressInfo } from 'net';
 import { io as conectar, type Socket } from 'socket.io-client';
 import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
-import { iniciarSalaSocket, SALA_SOCKET_PATH } from '../../src/sockets/salaSocket';
-import type { DependenciasSala } from '../../src/sockets/salaAcciones';
+import { iniciarSalaSocket, SALA_SOCKET_PATH } from '../../src/controllers/sala/salaSocket';
+import type { DependenciasSala } from '../../src/controllers/sala/salaAcciones';
 import type { SalaDto, ResultadoAccion } from '../../src/contrato/sala';
 import { guionDePrueba } from './guionDePrueba';
 

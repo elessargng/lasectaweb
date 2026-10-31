@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { LibraryService } from '../services/LibraryService';
-import { AuthRequest } from '../middlewares/auth';
+import { AuthRequest } from './middlewares/auth';
 import { parseAllowedRoles } from '../utils/libraryAccess';
 
 export class LibraryController {

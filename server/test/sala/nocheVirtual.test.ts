@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SalaDeJuego } from '../../src/services/SalaDeJuego';
-import { ejecutarAccion, type DependenciasSala } from '../../src/sockets/salaAcciones';
+import { ejecutarAccion, type DependenciasSala } from '../../src/controllers/sala/salaAcciones';
 import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
 import { habilidadesDelGuion } from '../../src/services/partida/habilidades';
 import { TontoYTu } from '../../src/services/narradorVirtual/estrategias/TontoYTu';

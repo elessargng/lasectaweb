@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { VillacuervosService } from '../services/VillacuervosService';
-import { AuthRequest } from '../middlewares/auth';
+import { AuthRequest } from './middlewares/auth';
 
 export class VillacuervosController {
   constructor(private villacuervosService: VillacuervosService) {}

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { UserService } from '../services/UserService';
-import { AuthRequest } from '../middlewares/auth';
+import { AuthRequest } from './middlewares/auth';
 
 export class AuthController {
   constructor(private userService: UserService) {}

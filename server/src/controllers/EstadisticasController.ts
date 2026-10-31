@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { AuthRequest } from '../middlewares/auth';
+import { AuthRequest } from './middlewares/auth';
 import { EstadisticasService } from '../services/estadisticas/EstadisticasService';
 
 export class EstadisticasController {

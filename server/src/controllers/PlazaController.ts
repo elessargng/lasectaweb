@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { PlazaService } from '../services/PlazaService';
-import { AuthRequest } from '../middlewares/auth';
+import { AuthRequest } from './middlewares/auth';
 
 /**
  * Express 5 tipa req.params como string | string[]. Todas las rutas de La Plaza

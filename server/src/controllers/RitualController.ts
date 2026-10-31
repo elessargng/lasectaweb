@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { RitualService } from '../services/RitualService';
-import { AuthRequest } from '../middlewares/auth';
+import { AuthRequest } from './middlewares/auth';
 
 function ritualId(req: Request | AuthRequest): string {
   const raw = (req.params as Record<string, string | string[]>).id;
