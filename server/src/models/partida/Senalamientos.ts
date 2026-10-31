@@ -1,13 +1,14 @@
 import { randomUUID } from 'crypto';
 import type { Participante } from '../sala/Participantes';
-import type { FaseDto, SenalamientoDto } from '../../contrato/partida';
+import type { Fase } from '../compartido/partida';
+import type { SenalamientoDto } from '../../views/dto/partida';
 import type { Jugador } from './Jugador';
 
 /** Lo que el señalamiento necesita saber de la sala. */
 export interface EntornoSenalamiento {
   /** Los jugadores de la plaza como están ahora. */
   plaza(): readonly Jugador[];
-  fase(): FaseDto;
+  fase(): Fase;
   /** El asiento en el que se sienta un participante, o null. */
   jugadorDe(participanteId: string): Jugador | null;
   /** Un visitante ve el grimorio del narrador. */

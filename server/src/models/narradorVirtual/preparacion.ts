@@ -1,7 +1,7 @@
-import { NO_VAN_EN_BOLSA } from '../../contrato/bolsaAleatoria';
-import { repartoAjustado } from '../../contrato/reparto';
-import type { GuionNarradorVirtual } from '../../contrato/narradorVirtual';
-import type { DistribucionDto } from '../../contrato/partida';
+import { NO_VAN_EN_BOLSA } from '../compartido/bolsaAleatoria';
+import { repartoAjustado } from '../compartido/reparto';
+import type { GuionNarradorVirtual } from '../compartido/narradorVirtual';
+import type { Distribucion } from '../compartido/partida';
 import type { PersonajeDeGuion } from '../guiones';
 import {
   categoriasDeHuecos,
@@ -90,7 +90,7 @@ export interface BolsaElegida {
  */
 export async function elegirBolsa(
   personajes: readonly PersonajeDeGuion[],
-  distribucion: DistribucionDto,
+  distribucion: Distribucion,
   decidir: <T>(decision: Decision<T>) => Promise<T>,
   { azar = Math.random, recientes = [] }: { azar?: Azar; recientes?: readonly (readonly string[])[] } = {},
 ): Promise<BolsaElegida | null> {

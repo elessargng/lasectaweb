@@ -1,5 +1,5 @@
-import type { FichaEnviadaDto, GrimorioEnviadoDto } from '../../contrato/grimorio';
-import type { Alineamiento } from '../../contrato/jugador';
+import type { FichaEnviadaDto, GrimorioEnviadoDto } from '../../views/dto/grimorio';
+import type { Alineamiento } from '../compartido/jugador';
 import type { Diario } from './eventos';
 import type { Jugador } from './Jugador';
 

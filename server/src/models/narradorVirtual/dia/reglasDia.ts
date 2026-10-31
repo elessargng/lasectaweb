@@ -1,4 +1,4 @@
-import type { EtapaNarradorVirtual } from '../../../contrato/narradorVirtual';
+import type { EtapaNarradorVirtual } from '../../compartido/narradorVirtual';
 import type { Participante } from '../../sala/Participantes';
 import type { SalaDeJuego } from '../../../services/SalaDeJuego';
 

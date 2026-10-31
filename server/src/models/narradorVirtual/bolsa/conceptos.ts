@@ -1,4 +1,4 @@
-import { barajar } from '../../../contrato/bolsaAleatoria';
+import { barajar } from '../../compartido/bolsaAleatoria';
 import type { Azar } from '../puertos';
 
 /**

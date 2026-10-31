@@ -1,4 +1,4 @@
-import type { Alineamiento } from '../../../contrato/jugador';
+import type { Alineamiento } from '../../compartido/jugador';
 import type { PersonajeDeGuion } from '../../guiones';
 import type { Jugador } from '../Jugador';
 

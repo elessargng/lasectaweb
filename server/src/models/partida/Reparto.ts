@@ -1,4 +1,4 @@
-import type { DistribucionDto } from '../../contrato/partida';
+import type { Distribucion } from '../compartido/partida';
 import { barajar } from './azar';
 import { Bolsa } from './Bolsa';
 import { repartoPara } from './distribucion';
@@ -53,7 +53,7 @@ export class Reparto {
    * El reparto de la partida: los jugadores (asientos, sin los viajeros: los
    * puestos a mano y los de la bolsa) y cuántos de cada tipo (ver repartoPara).
    */
-  distribucion(): DistribucionDto {
+  distribucion(): Distribucion {
     const plaza = this.entorno.plaza();
     const viajeros = plaza.filter((a) => this.llevaViajero(a)).length + this.bolsa.viajeros();
     const jugadores = Math.max(0, plaza.length - viajeros);

@@ -2,13 +2,13 @@ import {
   NARRADORES_VIRTUALES,
   type GuionNarradorVirtual,
   type IdNarradorVirtual,
-} from '../../contrato/narradorVirtual';
+} from '../../models/compartido/narradorVirtual';
 import type { SalaDeJuego } from '../SalaDeJuego';
 import type { EstrategiaNarrador } from '../../models/narradorVirtual/estrategias/EstrategiaNarrador';
 import { TontoYTu } from '../../models/narradorVirtual/estrategias/TontoYTu';
 import { EsperandoJugadores } from '../../models/narradorVirtual/etapas/EsperandoJugadores';
 import { decisionesDe, type AccionJugador, type ContextoEtapa, type Etapa } from '../../models/narradorVirtual/etapas/Etapa';
-import type { RespuestaArtista } from '../../contrato/artista';
+import type { RespuestaArtista } from '../../models/compartido/artista';
 import { preguntarComoArtista } from '../../models/narradorVirtual/dia/artista';
 import { contarDisparo, exterminar } from '../../models/narradorVirtual/dia/exterminar';
 import { contarPatoso } from '../../models/narradorVirtual/dia/patoso';

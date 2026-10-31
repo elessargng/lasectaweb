@@ -1,8 +1,8 @@
 import { randomUUID } from 'crypto';
-import type { EleccionDespertar, EnvioDespertar } from '../../contrato/despertar';
-import type { FichaEnviadaDto } from '../../contrato/grimorio';
-import type { Alineamiento } from '../../contrato/jugador';
-import type { AsientoDiario, HechoDiario } from '../../contrato/diario';
+import type { EleccionDespertar, EnvioDespertar } from '../compartido/despertar';
+import type { FichaEnviadaDto } from '../../views/dto/grimorio';
+import type { Alineamiento } from '../compartido/jugador';
+import type { AsientoDiario, HechoDiario } from '../compartido/diario';
 import type { GuionResuelto } from '../guiones';
 import type { Participante } from '../sala/Participantes';
 import type { Sala } from '../sala/Sala';
@@ -213,7 +213,7 @@ export class Partida {
   }
 
   /**
-   * Apunta algo que se ha hecho en la partida, para su diario (ver contrato/diario).
+   * Apunta algo que se ha hecho en la partida, para su diario (ver models/compartido/diario).
    * En la preparación solo cuentan los faroles; revelado el grimorio, ya nada.
    */
   anotar(hecho: HechoDiario): void {

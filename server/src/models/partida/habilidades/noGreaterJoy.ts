@@ -1,4 +1,4 @@
-import type { OpcionDespertar } from '../../../contrato/despertar';
+import type { OpcionDespertar } from '../../compartido/despertar';
 import {
   droison,
   EligeYSabe,

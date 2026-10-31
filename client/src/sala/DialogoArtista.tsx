@@ -11,7 +11,7 @@ import {
   type RespuestaArtista,
   type TipoArtista,
   type TipoPreguntaArtista,
-} from '@contrato/artista';
+} from '@models/artista';
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario, campo } from './estilos';

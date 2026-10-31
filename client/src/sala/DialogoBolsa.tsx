@@ -10,12 +10,12 @@ import PestanasDialogo from './PestanasDialogo';
 import RejillaFichas from './RejillaFichas';
 import { problemasDelReparto, repartoAjustado } from './comprobarReparto';
 import { llenarAlAzar, type BolsaAlAzar } from './bolsaAleatoria';
-import type { DistribucionDto, ResultadoAccion } from './useSala';
+import type { Distribucion, ResultadoAccion } from './useSala';
 
 interface DialogoBolsaProps {
   bolsa: string[];
   /** El reparto de la partida; sus jugadores son los asientos a los que se reparte (sin viajeros). */
-  distribucion: DistribucionDto;
+  distribucion: Distribucion;
   /** Los NPCs en juego (el Centinela altera la preparación). */
   npcs: string[];
   /** Se pueden repartir los personajes (solo en la preparación); si no, no sale «Asignar personajes». */

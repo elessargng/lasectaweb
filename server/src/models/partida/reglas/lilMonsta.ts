@@ -1,4 +1,4 @@
-import type { SenalamientoDto } from '../../../contrato/partida';
+import type { SenalamientoDto } from '../../../views/dto/partida';
 import type { ContextoReglas } from './ReglaPersonaje';
 import type { Jugador } from '../Jugador';
 

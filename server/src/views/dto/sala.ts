@@ -1,18 +1,15 @@
 /**
- * El contrato de la sala de juego: lo que el servidor manda (los Dto) y las
- * constantes que tienen que valer lo mismo en los dos lados. Lo importa también el
- * cliente (alias @contrato), así que aquí solo van tipos y valores puros: nada de
- * Node, de la base de datos ni de los servicios, y los imports de tipos con `import type`.
- *
- * Va por temas: participante, jugador, grimorio, partida, despertar y narradorVirtual;
- * aquí, la sala entera tal como se envía (SalaDto).
+ * La sala entera tal como la recibe cada participante (SalaDto) y la respuesta a
+ * sus acciones. Los Dto de cada tema están junto a este archivo (alias @views);
+ * los valores del dominio que llevan, en models/compartido (alias @models).
  */
 import type { DespertarDto, HabilidadNocheDto } from './despertar';
 import type { CalaveraDto, GrimorioEnviadoDto } from './grimorio';
 import type { JugadorDto } from './jugador';
 import type { NarradorVirtualDto } from './narradorVirtual';
 import type { ParticipanteDto } from './participante';
-import type { ConfiguracionDto, DistribucionDto, FaseDto, NominacionDto, RegistroVotacionDto, RelojDto, RevelacionDto, SenalamientoDto } from './partida';
+import type { ConfiguracionDto, NominacionDto, RelojDto, RevelacionDto, SenalamientoDto } from './partida';
+import type { Distribucion, Fase, RegistroVotacion } from '../../models/compartido/partida';
 
 /** Una conversación privada (voz y vídeo) entre dos o más jugadores o narradores. */
 export interface ConversacionDto {
@@ -62,9 +59,9 @@ export interface SalaDto {
   notas: Record<string, string>;
   configuracion: ConfiguracionDto;
   nominacion: NominacionDto | null;
-  fase: FaseDto;
+  fase: Fase;
   /** El reparto de personajes de la partida, para todos. */
-  distribucion: DistribucionDto;
+  distribucion: Distribucion;
   /** Los personajes metidos en la bolsa (ids); solo se manda a los narradores. */
   bolsa: string[];
   /**
@@ -125,7 +122,7 @@ export interface SalaDto {
   /** Hora del servidor (ms) al mandar el estado: el cliente la usa para la cuenta atrás. */
   ahora: number;
   /** Registro de nominaciones y votaciones (en orden); solo se manda a los narradores. */
-  votaciones: RegistroVotacionDto[];
+  votaciones: RegistroVotacion[];
   /**
    * Fichas recordatorio (estrella) del orden de noche que los narradores han
    * quitado (false) o puesto (true) a mano, por id de personaje o 'esbirros' /

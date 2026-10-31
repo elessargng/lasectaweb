@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { SalaDeJuego } from '../../src/services/SalaDeJuego';
-import type { HabilidadNocheDto } from '../../src/contrato/despertar';
+import type { HabilidadNocheDto } from '../../src/views/dto/despertar';
 import { Arnes } from './arnes';
 import { ficha } from '../../src/models/partida/habilidades/HabilidadNocturna';
 import { guionDePrueba, guionTroubleBrewing, invitado } from './guionDePrueba';

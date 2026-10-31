@@ -4,10 +4,10 @@ import { useAriaLive } from './avisosConfig';
 import { firmaDelReparto, problemasDelReparto, repartoAjustado } from './comprobarReparto';
 import { botonSecundario } from './estilos';
 import { contarBolsa, identidadDe, TIPOS_REPARTO, useFichas } from './fichas';
-import type { JugadorDto, DistribucionDto, ResultadoAccion } from './useSala';
+import type { JugadorDto, Distribucion, ResultadoAccion } from './useSala';
 
 interface RepartoPartidaProps {
-  distribucion: DistribucionDto;
+  distribucion: Distribucion;
   /** La bolsa (solo el narrador); null para los demás. */
   bolsa: string[] | null;
   plaza: JugadorDto[];

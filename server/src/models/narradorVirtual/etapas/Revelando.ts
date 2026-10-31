@@ -1,4 +1,4 @@
-import { barajar } from '../../../contrato/bolsaAleatoria';
+import { barajar } from '../../compartido/bolsaAleatoria';
 import { escarlataAImp, esDemonio, type Ganador } from '../final/comprobarFinal';
 import { fraseAlRevelar } from '../final/cronica';
 import { duracionFrase, FRASES } from '../frases';

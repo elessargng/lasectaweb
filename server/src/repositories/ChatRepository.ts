@@ -1,4 +1,4 @@
-import { MensajeChatDto } from '../contrato/chat';
+import { MensajeChatDto } from '../views/dto/chat';
 
 /**
  * Dónde se guardan los mensajes de la sala. El servicio solo conoce esta

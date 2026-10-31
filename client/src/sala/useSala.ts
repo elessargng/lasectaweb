@@ -1,39 +1,39 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { notifySessionExpired } from '../utils/session';
-import type { SalaDto, ResultadoAccion } from '@contrato/sala';
-import type { MensajeChatDto, SusurroDto } from '@contrato/chat';
+import type { SalaDto, ResultadoAccion } from '@views/sala';
+import type { MensajeChatDto, SusurroDto } from '@views/chat';
 import type { GuionResuelto } from './guiones';
 
-// El contrato con el servidor (lo que manda, los Dto): server/src/contrato/, por temas.
+// Lo que comparte con el servidor: los Dto que manda (@views) y los valores del dominio (@models).
 // Se reexporta aquí para que la sala lo siga importando de useSala.
 export type {
   MensajeDespertar,
   AvisoHabilidad,
   EleccionDespertar,
   EnvioDespertar,
-  HabilidadNocheDto,
   OpcionDespertar,
   Registro,
-  DespertarDto,
-} from '@contrato/despertar';
-export type { FichaEnviadaDto, GrimorioEnviadoDto, Recordatorio } from '@contrato/grimorio';
-export type { Alineamiento, JugadorDto } from '@contrato/jugador';
-export type { Persona, FormaMano, ParticipanteDto, Rol } from '@contrato/participante';
+} from '@models/despertar';
+export type { HabilidadNocheDto, DespertarDto } from '@views/despertar';
+export type { Recordatorio } from '@models/grimorio';
+export type { FichaEnviadaDto, GrimorioEnviadoDto } from '@views/grimorio';
+export type { Alineamiento } from '@models/jugador';
+export type { JugadorDto } from '@views/jugador';
+export type { Persona, FormaMano, Rol } from '@models/participante';
+export type { ParticipanteDto } from '@views/participante';
+export type { Distribucion, Fase, RegistroVotacion } from '@models/partida';
 export type {
   ConfiguracionDto,
-  DistribucionDto,
-  FaseDto,
   NominacionDto,
-  RegistroVotacionDto,
   RelojDto,
   RevelacionDto,
   SenalamientoDto,
   VotacionDto,
-} from '@contrato/partida';
-export type { ConversacionDto, SalaDto, InvitacionDto, ResultadoAccion } from '@contrato/sala';
-export { usuarioDe } from '@contrato/participante';
-export { SALA_SENALAMIENTO as SENALAMIENTO } from '@contrato/partida';
+} from '@views/partida';
+export type { ConversacionDto, SalaDto, InvitacionDto, ResultadoAccion } from '@views/sala';
+export { usuarioDe } from '@models/participante';
+export { SALA_SENALAMIENTO as SENALAMIENTO } from '@models/partida';
 
 /** El pase para conectarse al servidor de vídeo. */
 export type PaseVideo = { ok: true; url: string; token: string } | { ok: false; error: string };

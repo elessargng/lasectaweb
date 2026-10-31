@@ -14,6 +14,7 @@ export const MAX_PREGUNTA_ARTISTA = 300;
 
 /** Los tipos de personaje por los que se puede preguntar. */
 export const TIPOS_ARTISTA = ['townsfolk', 'outsider', 'minion', 'demon'] as const;
+
 export type TipoArtista = (typeof TIPOS_ARTISTA)[number];
 
 /** De quién se pregunta: un personaje, un tipo de personaje o un bando. */

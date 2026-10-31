@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { PersonajeMostrado, Texto } from './guiones';
-import { RECORDATORIO_TEXTO } from '@contrato/grimorio';
+import { RECORDATORIO_TEXTO } from '@models/grimorio';
 import type { Alineamiento, JugadorDto, Recordatorio } from './useSala';
 
 /**
@@ -12,14 +12,14 @@ import type { Alineamiento, JugadorDto, Recordatorio } from './useSala';
 /**
  * Recordatorios con texto propio (sin personaje): su «personaje» es este y su
  * texto, el que se escribió, de hasta RECORDATORIO_TEXTO_MAX (van en redondo en
- * una ficha pequeña). Vienen del contrato con el servidor.
+ * una ficha pequeña). Vienen del dominio compartido con el servidor (@models).
  */
-export { RECORDATORIO_TEXTO, SALA_RECORDATORIO_TEXTO_MAX as RECORDATORIO_TEXTO_MAX } from '@contrato/grimorio';
+export { RECORDATORIO_TEXTO, SALA_RECORDATORIO_TEXTO_MAX as RECORDATORIO_TEXTO_MAX } from '@models/grimorio';
 export const esRecordatorioTexto = (r: Recordatorio) => r.personaje === RECORDATORIO_TEXTO;
 
 /**
  * Los iconos de un recordatorio con texto propio que no son de un personaje (los
- * de ICONOS_RECORDATORIO_TEXTO del contrato, con su nombre). El primero es el de por defecto.
+ * de ICONOS_RECORDATORIO_TEXTO de @models, con su nombre). El primero es el de por defecto.
  */
 export const ICONOS_LIBRES = [
   { id: '_secta', nombre: 'Logo de La Secta' },
@@ -29,7 +29,7 @@ export const ICONOS_LIBRES = [
 export const ICONO_LIBRE_INICIAL = ICONOS_LIBRES[0].id;
 
 /** El largo máximo de la nota de un asiento. */
-export { SALA_NOTA_LARGO_MAX as NOTA_LARGO_MAX } from '@contrato/grimorio';
+export { SALA_NOTA_LARGO_MAX as NOTA_LARGO_MAX } from '@models/grimorio';
 
 /** Los tipos que pueden ir en la ficha de un jugador (no los legendarios ni los lóricos). */
 export const TIPOS_EN_FICHA = ['townsfolk', 'outsider', 'minion', 'demon', 'traveller'];

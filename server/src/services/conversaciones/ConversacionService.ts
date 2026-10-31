@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { Participante } from '../../models/sala/Participantes';
-import { ConversacionDto, InvitacionDto } from '../../contrato/sala';
+import { ConversacionDto, InvitacionDto } from '../../views/dto/sala';
 import type { SalaDeJuego } from '../SalaDeJuego';
 import type { Sala } from '../../models/sala/Sala';
 import type { Partida } from '../../models/partida/Partida';

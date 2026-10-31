@@ -1,39 +1,7 @@
 /**
- * Lo que el narrador apunta en el grimorio (recordatorios, notas) y el grimorio que envía al Espía o a la Viuda.
- * Parte del contrato de la sala de juego (ver sala.ts): solo tipos y valores puros.
+ * Los recordatorios y las notas del grimorio.
+ * Dominio que comparten el servidor y el cliente (alias @models): solo tipos y valores puros.
  */
-import type { Alineamiento } from './jugador';
-
-/**
- * Una ficha del grimorio que el narrador envía al Espía o a la Viuda: lo que se
- * ve de ella (el narrador puede cambiarlo antes de enviarlo).
- */
-export interface FichaEnviadaDto {
-  jugadorId: string;
-  personaje: string | null;
-  alineamiento: Alineamiento | null;
-  muerto: boolean;
-  recordatorios: Recordatorio[];
-}
-
-/**
- * Un grimorio enviado (el último) a un jugador: cuándo, sus fichas (en el orden de
- * la plaza) y los faroles del demonio (ids de personaje, hasta NUM_FAROLES).
- */
-export interface GrimorioEnviadoDto {
-  hora: number;
-  fichas: FichaEnviadaDto[];
-  faroles: string[];
-}
-
-/**
- * La calavera: el único jugador marcado para ser ejecutado y con cuántos votos se
- * le puso (desde una nominación ya votada), o null si se puso a mano.
- */
-export interface CalaveraDto {
-  jugadorId: string;
-  votos: number | null;
-}
 
 /** El largo máximo de la nota del narrador sobre un jugador. */
 export const SALA_NOTA_LARGO_MAX = 500;

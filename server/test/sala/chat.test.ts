@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { canalPrivado } from '../../src/contrato/chat';
-import type { ParticipanteDto } from '../../src/contrato/participante';
+import { canalPrivado } from '../../src/models/compartido/chat';
+import type { ParticipanteDto } from '../../src/views/dto/participante';
 import type { ChatRepository } from '../../src/repositories/ChatRepository';
 import { ChatService } from '../../src/services/chat/ChatService';
 import type { SalaDeJuego } from '../../src/services/SalaDeJuego';

@@ -9,7 +9,7 @@ import type { PersonajeMostrado } from './guiones';
 import { nombreDeAsiento, textoEleccion } from './despertar';
 import { BotoneraDespertar, EditorAdjunto, HistorialDespertar, MensajeVisto } from './PiezasDespertar';
 import type { DespertarDto, SalaDto, ResultadoAccion } from './useSala';
-import { FICHAS_RESPUESTA_GUIADA } from '@contrato/despertar';
+import { FICHAS_RESPUESTA_GUIADA } from '@models/despertar';
 
 interface DespertarJugadorProps {
   estado: SalaDto;

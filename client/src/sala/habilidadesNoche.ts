@@ -4,7 +4,7 @@ import type { PersonajeMostrado } from './guiones';
 import type { AvisoHabilidad, EnvioDespertar, SalaDto, HabilidadNocheDto, OpcionDespertar, Registro } from './useSala';
 
 /**
- * El despertar guiado del orden de noche (ver HabilidadNocheDto en el contrato):
+ * El despertar guiado del orden de noche (ver HabilidadNocheDto en @views/despertar):
  * cómo se dice cada cosa que avisa el servidor. Los nombres de los personajes y
  * de los recordatorios, en el idioma elegido.
  */

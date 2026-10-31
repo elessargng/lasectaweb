@@ -1,4 +1,4 @@
-import { NUM_FAROLES } from '../../contrato/jugador';
+import { NUM_FAROLES } from '../compartido/jugador';
 import type { Jugador } from './Jugador';
 import type { Diario } from './eventos';
 

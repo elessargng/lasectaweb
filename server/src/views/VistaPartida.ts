@@ -4,9 +4,9 @@ import { identidadDe } from '../models/partida/Grimorio';
 import type { Participante } from '../models/sala/Participantes';
 import { NPC_TOR } from '../models/partida/personajesEspeciales';
 import { farolesVacios } from '../models/partida/Faroles';
-import type { JugadorDto } from '../contrato/jugador';
-import type { NominacionDto } from '../contrato/partida';
-import type { ConversacionDto, SalaDto, InvitacionDto } from '../contrato/sala';
+import type { JugadorDto } from './dto/jugador';
+import type { NominacionDto } from './dto/partida';
+import type { ConversacionDto, SalaDto, InvitacionDto } from './dto/sala';
 
 /** Lo que la vista necesita de fuera de la partida: las conversaciones, el vídeo y los permisos. */
 export interface ContextoVista {

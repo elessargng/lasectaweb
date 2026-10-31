@@ -1,6 +1,6 @@
-import type { EntradaDiario } from '../../contrato/diario';
-import { type Alineamiento } from '../../contrato/jugador';
-import { CAUSAS_CON_VICTORIA, type RegistroVotacionDto } from '../../contrato/partida';
+import type { EntradaDiario } from '../compartido/diario';
+import { type Alineamiento } from '../compartido/jugador';
+import { CAUSAS_CON_VICTORIA, type RegistroVotacion } from '../compartido/partida';
 
 /** Una causa de final y, si es de alguien concreto (el esbirro que cazó a la Doncel), su cuenta. */
 export interface CausaFinal {
@@ -68,8 +68,8 @@ export interface RegistroPartida {
   mesa: AsientoPartida[];
   narradoresNombres: string[];
   npcs: string[];
-  votaciones: RegistroVotacionDto[];
-  /** Todo lo que se hizo en ella, por noches y días (ver contrato/diario). */
+  votaciones: RegistroVotacion[];
+  /** Todo lo que se hizo en ella, por noches y días (ver models/compartido/diario). */
   diario: EntradaDiario[];
 }
 

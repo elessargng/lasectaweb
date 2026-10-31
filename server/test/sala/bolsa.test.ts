@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { DistribucionDto } from '../../src/contrato/partida';
+import type { Distribucion } from '../../src/models/compartido/partida';
 import { repartoPara } from '../../src/models/partida/distribucion';
 import {
   CATEGORIAS_ALDEANOS,
@@ -21,7 +21,7 @@ import { conSemilla, guionTroubleBrewing, personaje } from './guionDePrueba';
 const PERSONAJES = [...guionTroubleBrewing().personajes, personaje('baron', 'minion')];
 const tipo = (id: string) => PERSONAJES.find((p) => p.id === id)!.tipo;
 
-const distribucion = (jugadores: number): DistribucionDto => ({
+const distribucion = (jugadores: number): Distribucion => ({
   jugadores,
   jugadoresVivos: jugadores,
   viajeros: 0,

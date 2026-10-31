@@ -6,8 +6,8 @@ import type {
   OpcionDespertar,
   Registro,
   TarjetaDespertar,
-} from '../../../contrato/despertar';
-import type { Alineamiento } from '../../../contrato/jugador';
+} from '../../compartido/despertar';
+import type { Alineamiento } from '../../compartido/jugador';
 import { droison, tieneRecordatorio, type ContextoReglas } from '../reglas/ReglaPersonaje';
 import type { Jugador } from '../Jugador';
 

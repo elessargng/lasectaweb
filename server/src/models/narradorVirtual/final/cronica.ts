@@ -1,4 +1,4 @@
-import type { EnvioDespertar } from '../../../contrato/despertar';
+import type { EnvioDespertar } from '../../compartido/despertar';
 import { droison } from '../../partida/reglas/ReglaPersonaje';
 import type { SalaDeJuego } from '../../../services/SalaDeJuego';
 import { FRASES, type MuerteRevelada, type NocheRevelada } from '../frases';

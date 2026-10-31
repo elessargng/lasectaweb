@@ -1,16 +1,16 @@
-import { CANAL_GENERAL, CANAL_VISITANTES, PREFIJO_PRIVADO, type MensajeChatDto } from '@contrato/chat';
+import { CANAL_GENERAL, CANAL_VISITANTES, PREFIJO_PRIVADO } from '@models/chat';
+import { type MensajeChatDto } from '@views/chat';
 import type { SalaDto, ParticipanteDto } from './useSala';
 
-// Los canales, los mensajes y sus límites son del contrato con el servidor (server/src/contrato/chat.ts)
+// Los canales, los mensajes y sus límites se comparten con el servidor (@models/chat y @views/chat)
 export {
   CANAL_GENERAL,
   CANAL_VISITANTES,
   canalPrivado,
   LARGO_MAXIMO_MENSAJE,
-  type MensajeChatDto,
   type MensajesPrivados,
-  type SusurroDto,
-} from '@contrato/chat';
+} from '@models/chat';
+export { type MensajeChatDto, type SusurroDto } from '@views/chat';
 
 /**
  * Mensajes de texto de la sala, en el cliente. Las reglas las aplica el

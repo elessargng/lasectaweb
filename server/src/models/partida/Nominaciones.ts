@@ -1,4 +1,5 @@
-import type { NominacionDto, RegistroVotacionDto } from '../../contrato/partida';
+import type { RegistroVotacion } from '../compartido/partida';
+import type { NominacionDto } from '../../views/dto/partida';
 import type { Participante } from '../sala/Participantes';
 import type { Jugador } from './Jugador';
 
@@ -15,7 +16,7 @@ type NominacionInterna = Omit<NominacionDto, 'votosNecesarios' | 'votosNecesario
   /** Los votos que ha fijado el narrador; null: los de por defecto. */
   votosElegidos: number | null;
   /** Su entrada del registro, que se completa al terminar la votación. */
-  registro: RegistroVotacionDto | null;
+  registro: RegistroVotacion | null;
   /** Los asientos de muertos que ya no tenían voto al empezar la votación (para la votación secreta). */
   gastadosAlVotar?: string[];
   /** Las cuentas cuyo voto se ha contado en esta votación (para descontarlo si se reinicia). */
@@ -81,14 +82,14 @@ export class Nominaciones {
   private nominacionEnCurso: NominacionInterna | null = null;
   /** Lo siguiente que toca en la nominación: el fin de la cuenta atrás o el próximo paso de la votación. */
   private temporizador: NodeJS.Timeout | null = null;
-  private registro: RegistroVotacionDto[] = [];
+  private registro: RegistroVotacion[] = [];
   /** Los votos de la votación de hoy que más tuvo (de las que llegaron a los necesarios), o null. */
   private maximoDelDia: number | null = null;
 
   constructor(private readonly entorno: EntornoVotacion) {}
 
   /** El registro de nominaciones y votaciones, en el orden en que se nominó. */
-  votaciones(): RegistroVotacionDto[] {
+  votaciones(): RegistroVotacion[] {
     return this.registro.map((v) => ({ ...v, votantes: v.votantes && [...v.votantes] }));
   }
 
@@ -268,7 +269,7 @@ export class Nominaciones {
     this.pararTemporizador();
     const nominado = this.entorno.plaza().find((a) => a.id === hasta);
     const expulsion = !!nominado && this.entorno.llevaViajero(nominado);
-    const registro: RegistroVotacionDto = {
+    const registro: RegistroVotacion = {
       hora: Date.now(),
       dia: this.entorno.dia(),
       nomina: this.describirAsiento(desde),

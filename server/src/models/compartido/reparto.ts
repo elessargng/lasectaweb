@@ -1,9 +1,9 @@
 /**
  * El reparto de la partida que vale en los dos lados (lo importa también el
- * cliente, alias @contrato): cuántos forasteros cambian los personajes que alteran
+ * cliente, alias @models): cuántos forasteros cambian los personajes que alteran
  * la preparación y el reparto que toca con ellos. Solo valores puros.
  */
-import type { DistribucionDto } from './partida';
+import type { Distribucion } from './partida';
 
 /**
  * Cuántos forasteros de más (o de menos) puede haber por cada personaje que
@@ -30,7 +30,7 @@ export const FORASTEROS: Record<string, (jugadores: number) => number[] | 'cualq
  * de más o de menos ya puestos, y los aldeanos compensando. Los que dejan elegir
  * (el Ermitaño, el Padrino, el Centinela…) no lo cambian. Sin reparto (menos de 5), el mismo.
  */
-export function repartoAjustado(distribucion: DistribucionDto, presentes: string[]): DistribucionDto {
+export function repartoAjustado(distribucion: Distribucion, presentes: string[]): Distribucion {
   const { jugadores, aldeanos, forasteros } = distribucion;
   if (aldeanos === null || forasteros === null) return distribucion;
   let desvio = 0;

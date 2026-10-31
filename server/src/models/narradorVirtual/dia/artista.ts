@@ -5,7 +5,7 @@ import {
   type PreguntaArtista,
   type QuienArtista,
   type RespuestaArtista,
-} from '../../../contrato/artista';
+} from '../../compartido/artista';
 import { droison } from '../../partida/reglas/ReglaPersonaje';
 import type { SalaDeJuego } from '../../../services/SalaDeJuego';
 import type { ContextoEtapa } from '../etapas/Etapa';
@@ -20,7 +20,7 @@ import type { Jugador } from '../../partida/Jugador';
  * La pregunta del Artista (una vez por partida y persona, lo sea o no, como el
  * disparo del Exterminador). Libre (con Jarvis): la contesta su estrategia, que
  * puede pedir que la reformule; «Tonto y tú» siempre lo pide, porque no la
- * entiende. Montada con piezas (ver contrato/artista): al Artista de verdad y sano
+ * entiende. Montada con piezas (ver models/compartido/artista): al Artista de verdad y sano
  * se le contesta la verdad, mirando el grimorio; a los demás, lo que decida su
  * estrategia. Si se contesta, se gasta: el Artista de verdad pierde su habilidad («No Ability»).
  */

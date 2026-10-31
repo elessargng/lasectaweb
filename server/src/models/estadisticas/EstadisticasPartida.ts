@@ -1,4 +1,4 @@
-import type { EntradaDiario } from '../../contrato/diario';
+import type { EntradaDiario } from '../compartido/diario';
 import { PASOS_DE_FASE_MAX, type EventoPartida, type FotoAsiento } from '../partida/eventos';
 import { SeguimientoPartida, type FotoJugador, type InstantaneaSeguimiento, type RegistroPartida } from './SeguimientoPartida';
 
@@ -18,7 +18,7 @@ export class EstadisticasPartida {
    * devuelva: va a la par que los pasos que recuerda la sala.
    */
   private pasos: { seguimiento: InstantaneaSeguimiento; diario: number }[] = [];
-  /** Lo que se ha hecho en la partida, en orden (ver contrato/diario). */
+  /** Lo que se ha hecho en la partida, en orden (ver models/compartido/diario). */
   private diario: EntradaDiario[] = [];
 
   constructor(

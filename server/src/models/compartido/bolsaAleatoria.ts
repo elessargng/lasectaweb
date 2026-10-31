@@ -1,9 +1,9 @@
 /**
  * Llenar la bolsa al azar, como el botón de la bolsa del narrador (lo usan el
- * cliente, alias @contrato, y el narrador virtual). Solo valores puros.
+ * cliente, alias @models, y el narrador virtual). Solo valores puros.
  */
+import type { Distribucion } from './partida';
 import { repartoAjustado } from './reparto';
-import type { DistribucionDto } from './partida';
 
 /** Lo que hace falta de cada personaje para elegirlo. */
 export interface PersonajeParaBolsa {
@@ -47,7 +47,7 @@ export function barajar<T>(lista: readonly T[], azar: () => number): T[] {
  */
 export function llenarAlAzar<P extends PersonajeParaBolsa>(
   personajes: P[],
-  distribucion: DistribucionDto,
+  distribucion: Distribucion,
   npcs: string[],
   azar: () => number = Math.random,
 ): BolsaAlAzar<P> | null {

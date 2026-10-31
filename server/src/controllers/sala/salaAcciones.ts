@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { ChatRepository } from '../../repositories/ChatRepository';
 import { datosDeDataUrl, guardarFondoSala } from '../../infra/almacenamiento/salaFondoStorage';
 import { ProveedorVideo } from '../../services/videollamada/ProveedorVideo';
-import { MENSAJES_PRIVADOS, MensajesPrivados } from '../../contrato/chat';
+import { MENSAJES_PRIVADOS, MensajesPrivados } from '../../models/compartido/chat';
 import { limpiarAvatarSala, limpiarNombreSala, type Participante } from '../../models/sala/Participantes';
 import { SALA_RELOJ } from '../../models/partida/RelojSala';
 import type { SalaDeJuego } from '../../services/SalaDeJuego';
@@ -23,9 +23,9 @@ import {
   NARRADORES_VIRTUALES,
   type GuionNarradorVirtual,
   type IdNarradorVirtual,
-} from '../../contrato/narradorVirtual';
-import { SALA_SENALAMIENTO } from '../../contrato/partida';
-import { type ResultadoAccion } from '../../contrato/sala';
+} from '../../models/compartido/narradorVirtual';
+import { SALA_SENALAMIENTO } from '../../models/compartido/partida';
+import { type ResultadoAccion } from '../../views/dto/sala';
 import {
   ADJUNTOS_DESPERTAR,
   FICHAS_DESPERTAR,
@@ -36,17 +36,17 @@ import {
   EnvioDespertar,
   TARJETAS_DESPERTAR,
   TarjetaDespertar,
-} from '../../contrato/despertar';
+} from '../../models/compartido/despertar';
 import {
   ICONOS_RECORDATORIO_TEXTO,
   RECORDATORIO_TEXTO,
   SALA_NOTA_LARGO_MAX,
   SALA_RECORDATORIO_TEXTO_MAX,
-  FichaEnviadaDto,
-} from '../../contrato/grimorio';
-import { NUM_FAROLES } from '../../contrato/jugador';
-import { SALA_ESTILOS_MANO, SALA_FORMAS_MANO, FormaMano } from '../../contrato/participante';
-import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA } from '../../contrato/partida';
+} from '../../models/compartido/grimorio';
+import { FichaEnviadaDto } from '../../views/dto/grimorio';
+import { NUM_FAROLES } from '../../models/compartido/jugador';
+import { SALA_ESTILOS_MANO, SALA_FORMAS_MANO, FormaMano } from '../../models/compartido/participante';
+import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA } from '../../models/compartido/partida';
 import { guardarAvatarSala } from '../../infra/almacenamiento/salaAvatarStorage';
 import { GuionResuelto, PersonajeDeGuion, TIPOS_NPC, TipoPersonaje } from '../../models/guiones';
 import { GuionInvalidoError } from '../../models/guiones/errores';
@@ -588,7 +588,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   /**
    * Con narrador virtual, de día: un jugador vivo le hace la pregunta del Artista
    * (lo sea o no; una vez por partida, salvo que le pida que la reformule). datos: {
-   * texto } (libre) o { pregunta } (montada, ver contrato/artista). Contesta en
+   * texto } (libre) o { pregunta } (montada, ver models/compartido/artista). Contesta en
    * `valor`: 'si', 'no' o 'reformular'.
    */
   'jugador:artista': {

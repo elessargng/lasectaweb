@@ -9,7 +9,7 @@ import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import PanelGuion, { type RecordatoriosNoche } from './PanelGuion';
 import { botonIcono } from './estilos';
 import { aspectoDeGuion, usePredeterminados, type Genero, type GuionResuelto } from './guiones';
-import type { DistribucionDto, ResultadoAccion } from './useSala';
+import type { Distribucion, ResultadoAccion } from './useSala';
 
 interface TituloGuionProps {
   guion: GuionResuelto | null;
@@ -28,7 +28,7 @@ interface TituloGuionProps {
    * Preparar la bolsa (narradores, con guion): lo que lleva y el reparto; null si no se puede.
    * `puedeAsignar`: se pueden repartir los personajes (solo en la preparación).
    */
-  bolsa: { bolsa: string[]; distribucion: DistribucionDto; npcs: string[]; puedeAsignar: boolean } | null;
+  bolsa: { bolsa: string[]; distribucion: Distribucion; npcs: string[]; puedeAsignar: boolean } | null;
   /** Avisa al lector (al repartir los personajes de la bolsa). */
   onAnuncio: (tipo: TipoAviso, texto: string) => void;
   /**

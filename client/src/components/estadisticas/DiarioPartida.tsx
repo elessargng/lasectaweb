@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
-import type { AsientoDiario, EntradaDiario, HechoDiario } from '@contrato/diario';
+import type { AsientoDiario, EntradaDiario, HechoDiario } from '@models/diario';
 import { NOMBRE_BANDO, fichaDespertar, tarjetaDespertar, textoEleccion } from '../../sala/despertar';
 import type { VotacionHistorial } from '../../utils/estadisticasApi';
 import NombrePersonaje from './NombrePersonaje';
 import type { DatosPersonajes } from './personajes';
 
-/** El recordatorio de texto libre (como en el servidor, contrato/sala RECORDATORIO_TEXTO): no es de ningún personaje. */
+/** El recordatorio de texto libre (como en el servidor, RECORDATORIO_TEXTO de @models/grimorio): no es de ningún personaje. */
 const RECORDATORIO_TEXTO = '_texto';
 
 type Fase = EntradaDiario['fase'];

@@ -1,4 +1,4 @@
-import type { ResultadoAccion } from '../../contrato/sala';
+import type { ResultadoAccion } from '../../views/dto/sala';
 
 /**
  * Lo que el narrador virtual necesita de fuera, como interfaces (se le inyectan):

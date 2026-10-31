@@ -1,5 +1,5 @@
-import { type HabilidadNocheDto } from '../../../contrato/despertar';
-import { NUM_FAROLES } from '../../../contrato/jugador';
+import { type HabilidadNocheDto } from '../../../views/dto/despertar';
+import { NUM_FAROLES } from '../../compartido/jugador';
 import type { ContextoEtapa } from '../etapas/Etapa';
 import { describirPersonaje, opcionesDeAsientos } from '../grimorio';
 import { indiceRecordatorio, tipoReal } from '../plazaDeJuego';

@@ -6,7 +6,7 @@ import {
   NARRADORES_VIRTUALES,
   type GuionNarradorVirtual,
   type IdNarradorVirtual,
-} from '@contrato/narradorVirtual';
+} from '@models/narradorVirtual';
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario, campo } from './estilos';

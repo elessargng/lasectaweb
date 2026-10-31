@@ -1,4 +1,4 @@
-import type { Patoso } from '../../../contrato/narradorVirtual';
+import type { Patoso } from '../../compartido/narradorVirtual';
 import { droison } from '../../partida/reglas/ReglaPersonaje';
 import type { SalaDeJuego } from '../../../services/SalaDeJuego';
 import type { ContextoEtapa } from '../etapas/Etapa';

@@ -5,7 +5,7 @@ import { io as conectar, type Socket } from 'socket.io-client';
 import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
 import { iniciarSalaSocket, SALA_SOCKET_PATH } from '../../src/controllers/sala/salaSocket';
 import type { DependenciasSala } from '../../src/controllers/sala/salaAcciones';
-import type { SalaDto, ResultadoAccion } from '../../src/contrato/sala';
+import type { SalaDto, ResultadoAccion } from '../../src/views/dto/sala';
 import { guionDePrueba } from './guionDePrueba';
 
 const ESPERA_MAX_MS = 2000;

@@ -1,8 +1,9 @@
 /**
- * El jugador de la plaza tal como se envía, su alineamiento y sus faroles.
- * Parte del contrato de la sala de juego (ver sala.ts): solo tipos y valores puros.
+ * El jugador de la plaza tal como se envía.
+ * Lo que se envía al cliente (alias @views): solo tipos, sin Node ni servicios.
  */
-import type { Recordatorio } from './grimorio';
+import type { Recordatorio } from '../../models/compartido/grimorio';
+import type { Alineamiento } from '../../models/compartido/jugador';
 
 /**
  * Un jugador de la plaza, lo juegue alguien o no (su silla está libre): su ficha,
@@ -53,8 +54,3 @@ export interface JugadorDto {
    */
   farolEnUso: string | null;
 }
-
-/** Cuántos faroles hay: los del narrador y los de cada jugador. */
-export const NUM_FAROLES = 3;
-
-export type Alineamiento = 'bueno' | 'malvado';

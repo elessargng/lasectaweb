@@ -1,7 +1,8 @@
+
 import type { RespuestaArtista } from './artista';
 import type { FichaDespertar, TarjetaDespertar } from './despertar';
 import type { Alineamiento } from './jugador';
-import type { FaseDto } from './partida';
+import type { Fase } from './partida';
 
 /**
  * El diario de la partida: todo lo que se hace en ella, por noches y días, para
@@ -58,7 +59,7 @@ export type HechoDiario =
 
 /** Un hecho del diario, con cuándo pasó. */
 export type EntradaDiario = HechoDiario & {
-  fase: { momento: FaseDto['momento']; numero: number };
+  fase: { momento: Fase['momento']; numero: number };
   /** ms */
   hora: number;
 };

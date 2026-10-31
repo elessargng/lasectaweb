@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
-import type { Recordatorio } from '../../contrato/grimorio';
-import type { Alineamiento } from '../../contrato/jugador';
+import type { Recordatorio } from '../compartido/grimorio';
+import type { Alineamiento } from '../compartido/jugador';
 
 /**
  * Quién juega a un jugador: una persona de la sala (un participante sentado) o

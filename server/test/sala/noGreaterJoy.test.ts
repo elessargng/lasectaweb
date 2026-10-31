@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { SalaDeJuego } from '../../src/services/SalaDeJuego';
-import type { HabilidadNocheDto } from '../../src/contrato/despertar';
-import { describirPreguntaArtista, leerPreguntaArtista, type PreguntaArtista } from '../../src/contrato/artista';
+import type { HabilidadNocheDto } from '../../src/views/dto/despertar';
+import {
+  describirPreguntaArtista,
+  leerPreguntaArtista,
+  type PreguntaArtista,
+} from '../../src/models/compartido/artista';
 import { ficha } from '../../src/models/partida/habilidades/HabilidadNocturna';
 import { contestar } from '../../src/models/narradorVirtual/dia/artista';
 import { cronicaNueva } from '../../src/models/narradorVirtual/final/cronica';

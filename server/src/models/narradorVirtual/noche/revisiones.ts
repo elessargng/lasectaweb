@@ -1,4 +1,5 @@
-import type { EnvioDespertar, HabilidadNocheDto } from '../../../contrato/despertar';
+import type { EnvioDespertar } from '../../compartido/despertar';
+import type { HabilidadNocheDto } from '../../../views/dto/despertar';
 import { habilidadesDelGuion } from '../../partida/habilidades';
 import { OK } from '../../partida/habilidades/HabilidadNocturna';
 import type { ContextoEtapa } from '../etapas/Etapa';

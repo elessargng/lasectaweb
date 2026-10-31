@@ -1,5 +1,5 @@
-import type { MensajeDespertar, EnvioDespertar, OpcionDespertar } from '../../contrato/despertar';
-import type { RegistroVotacionDto } from '../../contrato/partida';
+import type { MensajeDespertar, EnvioDespertar, OpcionDespertar } from '../compartido/despertar';
+import type { RegistroVotacion } from '../compartido/partida';
 import { droison } from '../partida/reglas/ReglaPersonaje';
 import type { Opcion } from './estrategias/EstrategiaNarrador';
 import type { SalaDeJuego } from '../../services/SalaDeJuego';
@@ -57,7 +57,7 @@ export interface Grimorio {
   personajes: { id: string; nombre: string; tipo: string }[];
   /** Los faroles que tiene el demonio (los del narrador). */
   farolesDemonio: string[];
-  votaciones: RegistroVotacionDto[];
+  votaciones: RegistroVotacion[];
 }
 
 /** El número (1, 2…) de cada asiento, por su id. */

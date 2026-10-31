@@ -1,4 +1,4 @@
-import type { RelojDto } from '../../contrato/partida';
+import type { RelojDto } from '../../views/dto/partida';
 
 /** El reloj del narrador: cuánto puede durar (segundos) y cuánto se sigue viendo al acabar (ms). */
 export const SALA_RELOJ = { minSegundos: 5, maxSegundos: 60 * 60, mensajeMax: 120 };

@@ -1,4 +1,4 @@
-import type { NarradorVirtualDto } from '../contrato/narradorVirtual';
+import type { NarradorVirtualDto } from '../views/dto/narradorVirtual';
 
 /**
  * Dónde se guarda el narrador virtual de la sala. Es una interfaz: hoy vive en

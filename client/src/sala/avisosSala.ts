@@ -3,7 +3,7 @@ import type { PersonajeMostrado } from './guiones';
 import { datosAsiento } from './nombresAsiento';
 import { anuncioReloj } from './reloj';
 import type { TipoAviso } from './avisosConfig';
-import type { SalaDto, ParticipanteDto, FaseDto } from './useSala';
+import type { SalaDto, ParticipanteDto, Fase } from './useSala';
 
 /**
  * Qué decirle al lector cuando cambia la sala por algo que han hecho otros:
@@ -23,7 +23,7 @@ export interface Aviso {
 }
 
 /** «Preparación», «Noche 2», «Día 2». */
-export const nombreFase = (f: FaseDto) =>
+export const nombreFase = (f: Fase) =>
   f.momento === 'preparacion' ? 'Preparación' : `${f.momento === 'noche' ? 'Noche' : 'Día'} ${f.numero}`;
 
 /**

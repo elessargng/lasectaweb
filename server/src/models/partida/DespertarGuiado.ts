@@ -1,10 +1,5 @@
-import type {
-  AvisoHabilidad,
-  EleccionDespertar,
-  EnvioDespertar,
-  HabilidadNocheDto,
-  OpcionDespertar,
-} from '../../contrato/despertar';
+import type { AvisoHabilidad, EleccionDespertar, EnvioDespertar, OpcionDespertar } from '../compartido/despertar';
+import type { HabilidadNocheDto } from '../../views/dto/despertar';
 import { tarjeta, type ContextoNoche, type HabilidadNocturna, type Resultado } from './habilidades/HabilidadNocturna';
 import type { Jugador } from './Jugador';
 

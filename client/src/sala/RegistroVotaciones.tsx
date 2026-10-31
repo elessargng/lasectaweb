@@ -3,13 +3,13 @@ import ConAyuda from './ConAyuda';
 import { useState } from 'react';
 import Dialog from '../components/Dialog';
 import { botonIcono, botonSecundario } from './estilos';
-import type { RegistroVotacionDto } from './useSala';
+import type { RegistroVotacion } from './useSala';
 
 const hora = (ms: number) => new Date(ms).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
 /** Las nominaciones agrupadas por día, en orden (día 1, día 2…). */
-function porDias(votaciones: RegistroVotacionDto[]): { dia: number; votaciones: RegistroVotacionDto[] }[] {
-  const dias = new Map<number, RegistroVotacionDto[]>();
+function porDias(votaciones: RegistroVotacion[]): { dia: number; votaciones: RegistroVotacion[] }[] {
+  const dias = new Map<number, RegistroVotacion[]>();
   for (const v of votaciones) dias.set(v.dia, [...(dias.get(v.dia) ?? []), v]);
   return [...dias.entries()].sort(([a], [b]) => a - b).map(([dia, lista]) => ({ dia, votaciones: lista }));
 }
@@ -21,7 +21,7 @@ function porDias(votaciones: RegistroVotacionDto[]): { dia: number; votaciones: 
  * hubo y quién votó, o que no se votó (la hora, al pasar por encima de la fila).
  * Lo guarda el servidor hasta que se limpia el grimorio.
  */
-const RegistroVotaciones = ({ votaciones }: { votaciones: RegistroVotacionDto[] }) => {
+const RegistroVotaciones = ({ votaciones }: { votaciones: RegistroVotacion[] }) => {
   const [abierto, setAbierto] = useState(false);
 
   return (

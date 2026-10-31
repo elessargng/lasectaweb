@@ -1,9 +1,9 @@
 /**
- * Los despertares de noche: lo que se dicen el narrador y el jugador despierto, y el despertar guiado.
- * Parte del contrato de la sala de juego (ver sala.ts): solo tipos y valores puros.
+ * Los despertares de noche: lo que se dicen el narrador y el jugador despierto, y lo que propone el despertar guiado.
+ * Dominio que comparten el servidor y el cliente (alias @models): solo tipos y valores puros.
  */
 import type { Alineamiento } from './jugador';
-import type { FaseDto } from './partida';
+import type { Fase } from './partida';
 
 /**
  * Lo que se puede mandar al despertar a alguien de noche. Las fichas las usan
@@ -75,7 +75,7 @@ export interface MensajeDespertar {
    */
   guiado: boolean;
   /** En qué momento de la partida se mandó («Noche 2»). */
-  fase: { momento: FaseDto['momento']; numero: number };
+  fase: { momento: Fase['momento']; numero: number };
   /** ms */
   hora: number;
 }
@@ -126,36 +126,4 @@ export type AvisoHabilidad =
 export interface OpcionDespertar {
   envio: EnvioDespertar;
   registros: { jugador: string; como: Registro }[];
-}
-
-/**
- * El despertar guiado de una fila del orden de noche (solo con el guion Trouble
- * Brewing, de momento): el personaje despierta según su habilidad. Si elige, solo
- * puede elegir lo que ella le deja y el recordatorio se pone solo; si recibe
- * información, se calcula y se manda sola. Uno por personaje con habilidad y ficha en la plaza,
- * y los de la primera noche para los esbirros y el demonio ('esbirros' y 'demonios').
- */
-export interface HabilidadNocheDto {
-  /** El personaje, o 'esbirros' / 'demonios'. */
-  personaje: string;
-  /** El jugador que despierta (el de la ficha); con 'esbirros' o 'demonios', el primero. */
-  jugador: string;
-  /** Todos los que despiertan: el de la ficha o, con 'esbirros' y 'demonios', cada uno. */
-  jugadores: string[];
-  estado: EstadoHabilidad;
-  avisos: AvisoHabilidad[];
-  /** Lo que se propone mandar (revisar: una o varias, la primera es la de verdad). */
-  opciones: OpcionDespertar[];
-}
-
-/**
- * Un despertar: lo que se dicen el narrador y un jugador (aunque no lo juegue
- * nadie). Se abre de noche y dura hasta limpiar el grimorio; se pueden tener
- * varios a la vez, uno por jugador. Cerrar su ventana es cosa de cada uno (en su
- * navegador): el despertar sigue. Solo lo reciben los narradores y quien juega a
- * ese jugador.
- */
-export interface DespertarDto {
-  jugador: string;
-  mensajes: MensajeDespertar[];
 }

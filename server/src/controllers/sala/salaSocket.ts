@@ -5,7 +5,7 @@ import { SalaDeJuego } from '../../services/SalaDeJuego';
 import { limpiarAvatarSala, limpiarNombreSala, SALA_AVATAR_INVITADO, SalaLlegada } from '../../models/sala/Participantes';
 import { VistaPartida } from '../../views/VistaPartida';
 import { EstadisticasPartida } from '../../models/estadisticas/EstadisticasPartida';
-import { ResultadoAccion } from '../../contrato/sala';
+import { ResultadoAccion } from '../../views/dto/sala';
 import { ChatError, ChatService } from '../../services/chat/ChatService';
 import { ConversacionError, ConversacionService } from '../../services/conversaciones/ConversacionService';
 import { PaseVideo, VideollamadaError, VideollamadaService } from '../../services/videollamada/VideollamadaService';

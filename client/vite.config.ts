@@ -2,14 +2,16 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig, searchForWorkspaceRoot } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// El contrato de la sala (tipos y constantes que comparte con el servidor) vive en el servidor
-const contrato = fileURLToPath(new URL('../server/src/contrato', import.meta.url))
+// Lo que la sala comparte con el servidor vive en el servidor: los valores del dominio
+// (models/compartido) y lo que el servidor envía (views/dto). Solo tipos y valores puros.
+const models = fileURLToPath(new URL('../server/src/models/compartido', import.meta.url))
+const views = fileURLToPath(new URL('../server/src/views/dto', import.meta.url))
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: { '@contrato': contrato },
+    alias: { '@models': models, '@views': views },
   },
   envDir: '../',
   // Dos páginas: la web (index.html) y la sala de juego (sala.html), cada una con su bundle
@@ -25,7 +27,7 @@ export default defineConfig({
     host: '0.0.0.0', // Esto permite conexiones externas
     port: 5173,
     allowedHosts: ['elessartinuviel.duckdns.org'],
-    // Fuera de client/ solo se sirve el contrato
-    fs: { allow: [searchForWorkspaceRoot(process.cwd()), contrato] }
+    // Fuera de client/ solo se sirve lo compartido con el servidor
+    fs: { allow: [searchForWorkspaceRoot(process.cwd()), models, views] }
   }
 })

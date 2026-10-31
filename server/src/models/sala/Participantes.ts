@@ -1,13 +1,7 @@
 import { randomUUID } from 'crypto';
-import { type IdNarradorVirtual } from '../../contrato/narradorVirtual';
-import {
-  SALA_PARTIDAS_NOVATO,
-  usuarioDe,
-  type Persona,
-  type FormaMano,
-  type ParticipanteDto,
-  type Rol,
-} from '../../contrato/participante';
+import { type IdNarradorVirtual } from '../compartido/narradorVirtual';
+import { SALA_PARTIDAS_NOVATO, usuarioDe, type Persona, type FormaMano, type Rol } from '../compartido/participante';
+import { type ParticipanteDto } from '../../views/dto/participante';
 import { esAvatarSalaGuardado } from '../../infra/almacenamiento/salaAvatarStorage';
 
 /** Margen para volver tras una desconexión (recarga, red caída) sin perder el papel. */

@@ -1,6 +1,6 @@
 /**
- * Quién está en la sala: su papel, quién es (persona) y lo que se envía de cada participante.
- * Parte del contrato de la sala de juego (ver sala.ts): solo tipos y valores puros.
+ * Quién está en la sala: su papel y quién es (persona).
+ * Dominio que comparten el servidor y el cliente (alias @models): solo tipos y valores puros.
  */
 import type { IdNarradorVirtual } from './narradorVirtual';
 
@@ -46,41 +46,5 @@ export type Persona =
 
 /** Su id de usuario de la web, si entró con su cuenta; si no, null. */
 export const usuarioDe = (persona: Persona): string | null => (persona.tipo === 'usuario' ? persona.usuarioId : null);
-
-export interface ParticipanteDto {
-  /** Identificador dentro de la sala (no es el id de usuario de la web). */
-  id: string;
-  nombre: string;
-  persona: Persona;
-  /** Ruta del avatar que lleva (el de su cuenta, el elegido para la sala o el logo), o null. */
-  avatar: string | null;
-  rol: Rol;
-  /** false mientras se espera a que vuelva tras perder la conexión. */
-  conectado: boolean;
-  /** Jugador con la mano levantada. Al dejar de ser jugador, vuelve a false. */
-  manoLevantada: boolean;
-  /**
-   * Con la mano levantada, levanta las dos (la Banshee muerta con su «Has Ability»):
-   * su voto cuenta doble. Siempre false con la mano bajada.
-   */
-  dosManos: boolean;
-  /** La forma de su mano al levantarla; se conserva aunque la baje. */
-  formaMano: FormaMano;
-  /**
-   * Cómo se ve su mano (su «skin»: ver SALA_ESTILOS_MANO). La elige cada uno y la ven
-   * así todos; cada mano, con la de quien la levanta.
-   */
-  estiloMano: string;
-  /** Ha quitado el sonido: no oye a los demás (los demás lo ven junto a su nombre). */
-  sinSonido: boolean;
-  /**
-   * Un visitante puede pedir ver el grimorio del narrador: «solicitado» mientras
-   * el narrador responde; «concedido», lo ve como él (todos los personajes) y ya
-   * no lo pierde (tampoco si sale de la sala y vuelve) ni puede sentarse (lo ha
-   * visto). Al cambiar de papel, al limpiar el grimorio (otra partida) o si un
-   * narrador lo expulsa, vuelve a «ninguno».
-   */
-  accesoGrimorio: EstadoAccesoGrimorio;
-}
 
 export type EstadoAccesoGrimorio = 'ninguno' | 'solicitado' | 'concedido';

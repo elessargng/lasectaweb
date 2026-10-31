@@ -1,4 +1,4 @@
-import type { HabilidadNocheDto } from '../../../contrato/despertar';
+import type { HabilidadNocheDto } from '../../../views/dto/despertar';
 import { habilidadesDelGuion } from '../../partida/habilidades';
 import { elegirVarios } from '../estrategias/EstrategiaNarrador';
 import { FRASES } from '../frases';

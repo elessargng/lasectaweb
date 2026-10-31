@@ -1,5 +1,5 @@
-import type { Alineamiento } from '../../contrato/jugador';
-import type { RevelacionDto } from '../../contrato/partida';
+import type { Alineamiento } from '../compartido/jugador';
+import type { RevelacionDto } from '../../views/dto/partida';
 import type { Jugador } from './Jugador';
 
 /**

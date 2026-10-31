@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
-import type { MensajeDespertar, DespertarDto } from '../../contrato/despertar';
-import type { FaseDto } from '../../contrato/partida';
+import type { MensajeDespertar } from '../compartido/despertar';
+import type { DespertarDto } from '../../views/dto/despertar';
+import type { Fase } from '../compartido/partida';
 import type { Diario } from './eventos';
 import type { Jugador } from './Jugador';
 
@@ -26,7 +27,7 @@ export class Despertares {
     /** Los jugadores de la plaza como están ahora. */
     private readonly plaza: () => readonly Jugador[],
     /** La fase de la partida, para fechar los mensajes. */
-    private readonly fase: () => FaseDto,
+    private readonly fase: () => Fase,
     private readonly diario: Diario,
   ) {}
 

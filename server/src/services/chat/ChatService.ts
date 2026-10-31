@@ -7,9 +7,8 @@ import {
   canalPrivado,
   LARGO_MAXIMO_MENSAJE,
   participantesDePrivado,
-  MensajeChatDto,
-  SusurroDto,
-} from '../../contrato/chat';
+} from '../../models/compartido/chat';
+import { MensajeChatDto, SusurroDto } from '../../views/dto/chat';
 import type { SalaDeJuego } from '../SalaDeJuego';
 import type { Sala } from '../../models/sala/Sala';
 import type { Partida } from '../../models/partida/Partida';

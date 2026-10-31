@@ -1,6 +1,6 @@
-import type { AsientoDiario, EntradaDiario, HechoDiario } from '../../contrato/diario';
-import type { Alineamiento } from '../../contrato/jugador';
-import type { RegistroVotacionDto } from '../../contrato/partida';
+import type { AsientoDiario, EntradaDiario, HechoDiario } from '../compartido/diario';
+import type { Alineamiento } from '../compartido/jugador';
+import type { RegistroVotacion } from '../compartido/partida';
 
 /**
  * Lo que va pasando en la partida, para quien quiera enterarse sin que la sala
@@ -47,7 +47,7 @@ export type EventoPartida =
   | { tipo: 'desvoto'; userId: string | null }
   /** El narrador ha ejecutado a alguien (su cuenta, o null). */
   | { tipo: 'ejecucion'; userId: string | null }
-  /** Algo que se ha hecho en la partida, para su diario (ver contrato/diario). */
+  /** Algo que se ha hecho en la partida, para su diario (ver models/compartido/diario). */
   | { tipo: 'diario'; entrada: EntradaDiario }
   /**
    * La máquina del tiempo: se vuelve a la fase anterior. `deshace`: se deshace el
@@ -66,7 +66,7 @@ export type EventoPartida =
       plaza: FotoAsiento[];
       narradores: { userId: string | null; nombre: string }[];
       npcs: string[];
-      votaciones: RegistroVotacionDto[];
+      votaciones: RegistroVotacion[];
       guion: string | null;
       edicion: string | null;
       /** Hasta qué día (o noche) se jugó. */

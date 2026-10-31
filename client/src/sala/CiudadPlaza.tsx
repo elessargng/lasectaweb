@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import type { FaseDto } from './useSala';
+import type { Fase } from './useSala';
 
 /** Lo que dura el atardecer o el amanecer (sala.css lo reparte entre el cielo, el sol y las luces). */
 const DURACION_TRANSICION_MS = 3600;
@@ -104,7 +104,7 @@ const CiudadPlaza = ({
   siempre = false,
   onDescribir,
 }: {
-  fase: FaseDto['momento'];
+  fase: Fase['momento'];
   poblado?: boolean;
   /** Siempre a la vista (Preferencias), no solo al cambiar: atardece y amanece en su sitio. */
   siempre?: boolean;

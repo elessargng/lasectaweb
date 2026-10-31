@@ -1,4 +1,4 @@
-import type { NarradorVirtualDto } from '../../contrato/narradorVirtual';
+import type { NarradorVirtualDto } from '../../views/dto/narradorVirtual';
 import type { NarradorVirtualRepository } from '../../repositories/NarradorVirtualRepository';
 import type { Partida } from '../partida/Partida';
 import type { Sala } from '../sala/Sala';
