@@ -43,9 +43,9 @@ function mesaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDeL
   const juego = new SalaDeJuego();
   const { sala, partida, narrador } = juego;
   partida.cambiarGuion(guion());
-  while (partida.mesa().length > personajes.length) sala.quitarAsiento();
-  while (partida.mesa().length < personajes.length) sala.anadirAsiento();
-  personajes.forEach((p, i) => partida.grimorio.cambiarPersonaje(partida.mesa()[i].id, p));
+  while (partida.plaza().length > personajes.length) sala.quitarAsiento();
+  while (partida.plaza().length < personajes.length) sala.anadirAsiento();
+  personajes.forEach((p, i) => partida.grimorio.cambiarPersonaje(partida.plaza()[i].id, p));
   const bot = narrador.anadir({ id: 'tontoYTu', creador: 'nadie', guion: 'troublebrewing', jugadores: personajes.length }, 'Tonto y tú', '/logo-2.png');
   const deps: DependenciasSala = {
     guiones: { guionPredeterminado: async () => guion(), importar: async () => guion() },
@@ -95,7 +95,7 @@ function mesaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDeL
     }
     return siguiente as Etapa;
   };
-  const asiento = (personaje: string) => partida.mesa().find((a) => a.personaje === personaje)!;
+  const asiento = (personaje: string) => partida.plaza().find((a) => a.personaje === personaje)!;
   const textos = (personaje: string) => asiento(personaje).recordatorios.map((r) => r.texto);
   /**
    * En qué orden se ha despertado a cada uno (por su habilidad, o mandándole lo
@@ -139,7 +139,7 @@ describe('la noche del narrador virtual', () => {
       const faroles = partida.faroles.faroles().filter((f): f is string => !!f);
       expect(faroles).toHaveLength(3);
       expect(new Set(faroles).size).toBe(3);
-      const enJuego = new Set(partida.mesa().map((a) => a.personaje));
+      const enJuego = new Set(partida.plaza().map((a) => a.personaje));
       for (const f of faroles) {
         expect(enJuego.has(f)).toBe(false);
         expect(['townsfolk', 'outsider']).toContain(partida.guion.personaje(f)?.tipo);
@@ -159,7 +159,7 @@ describe('la noche del narrador virtual', () => {
     // El Empático: los otros números de 0 a 2
     expect(falsas('empath', numero(1)).map((f) => f.ficha)).toEqual(['cero', 'dos']);
     // La Lavandera: con los mismos jugadores, otro aldeano
-    const jugadores = [partida.mesa()[0].id, partida.mesa()[3].id];
+    const jugadores = [partida.plaza()[0].id, partida.plaza()[3].id];
     const lavandera = falsas('washerwoman', tarjeta('esteJugadorEs', { jugadores, personajes: ['chef'] }));
     expect(lavandera.length).toBeGreaterThan(0);
     for (const f of lavandera) {
@@ -200,20 +200,20 @@ describe('la noche del narrador virtual', () => {
 
     // Los faroles: tres buenos que no están en juego
     const faroles = partida.faroles.faroles();
-    const enJuego = new Set(partida.mesa().map((a) => a.personaje));
+    const enJuego = new Set(partida.plaza().map((a) => a.personaje));
     expect(faroles.filter(Boolean)).toHaveLength(3);
     for (const f of faroles) {
       expect(enJuego.has(f)).toBe(false);
       expect(['townsfolk', 'outsider']).toContain(partida.guion.personaje(f!)?.tipo);
     }
     // Lo que pedían en el grimorio, puesto: el correcto es de verdad de su tipo
-    const conRecordatorio = (personaje: string, texto: string) => partida.mesa().find((a) => a.recordatorios.some((r) => r.personaje === personaje && r.texto === texto));
+    const conRecordatorio = (personaje: string, texto: string) => partida.plaza().find((a) => a.recordatorios.some((r) => r.personaje === personaje && r.texto === texto));
     expect(['poisoner', 'spy']).toContain(conRecordatorio('investigator', 'Minion')?.personaje);
     expect(conRecordatorio('investigator', 'Wrong')).toBeTruthy();
     expect(partida.guion.personaje(conRecordatorio('washerwoman', 'Townsfolk')!.personaje!)?.tipo).toBe('townsfolk');
     expect(partida.grimorio.alineamiento(conRecordatorio('fortuneteller', 'Red Herring')!)).not.toBe('malvado');
     // Por los asientos libres elige él: el Envenenador ha envenenado a alguien
-    expect(partida.mesa().some((a) => a.recordatorios.some((r) => r.texto === 'Poisoned'))).toBe(true);
+    expect(partida.plaza().some((a) => a.recordatorios.some((r) => r.texto === 'Poisoned'))).toBe(true);
 
     const orden = m.despertados();
     expect(orden.slice(0, 2).sort()).toEqual(['demonios', 'esbirros']);
@@ -222,7 +222,7 @@ describe('la noche del narrador virtual', () => {
     // El Bibliotecario sin forasteros (aunque el Espía pudiera registrar como uno): «cero»
     const bibliotecario = m.asiento('librarian').id;
     expect(m.hechas).toContainEqual({ accion: 'despertar:enviar', datos: { asientoId: bibliotecario, ficha: 'cero' } });
-    expect(partida.mesa().some((a) => a.recordatorios.some((r) => r.personaje === 'librarian'))).toBe(false);
+    expect(partida.plaza().some((a) => a.recordatorios.some((r) => r.personaje === 'librarian'))).toBe(false);
   });
 
   it('el Envenenador con jugador: primero ve a su demonio y, cuando dice «Entendido», elige', async () => {
@@ -259,7 +259,7 @@ describe('la noche del narrador virtual', () => {
     const { partida } = m.juego;
     partida.irANoche();
     await m.noche();
-    const borrachos = partida.mesa().filter((a) => a.recordatorios.some((r) => r.texto === 'Is The Drunk'));
+    const borrachos = partida.plaza().filter((a) => a.recordatorios.some((r) => r.texto === 'Is The Drunk'));
     expect(borrachos).toHaveLength(1);
     expect(partida.guion.personaje(borrachos[0].personaje!)?.tipo).toBe('townsfolk');
     expect(identidadDe(borrachos[0])).toBe('drunk');
@@ -282,11 +282,11 @@ describe('la noche del narrador virtual', () => {
       if (!m.asiento('empath').muerto) expect(segunda.indexOf('empath')).toBeGreaterThan(segunda.indexOf('imp'));
       else expect(segunda).not.toContain('empath');
       expect(partida.fases.actual()).toMatchObject({ momento: 'dia', numero: 2 });
-      const muertos = partida.mesa().filter((a) => a.muerto);
-      expect(partida.mesa().some((a) => a.muertePendiente)).toBe(false);
+      const muertos = partida.plaza().filter((a) => a.muerto);
+      expect(partida.plaza().some((a) => a.muertePendiente)).toBe(false);
       const frase = m.frases[m.frases.length - 1];
       if (muertos.length === 0) expect(frase).toBe('Buenos días a todo el mundo, nadie nos ha dejado esta noche.');
-      else for (const a of muertos) expect(frase).toContain(`el asiento ${partida.mesa().findIndex((b) => b.id === a.id) + 1}`);
+      else for (const a of muertos) expect(frase).toContain(`el asiento ${partida.plaza().findIndex((b) => b.id === a.id) + 1}`);
     }
   });
 
@@ -405,7 +405,7 @@ describe('la noche del narrador virtual', () => {
       const escarlata = m.asiento('scarletwoman').id;
       partida.irANoche();
       await m.noche();
-      const asiento = partida.mesa().find((a) => a.id === escarlata)!;
+      const asiento = partida.plaza().find((a) => a.id === escarlata)!;
       expect(identidadDe(asiento)).toBe('imp');
       expect(m.ctx.recuerdos.cronica.antes.get(escarlata)).toBe('scarletwoman');
       // Se le dijo «Tú eres el Imp» y luego despertó como el Imp (a elegir)
@@ -423,7 +423,7 @@ describe('la noche del narrador virtual', () => {
       expect(await comprobarFinal(m.ctx)).toBeNull();
       const escarlata = m.asiento('scarletwoman').id;
       await new Revelando('malvado').alEntrar(m.ctx);
-      expect(identidadDe(partida.mesa().find((a) => a.id === escarlata)!)).toBe('imp');
+      expect(identidadDe(partida.plaza().find((a) => a.id === escarlata)!)).toBe('imp');
       const limite = Date.now() + 3000;
       while (!m.frases.some((f) => / pasó a ser el demonio/.test(f)) && Date.now() < limite) await new Promise((r) => setTimeout(r, 5));
       // El demonio, sin su nombre
@@ -461,7 +461,7 @@ describe('la noche del narrador virtual', () => {
       expect(siguiente).toBe('revelando');
       const senalamiento = m.hechas.find((h) => h.accion === 'narrador:senalamiento')?.datos as { objetivos: string[] };
       expect(senalamiento.objetivos[0]).toBe(m.asiento('imp').id);
-      expect(partida.grimorio.alineamiento(partida.mesa().find((a) => a.id === senalamiento.objetivos[1])!)).toBe('bueno');
+      expect(partida.grimorio.alineamiento(partida.plaza().find((a) => a.id === senalamiento.objetivos[1])!)).toBe('bueno');
     });
   });
 });

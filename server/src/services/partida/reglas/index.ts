@@ -1,4 +1,3 @@
-import type { SalaAsiento } from '../../../contrato/sala';
 import { banshee } from './banshee';
 import { burocrata } from './burocrata';
 import { canibal, carnicero, enterrador, leviatan } from './ejecuciones';
@@ -9,6 +8,7 @@ import { organGrinder } from './organGrinder';
 import type { ContextoReglas, RegistroAlNominar, ReglaPersonaje } from './ReglaPersonaje';
 import { revolucionario } from './revolucionario';
 import { voudon } from './voudon';
+import type { Jugador } from '../Jugador';
 
 /**
  * Las reglas de los personajes, en el orden en que se consultan: el Voudon antes
@@ -51,7 +51,7 @@ export class Reglas {
    * Si quien se sienta en el asiento puede votar: lo que diga la primera regla que
    * decida o, si no, que no sea un muerto que ya ha gastado su voto.
    */
-  puedeVotar(asiento: SalaAsiento): boolean {
+  puedeVotar(asiento: Jugador): boolean {
     for (const r of this.reglas) {
       const decide = r.puedeVotar?.(this.ctx, asiento);
       if (decide !== undefined) return decide;
@@ -60,16 +60,16 @@ export class Reglas {
   }
 
   /** Un muerto que vota desde este asiento no gasta su voto. */
-  votaSinGastar(asiento: SalaAsiento): boolean {
+  votaSinGastar(asiento: Jugador): boolean {
     return this.reglas.some((r) => r.votaSinGastar?.(this.ctx, asiento));
   }
 
-  votaDoble(asiento: SalaAsiento): boolean {
+  votaDoble(asiento: Jugador): boolean {
     return this.reglas.some((r) => r.votaDoble?.(this.ctx, asiento));
   }
 
   /** Lo que vale el voto de quien se sienta en el asiento: 1 por lo que lo multiplique cada regla. */
-  valorDelVoto(asiento: SalaAsiento, dosManos: boolean): number {
+  valorDelVoto(asiento: Jugador, dosManos: boolean): number {
     return this.reglas.reduce((valor, r) => valor * (r.multiplicaVoto?.(this.ctx, asiento, dosManos) ?? 1), 1);
   }
 
@@ -96,8 +96,8 @@ export class Reglas {
    * saber cómo registra el nominador, la pregunta (ver ReglaPersonaje.alNominar).
    */
   alNominar(
-    nominador: SalaAsiento,
-    nominado: SalaAsiento,
+    nominador: Jugador,
+    nominado: Jugador,
     registro: RegistroAlNominar = {},
   ): { recordatorios: RecordatorioAlEjecutar[]; ejecutaAlNominador: boolean } | { pregunta: 'comoAldeano' } {
     const respuestas = this.reglas.flatMap((r) => {
@@ -116,7 +116,7 @@ export class Reglas {
   }
 
   /** Los recordatorios que se ponen solos en la ficha del ejecutado, en orden. */
-  recordatoriosAlEjecutar(ejecutado: SalaAsiento): RecordatorioAlEjecutar[] {
+  recordatoriosAlEjecutar(ejecutado: Jugador): RecordatorioAlEjecutar[] {
     return this.reglas.flatMap((r) => {
       const recordatorio = r.alEjecutar?.(this.ctx, ejecutado);
       return recordatorio ? [{ personaje: r.personaje, ...recordatorio }] : [];
@@ -129,7 +129,7 @@ export class Reglas {
   }
 
   /** Los personajes barajados, en el orden en que se reparten (ver ReglaPersonaje.repartir). */
-  repartir(asientos: SalaAsiento[], personajes: string[]): string[] {
+  repartir(asientos: Jugador[], personajes: string[]): string[] {
     return this.reglas.reduce((lista, r) => r.repartir?.(this.ctx, asientos, lista) ?? lista, personajes);
   }
 }

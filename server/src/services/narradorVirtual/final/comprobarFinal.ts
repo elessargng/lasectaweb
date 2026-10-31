@@ -1,10 +1,10 @@
-import type { SalaAsiento } from '../../../contrato/sala';
 import { droison, tieneRecordatorio } from '../../partida/reglas/ReglaPersonaje';
 import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { ContextoEtapa } from '../etapas/Etapa';
 import { contextoNoche, tipoReal } from '../mesaDeJuego';
 import { ponerRecordatorio } from '../noche/requisitos';
 import { identidadDe } from '../../partida/Grimorio';
+import type { Jugador } from '../../partida/Jugador';
 
 /** Con cuántos vivos (contando al demonio que muere) la Mujer Escarlata pasa a ser el demonio. */
 const VIVOS_PARA_HEREDAR = 5;
@@ -12,7 +12,7 @@ const VIVOS_PARA_HEREDAR = 5;
 export type Ganador = 'bueno' | 'malvado';
 
 /** Es un demonio: lo es de verdad o es la Mujer Escarlata que ya lo ha heredado («Is The Demon»). */
-export const esDemonio = (juego: SalaDeJuego, asiento: SalaAsiento): boolean =>
+export const esDemonio = (juego: SalaDeJuego, asiento: Jugador): boolean =>
   tipoReal(juego, asiento) === 'demon' || tieneRecordatorio(asiento, 'scarletwoman', /^is the demon$/i);
 
 /**
@@ -23,7 +23,7 @@ export const esDemonio = (juego: SalaDeJuego, asiento: SalaAsiento): boolean =>
  */
 export async function escarlataAImp(ctx: ContextoEtapa): Promise<void> {
   const { partida } = ctx.juego;
-  for (const a of partida.mesa()) {
+  for (const a of partida.plaza()) {
     if (identidadDe(a) !== 'scarletwoman' || !tieneRecordatorio(a, 'scarletwoman', /^is the demon$/i)) continue;
     ctx.recuerdos.cronica.antes.set(a.id, 'scarletwoman');
     await ctx.mesa.accion('narrador:cambiarPersonaje', { asientoId: a.id, personajeId: 'imp' });
@@ -35,7 +35,7 @@ export async function escarlataAImp(ctx: ContextoEtapa): Promise<void> {
 }
 
 /** Los vivos que cuentan para el final: sin muerte y sin viajeros. */
-const vivos = (juego: SalaDeJuego) => juego.partida.mesa().filter((a) => !a.muerto && !a.muertePendiente && tipoReal(juego, a) !== 'traveller');
+const vivos = (juego: SalaDeJuego) => juego.partida.plaza().filter((a) => !a.muerto && !a.muertePendiente && tipoReal(juego, a) !== 'traveller');
 
 /** Con cuántos vivos gana el Alcalde si el día acaba sin ejecución. */
 const VIVOS_ALCALDE = 3;
@@ -57,7 +57,7 @@ export async function comprobarFinal(
   const { juego } = ctx;
   const { partida } = juego;
   const noche = contextoNoche(juego);
-  const ejecutadoHoy = ejecutado ? partida.mesa().find((a) => a.id === ejecutado) : undefined;
+  const ejecutadoHoy = ejecutado ? partida.plaza().find((a) => a.id === ejecutado) : undefined;
   if (ejecutadoHoy && identidadDe(ejecutadoHoy) === 'saint' && !droison(noche, ejecutadoHoy)) return 'malvado';
   const quedan = vivos(juego);
   if (

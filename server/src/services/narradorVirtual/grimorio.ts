@@ -1,9 +1,10 @@
-import type { MensajeDespertar, SalaAsiento, SalaEnvioDespertar, SalaOpcionDespertar, SalaRegistroVotacion } from '../../contrato/sala';
+import type { MensajeDespertar, SalaEnvioDespertar, SalaOpcionDespertar, SalaRegistroVotacion } from '../../contrato/sala';
 import { droison } from '../partida/reglas/ReglaPersonaje';
 import type { Opcion } from './estrategias/EstrategiaNarrador';
 import type { SalaDeJuego } from '../SalaDeJuego';
 import { contextoNoche, nombreDeAsiento, tipoReal, vivo } from './mesaDeJuego';
 import { identidadDe } from '../partida/Grimorio';
+import type { Jugador } from '../partida/Jugador';
 
 /**
  * El grimorio tal como lo ve el narrador, en una foto para decidir: lo que la
@@ -59,7 +60,7 @@ export interface Grimorio {
 }
 
 /** El número (1, 2…) de cada asiento, por su id. */
-const numeros = (asientos: SalaAsiento[]) => new Map(asientos.map((a, i) => [a.id, i + 1]));
+const numeros = (asientos: readonly Jugador[]) => new Map(asientos.map((a, i) => [a.id, i + 1]));
 
 function mensaje(m: MensajeDespertar, numero: Map<string, number>): MensajeGrimorio {
   return {
@@ -75,7 +76,7 @@ function mensaje(m: MensajeDespertar, numero: Map<string, number>): MensajeGrimo
 
 export function instantaneaGrimorio(juego: SalaDeJuego): Grimorio {
   const { partida } = juego;
-  const asientos = partida.mesa();
+  const asientos = partida.plaza();
   const numero = numeros(asientos);
   const noche = contextoNoche(juego);
   const despertares = partida.despertares.despertares();
@@ -89,7 +90,7 @@ export function instantaneaGrimorio(juego: SalaDeJuego): Grimorio {
       return {
         numero: i + 1,
         nombre: nombreDeAsiento(juego, a.id),
-        ocupado: !!a.ocupante,
+        ocupado: !!a.participanteId,
         personaje: identidad,
         tipo: tipoReal(juego, a) ?? null,
         ...(a.personaje && a.personaje !== identidad ? { ficha: a.personaje } : {}),
@@ -98,7 +99,7 @@ export function instantaneaGrimorio(juego: SalaDeJuego): Grimorio {
         droison: droison(noche, a),
         votoGastado: a.votoGastado,
         recordatorios: a.recordatorios.map((r) => ({ personaje: r.personaje, texto: r.texto })),
-        ...(malvado ? { faroles: a.faroles.filter((f): f is string => !!f), farolEnUso: a.farolEnUso ?? null } : {}),
+        ...(malvado ? { faroles: partida.faroles.deJugador(a).filter((f): f is string => !!f), farolEnUso: partida.faroles.enUso(a) } : {}),
         despertar: (despertares.find((d) => d.asiento === a.id)?.mensajes ?? []).map((m) => mensaje(m, numero)),
       };
     }),
@@ -109,9 +110,9 @@ export function instantaneaGrimorio(juego: SalaDeJuego): Grimorio {
 }
 
 /** Un asiento como opción de una decisión: «Asiento 3: Ana (chef, bueno)». */
-export function describirAsiento(juego: SalaDeJuego, asiento: SalaAsiento): string {
+export function describirAsiento(juego: SalaDeJuego, asiento: Jugador): string {
   const { partida } = juego;
-  const i = partida.mesa().findIndex((a) => a.id === asiento.id);
+  const i = partida.plaza().findIndex((a) => a.id === asiento.id);
   const quien = identidadDe(asiento);
   const datos = [quien && (partida.guion.personaje(quien)?.nombre ?? quien), partida.grimorio.alineamiento(asiento), vivo(asiento) ? null : 'muerto'].filter(Boolean);
   return `Asiento ${i + 1}: ${nombreDeAsiento(juego, asiento.id)}${datos.length ? ` (${datos.join(', ')})` : ''}`;
@@ -125,16 +126,16 @@ export function describirPersonaje(juego: SalaDeJuego, id: string): string {
 }
 
 /** Unos asientos como opciones de una decisión (la clave, su número: «a3»). */
-export function opcionesDeAsientos(juego: SalaDeJuego, asientos: readonly SalaAsiento[]): Opcion<SalaAsiento>[] {
+export function opcionesDeAsientos(juego: SalaDeJuego, asientos: readonly Jugador[]): Opcion<Jugador>[] {
   const { partida } = juego;
-  const numero = numeros(partida.mesa());
+  const numero = numeros(partida.plaza());
   return asientos.map((a) => ({ clave: `a${numero.get(a.id) ?? a.id}`, descripcion: describirAsiento(juego, a), valor: a }));
 }
 
 /** Lo que se le manda a alguien en su despertar, en palabras: «tarjeta esteJugadorEs; ficha dos; jugadores 3 y 5; personajes Chef». */
 export function describirEnvio(juego: SalaDeJuego, envio: SalaEnvioDespertar): string {
   const { partida } = juego;
-  const numero = numeros(partida.mesa());
+  const numero = numeros(partida.plaza());
   const partes = [
     envio.tarjeta && `tarjeta ${envio.tarjeta}`,
     envio.ficha && `ficha ${envio.ficha}`,
@@ -148,7 +149,7 @@ export function describirEnvio(juego: SalaDeJuego, envio: SalaEnvioDespertar): s
 /** Una respuesta propuesta de un despertar, con cómo registra cada uno para que salga. */
 export function describirOpcion(juego: SalaDeJuego, { envio, registros }: SalaOpcionDespertar): string {
   const { partida } = juego;
-  const numero = numeros(partida.mesa());
+  const numero = numeros(partida.plaza());
   const como = registros.map((r) => `el asiento ${numero.get(r.asiento) ?? r.asiento} registra como ${r.como}`);
   return `${describirEnvio(juego, envio)}${como.length ? ` (${como.join(', ')})` : ''}`;
 }

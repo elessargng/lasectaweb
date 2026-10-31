@@ -1,5 +1,6 @@
-import type { SalaAsiento, SalaNominacion, SalaRegistroVotacion } from '../../contrato/sala';
+import type { SalaNominacion, SalaRegistroVotacion } from '../../contrato/sala';
 import type { Participante } from '../sala/Participantes';
+import type { Jugador } from './Jugador';
 
 /**
  * La cuenta atrás de las nominaciones: siempre de 3 a 0, un segundo cada número
@@ -33,15 +34,15 @@ type NominacionInterna = Omit<SalaNominacion, 'votosNecesarios' | 'votosNecesari
  * Organ Grinder) vienen de fuera: no son cosa de la votación.
  */
 export interface EntornoVotacion {
-  /** La mesa, en orden. */
-  mesa(): SalaAsiento[];
+  /** Los jugadores de la plaza, en orden. */
+  plaza(): readonly Jugador[];
   buscar(participanteId: string): Participante | undefined;
   /** Baja todas las manos levantadas. */
   bajarManos(): void;
   /** La cuenta de un participante, o null (invitado). */
   cuentaDe(participanteId: string): string | null;
   /** En el asiento hay un viajero: nominarlo es pedir su expulsión. */
-  llevaViajero(asiento: SalaAsiento): boolean;
+  llevaViajero(asiento: Jugador): boolean;
   /** El día de la partida (para el registro). */
   dia(): number;
   /** Lo que tarda la aguja en pasar de una ficha a la siguiente. */
@@ -51,11 +52,11 @@ export interface EntornoVotacion {
   /** Gasta (o devuelve) el voto de la ficha muerta de un asiento. */
   cambiarVoto(asientoId: string, gastado: boolean): void;
   /** Un muerto que vota desde este asiento no gasta su voto (la Banshee con su habilidad, el Voudon vivo). */
-  votaSinGastar(asiento: SalaAsiento): boolean;
+  votaSinGastar(asiento: Jugador): boolean;
   /** Los votos que hacen falta con tantas fichas vivas (la mitad o, con el Voudon vivo, 1). */
   mayoria(vivos: number): number;
   /** Lo que vale el voto de quien se sienta en un asiento (1, o lo que digan sus recordatorios). */
-  valorDelVoto(asiento: SalaAsiento, ocupante: Participante): number;
+  valorDelVoto(asiento: Jugador, ocupante: Participante): number;
   /** La votación es secreta (Organ Grinder). */
   secreta(): boolean;
   /**
@@ -114,8 +115,8 @@ export class Nominaciones {
 
   /** «Bea» o, si está libre, «asiento 3», como lo verá el narrador en el registro. */
   private describirAsiento(asientoId: string): string {
-    const i = this.entorno.mesa().findIndex((a) => a.id === asientoId);
-    const ocupante = this.entorno.mesa()[i]?.ocupante;
+    const i = this.entorno.plaza().findIndex((a) => a.id === asientoId);
+    const ocupante = this.entorno.plaza()[i]?.participanteId;
     const nombre = ocupante ? this.entorno.buscar(ocupante)?.nombre : undefined;
     return nombre || `asiento ${i + 1}`;
   }
@@ -127,7 +128,7 @@ export class Nominaciones {
   private empezarVotacion(): void {
     const n = this.nominacionVigente();
     if (!n) return;
-    const mesa = this.entorno.mesa();
+    const mesa = this.entorno.plaza();
     const i = mesa.findIndex((a) => a.id === n.hasta);
     const orden = mesa.map((_, k) => mesa[(i + 1 + k) % mesa.length].id);
     n.votacion = { orden, paso: 0, resultados: {}, votos: 0, terminada: false };
@@ -146,8 +147,8 @@ export class Nominaciones {
     const v = n?.votacion;
     if (!n || !v || v.terminada) return;
     const asientoId = v.orden[v.paso];
-    const asiento = this.entorno.mesa().find((a) => a.id === asientoId);
-    const ocupante = asiento?.ocupante ? this.entorno.buscar(asiento.ocupante) : undefined;
+    const asiento = this.entorno.plaza().find((a) => a.id === asientoId);
+    const ocupante = asiento?.participanteId ? this.entorno.buscar(asiento.participanteId) : undefined;
     // La Banshee con su habilidad, y los muertos con el Voudon vivo, votan sin gastar el
     // voto de muerto (ni les hace falta); con el Voudon, los vivos no votan (salvo él)
     // En una expulsión nadie gasta el voto de muerto y cada mano vale 1
@@ -201,7 +202,7 @@ export class Nominaciones {
   /** La nominación en curso (la de verdad); se anula sola si alguno de los dos asientos ya no existe. */
   private nominacionVigente(): NominacionInterna | null {
     const n = this.nominacionEnCurso;
-    const existe = (id: string) => this.entorno.mesa().some((a) => a.id === id);
+    const existe = (id: string) => this.entorno.plaza().some((a) => a.id === id);
     if (n && (!existe(n.desde) || !existe(n.hasta))) {
       this.nominacionEnCurso = null;
       this.pararTemporizador();
@@ -244,8 +245,8 @@ export class Nominaciones {
    * En una expulsión, siempre la mitad de los asientos (vivos o muertos), redondeando hacia arriba.
    */
   private votosNecesariosPorDefecto(expulsion = false): number {
-    if (expulsion) return Math.max(1, Math.ceil(this.entorno.mesa().length / 2));
-    const vivos = this.entorno.mesa().filter((a) => !a.muerto).length;
+    if (expulsion) return Math.max(1, Math.ceil(this.entorno.plaza().length / 2));
+    const vivos = this.entorno.plaza().filter((a) => !a.muerto).length;
     // Con el Voudon vivo no hace falta la mitad: basta 1 (y superar la que más tuvo hoy)
     const mayoria = this.entorno.mayoria(vivos);
     return Math.max(1, mayoria, this.maximoDelDia === null ? 0 : this.maximoDelDia + 1);
@@ -265,7 +266,7 @@ export class Nominaciones {
    */
   nominar(desde: string, hasta: string): void {
     this.pararTemporizador();
-    const nominado = this.entorno.mesa().find((a) => a.id === hasta);
+    const nominado = this.entorno.plaza().find((a) => a.id === hasta);
     const expulsion = !!nominado && this.entorno.llevaViajero(nominado);
     const registro: SalaRegistroVotacion = {
       hora: Date.now(),
@@ -326,7 +327,7 @@ export class Nominaciones {
     this.pararTemporizador();
     if (n.votacion && n.gastadosAlVotar) {
       const gastados = new Set(n.gastadosAlVotar);
-      for (const a of this.entorno.mesa()) if (a.muerto && !gastados.has(a.id)) this.entorno.cambiarVoto(a.id, false);
+      for (const a of this.entorno.plaza()) if (a.muerto && !gastados.has(a.id)) this.entorno.cambiarVoto(a.id, false);
     }
     for (const cuenta of n.votantesContados ?? []) this.entorno.alDesvotar(cuenta);
     n.cuentaAtrasFin = null;

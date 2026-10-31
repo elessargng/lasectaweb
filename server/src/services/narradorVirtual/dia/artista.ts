@@ -6,7 +6,6 @@ import {
   type QuienArtista,
   type RespuestaArtista,
 } from '../../../contrato/artista';
-import type { SalaAsiento } from '../../../contrato/sala';
 import { droison } from '../../partida/reglas/ReglaPersonaje';
 import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { ContextoEtapa } from '../etapas/Etapa';
@@ -15,6 +14,7 @@ import type { Cronica } from '../final/cronica';
 import { contextoNoche, nombreDeAsiento, tipoReal } from '../mesaDeJuego';
 import { ponerRecordatorio } from '../noche/requisitos';
 import { identidadDe } from '../../partida/Grimorio';
+import type { Jugador } from '../../partida/Jugador';
 
 /**
  * La pregunta del Artista (una vez por partida y persona, lo sea o no, como el
@@ -31,7 +31,7 @@ export async function preguntarComoArtista(
 ): Promise<{ error: string } | { respuesta: RespuestaArtista }> {
   const { juego } = ctx;
   const { partida } = juego;
-  const asiento = partida.asientoDe(jugador);
+  const asiento = partida.jugadorDe(jugador);
   if (!asiento) return { error: 'No estás sentado.' };
   const { texto, pregunta } = (datos as { texto?: unknown; pregunta?: unknown } | null) ?? {};
   const artista = identidadDe(asiento) === 'artist';
@@ -58,7 +58,7 @@ export async function preguntarComoArtista(
   } else {
     const leida = leerPreguntaArtista(
       pregunta,
-      partida.mesa().map((a) => a.id),
+      partida.plaza().map((a) => a.id),
       (partida.guion.actual()?.personajes ?? []).map((p) => p.id),
     );
     if (!leida) return { error: 'Esa pregunta no se entiende.' };
@@ -84,7 +84,7 @@ export async function preguntarComoArtista(
 }
 
 /** Si un asiento es lo que se pregunta: el demonio lo es también la Mujer Escarlata que lo ha heredado. */
-function es(juego: SalaDeJuego, asiento: SalaAsiento, quien: QuienArtista): boolean {
+function es(juego: SalaDeJuego, asiento: Jugador, quien: QuienArtista): boolean {
   const { partida } = juego;
   if (quien.por === 'personaje') return identidadDe(asiento) === quien.personaje;
   if (quien.por === 'tipo') return quien.tipo === 'demon' ? esDemonio(juego, asiento) : tipoReal(juego, asiento) === quien.tipo;
@@ -97,7 +97,7 @@ const llana = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCa
 /** La respuesta de verdad a una pregunta montada, con el grimorio y lo apuntado en la crónica (quién eligió a quién). */
 export function contestar(juego: SalaDeJuego, cronica: Cronica, p: PreguntaArtista): boolean {
   const { sala, partida } = juego;
-  const mesa = partida.mesa();
+  const mesa = partida.plaza();
   const conQuien = mesa.filter((a) => es(juego, a, p.quien));
   switch (p.tipo) {
     case 'enJuego':
@@ -109,7 +109,7 @@ export function contestar(juego: SalaDeJuego, cronica: Cronica, p: PreguntaArtis
     case 'inicial':
       // Solo los que se sientan tienen nombre
       return conQuien.some((a) => {
-        const nombre = a.ocupante ? sala.participantes.buscar(a.ocupante)?.nombre : undefined;
+        const nombre = a.participanteId ? sala.participantes.buscar(a.participanteId)?.nombre : undefined;
         return !!nombre && llana(nombre).startsWith(llana(p.letra));
       });
     case 'silla':
@@ -118,7 +118,7 @@ export function contestar(juego: SalaDeJuego, cronica: Cronica, p: PreguntaArtis
       const desde = mesa.findIndex((a) => a.id === p.desde);
       const hasta = mesa.findIndex((a) => a.id === p.hasta);
       if (desde < 0 || hasta < 0) return false;
-      const tramo: SalaAsiento[] = [];
+      const tramo: Jugador[] = [];
       for (let i = desde; ; i = (i + 1) % mesa.length) {
         tramo.push(mesa[i]);
         if (i === hasta) break;

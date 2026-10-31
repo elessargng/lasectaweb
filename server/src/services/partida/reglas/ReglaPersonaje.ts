@@ -1,14 +1,15 @@
-import type { SalaAlineamiento, SalaAsiento } from '../../../contrato/sala';
+import type { SalaAlineamiento } from '../../../contrato/sala';
 import type { PersonajeDeGuion } from '../../../types/guiones';
+import type { Jugador } from '../Jugador';
 
 /** Lo que una regla puede consultar de la partida. Las reglas no cambian la sala: responden. */
 export interface ContextoReglas {
-  /** La mesa, en orden. */
-  mesa(): SalaAsiento[];
+  /** Los jugadores de la plaza, en orden. */
+  plaza(): readonly Jugador[];
   /** Quién es de verdad el de un asiento: el de su «Is The …» o, sin él, el de su ficha. */
-  identidad(asiento: SalaAsiento): string | null;
+  identidad(asiento: Jugador): string | null;
   /** El alineamiento de un asiento: el puesto por el narrador o el de su tipo. */
-  alineamiento(asiento: SalaAsiento): SalaAlineamiento | null;
+  alineamiento(asiento: Jugador): SalaAlineamiento | null;
   /** Un personaje de la partida (del guion o del catálogo). */
   personaje(id: string): PersonajeDeGuion | undefined;
 }
@@ -43,13 +44,13 @@ export interface ReglaPersonaje {
    * Si quien se sienta en el asiento puede votar: true o false si esta regla lo
    * decide ahora, undefined si no. Decide la primera de la lista que responda.
    */
-  puedeVotar?(ctx: ContextoReglas, asiento: SalaAsiento): boolean | undefined;
+  puedeVotar?(ctx: ContextoReglas, asiento: Jugador): boolean | undefined;
   /** Un muerto que vota desde este asiento no gasta su voto. */
-  votaSinGastar?(ctx: ContextoReglas, asiento: SalaAsiento): boolean;
+  votaSinGastar?(ctx: ContextoReglas, asiento: Jugador): boolean;
   /** Quien se sienta en el asiento puede votar con las dos manos. */
-  votaDoble?(ctx: ContextoReglas, asiento: SalaAsiento): boolean;
+  votaDoble?(ctx: ContextoReglas, asiento: Jugador): boolean;
   /** Por cuánto se multiplica su voto (`dosManos`: ha levantado las dos). */
-  multiplicaVoto?(ctx: ContextoReglas, asiento: SalaAsiento, dosManos: boolean): number;
+  multiplicaVoto?(ctx: ContextoReglas, asiento: Jugador, dosManos: boolean): number;
   /** Los votos que hacen falta para la calavera, si esta regla los cambia ahora; undefined si no. */
   mayoria?(ctx: ContextoReglas): number | undefined;
   /** Las votaciones son secretas. */
@@ -66,11 +67,11 @@ export interface ReglaPersonaje {
    * momento (la Virgen); null si no pasa nada. Si depende de cómo registra el
    * nominador (el Espía) y el narrador no lo ha dicho en `registro`, la pregunta.
    */
-  alNominar?(ctx: ContextoReglas, nominador: SalaAsiento, nominado: SalaAsiento, registro: RegistroAlNominar): AlNominar | null;
+  alNominar?(ctx: ContextoReglas, nominador: Jugador, nominado: Jugador, registro: RegistroAlNominar): AlNominar | null;
 
   // Las ejecuciones
   /** El recordatorio que se pone solo en la ficha del ejecutado, o null. */
-  alEjecutar?(ctx: ContextoReglas, ejecutado: SalaAsiento): RecordatorioDeRegla | null;
+  alEjecutar?(ctx: ContextoReglas, ejecutado: Jugador): RecordatorioDeRegla | null;
   /** Tras ejecutar no anochece (se puede volver a nominar). */
   impideAnochecer?(ctx: ContextoReglas): boolean;
 
@@ -80,23 +81,23 @@ export interface ReglaPersonaje {
    * en orden) y los personajes ya barajados (uno por asiento) y devuelve los
    * personajes en el orden en que se repartirán.
    */
-  repartir?(ctx: ContextoReglas, asientos: SalaAsiento[], personajes: string[]): string[];
+  repartir?(ctx: ContextoReglas, asientos: Jugador[], personajes: string[]): string[];
 }
 
 /** La ficha del asiento es la de ese personaje, o lo es de verdad (por su «Is The …»). */
-export const lleva = (ctx: ContextoReglas, asiento: SalaAsiento, personajeId: string): boolean =>
+export const lleva = (ctx: ContextoReglas, asiento: Jugador, personajeId: string): boolean =>
   asiento.personaje === personajeId || ctx.identidad(asiento) === personajeId;
 
 /** Ese personaje está vivo en la mesa (en la ficha o de verdad); `salvo`: sin contar ese asiento. */
-export const vivoEnJuego = (ctx: ContextoReglas, personajeId: string, salvo?: SalaAsiento): boolean =>
-  ctx.mesa().some((a) => a.id !== salvo?.id && !a.muerto && lleva(ctx, a, personajeId));
+export const vivoEnJuego = (ctx: ContextoReglas, personajeId: string, salvo?: Jugador): boolean =>
+  ctx.plaza().some((a) => a.id !== salvo?.id && !a.muerto && lleva(ctx, a, personajeId));
 
 /** El asiento lleva algún recordatorio de ese personaje (y, si se da, con ese texto). */
-export const tieneRecordatorio = (asiento: SalaAsiento, personajeId: string, texto?: RegExp): boolean =>
+export const tieneRecordatorio = (asiento: Jugador, personajeId: string, texto?: RegExp): boolean =>
   asiento.recordatorios.some((r) => r.personaje === personajeId && (!texto || texto.test(r.texto)));
 
 /** Si está envenenado (el recordatorio del Envenenador) o borracho (es el Borracho de verdad); null si está sano. */
-export function droison(ctx: ContextoReglas, asiento: SalaAsiento): 'envenenado' | 'borracho' | null {
+export function droison(ctx: ContextoReglas, asiento: Jugador): 'envenenado' | 'borracho' | null {
   if (ctx.identidad(asiento) === 'drunk') return 'borracho';
   if (tieneRecordatorio(asiento, 'poisoner', /^poisoned$/i)) return 'envenenado';
   return null;

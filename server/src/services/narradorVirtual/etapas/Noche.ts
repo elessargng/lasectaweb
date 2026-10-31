@@ -151,7 +151,7 @@ export class Noche implements Etapa {
     const { partida } = ctx.juego;
     const drunk = ctx.fueraDeLaBolsa().find((f) => f.personaje === 'drunk');
     if (!drunk) return;
-    const aldeanos = partida.mesa().filter((a) => a.personaje && partida.guion.personaje(a.personaje)?.tipo === 'townsfolk');
+    const aldeanos = partida.plaza().filter((a) => a.personaje && partida.guion.personaje(a.personaje)?.tipo === 'townsfolk');
     const elQueCreeSer = aldeanos.find((a) => a.personaje === drunk.creeSer);
     if (elQueCreeSer) {
       await ponerRecordatorio(ctx, elQueCreeSer.id, 'drunk', 'Is The Drunk');
@@ -195,9 +195,9 @@ export class Noche implements Etapa {
   private async esperarEleccion(ctx: ContextoEtapa, fila: SalaHabilidadNoche): Promise<void> {
     const { partida } = ctx.juego;
     const eleccion = habilidadesDelGuion(partida.guion.actual()?.edicion ?? null).get(fila.personaje)?.eleccion;
-    const asiento = partida.mesa().find((a) => a.id === fila.asiento);
-    if (eleccion && asiento && !asiento.ocupante) {
-      const posibles = partida.mesa().filter((a) => eleccion.puedeElegirse || a.id !== asiento.id);
+    const asiento = partida.plaza().find((a) => a.id === fila.asiento);
+    if (eleccion && asiento && !asiento.participanteId) {
+      const posibles = partida.plaza().filter((a) => eleccion.puedeElegirse || a.id !== asiento.id);
       const elegidos = await elegirVarios(
         (d) => ctx.decidir(d),
         {
@@ -220,7 +220,7 @@ export class Noche implements Etapa {
 
   private async elegirNuevoImp(ctx: ContextoEtapa): Promise<void> {
     const { partida } = ctx.juego;
-    const esbirros = partida.mesa().filter((a) => vivo(a) && tipoReal(ctx.juego, a) === 'minion');
+    const esbirros = partida.plaza().filter((a) => vivo(a) && tipoReal(ctx.juego, a) === 'minion');
     if (!esbirros.length) return;
     const nuevo = await ctx.decidir({
       motivo: 'nuevoImp',
@@ -245,7 +245,7 @@ export class Noche implements Etapa {
       await ctx.pasarA(new Revelando(porElPatoso));
       return;
     }
-    const muertos = partida.mesa().filter((a) => a.muertePendiente);
+    const muertos = partida.plaza().filter((a) => a.muertePendiente);
     const nombres = muertos.map((a) => nombreDeAsiento(juego, a.id));
     // Antes de que se cierren los despertares: lo que se ha dado y quién ha matado a quién
     apuntarNoche(ctx.recuerdos.cronica, juego);

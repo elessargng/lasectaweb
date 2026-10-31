@@ -1,5 +1,6 @@
-import type { SalaAlineamiento, SalaAsiento, SalaFichaEnviada, SalaGrimorioEnviado } from '../../contrato/sala';
+import type { SalaAlineamiento, SalaFichaEnviada, SalaGrimorioEnviado } from '../../contrato/sala';
 import type { Diario } from './eventos';
+import type { Jugador } from './Jugador';
 
 /** Lo que sabe un jugador de su ficha. */
 export interface FichaEntregada {
@@ -25,8 +26,8 @@ export class Entregas {
   private retenidas = false;
 
   constructor(
-    /** La mesa, en orden. */
-    private readonly mesa: () => SalaAsiento[],
+    /** Los jugadores de la plaza, en orden. */
+    private readonly plaza: () => readonly Jugador[],
     private readonly diario: Diario,
   ) {}
 
@@ -36,7 +37,7 @@ export class Entregas {
    * mientras tanto).
    */
   entregarFichas(): void {
-    this.entregadas = new Map(this.mesa().map((a) => [a.id, { personaje: a.personaje, alineamiento: a.alineamiento }]));
+    this.entregadas = new Map(this.plaza().map((a) => [a.id, { personaje: a.personaje, alineamiento: a.alineamiento }]));
     this.retenidas = false;
   }
 
@@ -68,14 +69,14 @@ export class Entregas {
 
   /** Envía un grimorio (sus fichas y los faroles) a quien se sienta en un asiento y lo apunta en el diario. No comprueba las fichas. */
   enviarGrimorio(asientoId: string, fichas: SalaFichaEnviada[], faroles: string[] = []): void {
-    const ocupante = this.mesa().find((a) => a.id === asientoId)?.ocupante;
+    const ocupante = this.plaza().find((a) => a.id === asientoId)?.participanteId;
     if (ocupante) this.grimoriosEnviados.set(asientoId, { ocupante, grimorio: { hora: Date.now(), fichas, faroles } });
     this.diario.anotar({ tipo: 'grimorio', asiento: this.diario.asiento(asientoId) });
   }
 
   /** El último grimorio enviado a un participante (si sigue en el asiento al que se envió), o null. */
   grimorioRecibidoPor(participanteId: string): SalaGrimorioEnviado | null {
-    const asiento = this.mesa().find((a) => a.ocupante === participanteId);
+    const asiento = this.plaza().find((a) => a.participanteId === participanteId);
     const enviado = asiento ? this.grimoriosEnviados.get(asiento.id) : undefined;
     return enviado && enviado.ocupante === participanteId ? enviado.grimorio : null;
   }

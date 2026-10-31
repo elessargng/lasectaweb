@@ -47,12 +47,12 @@ export async function prepararPartida(
   };
   try {
     await paso('narrador:limpiarGrimorio');
-    while (partida.mesa().length < jugadores) await paso('narrador:asientos', { cambio: 'añadir' });
-    while (partida.mesa().length > jugadores) {
-      const asientos = partida.mesa();
+    while (partida.plaza().length < jugadores) await paso('narrador:asientos', { cambio: 'añadir' });
+    while (partida.plaza().length > jugadores) {
+      const asientos = partida.plaza();
       const ultimo = asientos[asientos.length - 1];
-      const libre = asientos.slice(0, -1).find((a) => !a.ocupante);
-      if (ultimo.ocupante && libre) await paso('narrador:asientos', { cambio: 'mover', desde: ultimo.id, hasta: libre.id });
+      const libre = asientos.slice(0, -1).find((a) => !a.participanteId);
+      if (ultimo.participanteId && libre) await paso('narrador:asientos', { cambio: 'mover', desde: ultimo.id, hasta: libre.id });
       await paso('narrador:asientos', { cambio: 'quitar' });
     }
     await paso('narrador:cambiarGuion', { predeterminado: guion });

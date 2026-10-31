@@ -29,7 +29,7 @@ export class Faroles {
 
   constructor(
     /** Los jugadores de la plaza, en orden. */
-    private readonly plaza: () => Jugador[],
+    private readonly plaza: () => readonly Jugador[],
     private readonly diario: Diario,
   ) {}
 

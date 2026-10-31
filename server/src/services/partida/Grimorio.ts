@@ -1,18 +1,8 @@
 import { randomUUID } from 'crypto';
-import { RECORDATORIO_TEXTO, type SalaAlineamiento, type SalaAsiento, type SalaRecordatorio } from '../../contrato/sala';
+import { RECORDATORIO_TEXTO, type SalaAlineamiento, type SalaRecordatorio } from '../../contrato/sala';
 import type { AsientoDiario, HechoDiario } from '../../contrato/diario';
 import type { PersonajeDeGuion } from '../../types/guiones';
 import type { Jugador } from './Jugador';
-
-/**
- * La ficha de un jugador tal como se ve en el grimorio: lo suyo (personaje, muerte,
- * voto, recordatorios), la calavera si la lleva y la nota del narrador. Es para
- * leer: se cambia con el Grimorio.
- */
-export type Ficha = Pick<
-  SalaAsiento,
-  'muerto' | 'muertePendiente' | 'votoGastado' | 'marcado' | 'votosMarca' | 'personaje' | 'alineamiento' | 'recordatorios' | 'nota'
->;
 
 /**
  * Un recordatorio «Is The …» (el del Borracho, el Alquimista, el Filósofo, la
@@ -28,7 +18,7 @@ const esIdentidad = (r: SalaRecordatorio) => r.personaje !== RECORDATORIO_TEXTO 
  * (el último, si hay varios) o, sin él, el de su ficha. Es lo que cuenta para el
  * reparto; la ficha, para su habilidad (el orden de noche).
  */
-export function identidadDe(ficha: Pick<Ficha, 'personaje' | 'recordatorios'>): string | null {
+export function identidadDe(ficha: Pick<Jugador, 'personaje' | 'recordatorios'>): string | null {
   const r = [...ficha.recordatorios].reverse().find(esIdentidad);
   return r?.personaje ?? ficha.personaje;
 }
@@ -64,25 +54,13 @@ export class Grimorio {
   /** La nota del narrador sobre cada jugador (por su id). */
   private notas = new Map<string, string>();
   /** Quién lleva la calavera (solo uno en la plaza) y con cuántos votos se le puso. */
-  private marca: { jugador: string; votos: number | null } | null = null;
+  private conCalavera: { jugador: string; votos: number | null } | null = null;
 
   constructor(private readonly entorno: EntornoGrimorio) {}
 
-  /** La ficha de un jugador, para leerla (la de uno que no está, como al principio). */
-  ficha(jugadorId: string): Readonly<Ficha> {
-    const jugador = this.jugador(jugadorId);
-    const marcado = !!jugador && this.marca?.jugador === jugador.id;
-    return {
-      personaje: jugador?.personaje ?? null,
-      alineamiento: jugador?.alineamiento ?? null,
-      muerto: jugador?.muerto ?? false,
-      muertePendiente: jugador?.muertePendiente ?? false,
-      votoGastado: jugador?.votoGastado ?? false,
-      marcado,
-      votosMarca: marcado ? this.marca!.votos : null,
-      recordatorios: jugador?.recordatorios ?? [],
-      nota: (jugador && this.notas.get(jugador.id)) ?? null,
-    };
+  /** La nota del narrador sobre un jugador, o null. */
+  nota(jugadorId: string): string | null {
+    return this.notas.get(jugadorId) ?? null;
   }
 
   /** Un jugador de la plaza, o null si ya no está. */
@@ -95,7 +73,7 @@ export class Grimorio {
    * tipo de quien es de verdad (aldeanos y forasteros, buenos; esbirros y
    * demonios, malvados). Un viajero sin alineamiento puesto: null.
    */
-  alineamiento(ficha: Pick<Ficha, 'alineamiento' | 'personaje' | 'recordatorios'>): SalaAlineamiento | null {
+  alineamiento(ficha: Pick<Jugador, 'alineamiento' | 'personaje' | 'recordatorios'>): SalaAlineamiento | null {
     if (ficha.alineamiento) return ficha.alineamiento;
     const id = identidadDe(ficha);
     const tipo = id ? this.entorno.personaje(id)?.tipo : undefined;
@@ -276,22 +254,27 @@ export class Grimorio {
     if (marcado) this.desmarcar();
     const jugador = this.jugador(jugadorId);
     if (!jugador) return;
-    if (marcado) this.marca = { jugador: jugador.id, votos };
+    if (marcado) this.conCalavera = { jugador: jugador.id, votos };
     else this.quitarCalavera(jugador);
   }
 
   private quitarCalavera(jugador: Jugador): void {
-    if (this.marca?.jugador === jugador.id) this.marca = null;
+    if (this.conCalavera?.jugador === jugador.id) this.conCalavera = null;
   }
 
   /** Quita la calavera a quien la lleve. */
   desmarcar(): void {
-    this.marca = null;
+    this.conCalavera = null;
+  }
+
+  /** Quién lleva la calavera (el id de su jugador) y con cuántos votos se le puso, o null. */
+  calavera(): { jugador: string; votos: number | null } | null {
+    return this.conCalavera && { ...this.conCalavera };
   }
 
   /** Si alguien lleva la calavera. */
   hayMarca(): boolean {
-    return this.marca !== null;
+    return this.conCalavera !== null;
   }
 
   /** Se ha quitado un asiento: la nota de su jugador y su calavera, con él. */
@@ -304,6 +287,6 @@ export class Grimorio {
   limpiar(): void {
     for (const jugador of this.entorno.jugadores()) jugador.nuevaPartida();
     this.notas.clear();
-    this.marca = null;
+    this.conCalavera = null;
   }
 }

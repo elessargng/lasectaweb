@@ -1,6 +1,7 @@
-import { NUM_FAROLES, type SalaAsiento, type SalaEnvioDespertar } from '../../../contrato/sala';
+import { NUM_FAROLES, type SalaEnvioDespertar } from '../../../contrato/sala';
 import { falta, listoVarios, tarjeta, tipoDe, type ContextoNoche, type HabilidadNocturna, type Resultado } from './HabilidadNocturna';
 import type { TramoNoche } from './HabilidadNocturna';
+import type { Jugador } from '../Jugador';
 
 /**
  * La primera noche, los esbirros y el demonio se conocen (filas «Esbirros» y
@@ -9,15 +10,15 @@ import type { TramoNoche } from './HabilidadNocturna';
  */
 const JUGADORES_MINIMOS = 7;
 
-const pocosJugadores = (ctx: ContextoNoche) => ctx.mesa().filter((a) => tipoDe(ctx, a) !== 'traveller').length < JUGADORES_MINIMOS;
+const pocosJugadores = (ctx: ContextoNoche) => ctx.plaza().filter((a) => tipoDe(ctx, a) !== 'traveller').length < JUGADORES_MINIMOS;
 
 /** Los malvados se conocen la primera noche y el demonio recibe sus faroles: con menos de 7 jugadores (teensy), no. */
 export const malvadosSeConocen = (ctx: ContextoNoche) => !pocosJugadores(ctx);
 
 /** Los de un tipo de verdad (no el de su ficha). */
-const deTipo = (ctx: ContextoNoche, tipo: string) => ctx.mesa().filter((a) => tipoDe(ctx, a) === tipo);
+const deTipo = (ctx: ContextoNoche, tipo: string) => ctx.plaza().filter((a) => tipoDe(ctx, a) === tipo);
 
-const ids = (asientos: SalaAsiento[]) => asientos.map((a) => a.id);
+const ids = (asientos: Jugador[]) => asientos.map((a) => a.id);
 
 /** Despierta a todos los de un tipo: a cada uno se le manda lo suyo. No eligen. */
 abstract class InformacionMalvada implements HabilidadNocturna {
@@ -31,11 +32,11 @@ abstract class InformacionMalvada implements HabilidadNocturna {
     private readonly tipo: 'minion' | 'demon',
   ) {}
 
-  despiertan(ctx: ContextoNoche): SalaAsiento[] {
+  despiertan(ctx: ContextoNoche): Jugador[] {
     return deTipo(ctx, this.tipo);
   }
 
-  preparar(ctx: ContextoNoche, asiento: SalaAsiento): Resultado {
+  preparar(ctx: ContextoNoche, asiento: Jugador): Resultado {
     if (pocosJugadores(ctx)) return falta([{ tipo: 'pocosJugadores' }]);
     return this.informar(ctx, asiento);
   }
@@ -45,7 +46,7 @@ abstract class InformacionMalvada implements HabilidadNocturna {
   }
 
   /** Lo que se le manda. */
-  protected abstract informar(ctx: ContextoNoche, asiento: SalaAsiento): Resultado;
+  protected abstract informar(ctx: ContextoNoche, asiento: Jugador): Resultado;
 }
 
 /** Cada esbirro ve quién es el demonio y quiénes son los esbirros (si hay más). */

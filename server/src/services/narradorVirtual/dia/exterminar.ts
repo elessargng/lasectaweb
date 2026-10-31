@@ -18,8 +18,8 @@ import { identidadDe } from '../../partida/Grimorio';
 export async function exterminar(ctx: ContextoEtapa, tirador: string, asientoId: string): Promise<boolean> {
   const { juego } = ctx;
   const { partida } = juego;
-  const desde = partida.asientoDe(tirador);
-  const objetivo = partida.mesa().find((a) => a.id === asientoId);
+  const desde = partida.jugadorDe(tirador);
+  const objetivo = partida.plaza().find((a) => a.id === asientoId);
   if (!desde || !objetivo) return false;
   const noche = contextoNoche(juego);
   const esExterminador = identidadDe(desde) === 'slayer' && !droison(noche, desde);
@@ -42,13 +42,13 @@ export async function exterminar(ctx: ContextoEtapa, tirador: string, asientoId:
 export async function morirDeUnDisparo(ctx: ContextoEtapa, asientoId: string): Promise<void> {
   const { juego } = ctx;
   const { partida } = juego;
-  const objetivo = partida.mesa().find((a) => a.id === asientoId);
+  const objetivo = partida.plaza().find((a) => a.id === asientoId);
   if (!objetivo) return;
   await ctx.mesa.accion('narrador:cambiarVida', { asientoId, muerto: true });
   apuntarMuerteDeDia(ctx.recuerdos.cronica, juego, asientoId, 'exterminador');
   abrirPatosos(juego, [asientoId], 'amanecer');
   const narrador = juego.narrador.actual();
-  const ocupante = objetivo.ocupante;
+  const ocupante = objetivo.participanteId;
   if (narrador && ocupante && !narrador.listos.includes(ocupante)) juego.narrador.actualizar({ listos: [...narrador.listos, ocupante] });
 }
 
@@ -61,7 +61,7 @@ export async function morirDeUnDisparo(ctx: ContextoEtapa, asientoId: string): P
 export async function contarDisparo(ctx: ContextoEtapa, tirador: string, asientoId: string, muere: boolean): Promise<Ganador | null> {
   const { juego } = ctx;
   const { partida } = juego;
-  const desde = partida.asientoDe(tirador);
+  const desde = partida.jugadorDe(tirador);
   if (!desde) return null;
   partida.anotar({ tipo: 'exterminador', asiento: partida.asientoDiario(desde.id), objetivo: partida.asientoDiario(asientoId), muere });
   const decirYEsperar = async (frase: string) => {

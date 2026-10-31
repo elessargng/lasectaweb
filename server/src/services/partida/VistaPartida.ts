@@ -90,7 +90,26 @@ export class VistaPartida {
     this.partida = partida;
     // Con su acceso al grimorio (es de la partida, no del participante)
     this.participantes = sala.participantes.participantes().map((p) => ({ ...p, accesoGrimorio: partida.acceso.de(p.id) }));
-    this.asientos = partida.mesa();
+    // Cada jugador de la plaza como asiento del contrato: lo suyo, lo del grimorio y sus faroles
+    const calavera = partida.grimorio.calavera();
+    this.asientos = partida.plaza().map((j) => {
+      const marcado = calavera?.jugador === j.id;
+      return {
+        id: j.id,
+        ocupante: j.participanteId,
+        muerto: j.muerto,
+        muertePendiente: j.muertePendiente,
+        votoGastado: j.votoGastado,
+        marcado,
+        votosMarca: marcado ? calavera.votos : null,
+        personaje: j.personaje,
+        alineamiento: j.alineamiento,
+        recordatorios: [...j.recordatorios],
+        nota: partida.grimorio.nota(j.id),
+        faroles: partida.faroles.deJugador(j),
+        farolEnUso: partida.faroles.enUso(j),
+      };
+    });
     this.nominacion = partida.nominaciones.nominacion();
     this.revelacion = partida.revelacion.revelacion();
     this.reveladas = new Set(this.revelacion?.reveladas ?? []);
@@ -121,7 +140,7 @@ export class VistaPartida {
     const ocultarVotos = this.secreta && !veGrimorio;
     // La votación en curso solo se esconde si es una nominación (las expulsiones, no)
     const ocultarVotacion = ocultarVotos && !!this.nominacion?.privada;
-    const miAsiento = partida.asientoDe(yo.id)?.id ?? null;
+    const miAsiento = partida.jugadorDe(yo.id)?.id ?? null;
     return {
       // Votación secreta, con una nominación abierta: las manos de los demás no se ven
       participantes:

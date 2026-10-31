@@ -23,10 +23,10 @@ function partida() {
   juego.partida.cambiarGuion(guionDePrueba());
   const entra = (userId: string, nombre: string) => sala.participantes.conectar(`s-${nombre}`, `c-${nombre}`, conCuenta(userId, nombre), () => true).id;
   const ids = [entra('1', 'ana'), entra('2', 'bea'), entra('3', 'ceci')];
-  ids.forEach((id, i) => sala.sentar(id, juego.partida.mesa()[i].id));
+  ids.forEach((id, i) => sala.sentar(id, juego.partida.plaza()[i].id));
   sala.participantes.cambiarRol(entra('9', 'nora'), 'narrador');
-  ['chef', 'imp', 'empath'].forEach((p, i) => juego.partida.grimorio.cambiarPersonaje(juego.partida.mesa()[i].id, p));
-  const asiento = (i: number) => juego.partida.mesa()[i].id;
+  ['chef', 'imp', 'empath'].forEach((p, i) => juego.partida.grimorio.cambiarPersonaje(juego.partida.plaza()[i].id, p));
+  const asiento = (i: number) => juego.partida.plaza()[i].id;
   return { juego, ids, asiento, registros: guardadas(juego) };
 }
 
@@ -37,7 +37,7 @@ describe('estadísticas de la partida', () => {
   const votar = (juego: SalaDeJuego) => {
     const { partida } = juego;
     partida.nominaciones.iniciarCuentaAtras(Date.now());
-    vi.advanceTimersByTime(SALA_CUENTA_ATRAS_MS + partida.configuracion.actual().segundosPorFicha * 1000 * partida.mesa().length);
+    vi.advanceTimersByTime(SALA_CUENTA_ATRAS_MS + partida.configuracion.actual().segundosPorFicha * 1000 * partida.plaza().length);
   };
 
   it('apunta roles, nominaciones, votos y ejecuciones de cada jugador con cuenta', () => {

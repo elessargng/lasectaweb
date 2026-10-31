@@ -29,7 +29,7 @@ export function diaVirtual(juego: SalaDeJuego) {
 export function noPuedeNominar(juego: SalaDeJuego, yo: Participante): string | null {
   const { partida, narrador } = juego;
   if (narrador.actual()?.etapa !== 'nominaciones') return 'Ahora no es el momento de nominar.';
-  const asiento = partida.asientoDe(yo.id);
+  const asiento = partida.jugadorDe(yo.id);
   if (yo.rol !== 'jugador' || !asiento) return 'Solo nominan los jugadores sentados.';
   if (asiento.muerto) return 'Los muertos no nominan.';
   if (partida.nominaciones.nominacion()) return 'Ya hay una nominación en marcha.';
@@ -39,8 +39,8 @@ export function noPuedeNominar(juego: SalaDeJuego, yo: Participante): string | n
 
 /** Los jugadores de la partida: los que se sientan (los asientos libres no esperan a nadie). */
 export const jugadoresSentados = ({ partida }: SalaDeJuego): string[] =>
-  partida.mesa().flatMap((a) => (a.ocupante ? [a.ocupante] : []));
+  partida.plaza().flatMap((a) => (a.participanteId ? [a.participanteId] : []));
 
 /** Los jugadores muertos: como no nominan, están listos para la noche desde el principio del día. */
 export const muertosSentados = ({ partida }: SalaDeJuego): string[] =>
-  partida.mesa().flatMap((a) => (a.ocupante && a.muerto ? [a.ocupante] : []));
+  partida.plaza().flatMap((a) => (a.participanteId && a.muerto ? [a.participanteId] : []));

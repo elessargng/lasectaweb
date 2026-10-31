@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
-import type { MensajeDespertar, SalaAsiento, SalaDespertar, SalaFase } from '../../contrato/sala';
+import type { MensajeDespertar, SalaDespertar, SalaFase } from '../../contrato/sala';
 import type { Diario } from './eventos';
+import type { Jugador } from './Jugador';
 
 /** Mensajes que se guardan en cada despertar (los más antiguos se descartan). */
 export const SALA_MENSAJES_DESPERTAR_MAX = 300;
@@ -21,8 +22,8 @@ export class Despertares {
   private hilos: HiloDespertar[] = [];
 
   constructor(
-    /** La mesa como está ahora. */
-    private readonly mesa: () => SalaAsiento[],
+    /** Los jugadores de la plaza como están ahora. */
+    private readonly plaza: () => readonly Jugador[],
     /** La fase de la partida, para fechar los mensajes. */
     private readonly fase: () => SalaFase,
     private readonly diario: Diario,
@@ -34,8 +35,8 @@ export class Despertares {
    * despertar se cierra (lo dicho era para otro).
    */
   private alDia(): HiloDespertar[] {
-    const mesa = this.mesa();
-    this.hilos = this.hilos.filter((h) => mesa.some((a) => a.id === h.asiento && a.ocupante === h.ocupante));
+    const mesa = this.plaza();
+    this.hilos = this.hilos.filter((h) => mesa.some((a) => a.id === h.asiento && a.participanteId === h.ocupante));
     return this.hilos;
   }
 
@@ -60,9 +61,9 @@ export class Despertares {
 
   /** Abre el despertar de un asiento (si ya lo tiene, no hace nada). Devuelve el error, si lo hay. */
   despertar(asientoId: string): string | null {
-    const asiento = this.mesa().find((a) => a.id === asientoId);
+    const asiento = this.plaza().find((a) => a.id === asientoId);
     if (!asiento) return 'Ese asiento ya no existe.';
-    if (!this.hayDespertar(asientoId)) this.hilos.push({ asiento: asientoId, ocupante: asiento.ocupante, mensajes: [] });
+    if (!this.hayDespertar(asientoId)) this.hilos.push({ asiento: asientoId, ocupante: asiento.participanteId, mensajes: [] });
     return null;
   }
 

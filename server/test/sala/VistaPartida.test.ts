@@ -22,10 +22,10 @@ function partida() {
   const ana = entra('Ana');
   const bea = entra('Bea');
   const vera = entra('Vera');
-  sala.sentar(ana, juego.partida.mesa()[0].id);
-  sala.sentar(bea, juego.partida.mesa()[1].id);
+  sala.sentar(ana, juego.partida.plaza()[0].id);
+  sala.sentar(bea, juego.partida.plaza()[1].id);
   const vista = (id: string) => new VistaPartida(juego, contexto).para(sala.participantes.buscar(id)!);
-  const asiento = (i: number) => juego.partida.mesa()[i];
+  const asiento = (i: number) => juego.partida.plaza()[i];
   return { juego, narradora, ana, bea, vera, vista, asiento };
 }
 

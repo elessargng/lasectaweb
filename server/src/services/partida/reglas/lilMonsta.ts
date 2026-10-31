@@ -1,5 +1,6 @@
-import type { SalaAsiento, SalaSenalamiento } from '../../../contrato/sala';
+import type { SalaSenalamiento } from '../../../contrato/sala';
 import type { ContextoReglas } from './ReglaPersonaje';
+import type { Jugador } from '../Jugador';
 
 /**
  * Lil' Monsta (demonio): no hay ficha de demonio; cada noche los esbirros eligen
@@ -18,8 +19,8 @@ export function esbirrosLilmonsta(
   partida: { noche: boolean; enElGuion: boolean; esbirrosQueTocan: number | null },
 ): string[] | null {
   if (!partida.noche || !partida.enElGuion) return null;
-  const tipo = (a: SalaAsiento) => (a.personaje ? ctx.personaje(a.personaje)?.tipo : undefined);
-  const mesa = ctx.mesa();
+  const tipo = (a: Jugador) => (a.personaje ? ctx.personaje(a.personaje)?.tipo : undefined);
+  const mesa = ctx.plaza();
   if (mesa.some((a) => tipo(a) === 'demon')) return null;
   const esbirros = mesa.filter((a) => tipo(a) === 'minion');
   const tocan = partida.esbirrosQueTocan;
@@ -30,7 +31,7 @@ export function esbirrosLilmonsta(
 
 /** El asiento que lo cuida, si todos los esbirros sentados señalan al mismo; si no, null. */
 export function cuidadorLilmonsta(ctx: ContextoReglas, s: SalaSenalamiento): string | null {
-  const sentados = ctx.mesa().filter((a) => a.ocupante && s.senaladores.includes(a.id));
+  const sentados = ctx.plaza().filter((a) => a.participanteId && s.senaladores.includes(a.id));
   const elegidos = new Set(sentados.map((a) => s.senales[a.id]));
   if (sentados.length === 0 || elegidos.size !== 1) return null;
   const [cuidador] = [...elegidos];

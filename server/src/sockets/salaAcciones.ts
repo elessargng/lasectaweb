@@ -213,7 +213,7 @@ const alNarradorVirtual =
 const enSuTurno = (juego: SalaDeJuego, yo: Participante, turno: 'acusacion' | 'defensa') => {
   const { partida, narrador } = juego;
   const n = partida.nominaciones.nominacion();
-  const mio = partida.asientoDe(yo.id)?.id;
+  const mio = partida.jugadorDe(yo.id)?.id;
   return narrador.actual()?.turno === turno && !!n && !!mio && (turno === 'acusacion' ? n.desde : n.hasta) === mio;
 };
 
@@ -534,7 +534,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   'jugador:listo': {
     // En medio de una nominación, no: se decide al acabarla
     puede: ({ partida, narrador }, yo) =>
-      narrador.actual()?.etapa === 'nominaciones' && !partida.nominaciones.nominacion() && !!partida.asientoDe(yo.id) && !narrador.actual()!.listos.includes(yo.id),
+      narrador.actual()?.etapa === 'nominaciones' && !partida.nominaciones.nominacion() && !!partida.jugadorDe(yo.id) && !narrador.actual()!.listos.includes(yo.id),
     noPuede: 'Ahora no hay que decir si estás listo.',
     hacer: alNarradorVirtual('listo'),
   },
@@ -543,7 +543,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   'jugador:seguirNominando': {
     puede: (juego, yo) => {
       const { partida, narrador } = juego;
-      const asiento = partida.asientoDe(yo.id);
+      const asiento = partida.jugadorDe(yo.id);
       return (
         narrador.actual()?.etapa === 'nominaciones' &&
         !partida.nominaciones.nominacion() &&
@@ -565,7 +565,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     puede: (juego, yo) => {
       const { partida } = juego;
       const dia = diaVirtual(juego);
-      return !!dia && !!partida.asientoDe(yo.id) && !dia.exterminadores.includes(yo.id) && !partida.nominaciones.nominacion();
+      return !!dia && !!partida.jugadorDe(yo.id) && !dia.exterminadores.includes(yo.id) && !partida.nominaciones.nominacion();
     },
     noPuede: ({ narrador }, yo) => (narrador.actual()?.exterminadores.includes(yo.id) ? 'Ya has disparado en esta partida.' : 'Ahora no se puede disparar.'),
     hacer: alNarradorVirtual('exterminar'),
@@ -579,7 +579,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     puede: (juego, yo) => {
       const { partida } = juego;
       const narrador = juego.narrador.actual();
-      const mio = partida.asientoDe(yo.id)?.id;
+      const mio = partida.jugadorDe(yo.id)?.id;
       return !!narrador && narrador.etapa !== 'revelando' && !!mio && narrador.patosos.some((p) => p.asiento === mio);
     },
     noPuede: 'Ya no puedes declararte Patoso.',
@@ -596,7 +596,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     puede: (juego, yo) => {
       const { partida } = juego;
       const dia = diaVirtual(juego);
-      const asiento = partida.asientoDe(yo.id);
+      const asiento = partida.jugadorDe(yo.id);
       return !!dia && !!asiento && !asiento.muerto && !dia.artistas.includes(yo.id);
     },
     noPuede: ({ narrador }, yo) =>
@@ -728,7 +728,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    */
   'narrador:nominar': {
     // Solo de día
-    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.fases.actual().momento === 'dia' && partida.mesa().length >= 2,
+    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.fases.actual().momento === 'dia' && partida.plaza().length >= 2,
     noPuede: ({ partida }, yo) =>
       yo.rol !== 'narrador'
         ? 'Solo un narrador puede abrir una nominación.'
@@ -769,7 +769,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
       const votos = (datos as { votos?: unknown } | null)?.votos;
-      const maximo = Math.max(1, partida.mesa().length);
+      const maximo = Math.max(1, partida.plaza().length);
       if (votos !== null && (typeof votos !== 'number' || !Number.isInteger(votos) || votos < 1 || votos > maximo)) {
         return { ok: false, error: `Los votos tienen que ser de 1 a ${maximo}.` };
       }
@@ -815,7 +815,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    */
   'narrador:marcar': {
     // De noche no se marca a nadie: la calavera es de las ejecuciones del día
-    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.fases.actual().momento !== 'noche' && partida.mesa().length > 0,
+    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.fases.actual().momento !== 'noche' && partida.plaza().length > 0,
     noPuede: ({ partida }, yo) =>
       yo.rol !== 'narrador'
         ? 'Solo un narrador puede marcar una ficha.'
@@ -918,7 +918,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       // Si su habilidad le ha pedido que elija (el despertar guiado), solo contesta con
       // quienes elige. Por un asiento libre (cuenta como un jugador) elige el narrador.
       const destinos = asientoIds.map((asientoId) => {
-        const libre = !partida.mesa().find((a) => a.id === asientoId)?.ocupante;
+        const libre = !partida.plaza().find((a) => a.id === asientoId)?.participanteId;
         const pide = !narra || libre ? partida.guiado.eleccionPendiente(asientoId) : null;
         return { asientoId, pide, eligiendo: !!pide && (!narra || mensaje.ficha === 'jugador') };
       });
@@ -1100,7 +1100,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * datos: { mensaje?, segundos: number | null, senaladores?: asientoId[], objetivos?: asientoId[] }.
    */
   'narrador:senalamiento': {
-    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.mesa().length > 0,
+    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador puede pedir que se señale.'),
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
@@ -1172,7 +1172,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     puede: (juego, yo) => {
       const { partida } = juego;
       const s = partida.senalamientos.senalamiento();
-      const asiento = partida.asientoDe(yo.id);
+      const asiento = partida.jugadorDe(yo.id);
       return yo.rol === 'jugador' && !!s && !s.congelado && !!asiento && s.senaladores.includes(asiento.id);
     },
     noPuede: 'No te toca señalar.',
@@ -1207,7 +1207,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * esbirros, demonios o viajeros), o se lo quita. datos: { asientoId, personajeId: string | null }.
    */
   'narrador:cambiarPersonaje': {
-    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.mesa().length > 0,
+    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador puede cambiar las fichas.'),
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
@@ -1230,7 +1230,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * entregado: al entregarlos, se acaba. datos: { desde, hasta } (ids de asiento).
    */
   'narrador:intercambiarFichas': {
-    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.npcs.activo(NPC_GARDENER) && partida.entregas.fichasRetenidas() && partida.mesa().length > 1,
+    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.npcs.activo(NPC_GARDENER) && partida.entregas.fichasRetenidas() && partida.plaza().length > 1,
     noPuede: ({ partida }, yo) =>
       yo.rol !== 'narrador'
         ? 'Solo un narrador puede intercambiar las fichas.'
@@ -1258,12 +1258,12 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * antes (ver recordatorioQueSobra). datos: { asientoId, personajeId, indice }.
    */
   'narrador:ponerRecordatorio': {
-    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.mesa().length > 0,
+    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador pone recordatorios.'),
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
       const { asientoId, personajeId, indice } = (datos as { asientoId?: unknown; personajeId?: unknown; indice?: unknown }) ?? {};
-      const asiento = partida.mesa().find((a) => a.id === asientoId);
+      const asiento = partida.plaza().find((a) => a.id === asientoId);
       if (!asiento || typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
       const personaje = typeof personajeId === 'string' ? partida.guion.personaje(personajeId) : undefined;
       if (!personaje) return { ok: false, error: 'Ese personaje no está en el guion.' };
@@ -1284,12 +1284,12 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * narrador, corto, porque va en redondo en una ficha pequeña. datos: { asientoId, texto, icono? }.
    */
   'narrador:ponerRecordatorioTexto': {
-    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.mesa().length > 0,
+    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador pone recordatorios.'),
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
       const { asientoId, texto, icono } = (datos as { asientoId?: unknown; texto?: unknown; icono?: unknown }) ?? {};
-      const asiento = partida.mesa().find((a) => a.id === asientoId);
+      const asiento = partida.plaza().find((a) => a.id === asientoId);
       if (!asiento || typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
       const limpio = typeof texto === 'string' ? texto.replace(/\s+/g, ' ').trim() : '';
       if (!limpio) return { ok: false, error: 'Escribe el texto del recordatorio.' };
@@ -1311,7 +1311,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * datos: { asientoId, texto }.
    */
   'narrador:escribirNota': {
-    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.mesa().length > 0,
+    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador escribe notas.'),
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
@@ -1332,16 +1332,16 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * datos: { asientoId, fichas: SalaFichaEnviada[], faroles?: string[] }.
    */
   'narrador:enviarGrimorio': {
-    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.mesa().some((a) => a.ocupante),
+    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().some((a) => a.participanteId),
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'No hay nadie sentado.' : 'Solo un narrador envía el grimorio.'),
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
       const { asientoId, fichas } = (datos as { asientoId?: unknown; fichas?: unknown }) ?? {};
-      const destino = partida.mesa().find((a) => a.id === asientoId);
+      const destino = partida.plaza().find((a) => a.id === asientoId);
       if (!destino || typeof asientoId !== 'string') return { ok: false, error: 'Ese asiento ya no existe.' };
-      if (!destino.ocupante) return { ok: false, error: 'En ese asiento no hay nadie a quien enviárselo.' };
+      if (!destino.participanteId) return { ok: false, error: 'En ese asiento no hay nadie a quien enviárselo.' };
       if (!Array.isArray(fichas) || fichas.length > SALA_ASIENTOS.max) return { ok: false, error: 'El grimorio no es válido.' };
-      const mesa = new Set(partida.mesa().map((a) => a.id));
+      const mesa = new Set(partida.plaza().map((a) => a.id));
       const limpias: SalaFichaEnviada[] = [];
       for (const f of fichas as Record<string, unknown>[]) {
         if (!f || typeof f.asientoId !== 'string' || !mesa.has(f.asientoId)) return { ok: false, error: 'El grimorio no es válido.' };
@@ -1615,11 +1615,11 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * o no. datos: { posicion: 0..2, personajeId: string | null }.
    */
   'jugador:farol': {
-    puede: ({ partida }, yo) => yo.rol === 'jugador' && !!partida.asientoDe(yo.id) && !!partida.guion.actual(),
+    puede: ({ partida }, yo) => yo.rol === 'jugador' && !!partida.jugadorDe(yo.id) && !!partida.guion.actual(),
     noPuede: 'Solo un jugador sentado se pone faroles.',
     hacer: (juego, yo, datos) => {
       const { partida } = juego;
-      const asiento = partida.asientoDe(yo.id);
+      const asiento = partida.jugadorDe(yo.id);
       if (!asiento) return { ok: false, error: 'Ya no estás sentado.' };
       const farol = leerFarol(juego, datos);
       if ('error' in farol) return { ok: false, error: farol.error };
@@ -1633,11 +1633,11 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * hace pasar), para que lo sepa el narrador; o ninguno. datos: { personajeId: string | null }.
    */
   'jugador:usarFarol': {
-    puede: ({ partida }, yo) => yo.rol === 'jugador' && !!partida.asientoDe(yo.id) && !!partida.guion.actual(),
+    puede: ({ partida }, yo) => yo.rol === 'jugador' && !!partida.jugadorDe(yo.id) && !!partida.guion.actual(),
     noPuede: 'Solo un jugador sentado usa faroles.',
     hacer: (juego, yo, datos) => {
       const { partida } = juego;
-      const asiento = partida.asientoDe(yo.id);
+      const asiento = partida.jugadorDe(yo.id);
       if (!asiento) return { ok: false, error: 'Ya no estás sentado.' };
       const personajeId = (datos as { personajeId?: unknown } | null)?.personajeId ?? null;
       if (personajeId !== null && typeof personajeId !== 'string') return { ok: false, error: 'Personaje desconocido.' };
@@ -1703,7 +1703,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * (ver CAUSAS_FIN_PARTIDA: lo que ha pasado con los personajes de la lista en juego).
    */
   'narrador:revelarGrimorio': {
-    puede: ({ partida }, yo) => yo.rol === 'narrador' && !partida.revelacion.revelacion() && partida.mesa().length > 0,
+    puede: ({ partida }, yo) => yo.rol === 'narrador' && !partida.revelacion.revelacion() && partida.plaza().length > 0,
     noPuede: ({ partida }, yo) =>
       yo.rol !== 'narrador'
         ? 'Solo un narrador puede revelar el grimorio.'
@@ -1716,7 +1716,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
         (datos as { ganador?: unknown; causas?: unknown; esbirros?: unknown } | null) ?? {};
       if (ganador !== 'bueno' && ganador !== 'malvado') return { ok: false, error: 'Bando desconocido.' };
       // Lo que ha pasado: solo de los personajes de la lista que están en juego (quien es de verdad cada uno)
-      const enJuego = new Set(partida.mesa().map((a) => identidadDe(a)));
+      const enJuego = new Set(partida.plaza().map((a) => identidadDe(a)));
       if (!Array.isArray(causas) || causas.some((c) => typeof c !== 'string' || !CAUSAS_FIN_PARTIDA.includes(c) || !enJuego.has(c))) {
         return { ok: false, error: 'Hay un personaje que no está en juego.' };
       }
@@ -1724,7 +1724,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       if (typeof esbirros !== 'object' || esbirros === null) return { ok: false, error: 'Esbirros no válidos.' };
       const elegidos = esbirros as Record<string, unknown>;
       const esEsbirro = (id: unknown) => {
-        const a = partida.mesa().find((x) => x.id === id);
+        const a = partida.plaza().find((x) => x.id === id);
         const quien = a ? identidadDe(a) : null;
         return !!quien && partida.guion.personaje(quien)?.tipo === 'minion';
       };
@@ -1804,14 +1804,14 @@ export const SALA_ACCIONES: Record<string, Accion> = {
 
   /** Cambia el alineamiento de la ficha de un asiento. datos: { asientoId, alineamiento: 'bueno' | 'malvado' }. */
   'narrador:cambiarAlineamiento': {
-    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.mesa().length > 0,
+    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador puede cambiar las fichas.'),
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
       const { asientoId, alineamiento } = (datos as { asientoId?: unknown; alineamiento?: unknown }) ?? {};
       if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return { ok: false, error: 'Ese asiento ya no existe.' };
       if (alineamiento !== 'bueno' && alineamiento !== 'malvado') return { ok: false, error: 'Alineamiento desconocido.' };
-      if (!partida.mesa().find((a) => a.id === asientoId)?.personaje) {
+      if (!partida.plaza().find((a) => a.id === asientoId)?.personaje) {
         return { ok: false, error: 'Esa ficha no tiene personaje.' };
       }
       partida.grimorio.cambiarAlineamiento(asientoId, alineamiento);
@@ -1824,7 +1824,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * deja la muerte pendiente (ver Grimorio.cambiarVida). datos: { asientoId, muerto: boolean }.
    */
   'narrador:cambiarVida': {
-    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.mesa().length > 0,
+    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().length > 0,
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'La mesa no tiene asientos.' : 'Solo un narrador puede matar o revivir.'),
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
@@ -1847,9 +1847,9 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (juego, _yo, datos) => {
       const { partida } = juego;
       const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
-      const asiento = partida.mesa().find((a) => a.id === asientoId);
+      const asiento = partida.plaza().find((a) => a.id === asientoId);
       if (!asiento) return { ok: false, error: 'Ese asiento ya no existe.' };
-      if (!asiento.marcado) return { ok: false, error: 'Solo se ejecuta a quien lleva la calavera.' };
+      if (partida.grimorio.calavera()?.jugador !== asiento.id) return { ok: false, error: 'Solo se ejecuta a quien lleva la calavera.' };
       // Si quedan dos vivos, no anochece: el narrador elige (valor «final») entre la noche y revelar el grimorio
       const { final } = partida.ejecutar(asiento.id) ?? { final: false };
       return final ? { ok: true, valor: 'final' } : { ok: true };
@@ -1861,7 +1861,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * anuncia y ya la ven todos. datos: { asientoId }.
    */
   'narrador:confirmarMuerte': {
-    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.mesa().some((a) => a.muertePendiente),
+    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().some((a) => a.muertePendiente),
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'No hay ninguna muerte por anunciar.' : 'Solo un narrador puede anunciar una muerte.'),
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
@@ -1877,7 +1877,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
    * enciende su vela. datos: { asientoId, gastado: boolean }.
    */
   'narrador:cambiarVoto': {
-    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.mesa().some((a) => a.muerto),
+    puede: ({ partida }, yo) => yo.rol === 'narrador' && partida.plaza().some((a) => a.muerto),
     noPuede: (_sala, yo) => (yo.rol === 'narrador' ? 'No hay ningún muerto.' : 'Solo un narrador quita o devuelve votos.'),
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
@@ -1944,7 +1944,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
     hacer: (juego, _yo, datos) => {
       const { sala, partida } = juego;
       const cambio = (datos as { cambio?: unknown } | null)?.cambio;
-      const total = partida.mesa().length;
+      const total = partida.plaza().length;
       if (cambio === 'añadir') {
         if (total >= SALA_ASIENTOS.max) return { ok: false, error: `La mesa ya tiene el máximo de ${SALA_ASIENTOS.max} asientos.` };
         sala.anadirAsiento();

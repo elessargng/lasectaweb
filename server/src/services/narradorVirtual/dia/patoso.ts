@@ -42,8 +42,8 @@ export async function cerrarPatosos(ctx: ContextoEtapa, hasta: SalaPatoso['hasta
   const cierran = narrador.actual()?.patosos.filter((p) => p.hasta === hasta) ?? [];
   for (const { asiento } of cierran) {
     quitarPatoso(juego, asiento);
-    const patoso = partida.mesa().find((a) => a.id === asiento);
-    const vivos = partida.mesa().filter(vivo);
+    const patoso = partida.plaza().find((a) => a.id === asiento);
+    const vivos = partida.plaza().filter(vivo);
     if (!patoso || identidadDe(patoso) !== 'klutz' || !vivos.length) continue;
     const elegido = await ctx.decidir({
       motivo: 'patoso',
@@ -66,8 +66,8 @@ export async function contarPatoso(ctx: ContextoEtapa, patosoId: string, elegido
   const { juego } = ctx;
   const { partida } = juego;
   quitarPatoso(juego, patosoId);
-  const patoso = partida.mesa().find((a) => a.id === patosoId);
-  const elegido = partida.mesa().find((a) => a.id === elegidoId);
+  const patoso = partida.plaza().find((a) => a.id === patosoId);
+  const elegido = partida.plaza().find((a) => a.id === elegidoId);
   if (!patoso || !elegido) return null;
   partida.anotar({ tipo: 'patoso', asiento: partida.asientoDiario(patosoId), objetivo: partida.asientoDiario(elegidoId), porElNarrador });
   const frase = FRASES.patoso(nombreDeAsiento(juego, patosoId), nombreDeAsiento(juego, elegidoId));

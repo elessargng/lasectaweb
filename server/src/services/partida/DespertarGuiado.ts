@@ -1,5 +1,4 @@
 import type {
-  SalaAsiento,
   SalaAvisoHabilidad,
   SalaEleccionDespertar,
   SalaEnvioDespertar,
@@ -7,6 +6,7 @@ import type {
   SalaOpcionDespertar,
 } from '../../contrato/sala';
 import { tarjeta, type ContextoNoche, type HabilidadNocturna, type Resultado } from './habilidades/HabilidadNocturna';
+import type { Jugador } from './Jugador';
 
 /** Lo que el despertar guiado necesita de la sala. */
 export interface EntornoDespertarGuiado {
@@ -71,8 +71,8 @@ export class DespertarGuiado {
    * El asiento que despierta con un personaje: el de su ficha (el que cree serlo).
    * Antes uno vivo; si no, uno que muere esta noche; si no, cualquiera.
    */
-  private asientoDe(personaje: string): SalaAsiento | null {
-    const con = this.entorno.ctx.mesa().filter((a) => a.personaje === personaje);
+  private asientoDe(personaje: string): Jugador | null {
+    const con = this.entorno.ctx.plaza().filter((a) => a.personaje === personaje);
     return con.find((a) => !a.muerto && !a.muertePendiente) ?? con.find((a) => !a.muerto) ?? con[0] ?? null;
   }
 
@@ -85,7 +85,7 @@ export class DespertarGuiado {
   }
 
   /** Los que despiertan con una habilidad: el de su ficha o, los esbirros y el demonio, cada uno. */
-  private asientosDe(habilidad: HabilidadNocturna): SalaAsiento[] {
+  private asientosDe(habilidad: HabilidadNocturna): Jugador[] {
     if (habilidad.despiertan) return habilidad.despiertan(this.entorno.ctx);
     const asiento = this.asientoDe(habilidad.personaje);
     return asiento ? [asiento] : [];
@@ -95,7 +95,7 @@ export class DespertarGuiado {
    * Lo que dice una habilidad de todos los que despiertan con ella: lo peor de
    * cada uno (falta, revisar, listo), con sus avisos sin repetir. Las opciones, las del primero.
    */
-  private preparar(habilidad: HabilidadNocturna, asientos: SalaAsiento[]): Pick<Resultado, 'estado' | 'avisos' | 'opciones'> {
+  private preparar(habilidad: HabilidadNocturna, asientos: Jugador[]): Pick<Resultado, 'estado' | 'avisos' | 'opciones'> {
     const resultados = asientos.map((a) => habilidad.preparar(this.entorno.ctx, a));
     const estado = (['falta', 'revisar'] as const).find((e) => resultados.some((r) => r.estado === e)) ?? 'listo';
     const avisos = [...new Map(resultados.flatMap((r) => r.avisos).map((a) => [JSON.stringify(a), a])).values()];
@@ -146,7 +146,7 @@ export class DespertarGuiado {
    * Lo que pasa con lo que dice la habilidad: si está listo, se hace; si no, queda para
    * revisar. `respuesta`: contesta a lo que ha elegido (se le manda ya, sin cola).
    */
-  private aplicar(personaje: string, asiento: SalaAsiento, resultado: Resultado, respuesta = false): void {
+  private aplicar(personaje: string, asiento: Jugador, resultado: Resultado, respuesta = false): void {
     const { estado, avisos, opciones, efectos } = resultado;
     if (estado !== 'listo') {
       this.guardar({ personaje, asiento: asiento.id, estado: 'revisar', avisos, opciones });
@@ -176,7 +176,7 @@ export class DespertarGuiado {
       return;
     }
     const cola = this.colas.get(asientoId) ?? [];
-    const ocupado = !!this.entorno.ctx.mesa().find((a) => a.id === asientoId)?.ocupante;
+    const ocupado = !!this.entorno.ctx.plaza().find((a) => a.id === asientoId)?.participanteId;
     if (ocupado && (cola.length || this.entorno.porEntender(asientoId))) this.colas.set(asientoId, [...cola, { envio, eleccion }]);
     else this.entorno.mandar(asientoId, envio, eleccion);
   }
@@ -204,7 +204,7 @@ export class DespertarGuiado {
   alElegir(asientoId: string, elegidos: string[]): void {
     const turno = this.turnos.find((t) => t.asiento === asientoId && t.estado === 'esperando');
     const habilidad = turno && this.entorno.habilidades().get(turno.personaje);
-    const mesa = this.entorno.ctx.mesa();
+    const mesa = this.entorno.ctx.plaza();
     const asiento = mesa.find((a) => a.id === asientoId);
     if (!turno || !habilidad || !asiento) return;
     const elegidosEnMesa = elegidos.flatMap((id) => mesa.find((a) => a.id === id) ?? []);

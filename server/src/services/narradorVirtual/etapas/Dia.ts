@@ -17,7 +17,7 @@ export const TRAS_GONG_MS = 3_000;
 const PRIVADOS_POR_VIVO_MS = 30_000;
 
 /** Lo que duran los privados (ms): medio minuto por cada jugador vivo. */
-export const duracionPrivados = ({ partida }: SalaDeJuego): number => partida.mesa().filter(vivo).length * PRIVADOS_POR_VIVO_MS;
+export const duracionPrivados = ({ partida }: SalaDeJuego): number => partida.plaza().filter(vivo).length * PRIVADOS_POR_VIVO_MS;
 
 /** Una etapa que dura un rato con el reloj de la mesa y luego pasa a la siguiente. */
 abstract class EtapaConReloj implements Etapa {
@@ -128,7 +128,7 @@ export class Nominaciones implements Etapa {
     if (this.terminando) return 'El día ya ha terminado.';
     const narrador = juego.narrador.actual();
     const yo = sala.participantes.buscar(jugador);
-    const miAsiento = partida.asientoDe(jugador);
+    const miAsiento = partida.jugadorDe(jugador);
     if (!narrador || !yo || !miAsiento) return 'No estás sentado.';
     const nominacion = partida.nominaciones.nominacion();
 
@@ -142,7 +142,7 @@ export class Nominaciones implements Etapa {
     }
     if (accion === 'defensa') {
       if (narrador.turno !== 'acusacion' || nominacion?.desde !== miAsiento.id) return 'Ahora no te toca.';
-      const nominado = partida.mesa().find((a) => a.id === nominacion.hasta)?.ocupante ?? null;
+      const nominado = partida.plaza().find((a) => a.id === nominacion.hasta)?.participanteId ?? null;
       juego.narrador.actualizar({ turno: 'defensa' });
       await ctx.mesa.accion('narrador:darPalabra', { participanteId: nominado });
       ctx.decir(FRASES.defensa(nombreDeAsiento(juego, nominacion.hasta)));
@@ -150,7 +150,7 @@ export class Nominaciones implements Etapa {
     }
     if (accion === 'voto') {
       if (narrador.turno !== 'defensa' || nominacion?.hasta !== miAsiento.id) return 'Ahora no te toca.';
-      this.marcaAlVotar = partida.mesa().find((a) => a.marcado)?.votosMarca ?? null;
+      this.marcaAlVotar = partida.grimorio.calavera()?.votos ?? null;
       juego.narrador.actualizar({ turno: 'votacion' });
       await ctx.mesa.accion('narrador:darPalabra', { participanteId: null });
       ctx.decir(FRASES.votosNecesarios(nominacion.votosNecesarios, nombreDeAsiento(juego, nominacion.hasta), this.marcaAlVotar !== null));
@@ -230,7 +230,7 @@ export class Nominaciones implements Etapa {
     if (this.terminando || !narrador || narrador.turno !== null || partida.nominaciones.nominacion()) return;
     const muertos = muertosSentados(juego);
     if (!jugadoresSentados(juego).every((id) => narrador.listos.includes(id) || muertos.includes(id))) return;
-    const marcado = partida.mesa().find((a) => a.marcado);
+    const marcado = partida.plaza().find((a) => a.id === partida.grimorio.calavera()?.jugador);
     if (!marcado) {
       // Sin ejecución: con el Alcalde y tres vivos, se acaba
       await this.terminarDia(ctx, FRASES.nadieEjecutado(), await comprobarFinal(ctx, { sinEjecucion: true }));

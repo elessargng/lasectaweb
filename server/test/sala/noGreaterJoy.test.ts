@@ -14,14 +14,14 @@ function mesa(...personajes: string[]) {
   const juego = new SalaDeJuego();
   const { sala, partida } = juego;
   partida.cambiarGuion(guionNoGreaterJoy());
-  while (partida.mesa().length > personajes.length) sala.quitarAsiento();
+  while (partida.plaza().length > personajes.length) sala.quitarAsiento();
   personajes.forEach((p, i) => {
     const { id } = sala.participantes.conectar(`s-${i}`, `c-${i}`, invitado(`J${i}`), () => true);
-    sala.sentar(id, partida.mesa()[i].id);
-    partida.grimorio.cambiarPersonaje(partida.mesa()[i].id, p);
+    sala.sentar(id, partida.plaza()[i].id);
+    partida.grimorio.cambiarPersonaje(partida.plaza()[i].id, p);
   });
   partida.irANoche();
-  const asiento = (i: number) => partida.mesa()[i];
+  const asiento = (i: number) => partida.plaza()[i];
   const fila = (personaje: string): SalaHabilidadNoche | undefined => partida.guiado.habilidadesNoche().find((h) => h.personaje === personaje);
   const ultimo = (i: number) => partida.despertares.despertares().find((d) => d.asiento === asiento(i).id)?.mensajes.slice(-1)[0];
   const elegir = (i: number, ...elegidos: number[]) => {

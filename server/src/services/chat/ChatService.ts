@@ -134,13 +134,13 @@ export class ChatService {
 
   /** Los vecinos de un jugador: el más cercano sentado a cada lado de la mesa. */
   vecinos(participanteId: string): string[] {
-    const mesa = this.partida.mesa();
-    const i = mesa.findIndex((a) => a.ocupante === participanteId);
+    const mesa = this.partida.plaza();
+    const i = mesa.findIndex((a) => a.participanteId === participanteId);
     if (i < 0) return [];
     const n = mesa.length;
     const cercano = (paso: 1 | -1) => {
       for (let k = 1; k < n; k++) {
-        const ocupante = mesa[(i + paso * k + n) % n].ocupante;
+        const ocupante = mesa[(i + paso * k + n) % n].participanteId;
         if (ocupante) return ocupante;
       }
       return null;
@@ -151,9 +151,9 @@ export class ChatService {
   /** Entre dos jugadores sentados, las ondas del susurro (más intensas cuanto más largo). */
   private susurro(yo: Participante, otro: Participante, texto: string): SalaSusurro | null {
     if (yo.rol !== 'jugador' || otro.rol !== 'jugador') return null;
-    const mesa = this.partida.mesa();
-    const desde = mesa.find((a) => a.ocupante === yo.id)?.id;
-    const hasta = mesa.find((a) => a.ocupante === otro.id)?.id;
+    const mesa = this.partida.plaza();
+    const desde = mesa.find((a) => a.participanteId === yo.id)?.id;
+    const hasta = mesa.find((a) => a.participanteId === otro.id)?.id;
     if (!desde || !hasta) return null;
     return { desde, hasta, intensidad: texto.length < 40 ? 1 : texto.length < 140 ? 2 : 3 };
   }

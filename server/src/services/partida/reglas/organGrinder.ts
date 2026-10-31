@@ -10,7 +10,7 @@ export const ESBIRRO_ORGAN_GRINDER = 'organgrinder';
 export const organGrinder: ReglaPersonaje = {
   personaje: ESBIRRO_ORGAN_GRINDER,
   votacionSecreta: (ctx) => {
-    const og = ctx.mesa().find((a) => !a.muerto && ctx.identidad(a) === ESBIRRO_ORGAN_GRINDER);
+    const og = ctx.plaza().find((a) => !a.muerto && ctx.identidad(a) === ESBIRRO_ORGAN_GRINDER);
     return !!og && !og.recordatorios.some((r) => /^drunk$/i.test(r.texto.trim()));
   },
 };

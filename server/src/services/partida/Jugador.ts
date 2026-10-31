@@ -18,7 +18,7 @@ const VACIO: Ocupante = { tipo: 'vacio' };
  */
 export class Jugador {
   /** Lo identifica en la plaza: lo que se guarda por él va con él al cambiar de silla. */
-  readonly id = randomUUID();
+  readonly id: string = randomUUID();
   ocupante: Ocupante = VACIO;
   /** El personaje de su ficha (id del catálogo o del guion), o null si no tiene. */
   personaje: string | null = null;

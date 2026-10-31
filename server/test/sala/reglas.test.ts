@@ -3,8 +3,8 @@ import { SALA_CUENTA_ATRAS_MS } from '../../src/services/partida/Nominaciones';
 import { SalaDeJuego } from '../../src/services/SalaDeJuego';
 import { Reglas } from '../../src/services/partida/reglas';
 import type { ContextoReglas, ReglaPersonaje } from '../../src/services/partida/reglas/ReglaPersonaje';
-import type { SalaAsiento } from '../../src/contrato/sala';
 import { guionDePrueba, invitado } from './guionDePrueba';
+import { Jugador } from '../../src/services/partida/Jugador';
 
 /** Las reglas de los personajes que cambian la partida, vistas desde fuera (la sala). */
 
@@ -14,10 +14,10 @@ function salaConJugadores(...nombres: string[]) {
   partida.cambiarGuion(guionDePrueba());
   const ids = nombres.map((nombre, i) => {
     const { id } = sala.participantes.conectar(`s-${nombre}`, `c-${nombre}`, invitado(nombre), () => true);
-    sala.sentar(id, partida.mesa()[i].id);
+    sala.sentar(id, partida.plaza()[i].id);
     return id;
   });
-  const asiento = (i: number) => partida.mesa()[i];
+  const asiento = (i: number) => partida.plaza()[i];
   return { juego, ids, asiento };
 }
 
@@ -27,7 +27,7 @@ const alDia = (juego: SalaDeJuego) => {
   partida.amanecer();
 };
 
-const textos = ({ partida }: SalaDeJuego, i: number) => partida.mesa()[i].recordatorios.map((r) => r.texto);
+const textos = ({ partida }: SalaDeJuego, i: number) => partida.plaza()[i].recordatorios.map((r) => r.texto);
 
 describe('reglas de los personajes', () => {
   describe('votando', () => {
@@ -38,7 +38,7 @@ describe('reglas de los personajes', () => {
       const { partida } = juego;
       partida.nominaciones.iniciarCuentaAtras(Date.now());
       vi.advanceTimersByTime(SALA_CUENTA_ATRAS_MS);
-      vi.advanceTimersByTime(partida.configuracion.actual().segundosPorFicha * 1000 * partida.mesa().length);
+      vi.advanceTimersByTime(partida.configuracion.actual().segundosPorFicha * 1000 * partida.plaza().length);
     };
 
     it('la Banshee muerta con su habilidad vota con las dos manos y sin gastar su voto', () => {
@@ -101,7 +101,7 @@ describe('reglas de los personajes', () => {
 
   describe('nominando', () => {
     /** Ana (asiento 0) nomina a la Virgen (asiento 1), de día; Ana lleva `nominador`. */
-    const nominaALaVirgen = (nominador: string, preparar?: (sala: SalaDeJuego, asiento: (i: number) => SalaAsiento) => void) => {
+    const nominaALaVirgen = (nominador: string, preparar?: (sala: SalaDeJuego, asiento: (i: number) => Jugador) => void) => {
       const { juego, asiento } = salaConJugadores('Ana', 'Bea');
       const { partida } = juego;
       partida.grimorio.cambiarPersonaje(asiento(0).id, nominador);
@@ -297,29 +297,15 @@ describe('reglas de los personajes', () => {
       partida.senalar(ids[0], asiento(2).id);
       partida.senalar(ids[1], asiento(3).id);
       expect(partida.senalamientos.senalamiento()?.congelado).toBe(false);
-      expect(partida.mesa().some((a) => a.recordatorios.length > 0)).toBe(false);
+      expect(partida.plaza().some((a) => a.recordatorios.length > 0)).toBe(false);
     });
   });
 });
 
 describe('Reglas (cómo se combinan)', () => {
-  const asiento = (cambios: Partial<SalaAsiento> = {}): SalaAsiento => ({
-    id: 'a',
-    ocupante: null,
-    muerto: false,
-    muertePendiente: false,
-    votoGastado: false,
-    marcado: false,
-    votosMarca: null,
-    personaje: null,
-    alineamiento: null,
-    recordatorios: [],
-    nota: null,
-    faroles: [null, null, null],
-    farolEnUso: null,
-    ...cambios,
-  });
-  const ctx: ContextoReglas = { mesa: () => [], identidad: (a) => a.personaje, alineamiento: () => null, personaje: () => undefined };
+  const asiento = (cambios: Partial<Pick<Jugador, 'muerto' | 'votoGastado' | 'personaje' | 'recordatorios'>> = {}): Jugador =>
+    Object.assign(new Jugador(), cambios);
+  const ctx: ContextoReglas = { plaza: () => [], identidad: (a) => a.personaje, alineamiento: () => null, personaje: () => undefined };
 
   it('sin reglas: vota quien no es un muerto sin voto, y hace falta la mitad', () => {
     const reglas = new Reglas(ctx, []);

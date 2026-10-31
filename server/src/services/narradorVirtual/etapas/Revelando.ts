@@ -32,7 +32,7 @@ export class Revelando implements Etapa {
     // Si acaba antes de la noche en que lo sería, la Mujer Escarlata que ha heredado se revela ya como el Imp
     await escarlataAImp(ctx);
     if (!(await ctx.mesa.accion('narrador:revelarGrimorio', { ganador: this.ganador })).ok) return;
-    const asientos = partida.mesa();
+    const asientos = partida.plaza();
     const demonios = asientos.filter((a) => esDemonio(ctx.juego, a));
     const orden = [...barajar(asientos.filter((a) => !demonios.includes(a)), ctx.azar), ...barajar(demonios, ctx.azar)];
     void this.revelar(ctx, orden.map((a) => a.id));
@@ -50,7 +50,7 @@ export class Revelando implements Etapa {
     for (const asientoId of orden) {
       await new Promise<void>((listo) => (this.cancelar = ctx.temporizador.programar(espera, listo)));
       if (!this.seguir) return;
-      const asiento = partida.mesa().find((a) => a.id === asientoId);
+      const asiento = partida.plaza().find((a) => a.id === asientoId);
       if (!asiento) continue;
       const frase = fraseAlRevelar(ctx.recuerdos.cronica, ctx.juego, asiento);
       await ctx.mesa.accion('narrador:revelarFicha', { asientoId });

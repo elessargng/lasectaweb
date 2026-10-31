@@ -92,7 +92,7 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     if (!datos?.disponible) return 'Ese narrador virtual aún no está disponible.';
     const libre = () => {
       if (sala.participantes.hayNarrador()) return 'La sala ya tiene narrador.';
-      const sentados = partida.mesa().filter((a) => a.ocupante).length;
+      const sentados = partida.plaza().filter((a) => a.participanteId).length;
       return sentados > jugadores ? `Ya hay ${sentados} jugadores sentados: elige al menos ${sentados}.` : null;
     };
     const ocupada = libre();
@@ -170,14 +170,14 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     if (accion === 'exterminar' || accion === 'patoso') {
       const asientoId = (datos as { asientoId?: unknown } | null)?.asientoId;
       if (typeof asientoId !== 'string' || !sala.jugador(asientoId)) return 'Ese asiento ya no existe.';
-      const mio = partida.asientoDe(jugador)?.id;
+      const mio = partida.jugadorDe(jugador)?.id;
       if (mio === asientoId) return accion === 'exterminar' ? 'No puedes dispararte a ti.' : 'Elige a otro jugador.';
       if (this.contando) return 'Espera a que el narrador termine de contar lo anterior.';
       const ctx = this.contexto();
       let contar: Promise<Ganador | null>;
       if (accion === 'patoso') {
         if (!mio) return 'No estás sentado.';
-        if (!vivo(partida.mesa().find((a) => a.id === asientoId)!)) return 'Elige a un jugador vivo.';
+        if (!vivo(partida.plaza().find((a) => a.id === asientoId)!)) return 'Elige a un jugador vivo.';
         contar = contarPatoso(ctx, mio, asientoId);
       } else {
         const muere = await exterminar(ctx, jugador, asientoId);
@@ -262,16 +262,16 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
   private vigilarAsientos(): void {
     const { partida } = this.juego;
     const enPartida = !!this.etapa && EN_PARTIDA.includes(this.etapa.id);
-    const asientos = partida.mesa();
+    const asientos = partida.plaza();
     for (const [id, cancelar] of this.vacios) {
-      if (!enPartida || asientos.find((a) => a.id === id)?.ocupante !== null) {
+      if (!enPartida || asientos.find((a) => a.id === id)?.participanteId !== null) {
         cancelar();
         this.vacios.delete(id);
       }
     }
     if (!enPartida) return;
     for (const a of asientos) {
-      if (a.ocupante || this.vacios.has(a.id)) continue;
+      if (a.participanteId || this.vacios.has(a.id)) continue;
       this.vacios.set(
         a.id,
         this.temporizador.programar(ESPERA_ABANDONO_MS, () => {
@@ -284,8 +284,8 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
 
   private async abandonado(asientoId: string): Promise<void> {
     const { partida } = this.juego;
-    const asiento = partida.mesa().find((a) => a.id === asientoId);
-    if (!asiento || asiento.ocupante || !this.etapa || !EN_PARTIDA.includes(this.etapa.id)) return;
+    const asiento = partida.plaza().find((a) => a.id === asientoId);
+    if (!asiento || asiento.participanteId || !this.etapa || !EN_PARTIDA.includes(this.etapa.id)) return;
     if (esDemonio(this.juego, asiento) && !asiento.muerto) {
       await this.pasarA(new Revelando('bueno'));
       return;

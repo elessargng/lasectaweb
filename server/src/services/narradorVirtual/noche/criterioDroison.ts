@@ -47,7 +47,7 @@ export function destapaAlMal(juego: SalaDeJuego, envio: SalaEnvioDespertar): boo
 /** Cómo va el mal: los malvados vivos sobre los vivos, menos los del principio (positivo: va ganando). */
 export function ventajaDelMal(juego: SalaDeJuego): number {
   const { partida } = juego;
-  const jugadores = partida.mesa().filter((a) => tipoReal(juego, a) !== 'traveller');
+  const jugadores = partida.plaza().filter((a) => tipoReal(juego, a) !== 'traveller');
   const malvado = (a: (typeof jugadores)[number]) => partida.grimorio.alineamiento(a) === 'malvado';
   const vivos = jugadores.filter(vivo);
   if (!vivos.length || !jugadores.length) return 0;
@@ -77,7 +77,7 @@ export function opcionesFalsas(
   const { partida } = juego;
   const antes = recuerdos.droison.get(clave(asiento, personaje));
   const n = numeroDe(verdadera);
-  const asientos = partida.mesa();
+  const asientos = partida.plaza();
   return falsas.map((f, i) => {
     const rasgos: RasgoOpcion[] = [];
     let peso = 1;
@@ -93,7 +93,7 @@ export function opcionesFalsas(
     }
     const [ensenado] = f.personajes;
     const jugadores = f.jugadores.flatMap((id) => asientos.find((a) => a.id === id) ?? []);
-    if (ensenado && jugadores.some((a) => partida.grimorio.alineamiento(a) === 'malvado' && a.farolEnUso === ensenado)) {
+    if (ensenado && jugadores.some((a) => partida.grimorio.alineamiento(a) === 'malvado' && partida.faroles.enUso(a) === ensenado)) {
       rasgos.push('confirmaFarol');
       peso *= 6;
     }

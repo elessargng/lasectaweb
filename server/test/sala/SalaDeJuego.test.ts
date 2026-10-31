@@ -21,10 +21,10 @@ function salaConJugadores(...nombres: string[]) {
   partida.cambiarGuion(guionDePrueba());
   const ids = nombres.map((nombre, i) => {
     const { id } = sala.participantes.conectar(`socket-${nombre}`, `cliente-${nombre}`, invitado(nombre), siempreViva);
-    expect(sala.sentar(id, partida.mesa()[i].id)).toBeNull();
+    expect(sala.sentar(id, partida.plaza()[i].id)).toBeNull();
     return id;
   });
-  const asiento = (i: number) => partida.mesa()[i];
+  const asiento = (i: number) => partida.plaza()[i];
   return { juego, ids, asiento };
 }
 
@@ -41,8 +41,8 @@ describe('SalaDeJuego', () => {
       const juego = new SalaDeJuego();
       const { sala, partida } = juego;
       expect(partida.fases.actual()).toEqual({ momento: 'preparacion', numero: 0, reinicios: 0 });
-      expect(partida.mesa()).toHaveLength(7);
-      expect(partida.mesa().every((a) => a.ocupante === null && !a.muerto && a.personaje === null)).toBe(true);
+      expect(partida.plaza()).toHaveLength(7);
+      expect(partida.plaza().every((a) => a.participanteId === null && !a.muerto && a.personaje === null)).toBe(true);
       expect(sala.participantes.participantes()).toEqual([]);
       expect(sala.participantes.hayNarrador()).toBe(false);
       expect(partida.guion.actual()).toBeNull();
@@ -61,7 +61,7 @@ describe('SalaDeJuego', () => {
       const juego = new SalaDeJuego();
       const { sala, partida } = juego;
       const primera = sala.participantes.conectar('s1', 'c1', conCuenta('42', 'ana'), siempreViva);
-      sala.sentar(primera.id, partida.mesa()[0].id);
+      sala.sentar(primera.id, partida.plaza()[0].id);
       const segunda = sala.participantes.conectar('s2', 'c2', conCuenta('42', 'ana'), siempreViva);
       expect(segunda.id).toBe(primera.id);
       expect(segunda.expulsar).toBe('s1');
@@ -169,7 +169,7 @@ describe('SalaDeJuego', () => {
       const { sala, partida } = juego;
       const { id } = sala.participantes.conectar('s1', 'c1', invitado('Vera'), siempreViva);
       partida.acceso.cambiar(id, 'concedido');
-      sala.sentar(id, partida.mesa()[0].id);
+      sala.sentar(id, partida.plaza()[0].id);
       expect(acceso(juego, id)).toBe('ninguno');
       sala.levantar(id);
       expect(acceso(juego, id)).toBe('ninguno');
@@ -206,10 +206,10 @@ describe('SalaDeJuego', () => {
       const { juego, ids, asiento } = salaConJugadores('Ana');
       const { sala } = juego;
       expect(sala.participantes.buscar(ids[0])?.rol).toBe('jugador');
-      expect(asiento(0).ocupante).toBe(ids[0]);
+      expect(asiento(0).participanteId).toBe(ids[0]);
       sala.levantar(ids[0]);
       expect(sala.participantes.buscar(ids[0])?.rol).toBe('visitante');
-      expect(asiento(0).ocupante).toBeNull();
+      expect(asiento(0).participanteId).toBeNull();
     });
 
     it('no se puede sentar en un asiento ocupado ni en uno que no existe', () => {
@@ -224,16 +224,16 @@ describe('SalaDeJuego', () => {
       const { juego, ids, asiento } = salaConJugadores('Ana');
       const { sala } = juego;
       sala.participantes.cambiarRol(ids[0], 'narrador');
-      expect(asiento(0).ocupante).toBeNull();
+      expect(asiento(0).participanteId).toBeNull();
     });
 
     it('al quitar el último asiento, quien estaba sentado vuelve a visitante', () => {
       const juego = new SalaDeJuego();
       const { sala, partida } = juego;
       const { id } = sala.participantes.conectar('s1', 'c1', invitado('Ana'), siempreViva);
-      sala.sentar(id, partida.mesa()[6].id);
+      sala.sentar(id, partida.plaza()[6].id);
       sala.quitarAsiento();
-      expect(partida.mesa()).toHaveLength(6);
+      expect(partida.plaza()).toHaveLength(6);
       expect(sala.participantes.buscar(id)?.rol).toBe('visitante');
     });
 
@@ -243,26 +243,26 @@ describe('SalaDeJuego', () => {
       partida.grimorio.cambiarPersonaje(asiento(0).id, 'chef');
       partida.grimorio.cambiarVida(asiento(0).id, true);
       expect(sala.moverOcupante(asiento(0).id, asiento(3).id)).toBeNull();
-      expect(asiento(3)).toMatchObject({ ocupante: ids[0], personaje: 'chef', muerto: true });
-      expect(asiento(0)).toMatchObject({ ocupante: null, personaje: null, muerto: false });
+      expect(asiento(3)).toMatchObject({ participanteId: ids[0], personaje: 'chef', muerto: true });
+      expect(asiento(0)).toMatchObject({ participanteId: null, personaje: null, muerto: false });
     });
 
     it('al mezclar los asientos, cada jugador sigue con su ficha', () => {
       const { juego, ids } = salaConJugadores('Ana', 'Bea', 'Ceci');
       const { sala, partida } = juego;
       const personajes = ['chef', 'empath', 'imp'];
-      ids.forEach((_, i) => partida.grimorio.cambiarPersonaje(partida.mesa()[i].id, personajes[i]));
+      ids.forEach((_, i) => partida.grimorio.cambiarPersonaje(partida.plaza()[i].id, personajes[i]));
       expect(sala.mezclar()).toBe(3);
-      ids.forEach((id, i) => expect(partida.asientoDe(id)?.personaje).toBe(personajes[i]));
+      ids.forEach((id, i) => expect(partida.jugadorDe(id)?.personaje).toBe(personajes[i]));
     });
 
     it('dos jugadores son vecinos si no hay nadie sentado entre ellos (los libres se saltan)', () => {
       const juego = new SalaDeJuego();
       const { sala, partida } = juego;
       const [a, b, c] = ['Ana', 'Bea', 'Ceci'].map((n) => sala.participantes.conectar(`s-${n}`, `c-${n}`, invitado(n), siempreViva).id);
-      sala.sentar(a, partida.mesa()[0].id);
-      sala.sentar(b, partida.mesa()[3].id);
-      sala.sentar(c, partida.mesa()[5].id);
+      sala.sentar(a, partida.plaza()[0].id);
+      sala.sentar(b, partida.plaza()[3].id);
+      sala.sentar(c, partida.plaza()[5].id);
       expect(sala.sonVecinos(a, b)).toBe(true);
       expect(sala.sonVecinos(a, c)).toBe(true);
       expect(sala.sonVecinos(b, c)).toBe(true);
@@ -281,7 +281,7 @@ describe('SalaDeJuego', () => {
       const juego = new SalaDeJuego();
       const { partida } = juego;
       partida.cambiarGuion(guionDePrueba());
-      partida.grimorio.cambiarPersonaje(partida.mesa()[0].id, 'voudon');
+      partida.grimorio.cambiarPersonaje(partida.plaza()[0].id, 'voudon');
       expect(partida.reparto.distribucion()).toMatchObject({ jugadores: 6, viajeros: 1, aldeanos: 3, forasteros: 1 });
       expect(partida.reparto.fichasParaRepartir()).toBe(6);
     });
@@ -292,9 +292,9 @@ describe('SalaDeJuego', () => {
       partida.cambiarGuion(guionDePrueba());
       BOLSA_DE_SIETE.forEach((id) => partida.reparto.bolsa.alternar(id));
       partida.reparto.repartir();
-      const repartidos = partida.mesa().map((a) => a.personaje);
+      const repartidos = partida.plaza().map((a) => a.personaje);
       expect([...repartidos].sort()).toEqual([...BOLSA_DE_SIETE].sort());
-      expect(partida.mesa().every((a) => a.alineamiento === null)).toBe(true);
+      expect(partida.plaza().every((a) => a.alineamiento === null)).toBe(true);
       expect(partida.reparto.bolsa.bolsa()).toEqual(BOLSA_DE_SIETE);
     });
 
@@ -422,7 +422,7 @@ describe('SalaDeJuego', () => {
       partida.irANoche();
       expect(partida.volverAtras()).toBe(true);
       expect(partida.fases.actual()).toMatchObject({ momento: 'dia', numero: 1 });
-      expect(asiento(1)).toMatchObject({ marcado: true, votosMarca: 3 });
+      expect(partida.grimorio.calavera()).toEqual({ jugador: asiento(1).id, votos: 3 });
       expect(partida.volverAtras()).toBe(true);
       expect(partida.fases.actual()).toMatchObject({ momento: 'noche', numero: 1 });
       expect(partida.volverAtras()).toBe(true);
@@ -442,7 +442,7 @@ describe('SalaDeJuego', () => {
       const { reinicios } = partida.fases.actual();
       partida.limpiarGrimorio();
       expect(partida.fases.actual()).toEqual({ momento: 'preparacion', numero: 0, reinicios: reinicios + 1 });
-      expect(asiento(0)).toMatchObject({ ocupante: ids[0], muerto: false, personaje: null, recordatorios: [] });
+      expect(asiento(0)).toMatchObject({ participanteId: ids[0], muerto: false, personaje: null, recordatorios: [] });
       expect(partida.reparto.bolsa.bolsa()).toEqual([]);
       expect(partida.nominaciones.votaciones()).toEqual([]);
       expect(partida.nominaciones.nominacion()).toBeNull();
@@ -466,7 +466,8 @@ describe('SalaDeJuego', () => {
       alDia(juego);
       partida.grimorio.marcar(asiento(0).id, true);
       partida.grimorio.cambiarVida(asiento(0).id, true);
-      expect(asiento(0)).toMatchObject({ muerto: true, muertePendiente: false, marcado: false });
+      expect(asiento(0)).toMatchObject({ muerto: true, muertePendiente: false });
+      expect(partida.grimorio.hayMarca()).toBe(false);
     });
 
     it('de noche la muerte queda pendiente hasta que el narrador la anuncia', () => {
@@ -522,7 +523,7 @@ describe('SalaDeJuego', () => {
       const { partida } = juego;
       partida.nominaciones.iniciarCuentaAtras(Date.now());
       vi.advanceTimersByTime(SALA_CUENTA_ATRAS_MS);
-      vi.advanceTimersByTime(partida.configuracion.actual().segundosPorFicha * 1000 * partida.mesa().length);
+      vi.advanceTimersByTime(partida.configuracion.actual().segundosPorFicha * 1000 * partida.plaza().length);
     };
 
     it('la palabra es de la nominación: al cerrarla o empezar otra, vuelven a hablar todos', () => {
@@ -602,7 +603,7 @@ describe('SalaDeJuego', () => {
     it('la siguiente votación tiene que superar a la que más tuvo del día', () => {
       const { juego, ids, asiento } = salaConJugadores('Ana', 'Bea', 'Ceci');
       const { sala, partida } = juego;
-      while (partida.mesa().length > 3) sala.quitarAsiento();
+      while (partida.plaza().length > 3) sala.quitarAsiento();
       alDia(juego);
       partida.nominar(asiento(0).id, asiento(1).id);
       expect(partida.nominaciones.nominacion()?.votosNecesarios).toBe(2);
@@ -835,7 +836,7 @@ describe('SalaDeJuego', () => {
       const { sala, partida } = juego;
       alDia(juego);
       partida.empezarSenalamiento({ mensaje: '¿Quién?', segundos: 10, senaladores: [], objetivos: [] });
-      expect(partida.senalamientos.senalamiento()).toMatchObject({ publico: true, senaladores: partida.mesa().map((a) => a.id) });
+      expect(partida.senalamientos.senalamiento()).toMatchObject({ publico: true, senaladores: partida.plaza().map((a) => a.id) });
       expect(partida.senalamientos.veSenalamiento(sala.participantes.buscar(ids[1])!)).toBe(true);
     });
   });
@@ -845,7 +846,7 @@ describe('SalaDeJuego', () => {
       const { juego } = salaConJugadores('Ana', 'Bea');
       const { partida } = juego;
       alDia(juego);
-      const [a, b] = partida.mesa();
+      const [a, b] = partida.plaza();
       partida.nominar(a.id, b.id);
       partida.reloj.ponerReloj(60, 'Privados');
       partida.empezarSenalamiento({ mensaje: '¿Quién?', segundos: 10, senaladores: [], objetivos: [] });
@@ -860,8 +861,8 @@ describe('SalaDeJuego', () => {
       const { sala, partida } = juego;
       partida.cambiarGuion(guionDePrueba());
       const { id } = sala.participantes.conectar('s1', 'c1', conCuenta('42', 'ana'), siempreViva);
-      sala.sentar(id, partida.mesa()[0].id);
-      partida.grimorio.cambiarPersonaje(partida.mesa()[0].id, 'chef');
+      sala.sentar(id, partida.plaza()[0].id);
+      partida.grimorio.cambiarPersonaje(partida.plaza()[0].id, 'chef');
       const alTerminar = vi.fn();
       const estadisticas = new EstadisticasPartida(alTerminar);
       partida.suscribir((evento) => estadisticas.registrar(evento));

@@ -1,16 +1,17 @@
-import type { SalaAsiento, SalaDistribucion } from '../../contrato/sala';
+import type { SalaDistribucion } from '../../contrato/sala';
 import { barajar } from './azar';
 import { Bolsa } from './Bolsa';
 import { repartoPara } from './distribucion';
 import { identidadDe } from './Grimorio';
+import type { Jugador } from './Jugador';
 
 /** Lo que el reparto necesita saber de la partida. */
 export interface EntornoReparto {
-  /** La mesa con sus fichas, en orden. */
-  mesa(): SalaAsiento[];
+  /** Los jugadores de la plaza, en orden. */
+  plaza(): readonly Jugador[];
   esViajero(personajeId: string): boolean;
   /** Lo que hacen las reglas con el reparto (el Revolutionary: ver reglas/revolucionario.ts). */
-  reglas(asientos: SalaAsiento[], personajes: string[]): string[];
+  reglas(asientos: Jugador[], personajes: string[]): string[];
   /** Pone en la ficha del asiento el personaje que le ha tocado (ver Grimorio.repartir). */
   darPersonaje(asientoId: string, personaje: string | null): void;
 }
@@ -43,7 +44,7 @@ export class Reparto {
    * reparto. Uno que esté en la bolsa no cuenta (salió del reparto, y al repartir
    * otra vez puede tocarle a otro).
    */
-  llevaViajero(asiento: SalaAsiento): boolean {
+  llevaViajero(asiento: Jugador): boolean {
     const id = identidadDe(asiento);
     return !!id && this.entorno.esViajero(id) && !this.bolsa.contiene(id);
   }
@@ -53,7 +54,7 @@ export class Reparto {
    * puestos a mano y los de la bolsa) y cuántos de cada tipo (ver repartoPara).
    */
   distribucion(): SalaDistribucion {
-    const mesa = this.entorno.mesa();
+    const mesa = this.entorno.plaza();
     const viajeros = mesa.filter((a) => this.llevaViajero(a)).length + this.bolsa.viajeros();
     const jugadores = Math.max(0, mesa.length - viajeros);
     const reparto = repartoPara(jugadores);
@@ -78,7 +79,7 @@ export class Reparto {
 
   /** Cuántos personajes hay que meter en la bolsa: uno por asiento sin viajero puesto a mano (los de la bolsa, también). */
   fichasParaRepartir(): number {
-    return this.entorno.mesa().filter((a) => !this.llevaViajero(a)).length;
+    return this.entorno.plaza().filter((a) => !this.llevaViajero(a)).length;
   }
 
   /**
@@ -88,7 +89,7 @@ export class Reparto {
    * bolsa se queda como estaba.
    */
   repartir(): void {
-    const asientos = this.entorno.mesa().filter((a) => !this.llevaViajero(a));
+    const asientos = this.entorno.plaza().filter((a) => !this.llevaViajero(a));
     const personajes = this.entorno.reglas(asientos, barajar(this.bolsa.bolsa()));
     asientos.forEach((a, i) => this.entorno.darPersonaje(a.id, personajes[i] ?? null));
   }

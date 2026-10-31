@@ -40,8 +40,8 @@ export class Violinista implements Etapa {
   private async correr(ctx: ContextoEtapa): Promise<void> {
     const { juego } = ctx;
     const { partida } = juego;
-    const demonio = partida.mesa().find((a) => !a.muerto && esDemonio(juego, a)) ?? partida.mesa().find((a) => esDemonio(juego, a));
-    const buenos = partida.mesa().filter((a) => !esDemonio(juego, a) && partida.grimorio.alineamiento(a) !== 'malvado');
+    const demonio = partida.plaza().find((a) => !a.muerto && esDemonio(juego, a)) ?? partida.plaza().find((a) => esDemonio(juego, a));
+    const buenos = partida.plaza().filter((a) => !esDemonio(juego, a) && partida.grimorio.alineamiento(a) !== 'malvado');
     if (!demonio || !buenos.length) return void ctx.pasarA(new Revelando(demonio ? 'malvado' : 'bueno'));
 
     const bueno =
@@ -73,7 +73,7 @@ export class Violinista implements Etapa {
   /** El demonio elige en un despertar: el asiento de un bueno, o null si no está o no contesta a tiempo. */
   private async eligeElDemonio(ctx: ContextoEtapa, demonio: string, buenos: string[]): Promise<string | null> {
     const { partida } = ctx.juego;
-    if (!partida.mesa().find((a) => a.id === demonio)?.ocupante) return null;
+    if (!partida.plaza().find((a) => a.id === demonio)?.participanteId) return null;
     if (!(await ctx.mesa.accion('narrador:despertar', { asientoId: demonio })).ok) return null;
     await ctx.mesa.accion('despertar:enviar', { asientoId: demonio, ficha: 'personalizado', texto: PIDE_AL_DEMONIO });
     const limite = Date.now() + ELIGE_EL_DEMONIO_MS;

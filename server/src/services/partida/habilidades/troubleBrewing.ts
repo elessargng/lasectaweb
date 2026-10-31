@@ -1,4 +1,4 @@
-import type { SalaAsiento, SalaAvisoHabilidad, SalaOpcionDespertar, SalaRegistro } from '../../../contrato/sala';
+import type { SalaAvisoHabilidad, SalaOpcionDespertar, SalaRegistro } from '../../../contrato/sala';
 import { tieneRecordatorio } from '../reglas/ReglaPersonaje';
 import {
   alineamientosPosibles,
@@ -25,11 +25,12 @@ import {
   type Resultado,
 } from './HabilidadNocturna';
 import { demonios, esbirros } from './malvados';
+import type { Jugador } from '../Jugador';
 
 /** Las habilidades de noche de Trouble Brewing. */
 
 /** «Este jugador es» con quien es de verdad; si puede registrar como otro, el narrador lo revisa. */
-function esteJugadorEs(ctx: ContextoNoche, jugadores: SalaAsiento[], quien: SalaAsiento) {
+function esteJugadorEs(ctx: ContextoNoche, jugadores: readonly Jugador[], quien: Jugador) {
   const id = ctx.identidad(quien);
   const avisos: SalaAvisoHabilidad[] = dudoso(ctx, quien) ? [{ tipo: 'registro', asiento: quien.id }] : [];
   const opciones: SalaOpcionDespertar[] = id
@@ -45,7 +46,7 @@ export const monje = new EligeYMarca('monk', 'Safe', { puedeElegirse: false, tra
 export const mayordomo = new EligeYMarca('butler', 'Master', { puedeElegirse: false });
 
 /** Protegido del demonio esta noche: con el «Safe» del Monje o un Soldado sano. */
-const protegido = (ctx: ContextoNoche, asiento: SalaAsiento) =>
+const protegido = (ctx: ContextoNoche, asiento: Jugador) =>
   tieneRecordatorio(asiento, 'monk', /^safe$/i) || (ctx.identidad(asiento) === 'soldier' && !droison(ctx, asiento));
 
 /**
@@ -58,7 +59,7 @@ export class Imp extends EligeYMarca {
     super('imp', 'Dead', { puedeElegirse: true });
   }
 
-  protected marcar(ctx: ContextoNoche, asiento: SalaAsiento, elegido: SalaAsiento, avisos: SalaAvisoHabilidad[]): Resultado {
+  protected marcar(ctx: ContextoNoche, asiento: Jugador, elegido: Jugador, avisos: SalaAvisoHabilidad[]): Resultado {
     const muere: Efectos = { ...sinEfectos(), recordatorios: [{ asiento: elegido.id, texto: this.recordatorio }], muere: elegido.id };
     if (elegido.id === asiento.id) return listo(OK, { ...muere, nuevoImp: true }, avisos);
     if (elegido.muerto) return listo(OK, sinEfectos(), avisos);
@@ -83,10 +84,10 @@ class Adivina extends EligeYSabe {
     return pideRecordatorio(ctx, this.personaje, 'Red Herring');
   }
 
-  protected saber(ctx: ContextoNoche, _asiento: SalaAsiento, elegidos: SalaAsiento[]) {
-    const posibles = (a: SalaAsiento): SalaRegistro[] => (ctx.identidad(a) === 'recluse' && dudoso(ctx, a) ? ['noDemonio', 'demonio'] : []);
+  protected saber(ctx: ContextoNoche, _asiento: Jugador, elegidos: Jugador[]) {
+    const posibles = (a: Jugador): SalaRegistro[] => (ctx.identidad(a) === 'recluse' && dudoso(ctx, a) ? ['noDemonio', 'demonio'] : []);
     const opciones = segunRegistros(ctx, elegidos, posibles, (registro) => {
-      const demonio = (a: SalaAsiento) => {
+      const demonio = (a: Jugador) => {
         const r = registro(a);
         return r ? r === 'demonio' : tipoDe(ctx, a) === 'demon';
       };
@@ -105,11 +106,11 @@ class Cuervero extends EligeYSabe {
     this.despiertaAlMorir = true;
   }
 
-  protected requisitos(_ctx: ContextoNoche, asiento: SalaAsiento): SalaAvisoHabilidad[] {
+  protected requisitos(_ctx: ContextoNoche, asiento: Jugador): SalaAvisoHabilidad[] {
     return asiento.muertePendiente ? [] : [{ tipo: 'noMuere' }];
   }
 
-  protected saber(ctx: ContextoNoche, _asiento: SalaAsiento, [elegido]: SalaAsiento[]) {
+  protected saber(ctx: ContextoNoche, _asiento: Jugador, [elegido]: Jugador[]) {
     return esteJugadorEs(ctx, [elegido], elegido);
   }
 }
@@ -149,7 +150,7 @@ class SenalaDosJugadores extends RecibeInformacion {
     const bueno = conRecordatorio(ctx, this.personaje, this.correcto)!;
     const malo = conRecordatorio(ctx, this.personaje, 'Wrong')!;
     // En el orden de la mesa: que no se sepa cuál es
-    const jugadores = ctx.mesa().filter((a) => a.id === bueno.id || a.id === malo.id);
+    const jugadores = ctx.plaza().filter((a) => a.id === bueno.id || a.id === malo.id);
     const info = esteJugadorEs(ctx, jugadores, bueno);
     // Si no es de ese tipo (el Espía, la Reclusa…), qué personaje enseñar lo decide el narrador
     return tipoDe(ctx, bueno) === this.tipo ? info : { opciones: [], avisos: info.avisos };
@@ -166,7 +167,7 @@ class Bibliotecario extends SenalaDosJugadores {
   }
 
   protected ninguno(ctx: ContextoNoche): boolean {
-    return !ctx.mesa().some((a) => tipoDe(ctx, a) === 'outsider' || (ctx.identidad(a) === 'spy' && dudoso(ctx, a)));
+    return !ctx.plaza().some((a) => tipoDe(ctx, a) === 'outsider' || (ctx.identidad(a) === 'spy' && dudoso(ctx, a)));
   }
 }
 export const bibliotecario = new Bibliotecario();
@@ -179,13 +180,13 @@ class Chef extends RecibeInformacion {
 
   /** Como mucho, una pareja por cada dos asientos. */
   maximoNumero(ctx: ContextoNoche): number {
-    return Math.floor(ctx.mesa().length / 2);
+    return Math.floor(ctx.plaza().length / 2);
   }
 
   protected informacion(ctx: ContextoNoche) {
-    const mesa = ctx.mesa();
+    const mesa = ctx.plaza();
     const opciones = segunRegistros(ctx, mesa, (a) => alineamientosPosibles(ctx, a), (registro) => {
-      const malvado = (a: SalaAsiento) => (registro(a) ?? ctx.alineamiento(a)) === 'malvado';
+      const malvado = (a: Jugador) => (registro(a) ?? ctx.alineamiento(a)) === 'malvado';
       const parejas = mesa.length < 2 ? 0 : mesa.filter((a, i) => malvado(a) && malvado(mesa[(i + 1) % mesa.length])).length;
       // Con dos, la pareja se cuenta una vez
       return numero(mesa.length === 2 ? Math.min(parejas, 1) : parejas);
@@ -206,7 +207,7 @@ class Empatico extends RecibeInformacion {
     return 2;
   }
 
-  protected informacion(ctx: ContextoNoche, asiento: SalaAsiento) {
+  protected informacion(ctx: ContextoNoche, asiento: Jugador) {
     const vecinos = vecinosVivos(ctx, asiento);
     const opciones = segunRegistros(ctx, vecinos, (a) => alineamientosPosibles(ctx, a), (registro) =>
       numero(vecinos.filter((a) => (registro(a) ?? ctx.alineamiento(a)) === 'malvado').length),
@@ -252,7 +253,7 @@ class MujerEscarlata extends RecibeInformacion {
     super('scarletwoman');
   }
 
-  protected requisitos(_ctx: ContextoNoche, asiento: SalaAsiento) {
+  protected requisitos(_ctx: ContextoNoche, asiento: Jugador) {
     return tieneRecordatorio(asiento, this.personaje, /^is the demon$/i) ? [] : [{ tipo: 'faltaRecordatorio' as const, personaje: this.personaje, texto: 'Is The Demon' }];
   }
 

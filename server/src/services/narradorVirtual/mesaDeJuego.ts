@@ -1,7 +1,7 @@
-import type { SalaAsiento } from '../../contrato/sala';
 import type { ContextoNoche } from '../partida/habilidades/HabilidadNocturna';
 import type { SalaDeJuego } from '../SalaDeJuego';
 import { identidadDe } from '../partida/Grimorio';
+import type { Jugador } from '../partida/Jugador';
 
 /**
  * Consultas a la mesa que usan las etapas del narrador virtual (solo leen; lo que
@@ -9,27 +9,27 @@ import { identidadDe } from '../partida/Grimorio';
  */
 
 /** El tipo de quien es de verdad el de un asiento. */
-export const tipoReal = (juego: SalaDeJuego, asiento: SalaAsiento): string | undefined => {
+export const tipoReal = (juego: SalaDeJuego, asiento: Jugador): string | undefined => {
   const { partida } = juego;
   const id = identidadDe(asiento);
   return id ? partida.guion.personaje(id)?.tipo : undefined;
 };
 
 /** Vivo: ni muerto ni muere esta noche. */
-export const vivo = (asiento: SalaAsiento): boolean => !asiento.muerto && !asiento.muertePendiente;
+export const vivo = (asiento: Jugador): boolean => !asiento.muerto && !asiento.muertePendiente;
 
 /** Cómo se le nombra en voz alta: quien se sienta o, libre, su asiento. */
 export function nombreDeAsiento(juego: SalaDeJuego, asientoId: string): string {
   const { sala, partida } = juego;
-  const asientos = partida.mesa();
+  const asientos = partida.plaza();
   const i = asientos.findIndex((a) => a.id === asientoId);
-  const ocupante = asientos[i]?.ocupante;
+  const ocupante = asientos[i]?.participanteId;
   return (ocupante && sala.participantes.buscar(ocupante)?.nombre) || `el asiento ${i + 1}`;
 }
 
 /** Lo que consultan las habilidades de noche, desde la sala (para preguntarles como lo haría la sala). */
 export const contextoNoche = ({ partida }: SalaDeJuego): ContextoNoche => ({
-  mesa: () => partida.mesa(),
+  plaza: () => partida.plaza(),
   identidad: (asiento) => identidadDe(asiento),
   alineamiento: (asiento) => partida.grimorio.alineamiento(asiento),
   personaje: (id) => partida.guion.personaje(id),
@@ -45,10 +45,10 @@ export const contextoNoche = ({ partida }: SalaDeJuego): ContextoNoche => ({
  */
 export function sinEntender(juego: SalaDeJuego): string[] {
   const { partida } = juego;
-  const asientos = partida.mesa();
+  const asientos = partida.plaza();
   return partida.despertares.despertares()
     .filter((d) => {
-      if (!asientos.find((a) => a.id === d.asiento)?.ocupante) return false;
+      if (!asientos.find((a) => a.id === d.asiento)?.participanteId) return false;
       const ultimo = d.mensajes[d.mensajes.length - 1];
       return !!ultimo && ultimo.ficha !== 'entendido';
     })

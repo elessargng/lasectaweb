@@ -75,7 +75,7 @@ async function droison(ctx: ContextoEtapa, fila: SalaHabilidadNoche): Promise<Sa
 /** El demonio ataca al Alcalde: muere él o la muerte rebota a otro vivo (no al demonio). */
 async function alcaldeAtacado(ctx: ContextoEtapa, demonio: string, alcaldeId: string): Promise<void> {
   const { partida } = ctx.juego;
-  const otros = partida.mesa().filter((a) => vivo(a) && a.id !== alcaldeId && a.personaje !== demonio);
+  const otros = partida.plaza().filter((a) => vivo(a) && a.id !== alcaldeId && a.personaje !== demonio);
   const rebota =
     otros.length > 0 &&
     (await ctx.siONo({

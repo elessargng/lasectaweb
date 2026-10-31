@@ -1,4 +1,5 @@
-import type { SalaAlineamiento, SalaAsiento, SalaRevelacion } from '../../contrato/sala';
+import type { SalaAlineamiento, SalaRevelacion } from '../../contrato/sala';
+import type { Jugador } from './Jugador';
 
 /**
  * El final de la partida: el narrador dice qué bando ha ganado (y lo que ha
@@ -9,15 +10,15 @@ export class Revelacion {
   private actual: { ganador: SalaAlineamiento; causas: string[]; reveladas: string[] } | null = null;
 
   constructor(
-    /** La mesa, en orden. */
-    private readonly mesa: () => SalaAsiento[],
+    /** Los jugadores de la plaza, en orden. */
+    private readonly plaza: () => readonly Jugador[],
   ) {}
 
   /** La revelación del grimorio en curso (o acabada), o null. */
   revelacion(): SalaRevelacion | null {
     const r = this.actual;
     if (!r) return null;
-    const mesa = this.mesa();
+    const mesa = this.plaza();
     // Solo cuentan los asientos que siguen en la mesa
     const reveladas = r.reveladas.filter((id) => mesa.some((a) => a.id === id));
     const terminada = mesa.every((a) => reveladas.includes(a.id));
@@ -33,12 +34,12 @@ export class Revelacion {
   /** Revela la ficha de un asiento (todos verán su personaje). */
   revelarFicha(asientoId: string): void {
     const r = this.actual;
-    if (r && !r.reveladas.includes(asientoId) && this.mesa().some((a) => a.id === asientoId)) r.reveladas.push(asientoId);
+    if (r && !r.reveladas.includes(asientoId) && this.plaza().some((a) => a.id === asientoId)) r.reveladas.push(asientoId);
   }
 
   /** Revela de una vez las que quedan. */
   revelarTodas(): void {
-    for (const a of this.mesa()) this.revelarFicha(a.id);
+    for (const a of this.plaza()) this.revelarFicha(a.id);
   }
 
   /** Otra partida: no hay nada que revelar. */

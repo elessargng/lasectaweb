@@ -1,14 +1,15 @@
 import { randomUUID } from 'crypto';
 import type { Participante } from '../sala/Participantes';
-import type { SalaAsiento, SalaFase, SalaSenalamiento } from '../../contrato/sala';
+import type { SalaFase, SalaSenalamiento } from '../../contrato/sala';
+import type { Jugador } from './Jugador';
 
 /** Lo que el señalamiento necesita saber de la sala. */
 export interface EntornoSenalamiento {
-  /** La mesa como está ahora. */
-  mesa(): SalaAsiento[];
+  /** Los jugadores de la plaza como están ahora. */
+  plaza(): readonly Jugador[];
   fase(): SalaFase;
   /** El asiento en el que se sienta un participante, o null. */
-  asientoDe(participanteId: string): SalaAsiento | null;
+  jugadorDe(participanteId: string): Jugador | null;
   /** Un visitante ve el grimorio del narrador. */
   veGrimorio(participanteId: string): boolean;
   /** Despierta a un asiento (de noche, los que señalan). */
@@ -33,7 +34,7 @@ export class Senalamientos {
   senalamiento(): SalaSenalamiento | null {
     const s = this.actual;
     if (!s) return null;
-    const ids = new Set(this.entorno.mesa().map((a) => a.id));
+    const ids = new Set(this.entorno.plaza().map((a) => a.id));
     s.senaladores = s.senaladores.filter((id) => ids.has(id));
     s.objetivos = s.objetivos.filter((id) => ids.has(id));
     for (const [desde, hasta] of Object.entries(s.senales)) if (!ids.has(desde) || !ids.has(hasta)) delete s.senales[desde];
@@ -51,7 +52,7 @@ export class Senalamientos {
     if (!s) return false;
     if (s.publico || participante.rol === 'narrador') return true;
     if (participante.rol === 'visitante') return this.entorno.veGrimorio(participante.id);
-    const asiento = this.entorno.asientoDe(participante.id);
+    const asiento = this.entorno.jugadorDe(participante.id);
     return !!asiento && s.senaladores.includes(asiento.id);
   }
 
@@ -67,7 +68,7 @@ export class Senalamientos {
     senaladores: string[];
     objetivos: string[];
   }): void {
-    const todos = this.entorno.mesa().map((a) => a.id);
+    const todos = this.entorno.plaza().map((a) => a.id);
     const deLaMesa = (ids: string[]) => (ids.length ? todos.filter((id) => ids.includes(id)) : todos);
     const publico = this.entorno.fase().momento !== 'noche';
     const inicio = Date.now();
@@ -91,7 +92,7 @@ export class Senalamientos {
     const s = this.senalamiento() && this.actual!;
     if (!s) return 'No hay ningún señalamiento.';
     if (s.congelado) return 'El señalamiento ya ha terminado.';
-    const asiento = this.entorno.asientoDe(participanteId);
+    const asiento = this.entorno.jugadorDe(participanteId);
     if (!asiento || !s.senaladores.includes(asiento.id)) return 'No te toca señalar.';
     if (objetivo === null) {
       delete s.senales[asiento.id];

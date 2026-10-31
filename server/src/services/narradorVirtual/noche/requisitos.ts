@@ -1,8 +1,9 @@
-import { NUM_FAROLES, type SalaAsiento, type SalaHabilidadNoche } from '../../../contrato/sala';
+import { NUM_FAROLES, type SalaHabilidadNoche } from '../../../contrato/sala';
 import type { ContextoEtapa } from '../etapas/Etapa';
 import { describirPersonaje, opcionesDeAsientos } from '../grimorio';
 import { indiceRecordatorio, tipoReal } from '../mesaDeJuego';
 import { identidadDe } from '../../partida/Grimorio';
+import type { Jugador } from '../../partida/Jugador';
 
 /**
  * Lo que falta en el grimorio antes de despertar a alguien, como lo pondría el
@@ -29,7 +30,7 @@ export async function ponerRecordatorio(ctx: ContextoEtapa, asientoId: string, p
 export async function ponerFaroles(ctx: ContextoEtapa): Promise<boolean> {
   const { partida } = ctx.juego;
   if (partida.faroles.faroles().filter(Boolean).length >= NUM_FAROLES) return false;
-  const enJuego = new Set(partida.mesa().flatMap((a) => [a.personaje, identidadDe(a)]).filter(Boolean));
+  const enJuego = new Set(partida.plaza().flatMap((a) => [a.personaje, identidadDe(a)]).filter(Boolean));
   const libres = (partida.guion.actual()?.personajes ?? []).filter((p) => (p.tipo === 'townsfolk' || p.tipo === 'outsider') && !enJuego.has(p.id));
   const forasteros = libres.filter((p) => p.tipo === 'outsider').length;
   const faroles: string[] = [];
@@ -73,14 +74,14 @@ export async function cumplirRequisitos(ctx: ContextoEtapa, fila: SalaHabilidadN
   let puesto = false;
   const faltan = fila.avisos.flatMap((a) => (a.tipo === 'faltaRecordatorio' ? [a] : []));
   if (fila.avisos.some((a) => a.tipo === 'faltanFaroles')) puesto = (await ponerFaroles(ctx)) || puesto;
-  const asientos = partida.mesa();
+  const asientos = partida.plaza();
   const yo = asientos.find((a) => a.id === fila.asiento);
   const otros = asientos.filter((a) => a.id !== fila.asiento);
   // El correcto antes que el «Wrong» (que no puede caer en el mismo)
-  let correcto: SalaAsiento | null = null;
+  let correcto: Jugador | null = null;
   for (const { personaje, texto } of [...faltan].sort((a, b) => Number(a.texto === 'Wrong') - Number(b.texto === 'Wrong'))) {
     const clave = texto.toLowerCase();
-    let elegido: SalaAsiento | null = null;
+    let elegido: Jugador | null = null;
     if (clave === 'red herring') {
       // La Pitonisa: un bueno cualquiera (puede ser ella)
       const buenos = asientos.filter((a) => partida.grimorio.alineamiento(a) !== 'malvado');

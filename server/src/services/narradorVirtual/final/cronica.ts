@@ -1,10 +1,11 @@
-import type { SalaAsiento, SalaEnvioDespertar } from '../../../contrato/sala';
+import type { SalaEnvioDespertar } from '../../../contrato/sala';
 import { droison } from '../../partida/reglas/ReglaPersonaje';
 import type { SalaDeJuego } from '../../SalaDeJuego';
 import { FRASES, type MuerteRevelada, type NocheRevelada } from '../frases';
 import { contextoNoche, nombreDeAsiento, tipoReal } from '../mesaDeJuego';
 import { numeroDe } from '../noche/informacionFalsa';
 import { identidadDe } from '../../partida/Grimorio';
+import type { Jugador } from '../../partida/Jugador';
 
 /** Lo que hizo alguien una noche: a quiénes eligió, lo que le dio el narrador (y si era falso) y si estaba droison. */
 interface NocheApuntada {
@@ -49,7 +50,7 @@ export function apuntarNoche(cronica: Cronica, juego: SalaDeJuego): void {
   const { partida } = juego;
   const noche = partida.fases.actual().numero;
   cronica.ultimaNoche = noche;
-  const asientos = partida.mesa();
+  const asientos = partida.plaza();
   const despertares = partida.despertares.despertares();
   const ctx = contextoNoche(juego);
   for (const { asiento, mensajes } of despertares) {
@@ -95,7 +96,7 @@ export function apuntarMuerteDeDia(cronica: Cronica, juego: SalaDeJuego, asiento
  * Lo que se cuenta de un asiento al revelar su ficha. Un demonio, sea cual sea, es
  * siempre «el demonio» (quién era, lo que creía ser, lo que le enseñaron…), nunca su nombre.
  */
-export function fraseAlRevelar(cronica: Cronica, juego: SalaDeJuego, asiento: SalaAsiento): string {
+export function fraseAlRevelar(cronica: Cronica, juego: SalaDeJuego, asiento: Jugador): string {
   const { partida } = juego;
   const nombreP = (id: string) => {
     const personaje = partida.guion.personaje(id);

@@ -1,7 +1,6 @@
 import { randomUUID } from 'crypto';
 import type {
   SalaAlineamiento,
-  SalaAsiento,
   SalaEleccionDespertar,
   SalaEnvioDespertar,
   SalaFichaEnviada,
@@ -32,6 +31,7 @@ import { RelojSala } from './RelojSala';
 import { Reparto } from './Reparto';
 import { Revelacion } from './Revelacion';
 import { Senalamientos } from './Senalamientos';
+import type { Jugador } from './Jugador';
 
 /** Lo que la partida necesita saber de fuera de la sala. */
 export interface EntornoPartida {
@@ -77,7 +77,7 @@ export class Partida {
   });
   /** Lo que las reglas de los personajes pueden consultar de la partida. */
   private readonly contextoReglas: ContextoReglas = {
-    mesa: () => this.mesa(),
+    plaza: () => this.plaza(),
     identidad: (asiento) => identidadDe(asiento),
     alineamiento: (asiento) => this.grimorio.alineamiento(asiento),
     personaje: (id) => this.guion.personaje(id),
@@ -86,7 +86,7 @@ export class Partida {
   private readonly reglas = new Reglas(this.contextoReglas);
   /** Las nominaciones y votaciones del día (y quién tiene la palabra). */
   readonly nominaciones = new Nominaciones({
-    mesa: () => this.mesa(),
+    plaza: () => this.plaza(),
     buscar: (id) => this.sala.participantes.buscar(id),
     bajarManos: () => this.sala.participantes.bajarManos(),
     cuentaDe: (id) => this.cuentaDe(id),
@@ -113,7 +113,7 @@ export class Partida {
   readonly reloj = new RelojSala();
   /** Los despertares de la noche. */
   readonly despertares = new Despertares(
-    () => this.mesa(),
+    () => this.plaza(),
     () => this.fases.actual(),
     this.diario(),
   );
@@ -133,23 +133,23 @@ export class Partida {
   /** Los faroles para el demonio (del narrador y de cada asiento). */
   readonly faroles = new Faroles(() => this.sala.jugadores(), this.diario());
   /** El final de la partida: qué bando ha ganado y qué fichas se han revelado. */
-  readonly revelacion = new Revelacion(() => this.mesa());
+  readonly revelacion = new Revelacion(() => this.plaza());
   /** Los NPCs en juego y lo que traen (Bootlegger, Storm Catcher, silencio). */
   readonly npcs = new Npcs(() => this.guion.actual());
   /** Lo entregado a cada jugador y los grimorios enviados. */
-  readonly entregas = new Entregas(() => this.mesa(), this.diario());
+  readonly entregas = new Entregas(() => this.plaza(), this.diario());
   /** La bolsa y el reparto de personajes. */
   readonly reparto = new Reparto({
-    mesa: () => this.mesa(),
+    plaza: () => this.plaza(),
     esViajero: (id) => this.guion.esViajero(id),
     reglas: (asientos, personajes) => this.reglas.repartir(asientos, personajes),
     darPersonaje: (asientoId, personaje) => this.grimorio.repartir(asientoId, personaje),
   });
   /** El señalamiento en curso. */
   readonly senalamientos = new Senalamientos({
-    mesa: () => this.mesa(),
+    plaza: () => this.plaza(),
     fase: () => this.fases.actual(),
-    asientoDe: (id) => this.asientoDe(id),
+    jugadorDe: (id) => this.jugadorDe(id),
     veGrimorio: (id) => this.acceso.de(id) === 'concedido',
     despertar: (asientoId) => void this.despertares.despertar(asientoId),
   });
@@ -157,22 +157,16 @@ export class Partida {
   private recordatorios: Record<string, boolean> = {};
 
   /**
-   * Los asientos con su ficha y sus faroles, en orden (ver Sala.asientos). Es una
-   * copia para leer: las fichas se cambian en this.grimorio.
+   * Los jugadores de la plaza, en orden (ver Sala.jugadores). Se cambian con
+   * this.grimorio, no a mano.
    */
-  mesa(): SalaAsiento[] {
-    return this.sala.jugadores().map((j) => ({
-      id: j.id,
-      ocupante: j.participanteId,
-      ...this.grimorio.ficha(j.id),
-      faroles: this.faroles.deJugador(j),
-      farolEnUso: this.faroles.enUso(j),
-    }));
+  plaza(): readonly Jugador[] {
+    return this.sala.jugadores();
   }
 
-  /** El asiento (con su ficha) en el que se sienta un participante, o null. */
-  asientoDe(participanteId: string): SalaAsiento | null {
-    return this.mesa().find((a) => a.ocupante === participanteId) ?? null;
+  /** El jugador al que juega un participante, o null. */
+  jugadorDe(participanteId: string): Jugador | null {
+    return this.sala.jugadorDe(participanteId);
   }
 
   /**
@@ -239,9 +233,9 @@ export class Partida {
 
   /** Un asiento para el diario: su número y quien se sienta ahora. */
   asientoDiario(asientoId: string): AsientoDiario {
-    const mesa = this.mesa();
+    const mesa = this.plaza();
     const i = mesa.findIndex((a) => a.id === asientoId);
-    const ocupante = mesa[i]?.ocupante;
+    const ocupante = mesa[i]?.participanteId;
     return { numero: i + 1, nombre: ocupante ? (this.sala.participantes.buscar(ocupante)?.nombre ?? null) : null };
   }
 
@@ -251,17 +245,17 @@ export class Partida {
   }
 
   private cuentaDelAsiento(asientoId: string): string | null {
-    return this.cuentaDe(this.mesa().find((a) => a.id === asientoId)?.ocupante ?? null);
+    return this.cuentaDe(this.plaza().find((a) => a.id === asientoId)?.participanteId ?? null);
   }
 
   /** Cómo está ahora la mesa, asiento a asiento (para quien escucha la partida). */
   private fotoDeLaMesa(): FotoAsiento[] {
-    return this.mesa().map((a, i) => {
+    return this.plaza().map((a, i) => {
       const personaje = identidadDe(a);
       return {
         numero: i + 1,
-        nombre: a.ocupante ? (this.sala.participantes.buscar(a.ocupante)?.nombre ?? null) : null,
-        userId: this.cuentaDe(a.ocupante),
+        nombre: a.participanteId ? (this.sala.participantes.buscar(a.participanteId)?.nombre ?? null) : null,
+        userId: this.cuentaDe(a.participanteId),
         personaje,
         ficha: a.personaje && a.personaje !== personaje ? a.personaje : null,
         alineamiento: this.grimorio.alineamiento(a),
@@ -276,16 +270,17 @@ export class Partida {
    * de votos del día.
    */
   irANoche(): void {
-    const marcadas = this.mesa().filter((a) => a.marcado);
+    const calavera = this.grimorio.calavera();
+    const marcadas = this.plaza().filter((a) => a.id === calavera?.jugador);
     this.avisar({
       tipo: 'anochece',
       desdePreparacion: this.fases.actual().momento === 'preparacion',
       mesa: this.fotoDeLaMesa(),
-      conCalavera: marcadas.flatMap((a) => this.cuentaDe(a.ocupante) ?? []),
+      conCalavera: marcadas.flatMap((a) => this.cuentaDe(a.participanteId) ?? []),
     });
     // Para poder volver: lo que se quita al anochecer
     this.fases.anochecer({
-      marcas: marcadas.map((a) => ({ asiento: a.id, votos: a.votosMarca })),
+      marcas: calavera ? [{ asiento: calavera.jugador, votos: calavera.votos }] : [],
       maximoDelDia: this.nominaciones.recordDelDia(),
     });
     // Otra noche: el despertar guiado empieza de cero
@@ -374,8 +369,8 @@ export class Partida {
 
   /** Envía a quien se sienta en un asiento el grimorio tal como está (el Espía); a un asiento libre, nada. */
   private enviarGrimorioDeLaMesa(asientoId: string): void {
-    const mesa = this.mesa();
-    if (!mesa.find((a) => a.id === asientoId)?.ocupante) return;
+    const mesa = this.plaza();
+    if (!mesa.find((a) => a.id === asientoId)?.participanteId) return;
     const fichas: SalaFichaEnviada[] = mesa.map((a) => ({
       asientoId: a.id,
       personaje: a.personaje,
@@ -429,7 +424,7 @@ export class Partida {
     hasta: string,
     registro: RegistroAlNominar = {},
   ): { pregunta: 'comoAldeano' } | { anochece: boolean; final: boolean } | null {
-    const mesa = this.mesa();
+    const mesa = this.plaza();
     const nominador = mesa.find((a) => a.id === desde);
     const nominado = mesa.find((a) => a.id === hasta);
     // Pedir la expulsión de un viajero no es nominar
@@ -470,7 +465,7 @@ export class Partida {
    */
   senalar(participanteId: string, objetivo: string | null): string | null {
     const error = this.senalamientos.senalar(participanteId, objetivo);
-    const desde = this.asientoDe(participanteId);
+    const desde = this.jugadorDe(participanteId);
     if (!error && desde) {
       this.anotar({ tipo: 'senala', asiento: this.asientoDiario(desde.id), objetivo: objetivo === null ? null : this.asientoDiario(objetivo) });
     }
@@ -540,7 +535,7 @@ export class Partida {
    * el asiento no existe.
    */
   ejecutar(asientoId: string): { anochece: boolean; final: boolean } | null {
-    const asiento = this.mesa().find((a) => a.id === asientoId);
+    const asiento = this.plaza().find((a) => a.id === asientoId);
     if (!asiento) return null;
     // Los recordatorios de los personajes que funcionan con las ejecuciones (ver Reglas)
     for (const { personaje, texto, unico } of this.reglas.recordatoriosAlEjecutar(asiento)) {
@@ -550,12 +545,12 @@ export class Partida {
       if (unico) this.grimorio.quitarDeTodas(personaje, indice);
       this.grimorio.ponerRecordatorio(asiento.id, { personaje, indice, texto: textos![indice] }, { anotar: false });
     }
-    this.avisar({ tipo: 'ejecucion', userId: this.cuentaDe(asiento.ocupante) });
+    this.avisar({ tipo: 'ejecucion', userId: this.cuentaDe(asiento.participanteId) });
     this.anotar({ tipo: 'ejecucion', asiento: this.asientoDiario(asiento.id) });
     this.grimorio.cambiarVida(asiento.id, true, { anotar: false });
     // Los vivos que quedan: los asientos (también los libres, que cuentan como jugadores)
     // sin muerte, sin contar a los viajeros
-    const vivos = this.mesa().filter((a) => !a.muerto && !a.muertePendiente && !this.reparto.llevaViajero(a)).length;
+    const vivos = this.plaza().filter((a) => !a.muerto && !a.muertePendiente && !this.reparto.llevaViajero(a)).length;
     const final = vivos <= 2;
     // Con narrador virtual, anochece él cuando acaba de decirlo (o revela, si se acaba la partida)
     const anochece = !final && !this.entorno.hayNarradorVirtual() && this.reglas.anocheceTrasEjecutar();
@@ -565,7 +560,7 @@ export class Partida {
 
   /** No puede votar: no está sentado, o las reglas dicen que no (ver Reglas.puedeVotar). */
   sinVoto(participanteId: string): boolean {
-    const asiento = this.asientoDe(participanteId);
+    const asiento = this.jugadorDe(participanteId);
     if (!asiento) return true;
     // En la expulsión de un viajero vota cualquiera (los muertos, sin gastar su voto)
     if (this.nominaciones.esExpulsion()) return false;
@@ -587,7 +582,7 @@ export class Partida {
 
   /** Puede votar con las dos manos (dos votos): la Banshee con su habilidad (ver reglas/banshee.ts). */
   puedeVotarDoble(participanteId: string): boolean {
-    const asiento = this.asientoDe(participanteId);
+    const asiento = this.jugadorDe(participanteId);
     return !!asiento && this.reglas.votaDoble(asiento);
   }
 }

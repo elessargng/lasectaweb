@@ -1,8 +1,8 @@
-import type { SalaAsiento } from '../../../contrato/sala';
 import { tieneRecordatorio, type ReglaPersonaje } from './ReglaPersonaje';
+import type { Jugador } from '../Jugador';
 
 /** La Banshee muerta con su recordatorio «Has Ability» en la ficha. */
-const conHabilidad = (asiento: SalaAsiento) => asiento.muerto && tieneRecordatorio(asiento, 'banshee', /has ability/i);
+const conHabilidad = (asiento: Jugador) => asiento.muerto && tieneRecordatorio(asiento, 'banshee', /has ability/i);
 
 /**
  * Banshee: muerta con su habilidad, vota aunque haya gastado su voto, sin

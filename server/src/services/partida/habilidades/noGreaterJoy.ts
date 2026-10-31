@@ -1,4 +1,4 @@
-import type { SalaAsiento, SalaOpcionDespertar } from '../../../contrato/sala';
+import type { SalaOpcionDespertar } from '../../../contrato/sala';
 import {
   droison,
   EligeYSabe,
@@ -14,6 +14,7 @@ import {
 } from './HabilidadNocturna';
 import { demonios, esbirros } from './malvados';
 import { empatico, imp, investigador, mujerEscarlata } from './troubleBrewing';
+import type { Jugador } from '../Jugador';
 
 /**
  * Las habilidades de noche de No Greater Joy (para 5 o 6 jugadores): las de
@@ -29,11 +30,11 @@ class Relojero extends RecibeInformacion {
 
   /** Como mucho, media mesa. */
   maximoNumero(ctx: ContextoNoche): number {
-    return Math.floor(ctx.mesa().length / 2);
+    return Math.floor(ctx.plaza().length / 2);
   }
 
   protected informacion(ctx: ContextoNoche) {
-    const mesa = ctx.mesa();
+    const mesa = ctx.plaza();
     const n = mesa.length;
     const posiciones = (tipo: string) => mesa.flatMap((a, i) => (tipoDe(ctx, a) === tipo ? [i] : []));
     const distancias = posiciones('demon').flatMap((d) => posiciones('minion').map((e) => Math.min(Math.abs(d - e), n - Math.abs(d - e))));
@@ -58,7 +59,7 @@ class Camarera extends EligeYSabe {
     return 2;
   }
 
-  protected saber(ctx: ContextoNoche, _asiento: SalaAsiento, elegidos: SalaAsiento[]) {
+  protected saber(ctx: ContextoNoche, _asiento: Jugador, elegidos: Jugador[]) {
     const despertados = new Set(ctx.despertados?.() ?? []);
     return { opciones: [{ envio: numero(elegidos.filter((a) => despertados.has(a.id)).length), registros: [] }] };
   }
@@ -66,7 +67,7 @@ class Camarera extends EligeYSabe {
 export const camarera = new Camarera();
 
 /** Le ha matado el demonio esta noche: muere y lleva el recordatorio de un demonio (su «Dead»). */
-const muereAManosDelDemonio = (ctx: ContextoNoche, asiento: SalaAsiento) =>
+const muereAManosDelDemonio = (ctx: ContextoNoche, asiento: Jugador) =>
   asiento.muertePendiente && asiento.recordatorios.some((r) => ctx.personaje(r.personaje)?.tipo === 'demon');
 
 /**
@@ -81,17 +82,17 @@ class Sabio extends RecibeInformacion {
     this.tipoEnsenado = 'demon';
   }
 
-  preparar(ctx: ContextoNoche, asiento: SalaAsiento): Resultado {
+  preparar(ctx: ContextoNoche, asiento: Jugador): Resultado {
     if (asiento.muerto) return falta([{ tipo: 'muerto' }]);
     if (!muereAManosDelDemonio(ctx, asiento)) return falta([{ tipo: 'noMuere' }]);
     return informar(ctx, asiento, this.informacion(ctx, asiento), [], true);
   }
 
-  protected informacion(ctx: ContextoNoche, asiento: SalaAsiento) {
-    const mesa = ctx.mesa();
+  protected informacion(ctx: ContextoNoche, asiento: Jugador) {
+    const mesa = ctx.plaza();
     const otros = mesa.filter((a) => a.id !== asiento.id);
     const demonio = otros.find((a) => tipoDe(ctx, a) === 'demon');
-    const pareja = (a: SalaAsiento, b: SalaAsiento, personaje: string): SalaOpcionDespertar => ({
+    const pareja = (a: Jugador, b: Jugador, personaje: string): SalaOpcionDespertar => ({
       // En el orden de la mesa: que no se sepa cuál es
       envio: tarjeta('esteJugadorEs', { jugadores: mesa.filter((x) => x.id === a.id || x.id === b.id).map((x) => x.id), personajes: [personaje] }),
       registros: [],

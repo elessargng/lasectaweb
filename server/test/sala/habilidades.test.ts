@@ -12,15 +12,15 @@ function mesa(...personajes: string[]) {
   const juego = new SalaDeJuego();
   const { sala, partida } = juego;
   partida.cambiarGuion(guionTroubleBrewing());
-  while (partida.mesa().length > personajes.length) sala.quitarAsiento();
+  while (partida.plaza().length > personajes.length) sala.quitarAsiento();
   const ids = personajes.map((p, i) => {
     const { id } = sala.participantes.conectar(`s-${i}`, `c-${i}`, invitado(`J${i}`), () => true);
-    sala.sentar(id, partida.mesa()[i].id);
-    partida.grimorio.cambiarPersonaje(partida.mesa()[i].id, p);
+    sala.sentar(id, partida.plaza()[i].id);
+    partida.grimorio.cambiarPersonaje(partida.plaza()[i].id, p);
     return id;
   });
   partida.irANoche();
-  const asiento = (i: number) => partida.mesa()[i];
+  const asiento = (i: number) => partida.plaza()[i];
   const fila = (personaje: string): SalaHabilidadNoche | undefined => partida.guiado.habilidadesNoche().find((h) => h.personaje === personaje);
   const recordatorio = (i: number, personaje: string, texto: string) => {
     const indice = partida.guion.personaje(personaje)!.recordatorios.indexOf(texto);
