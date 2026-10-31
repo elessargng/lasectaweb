@@ -1,4 +1,4 @@
-import type { GuionResuelto, PersonajeDeGuion } from '../../types/guiones';
+import type { GuionResuelto, PersonajeDeGuion } from '../guiones';
 
 /** El guion de la partida (ya resuelto por GuionService) y sus personajes. */
 export class Guion {

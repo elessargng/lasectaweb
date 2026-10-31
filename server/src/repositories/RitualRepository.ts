@@ -1,5 +1,5 @@
 import { DatabaseRepository } from './DatabaseRepository';
-import { Ritual, RitualInput } from '../types/rituals';
+import { Ritual, RitualInput } from '../models/rituals';
 
 const SELECT_RITUAL = `
   SELECT r.*, st.username AS storytellerUsername, cb.username AS createdByUsername

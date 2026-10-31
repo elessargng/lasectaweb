@@ -1,6 +1,6 @@
-import { PublicRoleSchema } from '../../types/villacuervos';
-import { PersonajeDeFuente, TIPOS_PERSONAJE, TipoPersonaje } from '../../types/guiones';
-import { normalizarIdPersonaje } from '../../services/personajes/idPersonaje';
+import { PublicRoleSchema } from './esquemas';
+import { PersonajeDeFuente, TIPOS_PERSONAJE, TipoPersonaje } from '../../models/guiones';
+import { normalizarIdPersonaje } from '../../models/personajes/idPersonaje';
 
 /**
  * Otra versión de un icono de Villacuervos: el mismo archivo dentro de una

@@ -1,9 +1,9 @@
 import { randomUUID } from 'crypto';
-import type { Participante } from '../sala/Participantes';
+import type { Participante } from '../../models/sala/Participantes';
 import { ConversacionDto, InvitacionDto } from '../../contrato/sala';
 import type { SalaDeJuego } from '../SalaDeJuego';
-import type { Sala } from '../sala/Sala';
-import type { Partida } from '../partida/Partida';
+import type { Sala } from '../../models/sala/Sala';
+import type { Partida } from '../../models/partida/Partida';
 
 /** Algo que no se puede hacer en una conversación (el mensaje es para quien lo intenta). */
 export class ConversacionError extends Error {

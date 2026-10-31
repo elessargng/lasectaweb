@@ -1,7 +1,7 @@
 import { VillacuervosRepository } from '../../repositories/VillacuervosRepository';
-import { ReglaDjinn } from '../../types/guiones';
-import { PublicJinxSchema } from '../../types/villacuervos';
-import { normalizarIdPersonaje } from '../../services/personajes/idPersonaje';
+import { ReglaDjinn } from '../../models/guiones';
+import { PublicJinxSchema } from './esquemas';
+import { normalizarIdPersonaje } from '../../models/personajes/idPersonaje';
 import { FuenteDjinn } from '../../services/djinn/FuenteDjinn';
 
 /**

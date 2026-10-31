@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { RECORDATORIO_TEXTO, type Recordatorio } from '../../contrato/grimorio';
 import { type Alineamiento } from '../../contrato/jugador';
 import type { AsientoDiario, HechoDiario } from '../../contrato/diario';
-import type { PersonajeDeGuion } from '../../types/guiones';
+import type { PersonajeDeGuion } from '../guiones';
 import type { Jugador } from './Jugador';
 
 /**

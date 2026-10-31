@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { SalaDeJuego } from '../../src/services/SalaDeJuego';
 import type { HabilidadNocheDto } from '../../src/contrato/despertar';
 import { describirPreguntaArtista, leerPreguntaArtista, type PreguntaArtista } from '../../src/contrato/artista';
-import { ficha } from '../../src/services/partida/habilidades/HabilidadNocturna';
-import { contestar } from '../../src/services/narradorVirtual/dia/artista';
-import { cronicaNueva } from '../../src/services/narradorVirtual/final/cronica';
+import { ficha } from '../../src/models/partida/habilidades/HabilidadNocturna';
+import { contestar } from '../../src/models/narradorVirtual/dia/artista';
+import { cronicaNueva } from '../../src/models/narradorVirtual/final/cronica';
 import { guionNoGreaterJoy, invitado } from './guionDePrueba';
 
 /** El despertar guiado de No Greater Joy: el Relojero, la Camarera y el Sabio. */

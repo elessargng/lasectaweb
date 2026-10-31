@@ -1,4 +1,4 @@
-import { LibraryAccessLevel } from '../types/library';
+import { LibraryAccessLevel } from './library';
 
 /**
  * Cualquier elemento de La Biblioteca (sección, documento o enlace) sobre el que

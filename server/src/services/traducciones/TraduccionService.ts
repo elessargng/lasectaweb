@@ -1,6 +1,6 @@
 import { IdiomaRepository } from '../../repositories/IdiomaRepository';
 import { TraduccionRepository } from '../../repositories/TraduccionRepository';
-import { Genero, IDIOMA_ORIGINAL, Idioma, TraduccionPersonaje } from '../../types/guiones';
+import { Genero, IDIOMA_ORIGINAL, Idioma, TraduccionPersonaje } from '../../models/guiones';
 
 /** Las traducciones de un idioma (en un género, si los distingue). */
 export interface TraduccionesDeIdioma {

@@ -5,8 +5,8 @@ import {
   computeProposalContentHash,
   GENESIS_HASH,
   hashToken
-} from '../utils/ledger';
-import { ProposalTarget } from '../types/codice';
+} from '../models/ledger';
+import { ProposalTarget } from '../models/codice';
 import {
   Proposal,
   ProposalComment,
@@ -15,7 +15,7 @@ import {
   CloseReason,
   LedgerKind,
   ProposalStatus
-} from '../types/plaza';
+} from '../models/plaza';
 
 /**
  * Acceso a datos de La Plaza.

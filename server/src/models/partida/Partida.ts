@@ -3,7 +3,7 @@ import type { EleccionDespertar, EnvioDespertar } from '../../contrato/despertar
 import type { FichaEnviadaDto } from '../../contrato/grimorio';
 import type { Alineamiento } from '../../contrato/jugador';
 import type { AsientoDiario, HechoDiario } from '../../contrato/diario';
-import type { GuionResuelto } from '../../types/guiones';
+import type { GuionResuelto } from '../guiones';
 import type { Participante } from '../sala/Participantes';
 import type { Sala } from '../sala/Sala';
 import { AccesoGrimorio } from './AccesoGrimorio';

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { TraduccionService } from '../services/traducciones/TraduccionService';
-import { GENEROS, GENERO_POR_DEFECTO } from '../types/guiones';
+import { GENEROS, GENERO_POR_DEFECTO } from '../models/guiones';
 
 /** Rutas HTTP de los idiomas de los personajes. Solo traduce HTTP ↔ servicio. */
 export class TraduccionController {

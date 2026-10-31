@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { EstadisticasPartida } from '../../src/services/estadisticas/EstadisticasPartida';
-import { SALA_GRACIA_MS } from '../../src/services/sala/Participantes';
-import { SALA_CUENTA_ATRAS_MS } from '../../src/services/partida/Nominaciones';
+import { EstadisticasPartida } from '../../src/models/estadisticas/EstadisticasPartida';
+import { SALA_GRACIA_MS } from '../../src/models/sala/Participantes';
+import { SALA_CUENTA_ATRAS_MS } from '../../src/models/partida/Nominaciones';
 import { SalaDeJuego } from '../../src/services/SalaDeJuego';
 import { BOLSA_DE_SIETE, conCuenta, guionDePrueba, invitado } from './guionDePrueba';
-import { identidadDe } from '../../src/services/partida/Grimorio';
+import { identidadDe } from '../../src/models/partida/Grimorio';
 
 /**
  * Tests de caracterización: fijan cómo se comporta hoy la sala, para poder

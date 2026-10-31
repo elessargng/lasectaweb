@@ -2,7 +2,7 @@ import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import path from 'path';
 import fs from 'fs';
-import { computeVersionHash, GENESIS_HASH } from '../utils/ledger';
+import { computeVersionHash, GENESIS_HASH } from '../models/ledger';
 
 export class DatabaseRepository {
   private static instance: Database | null = null;

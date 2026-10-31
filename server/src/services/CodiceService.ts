@@ -5,9 +5,9 @@ import {
   RuleWithHistory,
   TargetAction,
   CodiceSection
-} from '../types/codice';
-import { VerificationResult } from '../types/plaza';
-import seed from '../utils/codiceSeed.json';
+} from '../models/codice';
+import { VerificationResult } from '../models/plaza';
+import seed from '../infra/semillas/codiceSeed.json';
 
 /** Incidencia encontrada al verificar el Códice. */
 export interface CodiceProblem {

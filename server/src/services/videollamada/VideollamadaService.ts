@@ -1,7 +1,7 @@
 import { ConversacionService } from '../conversaciones/ConversacionService';
 import type { SalaDeJuego } from '../SalaDeJuego';
-import type { Sala } from '../sala/Sala';
-import type { Partida } from '../partida/Partida';
+import type { Sala } from '../../models/sala/Sala';
+import type { Partida } from '../../models/partida/Partida';
 import { PermisosVideo, ProveedorVideo } from './ProveedorVideo';
 
 /** No se puede entrar en esa sala de vídeo (el mensaje es para quien lo intenta). */

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { EstadisticasPartida } from '../../src/services/estadisticas/EstadisticasPartida';
-import type { RegistroPartida } from '../../src/services/estadisticas/SeguimientoPartida';
-import { SALA_CUENTA_ATRAS_MS } from '../../src/services/partida/Nominaciones';
+import { EstadisticasPartida } from '../../src/models/estadisticas/EstadisticasPartida';
+import type { RegistroPartida } from '../../src/models/estadisticas/SeguimientoPartida';
+import { SALA_CUENTA_ATRAS_MS } from '../../src/models/partida/Nominaciones';
 import { SalaDeJuego } from '../../src/services/SalaDeJuego';
 import { conCuenta, guionDePrueba } from './guionDePrueba';
 

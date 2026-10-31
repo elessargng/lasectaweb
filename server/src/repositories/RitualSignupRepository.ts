@@ -1,5 +1,5 @@
 import { DatabaseRepository } from './DatabaseRepository';
-import { RitualAttendee } from '../types/rituals';
+import { RitualAttendee } from '../models/rituals';
 
 export class RitualSignupRepository {
   /** La gente apuntada a esos rituales, en el orden en que se apuntó. */

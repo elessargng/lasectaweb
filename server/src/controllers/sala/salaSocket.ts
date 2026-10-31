@@ -2,16 +2,16 @@ import type { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
 import { SalaDeJuego } from '../../services/SalaDeJuego';
-import { limpiarAvatarSala, limpiarNombreSala, SALA_AVATAR_INVITADO, SalaLlegada } from '../../services/sala/Participantes';
+import { limpiarAvatarSala, limpiarNombreSala, SALA_AVATAR_INVITADO, SalaLlegada } from '../../models/sala/Participantes';
 import { VistaPartida } from '../../views/VistaPartida';
-import { EstadisticasPartida } from '../../services/estadisticas/EstadisticasPartida';
+import { EstadisticasPartida } from '../../models/estadisticas/EstadisticasPartida';
 import { ResultadoAccion } from '../../contrato/sala';
 import { ChatError, ChatService } from '../../services/chat/ChatService';
 import { ConversacionError, ConversacionService } from '../../services/conversaciones/ConversacionService';
 import { PaseVideo, VideollamadaError, VideollamadaService } from '../../services/videollamada/VideollamadaService';
 import { accionesPermitidas, DependenciasSala, ejecutarAccion } from './salaAcciones';
 import { NarradorVirtualService } from '../../services/narradorVirtual/NarradorVirtualService';
-import { temporizadorReal, type Narrador } from '../../services/narradorVirtual/puertos';
+import { temporizadorReal, type Narrador } from '../../models/narradorVirtual/puertos';
 
 /** Bajo /api para que pase por el mismo proxy que el resto de la API. */
 export const SALA_SOCKET_PATH = '/api/socket.io';

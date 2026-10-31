@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { LibraryService } from '../services/LibraryService';
 import { AuthRequest } from './middlewares/auth';
-import { parseAllowedRoles } from '../utils/libraryAccess';
+import { parseAllowedRoles } from '../models/libraryAccess';
 
 export class LibraryController {
   constructor(private libraryService: LibraryService) {}

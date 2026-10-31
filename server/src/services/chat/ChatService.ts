@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import type { Participante } from '../sala/Participantes';
+import type { Participante } from '../../models/sala/Participantes';
 import { ChatRepository } from '../../repositories/ChatRepository';
 import {
   CANAL_GENERAL,
@@ -11,8 +11,8 @@ import {
   SusurroDto,
 } from '../../contrato/chat';
 import type { SalaDeJuego } from '../SalaDeJuego';
-import type { Sala } from '../sala/Sala';
-import type { Partida } from '../partida/Partida';
+import type { Sala } from '../../models/sala/Sala';
+import type { Partida } from '../../models/partida/Partida';
 
 /** Un mensaje que no se puede mandar (el mensaje de error es para quien escribe). */
 export class ChatError extends Error {

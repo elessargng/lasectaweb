@@ -4,24 +4,24 @@ import {
   type IdNarradorVirtual,
 } from '../../contrato/narradorVirtual';
 import type { SalaDeJuego } from '../SalaDeJuego';
-import type { EstrategiaNarrador } from './estrategias/EstrategiaNarrador';
-import { TontoYTu } from './estrategias/TontoYTu';
-import { EsperandoJugadores } from './etapas/EsperandoJugadores';
-import { decisionesDe, type AccionJugador, type ContextoEtapa, type Etapa } from './etapas/Etapa';
+import type { EstrategiaNarrador } from '../../models/narradorVirtual/estrategias/EstrategiaNarrador';
+import { TontoYTu } from '../../models/narradorVirtual/estrategias/TontoYTu';
+import { EsperandoJugadores } from '../../models/narradorVirtual/etapas/EsperandoJugadores';
+import { decisionesDe, type AccionJugador, type ContextoEtapa, type Etapa } from '../../models/narradorVirtual/etapas/Etapa';
 import type { RespuestaArtista } from '../../contrato/artista';
-import { preguntarComoArtista } from './dia/artista';
-import { contarDisparo, exterminar } from './dia/exterminar';
-import { contarPatoso } from './dia/patoso';
-import { vivo } from './plazaDeJuego';
-import { comprobarFinal, esDemonio, type Ganador } from './final/comprobarFinal';
-import { Revelando } from './etapas/Revelando';
-import { Violinista } from './etapas/Violinista';
-import { FRASES } from './frases';
-import { recuerdosNuevos } from './noche/criterioDroison';
-import { prepararPartida, type FueraDeLaBolsa } from './preparacion';
-import type { Azar, BolsasRecientes, Narrador, ModelosJarvis, Temporizador, Voz } from './puertos';
-import { ConRespaldo } from './estrategias/ConRespaldo';
-import { Jarvis } from './estrategias/Jarvis';
+import { preguntarComoArtista } from '../../models/narradorVirtual/dia/artista';
+import { contarDisparo, exterminar } from '../../models/narradorVirtual/dia/exterminar';
+import { contarPatoso } from '../../models/narradorVirtual/dia/patoso';
+import { vivo } from '../../models/narradorVirtual/plazaDeJuego';
+import { comprobarFinal, esDemonio, type Ganador } from '../../models/narradorVirtual/final/comprobarFinal';
+import { Revelando } from '../../models/narradorVirtual/etapas/Revelando';
+import { Violinista } from '../../models/narradorVirtual/etapas/Violinista';
+import { FRASES } from '../../models/narradorVirtual/frases';
+import { recuerdosNuevos } from '../../models/narradorVirtual/noche/criterioDroison';
+import { prepararPartida, type FueraDeLaBolsa } from '../../models/narradorVirtual/preparacion';
+import type { Azar, BolsasRecientes, Narrador, ModelosJarvis, Temporizador, Voz } from '../../models/narradorVirtual/puertos';
+import { ConRespaldo } from '../../models/narradorVirtual/estrategias/ConRespaldo';
+import { Jarvis } from '../../models/narradorVirtual/estrategias/Jarvis';
 
 /** Lo que se elige al añadir un narrador virtual. */
 export interface OpcionesNarradorVirtual {

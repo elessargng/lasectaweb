@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { DatabaseRepository } from './DatabaseRepository';
-import type { AsientoPartida, RegistroPartida } from '../services/estadisticas/SeguimientoPartida';
+import type { AsientoPartida, RegistroPartida } from '../models/estadisticas/SeguimientoPartida';
 import type { RegistroVotacionDto } from '../contrato/partida';
 import type { EntradaDiario } from '../contrato/diario';
 

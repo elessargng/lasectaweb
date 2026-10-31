@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DistribucionDto } from '../../src/contrato/partida';
-import { repartoPara } from '../../src/services/partida/distribucion';
+import { repartoPara } from '../../src/models/partida/distribucion';
 import {
   CATEGORIAS_ALDEANOS,
   CATEGORIAS_INFORMACION,
@@ -11,10 +11,10 @@ import {
   MAX_OPCIONES,
   sortearConceptos,
   type CategoriaAldeano,
-} from '../../src/services/narradorVirtual/bolsa/conceptos';
-import type { Decision } from '../../src/services/narradorVirtual/estrategias/EstrategiaNarrador';
-import { TontoYTu } from '../../src/services/narradorVirtual/estrategias/TontoYTu';
-import { elegirBolsa } from '../../src/services/narradorVirtual/preparacion';
+} from '../../src/models/narradorVirtual/bolsa/conceptos';
+import type { Decision } from '../../src/models/narradorVirtual/estrategias/EstrategiaNarrador';
+import { TontoYTu } from '../../src/models/narradorVirtual/estrategias/TontoYTu';
+import { elegirBolsa } from '../../src/models/narradorVirtual/preparacion';
 import { conSemilla, guionTroubleBrewing, personaje } from './guionDePrueba';
 
 /** Trouble Brewing entero (el de prueba no trae al Barón). */

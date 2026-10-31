@@ -1,5 +1,5 @@
 import { DatabaseRepository } from './DatabaseRepository';
-import { LibraryDocument, LibraryDocumentVersion } from '../types/library';
+import { LibraryDocument, LibraryDocumentVersion } from '../models/library';
 
 export class LibraryDocumentRepository {
   public async getVersionsByDocumentId(documentId: string): Promise<LibraryDocumentVersion[]> {

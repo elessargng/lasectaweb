@@ -21,8 +21,8 @@ import {
   CreatePovMatchDTO,
   UpdatePovMatchDTO,
   PovInputDTO
-} from '../types/library';
-import { AccessContext, canAccess } from '../utils/libraryAccess';
+} from '../models/library';
+import { AccessContext, canAccess } from '../models/libraryAccess';
 
 export class LibraryService {
   constructor(

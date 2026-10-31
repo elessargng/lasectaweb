@@ -1,5 +1,5 @@
 import { DatabaseRepository } from './DatabaseRepository';
-import { BaseLibraryItem, LibraryAccessLevel, LibraryItem, LibrarySection } from '../types/library';
+import { BaseLibraryItem, LibraryAccessLevel, LibraryItem, LibrarySection } from '../models/library';
 
 const SECTION_COLUMNS = 'id, name, parentId, position, icon, accessLevel, allowedRoles, createdAt';
 

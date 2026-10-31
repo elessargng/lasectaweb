@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { DatabaseRepository } from './DatabaseRepository';
-import { computeVersionHash, verifyVersionChain, GENESIS_HASH } from '../utils/ledger';
+import { computeVersionHash, verifyVersionChain, GENESIS_HASH } from '../models/ledger';
 import {
   CodiceSection,
   CodiceVersion,
@@ -10,7 +10,7 @@ import {
   RuleWithHistory,
   RuleKind,
   VersionOrigin
-} from '../types/codice';
+} from '../models/codice';
 
 export class CodiceRepository {
   // ----------------------------------------------------------------- Secciones

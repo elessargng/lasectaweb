@@ -1,4 +1,4 @@
-import type { ClienteJev, DatosJev, PreguntaJev, RespuestaJev } from '../../services/narradorVirtual/puertos';
+import type { ClienteJev, DatosJev, PreguntaJev, RespuestaJev } from '../../models/narradorVirtual/puertos';
 
 export type { DatosJev };
 

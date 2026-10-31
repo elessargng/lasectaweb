@@ -1,7 +1,7 @@
 import path from 'path';
 import { AlmacenIconos } from '../../repositories/AlmacenIconos';
 import { PersonajeGuardado, PersonajeRepository } from '../../repositories/PersonajeRepository';
-import { PersonajeDeFuente } from '../../types/guiones';
+import { PersonajeDeFuente } from '../../models/guiones';
 import { FuentePersonajes } from './FuentePersonajes';
 
 /** Resultado de una sincronización. */

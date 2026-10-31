@@ -1,5 +1,5 @@
 import type { ContextoNoche } from '../partida/habilidades/HabilidadNocturna';
-import type { SalaDeJuego } from '../SalaDeJuego';
+import type { SalaDeJuego } from '../../services/SalaDeJuego';
 import { identidadDe } from '../partida/Grimorio';
 import type { Jugador } from '../partida/Jugador';
 

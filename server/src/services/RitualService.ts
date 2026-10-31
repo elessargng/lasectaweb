@@ -3,7 +3,7 @@ import { RitualRepository } from '../repositories/RitualRepository';
 import { RitualSignupRepository } from '../repositories/RitualSignupRepository';
 import { UserRepository } from '../repositories/UserRepository';
 import { VillacuervosService } from './VillacuervosService';
-import { PublicPlayListSchema } from '../types/villacuervos';
+import { PublicPlayListSchema } from '../infra/villacuervos/esquemas';
 import {
   Ritual,
   RitualAttendanceMode,
@@ -13,7 +13,7 @@ import {
   MAX_RECURRENCE_MONTHS,
   RITUAL_STATUSES,
   RITUAL_TYPES
-} from '../types/rituals';
+} from '../models/rituals';
 
 function villacuervosPlayUrl(playId: number, slug: string): string {
   return `https://villacuervos.es/partidas/${process.env.VILLACUERVOS_CULT_SLUG}/${playId}/${slug}`;

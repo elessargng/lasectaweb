@@ -1,4 +1,4 @@
-import { Genero, Idioma, TraduccionPersonaje } from '../../types/guiones';
+import { Genero, Idioma, TraduccionPersonaje } from '../../models/guiones';
 
 /**
  * De dónde salen las traducciones de los personajes. La sincronización solo

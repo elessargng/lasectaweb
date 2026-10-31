@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SALA_CUENTA_ATRAS_MS } from '../../src/services/partida/Nominaciones';
+import { SALA_CUENTA_ATRAS_MS } from '../../src/models/partida/Nominaciones';
 import { SalaDeJuego } from '../../src/services/SalaDeJuego';
-import { Reglas } from '../../src/services/partida/reglas';
-import type { ContextoReglas, ReglaPersonaje } from '../../src/services/partida/reglas/ReglaPersonaje';
+import { Reglas } from '../../src/models/partida/reglas';
+import type { ContextoReglas, ReglaPersonaje } from '../../src/models/partida/reglas/ReglaPersonaje';
 import { guionDePrueba, invitado } from './guionDePrueba';
-import { Jugador } from '../../src/services/partida/Jugador';
+import { Jugador } from '../../src/models/partida/Jugador';
 
 /** Las reglas de los personajes que cambian la partida, vistas desde fuera (la sala). */
 

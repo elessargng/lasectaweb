@@ -1,5 +1,5 @@
 import { DatabaseRepository } from './DatabaseRepository';
-import { LibraryLink } from '../types/library';
+import { LibraryLink } from '../models/library';
 
 export class LibraryLinkRepository {
   public async getLinkById(id: string): Promise<LibraryLink | undefined> {

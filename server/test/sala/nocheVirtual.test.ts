@@ -2,31 +2,31 @@ import { describe, expect, it } from 'vitest';
 import { SalaDeJuego } from '../../src/services/SalaDeJuego';
 import { ejecutarAccion, type DependenciasSala } from '../../src/controllers/sala/salaAcciones';
 import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
-import { habilidadesDelGuion } from '../../src/services/partida/habilidades';
-import { TontoYTu } from '../../src/services/narradorVirtual/estrategias/TontoYTu';
-import { decisionesDe, type ContextoEtapa, type Etapa } from '../../src/services/narradorVirtual/etapas/Etapa';
-import { Noche } from '../../src/services/narradorVirtual/etapas/Noche';
-import { planificarNoche } from '../../src/services/narradorVirtual/noche/planificarNoche';
-import { informacionesFalsas } from '../../src/services/narradorVirtual/noche/informacionFalsa';
-import { ponerFaroles } from '../../src/services/narradorVirtual/noche/requisitos';
+import { habilidadesDelGuion } from '../../src/models/partida/habilidades';
+import { TontoYTu } from '../../src/models/narradorVirtual/estrategias/TontoYTu';
+import { decisionesDe, type ContextoEtapa, type Etapa } from '../../src/models/narradorVirtual/etapas/Etapa';
+import { Noche } from '../../src/models/narradorVirtual/etapas/Noche';
+import { planificarNoche } from '../../src/models/narradorVirtual/noche/planificarNoche';
+import { informacionesFalsas } from '../../src/models/narradorVirtual/noche/informacionFalsa';
+import { ponerFaroles } from '../../src/models/narradorVirtual/noche/requisitos';
 import {
   opcionesFalsas,
   probabilidadVerdad,
   recordarDroison,
   recuerdosNuevos,
-} from '../../src/services/narradorVirtual/noche/criterioDroison';
-import { elegirBolsa, type FueraDeLaBolsa } from '../../src/services/narradorVirtual/preparacion';
-import type { Decision } from '../../src/services/narradorVirtual/estrategias/EstrategiaNarrador';
-import { comprobarFinal } from '../../src/services/narradorVirtual/final/comprobarFinal';
-import { Revelando } from '../../src/services/narradorVirtual/etapas/Revelando';
-import { Violinista } from '../../src/services/narradorVirtual/etapas/Violinista';
-import { contarDisparo, exterminar } from '../../src/services/narradorVirtual/dia/exterminar';
-import { duracionPrivados, PuestaEnComun, TRAS_GONG_MS } from '../../src/services/narradorVirtual/etapas/Dia';
-import { FRASES } from '../../src/services/narradorVirtual/frases';
-import { contextoNoche } from '../../src/services/narradorVirtual/plazaDeJuego';
-import { ficha, numero, tarjeta } from '../../src/services/partida/habilidades/HabilidadNocturna';
+} from '../../src/models/narradorVirtual/noche/criterioDroison';
+import { elegirBolsa, type FueraDeLaBolsa } from '../../src/models/narradorVirtual/preparacion';
+import type { Decision } from '../../src/models/narradorVirtual/estrategias/EstrategiaNarrador';
+import { comprobarFinal } from '../../src/models/narradorVirtual/final/comprobarFinal';
+import { Revelando } from '../../src/models/narradorVirtual/etapas/Revelando';
+import { Violinista } from '../../src/models/narradorVirtual/etapas/Violinista';
+import { contarDisparo, exterminar } from '../../src/models/narradorVirtual/dia/exterminar';
+import { duracionPrivados, PuestaEnComun, TRAS_GONG_MS } from '../../src/models/narradorVirtual/etapas/Dia';
+import { FRASES } from '../../src/models/narradorVirtual/frases';
+import { contextoNoche } from '../../src/models/narradorVirtual/plazaDeJuego';
+import { ficha, numero, tarjeta } from '../../src/models/partida/habilidades/HabilidadNocturna';
 import { conSemilla, guionTroubleBrewing, invitado } from './guionDePrueba';
-import { identidadDe } from '../../src/services/partida/Grimorio';
+import { identidadDe } from '../../src/models/partida/Grimorio';
 
 /** La hoja de noche de Trouble Brewing (la de verdad). */
 const PRIMERA_NOCHE = ['poisoner', 'spy', 'washerwoman', 'librarian', 'investigator', 'chef', 'empath', 'fortuneteller', 'butler'];

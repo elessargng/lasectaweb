@@ -1,6 +1,6 @@
 import { normalizarIdPersonaje } from '../personajes/idPersonaje';
 import { GuionInvalidoError } from './errores';
-import { Despertar, ESPECIAL_REPETIBLE, GuionImportado, PersonajePropio, TIPOS_PERSONAJE, TipoPersonaje } from '../../types/guiones';
+import { Despertar, ESPECIAL_REPETIBLE, GuionImportado, PersonajePropio, TIPOS_PERSONAJE, TipoPersonaje } from './index';
 
 
 const MAX_TEXTO = 300 * 1024;

@@ -6,8 +6,8 @@ import {
   deriveTokens,
   hashToken,
   computeProposalContentHash
-} from '../utils/ledger';
-import { ProposalTarget } from '../types/codice';
+} from '../models/ledger';
+import { ProposalTarget } from '../models/codice';
 import type { PlazaResultAnnouncement } from '../infra/mailer';
 import {
   Proposal,
@@ -19,7 +19,7 @@ import {
   VerificationResult,
   ProposalComment,
   LedgerEntry
-} from '../types/plaza';
+} from '../models/plaza';
 
 /**
  * Reglas de aprobación acordadas por la comunidad.

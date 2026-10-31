@@ -1,6 +1,6 @@
 import { IdiomaRepository } from '../../repositories/IdiomaRepository';
 import { TraduccionRepository, VarianteTraducciones } from '../../repositories/TraduccionRepository';
-import { GENEROS, Genero, Idioma } from '../../types/guiones';
+import { GENEROS, Genero, Idioma } from '../../models/guiones';
 import { FuenteTraducciones } from './FuenteTraducciones';
 
 /** Resultado de una sincronización. */

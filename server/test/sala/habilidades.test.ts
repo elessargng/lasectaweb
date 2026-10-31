@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { SalaDeJuego } from '../../src/services/SalaDeJuego';
 import type { HabilidadNocheDto } from '../../src/contrato/despertar';
 import { Arnes } from './arnes';
-import { ficha } from '../../src/services/partida/habilidades/HabilidadNocturna';
+import { ficha } from '../../src/models/partida/habilidades/HabilidadNocturna';
 import { guionDePrueba, guionTroubleBrewing, invitado } from './guionDePrueba';
 
 /** El despertar guiado desde el orden de noche: cada personaje de Trouble Brewing, según su habilidad. */

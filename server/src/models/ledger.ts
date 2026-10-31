@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { LedgerEntry, VoteChoice, CloseReason, LedgerKind } from '../types/plaza';
+import { LedgerEntry, VoteChoice, CloseReason, LedgerKind } from './plaza';
 
 /**
  * Núcleo criptográfico del registro sellado de La Plaza.

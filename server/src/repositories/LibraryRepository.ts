@@ -13,7 +13,7 @@ import {
   LibraryAccessLevel,
   InitialAlignment,
   CharacterType
-} from '../types/library';
+} from '../models/library';
 
 export class LibraryRepository {
   public itemRepo: LibraryItemRepository;

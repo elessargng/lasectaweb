@@ -2,7 +2,7 @@ import type { MensajeDespertar, EnvioDespertar, OpcionDespertar } from '../../co
 import type { RegistroVotacionDto } from '../../contrato/partida';
 import { droison } from '../partida/reglas/ReglaPersonaje';
 import type { Opcion } from './estrategias/EstrategiaNarrador';
-import type { SalaDeJuego } from '../SalaDeJuego';
+import type { SalaDeJuego } from '../../services/SalaDeJuego';
 import { contextoNoche, nombreDeAsiento, tipoReal, vivo } from './plazaDeJuego';
 import { identidadDe } from '../partida/Grimorio';
 import type { Jugador } from '../partida/Jugador';

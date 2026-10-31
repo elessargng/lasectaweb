@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { ConRespaldo, FALLOS_PARA_RENDIRSE } from '../../src/services/narradorVirtual/estrategias/ConRespaldo';
-import type { Decision, EstrategiaNarrador } from '../../src/services/narradorVirtual/estrategias/EstrategiaNarrador';
-import { Jarvis } from '../../src/services/narradorVirtual/estrategias/Jarvis';
-import type { Grimorio } from '../../src/services/narradorVirtual/grimorio';
-import type { ClienteJev, PreguntaJev, RespuestaJev } from '../../src/services/narradorVirtual/puertos';
+import { ConRespaldo, FALLOS_PARA_RENDIRSE } from '../../src/models/narradorVirtual/estrategias/ConRespaldo';
+import type { Decision, EstrategiaNarrador } from '../../src/models/narradorVirtual/estrategias/EstrategiaNarrador';
+import { Jarvis } from '../../src/models/narradorVirtual/estrategias/Jarvis';
+import type { Grimorio } from '../../src/models/narradorVirtual/grimorio';
+import type { ClienteJev, PreguntaJev, RespuestaJev } from '../../src/models/narradorVirtual/puertos';
 import { Arnes, type Cliente } from './arnes';
 import { conSemilla, guionTroubleBrewing } from './guionDePrueba';
 

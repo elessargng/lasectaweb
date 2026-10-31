@@ -2,7 +2,7 @@ import { NO_VAN_EN_BOLSA } from '../../contrato/bolsaAleatoria';
 import { repartoAjustado } from '../../contrato/reparto';
 import type { GuionNarradorVirtual } from '../../contrato/narradorVirtual';
 import type { DistribucionDto } from '../../contrato/partida';
-import type { PersonajeDeGuion } from '../../types/guiones';
+import type { PersonajeDeGuion } from '../guiones';
 import {
   categoriasDeHuecos,
   CATEGORIAS_ALDEANOS,
@@ -19,7 +19,7 @@ import {
 } from './bolsa/conceptos';
 import type { Decision } from './estrategias/EstrategiaNarrador';
 import { instruccionesBolsa } from './estrategias/instruccionesJarvis';
-import type { SalaDeJuego } from '../SalaDeJuego';
+import type { SalaDeJuego } from '../../services/SalaDeJuego';
 import type { Azar, Narrador } from './puertos';
 
 /** Lo que ha salido pero no va en la bolsa (el Borracho) y el aldeano que cree ser (su ficha sí va). */

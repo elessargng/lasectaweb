@@ -1,5 +1,5 @@
 import { DatabaseRepository } from './DatabaseRepository';
-import { LibraryPovMatch, LibraryPov, LibraryAccessLevel, InitialAlignment, CharacterType } from '../types/library';
+import { LibraryPovMatch, LibraryPov, LibraryAccessLevel, InitialAlignment, CharacterType } from '../models/library';
 
 export class LibraryPovMatchRepository {
   public async getPovsByMatchId(matchId: string): Promise<LibraryPov[]> {

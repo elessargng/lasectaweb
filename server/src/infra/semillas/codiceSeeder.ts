@@ -1,5 +1,5 @@
 import { CodiceRepository } from '../../repositories/CodiceRepository';
-import seed from '../../utils/codiceSeed.json';
+import seed from './codiceSeed.json';
 
 /**
  * Carga el Códice vigente en base de datos la primera vez que arranca.

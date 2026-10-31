@@ -3,12 +3,12 @@ import { ChatRepository } from '../../repositories/ChatRepository';
 import { datosDeDataUrl, guardarFondoSala } from '../../infra/almacenamiento/salaFondoStorage';
 import { ProveedorVideo } from '../../services/videollamada/ProveedorVideo';
 import { MENSAJES_PRIVADOS, MensajesPrivados } from '../../contrato/chat';
-import { limpiarAvatarSala, limpiarNombreSala, type Participante } from '../../services/sala/Participantes';
-import { SALA_RELOJ } from '../../services/partida/RelojSala';
+import { limpiarAvatarSala, limpiarNombreSala, type Participante } from '../../models/sala/Participantes';
+import { SALA_RELOJ } from '../../models/partida/RelojSala';
 import type { SalaDeJuego } from '../../services/SalaDeJuego';
-import { SALA_ASIENTOS } from '../../services/sala/Sala';
-import { SALA_SEGUNDOS_POR_FICHA, type Configuracion } from '../../services/partida/Configuracion';
-import { identidadDe } from '../../services/partida/Grimorio';
+import { SALA_ASIENTOS } from '../../models/sala/Sala';
+import { SALA_SEGUNDOS_POR_FICHA, type Configuracion } from '../../models/partida/Configuracion';
+import { identidadDe } from '../../models/partida/Grimorio';
 import {
   NPC_BOOTLEGGER,
   NPC_FERRYMAN,
@@ -16,7 +16,7 @@ import {
   NPC_POPE,
   NPC_SILENCIO,
   NPC_STORMCATCHER,
-} from '../../services/partida/personajesEspeciales';
+} from '../../models/partida/personajesEspeciales';
 import {
   GUIONES_NARRADOR_VIRTUAL,
   JUGADORES_NARRADOR_VIRTUAL,
@@ -48,13 +48,13 @@ import { NUM_FAROLES } from '../../contrato/jugador';
 import { SALA_ESTILOS_MANO, SALA_FORMAS_MANO, FormaMano } from '../../contrato/participante';
 import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA } from '../../contrato/partida';
 import { guardarAvatarSala } from '../../infra/almacenamiento/salaAvatarStorage';
-import { GuionResuelto, PersonajeDeGuion, TIPOS_NPC, TipoPersonaje } from '../../types/guiones';
-import { GuionInvalidoError } from '../../services/guiones/errores';
-import type { RegistroPartida } from '../../services/estadisticas/SeguimientoPartida';
+import { GuionResuelto, PersonajeDeGuion, TIPOS_NPC, TipoPersonaje } from '../../models/guiones';
+import { GuionInvalidoError } from '../../models/guiones/errores';
+import type { RegistroPartida } from '../../models/estadisticas/SeguimientoPartida';
 import type { AccionSuelta, ServicioNarradorVirtual } from '../../services/narradorVirtual/NarradorVirtualService';
-import type { Azar, ClienteJev, DatosJev, Temporizador } from '../../services/narradorVirtual/puertos';
-import type { AccionJugador } from '../../services/narradorVirtual/etapas/Etapa';
-import { diaVirtual, noPuedeNominar, nominoHoy } from '../../services/narradorVirtual/dia/reglasDia';
+import type { Azar, ClienteJev, DatosJev, Temporizador } from '../../models/narradorVirtual/puertos';
+import type { AccionJugador } from '../../models/narradorVirtual/etapas/Etapa';
+import { diaVirtual, noPuedeNominar, nominoHoy } from '../../models/narradorVirtual/dia/reglasDia';
 
 
 /** Lo que devuelve una acción: el resultado y, si saca a alguien de la sala, qué conexiones cerrar. */

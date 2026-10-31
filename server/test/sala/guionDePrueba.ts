@@ -1,5 +1,5 @@
-import type { GuionResuelto, PersonajeDeGuion, TipoPersonaje } from '../../src/types/guiones';
-import type { SalaLlegada } from '../../src/services/sala/Participantes';
+import type { GuionResuelto, PersonajeDeGuion, TipoPersonaje } from '../../src/models/guiones';
+import type { SalaLlegada } from '../../src/models/sala/Participantes';
 
 /** Un personaje del guion con lo mínimo: su id, su tipo y sus recordatorios. */
 export const personaje = (id: string, tipo: TipoPersonaje, recordatorios: string[] = []): PersonajeDeGuion => ({

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { Fases } from '../../src/services/partida/Fases';
-import { PASOS_DE_FASE_MAX } from '../../src/services/partida/eventos';
+import { Fases } from '../../src/models/partida/Fases';
+import { PASOS_DE_FASE_MAX } from '../../src/models/partida/eventos';
 
 describe('Fases', () => {
   it('empieza en la preparación y va noche 1, día 1, noche 2', () => {

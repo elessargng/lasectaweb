@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { FRASES } from '../../src/services/narradorVirtual/frases';
+import { FRASES } from '../../src/models/narradorVirtual/frases';
 import { Arnes, type Cliente } from './arnes';
 import { guionTroubleBrewing } from './guionDePrueba';
 

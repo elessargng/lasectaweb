@@ -1,5 +1,5 @@
 import type { Alineamiento } from '../../../contrato/jugador';
-import type { PersonajeDeGuion } from '../../../types/guiones';
+import type { PersonajeDeGuion } from '../../guiones';
 import type { Jugador } from '../Jugador';
 
 /** Lo que una regla puede consultar de la partida. Las reglas no cambian la sala: responden. */

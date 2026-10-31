@@ -1,4 +1,4 @@
-import type { GuionResuelto } from '../../types/guiones';
+import type { GuionResuelto } from '../guiones';
 import { NPC_SILENCIO, NPC_STORMCATCHER } from './personajesEspeciales';
 
 /**

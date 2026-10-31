@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Sala, SALA_ASIENTOS } from '../../src/services/sala/Sala';
+import { Sala, SALA_ASIENTOS } from '../../src/models/sala/Sala';
 import { invitado } from './guionDePrueba';
 
 const siempreViva = () => true;

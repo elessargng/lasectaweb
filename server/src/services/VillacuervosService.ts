@@ -8,7 +8,7 @@ import {
   PublicPlaySchema,
   PublicPlayCreateSchema,
   PublicPlayUpdateSchema
-} from '../types/villacuervos';
+} from '../infra/villacuervos/esquemas';
 
 export class VillacuervosService {
   constructor(

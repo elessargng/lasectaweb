@@ -1,6 +1,6 @@
 import cron, { ScheduledTask } from 'node-cron';
 import { PlazaService } from './PlazaService';
-import { VerificationResult } from '../types/plaza';
+import { VerificationResult } from '../models/plaza';
 
 /**
  * Vigilante de La Plaza.

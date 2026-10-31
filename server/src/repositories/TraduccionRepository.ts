@@ -1,5 +1,5 @@
 import { DatabaseRepository } from './DatabaseRepository';
-import { Genero, TraduccionPersonaje } from '../types/guiones';
+import { Genero, TraduccionPersonaje } from '../models/guiones';
 
 /** Las traducciones de un idioma en un género, o sin género (null) si el idioma no los distingue. */
 export interface VarianteTraducciones {
