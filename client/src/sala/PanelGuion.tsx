@@ -112,7 +112,7 @@ const PanelGuion = ({ vista, guion, idiomas, recordatorios, nochePorDefecto, onC
   const modo = completo ? 'completo' : 'resumido';
   const maximo = () => Math.max(ANCHO.min, window.innerWidth - 16);
   const ancho = Math.min(anchos[modo], maximo());
-  // Mientras está abierto, su ancho para lo que se aparta de él (la mesa)
+  // Mientras está abierto, su ancho para lo que se aparta de él (la plaza)
   useEffect(() => {
     const raiz = document.documentElement;
     raiz.style.setProperty('--sala-panel-guion-ancho', `${ancho}px`);
@@ -341,7 +341,7 @@ const conMarcas = (texto: string): ReactNode =>
         <>
           <span
             aria-hidden="true"
-            // Como las fichas recordatorio de la mesa (FichaRecordatorio): el fondo de las de botc.app
+            // Como las fichas recordatorio de la plaza (FichaRecordatorio): el fondo de las de botc.app
             className="mx-0.5 inline-block h-3.5 w-3.5 rounded-full align-middle shadow-[0_0_0_1px_rgba(20,12,32,0.6),0_1px_2px_rgba(0,0,0,0.5)]"
             style={{ background: "url('/recordatorio.webp') center / cover no-repeat, #3d2a5c" }}
           />

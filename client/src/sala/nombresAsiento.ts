@@ -5,7 +5,7 @@ export const describirAsiento = (numero: number, ocupante: ParticipanteDto | nul
   ocupante ? `asiento ${numero} (${ocupante.nombre})` : `asiento ${numero}, libre`;
 
 /**
- * Si dos participantes son vecinos en la mesa: el asiento ocupado más cercano a
+ * Si dos participantes son vecinos en la plaza: el asiento ocupado más cercano a
  * cada lado (los libres se saltan). Como en el servidor (la Institutriz).
  */
 export function sonVecinos(estado: SalaDto, unoId: string, otroId: string): boolean {

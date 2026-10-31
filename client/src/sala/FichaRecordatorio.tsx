@@ -16,7 +16,7 @@ interface FichaRecordatorioProps {
   /** El personaje del que es: su icono (el de por defecto). */
   personaje: PersonajeMostrado | undefined;
   texto: Texto;
-  /** Tamaño (CSS); por defecto, a escala de las fichas de la mesa. */
+  /** Tamaño (CSS); por defecto, a escala de las fichas de la plaza. */
   tamano?: string;
   /**
    * Con texto propio: el texto da la vuelta a la ficha y en el centro va su icono,

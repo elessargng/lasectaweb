@@ -1,5 +1,5 @@
 import type { RemoteAudioTrack } from 'livekit-client';
-import { anguloAsiento } from './geometriaMesa';
+import { anguloAsiento } from './geometriaPlaza';
 
 /**
  * Sonido envolvente (Preferencias → Accesibilidad): el narrador (y quien no tiene
@@ -63,7 +63,7 @@ const PAUSA_TRAS_RAFAGAS_S = 0.9;
 const DURA_RAFAGAS_S = 0.6;
 
 /**
- * Lleva un sonido a un sitio de la mesa: el ángulo del asiento (radianes, 0
+ * Lleva un sonido a un sitio de la plaza: el ángulo del asiento (radianes, 0
  * arriba, como las agujas del reloj) o null, delante.
  */
 interface Espacializador {

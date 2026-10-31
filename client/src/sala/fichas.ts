@@ -4,7 +4,7 @@ import { RECORDATORIO_TEXTO } from '@contrato/grimorio';
 import type { Alineamiento, JugadorDto, Recordatorio } from './useSala';
 
 /**
- * Los personajes en las fichas de la mesa: qué personajes se pueden poner (los
+ * Los personajes en las fichas de la plaza: qué personajes se pueden poner (los
  * del guion, en el idioma de cada uno), cómo se ve cada uno según su
  * alineamiento y el grimorio propio de un jugador (sus notas, solo en su navegador).
  */

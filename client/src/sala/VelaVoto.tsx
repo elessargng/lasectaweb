@@ -67,7 +67,7 @@ const VelaVoto = ({ encendida, className = '' }: VelaVotoProps) => {
           </radialGradient>
         </defs>
 
-        {/* Halo de la llama, sobre la mesa */}
+        {/* Halo de la llama, sobre la plaza */}
         <circle
           cx="30"
           cy="20"
@@ -83,7 +83,7 @@ const VelaVoto = ({ encendida, className = '' }: VelaVotoProps) => {
           stroke="#000"
           strokeWidth="0.6"
         />
-        {/* El filo del borde derretido: que se lea también apagada, sobre la mesa oscura */}
+        {/* El filo del borde derretido: que se lea también apagada, sobre la plaza oscura */}
         <path
           d="M8.4 29.5 Q8.6 26.8 12 26.4 Q16 25 20 27 Q24 25.5 29 26.5 Q34 25.1 38 26.8 Q43 25.5 47 27 Q51.6 27 51.6 29.5"
           fill="none"

@@ -1,7 +1,7 @@
 import { VideoPresets } from 'livekit-client';
 
 /**
- * Una sola captura de la cámara para todas las salas de vídeo (la mesa y la
+ * Una sola captura de la cámara para todas las salas de vídeo (la plaza y la
  * conversación privada): cada sala publica una copia (clone) de la misma pista,
  * en vez de abrir la cámara otra vez. Abrirla dos veces funciona en unos
  * navegadores y en otros no (Safari en iPhone y iPad congela la primera al

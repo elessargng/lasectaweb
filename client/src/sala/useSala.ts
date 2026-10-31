@@ -230,7 +230,7 @@ export function useSala(
     [],
   );
 
-  /** El pase para el vídeo de la mesa («principal») o de una conversación (su id). */
+  /** El pase para el vídeo de la plaza («principal») o de una conversación (su id). */
   const pedirPaseVideo = useCallback(
     (sala: string) => pedirAlSocket<ResultadoAccion & Partial<{ url: string; token: string }>>('video:pase', { sala }) as Promise<PaseVideo>,
     [pedirAlSocket],

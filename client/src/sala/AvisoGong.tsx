@@ -5,32 +5,32 @@ import { tocarGong } from './sonidos';
 /** Lo que dura el aviso en pantalla (ms); sala.css lo reparte entre entrar, girar y salir. */
 const DURACION_MS = 8000;
 
-/** El texto del aviso: da la vuelta entera a la mesa, con un adorno donde se cierra. */
+/** El texto del aviso: da la vuelta entera a la plaza, con un adorno donde se cierra. */
 export const TEXTO_GONG = '¡Por favor, regresad a la plaza del pueblo YA!';
 /** De noche no se vuelve a la plaza: el gong es para que el despertado atienda (el narrador virtual lo toca si no contesta). */
 export const TEXTO_GONG_NOCHE = '¡Presta atención a tu narrador!';
 
 // El círculo del texto, en las unidades del viewBox (0 0 200 200): empieza arriba y va
-// en el sentido del reloj, así las letras miran hacia fuera, como en la mesa del juego.
+// en el sentido del reloj, así las letras miran hacia fuera, como en la plaza del juego.
 const RADIO = 86;
 const CIRCULO = `M100,${100 - RADIO} a${RADIO},${RADIO} 0 1,1 0,${2 * RADIO} a${RADIO},${RADIO} 0 1,1 0,${-2 * RADIO}`;
 const VUELTA = 2 * Math.PI * RADIO;
 
 /**
  * El gong del narrador: cuando cambia `gong` (hora del servidor del último), suena
- * y, sobre la mesa, sale el aviso de volver a la plaza: un golpe de ondas de latón
- * desde el centro y el texto en dorado alrededor de la mesa, girando despacio,
+ * y, sobre la plaza, sale el aviso de volver a la plaza: un golpe de ondas de latón
+ * desde el centro y el texto en dorado alrededor de la plaza, girando despacio,
  * hasta que se desvanece (sala.css; con menos movimiento, quieto). No recibe el
  * ratón. Solo cuenta si es reciente: al entrar en la sala no suena uno de hace rato.
  *
  * Va encima de todo (también de las ventanas de las conversaciones privadas): se
- * pinta en el body, fuera de la capa de la mesa, justo encima de ella (`mesaRef`),
+ * pinta en el body, fuera de la capa de la plaza, justo encima de ella (`plazaRef`),
  * siguiéndola si cambia de tamaño o se desplaza la página.
  */
 const AvisoGong = ({
   gong,
   ahora,
-  mesaRef,
+  plazaRef,
   onAnuncio,
   noche = false,
 }: {
@@ -38,7 +38,7 @@ const AvisoGong = ({
   ahora: number;
   /** Es de noche: el texto es otro (ver TEXTO_GONG_NOCHE). */
   noche?: boolean;
-  mesaRef: RefObject<HTMLDivElement | null>;
+  plazaRef: RefObject<HTMLDivElement | null>;
   onAnuncio: (mensaje: string) => void;
 }) => {
   const [visible, setVisible] = useState<number | null>(null);
@@ -47,13 +47,13 @@ const AvisoGong = ({
   const [sitio, setSitio] = useState<CSSProperties | null>(null);
   const id = useId();
 
-  // Dónde está la mesa en la ventana, con sus tamaños de asiento y ficha (los usa sala.css)
+  // Dónde está la plaza en la ventana, con sus tamaños de asiento y ficha (los usa sala.css)
   useLayoutEffect(() => {
-    const mesa = mesaRef.current;
-    if (visible === null || !mesa) return;
+    const plaza = plazaRef.current;
+    if (visible === null || !plaza) return;
     const medir = () => {
-      const r = mesa.getBoundingClientRect();
-      const estilo = getComputedStyle(mesa);
+      const r = plaza.getBoundingClientRect();
+      const estilo = getComputedStyle(plaza);
       setSitio({
         left: r.left,
         top: r.top,
@@ -65,7 +65,7 @@ const AvisoGong = ({
     };
     medir();
     const observador = new ResizeObserver(medir);
-    observador.observe(mesa);
+    observador.observe(plaza);
     window.addEventListener('resize', medir);
     window.addEventListener('scroll', medir, true);
     return () => {
@@ -73,7 +73,7 @@ const AvisoGong = ({
       window.removeEventListener('resize', medir);
       window.removeEventListener('scroll', medir, true);
     };
-  }, [visible, mesaRef]);
+  }, [visible, plazaRef]);
 
   useEffect(() => {
     if (gong === null || ahora - gong > DURACION_MS / 2) return;

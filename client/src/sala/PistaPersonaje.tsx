@@ -16,7 +16,7 @@ const HUECO = 10;
 const MARGEN = 8;
 
 /**
- * La pista de una ficha de la mesa (al pasar el ratón, con el foco o al tocarla):
+ * La pista de una ficha de la plaza (al pasar el ratón, con el foco o al tocarla):
  * el nombre del personaje en el color de su bando (azul los buenos, rojo los
  * malvados), su tipo y su habilidad. Va encima de la ficha (o debajo, si no
  * cabe), en el body para que no la tape nada, y sin salirse de la ventana. No

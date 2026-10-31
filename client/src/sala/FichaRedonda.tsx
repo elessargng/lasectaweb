@@ -41,7 +41,7 @@ interface FichaRedondaProps {
  *
  * Muerto (ya anunciado), además se ve si le queda el voto, como haya elegido
  * cada uno: al perderlo, un círculo azul con halo en lo alto del sudario. (La
- * otra forma, la vela, va en la mesa, entre la ficha y sus recordatorios: ver Mesa.)
+ * otra forma, la vela, va en la plaza, entre la ficha y sus recordatorios: ver Plaza.)
  *
  * Tiene dos caras: boca abajo se ve el reverso (el de botc.app; muerta, el
  * violeta) y al darle la vuelta gira sobre sí misma (sin animación si se pide menos movimiento).
@@ -67,7 +67,7 @@ const FichaRedonda = ({ children, muerto = false, muertePendiente = false, votoG
           // oscuro queda justo en el borde de la ficha). Debajo, el color del
           // pergamino por si tarda en cargar.
           background: "url('/ficha.webp') center / 110% no-repeat, #d8c59c",
-          // Solo la sombra sobre la mesa: el relieve ya lo trae la textura
+          // Solo la sombra sobre la plaza: el relieve ya lo trae la textura
           boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
         }}
       >

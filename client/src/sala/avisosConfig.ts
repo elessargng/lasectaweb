@@ -94,7 +94,7 @@ export const GRUPOS_AVISOS: { grupo: string; tipos: { tipo: TipoAviso; etiqueta:
       { tipo: 'mensajes', etiqueta: 'Mensajes que te llegan (con quién y qué dicen)' },
       {
         tipo: 'susurros',
-        etiqueta: 'Susurros: quién escribe en privado a quién en la mesa (a los narradores, también lo que dice)',
+        etiqueta: 'Susurros: quién escribe en privado a quién en la plaza (a los narradores, también lo que dice)',
       },
       { tipo: 'despertar', etiqueta: 'De noche: lo que te muestra el narrador al despertarte, o lo que te contesta el jugador despierto' },
     ],

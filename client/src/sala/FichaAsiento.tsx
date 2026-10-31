@@ -29,7 +29,7 @@ interface FichaAsientoProps {
   asiento: JugadorDto;
   /** Lleva la calavera. */
   marcado: boolean;
-  /** Su número en la mesa (1 es el de las 12). */
+  /** Su número en la plaza (1 es el de las 12). */
   numero: number;
   /** Quien está sentado (o se ve sentado, si se le está moviendo), o null. */
   ocupante: ParticipanteDto | null;
@@ -484,7 +484,7 @@ const FichaAsiento = ({
     abreDialogo: true,
     elegir: () => setEligiendoRecordatorio(true),
   };
-  // La nota: un pósit junto al cuadro del asiento (lo abre la mesa)
+  // La nota: un pósit junto al cuadro del asiento (lo abre la plaza)
   const opcionNota: OpcionMenu[] = onEscribirNota
     ? [{ id: 'nota', etiqueta: conNota ? 'Editar nota' : 'Escribir nota', abreDialogo: true, elegir: onEscribirNota }]
     : [];

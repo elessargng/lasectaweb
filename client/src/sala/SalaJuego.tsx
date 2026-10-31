@@ -8,7 +8,7 @@ import DialogoPreferencias, { type Pestana } from './DialogoPreferencias';
 import ListaParticipantes from './ListaParticipantes';
 import MenuMano from './MenuMano';
 import MenuNarrador from './MenuNarrador';
-import Mesa, { type FocoAsiento, type TamanosMesa } from './Mesa';
+import Plaza, { type FocoAsiento, type TamanosPlaza } from './Plaza';
 import type { OpcionMenu } from './MenuDesplegable';
 import MenuUsuario from './MenuUsuario';
 import PanelAccesibilidad from './PanelAccesibilidad';
@@ -40,7 +40,7 @@ import PanelInvitaciones from './PanelInvitaciones';
 import ControlesVideo, { BotonVoz } from './ControlesVideo';
 import type { ContactoParticipante } from './BotonesContacto';
 import { useVideollamada } from './useVideollamada';
-import type { OndaMesa } from './Ondas';
+import type { OndaPlaza } from './Ondas';
 import {
   CANAL_GENERAL,
   CANAL_VISITANTES,
@@ -89,7 +89,7 @@ import { sinComunicaciones, usePreferencias } from './preferencias';
 import { sinAvatar, useConfiguracionCuenta, type ConfiguracionSala, type PerfilConfiguracion } from './configuracion';
 import PanelPerfiles from './PanelPerfiles';
 import { tamanoFichaAuto, tamanoNarradorAuto } from './tamanosAutomaticos';
-import { anguloAsiento } from './geometriaMesa';
+import { anguloAsiento } from './geometriaPlaza';
 import { nombreMano } from './formasMano';
 import {
   useSala,
@@ -138,7 +138,7 @@ function destinoFoco(estado: SalaDto): string {
 /**
  * La sala por dentro: en la cabecera, a la derecha, las opciones del narrador
  * (si narras), el botón de participantes y el menú del usuario; debajo, los
- * narradores arriba a la izquierda y la mesa con los asientos.
+ * narradores arriba a la izquierda y la plaza con los asientos.
  *
  * Avisos:
  * - Cambios que hacen otros (narradores que entran, salen o cambian; quién se
@@ -544,7 +544,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const [canalChat, setCanalChat] = useState<string | null>(null);
   const [privadosAbiertos, setPrivadosAbiertos] = useState<string[]>([]);
   const [leidoHasta, setLeidoHasta] = useState<Record<string, number>>({});
-  const [ondas, setOndas] = useState<OndaMesa[]>([]);
+  const [ondas, setOndas] = useState<OndaPlaza[]>([]);
   const ondaIdRef = useRef(0);
   const entradaChatRef = useRef<HTMLInputElement>(null);
   // Si el panel de mensajes es el que se ve en la columna de la izquierda (lo que llega, queda leído)
@@ -682,7 +682,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     return () => document.documentElement.removeAttribute('data-noche');
   }, [esNoche]);
 
-  // Videollamada: cámaras y micrófonos en la mesa y en la conversación privada
+  // Videollamada: cámaras y micrófonos en la plaza y en la conversación privada
   // La conversación en la que estoy: hablando (miembro) o escuchando (visitante)
   // Despertares. El narrador tiene abiertos en su ventana los que quiere (una pestaña
   // cada uno) y, por asiento, hasta qué mensaje del jugador ha visto (para iluminar
@@ -839,7 +839,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     noche,
     conversacion: miConversacion?.id ?? null,
     hablaEnConversacion,
-    camaraEnMesaConversando: estado?.configuracion.ocultarCamarasConversacion === false,
+    camaraEnPlazaConversando: estado?.configuracion.ocultarCamarasConversacion === false,
     silenciado: callado,
     idCamara: preferencias.idCamara,
     idMicrofono: preferencias.idMicrofono,
@@ -905,7 +905,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     else window.setTimeout(() => tituloRef.current?.focus(), 0);
   };
   // Seguir a un jugador (visitantes y narradores, desde su ficha): ir con él a sus
-  // conversaciones privadas, como oyente, y volver a la mesa cuando sale. Mientras
+  // conversaciones privadas, como oyente, y volver a la plaza cuando sale. Mientras
   // uno habla en una conversación no se mueve; escuchar, salir o aceptar una
   // invitación a mano deja de seguirle. Si deja de jugar, se deja de seguir.
   const [siguiendo, setSiguiendo] = useState<string | null>(null);
@@ -920,12 +920,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     setSiguiendo(null);
     anunciar('conversaciones', `Dejas de seguir a ${sigoA.nombre}.`);
   };
-  // Adónde hay que ir: la conversación del seguido o la mesa ('mesa')
+  // Adónde hay que ir: la conversación del seguido o la plaza ('plaza')
   const destinoSeguir =
     sigoA && !hablaEnConversacion
-      ? (estado?.conversaciones.find((c) => c.miembros.includes(sigoA.id))?.id ?? 'mesa')
+      ? (estado?.conversaciones.find((c) => c.miembros.includes(sigoA.id))?.id ?? 'plaza')
       : null;
-  const dondeEstoy = miConversacion && !hablaEnConversacion ? miConversacion.id : 'mesa';
+  const dondeEstoy = miConversacion && !hablaEnConversacion ? miConversacion.id : 'plaza';
   const pidiendoSeguirRef = useRef<string | null>(null);
   useEffect(() => {
     if (!destinoSeguir || destinoSeguir === dondeEstoy) {
@@ -934,12 +934,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     }
     if (pidiendoSeguirRef.current === destinoSeguir) return;
     pidiendoSeguirRef.current = destinoSeguir;
-    // Volviendo a la mesa, la ventana de la conversación desaparece: si tenía el foco, va al título
+    // Volviendo a la plaza, la ventana de la conversación desaparece: si tenía el foco, va al título
     const focoDentro = !!document.activeElement?.closest('[aria-labelledby="sala-conversacion-titulo"]');
-    const peticion = destinoSeguir === 'mesa' ? salirConversacion() : escucharConversacion(destinoSeguir);
+    const peticion = destinoSeguir === 'plaza' ? salirConversacion() : escucharConversacion(destinoSeguir);
     void peticion.then((r) => {
       if (!r.ok) setAviso(r.error);
-      else if (destinoSeguir === 'mesa' && focoDentro) window.setTimeout(() => tituloRef.current?.focus(), 0);
+      else if (destinoSeguir === 'plaza' && focoDentro) window.setTimeout(() => tituloRef.current?.focus(), 0);
     });
   }, [destinoSeguir, dondeEstoy, salirConversacion, escucharConversacion]);
 
@@ -1162,8 +1162,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     personajesGuionRef.current = personajesGuionPorId;
     npcsPorIdRef.current = new Map(npcsDisponibles.map((p) => [p.id, p]));
   });
-  // Tamaños con los que pinta la mesa (automáticos o no), para la vista previa.
-  const [tamanosMesa, setTamanosMesa] = useState<TamanosMesa | null>(null);
+  // Tamaños con los que pinta la plaza (automáticos o no), para la vista previa.
+  const [tamanosPlaza, setTamanosPlaza] = useState<TamanosPlaza | null>(null);
   // Tamaño de la ventana, para el tamaño automático de los cuadros de narrador.
   const [ventana, setVentana] = useState(() => ({ ancho: window.innerWidth, alto: window.innerHeight }));
   useEffect(() => {
@@ -1310,7 +1310,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // Una ejecución que deja solo dos jugadores vivos no anochece sola: quien ejecutó
   // elige entre la noche y revelar el grimorio (DialogoFinal). También al nominar a la Virgen.
   const [decidiendoFinal, setDecidiendoFinal] = useState(false);
-  const pedirEnMesa = async (accion: string, datos?: unknown) => {
+  const pedirEnPlaza = async (accion: string, datos?: unknown) => {
     const r = await pedirPropio(accion, datos);
     if ((accion === 'narrador:ejecutar' || accion === 'narrador:nominar') && r.ok && r.valor === 'final') setDecidiendoFinal(true);
     return r;
@@ -1318,7 +1318,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
   // El gong del narrador: desde el menú o con su tecla
   // Con narrador virtual, en las nominaciones: lo que hacen los botones del centro de
-  // la mesa (PanelDiaVirtual), con su tecla; se dice que se ha hecho (el panel puede no tener el foco)
+  // la plaza (PanelDiaVirtual), con su tecla; se dice que se ha hecho (el panel puede no tener el foco)
   const avanceNominacion: [string, string] | null = estado?.acciones.includes('jugador:defensa')
     ? ['jugador:defensa', 'Defensa.']
     : estado?.acciones.includes('jugador:voto')
@@ -1460,7 +1460,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     ...(puedeDejarDeNarrar ? [{ id: 'narrador:dejar', etiqueta: 'Dejar de ser narrador', elegir: dejarDeNarrar }] : []),
   ];
 
-  // Edición de asientos (narradores): botones en el centro de la mesa.
+  // Edición de asientos (narradores): botones en el centro de la plaza.
   const [editandoAsientos, setEditandoAsientos] = useState(false);
   const editando = editandoAsientos && !!estado?.acciones.includes('narrador:asientos');
   const terminarAsientos = () => {
@@ -1547,7 +1547,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
         <PanelInterfaz
           nombre={yo?.nombre ?? (alias || cuenta?.username || invitado || '')}
           preferencias={preferencias}
-          tamanosMesa={tamanosMesa}
+          tamanosPlaza={tamanosPlaza}
           fondoDeLaSala={fondoDeLaSala}
           onCambiar={cambiarPreferencias}
         />
@@ -1843,9 +1843,9 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   });
 
   // Los tamaños elegidos llegan a los cuadros (CuadroAvatar) y a las fichas
-  // (FichaRedonda, Mesa) por estas variables CSS.
-  // Fuera de la mesa (cuadros de narrador): automático según la ventana. La mesa
-  // pone los suyos (ver Mesa).
+  // (FichaRedonda, Plaza) por estas variables CSS.
+  // Fuera de la plaza (cuadros de narrador): automático según la ventana. La plaza
+  // pone los suyos (ver Plaza).
   const avatarFuera = preferencias.avatarAuto
     ? tamanoNarradorAuto(ventana.ancho, ventana.alto)
     : preferencias.tamanoAvatar;
@@ -2109,7 +2109,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           {estado && (
             <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
               {/* A la izquierda: los narradores y, debajo, la barra lateral (mensajes, conversaciones, faroles).
-                  En pantallas anchas, del alto de la ventana (como la mesa, ver sala.css): la barra
+                  En pantallas anchas, del alto de la ventana (como la plaza, ver sala.css): la barra
                   lateral ocupa lo que dejan los narradores, sin alargar la página */}
               <div className="flex w-full shrink-0 flex-col gap-4 lg:h-[calc(100vh-8rem)] lg:w-[23rem]">
                 <ZonaNarradores
@@ -2118,7 +2118,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   pedir={pedirPropio}
                   onError={setAviso}
                   contacto={contacto}
-                  pistas={video.mesa}
+                  pistas={video.plaza}
                 />
                 {/* Si la accesibilidad lo pide, las invitaciones y peticiones de llamada van aquí fuera,
                     encima de la columna y a la vista se vea el panel que se vea (si no, dentro de Charlas) */}
@@ -2160,27 +2160,27 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   onContraer={(panelLateralContraido) => cambiarPreferencias({ panelLateralContraido })}
                 />
               </div>
-              {/* sala-columna-mesa: la mesa centrada en la ventana y apartada de la hoja del guion (sala.css) */}
-              <section aria-labelledby="sala-plaza-titulo" className="sala-columna-mesa min-w-0 flex-1">
-                {/* Para saltar con el lector a la mesa: los asientos, cada uno con su ficha */}
+              {/* sala-columna-plaza: la plaza centrada en la ventana y apartada de la hoja del guion (sala.css) */}
+              <section aria-labelledby="sala-plaza-titulo" className="sala-columna-plaza min-w-0 flex-1">
+                {/* Para saltar con el lector a la plaza: los asientos, cada uno con su ficha */}
                 <h2 id="sala-plaza-titulo" className="sr-only">
                   La plaza
                 </h2>
-                <Mesa
+                <Plaza
                   estado={estado}
                   manual={{ avatar: preferencias.tamanoAvatar, ficha: preferencias.tamanoFicha }}
                   auto={{ avatar: preferencias.avatarAuto, ficha: preferencias.fichaAuto }}
-                  onTamanos={setTamanosMesa}
+                  onTamanos={setTamanosPlaza}
                   editando={editando}
                   grimorio={yo?.rol === 'jugador' && estado.configuracion.grimorioJugadores}
-                  pedir={pedirEnMesa}
+                  pedir={pedirEnPlaza}
                   onError={setAviso}
                   onAnuncio={anunciar}
                   focoAsientoRef={focoAsientoRef}
                   onTerminar={terminarAsientos}
                   desfaseReloj={desfaseReloj}
                   contacto={contacto}
-                  pistas={video.mesa}
+                  pistas={video.plaza}
                   ondas={ondas}
                   ciudad={preferencias.ciudad !== 'nunca' ? (
                       <CiudadPlaza
@@ -2226,8 +2226,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   }
                 />
               </section>
-              {/* Fuera de la mesa, para no tapar sus fichas: en pantallas anchas, abajo
-                  del todo a la derecha; en estrechas, debajo de la mesa. Con la hoja del guion
+              {/* Fuera de la plaza, para no tapar sus fichas: en pantallas anchas, abajo
+                  del todo a la derecha; en estrechas, debajo de la plaza. Con la hoja del guion
                   abierta, en su cabecera (ver TituloGuion) */}
               {!hojaAbierta && (
                 <div className="flex flex-wrap items-end gap-3 self-start lg:fixed lg:bottom-4 lg:right-4 lg:z-30">

@@ -7,7 +7,7 @@ import PersonajeEnFicha from './PersonajeEnFicha';
 const TAMANO_FAROL = '5.25rem';
 
 /**
- * Una casilla de farol: una ficha del juego (la misma que en la mesa, con el
+ * Una casilla de farol: una ficha del juego (la misma que en la plaza, con el
  * icono y el nombre curvado), del tamaño de un farol, y el nombre otra vez
  * debajo, más legible. Vacía, la ficha está boca abajo (se ve el reverso) y, al
  * ponerle un personaje, se da la vuelta. Solo es dibujo: el nombre accesible lo

@@ -14,7 +14,7 @@ import type { ParticipanteDto } from './useSala';
 
 interface AsientoProps {
   id: string;
-  /** Su número en la mesa (1 es el de las 12). */
+  /** Su número en la plaza (1 es el de las 12). */
   numero: number;
   /** Quien está sentado, o null si está libre. */
   ocupante: ParticipanteDto | null;
@@ -27,21 +27,21 @@ interface AsientoProps {
   /** Destino provisional de un movimiento: se resalta. */
   destino?: boolean;
   /**
-   * El nombre va debajo del cuadro (asientos de la mitad inferior de la mesa,
+   * El nombre va debajo del cuadro (asientos de la mitad inferior de la plaza,
    * donde la ficha queda encima, hacia el centro); si no, encima.
    */
   nombreAbajo?: boolean;
-  /** Dónde está en la mesa, en radianes desde las 12 en el sentido del reloj: la silla vacía mira al centro. */
+  /** Dónde está en la plaza, en radianes desde las 12 en el sentido del reloj: la silla vacía mira al centro. */
   angulo?: number;
   /** Escribir y conversar con quien se sienta (lo que se pueda). */
   contacto?: ContactoParticipante;
-  /** Su cámara, si la tiene encendida en la mesa (la propia, en espejo). */
+  /** Su cámara, si la tiene encendida en la plaza (la propia, en espejo). */
   video?: VideoTrack | null;
   espejo?: boolean;
   /** Está hablando (un aro en el cuadro que sigue su voz). */
   hablando?: boolean;
   /**
-   * Está en una conversación privada (fuera de la mesa): con quién, para el lector
+   * Está en una conversación privada (fuera de la plaza): con quién, para el lector
    * («con Ana y Luis», ver conQuienConversa); vacío si está solo en ella.
    */
   enConversacion?: string;
@@ -68,7 +68,7 @@ interface AsientoProps {
 }
 
 /**
- * Las sillas vacías, una por dirección, mirando al centro de la mesa: las de
+ * Las sillas vacías, una por dirección, mirando al centro de la plaza: las de
  * botc.app (copias locales en public/sillas) o las propias (public/sillas/<estilo>,
  * con los mismos nombres; ver marcas.ts). Las de la derecha son las de la
  * izquierda en espejo.
@@ -91,7 +91,7 @@ function sillaVacia(angulo: number) {
 }
 
 /**
- * Un asiento de la mesa. Libre: «Asiento N» con una silla vacía. Ocupado: el
+ * Un asiento de la plaza. Libre: «Asiento N» con una silla vacía. Ocupado: el
  * avatar y el nombre de quien se sienta. El nombre va por fuera del círculo, para
  * no chocar con la ficha, que va hacia el centro: encima del cuadro, o debajo en
  * los asientos de la mitad inferior.
@@ -154,7 +154,7 @@ const Asiento = ({
     >
       {asa}
       {enConversacion !== undefined && (
-        // Conversando en privado: su cámara y su voz no llegan a la mesa
+        // Conversando en privado: su cámara y su voz no llegan a la plaza
         <span className="absolute left-1 top-1 z-[5] rounded-full border border-gold/40 bg-background/85 p-1 text-gold-bright">
           <IconoConversar size={14} />
         </span>
@@ -202,14 +202,14 @@ const Asiento = ({
                       <span className="sr-only">silenciado, </span>
                     </>
                   )}
-                  {/* Tu nombre, en latón: así te encuentras en la mesa (el lector oye «(tú)») */}
+                  {/* Tu nombre, en latón: así te encuentras en la plaza (el lector oye «(tú)») */}
                   <span className={!ocupante.conectado ? 'text-on-surface-muted' : esYo ? 'font-semibold text-gold-bright' : 'font-semibold'}>
                     {ocupante.nombre}
                   </span>
                   {esYo && <span className="sr-only"> (tú)</span>}
                   {ocupante.persona.tipo === 'usuario' && ocupante.persona.novato && <PulpitoNovato />}
                   {ocupante.sinSonido && (
-                    // Ha quitado el sonido: no oye a la mesa
+                    // Ha quitado el sonido: no oye a la plaza
                     <>
                       <VolumeX size={13} className="ml-1 inline-block align-[-2px] text-blood-pale" />
                       <span className="sr-only"> (sin sonido)</span>

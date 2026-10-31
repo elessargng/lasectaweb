@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 
 interface AgujasProps {
-  /** Número de asientos de la mesa. */
+  /** Número de asientos de la plaza. */
   total: number;
   /** Asiento (desde 0) de quien nomina: la aguja de los segundos. */
   desde: number;
@@ -22,7 +22,7 @@ interface AgujasProps {
 const IMAGENES = { horas: '/agujas/horas.webp', minutos: '/agujas/minutos.webp', segundos: '/agujas/segundos.webp' };
 
 /**
- * Las agujas de una nominación, desde el centro de la mesa hacia los asientos.
+ * Las agujas de una nominación, desde el centro de la plaza hacia los asientos.
  * Cada asiento está en su ángulo (el 1 a las 12, como en un reloj), así que basta
  * girarlas:
  * - Horas: fija en el nominado.
@@ -33,7 +33,7 @@ const IMAGENES = { horas: '/agujas/horas.webp', minutos: '/agujas/minutos.webp',
  * Solo visual: quién nomina a quién se anuncia aparte.
  */
 const Agujas = ({ total, desde, hasta, votacion }: AgujasProps) => {
-  // Hasta la cara interior de las fichas, más o menos; nunca menos de un 15% de la mesa.
+  // Hasta la cara interior de las fichas, más o menos; nunca menos de un 15% de la plaza.
   const larga = 'max(15%, calc(50% - var(--sala-avatar, 10rem) - var(--sala-ficha, 4.5rem) / 2))';
   // El ángulo siempre crece (hasta + paso, sin volver a 0 al pasar las 12), así la
   // aguja da la vuelta en el sentido del reloj en lugar de retroceder.
@@ -80,7 +80,7 @@ const Esfera = ({ lado }: { lado: string }) => (
   </div>
 );
 
-/** Una aguja, centrada en el eje de la mesa y girada sobre él. */
+/** Una aguja, centrada en el eje de la plaza y girada sobre él. */
 const Aguja = ({ imagen, estilo }: { imagen: string; estilo: CSSProperties }) => (
   <img
     src={imagen}

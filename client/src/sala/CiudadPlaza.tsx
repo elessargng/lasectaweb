@@ -85,7 +85,7 @@ const Ave = ({ clase, y, dur, delay, escala }: Vuelo & { clase: string }) => (
 );
 
 /**
- * La ciudad en la plaza (el centro de la mesa, dentro del corro de fichas), ilustrada:
+ * La ciudad en la plaza (el centro de la plaza, dentro del corro de fichas), ilustrada:
  * tejados, agujas y la torre del reloj en el centro, vista por una ventana redonda.
  * De entrada no está siempre: solo al pasar a la noche (atardece) o de la noche al día
  * (amanece). Aparece con la fase de antes, hace el cambio, se queda un poco y se

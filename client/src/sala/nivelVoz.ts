@@ -1,6 +1,6 @@
 /**
  * El volumen de voz de cada participante (0 a 1, por su id), fuera de React:
- * cambia muchas veces por segundo y volver a pintar la mesa con cada medida
+ * cambia muchas veces por segundo y volver a pintar la plaza con cada medida
  * sería caro. Lo escribe la videollamada (lo mío, medido en mi micrófono; lo de
  * los demás, lo que dice el servidor) y lo lee el aro de quien habla (BordeHabla),
  * que lo pasa directamente a una variable CSS.

@@ -21,7 +21,7 @@ interface NotaAsientoProps {
   nota: string | null;
   /** Quien mira puede escribirla, cambiarla y borrarla (si no, solo leerla). */
   editable: boolean;
-  /** Hacia dónde sale la nota: hacia fuera de la mesa. */
+  /** Hacia dónde sale la nota: hacia fuera de la plaza. */
   lado: 'izquierda' | 'derecha';
   /** Plegada, solo asoma una pestaña con el icono de la nota. */
   plegada: boolean;
@@ -40,7 +40,7 @@ const botonNota =
 
 /**
  * La nota sobre un asiento: una tarjeta de tinta con filo de latón pegada al
- * cuadro, por el lado de fuera de la mesa. Quien puede la cambia (el lápiz, o
+ * cuadro, por el lado de fuera de la plaza. Quien puede la cambia (el lápiz, o
  * «Editar nota» en el menú de la ficha) o la borra (pidiendo confirmación);
  * cualquiera que la vea la pliega para que solo asome una pestaña con su icono, y
  * la despliega pulsándola. Sin nota no hay tarjeta: se escribe desde el menú de la
@@ -150,7 +150,7 @@ const NotaAsiento = ({ jugadorId, nombre, nota, editable, lado, plegada, editand
     enfocar('tarjeta');
   };
 
-  // El asa: hacia fuera de la mesa, más ancha; hacia abajo, más alta
+  // El asa: hacia fuera de la plaza, más ancha; hacia abajo, más alta
   const haciaFuera = lado === 'derecha' ? 1 : -1;
 
   const empezarArrastre = (e: PointerEvent<HTMLButtonElement>) => {

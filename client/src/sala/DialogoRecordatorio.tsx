@@ -38,7 +38,7 @@ const PESTANAS: { id: Pestana; etiqueta: string }[] = [
   { id: 'texto', etiqueta: 'Texto propio' },
 ];
 
-/** Lado de las fichas recordatorio en el diálogo (fijo: no depende de la mesa). */
+/** Lado de las fichas recordatorio en el diálogo (fijo: no depende de la plaza). */
 const TAMANO = '4.5rem';
 
 /**

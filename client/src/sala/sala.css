@@ -950,10 +950,10 @@
 }
 
 /*
- * Halo de la mesa: una luz de vela muy suave bajo el círculo de asientos que la
+ * Halo de la plaza: una luz de vela muy suave bajo el círculo de asientos que la
  * separa del fondo. Decorativo (pseudo-elemento).
  */
-.sala-mesa-halo::before {
+.sala-plaza-halo::before {
   content: "";
   position: absolute;
   inset: 4%;
@@ -1111,13 +1111,13 @@
 }
 
 /*
- * El gong del narrador (AvisoGong), sobre la mesa: se oscurece el tapete, salen
+ * El gong del narrador (AvisoGong), sobre la plaza: se oscurece el tapete, salen
  * tres ondas de latón del centro (el golpe) y el texto entra desenfocado y grande
- * hasta asentarse alrededor de la mesa, gira despacio con un destello que lo
+ * hasta asentarse alrededor de la plaza, gira despacio con un destello que lo
  * recorre y, a los 8 s, se desvanece. Los filetes giran al revés que el texto.
  */
 .sala-gong {
-  /* Las ondas y la entrada del texto crecen más que la mesa: se recortan en ella, que
+  /* Las ondas y la entrada del texto crecen más que la plaza: se recortan en ella, que
      si no la página crece (sale la barra de desplazamiento) y todo salta al empezar y al acabar */
   overflow: hidden;
   contain: paint;
@@ -1615,7 +1615,7 @@
 /* ───────────────────────── La ciudad de la plaza ───────────────────────── */
 
 /*
- * La ciudad en el centro de la mesa (CiudadPlaza): ilustraciones en capas
+ * La ciudad en el centro de la plaza (CiudadPlaza): ilustraciones en capas
  * (public/ciudad) que cambian con la fase, vistas por una ventana redonda que llena
  * la plaza hasta los asientos (las fichas quedan sobre su borde). Cada
  * capa entra o sale según la fase (data-fase), despacio; al cambiar de fase,
@@ -1649,7 +1649,7 @@
   from { opacity: 1; scale: 1; }
   to { opacity: 0; scale: 1.03; }
 }
-/* Un filo de latón alrededor de la ventana, que se funde con la mesa */
+/* Un filo de latón alrededor de la ventana, que se funde con la plaza */
 .sala-ciudad-marco::after {
   content: "";
   position: absolute;
@@ -1888,8 +1888,8 @@
 }
 
 /* Quien se va a conversar en privado se retira hacia el fondo: su cuadro (avatar o
-   cámara) y su ficha se hacen pequeños (--sala-retiro, lo fija Mesa) y, en la mesa,
-   el asiento entero se aleja hacia fuera (Mesa, posicion y posicionFicha); al
+   cámara) y su ficha se hacen pequeños (--sala-retiro, lo fija Plaza) y, en la plaza,
+   el asiento entero se aleja hacia fuera (Plaza, posicion y posicionFicha); al
    volver, regresa a su sitio. */
 .sala-retiro {
   transition:
@@ -2081,15 +2081,15 @@
 }
 
 /*
- * Columna de la mesa (SalaJuego), en pantallas anchas. A su izquierda va la de
+ * Columna de la plaza (SalaJuego), en pantallas anchas. A su izquierda va la de
  * los narradores y la barra lateral (23rem + 1.5rem de hueco): un margen derecho igual la
- * deja centrada en la ventana, menguando si falta sitio para la mesa entera (su
+ * deja centrada en la ventana, menguando si falta sitio para la plaza entera (su
  * lado máximo es 100vh - 8rem). Con la hoja del guion abierta (fija a la derecha,
- * --sala-panel-guion-ancho), el margen es al menos su ancho: la mesa se aparta a
+ * --sala-panel-guion-ancho), el margen es al menos su ancho: la plaza se aparta a
  * la izquierda (y encoge si hace falta) en vez de quedar tapada.
  */
 @media (width >= 64rem) {
-  .sala-columna-mesa {
+  .sala-columna-plaza {
     padding-right: max(
       clamp(0px, 100% - 24.5rem - (100vh - 8rem), 24.5rem),
       var(--sala-panel-guion-ancho, 0px)

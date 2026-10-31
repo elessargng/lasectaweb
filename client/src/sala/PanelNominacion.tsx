@@ -35,7 +35,7 @@ interface PanelNominacionProps {
   onCerrar: () => void;
 }
 
-/** En el centro de la mesa, para el narrador: lo que se puede hacer con la nominación abierta. */
+/** En el centro de la plaza, para el narrador: lo que se puede hacer con la nominación abierta. */
 const PanelNominacion = ({
   marcado,
   expulsion,

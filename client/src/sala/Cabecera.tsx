@@ -22,7 +22,7 @@ const Cabecera = ({ centro, derecha }: CabeceraProps) => {
   }, []);
 
   return (
-    // Capa propia por encima de la sala: sus menús desplegables no quedan tapados por la mesa
+    // Capa propia por encima de la sala: sus menús desplegables no quedan tapados por la plaza
     // Sin banda propia: solo un degradado oscuro desde arriba sobre el fondo (sala-cabecera, en sala.css)
     // En pantallas anchas, tres columnas (las de los lados, iguales): el centro queda en el
     // centro de la ventana. En estrechas, lo que no cabe pasa a otra fila (sin cambiar el

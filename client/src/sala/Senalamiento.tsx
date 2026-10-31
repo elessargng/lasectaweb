@@ -1,7 +1,7 @@
 import { Crosshair } from 'lucide-react';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { botonPrincipal } from './estilos';
-import { anguloAsiento } from './geometriaMesa';
+import { anguloAsiento } from './geometriaPlaza';
 import Mano from './Mano';
 import type { EstiloMano } from './marcas';
 import { resultadoSenalamiento } from './senales';
@@ -11,12 +11,12 @@ import type { SalaDto, SenalamientoDto } from './useSala';
 /** Lo que dura el sonido de la cuenta atrás (3, 2, 1, 0): suena en los últimos segundos. */
 const SONIDO_MS = 4000;
 
-/** El radio del círculo de las fichas, en CSS (como posicionFicha de Mesa). */
+/** El radio del círculo de las fichas, en CSS (como posicionFicha de Plaza). */
 const RADIO =
   '(50% - var(--sala-avatar, 10rem) / 2 - var(--sala-ficha-distancia, 0.75) * (var(--sala-avatar, 10rem) + var(--sala-ficha, 4.5rem)) / 2)';
 const n = (v: number) => v.toFixed(4);
 
-/** Un punto del círculo de las fichas: (px, py) radios desde el centro de la mesa. */
+/** Un punto del círculo de las fichas: (px, py) radios desde el centro de la plaza. */
 const punto = (px: number, py: number): CSSProperties => ({
   left: `calc(50% + ${n(px)} * ${RADIO})`,
   top: `calc(50% + ${n(py)} * ${RADIO})`,
@@ -36,7 +36,7 @@ interface ManosSenalamientoProps {
 }
 
 /**
- * Sobre la mesa, lo que se señala, como las manos al votar: dentro de cada ficha
+ * Sobre la plaza, lo que se señala, como las manos al votar: dentro de cada ficha
  * que señala, en grande, una mano (en el estilo de su jugador) girada hacia la
  * señalada; quien se señala a sí mismo, hacia su cuadro (su avatar o su cámara).
  * Dentro de la ficha que he señalado yo, en grande, mi marca (una mira). Se coloca
@@ -108,7 +108,7 @@ interface PanelSenalamientoProps {
  * En el centro de la plaza: el mensaje, en grande y en latón; la cuenta atrás
  * (de día, con su sonido en los últimos 4 segundos; de noche, en silencio); qué
  * hacer, si me toca, y al congelarse, el resultado. El narrador lo termina con
- * su botón. Lo que se ve aquí se anuncia aparte (Mesa), así que es solo visual
+ * su botón. Lo que se ve aquí se anuncia aparte (Plaza), así que es solo visual
  * salvo el botón.
  */
 export function PanelSenalamiento({ estado, senalamiento: s, congelado, desfase, puedoSenalar, onTerminar, anchoMax }: PanelSenalamientoProps) {

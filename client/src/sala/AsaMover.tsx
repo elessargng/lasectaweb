@@ -9,7 +9,7 @@ interface AsaMoverProps extends Omit<ComponentProps<'button'>, 'type' | 'classNa
   numero: number;
   /** Se está moviendo a este jugador. */
   cogido: boolean;
-  /** En qué esquina de arriba del cuadro va: la del lado de la mesa en el que se sienta (así la ficha no la tapa). */
+  /** En qué esquina de arriba del cuadro va: la del lado de la plaza en el que se sienta (así la ficha no la tapa). */
   lado?: 'izquierda' | 'derecha';
 }
 
@@ -17,7 +17,7 @@ interface AsaMoverProps extends Omit<ComponentProps<'button'>, 'type' | 'classNa
  * El asa de un asiento ocupado para mover al jugador (ver useMoverAsientos):
  * se arrastra con el ratón o el dedo, o se usa con el teclado. Va en la
  * esquina de arriba del cuadro del lado en el que se sienta (la ficha va hacia el
- * centro de la mesa); las instrucciones de teclado son su descripción.
+ * centro de la plaza); las instrucciones de teclado son su descripción.
  */
 const AsaMover = ({ nombre, numero, cogido, lado = 'izquierda', ...props }: AsaMoverProps) => (
   <button

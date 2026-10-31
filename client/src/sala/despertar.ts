@@ -139,6 +139,6 @@ export const autorDe = (m: MensajeDespertar, estado: SalaDto) =>
 
 /**
  * Lo último del despertar es un «Entendido» (del jugador o del narrador): ya está
- * hablado. En la mesa, la luna de su ficha es un pulgar arriba.
+ * hablado. En la plaza, la luna de su ficha es un pulgar arriba.
  */
 export const esEntendido = (d: DespertarDto) => d.mensajes[d.mensajes.length - 1]?.ficha === 'entendido';

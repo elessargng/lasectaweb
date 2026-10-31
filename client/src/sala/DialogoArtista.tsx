@@ -41,7 +41,7 @@ const leerQuien = (valor: string): QuienArtista => {
 
 /**
  * La pregunta del Artista al narrador virtual (una vez por partida, de día; lo sea
- * o no, como en la mesa). Con Jarvis se escribe libre; con «Tonto y tú», que no
+ * o no, como en la plaza). Con Jarvis se escribe libre; con «Tonto y tú», que no
  * entiende una pregunta libre, se monta con piezas, como en un despertar: qué se
  * pregunta y de quién (un bando, un tipo o un personaje), los jugadores, la letra…
  * Debajo se lee la pregunta tal como la recibirá el narrador. Al contestar, la
@@ -81,7 +81,7 @@ const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoAr
       case 'enJuego':
         return { tipo, quien: q };
       case 'es':
-        // En el orden de la mesa
+        // En el orden de la plaza
         return elegidos.length ? { tipo, quien: q, jugadores: asientos.filter((x) => elegidos.includes(x.id)).map((x) => x.id), todos } : null;
       case 'inicial':
         return letraValida ? { tipo, quien: q, letra: letra.toUpperCase() } : null;

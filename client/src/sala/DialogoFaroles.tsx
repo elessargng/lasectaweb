@@ -14,7 +14,7 @@ import Interruptor from './Interruptor';
 interface DialogoFarolesProps {
   /** Los faroles del narrador (3 casillas). */
   faroles: (string | null)[];
-  /** La bolsa y las fichas de la mesa: lo que está en juego («asignado»). */
+  /** La bolsa y las fichas de la plaza: lo que está en juego («asignado»). */
   bolsa: string[];
   asientos: JugadorDto[];
   pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;

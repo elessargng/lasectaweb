@@ -29,7 +29,7 @@ const NUMEROS = Array.from({ length: max - min + 1 }, (_, i) => min + i);
  * solo. Se elige cuántos jugadores, el guion (los que son para ese número: No
  * Greater Joy con 5 o 6, Trouble Brewing con 7 o más) y qué narrador (los que aún
  * no se pueden elegir salen desactivados, con el motivo). Al añadirlo, prepara la
- * mesa y espera a que se llene. Al abrirse, el foco va al título.
+ * plaza y espera a que se llene. Al abrirse, el foco va al título.
  */
 const DialogoNarradorVirtual = ({ sentados, noDisponible = {}, pedir, onCerrar }: DialogoNarradorVirtualProps) => {
   const elegible = (n: (typeof NARRADORES_VIRTUALES)[number]) => n.disponible && !noDisponible[n.id];
@@ -67,7 +67,7 @@ const DialogoNarradorVirtual = ({ sentados, noDisponible = {}, pedir, onCerrar }
             Añadir narrador virtual
           </h2>
           <p id="sala-virtual-texto" className="text-sm text-on-surface-muted">
-            Lleva la partida solo: prepara la mesa, espera a que se llene, reparte y narra las noches y los días.
+            Lleva la partida solo: prepara la plaza, espera a que se llene, reparte y narra las noches y los días.
           </p>
           <div className="flex flex-col gap-1">
             <label htmlFor="sala-virtual-jugadores" className="font-ui text-xs">

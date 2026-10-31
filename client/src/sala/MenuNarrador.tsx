@@ -15,7 +15,7 @@ interface MenuNarradorProps {
   estado: SalaDto;
   /** Pide una acción a la sala (ver `useSala`). */
   pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
-  /** Activa o desactiva la edición de asientos (botones en el centro de la mesa). */
+  /** Activa o desactiva la edición de asientos (botones en el centro de la plaza). */
   onAsientos: () => void;
   /** El diálogo de revelar el grimorio, abierto (también se abre con su tecla, desde fuera del menú). */
   revelando: boolean;

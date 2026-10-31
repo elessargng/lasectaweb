@@ -36,7 +36,7 @@ interface RepartoPartidaProps {
  * que toca por defecto. El narrador ve, por tipo, lo que ven los jugadores (por
  * defecto), lo que toca con los personajes que cambian los forasteros sin dejar
  * elegir (prevista: el Barón, el Fang Gu…) y lo que hay (real): los de la bolsa
- * mientras la prepara y, en cuanto hay personajes en la mesa, los que están en
+ * mientras la prepara y, en cuanto hay personajes en la plaza, los que están en
  * juego, por quien es cada uno de verdad (un Borracho con la ficha de un aldeano
  * cuenta como forastero). Antes que nada, los viajeros. Si el reparto está
  * completo y no es el de la partida, durante la preparación (luego el juego cambia
@@ -54,18 +54,18 @@ const RepartoPartida = ({ distribucion, bolsa, asientos, npcs, setupAceptado, pr
   const { jugadores, jugadoresVivos, viajeros, viajerosVivos } = distribucion;
   const hayReparto = distribucion.aldeanos !== null;
 
-  // Lo que se cuenta: lo que hay en juego (si ya hay personajes en la mesa) o la bolsa
-  const enMesa = asientos.some((a) => a.personaje);
+  // Lo que se cuenta: lo que hay en juego (si ya hay personajes en la plaza) o la bolsa
+  const enPlaza = asientos.some((a) => a.personaje);
   const ids = !bolsa
     ? null
-    : enMesa
+    : enPlaza
       ? asientos.flatMap((a) => {
           const id = identidadDe(a).personaje;
           return id ? [id] : [];
         })
       : bolsa;
   const cuentas = ids ? contarBolsa(ids, (id) => todosPorId.get(id)?.tipo) : null;
-  const donde = enMesa ? 'en juego' : 'en la bolsa';
+  const donde = enPlaza ? 'en juego' : 'en la bolsa';
   const regulares = cuentas ? TIPOS_REPARTO.reduce((n, { tipo }) => n + (cuentas[tipo] ?? 0), 0) : 0;
   // Solo con el reparto completo (mientras se prepara, siempre faltaría algo)
   const problemas =

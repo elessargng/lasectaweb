@@ -23,7 +23,7 @@ interface FasePartidaProps {
  * En la cabecera, a la vista de todos: en qué momento está la partida
  * («Preparación», «Noche 2», «Día 2»), con un icono que no se lee. Los cambios
  * se anuncian aparte (avisosSala). El jugador despertado vuelve a abrir su
- * información de noche desde la luna de su ficha (Mesa).
+ * información de noche desde la luna de su ficha (Plaza).
  *
  * Para el narrador es además un botón con la máquina del tiempo: «Volver a la
  * noche 2» (o al día, o a la preparación). Al elegirla, el foco vuelve al botón,

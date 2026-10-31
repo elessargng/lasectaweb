@@ -23,7 +23,7 @@ interface CuadroNarradorProps {
   grimorio?: { onSolicitar: () => void } | 'solicitado';
   /** Escribirle y conversar con él (lo que se pueda; escribirle, siempre). */
   contacto?: ContactoParticipante;
-  /** Su cámara, si la tiene encendida en la mesa (la propia, en espejo). */
+  /** Su cámara, si la tiene encendida en la plaza (la propia, en espejo). */
   video?: VideoTrack | null;
   espejo?: boolean;
   hablando?: boolean;

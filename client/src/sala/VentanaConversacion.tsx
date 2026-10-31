@@ -39,13 +39,13 @@ const PASO = 24;
 
 /**
  * La llamada privada de quien está en ella: en grande en el centro de la pantalla
- * (sin depender del tamaño de los cuadros de la mesa), con un cuadro por persona
+ * (sin depender del tamaño de los cuadros de la plaza), con un cuadro por persona
  * (su cámara o su avatar, un aro cuando habla). «Minimizar» la deja en una
  * ventanita con las cámaras pequeñas que se puede mover por la pantalla
  * (arrastrando su asa, o con las flechas con el foco en ella); «Ampliar» la
  * vuelve a poner en grande. Escape, con el foco dentro, la minimiza.
  *
- * No es modal: la mesa y el chat se siguen usando.
+ * No es modal: la plaza y el chat se siguen usando.
  */
 const VentanaConversacion = ({
   conversacion,
@@ -196,7 +196,7 @@ const VentanaConversacion = ({
 
       {!escucho && otros.length === 0 && (
         <p className={`text-on-surface-muted ${minimizada ? 'text-xs' : 'text-sm'}`}>
-          No queda nadie más en la conversación. Pulsa «Salir» para volver a la mesa.
+          No queda nadie más en la conversación. Pulsa «Salir» para volver a la plaza.
         </p>
       )}
 

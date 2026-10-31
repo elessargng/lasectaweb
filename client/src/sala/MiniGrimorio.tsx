@@ -27,10 +27,10 @@ interface MiniGrimorioProps {
 
 /**
  * Un grimorio en pequeño (el que el narrador envía al Espía o a la Viuda): las
- * fichas en círculo, como en la mesa (la 1 a las 12), cada una con su personaje,
+ * fichas en círculo, como en la plaza (la 1 a las 12), cada una con su personaje,
  * su sudario si está muerto, el nombre de quien se sienta y sus recordatorios
  * hacia el centro. Las fichas encogen cuantas más hay. Usa las mismas piezas que
- * la mesa (FichaRedonda, PersonajeEnFicha, RecordatoriosFicha), con su propio
+ * la plaza (FichaRedonda, PersonajeEnFicha, RecordatoriosFicha), con su propio
  * --sala-ficha.
  *
  * En el centro, los faroles del demonio, si los hay (como en el grimorio de verdad).
@@ -62,7 +62,7 @@ const MiniGrimorio = ({ fichas, faroles = [], nombres, elegida, onElegir, onQuit
     >
       {/* El tapete: un círculo de tinta morada con filo de latón */}
       <div aria-hidden="true" className="absolute inset-[4%] rounded-full border border-gold/25 bg-[radial-gradient(circle,rgba(75,60,134,0.35),rgba(11,9,20,0.6))]" />
-      {total === 0 && <p className="absolute inset-0 flex items-center justify-center text-sm text-on-surface-muted">La mesa no tiene asientos.</p>}
+      {total === 0 && <p className="absolute inset-0 flex items-center justify-center text-sm text-on-surface-muted">La plaza no tiene asientos.</p>}
       <ol className="contents">
         {fichas.map((f, i) => {
           const angulo = (2 * Math.PI * i) / total;

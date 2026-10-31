@@ -14,7 +14,7 @@ import { BookOpen } from 'lucide-react';
 import { describirAsiento } from './nombresAsiento';
 import CuentaAtras from './CuentaAtras';
 import RelojSala, { ID_CANCELAR_RELOJ } from './RelojSala';
-import Ondas, { type OndaMesa } from './Ondas';
+import Ondas, { type OndaPlaza } from './Ondas';
 import type { ContactoParticipante } from './BotonesContacto';
 import type { PistasParticipante } from './useVideollamada';
 import { hacenFalta, votacionOculta } from './avisosSala';
@@ -41,7 +41,7 @@ import { botonPrincipal, botonSecundario } from './estilos';
 import { ID_AYUDA_MOVER, idFichaNominar, idLunaFicha, idNombreAsiento, ID_GANADOR, idRevelarFicha } from './ids';
 import { nombreDeAsiento } from './despertar';
 import { tamanoAvatarAuto, tamanoFichaAuto } from './tamanosAutomaticos';
-import { anguloAsiento } from './geometriaMesa';
+import { anguloAsiento } from './geometriaPlaza';
 import { useMoverAsientos } from './useMoverAsientos';
 import { useIntercambiarFichas } from './useIntercambiarFichas';
 import { CAUSAS_FINAL } from './causasFinal';
@@ -52,7 +52,7 @@ import DialogoRegistroEspia from './DialogoRegistroEspia';
 import { useNominacion } from './useNominacion';
 import type { SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
 
-export interface TamanosMesa {
+export interface TamanosPlaza {
   avatar: number;
   ficha: number;
 }
@@ -66,18 +66,18 @@ export interface FocoAsiento {
 /** Límites de asientos; el servidor tiene los mismos y es quien los hace cumplir. */
 const ASIENTOS_MAX = 20;
 
-interface MesaProps {
+interface PlazaProps {
   estado: SalaDto;
   /** Mostrar en el centro los botones para añadir y eliminar asientos. */
   editando: boolean;
   /** Jugador con grimorio: puede cambiar las fichas en su grimorio. */
   grimorio: boolean;
   /** Tamaños elegidos a mano (Preferencias > Interfaz), en px. */
-  manual: TamanosMesa;
-  /** Qué tamaños calcula la mesa sola, según su tamaño en pantalla y los asientos. */
+  manual: TamanosPlaza;
+  /** Qué tamaños calcula la plaza sola, según su tamaño en pantalla y los asientos. */
   auto: { avatar: boolean; ficha: boolean };
   /** Los tamaños con los que se está pintando (para la vista previa de las preferencias). */
-  onTamanos: (tamanos: TamanosMesa) => void;
+  onTamanos: (tamanos: TamanosPlaza) => void;
   /** Pide una acción a la sala (ver `useSala`). */
   pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onError: (mensaje: string) => void;
@@ -95,10 +95,10 @@ interface MesaProps {
   desfaseReloj: number;
   /** Escribir y conversar con quien se sienta (lo que se pueda). */
   contacto?: (participante: ParticipanteDto) => ContactoParticipante | undefined;
-  /** Lo que se ve y se oye de cada uno en la mesa (cámaras, quién habla). */
+  /** Lo que se ve y se oye de cada uno en la plaza (cámaras, quién habla). */
   pistas: Map<string, PistasParticipante>;
   /** Susurros en curso: ondas de un asiento a otro. */
-  ondas: OndaMesa[];
+  ondas: OndaPlaza[];
   /** En la plaza, dentro del corro de fichas y por debajo de todo (la ciudad, CiudadPlaza). */
   ciudad?: ReactNode;
   /**
@@ -110,7 +110,7 @@ interface MesaProps {
   despertares: { hilos: Set<string>; noLeidos: Set<string>; entendidos: Set<string>; onAbrir: (jugadorId: string) => void } | null;
   /**
    * Eligiendo a un jugador en la plaza para el despertar (ver elegirEnPlaza): las
-   * fichas son botones para elegirlo (menos las ya elegidas) y el centro de la mesa
+   * fichas son botones para elegirlo (menos las ya elegidas) y el centro de la plaza
    * dice para qué y ofrece cancelar. null si no se está eligiendo.
    */
   eleccion?: {
@@ -133,7 +133,7 @@ interface MesaProps {
 /**
  * Dónde va el asiento `i` de `total`: en un círculo, el primero a las 12 y
  * siguiendo como las agujas del reloj, así que el último queda hacia las 11.
- * El centro del cuadro se separa del borde de la mesa medio cuadro (--sala-avatar).
+ * El centro del cuadro se separa del borde de la plaza medio cuadro (--sala-avatar).
  */
 function posicion(i: number, total: number, retirado = false): CSSProperties {
   const angulo = anguloAsiento(i, total);
@@ -154,7 +154,7 @@ const ESCALA_RETIRO = 0.72;
 
 /**
  * Dónde va la ficha del asiento `i`: su centro, sobre la línea que va del centro
- * del cuadro al centro de la mesa, desplazado hacia dentro según
+ * del cuadro al centro de la plaza, desplazado hacia dentro según
  * --sala-ficha-distancia (0 a 1): 0, centrada en el cuadro; 1, a (lado +
  * diámetro) / 2, justo fuera del cuadro en los asientos de arriba, abajo y los
  * lados.
@@ -213,7 +213,7 @@ function posicionVela(i: number, total: number): CSSProperties {
 
 /**
  * Dónde empiezan los recordatorios de la ficha `i`: junto a ella, hacia el
- * centro de la mesa (medio diámetro de la ficha y medio de un recordatorio más
+ * centro de la plaza (medio diámetro de la ficha y medio de un recordatorio más
  * adentro; con la vela del muerto, además lo que ocupa la vela), y hacia dónde
  * se apilan (el centro). Con la vela, se acercan lo mismo que ella a la ficha: en
  * el semicírculo de arriba porque la vela se ha acercado a la ficha; en el de
@@ -236,7 +236,7 @@ function posicionRecordatorios(i: number, total: number, conVela: boolean): { st
 const textoAsientos = (n: number) => (n === 1 ? '1 asiento' : `${n} asientos`);
 
 /**
- * La mesa: los asientos de la partida en círculo, del tamaño de avatar que cada
+ * La plaza: los asientos de la partida en círculo, del tamaño de avatar que cada
  * uno ha elegido. En modo edición (solo narradores), en el centro, los botones
  * para añadir un asiento al final del círculo, eliminar el último o mezclar a
  * quienes están sentados.
@@ -247,7 +247,7 @@ const textoAsientos = (n: number) => (n === 1 ? '1 asiento' : `${n} asientos`);
  * todos ven la de cada jugador (ver FichaJugador). Para el lector, los asientos son una lista ordenada.
  * Al añadir o quitar asientos se anuncia cuántos quedan: el foco sigue en el botón.
  */
-const Mesa = ({
+const Plaza = ({
   estado,
   editando,
   grimorio,
@@ -267,7 +267,7 @@ const Mesa = ({
   despertares,
   seguimiento,
   eleccion = null,
-}: MesaProps) => {
+}: PlazaProps) => {
   const anadirRef = useRef<HTMLButtonElement>(null);
   const [pidiendo, setPidiendo] = useState(false);
   const { plaza: asientos, participantes, yo, acciones } = estado;
@@ -277,7 +277,7 @@ const Mesa = ({
   // jugador con grimorio, para cambiarlas en el suyo; si no, solo se ven. Revelando el
   // grimorio, el jugador con grimorio ve las del narrador (lo de verdad), no lo que anotó.
   const modoFichas = acciones.includes('narrador:cambiarVida') ? 'narrador' : grimorio && !estado.revelacion ? 'grimorio' : 'ver';
-  const mesaRef = useRef<HTMLDivElement>(null);
+  const plazaRef = useRef<HTMLDivElement>(null);
 
   // El señalamiento (si lo veo): si me toca señalar, las fichas que se pueden señalar son
   // botones para señalarlas (o dejar de hacerlo, la que ya señalo); al congelarse, ya no.
@@ -492,16 +492,16 @@ const Mesa = ({
     return { siguiendo: seguimiento.siguiendo === ocupante.id, onAlternar: () => seguimiento.onAlternar(ocupante) };
   };
 
-  // Lado de la mesa en pantalla, para los tamaños automáticos.
-  const [ladoMesa, setLadoMesa] = useState(0);
+  // Lado de la plaza en pantalla, para los tamaños automáticos.
+  const [ladoPlaza, setLadoPlaza] = useState(0);
   useEffect(() => {
-    const mesa = mesaRef.current;
-    if (!mesa) return;
-    const observador = new ResizeObserver(([e]) => setLadoMesa(e.contentRect.width));
-    observador.observe(mesa);
+    const plaza = plazaRef.current;
+    if (!plaza) return;
+    const observador = new ResizeObserver(([e]) => setLadoPlaza(e.contentRect.width));
+    observador.observe(plaza);
     return () => observador.disconnect();
   }, []);
-  const avatar = auto.avatar && ladoMesa ? tamanoAvatarAuto(ladoMesa, total) : manual.avatar;
+  const avatar = auto.avatar && ladoPlaza ? tamanoAvatarAuto(ladoPlaza, total) : manual.avatar;
   const ficha = auto.ficha ? tamanoFichaAuto(avatar) : manual.ficha;
   useEffect(() => {
     onTamanos({ avatar, ficha });
@@ -509,7 +509,7 @@ const Mesa = ({
   const mover = useMoverAsientos({
     asientos,
     participantes,
-    mesaRef,
+    plazaRef,
     pedir,
     onError,
     onAnuncio: (m) => onAnuncio('moverJugadores', m),
@@ -662,7 +662,7 @@ const Mesa = ({
   const pocosParaMezclar = !asientos.some((a) => a.participanteId);
   // Las fichas solo se ven (sin menú, sin seguir ni despertares): el asiento ya dice lo que lleva la suya
   const capaOculta = modoFichas === 'ver' && !seguimiento && !despertares;
-  // Algo en el centro de la mesa (ver abajo): la ciudad se vela para dejarlo leer
+  // Algo en el centro de la plaza (ver abajo): la ciudad se vela para dejarlo leer
   // Con narrador virtual, de día, el jugador sentado tiene su panel (Defensa, Voto, Listo…)
   // En privados y puesta en común ya lo dice el reloj: el panel, solo en las nominaciones
   const panelDiaVirtual = !!miAsiento && estado.narradorVirtual?.etapa === 'nominaciones';
@@ -681,10 +681,10 @@ const Mesa = ({
 
   return (
     <div
-      ref={mesaRef}
-      // isolate: las capas de la mesa (fichas, agujas, centro) no compiten con la cabecera y sus menús
-      className="sala-mesa-halo relative isolate mx-auto aspect-square w-full max-w-[calc(100vh-8rem)]"
-      // Los tamaños de la mesa (automáticos o no) para sus asientos y fichas.
+      ref={plazaRef}
+      // isolate: las capas de la plaza (fichas, agujas, centro) no compiten con la cabecera y sus menús
+      className="sala-plaza-halo relative isolate mx-auto aspect-square w-full max-w-[calc(100vh-8rem)]"
+      // Los tamaños de la plaza (automáticos o no) para sus asientos y fichas.
       style={{ '--sala-avatar': `${avatar}px`, '--sala-ficha': `${ficha}px`, '--sala-retiro': ESCALA_RETIRO } as CSSProperties}
     >
       {/* La ciudad, en el hueco que dejan las fichas: la primera, así queda debajo de todo (sala.css, sala-plaza-ciudad) */}
@@ -721,7 +721,7 @@ const Mesa = ({
             const retirado = !!ocupante && conQuienConversa(estado, ocupante.id) !== undefined;
             return (
               // Cada asiento con su ficha justo después: el lector los lee juntos, asiento a asiento.
-              // El li no tiene caja (contents): el asiento y la capa de su ficha se colocan respecto a la mesa.
+              // El li no tiene caja (contents): el asiento y la capa de su ficha se colocan respecto a la plaza.
               <li key={a.id} className="contents">
                 {/* Centrado en su punto sin transform ni z-index (una caja de 0×0 que centra el asiento): así no
                     forma su propio plano y, dentro, el cuadro queda bajo las fichas mientras la mano y los
@@ -740,7 +740,7 @@ const Mesa = ({
                       puedeSentarse={puedeSentarse}
                       onSentarse={() => sentarse(a.id)}
                       destino={editando && !!mover.activo && mover.activo.hasta === a.id && mover.activo.hasta !== mover.activo.desde}
-                      // Mitad inferior de la mesa (entre las 3 y las 9, sin contarlas): nombre debajo
+                      // Mitad inferior de la plaza (entre las 3 y las 9, sin contarlas): nombre debajo
                       nombreAbajo={-Math.cos(anguloAsiento(i, total)) > 0.01}
                       angulo={anguloAsiento(i, total)}
                       contacto={ocupante ? contacto?.(ocupante) : undefined}
@@ -748,7 +748,7 @@ const Mesa = ({
                       espejo={!!ocupante && ocupante.id === estado.yo}
                       hablando={!!ocupante && !!pistas.get(ocupante.id)?.hablando}
                       enConversacion={ocupante ? conQuienConversa(estado, ocupante.id) : undefined}
-                      // Micro cerrado en la mesa (quien conversa en privado ya lleva su icono)
+                      // Micro cerrado en la plaza (quien conversa en privado ya lleva su icono)
                       silenciado={
                         !!ocupante &&
                         !!pistas.get(ocupante.id) &&
@@ -785,7 +785,7 @@ const Mesa = ({
                         )
                       }
                     />
-                    {/* La nota: un pósit hacia fuera de la mesa (a la izquierda o a la derecha del cuadro) */}
+                    {/* La nota: un pósit hacia fuera de la plaza (a la izquierda o a la derecha del cuadro) */}
                     {!editando && (
                       <NotaAsiento
                         jugadorId={a.id}
@@ -804,7 +804,7 @@ const Mesa = ({
                   </div>
                 </div>
                 {/* Su ficha, hacia dentro del círculo y por encima de los cuadros (z-index). La capa ocupa
-                    toda la mesa (las fichas se colocan respecto a ella, como los asientos) y no captura el
+                    toda la plaza (las fichas se colocan respecto a ella, como los asientos) y no captura el
                     ratón, así que lo que tapa se sigue pudiendo pulsar. Al pasar el ratón o con el foco, por
                     encima de las de los demás; con su menú abierto, también de las agujas y del centro.
                     Solo se ve (sin menú): fuera del árbol de accesibilidad, salvo las que se pueden seguir. */}
@@ -941,7 +941,7 @@ const Mesa = ({
       ) : (
         !editando && (
           <p className="absolute inset-0 flex items-center justify-center text-on-surface-muted">
-            La mesa no tiene asientos.
+            La plaza no tiene asientos.
           </p>
         )
       )}
@@ -1022,7 +1022,7 @@ const Mesa = ({
         />
       )}
 
-      {/* El grimorio que me ha enviado el narrador (Espía, Viuda): en la esquina de la mesa, para volver a verlo */}
+      {/* El grimorio que me ha enviado el narrador (Espía, Viuda): en la esquina de la plaza, para volver a verlo */}
       {recibido && (
         <button
           type="button"
@@ -1042,12 +1042,12 @@ const Mesa = ({
         />
       )}
 
-      {/* El gong del narrador: el aviso de volver a la plaza, alrededor de la mesa */}
+      {/* El gong del narrador: el aviso de volver a la plaza, alrededor de la plaza */}
       <AvisoGong
         gong={estado.gong}
         ahora={estado.ahora}
         noche={estado.fase.momento === 'noche'}
-        mesaRef={mesaRef}
+        plazaRef={plazaRef}
         onAnuncio={(m) => onAnuncio('gong', m)}
       />
 
@@ -1078,7 +1078,7 @@ const Mesa = ({
         </p>
       )}
 
-      {/* El centro de la mesa: el reloj del narrador y la cuenta atrás (todos), el panel
+      {/* El centro de la plaza: el reloj del narrador y la cuenta atrás (todos), el panel
           de la nominación y el de editar asientos (narradores). Por encima de las agujas. */}
       {centroOcupado && (
         <div className="absolute left-1/2 top-1/2 z-30 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">
@@ -1149,7 +1149,7 @@ const Mesa = ({
               puedoSenalar={senalo}
               onTerminar={acciones.includes('narrador:terminarSenalamiento') ? () => void terminarSenalamiento() : undefined}
               // Lo que queda dentro del círculo de las fichas (con la distancia por defecto), con margen
-              anchoMax={Math.max(180, (ladoMesa || 600) - avatar - 0.75 * (avatar + ficha) - 1.8 * ficha)}
+              anchoMax={Math.max(180, (ladoPlaza || 600) - avatar - 0.75 * (avatar + ficha) - 1.8 * ficha)}
             />
           )}
           {eleccion && (
@@ -1219,4 +1219,4 @@ const Mesa = ({
   );
 };
 
-export default Mesa;
+export default Plaza;

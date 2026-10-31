@@ -47,7 +47,7 @@ export interface PreferenciasSala {
   tamanoFicha: number;
   /**
    * Dónde va la ficha respecto al cuadro del jugador, sobre la línea hacia el
-   * centro de la mesa, en %: 0, centrada en el cuadro; 100, justo fuera de él
+   * centro de la plaza, en %: 0, centrada en el cuadro; 100, justo fuera de él
    * (igual en todos los asientos, para que las fichas formen un círculo).
    */
   distanciaFicha: number;
@@ -131,7 +131,7 @@ export interface PreferenciasSala {
    */
   fondo: PreferenciaFondo;
   /**
-   * La ciudad animada en el centro de la mesa (ver CiudadPlaza): solo al atardecer y al
+   * La ciudad animada en el centro de la plaza (ver CiudadPlaza): solo al atardecer y al
    * amanecer (de entrada), siempre a la vista o nunca. Pestaña Interfaz.
    */
   ciudad: ModoCiudad;

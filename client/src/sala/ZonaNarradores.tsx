@@ -18,7 +18,7 @@ interface ZonaNarradoresProps {
   onError: (mensaje: string) => void;
   /** Escribir y conversar con un narrador (lo que se pueda). */
   contacto?: (participante: ParticipanteDto) => ContactoParticipante | undefined;
-  /** Lo que se ve y se oye de cada uno en la mesa. */
+  /** Lo que se ve y se oye de cada uno en la plaza. */
   pistas?: Map<string, PistasParticipante>;
   /** Abre el diálogo para añadir un narrador virtual (ver DialogoNarradorVirtual). */
   onAnadirVirtual: () => void;
@@ -75,7 +75,7 @@ const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas, onAnadirVirt
                 hablando={pistas?.get(n.id)?.hablando}
                 enConversacion={conQuienConversa(estado, n.id)}
                 escuchando={estado.conversaciones.some((c) => c.oyentes.includes(n.id))}
-                // Micro cerrado en la mesa (quien conversa o escucha ya lleva su icono)
+                // Micro cerrado en la plaza (quien conversa o escucha ya lleva su icono)
                 silenciado={
                   !!pistas?.get(n.id) &&
                   !pistas.get(n.id)!.microfono &&

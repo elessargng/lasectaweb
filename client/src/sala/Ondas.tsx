@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 
-/** Unas ondas que se ven en la mesa: de un asiento a otro (índices), con su intensidad. */
-export interface OndaMesa {
+/** Unas ondas que se ven en la plaza: de un asiento a otro (índices), con su intensidad. */
+export interface OndaPlaza {
   id: number;
   desde: number;
   hasta: number;
@@ -9,7 +9,7 @@ export interface OndaMesa {
 }
 
 /**
- * Los susurros de la mesa: cuando dos jugadores se escriben en privado, unas
+ * Los susurros de la plaza: cuando dos jugadores se escriben en privado, unas
  * ondas salen del asiento de quien escribe hacia el de quien lo recibe. Más
  * ondas y más grandes cuanto más largo es el mensaje. Todos las ven (no lo que
  * dicen). Con menos movimiento, se ven quietas a medio camino.
@@ -17,7 +17,7 @@ export interface OndaMesa {
  * Los asientos están en un círculo (el 1 a las 12): cada onda va por la cuerda
  * entre los dos, del centro de un cuadro al del otro. Solo visual: se avisa aparte.
  */
-const Ondas = ({ ondas, total }: { ondas: OndaMesa[]; total: number }) => (
+const Ondas = ({ ondas, total }: { ondas: OndaPlaza[]; total: number }) => (
   <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-20">
     {ondas.map((o) => {
       const a = (2 * Math.PI * o.desde) / total;

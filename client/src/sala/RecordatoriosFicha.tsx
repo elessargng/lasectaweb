@@ -5,9 +5,9 @@ import type { Recordatorio } from './useSala';
 
 interface RecordatoriosFichaProps {
   recordatorios: Recordatorio[];
-  /** Dónde empiezan: junto a la ficha, hacia el centro de la mesa (lo calcula la mesa). */
+  /** Dónde empiezan: junto a la ficha, hacia el centro de la plaza (lo calcula la plaza). */
   style: CSSProperties;
-  /** Hacia el centro de la mesa (vector unitario): por ahí se apilan. */
+  /** Hacia el centro de la plaza (vector unitario): por ahí se apilan. */
   hacia: { x: number; y: number };
   /** Los que quien mira puede quitar (botón); los demás solo se ven. */
   puedeQuitar: (r: Recordatorio) => boolean;
@@ -21,7 +21,7 @@ interface RecordatoriosFichaProps {
 }
 
 /**
- * Las fichas recordatorio de una ficha: junto a ella, hacia el centro de la mesa,
+ * Las fichas recordatorio de una ficha: junto a ella, hacia el centro de la plaza,
  * una tras otra en esa dirección. Apiladas (solapadas) mientras no se pasa el
  * ratón ni el foco por ellas; entonces se separan para verlas todas.
  *

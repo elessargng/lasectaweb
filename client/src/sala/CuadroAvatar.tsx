@@ -18,11 +18,11 @@ interface CuadroAvatarProps {
   vacio?: boolean;
   /** Jugador muerto: su avatar o su cámara, en escala de grises. */
   apagado?: boolean;
-  /** En una conversación privada (fuera de la mesa): su avatar o su cámara, más oscuros. */
+  /** En una conversación privada (fuera de la plaza): su avatar o su cámara, más oscuros. */
   atenuado?: boolean;
   /**
    * El pie va fuera de la caja del componente, que mide solo el cuadro, para
-   * colocarlo por su centro (asientos de la mesa): encima (jugadores, porque
+   * colocarlo por su centro (asientos de la plaza): encima (jugadores, porque
    * debajo van las fichas) o debajo. Sin esto, va debajo dentro de la caja.
    */
   pieFuera?: 'arriba' | 'abajo';

@@ -136,7 +136,7 @@ export function avisosDeCambio(
       avisa('conversaciones', `${nombreDe(id)} sale de la conversación${ultimo ? ' y no queda nadie más' : ''}.`);
     });
   } else if (miAntes && !miAhora) {
-    // Quien escuchaba (visitante, o siguiendo a un jugador) vuelve a la mesa
+    // Quien escuchaba (visitante, o siguiendo a un jugador) vuelve a la plaza
     const escuchaba = miAntes.oyentes.includes(yo);
     const sigue = nuevo.conversaciones.some((c) => c.id === miAntes.id);
     avisa(

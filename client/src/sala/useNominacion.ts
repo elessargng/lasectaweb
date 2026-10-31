@@ -17,8 +17,8 @@ const idMenuFicha = (participanteId: string) => `sala-ficha-${participanteId}-bo
  * Nominar (narradores), de la ficha de un asiento a la de otro o a sí misma
  * (haya alguien sentado o no). «Nominar a…» en la ficha que nomina pone todas en
  * modo «elegir»: pulsar una abre la nominación (servidor). Escape, o «Cancelar
- * nominación» en el centro de la mesa, lo cancela. Con la nominación abierta, el narrador
- * tiene en el centro de la mesa Cuenta atrás, Marca (pone o quita la calavera
+ * nominación» en el centro de la plaza, lo cancela. Con la nominación abierta, el narrador
+ * tiene en el centro de la plaza Cuenta atrás, Marca (pone o quita la calavera
  * al nominado, solo uno puede llevarla, y cierra la nominación) y Cerrar.
  *
  * El foco acompaña: al empezar a elegir va a la siguiente ficha, al abrir la
@@ -68,7 +68,7 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
 
   const empezar = (id: string) => {
     setEligiendoDesde(id);
-    // El foco, a la ficha del asiento siguiente (en el orden de la mesa).
+    // El foco, a la ficha del asiento siguiente (en el orden de la plaza).
     const i = asientos.findIndex((a) => a.id === id);
     focoRef.current = idFichaNominar(asientos[(i + 1) % asientos.length].id);
     onAnuncio(`Elige a qué ficha nomina el ${nombreDe(id)} (puede ser la suya): pulsa la ficha. Escape para cancelar.`);
@@ -134,7 +134,7 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
             yaNominado: nominadosHoy.has(id),
           }
         : undefined,
-    /** Se está eligiendo a quién nomina: el centro de la mesa ofrece cancelar. */
+    /** Se está eligiendo a quién nomina: el centro de la plaza ofrece cancelar. */
     cancelar: desde ? cancelar : null,
     /** El Espía nomina a la Virgen: si registra como aldeano (ver DialogoRegistroEspia), o null. */
     preguntaEspia: preguntaEspia

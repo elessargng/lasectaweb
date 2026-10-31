@@ -3,9 +3,9 @@ import CuadroAvatar from './CuadroAvatar';
 import FichaRedonda from './FichaRedonda';
 
 /**
- * Cómo se verá un jugador en la mesa con las preferencias de ahora: su cuadro
+ * Cómo se verá un jugador en la plaza con las preferencias de ahora: su cuadro
  * (con el avatar de La Secta) y el nombre encima, y la ficha a la derecha a la
- * distancia elegida. Usa los mismos componentes y variables CSS que la mesa
+ * distancia elegida. Usa los mismos componentes y variables CSS que la plaza
  * (--sala-avatar, --sala-ficha, --sala-ficha-distancia), así que se ve igual.
  *
  * Solo visual: el lector ya oye los valores en los deslizadores.

@@ -194,7 +194,7 @@ const PanelChat = ({
                   {susurros
                     ? 'Aquí aparecerá lo que los jugadores se escriban en privado.'
                     : actual === CANAL_GENERAL
-                      ? 'Sé el primero en escribir a la mesa.'
+                      ? 'Sé el primero en escribir a la plaza.'
                       : actual === CANAL_VISITANTES
                         ? 'Sé el primero en escribir a los demás visitantes.'
                         : otro

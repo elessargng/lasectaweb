@@ -26,7 +26,7 @@ export const ID_CANCELAR_RELOJ = 'sala-reloj-cancelar';
 const queda = (reloj: RelojDto, desfase: number) => reloj.fin - (Date.now() + desfase);
 
 /**
- * El reloj del narrador, en grande en el centro de la mesa, para todos: lo que
+ * El reloj del narrador, en grande en el centro de la plaza, para todos: lo que
  * queda (minutos:segundos) con una barra que se vacía y, debajo, su mensaje. Al
  * acabar (o si el narrador lo termina antes) suena el gong y pone «¡Tiempo!» un
  * rato; luego desaparece. Quien la usa la monta con `key` = su inicio, así que un

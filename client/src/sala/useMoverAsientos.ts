@@ -17,8 +17,8 @@ interface Movimiento {
 interface Opciones {
   asientos: JugadorDto[];
   participantes: ParticipanteDto[];
-  /** La mesa: dentro están los asientos, marcados con data-asiento. */
-  mesaRef: RefObject<HTMLElement | null>;
+  /** La plaza: dentro están los asientos, marcados con data-asiento. */
+  plazaRef: RefObject<HTMLElement | null>;
   pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   onError: (mensaje: string) => void;
   onAnuncio: (mensaje: string) => void;
@@ -26,7 +26,7 @@ interface Opciones {
 
 /**
  * Mover a un jugador de asiento (narradores, editando asientos). Se coge por su
- * asa y, mientras no se suelta, la mesa enseña cómo quedaría (provisional): el
+ * asa y, mientras no se suelta, la plaza enseña cómo quedaría (provisional): el
  * jugador en el asiento de destino y, si estaba ocupado, el otro en el de origen.
  * Al soltar se pide al servidor; hasta entonces no cambia nada para nadie.
  *
@@ -34,7 +34,7 @@ interface Opciones {
  * - Con teclado (y lector): Intro o Espacio coge, las flechas eligen asiento,
  *   Intro o Espacio suelta y Escape cancela. Cada paso se anuncia.
  */
-export function useMoverAsientos({ asientos, participantes, mesaRef, pedir, onError, onAnuncio }: Opciones) {
+export function useMoverAsientos({ asientos, participantes, plazaRef, pedir, onError, onAnuncio }: Opciones) {
   const [movimiento, setMovimiento] = useState<Movimiento | null>(null);
   // Tras soltar con el teclado, el foco va a su asa cuando llega a su nuevo asiento
   // (el id es el de su jugador, que se cambia de silla con él).
@@ -100,7 +100,7 @@ export function useMoverAsientos({ asientos, participantes, mesaRef, pedir, onEr
   /** El asiento más cercano al puntero (por el centro de su cuadro). */
   const asientoBajo = (x: number, y: number): string | null => {
     let mejor: { id: string; distancia: number } | null = null;
-    for (const el of mesaRef.current?.querySelectorAll<HTMLElement>('[data-asiento]') ?? []) {
+    for (const el of plazaRef.current?.querySelectorAll<HTMLElement>('[data-asiento]') ?? []) {
       const r = el.getBoundingClientRect();
       const distancia = Math.hypot(r.left + r.width / 2 - x, r.top + r.height / 2 - y);
       if (!mejor || distancia < mejor.distancia) mejor = { id: el.dataset.asiento!, distancia };

@@ -10,7 +10,7 @@ const AYUDA = 'Ha jugado menos de 10 partidas';
  *
  * Va centrado con el nombre y, aunque es más alto que el texto, no hace más alta
  * la línea (márgenes negativos): así no sobresale por arriba ni se corta en los
- * asientos pegados al borde de la mesa.
+ * asientos pegados al borde de la plaza.
  */
 const PulpitoNovato = ({ tamano = 'h-[1.75em] w-[1.75em]', paraLector = false }: { tamano?: string; paraLector?: boolean }) => (
   <span title={AYUDA} aria-hidden={!paraLector || undefined} className="ml-1 inline-flex shrink-0 -my-[0.375em] align-middle">

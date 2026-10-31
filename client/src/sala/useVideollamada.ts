@@ -25,12 +25,12 @@ import type { PaseVideo } from './useSala';
 /**
  * La videollamada de la sala (cámaras y micrófonos), con LiveKit.
  *
- * - La mesa: todos ven y oyen; emiten jugadores y narradores. De noche no hay
+ * - La plaza: todos ven y oyen; emiten jugadores y narradores. De noche no hay
  *   cámaras (solo voz).
  * - Una conversación privada: sus miembros se ven y se oyen solo entre ellos (y
- *   no emiten en la mesa, ni la oyen). Los visitantes que la escuchan no emiten.
+ *   no emiten en la plaza, ni la oyen). Los visitantes que la escuchan no emiten.
  *   Si el narrador no oculta sus cámaras, los miembros emiten además la cámara en
- *   la mesa (sin la voz; de día).
+ *   la plaza (sin la voz; de día).
  *
  * El servidor decide los permisos (no se puede emitir lo que no toca); aquí se
  * publica o no según los botones de cámara y micrófono, que empiezan apagados:
@@ -60,15 +60,15 @@ export interface ProblemaDispositivo {
 interface OpcionesVideollamada {
   /** La sala tiene videollamada y estamos dentro. */
   activa: boolean;
-  /** Puede emitir en la mesa (jugador o narrador). */
+  /** Puede emitir en la plaza (jugador o narrador). */
   puedeEmitir: boolean;
   noche: boolean;
   /** La conversación privada en la que está, o null. */
   conversacion: string | null;
   /** En ella habla (miembro); si solo escucha (visitante), no emite. */
   hablaEnConversacion: boolean;
-  /** Conversando (como miembro), la cámara se sigue viendo en la mesa (el narrador no la oculta). */
-  camaraEnMesaConversando: boolean;
+  /** Conversando (como miembro), la cámara se sigue viendo en la plaza (el narrador no la oculta). */
+  camaraEnPlazaConversando: boolean;
   /** El narrador ha pedido silencio: el micrófono no se emite (el servidor tampoco lo deja). */
   silenciado: boolean;
   idCamara: string;
@@ -192,7 +192,7 @@ export function useVideollamada({
   noche,
   conversacion,
   hablaEnConversacion,
-  camaraEnMesaConversando,
+  camaraEnPlazaConversando,
   silenciado,
   idCamara,
   idMicrofono,
@@ -208,7 +208,7 @@ export function useVideollamada({
   const [problema, setProblema] = useState<ProblemaDispositivo | null>(null);
   const [sonidoBloqueado, setSonidoBloqueado] = useState(false);
   // Lo que se ve y se oye, por sala (se recalcula con cada novedad de LiveKit)
-  const [mesa, setMesa] = useState<Map<string, PistasParticipante>>(new Map());
+  const [plaza, setPlaza] = useState<Map<string, PistasParticipante>>(new Map());
   const [privada, setPrivada] = useState<Map<string, PistasParticipante>>(new Map());
   // Uno mismo (su id de participante) y si está hablando, medido en su micrófono
   const [yo, setYo] = useState<string | null>(null);
@@ -217,10 +217,10 @@ export function useVideollamada({
   const [pistasPropias, setPistasPropias] = useState(0);
   // Sube cada vez que una sala termina de conectarse (para publicar en ella)
   const [conectadas, setConectadas] = useState(0);
-  const mesaRef = useRef<Room | null>(null);
+  const plazaRef = useRef<Room | null>(null);
   const privadaRef = useRef<Room | null>(null);
   /** Si ahora toca oír cada sala (para cortar desde el principio el audio que llegue nuevo). */
-  const oyeMesaRef = useRef(true);
+  const oyePlazaRef = useRef(true);
   const oyePrivadaRef = useRef(true);
   /** Lo último pedido a cada sala (publicar o dejar de hacerlo), para encadenar lo siguiente. */
   const colasRef = useRef(new WeakMap<Room, Promise<void>>());
@@ -345,10 +345,10 @@ export function useVideollamada({
     [camaraCompartida],
   );
 
-  // La mesa: mientras haya videollamada
+  // La plaza: mientras haya videollamada
   useEffect(() => {
     if (!activa) return;
-    return conectar('principal', mesaRef, oyeMesaRef, setMesa);
+    return conectar('principal', plazaRef, oyePlazaRef, setPlaza);
   }, [activa, conectar]);
 
   // La conversación privada: mientras se esté en una
@@ -358,7 +358,7 @@ export function useVideollamada({
   }, [activa, conversacion, conectar]);
 
   // Qué se emite y dónde: en la conversación, si se está en una (cámara también de
-  // noche); si no, en la mesa (sin cámara de noche). La voz, nunca en las dos; la
+  // noche); si no, en la plaza (sin cámara de noche). La voz, nunca en las dos; la
   // cámara, en las dos si el narrador no oculta las de las conversaciones.
   useEffect(() => {
     const enConversacion = !!conversacion;
@@ -420,20 +420,20 @@ export function useVideollamada({
       const siguiente = (colasRef.current.get(room) ?? Promise.resolve()).then(aplicar);
       colasRef.current.set(room, siguiente);
     };
-    const enMesa = puedeEmitir && !enConversacion;
+    const enPlaza = puedeEmitir && !enConversacion;
     // Con silencio, el micrófono se apaga en todas partes (se queda «encendido» para cuando acabe)
     const micro = microfono && !silenciado;
     const hablo = enConversacion && hablaEnConversacion;
-    const camaraEnMesa = puedeEmitir && (!enConversacion || (hablo && camaraEnMesaConversando));
-    void publicar(mesaRef.current, camara && camaraEnMesa && !noche, micro && enMesa);
+    const camaraEnPlaza = puedeEmitir && (!enConversacion || (hablo && camaraEnPlazaConversando));
+    void publicar(plazaRef.current, camara && camaraEnPlaza && !noche, micro && enPlaza);
     void publicar(privadaRef.current, camara && hablo, micro && hablo);
-  }, [camara, microfono, silenciado, noche, puedeEmitir, conversacion, hablaEnConversacion, camaraEnMesaConversando, idCamara, idMicrofono, conectadas, camaraCompartida]);
+  }, [camara, microfono, silenciado, noche, puedeEmitir, conversacion, hablaEnConversacion, camaraEnPlazaConversando, idCamara, idMicrofono, conectadas, camaraCompartida]);
 
   // Cambiar de cámara o de micrófono en Preferencias: se cambia en caliente. La cámara,
   // una vez: se abre la nueva y cada sala cambia su copia (y para la de antes).
   useEffect(() => {
     const cambiarCopias = async (nueva: MediaStreamTrack) => {
-      for (const room of [mesaRef.current, privadaRef.current]) {
+      for (const room of [plazaRef.current, privadaRef.current]) {
         const pista = room?.localParticipant.getTrackPublication(Track.Source.Camera)?.track;
         if (!pista) continue;
         const antes = pista.mediaStreamTrack;
@@ -449,18 +449,18 @@ export function useVideollamada({
     });
   }, [idCamara, camaraCompartida]);
   useEffect(() => {
-    for (const room of [mesaRef.current, privadaRef.current]) {
+    for (const room of [plazaRef.current, privadaRef.current]) {
       void room?.switchActiveDevice('audioinput', idMicrofono || 'default').catch(() => undefined);
     }
   }, [idMicrofono]);
 
-  // Lo que se oye: nada con el sonido quitado; en una conversación privada, solo ella (la mesa no)
+  // Lo que se oye: nada con el sonido quitado; en una conversación privada, solo ella (la plaza no)
   useEffect(() => {
-    oyeMesaRef.current = sonido && !conversacion;
+    oyePlazaRef.current = sonido && !conversacion;
     oyePrivadaRef.current = sonido;
-    oir(mesaRef.current, oyeMesaRef.current, volumenes, mezclador);
+    oir(plazaRef.current, oyePlazaRef.current, volumenes, mezclador);
     oir(privadaRef.current, oyePrivadaRef.current, volumenes, mezclador);
-  }, [sonido, conversacion, mesa, privada, volumenes, mezclador]);
+  }, [sonido, conversacion, plaza, privada, volumenes, mezclador]);
 
   // Sonido envolvente: al activarlo, las voces que ya llegan pasan al mezclador; al
   // quitarlo, vuelven a sus elementos. Su AudioContext arranca con el primer gesto.
@@ -475,7 +475,7 @@ export function useVideollamada({
       return console.warn('[Videollamada] Sin Web Audio no hay sonido envolvente:', e);
     }
     nuevo.colocar(opciones.posiciones);
-    for (const room of [mesaRef.current, privadaRef.current]) {
+    for (const room of [plazaRef.current, privadaRef.current]) {
       for (const [pista, id] of vocesDe(room)) nuevo.conectar(pista, id);
     }
     mezcladorRef.current = nuevo;
@@ -503,10 +503,10 @@ export function useVideollamada({
   }, [mezclador, posicionesVoz]);
 
   // Si hablo: el volumen de mi micrófono, en la sala en la que lo emito (la
-  // conversación o la mesa). Se vuelve a mirar al publicar o retirar pistas y al
+  // conversación o la plaza). Se vuelve a mirar al publicar o retirar pistas y al
   // conectarse; silenciarse no la retira, pero se mira en cada medida.
   useEffect(() => {
-    const room = conversacion ? (hablaEnConversacion ? privadaRef.current : null) : mesaRef.current;
+    const room = conversacion ? (hablaEnConversacion ? privadaRef.current : null) : plazaRef.current;
     const publicacion = room?.localParticipant.getTrackPublication(Track.Source.Microphone);
     const pista = publicacion?.track as LocalAudioTrack | undefined;
     // Sin micrófono que medir, callado (la limpieza de la medida anterior ya lo apagó)
@@ -547,7 +547,7 @@ export function useVideollamada({
     },
     [yo, yoHablando],
   );
-  const mesaConYo = useMemo(() => conYo(mesa), [conYo, mesa]);
+  const plazaConYo = useMemo(() => conYo(plaza), [conYo, plaza]);
   const privadaConYo = useMemo(() => conYo(privada), [conYo, privada]);
 
   const alternarCamara = useCallback(() => {
@@ -555,7 +555,7 @@ export function useVideollamada({
     setCamara((c) => !c);
   }, []);
   const alternarSonido = useCallback(() => setSonido((s) => !s), []);
-  /** El volumen al que se oye a alguien (0 a 1), en la mesa y en las conversaciones. */
+  /** El volumen al que se oye a alguien (0 a 1), en la plaza y en las conversaciones. */
   const cambiarVolumen = useCallback((id: string, volumen: number) => {
     setVolumenes((v) => ({ ...v, [id]: Math.min(1, Math.max(0, volumen)) }));
   }, []);
@@ -570,7 +570,7 @@ export function useVideollamada({
   );
   /** El navegador no deja sonar nada hasta que se interactúa: un clic lo desbloquea. */
   const activarSonido = useCallback(() => {
-    for (const room of [mesaRef.current, privadaRef.current]) void room?.startAudio();
+    for (const room of [plazaRef.current, privadaRef.current]) void room?.startAudio();
     mezcladorRef.current?.reanudar();
     setSonidoBloqueado(false);
   }, []);
@@ -591,8 +591,8 @@ export function useVideollamada({
     /** Sonido envolvente: los canales que da el sistema (null si no está activo) y la prueba de sonido. */
     canalesSalida: mezclador?.canales ?? null,
     probarEnvolvente,
-    /** Lo que se ve y se oye en la mesa y en la conversación privada, por participante. */
-    mesa: mesaConYo,
+    /** Lo que se ve y se oye en la plaza y en la conversación privada, por participante. */
+    plaza: plazaConYo,
     privada: privadaConYo,
   };
 }

@@ -9,7 +9,7 @@ import { IconoLlamadaBotc, IconoMensajeBotc } from './BotonesContacto';
 import { ICONOS_LLAMADA } from './llamadaBotc';
 import { carpetaSilla, ESTILOS_CALAVERA, ESTILOS_DESPERTAR, ESTILOS_ENTENDIDO, ESTILOS_MANO, ESTILOS_SILLA, ESTILOS_VOTO, MarcasContexto } from './marcas';
 import IconoDespertar from './IconoDespertar';
-import type { TamanosMesa } from './Mesa';
+import type { TamanosPlaza } from './Plaza';
 import { RANGOS, type ModoCiudad, type PreferenciasSala } from './preferencias';
 import { FONDOS, rutaFondo } from './fondos';
 import VelaVoto from './VelaVoto';
@@ -131,8 +131,8 @@ interface PanelInterfazProps {
   /** Para la vista previa: el nombre con el que apareces en la sala. */
   nombre: string;
   preferencias: PreferenciasSala;
-  /** Tamaños con los que se pinta ahora la mesa (los automáticos, si lo son). */
-  tamanosMesa: TamanosMesa | null;
+  /** Tamaños con los que se pinta ahora la plaza (los automáticos, si lo son). */
+  tamanosPlaza: TamanosPlaza | null;
   /** El fondo de la sala (del guion o del narrador), con su dirección completa, o null. */
   fondoDeLaSala: string | null;
   onCambiar: (cambios: Partial<PreferenciasSala>) => void;
@@ -142,7 +142,7 @@ interface PanelInterfazProps {
  * Pestaña Interfaz: cómo ves la sala (avatares y fichas), con una vista previa
  * arriba. Los cambios se aplican al momento; con cuenta se guardan en el servidor.
  */
-const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, fondoDeLaSala, onCambiar }: PanelInterfazProps) => (
+const PanelInterfaz = ({ nombre, preferencias, tamanosPlaza, fondoDeLaSala, onCambiar }: PanelInterfazProps) => (
   <div className="flex flex-col gap-6">
     <div className="flex flex-col gap-1">
       <Interruptor
@@ -183,11 +183,11 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, fondoDeLaSala, onCam
         </span>
       )}
     />
-    {/* La vista previa, con los tamaños de la mesa (un jugador se ve así) */}
+    {/* La vista previa, con los tamaños de la plaza (un jugador se ve así) */}
     <div
       style={
-        tamanosMesa
-          ? ({ '--sala-avatar': `${tamanosMesa.avatar}px`, '--sala-ficha': `${tamanosMesa.ficha}px` } as CSSProperties)
+        tamanosPlaza
+          ? ({ '--sala-avatar': `${tamanosPlaza.avatar}px`, '--sala-ficha': `${tamanosPlaza.ficha}px` } as CSSProperties)
           : undefined
       }
     >
@@ -201,8 +201,8 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, fondoDeLaSala, onCam
       onCambiar={(tamanoAvatar) => onCambiar({ tamanoAvatar })}
       automatico={{
         activo: preferencias.avatarAuto,
-        actual: tamanosMesa?.avatar ?? preferencias.tamanoAvatar,
-        explicacion: 'según el tamaño de la mesa y el número de asientos',
+        actual: tamanosPlaza?.avatar ?? preferencias.tamanoAvatar,
+        explicacion: 'según el tamaño de la plaza y el número de asientos',
         onCambiar: (avatarAuto) => onCambiar({ avatarAuto }),
       }}
     />
@@ -214,7 +214,7 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, fondoDeLaSala, onCam
       onCambiar={(tamanoFicha) => onCambiar({ tamanoFicha })}
       automatico={{
         activo: preferencias.fichaAuto,
-        actual: tamanosMesa?.ficha ?? preferencias.tamanoFicha,
+        actual: tamanosPlaza?.ficha ?? preferencias.tamanoFicha,
         explicacion: 'en proporción al tamaño de los avatares',
         onCambiar: (fichaAuto) => onCambiar({ fichaAuto }),
       }}
@@ -225,7 +225,7 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, fondoDeLaSala, onCam
       valor={preferencias.distanciaFicha}
       rango={RANGOS.distanciaFicha}
       unidad="%"
-      ayuda="Al mínimo, la ficha queda en el centro del cuadro; al máximo, entera fuera, hacia el centro de la mesa."
+      ayuda="Al mínimo, la ficha queda en el centro del cuadro; al máximo, entera fuera, hacia el centro de la plaza."
       onCambiar={(distanciaFicha) => onCambiar({ distanciaFicha })}
     />
     <ElegirEstilo
@@ -273,7 +273,7 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, fondoDeLaSala, onCam
         mano === 'azar' ? (
           <MuestraAzar />
         ) : (
-          // Como en la mesa: sobre la esquina de arriba a la derecha de la ficha
+          // Como en la plaza: sobre la esquina de arriba a la derecha de la ficha
           <span className="relative block">
             <FichaRedonda />
             <Mano forma="palma" estilo={mano} className="absolute -right-[8%] -top-[12%] w-[55%] drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]" />
@@ -312,7 +312,7 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, fondoDeLaSala, onCam
       valor={preferencias.iconoDespertar}
       onCambiar={(iconoDespertar) => onCambiar({ iconoDespertar })}
       muestra={(estilo) => (
-        // Sobre la ficha, como en la mesa, con algo nuevo
+        // Sobre la ficha, como en la plaza, con algo nuevo
         <span className="relative block">
           <FichaRedonda />
           <span className="absolute inset-0 flex items-center justify-center">
@@ -347,7 +347,7 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, fondoDeLaSala, onCam
         silla === 'azar' ? (
           <MuestraAzar />
         ) : (
-          // Como en el asiento de arriba a la derecha de la mesa (en espejo), en su marco de retrato
+          // Como en el asiento de arriba a la derecha de la plaza (en espejo), en su marco de retrato
           <img
             src={`${carpetaSilla(silla)}arriba-izquierda.webp`}
             alt=""
@@ -359,7 +359,7 @@ const PanelInterfaz = ({ nombre, preferencias, tamanosMesa, fondoDeLaSala, onCam
     <fieldset className="flex flex-col gap-2" aria-describedby="sala-pref-ciudad-ayuda">
       <legend className="campo-etiqueta">Ciudad animada en la plaza</legend>
       <p id="sala-pref-ciudad-ayuda" className="-mt-1 text-xs text-on-surface-muted">
-        La ciudad con la torre del reloj en el centro de la mesa, con su atardecer y su amanecer.
+        La ciudad con la torre del reloj en el centro de la plaza, con su atardecer y su amanecer.
       </p>
       {MODOS_CIUDAD_TEXTO.map((m) => (
         // El nombre de la opción es solo su etiqueta; lo que hace, su descripción (se lee después)

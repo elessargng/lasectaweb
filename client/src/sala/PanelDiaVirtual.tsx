@@ -15,7 +15,7 @@ const TU_TURNO: Record<string, string> = {
 };
 
 /**
- * En el centro de la mesa, con narrador virtual, en las nominaciones (los privados
+ * En el centro de la plaza, con narrador virtual, en las nominaciones (los privados
  * y la puesta en común ya los dice el reloj): lo que le toca a cada jugador. Quien
  * nomina, «Defensa» (pasa la palabra al nominado); el nominado, «Empezar votación»;
  * sin nominación en curso, «Listo» para la noche (o «Seguir nominando» para dejar
