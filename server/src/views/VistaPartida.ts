@@ -7,11 +7,12 @@ import { farolesVacios } from '../models/partida/Faroles';
 import type { JugadorDto } from './dto/jugador';
 import type { NominacionDto } from './dto/partida';
 import type { ConversacionDto, SalaDto, InvitacionDto } from './dto/sala';
+import type { Conversacion, Invitacion } from '../models/conversaciones';
 
 /** Lo que la vista necesita de fuera de la partida: las conversaciones, el vídeo y los permisos. */
 export interface ContextoVista {
-  conversaciones: ConversacionDto[];
-  invitacionesDe: (participanteId: string) => InvitacionDto[];
+  conversaciones: Conversacion[];
+  invitacionesDe: (participanteId: string) => Invitacion[];
   /** Hay videollamada en la sala. */
   video: boolean;
   /** Las acciones que puede usar ahora un participante (ver salaAcciones). */
@@ -29,6 +30,9 @@ const sinPersonaje = (a: JugadorDto): JugadorDto => ({
   farolEnUso: null,
 });
 const sinRecordatorios = (a: JugadorDto): JugadorDto => ({ ...a, recordatorios: [] });
+
+const conversacionDto = (c: Conversacion): ConversacionDto => ({ id: c.id, miembros: [...c.miembros], oyentes: [...c.oyentes] });
+const invitacionDto = (i: Invitacion): InvitacionDto => ({ id: i.id, de: i.de, para: i.para, ...(i.conversacion && { conversacion: i.conversacion }) });
 
 /**
  * La nominación como la ve quien no ve el grimorio en una votación secreta (Organ
@@ -159,9 +163,9 @@ export class VistaPartida {
         yo.rol === 'jugador'
           ? contexto.conversaciones
               .filter((c) => comun.fase.momento !== 'noche' || c.miembros.includes(yo.id))
-              .map((c) => ({ ...c, oyentes: [] }))
-          : contexto.conversaciones,
-      invitaciones: contexto.invitacionesDe(yo.id),
+              .map((c) => ({ ...conversacionDto(c), oyentes: [] }))
+          : contexto.conversaciones.map(conversacionDto),
+      invitaciones: contexto.invitacionesDe(yo.id).map(invitacionDto),
       // La bolsa es solo para los narradores (son los personajes de la partida)
       bolsa: narra ? comun.bolsa : [],
       // Los faroles del narrador: también los ven los visitantes (no juegan)

@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { Participante } from '../../models/sala/Participantes';
-import { ConversacionDto, InvitacionDto } from '../../views/dto/sala';
+import type { Conversacion, Invitacion } from '../../models/conversaciones';
 import type { SalaDeJuego } from '../../models/SalaDeJuego';
 import type { Sala } from '../../models/sala/Sala';
 import type { Partida } from '../../models/partida/Partida';
@@ -53,8 +53,8 @@ const escucha = (p: Participante) => p.rol === 'visitante' || p.rol === 'narrado
  * En memoria, como la sala.
  */
 export class ConversacionService {
-  private conversaciones: ConversacionDto[] = [];
-  private invitaciones: InvitacionDto[] = [];
+  private conversaciones: Conversacion[] = [];
+  private invitaciones: Invitacion[] = [];
   private faseVista: string;
   /** Las veces que se ha limpiado el grimorio, la última vez que se miró. */
   private reiniciosVistos: number;
@@ -70,24 +70,24 @@ export class ConversacionService {
   }
 
   /** Todas las conversaciones, con sus oyentes. */
-  lista(): ConversacionDto[] {
+  lista(): Conversacion[] {
     return this.conversaciones.map((c) => ({ ...c, miembros: [...c.miembros], oyentes: [...c.oyentes] }));
   }
 
   /** Las invitaciones pendientes en las que está alguien (las que hace y las que recibe). */
-  invitacionesDe(id: string): InvitacionDto[] {
+  invitacionesDe(id: string): Invitacion[] {
     return this.invitaciones.filter((i) => this.laVe(i, id)).map((i) => ({ ...i }));
   }
 
   /** Quien hace la invitación o la petición, y quien la recibe (en una petición, cualquier miembro). */
-  private laVe(i: InvitacionDto, id: string): boolean {
+  private laVe(i: Invitacion, id: string): boolean {
     if (i.de === id) return true;
     if (!i.conversacion) return i.para === id;
     return !!this.conversaciones.find((c) => c.id === i.conversacion)?.miembros.includes(id);
   }
 
   /** La conversación en la que está alguien (como miembro u oyente), o undefined. */
-  deParticipante(id: string): ConversacionDto | undefined {
+  deParticipante(id: string): Conversacion | undefined {
     return this.conversaciones.find((c) => c.miembros.includes(id) || c.oyentes.includes(id));
   }
 
@@ -97,7 +97,7 @@ export class ConversacionService {
   }
 
   /** Invita a alguien a conversar (a una nueva o a la propia). Lanza ConversacionError si no se puede. */
-  invitar(yoId: string, otroId: string): InvitacionDto {
+  invitar(yoId: string, otroId: string): Invitacion {
     this.depurar();
     const { yo, otro } = this.comprobar(yoId, otroId);
     // Recíproca: si el otro ya me había invitado a mí (invitación directa, no petición),
@@ -117,13 +117,13 @@ export class ConversacionService {
     if (this.invitaciones.some((i) => i.de === yo.id && i.para === otro.id)) {
       throw new ConversacionError(`Ya has invitado a ${otro.nombre}.`);
     }
-    const invitacion: InvitacionDto = { id: randomUUID(), de: yo.id, para: otro.id };
+    const invitacion: Invitacion = { id: randomUUID(), de: yo.id, para: otro.id };
     this.invitaciones.push(invitacion);
     return { ...invitacion };
   }
 
   /** Pide unirse a la conversación en la que está otro. Lanza ConversacionError si no se puede. */
-  pedirUnirse(yoId: string, otroId: string): InvitacionDto {
+  pedirUnirse(yoId: string, otroId: string): Invitacion {
     this.depurar();
     const yo = this.sala.participantes.buscar(yoId);
     const otro = this.sala.participantes.buscar(otroId);
@@ -141,7 +141,7 @@ export class ConversacionService {
     if (this.invitaciones.some((i) => i.de === yo.id && i.conversacion === suya.id)) {
       throw new ConversacionError('Ya has pedido unirte a esa conversación.');
     }
-    const peticion: InvitacionDto = { id: randomUUID(), de: yo.id, para: otro.id, conversacion: suya.id };
+    const peticion: Invitacion = { id: randomUUID(), de: yo.id, para: otro.id, conversacion: suya.id };
     this.invitaciones.push(peticion);
     return { ...peticion };
   }
