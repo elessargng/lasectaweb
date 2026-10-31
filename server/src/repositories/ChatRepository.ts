@@ -1,13 +1,13 @@
-import { MensajeChatDto } from '../views/dto/chat';
+import type { MensajeChat } from '../models/chat';
 
 /**
  * Dónde se guardan los mensajes de la sala. El servicio solo conoce esta
  * interfaz: se pueden guardar en memoria (como el resto de la sala) o en otro sitio.
  */
 export interface ChatRepository {
-  guardar(mensaje: MensajeChatDto): void;
+  guardar(mensaje: MensajeChat): void;
   /** Los mensajes de los canales que cumplan `incluir`, del más antiguo al más reciente. */
-  deCanales(incluir: (canal: string) => boolean): MensajeChatDto[];
+  deCanales(incluir: (canal: string) => boolean): MensajeChat[];
 }
 
 /**
@@ -15,18 +15,18 @@ export interface ChatRepository {
  * canal guarda solo los últimos `maximoPorCanal`.
  */
 export class MemoriaChatRepository implements ChatRepository {
-  private readonly canales = new Map<string, MensajeChatDto[]>();
+  private readonly canales = new Map<string, MensajeChat[]>();
 
   constructor(private readonly maximoPorCanal = 200) {}
 
-  guardar(mensaje: MensajeChatDto): void {
+  guardar(mensaje: MensajeChat): void {
     const lista = this.canales.get(mensaje.canal) ?? [];
     lista.push(mensaje);
     if (lista.length > this.maximoPorCanal) lista.splice(0, lista.length - this.maximoPorCanal);
     this.canales.set(mensaje.canal, lista);
   }
 
-  deCanales(incluir: (canal: string) => boolean): MensajeChatDto[] {
+  deCanales(incluir: (canal: string) => boolean): MensajeChat[] {
     return [...this.canales.entries()]
       .filter(([canal]) => incluir(canal))
       .flatMap(([, lista]) => lista)

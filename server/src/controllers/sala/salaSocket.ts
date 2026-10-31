@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import { SalaDeJuego } from '../../models/SalaDeJuego';
 import { limpiarAvatarSala, limpiarNombreSala, SALA_AVATAR_INVITADO, SalaLlegada } from '../../models/sala/Participantes';
 import { VistaPartida } from '../../views/VistaPartida';
+import { mensajeChatDto, susurroDto } from '../../views/VistaChat';
 import { EstadisticasPartida } from '../../models/estadisticas/EstadisticasPartida';
 import { ResultadoAccion } from '../../views/dto/sala';
 import { ChatError, ChatService } from '../../services/chat/ChatService';
@@ -210,7 +211,7 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
     const yo = () => sala.participantes.participanteDe(clave);
     const miHistorial = () => {
       const p = yo();
-      if (p) socket.emit('chat:historial', chat.historial(p));
+      if (p) socket.emit('chat:historial', chat.historial(p).map(mensajeChatDto));
     };
     miHistorial();
 
@@ -227,9 +228,9 @@ export function iniciarSalaSocket(httpServer: HttpServer, buscarAvatar: BuscarAv
         const { mensaje, lectores, susurro } = chat.enviar(p.id, peticion.para, peticion.texto);
         responder({ ok: true });
         for (const { socketId, id } of sala.participantes.conexiones()) {
-          if (lectores.includes(id)) io.to(socketId).emit('chat:mensaje', mensaje);
+          if (lectores.includes(id)) io.to(socketId).emit('chat:mensaje', mensajeChatDto(mensaje));
         }
-        if (susurro) io.emit('sala:susurro', susurro);
+        if (susurro) io.emit('sala:susurro', susurroDto(susurro));
       } catch (e) {
         responder({ ok: false, error: e instanceof ChatError ? e.message : 'No se ha podido mandar el mensaje.' });
       }

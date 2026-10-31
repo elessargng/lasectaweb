@@ -8,7 +8,7 @@ import {
   LARGO_MAXIMO_MENSAJE,
   participantesDePrivado,
 } from '../../models/compartido/chat';
-import { MensajeChatDto, SusurroDto } from '../../views/dto/chat';
+import type { MensajeChat, Susurro } from '../../models/chat';
 import type { SalaDeJuego } from '../../models/SalaDeJuego';
 import type { Sala } from '../../models/sala/Sala';
 import type { Partida } from '../../models/partida/Partida';
@@ -23,10 +23,10 @@ export class ChatError extends Error {
 
 /** Lo que pasa al mandar un mensaje: el mensaje, a quién le llega y, si es un susurro, las ondas. */
 export interface EnvioMensaje {
-  mensaje: MensajeChatDto;
+  mensaje: MensajeChat;
   /** ids de los participantes que pueden leerlo (incluido quien lo escribe). */
   lectores: string[];
-  susurro: SusurroDto | null;
+  susurro: Susurro | null;
 }
 
 /**
@@ -79,7 +79,7 @@ export class ChatService {
   }
 
   /** Los mensajes que alguien puede leer, del más antiguo al más reciente. */
-  historial(yo: Participante): MensajeChatDto[] {
+  historial(yo: Participante): MensajeChat[] {
     return this.repositorio.deCanales((canal) => this.puedeLeer(yo, canal));
   }
 
@@ -106,7 +106,7 @@ export class ChatService {
       canal = canalPrivado(yo.id, otro.id);
     }
 
-    const mensaje: MensajeChatDto = { id: randomUUID(), canal, autor: yo.id, autorNombre: yo.nombre, texto: limpio, hora: this.ahora() };
+    const mensaje: MensajeChat = { id: randomUUID(), canal, autor: yo.id, autorNombre: yo.nombre, texto: limpio, hora: this.ahora() };
     this.repositorio.guardar(mensaje);
     // En privado, los dos y, si son jugadores, los narradores
     const lectores = this.sala.participantes.participantes().filter((p) => this.puedeLeer(p, canal)).map((p) => p.id);
@@ -148,7 +148,7 @@ export class ChatService {
   }
 
   /** Entre dos jugadores sentados, las ondas del susurro (más intensas cuanto más largo). */
-  private susurro(yo: Participante, otro: Participante, texto: string): SusurroDto | null {
+  private susurro(yo: Participante, otro: Participante, texto: string): Susurro | null {
     if (yo.rol !== 'jugador' || otro.rol !== 'jugador') return null;
     const plaza = this.partida.plaza();
     const desde = plaza.find((a) => a.participanteId === yo.id)?.id;

@@ -51,7 +51,6 @@ const PENDIENTES = [
   'models/partida/Senalamientos.ts',
   'models/partida/reglas/lilMonsta.ts',
   'models/sala/Participantes.ts',
-  'services/chat/ChatService.ts',
 ];
 
 /**
