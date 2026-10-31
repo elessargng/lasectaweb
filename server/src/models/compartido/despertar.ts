@@ -99,8 +99,12 @@ export interface EleccionDespertar {
  */
 export type EstadoHabilidad = 'listo' | 'falta' | 'revisar' | 'esperando' | 'hecho';
 
-/** Cómo registra en una opción quien puede registrar como otra cosa (ver Percepcion): como bueno, malvado, el demonio o no. */
-export type Registro = 'bueno' | 'malvado' | 'demonio' | 'noDemonio';
+/**
+ * Cómo registra en una opción quien puede registrar como otra cosa (ver
+ * Percepcion): como bueno o malvado, el demonio o no, un esbirro o no, o ni lo
+ * uno ni lo otro.
+ */
+export type Registro = 'bueno' | 'malvado' | 'demonio' | 'noDemonio' | 'esbirro' | 'noEsbirro' | 'niDemonioNiEsbirro';
 
 /**
  * Lo que dice el despertar guiado al narrador (el cliente lo pone en palabras):

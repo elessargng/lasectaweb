@@ -20,6 +20,9 @@ const COMO: Record<Registro, string> = {
   malvado: 'malvado',
   demonio: 'el demonio',
   noDemonio: 'no demonio',
+  esbirro: 'un esbirro',
+  noEsbirro: 'no esbirro',
+  niDemonioNiEsbirro: 'ni demonio ni esbirro',
 };
 
 /** Las filas fijas del orden de noche con despertar guiado (no son personajes). */

@@ -9,7 +9,7 @@ import {
 import { ficha } from '../../src/models/partida/habilidades/HabilidadNocturna';
 import { contestar } from '../../src/models/personajes/artista';
 import { cronicaNueva } from '../../src/models/narradorVirtual/final/cronica';
-import { guionNoGreaterJoy, invitado } from './guionDePrueba';
+import { guionNoGreaterJoy, invitado, personaje } from './guionDePrueba';
 
 /** El despertar guiado de No Greater Joy: el Relojero, la Camarera y el Sabio. */
 
@@ -17,7 +17,9 @@ import { guionNoGreaterJoy, invitado } from './guionDePrueba';
 function plaza(...personajes: string[]) {
   const juego = new SalaDeJuego();
   const { sala, partida } = juego;
-  partida.cambiarGuion(guionNoGreaterJoy());
+  const guion = guionNoGreaterJoy();
+  // La Reclusa y el Espía, para ver cómo registran
+  partida.cambiarGuion({ ...guion, personajes: [...guion.personajes, personaje('recluse', 'outsider'), personaje('spy', 'minion')] });
   while (partida.plaza().length > personajes.length) sala.quitarAsiento();
   personajes.forEach((p, i) => {
     const { id } = sala.participantes.conectar(`s-${i}`, `c-${i}`, invitado(`J${i}`), () => true);
@@ -46,6 +48,17 @@ describe('No Greater Joy', () => {
   it('el Relojero cuenta los pasos del demonio a su esbirro más cercano, dando la vuelta a la plaza', () => {
     expect(plaza('clockmaker', 'imp', 'empath', 'baron', 'sage').fila('clockmaker')?.opciones.map((o) => o.envio.ficha)).toEqual(['dos']);
     expect(plaza('baron', 'clockmaker', 'empath', 'sage', 'imp').fila('clockmaker')?.opciones.map((o) => o.envio.ficha)).toEqual(['uno']);
+  });
+
+  it('con la Reclusa o el Espía, el Relojero da cada distancia posible (la de verdad, primero) y lo revisa el narrador', () => {
+    // J0 Relojero, J1 Imp, J2 Reclusa, J3 Empático, J4 Barón, J5 Sabio: de verdad, 3; la Reclusa como esbirro, 1; como demonio, 2
+    const conReclusa = plaza('clockmaker', 'imp', 'recluse', 'empath', 'baron', 'sage').fila('clockmaker')!;
+    expect(conReclusa.estado).toBe('revisar');
+    expect(conReclusa.opciones.map((o) => o.envio.ficha)).toEqual(['tres', 'uno', 'dos']);
+    expect(conReclusa.opciones[1].registros).toEqual([expect.objectContaining({ como: 'esbirro' })]);
+    // El Espía, el único esbirro: si no registra como esbirro, no hay ninguno (cero)
+    const conEspia = plaza('clockmaker', 'imp', 'empath', 'spy', 'sage').fila('clockmaker')!;
+    expect(conEspia.opciones.map((o) => o.envio.ficha)).toEqual(['dos', 'cero']);
   });
 
   it('la Camarera, la última, sabe cuántos de sus dos elegidos han despertado por su habilidad', () => {
@@ -78,6 +91,19 @@ describe('No Greater Joy', () => {
       expect(o.envio.jugadores).toContain(m.asiento(1).id);
       expect(o.envio.jugadores).not.toContain(m.asiento(0).id);
     }
+  });
+
+  it('el Sabio también puede ver a la Reclusa como demonio', () => {
+    const m = plaza('sage', 'imp', 'recluse', 'baron', 'empath');
+    const { partida } = m.juego;
+    partida.amanecer();
+    partida.irANoche();
+    expect(partida.guiado.despertar('imp')).toBeNull();
+    m.elegir(1, 0);
+    const f = m.fila('sage')!;
+    // Las 3 con el Imp y 2 más con la Reclusa (la de los dos ya está)
+    expect(f.opciones).toHaveLength(5);
+    expect(f.opciones.slice(3).every((o) => o.registros[0]?.como === 'demonio')).toBe(true);
   });
 });
 

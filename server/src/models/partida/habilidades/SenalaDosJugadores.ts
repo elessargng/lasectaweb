@@ -4,9 +4,9 @@ import {
   numero,
   pideRecordatorio,
   RecibeInformacion,
-  tipoDe,
   type ContextoNoche,
 } from './HabilidadNocturna';
+import { esDeTipo } from '../../personajes/Percepcion';
 
 /**
  * La Lavandera, el Bibliotecario y el Investigador: dos jugadores, uno de ellos es
@@ -42,7 +42,7 @@ export class SenalaDosJugadores extends RecibeInformacion {
     // En el orden de la plaza: que no se sepa cuál es
     const jugadores = ctx.plaza().filter((a) => a.id === bueno.id || a.id === malo.id);
     const info = esteJugadorEs(ctx, jugadores, bueno);
-    // Si no es de ese tipo (el Espía, la Reclusa…), qué personaje enseñar lo decide el narrador
-    return tipoDe(ctx, bueno) === this.tipo ? info : { opciones: [], avisos: info.avisos };
+    // Si no es de ese tipo de verdad (el Espía, la Reclusa…), qué personaje enseñar lo decide el narrador
+    return esDeTipo(ctx.percepcion(bueno), this.tipo)[0] ? info : { opciones: [], avisos: info.avisos };
   }
 }

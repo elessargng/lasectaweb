@@ -6,7 +6,6 @@ import {
   informar,
   RecibeInformacion,
   tarjeta,
-  tipoDe,
   type ContextoNoche,
   type Resultado,
 } from '../partida/habilidades/HabilidadNocturna';
@@ -18,7 +17,8 @@ const muereAManosDelDemonio = (ctx: ContextoNoche, jugador: Jugador) =>
 
 /**
  * El Sabio: si le mata el demonio, despierta y sabe que es uno de dos jugadores.
- * Cuál es el otro lo elige el narrador (lo revisa siempre); droison, también puede
+ * Cuál es el otro lo elige el narrador (lo revisa siempre), y también si le enseña
+ * a quien puede registrar como demonio (ver Percepcion); droison, también puede
  * enseñarle dos que no lo son.
  */
 class Sabio extends RecibeInformacion {
@@ -37,20 +37,30 @@ class Sabio extends RecibeInformacion {
   protected informacion(ctx: ContextoNoche, jugador: Jugador) {
     const plaza = ctx.plaza();
     const otros = plaza.filter((a) => a.id !== jugador.id);
-    const demonio = otros.find((a) => tipoDe(ctx, a) === 'demon');
-    const pareja = (a: Jugador, b: Jugador, personaje: string): OpcionDespertar => ({
+    const demonioDeVerdad = (a: Jugador) => ctx.percepcion(a).esDemonio()[0];
+    // Quien puede registrar como demonio (el de verdad, primero), y como cuál
+    const comoDemonio = (a: Jugador) => ctx.percepcion(a).personaje().find((p) => p && ctx.personaje(p)?.tipo === 'demon');
+    const candidatos = [...otros.filter(demonioDeVerdad), ...otros.filter((a) => !demonioDeVerdad(a) && ctx.percepcion(a).esDemonio().includes(true))];
+    const pareja = (a: Jugador, b: Jugador, personaje: string, registra = false): OpcionDespertar => ({
       // En el orden de la plaza: que no se sepa cuál es
       envio: tarjeta('esteJugadorEs', { jugadores: plaza.filter((x) => x.id === a.id || x.id === b.id).map((x) => x.id), personajes: [personaje] }),
-      registros: [],
+      registros: registra ? [{ jugador: a.id, como: 'demonio' }] : [],
     });
-    const ciertas = demonio ? otros.filter((a) => a !== demonio).map((a) => pareja(demonio, a, ctx.identidad(demonio)!)) : [];
+    const ciertas = candidatos.flatMap((c) => {
+      const personaje = comoDemonio(c);
+      return personaje ? otros.filter((a) => a !== c).map((a) => pareja(c, a, personaje, !demonioDeVerdad(c))) : [];
+    });
     // Droison, también dos que no son el demonio (con el demonio que hay, o el Imp)
+    const demonio = otros.find(demonioDeVerdad);
     const personaje = demonio ? ctx.identidad(demonio)! : 'imp';
-    const sinDemonio = otros.filter((a) => a !== demonio);
+    const sinDemonio = otros.filter((a) => !demonioDeVerdad(a));
     const falsas = droison(ctx, jugador)
       ? sinDemonio.flatMap((a, i) => sinDemonio.slice(i + 1).map((b) => pareja(a, b, personaje)))
       : [];
-    return { opciones: [...ciertas, ...falsas] };
+    // Sin repetir la misma tarjeta (la primera, la de verdad)
+    const opciones = new Map<string, OpcionDespertar>();
+    for (const o of [...ciertas, ...falsas]) if (!opciones.has(JSON.stringify(o.envio))) opciones.set(JSON.stringify(o.envio), o);
+    return { opciones: [...opciones.values()] };
   }
 }
 export const sabio = new Sabio();

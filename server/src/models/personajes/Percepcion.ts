@@ -47,3 +47,12 @@ export const oTambien = <T>(verdad: Posibles<T>, otras: readonly T[]): Posibles<
 
 /** Sí o no, a elección del narrador (lo de verdad, primero). */
 export const siONo = (verdad: Posibles<boolean>): Posibles<boolean> => oTambien(verdad, [true, false]);
+
+/** Si es de ese tipo de personaje (townsfolk, outsider, minion o demon); de otro tipo, nunca. */
+export function esDeTipo(percepcion: Percepcion, tipo: string): Posibles<boolean> {
+  if (tipo === 'townsfolk') return percepcion.esAldeano();
+  if (tipo === 'outsider') return percepcion.esForastero();
+  if (tipo === 'minion') return percepcion.esEsbirro();
+  if (tipo === 'demon') return percepcion.esDemonio();
+  return [false];
+}
