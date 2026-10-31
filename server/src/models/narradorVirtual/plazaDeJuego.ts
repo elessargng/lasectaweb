@@ -28,13 +28,7 @@ export function nombreDeAsiento(juego: SalaDeJuego, jugadorId: string): string {
 }
 
 /** Lo que consultan las habilidades de noche, desde la sala (para preguntarles como lo haría la sala). */
-export const contextoNoche = ({ partida }: SalaDeJuego): ContextoNoche => ({
-  plaza: () => partida.plaza(),
-  identidad: (jugador) => identidadDe(jugador),
-  alineamiento: (jugador) => partida.grimorio.alineamiento(jugador),
-  personaje: (id) => partida.guion.personaje(id),
-  faroles: () => partida.faroles.faroles(),
-});
+export const contextoNoche = ({ partida }: SalaDeJuego): ContextoNoche => partida.contextoNoche();
 
 /**
  * Los asientos despertados esta noche a los que aún les falta decir «Entendido»

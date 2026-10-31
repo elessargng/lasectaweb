@@ -8,6 +8,7 @@ import type {
   TarjetaDespertar,
 } from '../../compartido/despertar';
 import type { Alineamiento } from '../../compartido/jugador';
+import type { Posibles } from '../../personajes/Percepcion';
 import { droison, tieneRecordatorio, type ContextoReglas } from '../../personajes/ReglaPersonaje';
 import type { Jugador } from '../Jugador';
 
@@ -150,10 +151,6 @@ export const revisar = (opciones: OpcionDespertar[], avisos: AvisoHabilidad[]): 
 
 export { droison };
 
-/** Puede registrar como otra cosa: un Espía o una Reclusa sanos. */
-export const dudoso = (ctx: ContextoNoche, jugador: Jugador): boolean =>
-  ['spy', 'recluse'].includes(ctx.identidad(jugador) ?? '') && !droison(ctx, jugador);
-
 /** Muerto, o muere esta noche. */
 export const fuera = (jugador: Jugador): boolean => jugador.muerto || jugador.muertePendiente;
 
@@ -181,12 +178,16 @@ export function vecinosVivos(ctx: ContextoNoche, jugador: Jugador): Jugador[] {
   return izquierda === derecha ? [izquierda] : [izquierda, derecha];
 }
 
-/** Cómo puede registrar cada uno en un alineamiento: el de verdad y, el Espía y la Reclusa, también el otro. */
-export const alineamientosPosibles = (ctx: ContextoNoche, jugador: Jugador): Registro[] => {
-  if (!dudoso(ctx, jugador)) return [];
-  const real = ctx.alineamiento(jugador) === 'malvado' ? 'malvado' : 'bueno';
-  return [real, real === 'malvado' ? 'bueno' : 'malvado'];
-};
+/**
+ * Cómo puede registrar un jugador en una pregunta de sí o no (ver Percepcion),
+ * para segunRegistros: `si` o `no` por cada respuesta posible, la de verdad
+ * primero; nada, si la respuesta es segura.
+ */
+export const registros = (posibles: Posibles<boolean>, si: Registro, no: Registro): Registro[] =>
+  posibles.length > 1 ? posibles.map((r) => (r ? si : no)) : [];
+
+/** Cómo puede registrar un jugador en su alineamiento: el de verdad y, si puede registrar como otra cosa, también el otro. */
+export const alineamientos = (ctx: ContextoNoche, jugador: Jugador): Registro[] => registros(ctx.percepcion(jugador).esBueno(), 'bueno', 'malvado');
 
 /**
  * Las respuestas posibles según cómo registren los que pueden registrar como otra
@@ -348,7 +349,7 @@ export abstract class RecibeInformacion extends Habilidad {
 /** «Este jugador es» con quien es de verdad; si puede registrar como otro, el narrador lo revisa. */
 export function esteJugadorEs(ctx: ContextoNoche, jugadores: readonly Jugador[], quien: Jugador) {
   const id = ctx.identidad(quien);
-  const avisos: AvisoHabilidad[] = dudoso(ctx, quien) ? [{ tipo: 'registro', jugador: quien.id }] : [];
+  const avisos: AvisoHabilidad[] = ctx.percepcion(quien).personaje().length > 1 ? [{ tipo: 'registro', jugador: quien.id }] : [];
   const opciones: OpcionDespertar[] = id
     ? [{ envio: tarjeta('esteJugadorEs', { jugadores: jugadores.map((a) => a.id), personajes: [id] }), registros: [] }]
     : [];

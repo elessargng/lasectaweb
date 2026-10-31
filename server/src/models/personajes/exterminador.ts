@@ -3,7 +3,7 @@ import type { ContextoEtapa } from '../narradorVirtual/etapas/Etapa';
 import { apuntarMuerteDeDia } from '../narradorVirtual/final/cronica';
 import { comprobarFinal, type Ganador } from '../narradorVirtual/final/comprobarFinal';
 import { duracionFrase, FRASES, PAUSA_MS } from '../narradorVirtual/frases';
-import { contextoNoche, nombreDeAsiento, tipoReal } from '../narradorVirtual/plazaDeJuego';
+import { contextoNoche, nombreDeAsiento } from '../narradorVirtual/plazaDeJuego';
 import { ponerRecordatorio } from '../narradorVirtual/noche/requisitos';
 import { abrirPatosos } from './patoso';
 import { identidadDe } from '../partida/Grimorio';
@@ -13,7 +13,7 @@ import { otroJugador, type DeclaracionDia } from './DeclaracionDia';
 /**
  * Un jugador se declara Exterminador y dispara a otro (una vez por partida y
  * persona, lo sea o no). Solo mata si es de verdad el Exterminador, sano, y el
- * otro es el demonio, o la Reclusa (sana) si su estrategia decide que registra como tal.
+ * otro registra como demonio (si puede registrar o no, lo decide su estrategia; ver Percepcion).
  * El Exterminador de verdad pierde su habilidad («No Ability»). Devuelve si muere;
  * la muerte no se pone aquí, sino al contarlo (ver contarDisparo).
  */
@@ -25,12 +25,14 @@ export async function exterminar(ctx: ContextoEtapa, tirador: string, jugadorId:
   if (!desde || !objetivo) return false;
   const noche = contextoNoche(juego);
   const esExterminador = identidadDe(desde) === 'slayer' && !droison(noche, desde);
-  let registraComoDemonio = tipoReal(juego, objetivo) === 'demon';
-  if (!registraComoDemonio && esExterminador && identidadDe(objetivo) === 'recluse' && !droison(noche, objetivo)) {
+  const demonio = noche.percepcion(objetivo).esDemonio();
+  let registraComoDemonio = demonio[0];
+  if (esExterminador && demonio.length > 1) {
+    const nombre = nombreDeAsiento(juego, objetivo.id);
     registraComoDemonio = await ctx.siONo({
-      motivo: 'reclusaComoDemonio',
-      pregunta: 'El Exterminador dispara a la Reclusa: ¿registra como demonio?',
-      si: 'Registra como demonio: la Reclusa muere.',
+      motivo: 'registraComoDemonio',
+      pregunta: `El Exterminador dispara a ${nombre}, que puede registrar como demonio: ¿registra como tal?`,
+      si: `Registra como demonio: ${nombre} muere.`,
       no: 'No registra como demonio: no pasa nada.',
     });
   }

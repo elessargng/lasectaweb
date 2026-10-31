@@ -8,7 +8,7 @@ import { cuervero } from '../../personajes/cuervero';
 import { empatico } from '../../personajes/empatico';
 import { enterradorDeNoche } from '../../personajes/enterrador';
 import { envenenador } from '../../personajes/envenenador';
-import { espia } from '../../personajes/espia';
+import { espiaDeNoche } from '../../personajes/espia';
 import { imp } from '../../personajes/imp';
 import { investigador } from '../../personajes/investigador';
 import { lavandera } from '../../personajes/lavandera';
@@ -34,7 +34,7 @@ const TROUBLE_BREWING: readonly HabilidadNocturna[] = [
   chef,
   empatico,
   enterradorDeNoche,
-  espia,
+  espiaDeNoche,
   mujerEscarlata,
 ];
 

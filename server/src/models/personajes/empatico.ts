@@ -1,5 +1,5 @@
 import {
-  alineamientosPosibles,
+  alineamientos,
   numero,
   RecibeInformacion,
   segunRegistros,
@@ -21,7 +21,7 @@ class Empatico extends RecibeInformacion {
 
   protected informacion(ctx: ContextoNoche, jugador: Jugador) {
     const vecinos = vecinosVivos(ctx, jugador);
-    const opciones = segunRegistros(ctx, vecinos, (a) => alineamientosPosibles(ctx, a), (registro) =>
+    const opciones = segunRegistros(ctx, vecinos, (a) => alineamientos(ctx, a), (registro) =>
       numero(vecinos.filter((a) => (registro(a) ?? ctx.alineamiento(a)) === 'malvado').length),
     );
     return { opciones };

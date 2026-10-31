@@ -99,7 +99,7 @@ export interface EleccionDespertar {
  */
 export type EstadoHabilidad = 'listo' | 'falta' | 'revisar' | 'esperando' | 'hecho';
 
-/** Cómo registra un Espía o una Reclusa en una opción: como bueno, malvado, el demonio o no. */
+/** Cómo registra en una opción quien puede registrar como otra cosa (ver Percepcion): como bueno, malvado, el demonio o no. */
 export type Registro = 'bueno' | 'malvado' | 'demonio' | 'noDemonio';
 
 /**
@@ -108,7 +108,7 @@ export type Registro = 'bueno' | 'malvado' | 'demonio' | 'noDemonio';
  * - envenenado / borracho: el que despierta está droison;
  * - muerto: el de la ficha está muerto;
  * - noMuere: el Ravenkeeper no muere esta noche;
- * - registro: en lo que se calcula entra un Espía o una Reclusa (`jugador`);
+ * - registro: en lo que se calcula entra quien puede registrar como otra cosa (`jugador`);
  * - sinEfecto: estaba droison al elegir; se le ha contestado sin poner el recordatorio;
  * - protegido: el demonio ha elegido a uno protegido (`jugador`): no muere;
  * - alcalde: el demonio ha elegido al Alcalde (`jugador`): decide el narrador;
@@ -122,7 +122,7 @@ export type AvisoHabilidad =
   | { tipo: 'registro' | 'protegido' | 'alcalde'; jugador: string }
   | { tipo: 'elegido'; jugadores: string[] };
 
-/** Una respuesta posible: lo que se manda y, con un Espía o una Reclusa, cómo registra cada uno para que salga. */
+/** Una respuesta posible: lo que se manda y, con quien puede registrar como otra cosa, cómo registra cada uno para que salga. */
 export interface OpcionDespertar {
   envio: EnvioDespertar;
   registros: { jugador: string; como: Registro }[];

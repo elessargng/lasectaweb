@@ -3,15 +3,18 @@ import { burocrata } from './burocrata';
 import { canibal } from './canibal';
 import { carnicero } from './carnicero';
 import { enterrador } from './enterrador';
+import { espia } from './espia';
 import { leviatan } from './leviatan';
 import { virgen } from './virgen';
 import { institutriz } from './institutriz';
 import { ladron } from './ladron';
 import { organGrinder } from './organGrinder';
-import type { ContextoReglas, RegistroAlNominar, ReglaPersonaje } from './ReglaPersonaje';
+import { reclusa } from './reclusa';
+import { droison, type ContextoReglas, type RegistroAlNominar, type ReglaPersonaje } from './ReglaPersonaje';
 import { revolucionario } from './revolucionario';
 import { voudon } from './voudon';
 import type { Jugador } from '../partida/Jugador';
+import { percepcionReal, type Percepcion } from './Percepcion';
 
 /**
  * Las reglas de los personajes, en el orden en que se consultan: el Voudon antes
@@ -31,6 +34,9 @@ export const REGLAS: readonly ReglaPersonaje[] = [
   leviatan,
   carnicero,
   revolucionario,
+  // Cómo registran
+  reclusa,
+  espia,
 ];
 
 /** Un recordatorio que hay que poner al ejecutar (o al nominar): de qué personaje y con qué texto. */
@@ -129,6 +135,17 @@ export class Reglas {
   /** Tras ejecutar, anochece (salvo que una regla lo impida). */
   anocheceTrasEjecutar(): boolean {
     return !this.reglas.some((r) => r.impideAnochecer?.(this.ctx));
+  }
+
+  /**
+   * Cómo registra un jugador: lo de verdad o, si su personaje puede registrar como
+   * otra cosa y está sano, lo que diga su regla. Droison, como cualquiera.
+   */
+  percepcion(jugador: Jugador): Percepcion {
+    const base = percepcionReal(this.ctx, jugador);
+    if (droison(this.ctx, jugador)) return base;
+    const id = this.ctx.identidad(jugador);
+    return this.reglas.reduce((p, r) => (r.personaje === id && r.alterarPercepcion ? r.alterarPercepcion(this.ctx, p) : p), base);
   }
 
   /** Los personajes barajados, en el orden en que se reparten (ver ReglaPersonaje.repartir). */

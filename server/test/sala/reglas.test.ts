@@ -5,6 +5,10 @@ import { Reglas } from '../../src/models/personajes/Reglas';
 import type { ContextoReglas, ReglaPersonaje } from '../../src/models/personajes/ReglaPersonaje';
 import { guionDePrueba, invitado } from './guionDePrueba';
 import { Jugador } from '../../src/models/partida/Jugador';
+import { percepcionReal } from '../../src/models/personajes/Percepcion';
+import { reclusa } from '../../src/models/personajes/reclusa';
+import { espia } from '../../src/models/personajes/espia';
+import type { PersonajeDeGuion } from '../../src/models/guiones';
 
 /** Las reglas de los personajes que cambian la partida, vistas desde fuera (la sala). */
 
@@ -305,7 +309,14 @@ describe('reglas de los personajes', () => {
 describe('Reglas (cómo se combinan)', () => {
   const asiento = (cambios: Partial<Pick<Jugador, 'muerto' | 'votoGastado' | 'personaje' | 'recordatorios'>> = {}): Jugador =>
     Object.assign(new Jugador(), cambios);
-  const ctx: ContextoReglas = { plaza: () => [], identidad: (a) => a.personaje, alineamiento: () => null, personaje: () => undefined };
+  const ctx: ContextoReglas = {
+    plaza: () => [],
+    identidad: (a) => a.personaje,
+    alineamiento: () => null,
+    personaje: () => undefined,
+    personajesDelGuion: () => [],
+    percepcion: (a) => percepcionReal(ctx, a),
+  };
 
   it('sin reglas: vota quien no es un muerto sin voto, y hace falta la mitad', () => {
     const reglas = new Reglas(ctx, []);
@@ -333,5 +344,54 @@ describe('Reglas (cómo se combinan)', () => {
     const reglas = new Reglas(ctx, [verdugo]);
     expect(reglas.recordatoriosAlEjecutar(asiento())).toEqual([{ personaje: 'verdugo', texto: 'Ajusticiado', unico: true }]);
     expect(reglas.anocheceTrasEjecutar()).toBe(false);
+  });
+});
+
+describe('Percepción (cómo registra cada uno)', () => {
+  const TIPOS: Record<string, string> = { imp: 'demon', baron: 'minion', spy: 'minion', recluse: 'outsider', chef: 'townsfolk', saint: 'outsider' };
+  const guion = Object.entries(TIPOS).map(([id, tipo]) => ({ id, tipo }) as PersonajeDeGuion);
+  const ctx: ContextoReglas = {
+    plaza: () => [],
+    identidad: (a) => a.personaje,
+    alineamiento: (a) => (['demon', 'minion'].includes(TIPOS[a.personaje ?? ''] ?? '') ? 'malvado' : 'bueno'),
+    personaje: (id) => guion.find((p) => p.id === id),
+    personajesDelGuion: () => guion,
+    percepcion: (a) => reglas.percepcion(a),
+  };
+  const reglas = new Reglas(ctx, [reclusa, espia]);
+  const jugador = (personaje: string, envenenado = false): Jugador =>
+    Object.assign(new Jugador(), {
+      personaje,
+      recordatorios: envenenado ? [{ id: 'r', personaje: 'poisoner', indice: 0, texto: 'Poisoned' }] : [],
+    });
+
+  it('sin poder registrar como otra cosa, una sola respuesta: la de verdad', () => {
+    const imp = reglas.percepcion(jugador('imp'));
+    expect(imp.esDemonio()).toEqual([true]);
+    expect(imp.esBueno()).toEqual([false]);
+    expect(imp.personaje()).toEqual(['imp']);
+    expect(reglas.percepcion(jugador('chef')).esAldeano()).toEqual([true]);
+  });
+
+  it('la Reclusa: puede registrar como malvada, esbirro o demonio (la verdad, primero); elige el narrador', () => {
+    const r = reglas.percepcion(jugador('recluse'));
+    expect(r.esDemonio()).toEqual([false, true]);
+    expect(r.esEsbirro()).toEqual([false, true]);
+    expect(r.esBueno()).toEqual([true, false]);
+    expect(r.esAldeano()).toEqual([false]);
+    expect(r.personaje()).toEqual(['recluse', 'imp', 'baron', 'spy']);
+  });
+
+  it('el Espía: puede registrar como bueno, aldeano o forastero; nunca como demonio', () => {
+    const e = reglas.percepcion(jugador('spy'));
+    expect(e.esBueno()).toEqual([false, true]);
+    expect(e.esAldeano()).toEqual([false, true]);
+    expect(e.esDemonio()).toEqual([false]);
+    expect(e.personaje()).toEqual(['spy', 'recluse', 'chef', 'saint']);
+  });
+
+  it('envenenados, registran como lo que son', () => {
+    expect(reglas.percepcion(jugador('recluse', true)).esDemonio()).toEqual([false]);
+    expect(reglas.percepcion(jugador('spy', true)).personaje()).toEqual(['spy']);
   });
 });

@@ -1,6 +1,7 @@
 import type { Alineamiento } from '../compartido/jugador';
 import type { PersonajeDeGuion } from '../guiones';
 import type { Jugador } from '../partida/Jugador';
+import type { Percepcion } from './Percepcion';
 
 /** Lo que una regla puede consultar de la partida. Las reglas no cambian la sala: responden. */
 export interface ContextoReglas {
@@ -12,6 +13,10 @@ export interface ContextoReglas {
   alineamiento(jugador: Jugador): Alineamiento | null;
   /** Un personaje de la partida (del guion o del catálogo). */
   personaje(id: string): PersonajeDeGuion | undefined;
+  /** Los personajes del guion (sin viajeros ni NPCs). */
+  personajesDelGuion(): readonly PersonajeDeGuion[];
+  /** Cómo registra un jugador ante las habilidades de los demás (ver Percepcion). */
+  percepcion(jugador: Jugador): Percepcion;
 }
 
 /** Cómo registra quien nomina, si puede registrar como otra cosa: lo dice el narrador. */
@@ -82,6 +87,13 @@ export interface ReglaPersonaje {
    * personajes en el orden en que se repartirán.
    */
   repartir?(ctx: ContextoReglas, jugadores: Jugador[], personajes: string[]): string[];
+
+  // Cómo registra
+  /**
+   * Puede registrar como otra cosa (la Reclusa, el Espía): cambia lo que contesta
+   * quien lleva este personaje de verdad, sano, a partir de lo de verdad (`base`).
+   */
+  alterarPercepcion?(ctx: ContextoReglas, base: Percepcion): Percepcion;
 }
 
 /** La ficha del asiento es la de ese personaje, o lo es de verdad (por su «Is The …»). */

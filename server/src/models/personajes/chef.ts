@@ -1,5 +1,5 @@
 import {
-  alineamientosPosibles,
+  alineamientos,
   numero,
   RecibeInformacion,
   segunRegistros,
@@ -20,7 +20,7 @@ class Chef extends RecibeInformacion {
 
   protected informacion(ctx: ContextoNoche) {
     const plaza = ctx.plaza();
-    const opciones = segunRegistros(ctx, plaza, (a) => alineamientosPosibles(ctx, a), (registro) => {
+    const opciones = segunRegistros(ctx, plaza, (a) => alineamientos(ctx, a), (registro) => {
       const malvado = (a: Jugador) => (registro(a) ?? ctx.alineamiento(a)) === 'malvado';
       const parejas = plaza.length < 2 ? 0 : plaza.filter((a, i) => malvado(a) && malvado(plaza[(i + 1) % plaza.length])).length;
       // Con dos, la pareja se cuenta una vez

@@ -18,6 +18,7 @@ import { Fases } from './Fases';
 import { Grimorio, identidadDe } from './Grimorio';
 import { Guion } from './Guion';
 import { habilidadesDelGuion } from './habilidades';
+import type { ContextoNoche } from './habilidades/HabilidadNocturna';
 import { Nominaciones } from './Nominaciones';
 import { Npcs } from './Npcs';
 import { NPC_GARDENER } from './personajesEspeciales';
@@ -79,6 +80,8 @@ export class Partida {
     identidad: (jugador) => identidadDe(jugador),
     alineamiento: (jugador) => this.grimorio.alineamiento(jugador),
     personaje: (id) => this.guion.personaje(id),
+    personajesDelGuion: () => this.guion.actual()?.personajes ?? [],
+    percepcion: (jugador) => this.reglas.percepcion(jugador),
   };
   /** Las reglas de los personajes (ver models/personajes). */
   private readonly reglas = new Reglas(this.contextoReglas);
@@ -117,7 +120,7 @@ export class Partida {
   );
   /** El despertar guiado desde el orden de noche (ver DespertarGuiado). */
   readonly guiado = new DespertarGuiado({
-    ctx: { ...this.contextoReglas, faroles: () => this.faroles.faroles() },
+    ctx: this.contextoNoche(),
     habilidades: () => habilidadesDelGuion(this.guion.actual()?.edicion ?? null),
     noche: () => this.fases.actual().momento === 'noche',
     despertar: (jugadorId) => this.despertares.despertar(jugadorId),
@@ -155,6 +158,11 @@ export class Partida {
   readonly declaraciones = new Declaraciones();
   /** Recordatorios del orden de noche cambiados a mano (ver SalaDto.recordatoriosNoche). */
   private recordatorios: Record<string, boolean> = {};
+
+  /** Lo que consultan las habilidades de noche: lo de las reglas y los faroles del demonio. */
+  contextoNoche(): ContextoNoche {
+    return { ...this.contextoReglas, faroles: () => this.faroles.faroles() };
+  }
 
   /**
    * Los jugadores de la plaza, en orden (ver Sala.jugadores). Se cambian con

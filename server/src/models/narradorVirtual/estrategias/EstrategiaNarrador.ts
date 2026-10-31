@@ -40,7 +40,7 @@ export type MotivoDecision =
   /** El Espía nomina a la Virgen: si registra como aldeano. */
   | 'espiaComoAldeano'
   /** El Exterminador dispara a la Reclusa: si registra como demonio. */
-  | 'reclusaComoDemonio'
+  | 'registraComoDemonio'
   /** El Violinista: el bueno que elige el demonio si no contesta. */
   | 'violinistaBueno'
   /** La pregunta libre del Artista: sí, no o que la reformule. */
