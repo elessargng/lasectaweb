@@ -1,5 +1,5 @@
 import { barajar } from '../../compartido/bolsaAleatoria';
-import { escarlataAImp, esDemonio, type Ganador } from '../final/comprobarFinal';
+import { heredadosADemonio, esDemonio, type Ganador } from '../final/comprobarFinal';
 import { fraseAlRevelar } from '../final/cronica';
 import { duracionFrase, FRASES } from '../frases';
 import type { ContextoEtapa, Etapa } from './Etapa';
@@ -30,7 +30,7 @@ export class Revelando implements Etapa {
     // Se acaba la partida: nadie más puede declararse Patoso
     partida.declaraciones.cerrarTodos();
     // Si acaba antes de la noche en que lo sería, la Mujer Escarlata que ha heredado se revela ya como el Imp
-    await escarlataAImp(ctx);
+    await heredadosADemonio(ctx);
     if (!(await ctx.plaza.accion('narrador:revelarGrimorio', { ganador: this.ganador })).ok) return;
     const jugadores = partida.plaza();
     const demonios = jugadores.filter((a) => esDemonio(ctx.juego, a));

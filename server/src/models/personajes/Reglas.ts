@@ -10,7 +10,18 @@ import { institutriz } from './institutriz';
 import { ladron } from './ladron';
 import { organGrinder } from './organGrinder';
 import { reclusa } from './reclusa';
-import { droison, type ContextoReglas, type RegistroAlNominar, type ReglaPersonaje } from './ReglaPersonaje';
+import {
+  droison,
+  type ContextoReglas,
+  type FinDePartida,
+  type Herencia,
+  type PasaASerDemonio,
+  type RegistroAlNominar,
+  type ReglaPersonaje,
+} from './ReglaPersonaje';
+import type { Alineamiento } from '../compartido/jugador';
+import { santo } from './santo';
+import { mujerEscarlata } from './mujerEscarlata';
 import { revolucionario } from './revolucionario';
 import { voudon } from './voudon';
 import type { Jugador } from '../partida/Jugador';
@@ -43,6 +54,9 @@ export const REGLAS: readonly ReglaPersonaje[] = [
   // Cómo registran
   reclusa,
   espia,
+  // El final: el Santo antes que el Alcalde (ejecutado el Santo, gana el mal)
+  santo,
+  mujerEscarlata,
   // A quién le llega: se consulta de la última a la primera. Quien protege, antes
   // que quien se salva gastando su habilidad (protegido, el Bufón no la gasta) y que
   // quien desvía (protegido, no rebota)
@@ -165,6 +179,39 @@ export class Reglas {
   /** A quién le llega lo que le hacen a un jugador: a él, con lo que cambie cada regla. */
   objetivo(jugador: Jugador): Objetivo {
     return this.reglas.reduce((o, r) => r.alterarObjetivo?.(this.ctx, jugador, o) ?? o, objetivoReal(jugador));
+  }
+
+  /** Si la partida acaba por un personaje: quién gana (lo que diga la primera regla), o undefined. */
+  ganador(fin: FinDePartida): Alineamiento | undefined {
+    for (const r of this.reglas) {
+      const ganador = r.ganador?.(this.ctx, fin);
+      if (ganador) return ganador;
+    }
+    return undefined;
+  }
+
+  /** Es un demonio: lo es de verdad o cuenta como tal por una regla (la Mujer Escarlata que lo ha heredado). */
+  esDemonio(jugador: Jugador): boolean {
+    const id = this.ctx.identidad(jugador);
+    return (id ? this.ctx.personaje(id)?.tipo === 'demon' : false) || this.reglas.some((r) => r.esDemonio?.(this.ctx, jugador));
+  }
+
+  /** Muerto el demonio, quién lo hereda de los `vivos`, o null. */
+  heredarDemonio(vivos: readonly Jugador[]): Herencia | null {
+    for (const r of this.reglas) {
+      const herencia = r.heredarDemonio?.(this.ctx, vivos);
+      if (herencia) return herencia;
+    }
+    return null;
+  }
+
+  /** Quien ha heredado el demonio, a qué pasa a ser, o null. */
+  pasaASerDemonio(jugador: Jugador): PasaASerDemonio | null {
+    for (const r of this.reglas) {
+      const pasa = r.pasaASerDemonio?.(this.ctx, jugador);
+      if (pasa) return pasa;
+    }
+    return null;
   }
 
   /** Los personajes barajados, en el orden en que se reparten (ver ReglaPersonaje.repartir). */

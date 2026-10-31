@@ -1,10 +1,14 @@
 import { sinRepetir } from './Objetivo';
 import { droison, type ReglaPersonaje } from './ReglaPersonaje';
 
+/** Con cuántos vivos gana el Alcalde si el día acaba sin ejecución. */
+const VIVOS_ALCALDE = 3;
+
 /**
  * Alcalde (Mayor): sano, si un demonio lo mata, la muerte puede rebotar a otro
  * jugador vivo (no al demonio): lo decide el narrador. Rebotada, a ese le llega
- * como a él (protegido, no muere nadie).
+ * como a él (protegido, no muere nadie). Si el día acaba sin ejecución con tres
+ * vivos (el demonio, uno), él vivo y sano, gana el bien.
  */
 export const alcalde: ReglaPersonaje = {
   personaje: 'mayor',
@@ -20,4 +24,8 @@ export const alcalde: ReglaPersonaje = {
           },
         }
       : base,
+  ganador: (ctx, { vivos, sinEjecucion, hayDemonio }) =>
+    sinEjecucion && hayDemonio && vivos.length === VIVOS_ALCALDE && vivos.some((a) => ctx.identidad(a) === 'mayor' && !droison(ctx, a))
+      ? 'bueno'
+      : undefined,
 };

@@ -35,8 +35,8 @@ export type MotivoDecision =
   | 'informacionFalsa'
   /** Lo que le han hecho a alguien puede acabar de varias maneras (el Alcalde la rebota): a quién le llega. */
   | 'desenlace'
-  /** El Espía nomina a la Virgen: si registra como aldeano. */
-  | 'espiaComoAldeano'
+  /** Nomina a la Virgen quien puede registrar como aldeano (el Espía): si registra como tal. */
+  | 'registraComoAldeano'
   /** El Exterminador dispara a la Reclusa: si registra como demonio. */
   | 'registraComoDemonio'
   /** El Violinista: el bueno que elige el demonio si no contesta. */

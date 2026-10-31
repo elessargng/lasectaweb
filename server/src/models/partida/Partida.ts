@@ -84,8 +84,8 @@ export class Partida {
     percepcion: (jugador) => this.reglas.percepcion(jugador),
     objetivo: (jugador) => this.reglas.objetivo(jugador),
   };
-  /** Las reglas de los personajes (ver models/personajes). */
-  private readonly reglas = new Reglas(this.contextoReglas);
+  /** Las reglas de los personajes (ver models/personajes); el final de la partida también les pregunta. */
+  readonly reglas = new Reglas(this.contextoReglas);
   /** Las nominaciones y votaciones del día (y quién tiene la palabra). */
   readonly nominaciones = new Nominaciones({
     plaza: () => this.plaza(),

@@ -172,12 +172,13 @@ export class Nominaciones implements Etapa {
   private async nominar(ctx: ContextoEtapa, desde: string, hasta: string, jugador: string): Promise<string | null> {
     const { juego } = ctx;
     let r = await ctx.plaza.accion('narrador:nominar', { desde, hasta });
-    // Un Espía nomina a la Virgen: si registra como aldeano, lo decide su estrategia
+    // Quien nomina puede registrar como aldeano (ver Percepcion): lo decide su estrategia
     if (r.ok && r.valor === 'comoAldeano') {
+      const nominador = nombreDeAsiento(juego, desde);
       const comoAldeano = await ctx.siONo({
-        motivo: 'espiaComoAldeano',
-        pregunta: 'El Espía nomina a la Virgen: ¿registra como aldeano?',
-        si: 'Registra como aldeano: el Espía es ejecutado.',
+        motivo: 'registraComoAldeano',
+        pregunta: `${nominador} nomina a la Virgen y puede registrar como aldeano: ¿registra como tal?`,
+        si: `Registra como aldeano: ${nominador} es ejecutado.`,
         no: 'No registra como aldeano: no pasa nada.',
       });
       r = await ctx.plaza.accion('narrador:nominar', { desde, hasta, comoAldeano });

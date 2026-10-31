@@ -39,7 +39,7 @@ const POR_MOTIVO: Record<MotivoDecision, string> = {
   desenlace:
     'Han atacado a alguien y puede acabar de varias maneras (al Alcalde, la muerte del demonio le puede rebotar a otro jugador; ' +
     'si le llega a uno protegido, no muere nadie). La primera es la que toca sin ti. Elige pensando en el equilibrio.',
-  espiaComoAldeano: 'El Espía nomina a la Virgen: si registra como aldeano, el Espía es ejecutado al momento.',
+  registraComoAldeano: 'Nomina a la Virgen quien puede registrar como aldeano (el Espía): si registra como tal, es ejecutado al momento.',
   registraComoDemonio: 'El Exterminador dispara a quien puede registrar como demonio (la Reclusa): si registra como tal, muere.',
   violinistaBueno: 'El Violinista: el jugador bueno que se enfrenta al demonio; todos votarán entre los dos.',
   artista:

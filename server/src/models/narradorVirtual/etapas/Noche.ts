@@ -9,7 +9,7 @@ import { planificarNoche } from '../noche/planificarNoche';
 import { cumplirRequisitos, ponerFaroles, ponerRecordatorio } from '../noche/requisitos';
 import { resolverRevision } from '../noche/revisiones';
 import { duracionPrivados, Privados } from './Dia';
-import { comprobarFinal, escarlataAImp } from '../final/comprobarFinal';
+import { comprobarFinal, heredadosADemonio } from '../final/comprobarFinal';
 import { apuntarNoche } from '../final/cronica';
 import { abrirPatosos, cerrarPatosos } from '../../personajes/patoso';
 import { Revelando } from './Revelando';
@@ -133,7 +133,7 @@ export class Noche implements Etapa {
       // En una teensy (menos de 7 jugadores) el demonio no recibe faroles
       if (personajes.includes('demonios') && malvadosSeConocen(contextoNoche(juego))) await ponerFaroles(ctx);
       // Antes de que despierte el demonio, la Mujer Escarlata que lo ha heredado ya es el Imp
-      if (personajes.some((p) => partida.guion.personaje(p)?.tipo === 'demon')) await escarlataAImp(ctx);
+      if (personajes.some((p) => partida.guion.personaje(p)?.tipo === 'demon')) await heredadosADemonio(ctx);
       await Promise.all(personajes.map((p) => this.resolverFila(ctx, p)));
       // El Imp que se ha elegido a sí mismo: el nuevo, uno de los esbirros vivos
       if (partida.guiado.nuevoImp()) await this.elegirNuevoImp(ctx);

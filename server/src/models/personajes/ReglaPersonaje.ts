@@ -1,5 +1,6 @@
 import type { Alineamiento } from '../compartido/jugador';
 import type { PersonajeDeGuion } from '../guiones';
+import type { Recordatorio } from '../compartido/grimorio';
 import type { Jugador } from '../partida/Jugador';
 import type { Objetivo } from './Objetivo';
 import type { Percepcion } from './Percepcion';
@@ -43,6 +44,31 @@ export interface RecordatorioDeRegla {
  * implementa solo lo que le toca; la sala (ver Reglas) pregunta a todos. Un
  * personaje nuevo con reglas propias es una regla más en la lista de Reglas.ts.
  */
+/** Cómo está la partida al ver si ha terminado. */
+export interface FinDePartida {
+  /** Los vivos que cuentan (sin muerte pendiente y sin viajeros). */
+  vivos: readonly Jugador[];
+  /** El ejecutado hoy, si lo hay. */
+  ejecutado?: Jugador;
+  /** El día ha acabado sin ejecución. */
+  sinEjecucion: boolean;
+  /** Queda un demonio vivo (ver Reglas.esDemonio). */
+  hayDemonio: boolean;
+}
+
+/** Quien hereda el demonio y el recordatorio que se le pone. */
+export interface Herencia {
+  jugador: Jugador;
+  personaje: string;
+  texto: string;
+}
+
+/** Quien ya ha heredado el demonio pasa a serlo: su nuevo personaje y qué recordatorios se le quitan. */
+export interface PasaASerDemonio {
+  personaje: string;
+  quitar: (recordatorio: Recordatorio) => boolean;
+}
+
 export interface ReglaPersonaje {
   /** El personaje (id del catálogo). */
   personaje: string;
@@ -103,6 +129,14 @@ export interface ReglaPersonaje {
    * jugador: la regla mira si le toca (por quién es o por el recordatorio que lleva).
    */
   alterarObjetivo?(ctx: ContextoReglas, jugador: Jugador, base: Objetivo): Objetivo;
+  /** La partida acaba por este personaje (el Santo ejecutado, el Alcalde): quién gana; si no, undefined. */
+  ganador?(ctx: ContextoReglas, fin: FinDePartida): Alineamiento | undefined;
+  /** Cuenta como el demonio sin serlo de verdad (la Mujer Escarlata que lo ha heredado). */
+  esDemonio?(ctx: ContextoReglas, jugador: Jugador): boolean;
+  /** Muerto el demonio, quién lo hereda (la Mujer Escarlata), de los `vivos`; null si nadie. */
+  heredarDemonio?(ctx: ContextoReglas, vivos: readonly Jugador[]): Herencia | null;
+  /** Quien ha heredado el demonio, a qué pasa a ser (la Mujer Escarlata, al Imp); null si no le toca. */
+  pasaASerDemonio?(ctx: ContextoReglas, jugador: Jugador): PasaASerDemonio | null;
 }
 
 /** La ficha del asiento es la de ese personaje, o lo es de verdad (por su «Is The …»). */
