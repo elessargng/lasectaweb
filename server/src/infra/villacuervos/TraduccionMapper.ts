@@ -1,6 +1,6 @@
 import { PublicPackSchema, PublicTranslationSchema } from '../../types/villacuervos';
 import { IDIOMA_ORIGINAL, Idioma, TraduccionPersonaje } from '../../types/guiones';
-import { normalizarIdPersonaje } from '../personajes/idPersonaje';
+import { normalizarIdPersonaje } from '../../services/personajes/idPersonaje';
 
 /**
  * Villacuervos da los idiomas en ISO 639-3 («spa»); el navegador y los lectores

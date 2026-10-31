@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { ChatRepository } from '../../repositories/ChatRepository';
-import { datosDeDataUrl, guardarFondoSala } from '../../utils/salaFondoStorage';
+import { datosDeDataUrl, guardarFondoSala } from '../../infra/almacenamiento/salaFondoStorage';
 import { ProveedorVideo } from '../../services/videollamada/ProveedorVideo';
 import { MENSAJES_PRIVADOS, MensajesPrivados } from '../../contrato/chat';
 import { limpiarAvatarSala, limpiarNombreSala, type Participante } from '../../services/sala/Participantes';
@@ -47,7 +47,7 @@ import {
 import { NUM_FAROLES } from '../../contrato/jugador';
 import { SALA_ESTILOS_MANO, SALA_FORMAS_MANO, FormaMano } from '../../contrato/participante';
 import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA } from '../../contrato/partida';
-import { guardarAvatarSala } from '../../utils/salaAvatarStorage';
+import { guardarAvatarSala } from '../../infra/almacenamiento/salaAvatarStorage';
 import { GuionResuelto, PersonajeDeGuion, TIPOS_NPC, TipoPersonaje } from '../../types/guiones';
 import { GuionInvalidoError } from '../../services/guiones/errores';
 import type { RegistroPartida } from '../../services/estadisticas/SeguimientoPartida';

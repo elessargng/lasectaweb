@@ -1,6 +1,6 @@
 import { VillacuervosRepository } from '../../repositories/VillacuervosRepository';
 import { PersonajeDeFuente } from '../../types/guiones';
-import { FuentePersonajes } from './FuentePersonajes';
+import { FuentePersonajes } from '../../services/personajes/FuentePersonajes';
 import { personajeDesdeVillacuervos } from './PersonajeMapper';
 
 /** Villacuervos como fuente de personajes: pide sus datos y los traduce a nuestro modelo. */

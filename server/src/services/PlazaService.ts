@@ -8,7 +8,7 @@ import {
   computeProposalContentHash
 } from '../utils/ledger';
 import { ProposalTarget } from '../types/codice';
-import type { PlazaResultAnnouncement } from '../utils/mailer';
+import type { PlazaResultAnnouncement } from '../infra/mailer';
 import {
   Proposal,
   ProposalKind,

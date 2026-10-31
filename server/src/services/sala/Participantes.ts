@@ -8,7 +8,7 @@ import {
   type ParticipanteDto,
   type Rol,
 } from '../../contrato/participante';
-import { esAvatarSalaGuardado } from '../../utils/salaAvatarStorage';
+import { esAvatarSalaGuardado } from '../../infra/almacenamiento/salaAvatarStorage';
 
 /** Margen para volver tras una desconexión (recarga, red caída) sin perder el papel. */
 export const SALA_GRACIA_MS = 20_000;

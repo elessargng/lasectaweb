@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
-import { UserRepository } from '../repositories/UserRepository';
-import { User } from '../models/User';
+import { UserRepository } from '../../repositories/UserRepository';
+import { User } from '../../models/User';
 
 export async function seedAdminUser(userRepository: UserRepository): Promise<void> {
   const adminUsername = process.env.ADMIN_USERNAME;

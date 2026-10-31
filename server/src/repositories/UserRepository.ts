@@ -1,6 +1,6 @@
 import { User } from '../models/User';
 import { DatabaseRepository } from './DatabaseRepository';
-import { processProfilePicture } from '../utils/imageStorage';
+import { processProfilePicture } from '../infra/almacenamiento/imageStorage';
 
 export class UserRepository {
   private async getUserRoles(userId: string): Promise<('editor' | 'narrador' | 'admin')[]> {

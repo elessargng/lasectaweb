@@ -1,8 +1,8 @@
 import { VillacuervosRepository } from '../../repositories/VillacuervosRepository';
 import { ReglaDjinn } from '../../types/guiones';
 import { PublicJinxSchema } from '../../types/villacuervos';
-import { normalizarIdPersonaje } from '../personajes/idPersonaje';
-import { FuenteDjinn } from './FuenteDjinn';
+import { normalizarIdPersonaje } from '../../services/personajes/idPersonaje';
+import { FuenteDjinn } from '../../services/djinn/FuenteDjinn';
 
 /**
  * Traduce un «jinx» de Villacuervos a nuestro modelo (con los ids del catálogo);

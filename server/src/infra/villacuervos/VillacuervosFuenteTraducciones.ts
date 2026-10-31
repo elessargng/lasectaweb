@@ -1,6 +1,6 @@
 import { VillacuervosRepository } from '../../repositories/VillacuervosRepository';
 import { Genero, Idioma, TraduccionPersonaje } from '../../types/guiones';
-import { FuenteTraducciones } from './FuenteTraducciones';
+import { FuenteTraducciones } from '../../services/traducciones/FuenteTraducciones';
 import { idiomaDesdeVillacuervos, traduccionDesdeVillacuervos } from './TraduccionMapper';
 
 const GENEROS_VILLACUERVOS: Record<Genero, string> = { masculino: 'male', femenino: 'female' };

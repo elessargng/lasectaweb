@@ -1,6 +1,6 @@
 import { AccessToken, RoomServiceClient, TrackSource } from 'livekit-server-sdk';
 import { ConfigVideollamada } from '../../config/videollamada';
-import { PermisosVideo, ProveedorVideo } from './ProveedorVideo';
+import { PermisosVideo, ProveedorVideo } from '../../services/videollamada/ProveedorVideo';
 
 /** Los pases duran lo justo para entrar; dentro, la conexión se mantiene sola. */
 const VIDA_TOKEN = '10m';

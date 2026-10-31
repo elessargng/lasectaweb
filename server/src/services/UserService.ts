@@ -3,7 +3,7 @@ import { User } from '../models/User';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { sendConfirmationEmail, sendPasswordResetEmail } from '../utils/mailer';
+import { sendConfirmationEmail, sendPasswordResetEmail } from '../infra/mailer';
 import { RoleRequestRepository } from '../repositories/RoleRequestRepository';
 import { RoleRequest } from '../models/RoleRequest';
 
