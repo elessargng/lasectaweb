@@ -1,12 +1,12 @@
-import type { SalaDeJuego } from '../SalaDeJuego';
-import type { Partida } from './Partida';
-import { identidadDe } from './Grimorio';
-import type { Participante } from '../sala/Participantes';
-import { NPC_TOR } from './personajesEspeciales';
-import { farolesVacios } from './Faroles';
-import type { JugadorDto } from '../../contrato/jugador';
-import type { NominacionDto } from '../../contrato/partida';
-import type { ConversacionDto, SalaDto, InvitacionDto } from '../../contrato/sala';
+import type { SalaDeJuego } from '../services/SalaDeJuego';
+import type { Partida } from '../services/partida/Partida';
+import { identidadDe } from '../services/partida/Grimorio';
+import type { Participante } from '../services/sala/Participantes';
+import { NPC_TOR } from '../services/partida/personajesEspeciales';
+import { farolesVacios } from '../services/partida/Faroles';
+import type { JugadorDto } from '../contrato/jugador';
+import type { NominacionDto } from '../contrato/partida';
+import type { ConversacionDto, SalaDto, InvitacionDto } from '../contrato/sala';
 
 /** Lo que la vista necesita de fuera de la partida: las conversaciones, el vídeo y los permisos. */
 export interface ContextoVista {

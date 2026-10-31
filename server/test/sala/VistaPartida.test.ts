@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SalaDeJuego } from '../../src/services/SalaDeJuego';
-import { VistaPartida, type ContextoVista } from '../../src/services/partida/VistaPartida';
+import { VistaPartida, type ContextoVista } from '../../src/views/VistaPartida';
 import { guionDePrueba, invitado } from './guionDePrueba';
 
 /** Lo que ve cada uno, sin sockets: la vista se prueba sola. */

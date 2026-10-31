@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
 import { SalaDeJuego } from '../../services/SalaDeJuego';
 import { limpiarAvatarSala, limpiarNombreSala, SALA_AVATAR_INVITADO, SalaLlegada } from '../../services/sala/Participantes';
-import { VistaPartida } from '../../services/partida/VistaPartida';
+import { VistaPartida } from '../../views/VistaPartida';
 import { EstadisticasPartida } from '../../services/estadisticas/EstadisticasPartida';
 import { ResultadoAccion } from '../../contrato/sala';
 import { ChatError, ChatService } from '../../services/chat/ChatService';
