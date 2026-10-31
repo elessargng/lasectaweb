@@ -1,5 +1,5 @@
 import type { Fase } from '../compartido/partida';
-import type { SenalamientoDto } from '../../views/dto/partida';
+import type { Senalamiento } from './Senalamientos';
 import type { HiloDespertar } from './Despertares';
 import { PASOS_DE_FASE_MAX } from './eventos';
 
@@ -12,7 +12,7 @@ export interface Recuerdo {
   marcas?: { asiento: string; votos: number | null }[];
   maximoDelDia?: number | null;
   hilos?: HiloDespertar[];
-  senalamiento?: SenalamientoDto | null;
+  senalamiento?: Senalamiento | null;
 }
 
 interface Paso {

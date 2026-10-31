@@ -1,8 +1,31 @@
 import { randomUUID } from 'crypto';
 import type { Participante } from '../sala/Participantes';
 import type { Fase } from '../compartido/partida';
-import type { SenalamientoDto } from '../../views/dto/partida';
 import type { Jugador } from './Jugador';
+
+/**
+ * Un señalamiento: unos jugadores señalan a otros. Mientras dura la cuenta atrás
+ * cada uno elige (y puede cambiar); al acabar se congela.
+ */
+export interface Senalamiento {
+  id: string;
+  /** 'normal', o el de Lil' Monsta: los esbirros eligen quién lo cuida, sin cuenta atrás. */
+  tipo: 'normal' | 'lilmonsta';
+  /** Lo que se pide (puede ir vacío). */
+  mensaje: string;
+  /** Los jugadores que señalan y los que se pueden señalar (si no se eligió ninguno, todos). */
+  senaladores: string[];
+  objetivos: string[];
+  /** De día: lo ven todos. */
+  publico: boolean;
+  /** Cuándo empezó y cuándo acaba la cuenta atrás (ms); fin null: sin cuenta atrás. */
+  inicio: number;
+  fin: number | null;
+  /** Ya no se puede señalar: acabó la cuenta atrás o (Lil' Monsta) todos coinciden. */
+  congelado: boolean;
+  /** A quién señala cada jugador (el que señala → el señalado). */
+  senales: Record<string, string>;
+}
 
 /** Lo que el señalamiento necesita saber de la sala. */
 export interface EntornoSenalamiento {
@@ -23,8 +46,8 @@ export interface EntornoSenalamiento {
  * los que señalan y quien ve el grimorio. No comprueba permisos.
  */
 export class Senalamientos {
-  /** El señalamiento (ver SalaDto.senalamiento), o null. */
-  private actual: SenalamientoDto | null = null;
+  /** El señalamiento en curso (o ya congelado), o null. */
+  private actual: Senalamiento | null = null;
 
   constructor(private readonly entorno: EntornoSenalamiento) {}
 
@@ -32,7 +55,7 @@ export class Senalamientos {
    * El señalamiento, o null. Al leerlo se pone al día: los asientos que ya no
    * existen salen, y con la cuenta atrás acabada queda congelado.
    */
-  senalamiento(): SenalamientoDto | null {
+  senalamiento(): Senalamiento | null {
     const s = this.actual;
     if (!s) return null;
     const ids = new Set(this.entorno.plaza().map((a) => a.id));
@@ -63,7 +86,7 @@ export class Senalamientos {
    * los que señalan. `segundos` null: sin cuenta atrás. No valida los datos.
    */
   empezar(datos: {
-    tipo?: SenalamientoDto['tipo'];
+    tipo?: Senalamiento['tipo'];
     mensaje: string;
     segundos: number | null;
     senaladores: string[];
@@ -115,11 +138,11 @@ export class Senalamientos {
   }
 
   /** El señalamiento tal cual, para que la máquina del tiempo lo devuelva. */
-  instantanea(): SenalamientoDto | null {
+  instantanea(): Senalamiento | null {
     return this.actual;
   }
 
-  restaurar(senalamiento: SenalamientoDto): void {
+  restaurar(senalamiento: Senalamiento): void {
     this.actual = senalamiento;
   }
 }

@@ -1,4 +1,4 @@
-import type { SenalamientoDto } from '../../../views/dto/partida';
+import type { Senalamiento } from '../Senalamientos';
 import type { ContextoReglas } from './ReglaPersonaje';
 import type { Jugador } from '../Jugador';
 
@@ -30,7 +30,7 @@ export function esbirrosLilmonsta(
 }
 
 /** El asiento que lo cuida, si todos los esbirros sentados señalan al mismo; si no, null. */
-export function cuidadorLilmonsta(ctx: ContextoReglas, s: SenalamientoDto): string | null {
+export function cuidadorLilmonsta(ctx: ContextoReglas, s: Senalamiento): string | null {
   const sentados = ctx.plaza().filter((a) => a.participanteId && s.senaladores.includes(a.id));
   const elegidos = new Set(sentados.map((a) => s.senales[a.id]));
   if (sentados.length === 0 || elegidos.size !== 1) return null;

@@ -42,11 +42,8 @@ const PENDIENTES = [
   'models/partida/DespertarGuiado.ts',
   'models/partida/Despertares.ts',
   'models/partida/Entregas.ts',
-  'models/partida/Fases.ts',
   'models/partida/Nominaciones.ts',
   'models/partida/Partida.ts',
-  'models/partida/Senalamientos.ts',
-  'models/partida/reglas/lilMonsta.ts',
   'models/sala/Participantes.ts',
 ];
 

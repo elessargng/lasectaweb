@@ -11,7 +11,8 @@ import type { Conversacion, Invitacion } from '../models/conversaciones';
 import type { Ajustes } from '../models/partida/Configuracion';
 import type { Reloj } from '../models/partida/RelojSala';
 import type { EstadoRevelacion } from '../models/partida/Revelacion';
-import type { ConfiguracionDto, RelojDto, RevelacionDto } from './dto/partida';
+import type { Senalamiento } from '../models/partida/Senalamientos';
+import type { ConfiguracionDto, RelojDto, RevelacionDto, SenalamientoDto } from './dto/partida';
 
 /** Lo que la vista necesita de fuera de la partida: las conversaciones, el vídeo y los permisos. */
 export interface ContextoVista {
@@ -51,6 +52,18 @@ const revelacionDto = (r: EstadoRevelacion): RevelacionDto => ({
   causas: [...r.causas],
   reveladas: [...r.reveladas],
   terminada: r.terminada,
+});
+const senalamientoDto = (s: Senalamiento): SenalamientoDto => ({
+  id: s.id,
+  tipo: s.tipo,
+  mensaje: s.mensaje,
+  senaladores: [...s.senaladores],
+  objetivos: [...s.objetivos],
+  publico: s.publico,
+  inicio: s.inicio,
+  fin: s.fin,
+  congelado: s.congelado,
+  senales: { ...s.senales },
 });
 const conversacionDto = (c: Conversacion): ConversacionDto => ({ id: c.id, miembros: [...c.miembros], oyentes: [...c.oyentes] });
 const invitacionDto = (i: Invitacion): InvitacionDto => ({ id: i.id, de: i.de, para: i.para, ...(i.conversacion && { conversacion: i.conversacion }) });
@@ -144,7 +157,7 @@ export class VistaPartida {
       despertares: partida.despertares.despertares(),
       recordatoriosNoche: partida.recordatoriosNoche(),
       votaciones: partida.nominaciones.votaciones(),
-      senalamiento: partida.senalamientos.senalamiento(),
+      senalamiento: siHay(partida.senalamientos.senalamiento(), senalamientoDto),
       narradorVirtual: juego.narrador.actual(),
     };
   }
