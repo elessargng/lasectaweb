@@ -43,7 +43,7 @@ import {
   SALA_NOTA_LARGO_MAX,
   SALA_RECORDATORIO_TEXTO_MAX,
 } from '../../models/compartido/grimorio';
-import { FichaEnviadaDto } from '../../views/dto/grimorio';
+import type { FichaEnviada } from '../../models/partida/Entregas';
 import { NUM_FAROLES } from '../../models/compartido/jugador';
 import { SALA_ESTILOS_MANO, SALA_FORMAS_MANO, FormaMano } from '../../models/compartido/participante';
 import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA } from '../../models/compartido/partida';
@@ -1341,7 +1341,7 @@ export const SALA_ACCIONES: Record<string, Accion> = {
       if (!destino.participanteId) return { ok: false, error: 'En ese asiento no hay nadie a quien enviárselo.' };
       if (!Array.isArray(fichas) || fichas.length > SALA_ASIENTOS.max) return { ok: false, error: 'El grimorio no es válido.' };
       const plaza = new Set(partida.plaza().map((a) => a.id));
-      const limpias: FichaEnviadaDto[] = [];
+      const limpias: FichaEnviada[] = [];
       for (const f of fichas as Record<string, unknown>[]) {
         if (!f || typeof f.jugadorId !== 'string' || !plaza.has(f.jugadorId)) return { ok: false, error: 'El grimorio no es válido.' };
         const personaje = f.personaje === null ? null : typeof f.personaje === 'string' && partida.guion.personaje(f.personaje) ? f.personaje : undefined;

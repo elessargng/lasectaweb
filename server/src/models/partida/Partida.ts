@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { EleccionDespertar, EnvioDespertar } from '../compartido/despertar';
-import type { FichaEnviadaDto } from '../../views/dto/grimorio';
+import type { FichaEnviada } from './Entregas';
 import type { Alineamiento } from '../compartido/jugador';
 import type { AsientoDiario, HechoDiario } from '../compartido/diario';
 import type { GuionResuelto } from '../guiones';
@@ -368,7 +368,7 @@ export class Partida {
   private enviarGrimorioDeLaPlaza(jugadorId: string): void {
     const plaza = this.plaza();
     if (!plaza.find((a) => a.id === jugadorId)?.participanteId) return;
-    const fichas: FichaEnviadaDto[] = plaza.map((a) => ({
+    const fichas: FichaEnviada[] = plaza.map((a) => ({
       jugadorId: a.id,
       personaje: a.personaje,
       alineamiento: a.alineamiento,

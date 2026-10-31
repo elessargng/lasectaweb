@@ -1,7 +1,23 @@
-import type { FichaEnviadaDto, GrimorioEnviadoDto } from '../../views/dto/grimorio';
+import type { Recordatorio } from '../compartido/grimorio';
 import type { Alineamiento } from '../compartido/jugador';
 import type { Diario } from './eventos';
 import type { Jugador } from './Jugador';
+
+/** Una ficha del grimorio tal como el narrador la envía al Espía o a la Viuda (puede cambiarla antes). */
+export interface FichaEnviada {
+  jugadorId: string;
+  personaje: string | null;
+  alineamiento: Alineamiento | null;
+  muerto: boolean;
+  recordatorios: Recordatorio[];
+}
+
+/** Un grimorio enviado: cuándo, sus fichas (en el orden de la plaza) y los faroles del demonio. */
+export interface GrimorioEnviado {
+  hora: number;
+  fichas: FichaEnviada[];
+  faroles: string[];
+}
 
 /** Lo que sabe un jugador de su ficha. */
 export interface FichaEntregada {
@@ -22,7 +38,7 @@ export class Entregas {
    * Los grimorios enviados, por asiento: el último, y a quién estaba sentado
    * entonces (si se sienta otro, no lo ve).
    */
-  private grimoriosEnviados = new Map<string, { ocupante: string; grimorio: GrimorioEnviadoDto }>();
+  private grimoriosEnviados = new Map<string, { ocupante: string; grimorio: GrimorioEnviado }>();
   /** Con el Gardener: los personajes repartidos aún no se han entregado a los jugadores. */
   private retenidas = false;
 
@@ -69,14 +85,14 @@ export class Entregas {
   }
 
   /** Envía un grimorio (sus fichas y los faroles) a quien se sienta en un asiento y lo apunta en el diario. No comprueba las fichas. */
-  enviarGrimorio(jugadorId: string, fichas: FichaEnviadaDto[], faroles: string[] = []): void {
+  enviarGrimorio(jugadorId: string, fichas: FichaEnviada[], faroles: string[] = []): void {
     const ocupante = this.plaza().find((a) => a.id === jugadorId)?.participanteId;
     if (ocupante) this.grimoriosEnviados.set(jugadorId, { ocupante, grimorio: { hora: Date.now(), fichas, faroles } });
     this.diario.anotar({ tipo: 'grimorio', asiento: this.diario.asiento(jugadorId) });
   }
 
   /** El último grimorio enviado a un participante (si sigue en el asiento al que se envió), o null. */
-  grimorioRecibidoPor(participanteId: string): GrimorioEnviadoDto | null {
+  grimorioRecibidoPor(participanteId: string): GrimorioEnviado | null {
     const jugador = this.plaza().find((a) => a.participanteId === participanteId);
     const enviado = jugador ? this.grimoriosEnviados.get(jugador.id) : undefined;
     return enviado && enviado.ocupante === participanteId ? enviado.grimorio : null;

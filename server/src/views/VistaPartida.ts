@@ -7,6 +7,10 @@ import { farolesVacios } from '../models/partida/Faroles';
 import type { JugadorDto } from './dto/jugador';
 import type { NominacionDto } from './dto/partida';
 import type { Nominacion } from '../models/partida/Nominaciones';
+import type { HiloDespertar } from '../models/partida/Despertares';
+import type { FichaEnviada, GrimorioEnviado } from '../models/partida/Entregas';
+import type { DespertarDto } from './dto/despertar';
+import type { FichaEnviadaDto, GrimorioEnviadoDto } from './dto/grimorio';
 import type { ConversacionDto, SalaDto, InvitacionDto } from './dto/sala';
 import type { Conversacion, Invitacion } from '../models/conversaciones';
 import type { Ajustes } from '../models/partida/Configuracion';
@@ -83,6 +87,20 @@ const nominacionDto = (n: Nominacion): NominacionDto => ({
   votosNecesarios: n.votosNecesarios,
   votosNecesariosPorDefecto: n.votosNecesariosPorDefecto,
   privada: n.privada,
+});
+// Sin quién lo jugaba al abrirlo (es para cerrar el despertar si cambia)
+const despertarDto = (h: HiloDespertar): DespertarDto => ({ jugador: h.jugador, mensajes: h.mensajes.map((m) => ({ ...m })) });
+const fichaEnviadaDto = (f: FichaEnviada): FichaEnviadaDto => ({
+  jugadorId: f.jugadorId,
+  personaje: f.personaje,
+  alineamiento: f.alineamiento,
+  muerto: f.muerto,
+  recordatorios: f.recordatorios.map((r) => ({ ...r })),
+});
+const grimorioEnviadoDto = (g: GrimorioEnviado): GrimorioEnviadoDto => ({
+  hora: g.hora,
+  fichas: g.fichas.map(fichaEnviadaDto),
+  faroles: [...g.faroles],
 });
 const conversacionDto = (c: Conversacion): ConversacionDto => ({ id: c.id, miembros: [...c.miembros], oyentes: [...c.oyentes] });
 const invitacionDto = (i: Invitacion): InvitacionDto => ({ id: i.id, de: i.de, para: i.para, ...(i.conversacion && { conversacion: i.conversacion }) });
@@ -173,7 +191,7 @@ export class VistaPartida {
       bolsa: partida.reparto.bolsa.bolsa(),
       faroles: partida.faroles.faroles(),
       npcs: partida.npcs.npcs(),
-      despertares: partida.despertares.despertares(),
+      despertares: partida.despertares.despertares().map(despertarDto),
       recordatoriosNoche: partida.recordatoriosNoche(),
       votaciones: partida.nominaciones.votaciones(),
       senalamiento: siHay(partida.senalamientos.senalamiento(), senalamientoDto),
@@ -244,7 +262,7 @@ export class VistaPartida {
         : yo.rol === 'jugador'
           ? comun.despertares.filter((d) => d.jugador === partida.despertares.asientoDespiertoDe(yo.id))
           : [],
-      grimorioRecibido: yo.rol === 'jugador' ? partida.entregas.grimorioRecibidoPor(yo.id) : null,
+      grimorioRecibido: yo.rol === 'jugador' ? siHay(partida.entregas.grimorioRecibidoPor(yo.id), grimorioEnviadoDto) : null,
       narradorVirtual: comun.narradorVirtual,
       palabra: partida.nominaciones.palabra(),
       yo: yo.id,

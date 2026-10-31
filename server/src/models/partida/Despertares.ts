@@ -1,6 +1,5 @@
 import { randomUUID } from 'crypto';
 import type { MensajeDespertar } from '../compartido/despertar';
-import type { DespertarDto } from '../../views/dto/despertar';
 import type { Fase } from '../compartido/partida';
 import type { Diario } from './eventos';
 import type { Jugador } from './Jugador';
@@ -8,9 +7,9 @@ import type { Jugador } from './Jugador';
 /** Mensajes que se guardan en cada despertar (los más antiguos se descartan). */
 export const SALA_MENSAJES_DESPERTAR_MAX = 300;
 
-/** Un despertar abierto: el asiento, quién estaba sentado al abrirlo y lo que se han dicho. */
+/** Un despertar abierto: el jugador, quién lo jugaba al abrirlo y lo que se han dicho. */
 export interface HiloDespertar {
-  asiento: string;
+  jugador: string;
   ocupante: string | null;
   mensajes: MensajeDespertar[];
 }
@@ -38,17 +37,17 @@ export class Despertares {
    */
   private alDia(): HiloDespertar[] {
     const plaza = this.plaza();
-    this.hilos = this.hilos.filter((h) => plaza.some((a) => a.id === h.asiento && a.participanteId === h.ocupante));
+    this.hilos = this.hilos.filter((h) => plaza.some((a) => a.id === h.jugador && a.participanteId === h.ocupante));
     return this.hilos;
   }
 
-  /** Todos los despertares, en el orden en que se abrieron. */
-  despertares(): DespertarDto[] {
-    return this.alDia().map((h) => ({ jugador: h.asiento, mensajes: h.mensajes.map((m) => ({ ...m })) }));
+  /** Todos los despertares, en el orden en que se abrieron (copias). */
+  despertares(): HiloDespertar[] {
+    return this.alDia().map((h) => ({ ...h, mensajes: h.mensajes.map((m) => ({ ...m })) }));
   }
 
   hayDespertar(jugadorId: string): boolean {
-    return this.alDia().some((h) => h.asiento === jugadorId);
+    return this.alDia().some((h) => h.jugador === jugadorId);
   }
 
   /**
@@ -57,7 +56,7 @@ export class Despertares {
    */
   asientoDespiertoDe(participanteId: string): string | null {
     return (
-      this.alDia().find((h) => h.ocupante === participanteId && h.mensajes.some((m) => m.autor === 'narrador'))?.asiento ?? null
+      this.alDia().find((h) => h.ocupante === participanteId && h.mensajes.some((m) => m.autor === 'narrador'))?.jugador ?? null
     );
   }
 
@@ -65,7 +64,7 @@ export class Despertares {
   despertar(jugadorId: string): string | null {
     const jugador = this.plaza().find((a) => a.id === jugadorId);
     if (!jugador) return 'Ese asiento ya no existe.';
-    if (!this.hayDespertar(jugadorId)) this.hilos.push({ asiento: jugadorId, ocupante: jugador.participanteId, mensajes: [] });
+    if (!this.hayDespertar(jugadorId)) this.hilos.push({ jugador: jugadorId, ocupante: jugador.participanteId, mensajes: [] });
     return null;
   }
 
@@ -74,7 +73,7 @@ export class Despertares {
    * (ver MensajeDespertar.guiado).
    */
   respuestaGuiada(jugadorId: string): boolean {
-    const hilo = this.alDia().find((h) => h.asiento === jugadorId);
+    const hilo = this.alDia().find((h) => h.jugador === jugadorId);
     return !!hilo && !![...hilo.mensajes].reverse().find((m) => m.autor === 'narrador')?.guiado;
   }
 
@@ -83,7 +82,7 @@ export class Despertares {
    * y no es un «Entendido» suyo (a lo que ha elegido el jugador). Sin despertar, no.
    */
   porEntender(jugadorId: string): boolean {
-    const ultimo = this.alDia().find((h) => h.asiento === jugadorId)?.mensajes.slice(-1)[0];
+    const ultimo = this.alDia().find((h) => h.jugador === jugadorId)?.mensajes.slice(-1)[0];
     return !!ultimo && ultimo.autor === 'narrador' && ultimo.ficha !== 'entendido';
   }
 
@@ -95,7 +94,7 @@ export class Despertares {
     jugadorId: string,
     mensaje: Omit<MensajeDespertar, 'id' | 'hora' | 'fase' | 'eleccion' | 'guiado'> & Partial<Pick<MensajeDespertar, 'eleccion' | 'guiado'>>,
   ): void {
-    const hilo = this.alDia().find((h) => h.asiento === jugadorId);
+    const hilo = this.alDia().find((h) => h.jugador === jugadorId);
     if (!hilo) return;
     const { momento, numero } = this.fase();
     hilo.mensajes.push({ eleccion: null, guiado: false, ...mensaje, id: randomUUID(), hora: Date.now(), fase: { momento, numero } });
