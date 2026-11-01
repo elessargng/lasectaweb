@@ -10,12 +10,12 @@ import { mensajeChatDto, susurroDto } from '../../views/VistaChat';
 export class DifusorSocketIo implements DifusorSala {
   constructor(
     private readonly io: Server,
-    private readonly sala: SalaService,
+    private readonly salaService: SalaService,
   ) {}
 
   estado(): void {
-    const { participantes } = this.sala.juego.sala;
-    const vista = new VistaPartida(this.sala.juego, this.sala.contextoVista());
+    const { participantes } = this.salaService.juego.sala;
+    const vista = new VistaPartida(this.salaService.juego, this.salaService.contextoVista());
     for (const { socketId, clave } of participantes.conexiones()) {
       this.io.to(socketId).emit('sala:estado', vista.para(participantes.participanteDe(clave)!));
     }

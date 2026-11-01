@@ -46,7 +46,7 @@ const sinRespuesta: Responder<unknown> = () => {};
 /**
  * La sala de juego en tiempo real (servicio de aplicación): junta la partida, el
  * chat, las conversaciones, la videollamada, el narrador virtual y las
- * estadísticas. Quien la usa (el socket, hoy) le pasa lo que piden los
+ * estadísticas. Quien la usa (SalaController, hoy por socket) le pasa lo que piden los
  * participantes; tras cada cambio, la sala se manda entera a todos por el difusor.
  */
 export class SalaService {

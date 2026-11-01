@@ -7,7 +7,7 @@ import { conCuenta, guionDePrueba } from './guionDePrueba';
 
 /** Lo que se guarda de cada partida para las estadísticas (al revelar el grimorio). */
 
-/** Las partidas que se mandan guardar: las estadísticas, escuchando a la sala (como en salaSocket). */
+/** Las partidas que se mandan guardar: las estadísticas, escuchando a la sala (como en SalaService). */
 function guardadas(juego: SalaDeJuego): RegistroPartida[] {
   const { partida } = juego;
   const registros: RegistroPartida[] = [];

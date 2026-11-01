@@ -5,7 +5,7 @@ import { BOLSA_DE_SIETE } from './guionDePrueba';
 /**
  * Lo que le llega a cada uno por el socket: el grimorio es secreto y cada papel
  * (narrador, jugador, visitante, visitante con el grimorio) ve una parte. Fija el
- * comportamiento de hoy para poder sacar ese filtrado de salaSocket sin cambiarlo.
+ * comportamiento de hoy para poder sacar ese filtrado del socket sin cambiarlo.
  */
 
 let arnes: Arnes;

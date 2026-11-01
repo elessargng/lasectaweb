@@ -3,7 +3,7 @@ import { createServer, type Server as HttpServer } from 'http';
 import type { AddressInfo } from 'net';
 import { io as conectar, type Socket } from 'socket.io-client';
 import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
-import { iniciarSalaSocket, SALA_SOCKET_PATH } from '../../src/controllers/sala/salaSocket';
+import { SalaController, SALA_SOCKET_PATH } from '../../src/controllers/sala/SalaController';
 import { SalaService } from '../../src/services/sala/SalaService';
 import type { DependenciasSala, ImagenesSala } from '../../src/services/sala/puertos';
 import { SALA_AVATARES } from '../../src/models/sala/Participantes';
@@ -102,7 +102,7 @@ export class Arnes {
       imagenes: sinImagenes,
       ...cambios,
     };
-    iniciarSalaSocket(http, new SalaService(deps));
+    new SalaController(new SalaService(deps)).escuchar(http);
     await new Promise<void>((resolver) => http.listen(0, '127.0.0.1', resolver));
     const { port } = http.address() as AddressInfo;
     return new Arnes(http, `http://127.0.0.1:${port}`);
