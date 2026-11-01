@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { SalaDeJuego } from '../../src/models/SalaDeJuego';
 import { ejecutarAccion } from '../../src/services/sala/acciones';
 import type { DependenciasAcciones } from '../../src/services/sala/puertos';
-import { sinImagenes } from './arnes';
+import { MemoriaImagenRepository } from '../../src/repositories/ImagenRepository';
+import { ImagenesSala } from '../../src/services/sala/ImagenesSala';
 import { habilidadesDelGuion } from '../../src/models/partida/habilidades';
 import { TontoYTu } from '../../src/models/narradorVirtual/estrategias/TontoYTu';
 import { decisionesDe, type ContextoEtapa, type Etapa } from '../../src/models/narradorVirtual/etapas/Etapa';
@@ -51,7 +52,7 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
   const deps: DependenciasAcciones = {
     guiones: { guionPredeterminado: async () => guion(), importar: async () => guion() },
     imagenesBiblioteca: { leerPublica: async () => Promise.reject(new Error('Sin Biblioteca')) },
-    imagenes: sinImagenes,
+    imagenes: new ImagenesSala(new MemoriaImagenRepository()),
   };
   const azar = conSemilla(semilla);
   const estrategia = new TontoYTu(azar);

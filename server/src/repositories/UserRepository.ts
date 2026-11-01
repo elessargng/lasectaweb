@@ -1,6 +1,5 @@
 import { User } from '../models/User';
 import { DatabaseRepository } from './DatabaseRepository';
-import { processProfilePicture } from '../infra/almacenamiento/imageStorage';
 
 export class UserRepository {
   private async getUserRoles(userId: string): Promise<('editor' | 'narrador' | 'admin')[]> {
@@ -103,7 +102,6 @@ export class UserRepository {
   }
 
   async save(user: User): Promise<User> {
-    user.profilePicture = processProfilePicture(user.profilePicture, user.id);
     const db = await DatabaseRepository.getInstance();
     await db.run(
       `INSERT INTO users (id, username, realName, botcUsername, email, telegramUsername, passwordHash, profilePicture, isConfirmed, confirmationToken, confirmationTokenExpires, createdAt)
@@ -134,7 +132,6 @@ export class UserRepository {
   }
 
   async update(user: User): Promise<User> {
-    user.profilePicture = processProfilePicture(user.profilePicture, user.id);
     const db = await DatabaseRepository.getInstance();
     await db.run(
       `UPDATE users SET

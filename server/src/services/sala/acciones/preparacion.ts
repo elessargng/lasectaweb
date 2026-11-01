@@ -3,14 +3,9 @@ import { SALA_SEGUNDOS_POR_FICHA, type Configuracion } from '../../../models/par
 import { NPC_BOOTLEGGER, NPC_SILENCIO, NPC_STORMCATCHER } from '../../../models/partida/personajesEspeciales';
 import { TIPOS_NPC, type TipoPersonaje } from '../../../models/guiones';
 import { GuionInvalidoError } from '../../../models/guiones/errores';
+import { leerDataUrl } from '../../../models/imagenes';
+import { FONDO_SALA } from '../../../models/sala/imagenes';
 import { type Accion, cadena, esNarrador } from './Accion';
-
-/** Los bytes de una imagen en data URL (data:image/…;base64,…), o null si no lo es. */
-function datosDeDataUrl(valor: unknown): Buffer | null {
-  if (typeof valor !== 'string') return null;
-  const partes = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(valor);
-  return partes ? Buffer.from(partes[2], 'base64') : null;
-}
 
 /** La preparación de la partida: ajustes, guion, fondo, NPCs, bolsa y reparto. */
 export const ACCIONES_PREPARACION: Record<string, Accion> = {
@@ -121,8 +116,8 @@ export const ACCIONES_PREPARACION: Record<string, Accion> = {
       }
       let bytes: Buffer | null = null;
       if (imagen !== undefined) {
-        bytes = datosDeDataUrl(imagen);
-        if (!bytes) return { ok: false, error: 'La imagen no es válida (JPEG, PNG o WebP).' };
+        bytes = leerDataUrl(imagen)?.datos ?? null;
+        if (!bytes) return { ok: false, error: FONDO_SALA.noValida };
       } else if (typeof biblioteca === 'string') {
         try {
           bytes = await deps.imagenesBiblioteca.leerPublica(biblioteca);

@@ -95,7 +95,7 @@ import { EstadisticasService } from './services/estadisticas/EstadisticasService
 import { SalaController } from './controllers/sala/SalaController';
 import { abrirSalaPorSocket } from './infra/socketio/salaPorSocket';
 import { SalaService } from './services/sala/SalaService';
-import { imagenesSalaEnDisco } from './infra/almacenamiento/imagenesSalaEnDisco';
+import { ImagenDiscoRepository } from './repositories/ImagenRepository';
 import { MemoriaChatRepository } from './repositories/ChatRepository';
 import { leerConfigVideollamada } from './config/videollamada';
 import { LiveKitProveedor } from './infra/videollamada/LiveKitProveedor';
@@ -122,7 +122,8 @@ app.use('/uploads', express.static(uploadPath));
 // Initialize dependencies
 const userRepository = new UserRepository();
 const roleRequestRepository = new RoleRequestRepository();
-const userService = new UserService(userRepository, roleRequestRepository);
+const imagenRepository = new ImagenDiscoRepository(uploadPath, '/uploads');
+const userService = new UserService(userRepository, roleRequestRepository, imagenRepository);
 const authController = new AuthController(userService);
 
 const threadRepository = new ThreadRepository();
@@ -426,7 +427,7 @@ DatabaseRepository.getInstance()
       guiones: guionService,
       avatarDe: async (id) => (await userRepository.findById(id))?.profilePicture || null,
       // Los avatares y fondos que se suben a la sala, en disco (UPLOAD_DIR/sala)
-      imagenes: imagenesSalaEnDisco,
+      imagenes: imagenRepository,
       // Jarvis: el modelo JEV del servidor (JEV_API_KEY), el mismo para todos
       modeloJarvisDe: async () => jevPorDefecto(),
       clienteJev: (datos) => new ClienteJevHttp(datos),

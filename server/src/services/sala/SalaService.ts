@@ -7,6 +7,7 @@ import { ConversacionError, ConversacionService } from '../conversaciones/Conver
 import { VideollamadaError, VideollamadaService, type PaseVideo } from '../videollamada/VideollamadaService';
 import { NarradorVirtualService } from '../narradorVirtual/NarradorVirtualService';
 import { accionesPermitidas, ejecutarAccion } from './acciones';
+import { ImagenesSala } from './ImagenesSala';
 import type { DependenciasAcciones, DependenciasSala, DifusorSala } from './puertos';
 
 /** Quien llega a la sala, antes de entrar. */
@@ -51,6 +52,7 @@ const sinRespuesta: Responder<unknown> = () => {};
 export class SalaService {
   readonly juego = new SalaDeJuego();
   private readonly chat: ChatService;
+  private readonly imagenes: ImagenesSala;
   private readonly conversaciones: ConversacionService;
   private readonly videollamada: VideollamadaService | null;
   private readonly narradorVirtual: NarradorVirtualService;
@@ -77,6 +79,7 @@ export class SalaService {
       partida.suscribir((evento) => estadisticas.registrar(evento));
     }
     this.chat = new ChatService(deps.mensajes, this.juego);
+    this.imagenes = new ImagenesSala(deps.imagenes);
     this.conversaciones = new ConversacionService(this.juego);
     // Sin servidor de vídeo configurado, la sala funciona igual, sin cámaras ni micrófonos
     this.videollamada = deps.video ? new VideollamadaService(deps.video, this.juego, this.conversaciones) : null;
@@ -124,7 +127,7 @@ export class SalaService {
     this.depsAcciones = {
       guiones: deps.guiones,
       imagenesBiblioteca: deps.imagenesBiblioteca,
-      imagenes: deps.imagenes,
+      imagenes: this.imagenes,
       narradorVirtual: this.narradorVirtual,
     };
     // La votación avanza sola con el tiempo: cada paso se manda a todos.
@@ -151,7 +154,8 @@ export class SalaService {
    * entra, que no puede usar ya otro. Aún no entra (ver conectar).
    */
   async llegada({ usuario, nombre, alias, avatar, clienteId }: PeticionLlegada): Promise<SalaLlegada | { error: ErrorLlegada }> {
-    const { imagenes, contarPartidas, avatarDe } = this.deps;
+    const { imagenes } = this;
+    const { contarPartidas, avatarDe } = this.deps;
     if (usuario) {
       return {
         cuenta: {

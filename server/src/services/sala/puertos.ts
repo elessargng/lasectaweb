@@ -4,6 +4,8 @@
  * de sockets, de disco ni de bases de datos.
  */
 import type { ChatRepository } from '../../repositories/ChatRepository';
+import type { ImagenRepository } from '../../repositories/ImagenRepository';
+import type { ImagenesSala } from './ImagenesSala';
 import type { GuionResuelto } from '../../models/guiones';
 import type { MensajeChat, Susurro } from '../../models/chat';
 import type { RegistroPartida } from '../../models/estadisticas/SeguimientoPartida';
@@ -26,19 +28,6 @@ export interface ServicioGuiones {
  */
 export interface ImagenesBiblioteca {
   leerPublica(versionId: string): Promise<Buffer>;
-}
-
-/** Lo que se guarda o el porqué de que no. */
-export type Guardado = { ruta: string } | { error: string };
-
-/** Dónde se guardan las imágenes que se suben a la sala (los avatares y los fondos). */
-export interface ImagenesSala {
-  /** Guarda un avatar subido (data URL de un JPEG o un GIF): su ruta pública. */
-  guardarAvatar(dataUrl: unknown): Guardado;
-  /** El avatar si es uno de los permitidos (predefinido o subido a la sala); si no, null. */
-  avatarValido(valor: unknown): string | null;
-  /** Guarda una imagen como fondo (JPEG, PNG o WebP): su ruta pública. */
-  guardarFondo(datos: Buffer): Guardado;
 }
 
 /** Por qué se saca a alguien de la sala: entra con su cuenta desde otro sitio, o lo expulsa un narrador. */
@@ -79,7 +68,9 @@ export interface DependenciasAcciones {
 }
 
 /** Lo que necesita la sala de juego (SalaService). */
-export interface DependenciasSala extends Omit<DependenciasAcciones, 'narradorVirtual'> {
+export interface DependenciasSala extends Omit<DependenciasAcciones, 'narradorVirtual' | 'imagenes'> {
+  /** Dónde se guardan los avatares y los fondos que se suben a la sala. */
+  imagenes: ImagenRepository;
   /** Dónde se guardan los mensajes de texto de la sala. */
   mensajes: ChatRepository;
   /** El servidor de vídeo (cámaras y micrófonos), o null si no está configurado. */

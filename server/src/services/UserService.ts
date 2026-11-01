@@ -6,6 +6,8 @@ import crypto from 'crypto';
 import { sendConfirmationEmail, sendPasswordResetEmail } from '../infra/mailer';
 import { RoleRequestRepository } from '../repositories/RoleRequestRepository';
 import { RoleRequest } from '../models/RoleRequest';
+import { leerDataUrl } from '../models/imagenes';
+import { ImagenRepository } from '../repositories/ImagenRepository';
 
 // Duración del token de sesión: un día por defecto, 30 con «Recordarme».
 const SESSION_TTL = '1d';
@@ -44,11 +46,31 @@ const PROFILE_EDITABLE_FIELDS = [
   'estadisticasPublicas'
 ] as const;
 
+/** Las fotos de perfil se guardan por la hora en que se suben: avatars/AAAA/MM/DD/HH. */
+function coleccionDeFotos(ahora = new Date()): string {
+  const dos = (n: number) => String(n).padStart(2, '0');
+  return ['avatars', ahora.getFullYear(), dos(ahora.getMonth() + 1), dos(ahora.getDate()), dos(ahora.getHours())].join('/');
+}
+
 export class UserService {
   constructor(
     private userRepository: UserRepository,
-    private roleRequestRepository: RoleRequestRepository
+    private roleRequestRepository: RoleRequestRepository,
+    private imagenRepository: ImagenRepository
   ) {}
+
+  /** Si la foto de perfil llega como imagen (data URL), se guarda y queda su ruta; si no, se deja como viene. */
+  private guardarFoto(foto: string): string {
+    const imagen = leerDataUrl(foto);
+    if (!imagen) return foto;
+    const extension = imagen.tipo === 'jpeg' ? 'jpg' : imagen.tipo === 'svg+xml' ? 'svg' : imagen.tipo;
+    try {
+      return this.imagenRepository.guardar(coleccionDeFotos(), extension, imagen.datos);
+    } catch (error) {
+      console.error('No se ha podido guardar la foto de perfil:', error);
+      return foto;
+    }
+  }
 
   async registerUser(userData: Omit<User, 'id' | 'passwordHash' | 'createdAt' | 'isConfirmed' | 'confirmationToken' | 'confirmationTokenExpires' | 'roles'>, passwordPlain: string): Promise<{ message: string }> {
     const existing = await this.userRepository.findByUsername(userData.username);
@@ -62,6 +84,7 @@ export class UserService {
     
     const user: User = {
       ...userData,
+      profilePicture: this.guardarFoto(userData.profilePicture),
       id: Date.now().toString(),
       passwordHash,
       isConfirmed: false,
@@ -215,6 +238,9 @@ export class UserService {
     }
     if (editable.estadisticasPublicas !== undefined) {
       editable.estadisticasPublicas = editable.estadisticasPublicas === true;
+    }
+    if (typeof editable.profilePicture === 'string') {
+      editable.profilePicture = this.guardarFoto(editable.profilePicture);
     }
 
     const updatedUser = {
