@@ -92,6 +92,23 @@ export class UserRepository {
     );
   }
 
+  /**
+   * Borra las cuentas sin confirmar cuyo enlace de confirmación ya caducó, y
+   * con ellas su nombre de usuario, que queda libre para otra persona. Los
+   * datos que colgasen de la cuenta se van en cascada.
+   */
+  async deleteExpiredUnconfirmed(now: Date): Promise<number> {
+    const db = await DatabaseRepository.getInstance();
+    const result = await db.run(
+      `DELETE FROM users
+       WHERE isConfirmed = 0
+         AND confirmationTokenExpires IS NOT NULL
+         AND confirmationTokenExpires < ?`,
+      [now.toISOString()]
+    );
+    return result.changes ?? 0;
+  }
+
   async listAll(): Promise<User[]> {
     const db = await DatabaseRepository.getInstance();
     const rows = await db.all<any[]>('SELECT * FROM users');
