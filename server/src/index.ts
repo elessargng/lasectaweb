@@ -410,7 +410,14 @@ DatabaseRepository.getInstance()
     
     // Seed admin user if configured
     await seedAdminUser(userRepository);
-    
+
+    // Los registros sin confirmar caducan a las 24 h: se barren al arrancar y
+    // cada hora (además de justo antes de registrar, entrar o recuperar).
+    const purgarRegistros = () =>
+      userService.purgeExpiredRegistrations().catch((err) => console.error('Error al purgar registros caducados:', err));
+    await purgarRegistros();
+    setInterval(purgarRegistros, 60 * 60 * 1000).unref();
+
     // Arrancar el servicio de vigilancia de partidas
     vigilanteService.start();
     await seedCodice(codiceRepository);

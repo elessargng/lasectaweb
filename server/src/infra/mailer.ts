@@ -31,6 +31,7 @@ export async function sendConfirmationEmail(email: string, username: string, tok
       </div>
       <p style="color: #a0aec0; font-size: 14px;">Si el botón no funciona, copia y pega este enlace en tu navegador:</p>
       <p style="color: #a0aec0; font-size: 14px; word-break: break-all;">${confirmationUrl}</p>
+      <p style="color: #a0aec0; font-size: 14px;">El enlace caduca en 24 horas. Pasado ese plazo la cuenta sin confirmar se borra, el nombre de usuario queda libre y tendrás que registrarte de nuevo.</p>
       <hr style="border: 0; border-top: 1px solid #444; margin: 20px 0;" />
       <p style="color: #718096; font-size: 12px; text-align: center;">Este es un correo automático, por favor no respondas a él.</p>
     </div>

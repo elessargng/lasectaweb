@@ -49,6 +49,12 @@
           "Añadidas las Reliquias, junto a los logros.",
           "Añadido el diario de la partida al historial."
         ]
+      },
+      {
+        "category": "Cuenta y Sesión",
+        "items": [
+          "Los registros sin confirmar caducan a las 24 horas y su nombre de usuario queda libre."
+        ]
       }
     ]
   },

@@ -13,6 +13,12 @@ import { ImagenRepository } from '../repositories/ImagenRepository';
 const SESSION_TTL = '1d';
 const SESSION_REMEMBER_TTL = '30d';
 
+/**
+ * Cuánto vale el enlace de confirmación. Pasado el plazo la cuenta sin
+ * confirmar se borra y su nombre de usuario vuelve a estar libre.
+ */
+const CONFIRMATION_TTL_MS = 24 * 60 * 60 * 1000;
+
 /** Cuánto vale el enlace para restablecer la contraseña. */
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
 
@@ -76,7 +82,21 @@ export class UserService {
     }
   }
 
+  /**
+   * Borra los registros que no se confirmaron a tiempo y libera sus nombres.
+   * Se llama antes de todo lo que mira si una cuenta existe, para que una
+   * caducada no ocupe el nombre ni se pueda revivir, y también periódicamente.
+   */
+  async purgeExpiredRegistrations(): Promise<number> {
+    const purged = await this.userRepository.deleteExpiredUnconfirmed(new Date());
+    if (purged > 0) {
+      console.log(`[REGISTRO] ${purged} cuenta(s) sin confirmar caducada(s) y borrada(s).`);
+    }
+    return purged;
+  }
+
   async registerUser(userData: Omit<User, 'id' | 'passwordHash' | 'createdAt' | 'isConfirmed' | 'confirmationToken' | 'confirmationTokenExpires' | 'roles'>, passwordPlain: string): Promise<{ message: string }> {
+    await this.purgeExpiredRegistrations();
     const existing = await this.userRepository.findByUsername(userData.username);
     if (existing) {
       throw new Error('El usuario ya existe');
@@ -84,7 +104,7 @@ export class UserService {
     
     const passwordHash = await bcrypt.hash(passwordPlain, 10);
     const confirmationToken = crypto.randomBytes(32).toString('hex');
-    const confirmationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+    const confirmationTokenExpires = new Date(Date.now() + CONFIRMATION_TTL_MS);
     
     const user: User = {
       ...userData,
@@ -109,11 +129,12 @@ export class UserService {
     }
     
     return { 
-      message: 'Registro realizado con éxito. Por favor, revisa tu correo electrónico para confirmar tu cuenta.'
+      message: 'Registro realizado con éxito. Por favor, revisa tu correo electrónico para confirmar tu cuenta en las próximas 24 horas.'
     };
   }
 
   async loginUser(username: string, passwordPlain: string, remember = false): Promise<{ user: Partial<User>, token: string }> {
+    await this.purgeExpiredRegistrations();
     const cleanUsername = (username || '').trim();
     const user = await this.userRepository.findByUsername(cleanUsername);
     if (!user) {
@@ -159,7 +180,9 @@ export class UserService {
     }
 
     if (user.confirmationTokenExpires && user.confirmationTokenExpires < new Date()) {
-      throw new Error('El enlace de confirmación ha expirado.');
+      // Una cuenta caducada no se confirma: se borra y el nombre queda libre.
+      await this.purgeExpiredRegistrations();
+      throw new Error('El enlace de confirmación ha caducado. Vuelve a registrarte.');
     }
 
     user.isConfirmed = true;
@@ -183,6 +206,8 @@ export class UserService {
       throw new Error('Indica el correo electrónico con el que te registraste.');
     }
 
+    // Una cuenta caducada sin confirmar no se revive restableciendo la contraseña.
+    await this.purgeExpiredRegistrations();
     const users = await this.userRepository.findAllByEmail(cleanEmail);
     for (const user of users) {
       const token = crypto.randomBytes(32).toString('hex');
@@ -209,6 +234,7 @@ export class UserService {
       throw new Error('Escribe la contraseña nueva.');
     }
 
+    await this.purgeExpiredRegistrations();
     const user = await this.userRepository.findByPasswordResetTokenHash(hashResetToken(token));
     if (!user || !user.passwordResetExpires || user.passwordResetExpires < new Date()) {
       throw new Error('El enlace no es válido o ha caducado. Pide uno nuevo desde «¿Has olvidado tu contraseña?».');
