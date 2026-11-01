@@ -1,139 +1,138 @@
-import type { Server as HttpServer } from 'http';
-import { Server, type Socket } from 'socket.io';
 import type { SalaLlegada } from '../../models/sala/Participantes';
-import type { SalaService } from '../../services/sala/SalaService';
-import { ConversacionError, type ConversacionService } from '../../services/conversaciones/ConversacionService';
+import type { Responder, SalaService } from '../../services/sala/SalaService';
 import type { PaseVideo } from '../../services/videollamada/VideollamadaService';
-import { mensajeChatDto } from '../../views/VistaChat';
-import { ResultadoAccion } from '../../views/dto/sala';
+import type { ResultadoAccion } from '../../views/dto/sala';
 import { usuarioDelToken } from '../middlewares/auth';
-import { DifusorSocketIo } from './DifusorSocketIo';
 
-/** Bajo /api para que pase por el mismo proxy que el resto de la API. */
-export const SALA_SOCKET_PATH = '/api/socket.io';
+/** Quién pide algo (como req.user en la API): su clave en la sala y su conexión. */
+export interface Sesion {
+  clave: string;
+  conexion: string;
+}
 
-interface DatosSocket {
+/** Con qué se llega a la sala, ya comprobado: con esto se entra al conectar. */
+export interface Credenciales {
   llegada: SalaLlegada;
   clienteId: string | null;
 }
 
-/** Contesta por el ack del evento, si el cliente lo ha pedido. */
-const contestar =
-  <R>(ack: unknown) =>
-  (respuesta: R) =>
-    typeof ack === 'function' && ack(respuesta);
+/** Los campos de una petición; si no es un objeto, ninguno. */
+const campos = (peticion: unknown): Record<string, unknown> =>
+  typeof peticion === 'object' && peticion !== null ? (peticion as Record<string, unknown>) : {};
 
-/** Lee un texto de una petición de conversación; si no lo es, la rechaza. */
-const texto = (v: unknown) => {
-  if (typeof v !== 'string') throw new ConversacionError('Petición desconocida.');
-  return v;
-};
-
-/** Las conversaciones privadas: invitar, responder a una invitación, retirarla, escuchar una (visitantes) y salir. */
-const CONVERSACION: Record<string, (c: ConversacionService, yoId: string, d: Record<string, unknown>) => void> = {
-  'conversacion:invitar': (c, yoId, d) => void c.invitar(yoId, texto(d.con)),
-  'conversacion:pedirUnirse': (c, yoId, d) => void c.pedirUnirse(yoId, texto(d.con)),
-  'conversacion:responder': (c, yoId, d) => c.responder(yoId, texto(d.invitacion), d.aceptar === true),
-  'conversacion:cancelar': (c, yoId, d) => c.cancelar(yoId, texto(d.invitacion)),
-  'conversacion:entrar': (c, yoId, d) => c.entrar(yoId, texto(d.conversacion)),
-  'conversacion:escuchar': (c, yoId, d) => c.escuchar(yoId, texto(d.conversacion)),
-  'conversacion:salir': (c, yoId) => c.salir(yoId),
-};
+const DESCONOCIDA: ResultadoAccion = { ok: false, error: 'Petición desconocida.' };
+const FUERA: ResultadoAccion = { ok: false, error: 'Ya no estás en la sala.' };
 
 /**
- * La sala de juego por WebSocket: lee cada evento, se lo pasa a SalaService y
- * contesta por su ack; lo que cambia le llega a cada uno por el difusor
- * (DifusorSocketIo). Al conectarse, el cliente manda su token de la web o, sin
- * cuenta, el nombre con el que entra; el nombre y el avatar que prefiere mostrar,
- * si los cambió; y su id de cliente para recuperar el sitio si se reconecta.
+ * La sala de juego en tiempo real (hoy por WebSocket, ver infra/socketio): cada
+ * método lee una petición, se la pasa a SalaService y contesta. Lo que cambia le
+ * llega a cada uno por el difusor, no por aquí.
  */
 export class SalaController {
   constructor(private readonly salaService: SalaService) {}
 
-  /** Abre la sala por WebSocket sobre ese servidor HTTP. */
-  escuchar(httpServer: HttpServer): void {
-    const io = new Server(httpServer, {
-      path: SALA_SOCKET_PATH,
-      cors: { origin: '*' },
-      // Un fondo de la sala subido desde el ordenador (data URL) puede pasar de 1 MB
-      maxHttpBufferSize: 8 * 1024 * 1024,
-    });
-    this.salaService.difundirCon(new DifusorSocketIo(io, this.salaService));
-    io.use((socket, next) => void this.identificar(socket, next));
-    io.on('connection', (socket) => this.conectar(socket));
-  }
-
   /**
-   * Aquí solo se identifica: se entra en la sala al completarse la conexión. Si se
-   * entrase ya y la conexión se cortara ahora (StrictMode, recarga rápida), nunca
-   * llegaría su 'disconnect' y quedaría un participante fantasma.
+   * Quien llega trae su token de la web o, sin cuenta, el nombre con el que entra;
+   * el nombre y el avatar que prefiere mostrar, si los cambió; y su id de cliente
+   * para recuperar el sitio si se reconecta. Aún no entra (ver entrar).
    */
-  private async identificar(socket: Socket, next: (err?: Error) => void): Promise<void> {
-    const { token, nombre, alias, avatar, clienteId } = socket.handshake.auth ?? {};
+  identificar = async (datos: unknown): Promise<Credenciales | { error: string }> => {
+    const { token, nombre, alias, avatar, clienteId } = campos(datos);
     let usuario = null;
     if (typeof token === 'string' && token) {
       usuario = usuarioDelToken(token);
-      // El cliente reconoce este mensaje y da la sesión por cerrada.
-      if (!usuario) return next(new Error('SESION_CADUCADA'));
+      // El cliente reconoce este error y da la sesión por cerrada.
+      if (!usuario) return { error: 'SESION_CADUCADA' };
     }
     const cliente = typeof clienteId === 'string' && clienteId ? clienteId.slice(0, 64) : null;
     const llegada = await this.salaService.llegada({ usuario, nombre, alias, avatar, clienteId: cliente });
-    if ('error' in llegada) return next(new Error(llegada.error));
-    const datos: DatosSocket = { llegada, clienteId: cliente };
-    Object.assign(socket.data, datos);
-    next();
-  }
+    if ('error' in llegada) return llegada;
+    return { llegada, clienteId: cliente };
+  };
 
-  private conectar(socket: Socket): void {
-    const { salaService } = this;
-    const { llegada, clienteId } = socket.data as DatosSocket;
-    socket.emit('sala:guion', salaService.guion());
-    const clave = salaService.conectar(socket.id, clienteId, llegada);
-    const yo = () => salaService.participanteDe(clave);
-    const miHistorial = () => {
-      const p = yo();
-      if (p) socket.emit('chat:historial', salaService.historial(p).map(mensajeChatDto));
-    };
-    miHistorial();
+  entrar = (conexion: string, { llegada, clienteId }: Credenciales): Sesion => ({
+    clave: this.salaService.conectar(conexion, clienteId, llegada),
+    conexion,
+  });
 
-    // Mensajes de texto: { para: 'general' | 'visitantes' | id de participante, texto }.
-    socket.on('chat:enviar', (peticion: { para?: unknown; texto?: unknown } | null, ack?: unknown) => {
-      const responder = contestar<ResultadoAccion>(ack);
-      const p = yo();
-      if (!p || typeof peticion?.para !== 'string' || typeof peticion.texto !== 'string') {
-        responder({ ok: false, error: 'Mensaje desconocido.' });
-        return;
-      }
-      salaService.enviarMensaje(p.id, peticion.para, peticion.texto, responder);
-    });
-    // Al cambiar de papel cambia lo que se puede leer: el cliente pide su historial.
-    socket.on('chat:historial', miHistorial);
+  /** Si se va a propósito («Salir»), sale ya. Si no, se le guarda el sitio. */
+  salir = ({ clave, conexion }: Sesion, aProposito: boolean): void => {
+    this.salaService.desconectar(clave, conexion, aProposito);
+  };
 
-    // Videollamada: el pase para la plaza («principal») o para su conversación privada.
-    socket.on('video:pase', async (peticion: { sala?: unknown } | null, ack?: unknown) => {
-      const responder = contestar<ResultadoAccion & Partial<PaseVideo>>(ack);
-      const p = yo();
-      if (!p || typeof peticion?.sala !== 'string') return responder({ ok: false, error: 'Petición desconocida.' });
-      responder(await salaService.pase(p.id, peticion.sala));
-    });
+  /** Una sola puerta para todas las acciones: { accion, datos }. */
+  accion = async ({ clave }: Sesion, peticion: unknown, responder: Responder<ResultadoAccion>): Promise<void> => {
+    const { accion, datos } = campos(peticion);
+    await this.salaService.accion(this.salaService.participanteDe(clave), typeof accion === 'string' ? accion : '', datos, responder);
+  };
 
-    // Conversaciones privadas: cada una responde por ack.
-    for (const [evento, hacer] of Object.entries(CONVERSACION)) {
-      socket.on(evento, (datos: Record<string, unknown> | null, ack?: unknown) => {
-        const responder = contestar<ResultadoAccion>(ack);
-        const p = yo();
-        if (!p) return responder({ ok: false, error: 'Ya no estás en la sala.' });
-        salaService.conversar((c) => hacer(c, p.id, datos ?? {}), responder);
-      });
-    }
+  /** Un mensaje de texto: { para: 'general' | 'visitantes' | id de participante, texto }. */
+  enviarMensaje = ({ clave }: Sesion, peticion: unknown, responder: Responder<ResultadoAccion>): void => {
+    const { para, texto } = campos(peticion);
+    const yo = this.salaService.participanteDe(clave);
+    if (!yo || typeof para !== 'string' || typeof texto !== 'string') return responder({ ok: false, error: 'Mensaje desconocido.' });
+    this.salaService.enviarMensaje(yo.id, para, texto, responder);
+  };
 
-    // Una sola puerta para todas las acciones: { accion, datos } y respuesta por ack.
-    socket.on('sala:accion', async (peticion: { accion?: unknown; datos?: unknown } | null, ack?: unknown) => {
-      const nombre = typeof peticion?.accion === 'string' ? peticion.accion : '';
-      await salaService.accion(yo(), nombre, peticion?.datos, contestar<ResultadoAccion>(ack));
-    });
+  /** Al cambiar de papel cambia lo que se puede leer: el cliente pide su historial. */
+  historial = ({ clave, conexion }: Sesion): void => {
+    this.salaService.mandarHistorial(clave, conexion);
+  };
 
-    // Si el cliente cierra a propósito («Salir»), se va ya. Si no, se le guarda el sitio.
-    socket.on('disconnect', (reason) => salaService.desconectar(clave, socket.id, reason === 'client namespace disconnect'));
+  /** El pase a la videollamada: { sala: 'principal' (la plaza) | su conversación privada }. */
+  pase = async ({ clave }: Sesion, peticion: unknown, responder: Responder<ResultadoAccion & Partial<PaseVideo>>): Promise<void> => {
+    const { sala } = campos(peticion);
+    const yo = this.salaService.participanteDe(clave);
+    if (!yo || typeof sala !== 'string') return responder(DESCONOCIDA);
+    responder(await this.salaService.pase(yo.id, sala));
+  };
+
+  // Conversaciones privadas
+
+  invitar = (sesion: Sesion, peticion: unknown, responder: Responder<ResultadoAccion>): void =>
+    this.conversacion(sesion, peticion, 'con', responder, (yoId, con) => this.salaService.invitar(yoId, con, responder));
+
+  pedirUnirse = (sesion: Sesion, peticion: unknown, responder: Responder<ResultadoAccion>): void =>
+    this.conversacion(sesion, peticion, 'con', responder, (yoId, con) => this.salaService.pedirUnirse(yoId, con, responder));
+
+  responderInvitacion = (sesion: Sesion, peticion: unknown, responder: Responder<ResultadoAccion>): void =>
+    this.conversacion(sesion, peticion, 'invitacion', responder, (yoId, invitacion) =>
+      this.salaService.responderInvitacion(yoId, invitacion, campos(peticion).aceptar === true, responder),
+    );
+
+  cancelarInvitacion = (sesion: Sesion, peticion: unknown, responder: Responder<ResultadoAccion>): void =>
+    this.conversacion(sesion, peticion, 'invitacion', responder, (yoId, invitacion) =>
+      this.salaService.cancelarInvitacion(yoId, invitacion, responder),
+    );
+
+  entrarEnConversacion = (sesion: Sesion, peticion: unknown, responder: Responder<ResultadoAccion>): void =>
+    this.conversacion(sesion, peticion, 'conversacion', responder, (yoId, conversacion) =>
+      this.salaService.entrarEnConversacion(yoId, conversacion, responder),
+    );
+
+  escucharConversacion = (sesion: Sesion, peticion: unknown, responder: Responder<ResultadoAccion>): void =>
+    this.conversacion(sesion, peticion, 'conversacion', responder, (yoId, conversacion) =>
+      this.salaService.escucharConversacion(yoId, conversacion, responder),
+    );
+
+  salirDeConversacion = ({ clave }: Sesion, _peticion: unknown, responder: Responder<ResultadoAccion>): void => {
+    const yo = this.salaService.participanteDe(clave);
+    if (!yo) return responder(FUERA);
+    this.salaService.salirDeConversacion(yo.id, responder);
+  };
+
+  /** Una petición de conversación: hace falta seguir en la sala y traer ese campo (un texto). */
+  private conversacion(
+    { clave }: Sesion,
+    peticion: unknown,
+    campo: string,
+    responder: Responder<ResultadoAccion>,
+    hacer: (yoId: string, valor: string) => void,
+  ): void {
+    const yo = this.salaService.participanteDe(clave);
+    if (!yo) return responder(FUERA);
+    const valor = campos(peticion)[campo];
+    if (typeof valor !== 'string') return responder(DESCONOCIDA);
+    hacer(yo.id, valor);
   }
 }

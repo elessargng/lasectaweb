@@ -21,8 +21,12 @@ export class DifusorSocketIo implements DifusorSala {
     }
   }
 
-  guion(guion: GuionResuelto | null): void {
-    this.io.emit('sala:guion', guion);
+  guion(guion: GuionResuelto | null, conexion?: string): void {
+    (conexion ? this.io.to(conexion) : this.io).emit('sala:guion', guion);
+  }
+
+  historial(conexion: string, mensajes: MensajeChat[]): void {
+    this.io.to(conexion).emit('chat:historial', mensajes.map(mensajeChatDto));
   }
 
   voz(texto: string): void {

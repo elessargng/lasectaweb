@@ -46,14 +46,16 @@ export type MotivoExpulsion = 'otraConexion' | 'narrador';
 
 /**
  * Cómo le llega a cada uno lo que pasa en la sala. Hoy, por socket.io (ver
- * controllers/sala/DifusorSocketIo); con otra tecnología, basta con otra implementación.
+ * infra/socketio/DifusorSocketIo); con otra tecnología, basta con otra implementación.
  * Las conexiones son las de Participantes (un id opaco para la sala).
  */
 export interface DifusorSala {
   /** La sala ha cambiado: a cada conexión, lo que le toca ver. */
   estado(): void;
-  /** El guion ha cambiado: va aparte del estado, porque es grande. */
-  guion(guion: GuionResuelto | null): void;
+  /** El guion, aparte del estado porque es grande: a todos cuando cambia, o a una conexión al entrar. */
+  guion(guion: GuionResuelto | null, conexion?: string): void;
+  /** Los mensajes que puede leer quien está en esa conexión. */
+  historial(conexion: string, mensajes: MensajeChat[]): void;
   /** Lo que dice el narrador virtual, para que lo oigan todos. */
   voz(texto: string): void;
   /** Un mensaje de texto, a las conexiones de quienes pueden leerlo. */

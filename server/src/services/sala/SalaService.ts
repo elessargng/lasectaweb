@@ -1,8 +1,6 @@
 import { SalaDeJuego } from '../../models/SalaDeJuego';
 import { limpiarNombreSala, SALA_AVATAR_INVITADO, type Participante, type SalaLlegada } from '../../models/sala/Participantes';
 import { EstadisticasPartida } from '../../models/estadisticas/EstadisticasPartida';
-import type { MensajeChat } from '../../models/chat';
-import type { GuionResuelto } from '../../models/guiones';
 import { temporizadorReal, type RespuestaAccion } from '../../models/narradorVirtual/puertos';
 import { ChatError, ChatService } from '../chat/ChatService';
 import { ConversacionError, ConversacionService } from '../conversaciones/ConversacionService';
@@ -34,6 +32,7 @@ export type Responder<R = RespuestaAccion> = (respuesta: R) => void;
 const SIN_DIFUSOR: DifusorSala = {
   estado: () => {},
   guion: () => {},
+  historial: () => {},
   voz: () => {},
   mensaje: () => {},
   susurro: () => {},
@@ -147,10 +146,6 @@ export class SalaService {
     };
   }
 
-  guion(): GuionResuelto | null {
-    return this.juego.partida.guion.actual();
-  }
-
   /**
    * Identifica a quien llega: con su cuenta o, sin ella, con el nombre con el que
    * entra, que no puede usar ya otro. Aún no entra (ver conectar).
@@ -186,13 +181,16 @@ export class SalaService {
   }
 
   /**
-   * Entra en la sala (o vuelve a su sitio) por una conexión: devuelve su clave. Si
-   * su cuenta ya estaba en la sala desde otra conexión, a esa se la saca.
+   * Entra en la sala (o vuelve a su sitio) por una conexión: devuelve su clave. Le
+   * llegan el guion, la sala y lo que puede leer del chat. Si su cuenta ya estaba en
+   * la sala desde otra conexión, a esa se la saca.
    */
   conectar(conexion: string, clienteId: string | null, llegada: SalaLlegada): string {
+    this.difusor.guion(this.juego.partida.guion.actual(), conexion);
     const { clave, expulsar } = this.juego.sala.participantes.conectar(conexion, clienteId, llegada, (c) => this.difusor.sigueAbierta(c));
     if (expulsar) this.difusor.expulsar(expulsar, 'otraConexion');
     this.difundir();
+    this.mandarHistorial(clave, conexion);
     return clave;
   }
 
@@ -236,9 +234,10 @@ export class SalaService {
     }
   }
 
-  /** Los mensajes que puede leer (cambian con su papel). */
-  historial(yo: Participante): MensajeChat[] {
-    return this.chat.historial(yo);
+  /** Le manda los mensajes que puede leer (cambian con su papel). */
+  mandarHistorial(clave: string, conexion: string): void {
+    const yo = this.participanteDe(clave);
+    if (yo) this.difusor.historial(conexion, this.chat.historial(yo));
   }
 
   /** El pase a la videollamada: la plaza («principal») o su conversación privada. */
@@ -251,11 +250,39 @@ export class SalaService {
     }
   }
 
-  /**
-   * Algo con las conversaciones privadas (invitar, responder, salir…; ver
-   * ConversacionService): si sale bien, se difunde la sala.
-   */
-  conversar(hacer: (conversaciones: ConversacionService) => void, responder: Responder): void {
+  // Conversaciones privadas (ver ConversacionService): invitar, responder a una
+  // invitación, retirarla, escuchar una (visitantes) y salir.
+
+  invitar(yoId: string, con: string, responder: Responder): void {
+    this.conversar(responder, (c) => void c.invitar(yoId, con));
+  }
+
+  pedirUnirse(yoId: string, con: string, responder: Responder): void {
+    this.conversar(responder, (c) => void c.pedirUnirse(yoId, con));
+  }
+
+  responderInvitacion(yoId: string, invitacion: string, aceptar: boolean, responder: Responder): void {
+    this.conversar(responder, (c) => c.responder(yoId, invitacion, aceptar));
+  }
+
+  cancelarInvitacion(yoId: string, invitacion: string, responder: Responder): void {
+    this.conversar(responder, (c) => c.cancelar(yoId, invitacion));
+  }
+
+  entrarEnConversacion(yoId: string, conversacion: string, responder: Responder): void {
+    this.conversar(responder, (c) => c.entrar(yoId, conversacion));
+  }
+
+  escucharConversacion(yoId: string, conversacion: string, responder: Responder): void {
+    this.conversar(responder, (c) => c.escuchar(yoId, conversacion));
+  }
+
+  salirDeConversacion(yoId: string, responder: Responder): void {
+    this.conversar(responder, (c) => c.salir(yoId));
+  }
+
+  /** Algo con las conversaciones privadas: si sale bien, se difunde la sala. */
+  private conversar(responder: Responder, hacer: (conversaciones: ConversacionService) => void): void {
     try {
       hacer(this.conversaciones);
       responder({ ok: true });
