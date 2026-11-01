@@ -1,26 +1,28 @@
 /**
- * La pregunta del Artista (una vez por partida, de día, una pregunta de sí o no al
- * narrador). Con Jarvis se escribe libre; con «Tonto y tú», que no entiende una
- * pregunta libre, se monta con piezas que el servidor sabe contestar mirando el
- * grimorio. Lo comparten el servidor (para leerla y contestarla) y el cliente (para
- * montarla y decirla en palabras).
+ * Una pregunta de sí o no sobre la partida (qué hay en juego, quién es qué, dónde
+ * se sienta, a quién eligieron de noche), de las que contesta el narrador mirando
+ * el grimorio. La hace quien tenga una habilidad para ello (el Artista). Con
+ * Jarvis se escribe libre; con «Tonto y tú», que no entiende una pregunta libre,
+ * se monta con piezas que el servidor sabe contestar (ver
+ * narradorVirtual/contestarPregunta). Lo comparten el servidor (para leerla y
+ * contestarla) y el cliente (para montarla y decirla en palabras).
  */
 
 /** Lo que contesta el narrador: sí, no, o que la reformule (no la puede contestar; no se gasta). */
-export type RespuestaArtista = 'si' | 'no' | 'reformular';
+export type RespuestaPregunta = 'si' | 'no' | 'reformular';
 
 /** Lo que cabe en una pregunta libre. */
-export const MAX_PREGUNTA_ARTISTA = 300;
+export const MAX_PREGUNTA_LIBRE = 300;
 
 /** Los tipos de personaje por los que se puede preguntar. */
-export const TIPOS_ARTISTA = ['townsfolk', 'outsider', 'minion', 'demon'] as const;
+export const TIPOS_PREGUNTABLES = ['townsfolk', 'outsider', 'minion', 'demon'] as const;
 
-export type TipoArtista = (typeof TIPOS_ARTISTA)[number];
+export type TipoPreguntable = (typeof TIPOS_PREGUNTABLES)[number];
 
 /** De quién se pregunta: un personaje, un tipo de personaje o un bando. */
-export type QuienArtista =
+export type QuienPregunta =
   | { por: 'personaje'; personaje: string }
-  | { por: 'tipo'; tipo: TipoArtista }
+  | { por: 'tipo'; tipo: TipoPreguntable }
   | { por: 'alineamiento'; alineamiento: 'bueno' | 'malvado' };
 
 /**
@@ -28,24 +30,24 @@ export type QuienArtista =
  * (y los libres, que también son jugadores); las sillas se cuentan desde la 1, la
  * de las 12, en el sentido de las agujas del reloj.
  */
-export type PreguntaArtista =
+export type PreguntaPartida =
   /** ¿Está el Alcalde en juego? ¿Hay algún forastero en juego? */
-  | { tipo: 'enJuego'; quien: QuienArtista }
+  | { tipo: 'enJuego'; quien: QuienPregunta }
   /** ¿Es Paco o Marta el demonio? (`todos`: ¿Son Paco y Marta malvados?) */
-  | { tipo: 'es'; jugadores: string[]; todos: boolean; quien: QuienArtista }
+  | { tipo: 'es'; jugadores: string[]; todos: boolean; quien: QuienPregunta }
   /** ¿Empieza por «P» el nombre del demonio? */
-  | { tipo: 'inicial'; quien: QuienArtista; letra: string }
+  | { tipo: 'inicial'; quien: QuienPregunta; letra: string }
   /** ¿Se sienta el demonio en una silla par? */
-  | { tipo: 'silla'; quien: QuienArtista; par: boolean }
+  | { tipo: 'silla'; quien: QuienPregunta; par: boolean }
   /** ¿Se sienta el demonio entre Paco y Pepe (los dos incluidos)? */
-  | { tipo: 'entre'; quien: QuienArtista; desde: string; hasta: string }
+  | { tipo: 'entre'; quien: QuienPregunta; desde: string; hasta: string }
   /** ¿Ha elegido algún bueno a Pepe anoche (o alguna noche)? */
-  | { tipo: 'eligio'; quien: QuienArtista; a: string; cuando: 'anoche' | 'algunaNoche' };
+  | { tipo: 'eligio'; quien: QuienPregunta; a: string; cuando: 'anoche' | 'algunaNoche' };
 
-export type TipoPreguntaArtista = PreguntaArtista['tipo'];
+export type TipoPreguntaPartida = PreguntaPartida['tipo'];
 
 /** Cada clase de pregunta, en el orden en que se ofrecen, con cómo se llama. */
-export const PREGUNTAS_ARTISTA: { tipo: TipoPreguntaArtista; nombre: string }[] = [
+export const PREGUNTAS_PARTIDA: { tipo: TipoPreguntaPartida; nombre: string }[] = [
   { tipo: 'es', nombre: 'Si unos jugadores son algo' },
   { tipo: 'enJuego', nombre: 'Si algo está en juego' },
   { tipo: 'eligio', nombre: 'Si alguien eligió a un jugador de noche' },
@@ -56,11 +58,11 @@ export const PREGUNTAS_ARTISTA: { tipo: TipoPreguntaArtista; nombre: string }[] 
 
 const esTexto = (x: unknown): x is string => typeof x === 'string' && x.length > 0;
 
-function leerQuien(x: unknown, personajes: readonly string[]): QuienArtista | null {
+function leerQuien(x: unknown, personajes: readonly string[]): QuienPregunta | null {
   const q = x as Record<string, unknown> | null;
   if (!q || typeof q !== 'object') return null;
   if (q.por === 'personaje' && esTexto(q.personaje) && personajes.includes(q.personaje)) return { por: 'personaje', personaje: q.personaje };
-  if (q.por === 'tipo' && TIPOS_ARTISTA.includes(q.tipo as TipoArtista)) return { por: 'tipo', tipo: q.tipo as TipoArtista };
+  if (q.por === 'tipo' && TIPOS_PREGUNTABLES.includes(q.tipo as TipoPreguntable)) return { por: 'tipo', tipo: q.tipo as TipoPreguntable };
   if (q.por === 'alineamiento' && (q.alineamiento === 'bueno' || q.alineamiento === 'malvado')) return { por: 'alineamiento', alineamiento: q.alineamiento };
   return null;
 }
@@ -69,7 +71,7 @@ function leerQuien(x: unknown, personajes: readonly string[]): QuienArtista | nu
  * Lee una pregunta montada (de lo que manda el cliente), con los jugadores de la
  * plaza y los personajes del guion; null si no vale.
  */
-export function leerPreguntaArtista(x: unknown, jugadores: readonly string[], personajes: readonly string[]): PreguntaArtista | null {
+export function leerPreguntaPartida(x: unknown, jugadores: readonly string[], personajes: readonly string[]): PreguntaPartida | null {
   const p = x as Record<string, unknown> | null;
   if (!p || typeof p !== 'object') return null;
   const quien = leerQuien(p.quien, personajes);
@@ -96,11 +98,11 @@ export function leerPreguntaArtista(x: unknown, jugadores: readonly string[], pe
   }
 }
 
-const TIPO_SINGULAR: Record<TipoArtista, string> = { townsfolk: 'aldeano', outsider: 'forastero', minion: 'esbirro', demon: 'demonio' };
-const TIPO_PLURAL: Record<TipoArtista, string> = { townsfolk: 'aldeanos', outsider: 'forasteros', minion: 'esbirros', demon: 'demonios' };
+const TIPO_SINGULAR: Record<TipoPreguntable, string> = { townsfolk: 'aldeano', outsider: 'forastero', minion: 'esbirro', demon: 'demonio' };
+const TIPO_PLURAL: Record<TipoPreguntable, string> = { townsfolk: 'aldeanos', outsider: 'forasteros', minion: 'esbirros', demon: 'demonios' };
 
 /** Cómo se nombran los jugadores y los personajes al decir la pregunta. */
-export interface NombresArtista {
+export interface NombresPregunta {
   jugador(id: string): string;
   personaje(id: string): string;
   /** El jugador que pregunta: de él se dice «te» / «tú». */
@@ -108,14 +110,14 @@ export interface NombresArtista {
 }
 
 /** «el demonio», «algún esbirro», «el Mayor», «algún malvado». */
-function sujeto(q: QuienArtista, n: NombresArtista): string {
+function sujeto(q: QuienPregunta, n: NombresPregunta): string {
   if (q.por === 'personaje') return `el ${n.personaje(q.personaje)}`;
   if (q.por === 'tipo') return q.tipo === 'demon' ? 'el demonio' : `algún ${TIPO_SINGULAR[q.tipo]}`;
   return `algún ${q.alineamiento}`;
 }
 
 /** Lo que se pregunta de unos jugadores: «el demonio», «aldeano», «malvados»… */
-function atributo(q: QuienArtista, n: NombresArtista, plural: boolean): string {
+function atributo(q: QuienPregunta, n: NombresPregunta, plural: boolean): string {
   if (q.por === 'personaje') return `el ${n.personaje(q.personaje)}`;
   if (q.por === 'tipo') return q.tipo === 'demon' && !plural ? 'el demonio' : (plural ? TIPO_PLURAL : TIPO_SINGULAR)[q.tipo];
   return plural ? `${q.alineamiento}s` : q.alineamiento;
@@ -127,7 +129,7 @@ function lista(nombres: string[], y: 'y' | 'o'): string {
 }
 
 /** La pregunta en palabras: «¿Es Paco o Marta el demonio?». */
-export function describirPreguntaArtista(p: PreguntaArtista, n: NombresArtista): string {
+export function describirPreguntaPartida(p: PreguntaPartida, n: NombresPregunta): string {
   const nombre = (id: string) => (id === n.yo ? 'tú' : n.jugador(id));
   switch (p.tipo) {
     case 'enJuego':
@@ -154,7 +156,7 @@ export function describirPreguntaArtista(p: PreguntaArtista, n: NombresArtista):
 }
 
 /** La respuesta en palabras. */
-export const RESPUESTAS_ARTISTA: Record<RespuestaArtista, string> = {
+export const RESPUESTAS_PREGUNTA: Record<RespuestaPregunta, string> = {
   si: 'Sí.',
   no: 'No.',
   reformular: 'No puedo contestar a eso: reformula la pregunta. No has gastado tu habilidad.',

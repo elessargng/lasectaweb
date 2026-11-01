@@ -1,17 +1,17 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  describirPreguntaArtista,
-  MAX_PREGUNTA_ARTISTA,
-  PREGUNTAS_ARTISTA,
-  RESPUESTAS_ARTISTA,
-  TIPOS_ARTISTA,
-  type PreguntaArtista,
-  type QuienArtista,
-  type RespuestaArtista,
-  type TipoArtista,
-  type TipoPreguntaArtista,
-} from '@models/artista';
+  describirPreguntaPartida,
+  MAX_PREGUNTA_LIBRE,
+  PREGUNTAS_PARTIDA,
+  RESPUESTAS_PREGUNTA,
+  TIPOS_PREGUNTABLES,
+  type PreguntaPartida,
+  type QuienPregunta,
+  type RespuestaPregunta,
+  type TipoPreguntable,
+  type TipoPreguntaPartida,
+} from '@models/preguntaPartida';
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario, campo } from './estilos';
@@ -32,10 +32,10 @@ interface DialogoArtistaProps {
 const NOMBRE_TIPO: Record<string, string> = { townsfolk: 'Aldeano', outsider: 'Forastero', minion: 'Esbirro', demon: 'Demonio' };
 
 /** Lo que se elige en el desplegable de «quién»: «alineamiento:malvado», «tipo:demon», «personaje:imp». */
-const leerQuien = (valor: string): QuienArtista => {
+const leerQuien = (valor: string): QuienPregunta => {
   const [por, id] = valor.split(':');
   if (por === 'personaje') return { por, personaje: id };
-  if (por === 'tipo') return { por, tipo: id as TipoArtista };
+  if (por === 'tipo') return { por, tipo: id as TipoPreguntable };
   return { por: 'alineamiento', alineamiento: id === 'malvado' ? 'malvado' : 'bueno' };
 };
 
@@ -52,7 +52,7 @@ const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoAr
   const { personajes, todosPorId } = useFichas();
   const plaza = estado.plaza;
   const [texto, setTexto] = useState('');
-  const [tipo, setTipo] = useState<TipoPreguntaArtista>('es');
+  const [tipo, setTipo] = useState<TipoPreguntaPartida>('es');
   const [quien, setQuien] = useState('tipo:demon');
   const [elegidos, setElegidos] = useState<string[]>([]);
   const [todos, setTodos] = useState(false);
@@ -62,7 +62,7 @@ const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoAr
   const [hasta, setHasta] = useState(plaza[plaza.length - 1]?.id ?? '');
   const [a, setA] = useState(miAsiento);
   const [cuando, setCuando] = useState<'anoche' | 'algunaNoche'>('anoche');
-  const [respuesta, setRespuesta] = useState<RespuestaArtista | null>(null);
+  const [respuesta, setRespuesta] = useState<RespuestaPregunta | null>(null);
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
   const respuestaRef = useRef<HTMLParagraphElement>(null);
@@ -75,7 +75,7 @@ const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoAr
   };
   const letraValida = /^\p{L}$/u.test(letra);
   /** La pregunta con lo elegido; null si falta algo (ningún jugador, ninguna letra). */
-  const montar = (): PreguntaArtista | null => {
+  const montar = (): PreguntaPartida | null => {
     const q = leerQuien(quien);
     switch (tipo) {
       case 'enJuego':
@@ -108,7 +108,7 @@ const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoAr
     const r = await pedir('jugador:artista', libre ? { texto: texto.trim() } : { pregunta });
     setEnviando(false);
     if (!r.ok) return setError(r.error);
-    setRespuesta((r.valor as RespuestaArtista) ?? 'reformular');
+    setRespuesta((r.valor as RespuestaPregunta) ?? 'reformular');
     window.setTimeout(() => respuestaRef.current?.focus(), 0);
   };
 
@@ -153,7 +153,7 @@ const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoAr
               <textarea
                 id="sala-artista-libre"
                 value={texto}
-                maxLength={MAX_PREGUNTA_ARTISTA}
+                maxLength={MAX_PREGUNTA_LIBRE}
                 rows={3}
                 disabled={contestada}
                 onChange={(e) => setTexto(e.target.value)}
@@ -169,8 +169,8 @@ const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoAr
                 <label htmlFor="sala-artista-tipo" className="font-ui text-xs">
                   Qué preguntas
                 </label>
-                <select id="sala-artista-tipo" value={tipo} onChange={(e) => setTipo(e.target.value as TipoPreguntaArtista)} className={`${campo} text-sm`}>
-                  {PREGUNTAS_ARTISTA.map((p) => (
+                <select id="sala-artista-tipo" value={tipo} onChange={(e) => setTipo(e.target.value as TipoPreguntaPartida)} className={`${campo} text-sm`}>
+                  {PREGUNTAS_PARTIDA.map((p) => (
                     <option key={p.tipo} value={p.tipo}>
                       {p.nombre}
                     </option>
@@ -215,7 +215,7 @@ const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoAr
                     <option value="alineamiento:malvado">Malvado</option>
                   </optgroup>
                   <optgroup label="Tipo">
-                    {TIPOS_ARTISTA.map((t) => (
+                    {TIPOS_PREGUNTABLES.map((t) => (
                       <option key={t} value={`tipo:${t}`}>
                         {NOMBRE_TIPO[t]}
                       </option>
@@ -292,7 +292,7 @@ const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoAr
               {pregunta && (
                 <p className="text-sm">
                   <span className="font-ui text-xs text-on-surface-muted">Preguntarás: </span>
-                  {describirPreguntaArtista(pregunta, nombres)}
+                  {describirPreguntaPartida(pregunta, nombres)}
                 </p>
               )}
             </fieldset>
@@ -307,7 +307,7 @@ const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoAr
           {respuesta && (
             <p ref={respuestaRef} tabIndex={-1} className="rounded border border-gold p-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main">
               <span className="font-ui text-xs text-on-surface-muted">El narrador contesta: </span>
-              {RESPUESTAS_ARTISTA[respuesta]}
+              {RESPUESTAS_PREGUNTA[respuesta]}
             </p>
           )}
           <div className="flex justify-end gap-3">

@@ -1,5 +1,5 @@
 
-import type { RespuestaArtista } from './artista';
+import type { RespuestaPregunta } from './preguntaPartida';
 import type { FichaDespertar, TarjetaDespertar } from './despertar';
 import type { Alineamiento } from './jugador';
 import type { Fase } from './partida';
@@ -55,7 +55,7 @@ export type HechoDiario =
   /** Se declara Patoso y elige (con narrador virtual). `porElNarrador`: no eligió a tiempo y eligió el narrador. */
   | { tipo: 'patoso'; asiento: AsientoDiario; objetivo: AsientoDiario; porElNarrador: boolean }
   /** Hace la pregunta del Artista (con narrador virtual). */
-  | { tipo: 'artista'; asiento: AsientoDiario; pregunta: string; respuesta: RespuestaArtista };
+  | { tipo: 'artista'; asiento: AsientoDiario; pregunta: string; respuesta: RespuestaPregunta };
 
 /** Un hecho del diario, con cuándo pasó. */
 export type EntradaDiario = HechoDiario & {

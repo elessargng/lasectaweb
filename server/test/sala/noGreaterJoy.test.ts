@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { SalaDeJuego } from '../../src/models/SalaDeJuego';
 import type { HabilidadNocheDto } from '../../src/views/dto/despertar';
 import {
-  describirPreguntaArtista,
-  leerPreguntaArtista,
-  type PreguntaArtista,
-} from '../../src/models/compartido/artista';
+  describirPreguntaPartida,
+  leerPreguntaPartida,
+  type PreguntaPartida,
+} from '../../src/models/compartido/preguntaPartida';
 import { ficha } from '../../src/models/partida/habilidades/HabilidadNocturna';
-import { contestar } from '../../src/models/personajes/artista';
+import { contestarPregunta } from '../../src/models/narradorVirtual/contestarPregunta';
 import { cronicaNueva } from '../../src/models/narradorVirtual/final/cronica';
 import { guionNoGreaterJoy, invitado, personaje } from './guionDePrueba';
 
@@ -107,14 +107,14 @@ describe('No Greater Joy', () => {
   });
 });
 
-describe('la pregunta montada del Artista', () => {
+describe('la pregunta montada sobre la partida', () => {
   // Asientos 1 a 5: J0 Relojero, J1 Imp, J2 Empático, J3 Barón, J4 Sabio
   const m = () => plaza('clockmaker', 'imp', 'empath', 'baron', 'sage');
   const ids = (x: ReturnType<typeof m>, ...i: number[]) => i.map((n) => x.asiento(n).id);
 
   it('se contesta con el grimorio: en juego, quiénes son, sillas, entre dos y la inicial', () => {
     const x = m();
-    const c = (p: PreguntaArtista) => contestar(x.juego, cronicaNueva(), p);
+    const c = (p: PreguntaPartida) => contestarPregunta(x.juego, cronicaNueva(), p);
     const demonio = { por: 'tipo', tipo: 'demon' } as const;
     expect(c({ tipo: 'enJuego', quien: { por: 'personaje', personaje: 'sage' } })).toBe(true);
     expect(c({ tipo: 'enJuego', quien: { por: 'personaje', personaje: 'artist' } })).toBe(false);
@@ -136,15 +136,15 @@ describe('la pregunta montada del Artista', () => {
     cronica.ultimaNoche = 2;
     cronica.noches.set(x.asiento(1).id, [{ noche: 1, eligio: [[x.asiento(4).id]], infos: [], droison: null }]);
     const malvado = { por: 'alineamiento', alineamiento: 'malvado' } as const;
-    expect(contestar(x.juego, cronica, { tipo: 'eligio', quien: malvado, a: x.asiento(4).id, cuando: 'algunaNoche' })).toBe(true);
-    expect(contestar(x.juego, cronica, { tipo: 'eligio', quien: malvado, a: x.asiento(4).id, cuando: 'anoche' })).toBe(false);
+    expect(contestarPregunta(x.juego, cronica, { tipo: 'eligio', quien: malvado, a: x.asiento(4).id, cuando: 'algunaNoche' })).toBe(true);
+    expect(contestarPregunta(x.juego, cronica, { tipo: 'eligio', quien: malvado, a: x.asiento(4).id, cuando: 'anoche' })).toBe(false);
   });
 
   it('se lee y se dice en palabras; lo que no vale, no se lee', () => {
     const asientos = ['a1', 'a2', 'a3'];
     const nombres = { jugador: (id: string) => ({ a1: 'Paco', a2: 'Marta', a3: 'Pepe' })[id] ?? id, personaje: () => 'Mayor', yo: 'a3' };
-    const leer = (p: unknown) => leerPreguntaArtista(p, asientos, ['mayor']);
-    const di = (p: unknown) => describirPreguntaArtista(leer(p)!, nombres);
+    const leer = (p: unknown) => leerPreguntaPartida(p, asientos, ['mayor']);
+    const di = (p: unknown) => describirPreguntaPartida(leer(p)!, nombres);
     expect(di({ tipo: 'es', jugadores: ['a1', 'a2'], todos: false, quien: { por: 'tipo', tipo: 'demon' } })).toBe('¿Es alguno de Paco o Marta el demonio?');
     expect(di({ tipo: 'es', jugadores: ['a1', 'a2'], todos: true, quien: { por: 'alineamiento', alineamiento: 'malvado' } })).toBe('¿Son Paco y Marta malvados?');
     expect(di({ tipo: 'enJuego', quien: { por: 'personaje', personaje: 'mayor' } })).toBe('¿Está el Mayor en juego?');
