@@ -15,7 +15,7 @@ import { Violinista } from '../../models/narradorVirtual/etapas/Violinista';
 import { FRASES } from '../../models/narradorVirtual/frases';
 import { recuerdosNuevos } from '../../models/narradorVirtual/noche/criterioDroison';
 import { prepararPartida, type FueraDeLaBolsa } from '../../models/narradorVirtual/preparacion';
-import type { Azar, BolsasRecientes, Narrador, ModelosJarvis, Temporizador, Voz } from '../../models/narradorVirtual/puertos';
+import type { Azar, BolsasRecientes, ModelosNarrador, Narrador, Temporizador, Voz } from '../../models/narradorVirtual/puertos';
 import { ConRespaldo } from '../../models/narradorVirtual/estrategias/ConRespaldo';
 import { Jarvis } from '../../models/narradorVirtual/estrategias/Jarvis';
 
@@ -81,7 +81,7 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     private readonly difundir: () => void,
     private readonly azar: Azar = Math.random,
     /** Para Jarvis (sin esto, no se puede añadir). */
-    private readonly modelos: ModelosJarvis | null = null,
+    private readonly modelos: ModelosNarrador | null = null,
     /** Las bolsas de las últimas partidas de quien lo añade (sin esto, no se tienen en cuenta). */
     private readonly bolsas: BolsasRecientes | null = null,
   ) {}
@@ -131,15 +131,11 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
    * respaldo; si deja de responder del todo, se va y sigue «Tonto y tú». O el error.
    */
   private async estrategiaJarvis(creador: string): Promise<EstrategiaNarrador | string> {
-    const datos = await this.modelos?.modeloDe(creador);
-    if (!this.modelos || datos === undefined) return 'Jarvis no está disponible en este servidor.';
-    if (datos === 'sinCuenta') return 'Para añadir a Jarvis necesitas una cuenta.';
-    if (!datos) return 'Jarvis no está disponible en este servidor.';
-    const cliente = this.modelos.cliente(datos);
-    const error = await cliente.comprobar();
-    if (error) return `El modelo de Jarvis no responde: ${error}`;
+    if (!this.modelos) return 'Jarvis no está disponible en este servidor.';
+    const modelo = await this.modelos.modeloDe(creador);
+    if (typeof modelo === 'string') return modelo;
     const respaldo = new TontoYTu(this.azar);
-    return new ConRespaldo(new Jarvis(cliente), respaldo, this.temporizador, () => this.jarvisSeVa(respaldo));
+    return new ConRespaldo(new Jarvis(modelo), respaldo, this.temporizador, () => this.jarvisSeVa(respaldo));
   }
 
   /** Jarvis no consigue hablar con su modelo: lo dice y sigue la partida «Tonto y tú». */

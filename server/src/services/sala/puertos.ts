@@ -9,7 +9,8 @@ import type { ImagenesSala } from './ImagenesSala';
 import type { GuionResuelto } from '../../models/guiones';
 import type { MensajeChat, Susurro } from '../../models/chat';
 import type { RegistroPartida } from '../../models/estadisticas/SeguimientoPartida';
-import type { Azar, ClienteJev, DatosJev, Temporizador } from '../../models/narradorVirtual/puertos';
+import type { Azar, Temporizador } from '../../models/narradorVirtual/puertos';
+import type { NarradorIARepository } from '../../repositories/NarradorIARepository';
 import type { ServicioNarradorVirtual } from '../narradorVirtual/NarradorVirtualService';
 import type { ProveedorVideo } from '../videollamada/ProveedorVideo';
 
@@ -85,11 +86,10 @@ export interface DependenciasSala extends Omit<DependenciasAcciones, 'narradorVi
   relojNarradorVirtual?: Temporizador;
   azarNarradorVirtual?: Azar;
   /**
-   * Para Jarvis: el modelo que ha puesto cada usuario (comprobado alguna vez), o
-   * null si no lo tiene; y cómo hablar con él (en los tests, uno falso). Sin esto, no hay Jarvis.
+   * Para Jarvis: el modelo de IA con el que decide para cada usuario (en los tests,
+   * uno falso), o null si no tiene. Sin esto, no hay Jarvis.
    */
-  modeloJarvisDe?: (userId: string) => Promise<DatosJev | null>;
-  clienteJev?: (datos: DatosJev) => ClienteJev & { comprobar(): Promise<string | null> };
+  modelosIA?: (userId: string) => Promise<NarradorIARepository | null>;
   /** Las bolsas del narrador virtual en las últimas partidas de cada usuario; sin esto, no se tienen en cuenta. */
   bolsasRecientes?: { de(userId: string): Promise<string[][]>; apuntar(userId: string, personajes: string[]): Promise<void> };
 }

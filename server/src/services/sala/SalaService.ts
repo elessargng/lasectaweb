@@ -6,6 +6,7 @@ import { ChatError, ChatService } from '../chat/ChatService';
 import { ConversacionError, ConversacionService } from '../conversaciones/ConversacionService';
 import { VideollamadaError, VideollamadaService, type PaseVideo } from '../videollamada/VideollamadaService';
 import { NarradorVirtualService } from '../narradorVirtual/NarradorVirtualService';
+import { NarradorIAService } from '../narradorVirtual/NarradorIAService';
 import { accionesPermitidas, ejecutarAccion } from './acciones';
 import { ImagenesSala } from './ImagenesSala';
 import type { DependenciasAcciones, DependenciasSala, DifusorSala } from './puertos';
@@ -99,14 +100,14 @@ export class SalaService {
       deps.relojNarradorVirtual ?? temporizadorReal,
       () => this.difundir(),
       deps.azarNarradorVirtual,
-      // Jarvis: con el modelo de la cuenta de quien lo añade
-      deps.modeloJarvisDe && deps.clienteJev
+      // Jarvis: con el modelo de la cuenta de quien lo añade, ya comprobado
+      deps.modelosIA
         ? {
             modeloDe: async (participanteId) => {
               const cuenta = cuentaDe(participanteId);
-              return cuenta ? deps.modeloJarvisDe!(cuenta) : 'sinCuenta';
+              if (!cuenta) return 'Para añadir a Jarvis necesitas una cuenta.';
+              return NarradorIAService.para(await deps.modelosIA!(cuenta));
             },
-            cliente: deps.clienteJev,
           }
         : null,
       // Las bolsas recientes, de la cuenta de quien lo añade

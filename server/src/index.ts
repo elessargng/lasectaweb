@@ -88,7 +88,8 @@ import { RitualController } from './controllers/RitualController';
 import { SalaConfiguracionRepository } from './repositories/SalaConfiguracionRepository';
 import { SalaConfiguracionController } from './controllers/SalaConfiguracionController';
 import { BolsasRecientesRepository } from './repositories/BolsasRecientesRepository';
-import { ClienteJevHttp, jevPorDefecto } from './infra/jev/ClienteJevHttp';
+import { NarradorJevRepository } from './repositories/NarradorJevRepository';
+import { leerConfigJev } from './config/jev';
 import { EstadisticasController } from './controllers/EstadisticasController';
 import { EstadisticasRepository } from './repositories/EstadisticasRepository';
 import { EstadisticasService } from './services/estadisticas/EstadisticasService';
@@ -138,6 +139,7 @@ const villacuervosService = new VillacuervosService(villacuervosRepository, user
 // ninguna crea sus dependencias.
 const configPersonajes = leerConfigPersonajes();
 const configVideollamada = leerConfigVideollamada();
+const configJev = leerConfigJev();
 if (!configVideollamada) console.log('[Videollamada] Sin LIVEKIT_URL/LIVEKIT_API_KEY/LIVEKIT_API_SECRET: la sala no tendrá cámaras ni micrófonos.');
 const personajeRepository = new PersonajeRepository();
 const idiomaRepository = new IdiomaRepository();
@@ -429,8 +431,7 @@ DatabaseRepository.getInstance()
       // Los avatares y fondos que se suben a la sala, en disco (UPLOAD_DIR/sala)
       imagenes: imagenRepository,
       // Jarvis: el modelo JEV del servidor (JEV_API_KEY), el mismo para todos
-      modeloJarvisDe: async () => jevPorDefecto(),
-      clienteJev: (datos) => new ClienteJevHttp(datos),
+      modelosIA: async () => (configJev ? new NarradorJevRepository(configJev) : null),
       // Las bolsas del narrador virtual en las últimas partidas de cada usuario
       bolsasRecientes: new BolsasRecientesRepository(),
       // Los mensajes de la sala, en memoria (como la sala)
