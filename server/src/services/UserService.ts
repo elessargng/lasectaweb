@@ -1,12 +1,12 @@
 import { UserRepository } from '../repositories/UserRepository';
-import { User } from '../models/User';
+import { FOTO_PERFIL, User } from '../models/User';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { sendConfirmationEmail, sendPasswordResetEmail } from '../infra/mailer';
 import { RoleRequestRepository } from '../repositories/RoleRequestRepository';
 import { RoleRequest } from '../models/RoleRequest';
-import { leerDataUrl } from '../models/imagenes';
+import { comprobarImagen, leerDataUrl } from '../models/imagenes';
 import { ImagenRepository } from '../repositories/ImagenRepository';
 
 // Duración del token de sesión: un día por defecto, 30 con «Recordarme».
@@ -59,16 +59,20 @@ export class UserService {
     private imagenRepository: ImagenRepository
   ) {}
 
-  /** Si la foto de perfil llega como imagen (data URL), se guarda y queda su ruta; si no, se deja como viene. */
+  /**
+   * Si la foto de perfil llega como imagen (data URL), se comprueba (FOTO_PERFIL),
+   * se guarda y queda su ruta; si no (uno de los avatares de la web), se deja como viene.
+   */
   private guardarFoto(foto: string): string {
     const imagen = leerDataUrl(foto);
     if (!imagen) return foto;
-    const extension = imagen.tipo === 'jpeg' ? 'jpg' : imagen.tipo === 'svg+xml' ? 'svg' : imagen.tipo;
+    const comprobada = comprobarImagen(imagen.datos, FOTO_PERFIL);
+    if ('error' in comprobada) throw new Error(comprobada.error);
     try {
-      return this.imagenRepository.guardar(coleccionDeFotos(), extension, imagen.datos);
+      return this.imagenRepository.guardar(coleccionDeFotos(), comprobada.formato, imagen.datos);
     } catch (error) {
       console.error('No se ha podido guardar la foto de perfil:', error);
-      return foto;
+      throw new Error('No se ha podido guardar la foto de perfil.');
     }
   }
 
