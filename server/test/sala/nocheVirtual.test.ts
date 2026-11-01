@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { SalaDeJuego } from '../../src/models/SalaDeJuego';
-import { ejecutarAccion, type DependenciasSala } from '../../src/controllers/sala/salaAcciones';
-import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
+import { ejecutarAccion } from '../../src/services/sala/acciones';
+import type { DependenciasAcciones } from '../../src/services/sala/puertos';
+import { sinImagenes } from './arnes';
 import { habilidadesDelGuion } from '../../src/models/partida/habilidades';
 import { TontoYTu } from '../../src/models/narradorVirtual/estrategias/TontoYTu';
 import { decisionesDe, type ContextoEtapa, type Etapa } from '../../src/models/narradorVirtual/etapas/Etapa';
@@ -47,11 +48,10 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
   while (partida.plaza().length < personajes.length) sala.anadirAsiento();
   personajes.forEach((p, i) => partida.grimorio.cambiarPersonaje(partida.plaza()[i].id, p));
   const bot = narrador.anadir({ id: 'tontoYTu', creador: 'nadie', guion: 'troublebrewing', jugadores: personajes.length }, 'Tonto y tú', '/logo-2.png');
-  const deps: DependenciasSala = {
+  const deps: DependenciasAcciones = {
     guiones: { guionPredeterminado: async () => guion(), importar: async () => guion() },
-    mensajes: new MemoriaChatRepository(),
-    video: null,
     imagenesBiblioteca: { leerPublica: async () => Promise.reject(new Error('Sin Biblioteca')) },
+    imagenes: sinImagenes,
   };
   const azar = conSemilla(semilla);
   const estrategia = new TontoYTu(azar);
@@ -246,7 +246,7 @@ describe('la noche del narrador virtual', () => {
     // Un rato después, sigue sin pedirle que elija: espera a que lo entienda
     await new Promise((r) => setTimeout(r, 100));
     expect(mensajes().some((x) => x.eleccion)).toBe(false);
-    expect(await ejecutarAccion(m.juego, sala.participantes.buscar(id), 'despertar:enviar', { ficha: 'entendido' }, {} as DependenciasSala)).toMatchObject({ ok: true });
+    expect(await ejecutarAccion(m.juego, sala.participantes.buscar(id), 'despertar:enviar', { ficha: 'entendido' }, {} as DependenciasAcciones)).toMatchObject({ ok: true });
     await noche.alCambiar!();
     await hasta(() => !!mensajes()[mensajes().length - 1]?.eleccion);
     // (Mientras esperaba, el recordatorio de «Entendido»: el reloj de la prueba no espera el minuto)

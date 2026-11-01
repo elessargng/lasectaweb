@@ -27,7 +27,8 @@ const escucha = (p: Participante) => p.rol === 'visitante' || p.rol === 'narrado
  *   jugador o narrador; de noche, el narrador a quien quiera y los jugadores solo
  *   al narrador (para pedirle hablar). Si quien invita ya está en una
  *   conversación, quien acepta entra en ella.
- * - De noche, los jugadores solo ven las conversaciones en las que están (ver
+ * - De noche, los jugadores solo ven las conversaciones en las que están 
+
  *   salaSocket): por eso, si un jugador invita a un narrador que ya conversa con
  *   otro, la invitación se queda pendiente sin decírselo, y el narrador la acepta
  *   al acabar.

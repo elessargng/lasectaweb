@@ -4,12 +4,23 @@ import { Bolsa } from './Bolsa';
 import { repartoPara } from './distribucion';
 import { identidadDe } from './Grimorio';
 import type { Jugador } from './Jugador';
+import type { PersonajeDeGuion } from '../guiones';
+
+/** Los que van en la bolsa para repartir (también viajeros, de cualquier guion: no cuentan para el reparto por tipos). */
+export const TIPOS_EN_BOLSA: readonly string[] = ['townsfolk', 'outsider', 'minion', 'demon', 'traveller'];
+/** Fichas de un mismo personaje como mucho en la bolsa (con el Pope, o si es repetible). */
+export const MAX_REPETIDOS = 5;
+const ERROR_REPETIDOS = 'Solo con el Pope puede haber aldeanos o forasteros repetidos.';
 
 /** Lo que el reparto necesita saber de la partida. */
 export interface EntornoReparto {
   /** Los jugadores de la plaza, en orden. */
   plaza(): readonly Jugador[];
   esViajero(personajeId: string): boolean;
+  /** Un personaje del guion. */
+  personaje(id: string): PersonajeDeGuion | undefined;
+  /** El Pope está en juego: los aldeanos y forasteros pueden ir repetidos en la bolsa. */
+  popeEnJuego(): boolean;
   /** Lo que hacen las reglas con el reparto (el Revolutionary: ver personajes/revolucionario.ts). */
   reglas(jugadores: Jugador[], personajes: string[]): string[];
   /** Pone en la ficha del asiento el personaje que le ha tocado (ver Grimorio.repartir). */
@@ -18,7 +29,8 @@ export interface EntornoReparto {
 
 /**
  * El reparto de personajes: la bolsa, cuántos de cada tipo tocan (la
- * distribución) y el reparto de la bolsa entre los asientos. No comprueba permisos.
+ * distribución) y el reparto de la bolsa entre los asientos, con lo que puede ir
+ * en la bolsa. No comprueba permisos.
  */
 export class Reparto {
   /** Los personajes para repartir. */
@@ -36,6 +48,59 @@ export class Reparto {
 
   aceptarSetup(firma: string | null): void {
     this.setupAceptadoActual = firma;
+  }
+
+  /**
+   * Si un personaje puede ir repetido en la bolsa: los repetibles («bag-duplicate»,
+   * como el Village Idiot), siempre; los aldeanos y forasteros, con el Pope en juego.
+   */
+  private puedeRepetirse(personaje: PersonajeDeGuion): boolean {
+    return !!personaje.repetible || ((personaje.tipo === 'townsfolk' || personaje.tipo === 'outsider') && this.entorno.popeEnJuego());
+  }
+
+  /**
+   * El narrador mete en la bolsa un personaje del guion (de los que van en ella:
+   * ver TIPOS_EN_BOLSA), o lo saca si ya estaba. No se limita cuántos: lo decide
+   * él. Devuelve el error, si lo hay.
+   */
+  meterOSacar(personajeId: string): string | null {
+    const personaje = this.entorno.personaje(personajeId);
+    if (!personaje) return 'Ese personaje no está en el guion.';
+    if (!TIPOS_EN_BOLSA.includes(personaje.tipo)) return 'En la bolsa solo van aldeanos, forasteros, esbirros, demonios y viajeros.';
+    this.bolsa.alternar(personaje.id);
+    return null;
+  }
+
+  /**
+   * Cuántas fichas de un personaje hay en la bolsa (0 lo saca). Más de una, solo si
+   * puede repetirse (ver puedeRepetirse). Devuelve el error, si lo hay.
+   */
+  ponerEnBolsa(personajeId: string, cantidad: number): string | null {
+    const personaje = this.entorno.personaje(personajeId);
+    if (!personaje || !TIPOS_EN_BOLSA.includes(personaje.tipo)) return 'Ese personaje no va en la bolsa.';
+    if (!Number.isInteger(cantidad) || cantidad < 0 || cantidad > MAX_REPETIDOS) return 'Cantidad desconocida.';
+    if (cantidad > 1 && !this.puedeRepetirse(personaje)) return ERROR_REPETIDOS;
+    this.bolsa.poner(personaje.id, cantidad);
+    return null;
+  }
+
+  /**
+   * Llena la bolsa de una vez (al azar): sustituye sus aldeanos, forasteros,
+   * esbirros y demonios por estos, que tienen que ser del guion y no viajeros; los
+   * viajeros se quedan. Repetidos, solo los que pueden. Devuelve el error, si lo hay.
+   */
+  llenarBolsa(personajes: string[]): string | null {
+    const vistos = new Set<string>();
+    for (const id of personajes) {
+      const personaje = this.entorno.personaje(id);
+      if (!personaje || personaje.tipo === 'traveller' || !TIPOS_EN_BOLSA.includes(personaje.tipo)) {
+        return 'En la bolsa al azar solo van aldeanos, forasteros, esbirros y demonios del guion.';
+      }
+      if (vistos.has(id) && !this.puedeRepetirse(personaje)) return ERROR_REPETIDOS;
+      vistos.add(id);
+    }
+    this.bolsa.reemplazar(personajes);
+    return null;
   }
 
   /**

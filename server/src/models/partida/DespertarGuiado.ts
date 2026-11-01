@@ -1,7 +1,17 @@
-import type { AvisoHabilidad, EleccionDespertar, EnvioDespertar, EstadoHabilidad, OpcionDespertar } from '../compartido/despertar';
+import type { AvisoHabilidad, EleccionDespertar, EnvioDespertar, EstadoHabilidad, FichaDespertar, OpcionDespertar } from '../compartido/despertar';
 import { tarjeta, type ContextoNoche, type HabilidadNocturna, type Resultado } from './habilidades/HabilidadNocturna';
 import type { Jugador } from './Jugador';
 
+/**
+ * Si lo que contesta el de un asiento no es lo que le pide su habilidad (cuántos
+ * jugadores elige y si puede elegirse a sí mismo): el error, o null.
+ */
+export function errorDeEleccion(pide: EleccionDespertar, mensaje: { ficha: FichaDespertar | null; jugadores: string[] }, jugadorId: string): string | null {
+  const cuantos = pide.cantidad === 1 ? 'un jugador' : `${pide.cantidad} jugadores`;
+  if (mensaje.ficha !== 'jugador' || mensaje.jugadores.length !== pide.cantidad) return `Elige ${cuantos}.`;
+  if (!pide.puedeElegirse && mensaje.jugadores.includes(jugadorId)) return 'No puedes elegirte a ti.';
+  return null;
+}
 
 /**
  * Cómo está el despertar guiado de una fila del orden de noche: quién despierta,

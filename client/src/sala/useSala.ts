@@ -172,7 +172,7 @@ export function useSala(
   }, [token, nombre]);
 
   /**
-   * Pide una acción a la sala (ver `salaAcciones` en el servidor) y devuelve su
+   * Pide una acción a la sala (ver `services/sala/acciones` en el servidor) y devuelve su
    * resultado; nunca falla. El servidor comprueba si se puede.
    */
   const pedir = useCallback(

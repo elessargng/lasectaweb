@@ -355,7 +355,7 @@ export class Participantes {
 
   /**
    * Cambia el papel de alguien. No comprueba permisos: eso lo hace quien lo pide
-   * (ver `salaAcciones`).
+   * (ver `services/sala/acciones`).
    */
   cambiarRol(id: string, rol: Rol): void {
     const participante = this.buscar(id);

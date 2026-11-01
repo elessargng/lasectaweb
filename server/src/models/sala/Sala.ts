@@ -54,13 +54,19 @@ export class Sala {
     return [ocupados[(i + 1) % n], ocupados[(i - 1 + n) % n]].includes(otroId);
   }
 
-  /** Añade un asiento al final del círculo, con un jugador al que no juega nadie. No comprueba el máximo ni permisos. */
-  anadirAsiento(): void {
+  /** Añade un asiento al final del círculo, con un jugador al que no juega nadie (hasta el máximo). Devuelve el error, si lo hay. */
+  anadirAsiento(): string | null {
+    if (this.plaza.length >= SALA_ASIENTOS.max) return `La plaza ya tiene el máximo de ${SALA_ASIENTOS.max} asientos.`;
     this.plaza.push(new Jugador());
+    return null;
   }
 
-  /** Quita el último asiento del círculo, con su jugador; quien lo jugaba vuelve a visitante. Devuelve el id del jugador. */
+  /**
+   * Quita el último asiento del círculo, con su jugador; quien lo jugaba vuelve a
+   * visitante. Devuelve el id del jugador, o null si ya no se puede quitar ninguno.
+   */
   quitarAsiento(): string | null {
+    if (this.plaza.length <= SALA_ASIENTOS.min) return null;
     const quitado = this.plaza.pop();
     const ocupante = quitado?.participanteId;
     if (ocupante) this.participantes.cambiarRol(ocupante, 'visitante');

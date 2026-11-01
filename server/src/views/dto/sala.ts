@@ -145,7 +145,7 @@ export interface SalaDto {
   grimorioRecibido: GrimorioEnviadoDto | null;
   /** id del participante que recibe el mensaje. */
   yo: string;
-  /** Acciones que puede usar ahora quien recibe el mensaje (ver `salaAcciones`). */
+  /** Acciones que puede usar ahora quien recibe el mensaje (ver `services/sala/acciones`). */
   acciones: string[];
 }
 

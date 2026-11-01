@@ -9,7 +9,20 @@ export interface AuthRequest extends Request {
   file?: any;
 }
 
-export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunction): void => {
+/** El usuario de un token de la web, o null si está caducado o es falso. */
+export function usuarioDelToken(token: string): { id: string; username: string } | null {
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    if (typeof payload === 'object' && typeof payload.username === 'string' && typeof payload.id === 'string') {
+      return { id: payload.id, username: payload.username };
+    }
+  } catch {
+    // Token caducado o falso.
+  }
+  return null;
+}
+
+export const authenticateJWT =(req: AuthRequest, res: Response, next: NextFunction): void => {
   const authHeader = req.headers.authorization;
 
   if (authHeader) {

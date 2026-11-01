@@ -30,7 +30,7 @@ export interface ContextoVista {
   invitacionesDe: (participanteId: string) => Invitacion[];
   /** Hay videollamada en la sala. */
   video: boolean;
-  /** Las acciones que puede usar ahora un participante (ver salaAcciones). */
+  /** Las acciones que puede usar ahora un participante (ver services/sala/acciones). */
   accionesDe: (participante: Participante) => string[];
 }
 

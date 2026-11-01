@@ -38,10 +38,3 @@ export function guardarFondoSala(datos: Buffer): { ruta: string } | { error: str
   fs.writeFileSync(path.join(carpeta(), nombre), datos);
   return { ruta: `/uploads/sala/fondos/${nombre}` };
 }
-
-/** Los bytes de una imagen en data URL (data:image/…;base64,…), o null si no lo es. */
-export function datosDeDataUrl(valor: unknown): Buffer | null {
-  if (typeof valor !== 'string') return null;
-  const partes = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(valor);
-  return partes ? Buffer.from(partes[2], 'base64') : null;
-}

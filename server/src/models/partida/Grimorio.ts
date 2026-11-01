@@ -1,9 +1,15 @@
 import { randomUUID } from 'crypto';
-import { RECORDATORIO_TEXTO, type Recordatorio } from '../compartido/grimorio';
+import { ICONOS_RECORDATORIO_TEXTO, RECORDATORIO_TEXTO, SALA_RECORDATORIO_TEXTO_MAX, type Recordatorio } from '../compartido/grimorio';
 import { type Alineamiento } from '../compartido/jugador';
 import type { AsientoDiario, HechoDiario } from '../compartido/diario';
 import type { PersonajeDeGuion } from '../guiones';
 import type { Jugador } from './Jugador';
+
+/** Los tipos de personaje que pueden ir en la ficha de un jugador (no los legendarios ni los lóricos). */
+export const TIPOS_EN_FICHA: readonly string[] = ['townsfolk', 'outsider', 'minion', 'demon', 'traveller'];
+/** Recordatorios como mucho en una ficha (de sobra para una partida). */
+export const MAX_RECORDATORIOS = 20;
+const ERROR_DEMASIADOS = `Una ficha no puede llevar más de ${MAX_RECORDATORIOS} recordatorios.`;
 
 /**
  * Un recordatorio «Is The …» (el del Borracho, el Alquimista, el Filósofo, la
@@ -49,7 +55,9 @@ export interface EntornoGrimorio {
  * El grimorio: lo que el narrador (o las reglas) hacen con los jugadores de la
  * plaza (darles personaje, recordatorios, matarlos…), la nota del narrador sobre
  * cada uno y la calavera.
- * No comprueba permisos ni que el personaje esté en el guion.
+ * No comprueba permisos. Lo que pone el narrador a mano (elegirPersonaje,
+ * elegirRecordatorio, escribirRecordatorio) se comprueba contra el guion; lo
+ * demás (lo que hacen las reglas), no.
  */
 export class Grimorio {
   /** La nota del narrador sobre cada jugador (por su id). */
@@ -186,6 +194,68 @@ export class Grimorio {
     );
     if (puestos.length < iguales.size) return null;
     return puestos.find((p) => p.jugadorId !== jugadorId) ?? puestos[0];
+  }
+
+  /**
+   * El narrador pone en una ficha un personaje del guion que pueda ir en ella
+   * (ver TIPOS_EN_FICHA), o se lo quita con null. Devuelve el error, si lo hay.
+   */
+  elegirPersonaje(jugadorId: string, personajeId: string | null): string | null {
+    if (!this.jugador(jugadorId)) return 'Ese asiento ya no existe.';
+    if (personajeId !== null) {
+      const personaje = this.entorno.personaje(personajeId);
+      if (!personaje) return 'Ese personaje no está en el guion.';
+      if (!TIPOS_EN_FICHA.includes(personaje.tipo)) return 'Ese personaje no puede ir en una ficha.';
+    }
+    this.cambiarPersonaje(jugadorId, personajeId);
+    return null;
+  }
+
+  /**
+   * El narrador pone junto a una ficha uno de los recordatorios de un personaje del
+   * guion (esté en juego o no). Cada uno es único: si ya estaba puesto, se quita
+   * el de antes (ver recordatorioQueSobra). Devuelve el error, si lo hay.
+   */
+  elegirRecordatorio(jugadorId: string, personajeId: string, indice: number): string | null {
+    const jugador = this.jugador(jugadorId);
+    if (!jugador) return 'Ese asiento ya no existe.';
+    const personaje = this.entorno.personaje(personajeId);
+    if (!personaje) return 'Ese personaje no está en el guion.';
+    const texto = Number.isInteger(indice) ? personaje.recordatorios[indice] : undefined;
+    if (texto === undefined) return 'Ese recordatorio no existe.';
+    const sobra = this.recordatorioQueSobra(jugadorId, personaje.id, indice);
+    if (jugador.recordatorios.length >= MAX_RECORDATORIOS && sobra?.jugadorId !== jugadorId) return ERROR_DEMASIADOS;
+    if (sobra) this.quitarRecordatorio(sobra.jugadorId, sobra.recordatorioId);
+    this.ponerRecordatorio(jugadorId, { personaje: personaje.id, indice, texto });
+    return null;
+  }
+
+  /**
+   * El narrador pone un recordatorio con texto propio (sin personaje): corto, porque
+   * va en redondo en una ficha pequeña, y con un icono si quiere (ver
+   * iconoDeRecordatorio). Devuelve el error, si lo hay.
+   */
+  escribirRecordatorio(jugadorId: string, texto: string, icono: unknown): string | null {
+    const jugador = this.jugador(jugadorId);
+    if (!jugador) return 'Ese asiento ya no existe.';
+    const limpio = texto.replace(/\s+/g, ' ').trim();
+    if (!limpio) return 'Escribe el texto del recordatorio.';
+    if ([...limpio].length > SALA_RECORDATORIO_TEXTO_MAX) return `El recordatorio puede tener como mucho ${SALA_RECORDATORIO_TEXTO_MAX} caracteres.`;
+    if (jugador.recordatorios.length >= MAX_RECORDATORIOS) return ERROR_DEMASIADOS;
+    const conIcono = this.iconoDeRecordatorio(icono);
+    if (conIcono === undefined) return 'Ese icono no está en el guion.';
+    this.ponerRecordatorio(jugadorId, { personaje: RECORDATORIO_TEXTO, indice: -1, texto: limpio, ...(conIcono ? { icono: conIcono } : {}) });
+    return null;
+  }
+
+  /**
+   * El icono de un recordatorio con texto propio: uno de los fijos o un personaje del
+   * guion. Sin icono, null (el de por defecto); undefined si no vale.
+   */
+  iconoDeRecordatorio(icono: unknown): string | null | undefined {
+    if (icono === undefined || icono === null) return null;
+    if (typeof icono !== 'string') return undefined;
+    return ICONOS_RECORDATORIO_TEXTO.includes(icono) || this.entorno.personaje(icono) ? icono : undefined;
   }
 
   /**

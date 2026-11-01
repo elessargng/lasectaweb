@@ -122,7 +122,7 @@ export interface NominacionDto {
   /**
    * Votación secreta (el Organ Grinder vivo y sin su «Drunk»): a quien no ve el
    * grimorio no se le mandan los votos que hacen falta, ni el recuento, ni quién
-   * vota (salvo lo suyo), ni las manos de los demás (ver salaSocket).
+   * vota (salvo lo suyo), ni las manos de los demás (ver VistaPartida).
    */
   privada: boolean;
 }

@@ -21,7 +21,7 @@ import { habilidadesDelGuion } from './habilidades';
 import type { ContextoNoche } from './habilidades/HabilidadNocturna';
 import { Nominaciones } from './Nominaciones';
 import { Npcs } from './Npcs';
-import { NPC_GARDENER } from './personajesEspeciales';
+import { NPC_GARDENER, NPC_POPE } from './personajesEspeciales';
 import { Reglas } from '../personajes/Reglas';
 import type { ContextoReglas, RegistroAlNominar } from '../personajes/ReglaPersonaje';
 import { cuidadorLilmonsta, DEMONIO_LILMONSTA, esbirrosLilmonsta, recordatorioLilmonsta } from '../personajes/lilMonsta';
@@ -145,6 +145,8 @@ export class Partida {
   readonly reparto = new Reparto({
     plaza: () => this.plaza(),
     esViajero: (id) => this.guion.esViajero(id),
+    personaje: (id) => this.guion.personaje(id),
+    popeEnJuego: () => this.npcs.activo(NPC_POPE),
     reglas: (jugadores, personajes) => this.reglas.repartir(jugadores, personajes),
     darPersonaje: (jugadorId, personaje) => this.grimorio.repartir(jugadorId, personaje),
   });
@@ -570,6 +572,35 @@ export class Partida {
     const anochece = !final && !this.entorno.hayNarradorVirtual() && this.reglas.anocheceTrasEjecutar();
     if (anochece) this.irANoche();
     return { anochece, final };
+  }
+
+  /**
+   * El narrador ejecuta al que lleva la calavera (ver ejecutar; la Virgen, en
+   * cambio, ejecuta a quien la nomina sin ella). Devuelve el error, o si quedan dos vivos.
+   */
+  ejecutarConCalavera(jugadorId: string): { error: string } | { final: boolean } {
+    const jugador = this.plaza().find((a) => a.id === jugadorId);
+    if (!jugador) return { error: 'Ese asiento ya no existe.' };
+    if (this.grimorio.calavera()?.jugadorId !== jugador.id) return { error: 'Solo se ejecuta a quien lleva la calavera.' };
+    const { final } = this.ejecutar(jugador.id) ?? { final: false };
+    return { final };
+  }
+
+  /**
+   * Reparte al azar los personajes de la bolsa entre los asientos que no llevan
+   * viajero (tiene que haber en la bolsa tantos como esos asientos). Con el
+   * Gardener, los jugadores no los ven hasta que el narrador los entregue.
+   * Devuelve el error, si lo hay.
+   */
+  repartirPersonajes(): string | null {
+    const hacen = this.reparto.fichasParaRepartir();
+    const hay = this.reparto.bolsa.bolsa().length;
+    if (hacen === 0) return 'No hay asientos a los que repartir.';
+    if (hay !== hacen) return `En la bolsa tiene que haber ${hacen} personajes y hay ${hay}.`;
+    this.reparto.repartir();
+    if (this.npcs.activo(NPC_GARDENER)) this.entregas.retenerFichas(true);
+    else this.entregas.entregarFichas();
+    return null;
   }
 
   /** No puede votar: no está sentado, o las reglas dicen que no (ver Reglas.puedeVotar). */

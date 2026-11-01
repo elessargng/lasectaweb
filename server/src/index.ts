@@ -93,6 +93,8 @@ import { EstadisticasController } from './controllers/EstadisticasController';
 import { EstadisticasRepository } from './repositories/EstadisticasRepository';
 import { EstadisticasService } from './services/estadisticas/EstadisticasService';
 import { iniciarSalaSocket } from './controllers/sala/salaSocket';
+import { SalaService } from './services/sala/SalaService';
+import { imagenesSalaEnDisco } from './infra/almacenamiento/imagenesSalaEnDisco';
 import { MemoriaChatRepository } from './repositories/ChatRepository';
 import { leerConfigVideollamada } from './config/videollamada';
 import { LiveKitProveedor } from './infra/videollamada/LiveKitProveedor';
@@ -417,10 +419,13 @@ DatabaseRepository.getInstance()
       await sincronizarDjinn(true);
     })();
     
-    // La sala de juego va por WebSocket sobre el mismo servidor HTTP
+    // La sala de juego (en memoria) va por WebSocket sobre el mismo servidor HTTP
     const httpServer = http.createServer(app);
-    iniciarSalaSocket(httpServer, async (id) => (await userRepository.findById(id))?.profilePicture || null, {
+    const salaDeJuego = new SalaService({
       guiones: guionService,
+      avatarDe: async (id) => (await userRepository.findById(id))?.profilePicture || null,
+      // Los avatares y fondos que se suben a la sala, en disco (UPLOAD_DIR/sala)
+      imagenes: imagenesSalaEnDisco,
       // Jarvis: el modelo JEV del servidor (JEV_API_KEY), el mismo para todos
       modeloJarvisDe: async () => jevPorDefecto(),
       clienteJev: (datos) => new ClienteJevHttp(datos),
@@ -444,6 +449,7 @@ DatabaseRepository.getInstance()
       guardarPartida: (registro) => estadisticasRepository.guardar(registro),
       contarPartidas: (userId) => estadisticasRepository.contarPartidas(userId),
     });
+    iniciarSalaSocket(httpServer, salaDeJuego);
     httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });

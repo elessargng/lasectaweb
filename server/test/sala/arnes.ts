@@ -4,11 +4,20 @@ import type { AddressInfo } from 'net';
 import { io as conectar, type Socket } from 'socket.io-client';
 import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
 import { iniciarSalaSocket, SALA_SOCKET_PATH } from '../../src/controllers/sala/salaSocket';
-import type { DependenciasSala } from '../../src/controllers/sala/salaAcciones';
+import { SalaService } from '../../src/services/sala/SalaService';
+import type { DependenciasSala, ImagenesSala } from '../../src/services/sala/puertos';
+import { SALA_AVATARES } from '../../src/models/sala/Participantes';
 import type { SalaDto, ResultadoAccion } from '../../src/views/dto/sala';
 import { guionDePrueba } from './guionDePrueba';
 
 const ESPERA_MAX_MS = 2000;
+
+/** Sin disco: no se guarda ninguna imagen y solo valen los avatares predefinidos. */
+export const sinImagenes: ImagenesSala = {
+  guardarAvatar: () => ({ error: 'Sin disco' }),
+  avatarValido: (valor) => (typeof valor === 'string' && SALA_AVATARES.includes(valor) ? valor : null),
+  guardarFondo: () => ({ error: 'Sin disco' }),
+};
 
 /** Un navegador conectado a la sala: guarda el último estado que le ha llegado. */
 export class Cliente {
@@ -90,9 +99,10 @@ export class Arnes {
       mensajes: new MemoriaChatRepository(),
       video: null,
       imagenesBiblioteca: { leerPublica: async () => Promise.reject(new Error('Sin Biblioteca')) },
+      imagenes: sinImagenes,
       ...cambios,
     };
-    iniciarSalaSocket(http, async () => null, deps);
+    iniciarSalaSocket(http, new SalaService(deps));
     await new Promise<void>((resolver) => http.listen(0, '127.0.0.1', resolver));
     const { port } = http.address() as AddressInfo;
     return new Arnes(http, `http://127.0.0.1:${port}`);
