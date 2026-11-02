@@ -59,6 +59,11 @@ describe('arquitectura', () => {
     expect(fuera, 'Estos archivos usan un personaje concreto: que lo traiga su archivo y vaya en la lista').toEqual([]);
   });
 
+  it('los controladores no usan los repositorios ni la infraestructura: piden todo a su servicio', () => {
+    const fuera = archivos('controllers').filter((f) => importsDe(f).some((i) => /^(repositories|infra)(\/|$)/.test(i)));
+    expect(fuera, 'Estos controladores se saltan el servicio').toEqual([]);
+  });
+
   it('el dominio no usa los servicios, los controladores, los repositorios ni la infraestructura', () => {
     const fuera = archivos('models').filter((f) => importsDe(f).some((i) => /^(services|controllers|repositories|infra)(\/|$)/.test(i)));
     expect(fuera).toEqual([]);

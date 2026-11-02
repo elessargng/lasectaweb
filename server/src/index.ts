@@ -87,6 +87,7 @@ import { RitualService } from './services/RitualService';
 import { RitualController } from './controllers/RitualController';
 import { SalaConfiguracionRepository } from './repositories/SalaConfiguracionRepository';
 import { SalaConfiguracionController } from './controllers/SalaConfiguracionController';
+import { SalaConfiguracionService } from './services/SalaConfiguracionService';
 import { BolsasRecientesRepository } from './repositories/BolsasRecientesRepository';
 import { NarradorJevRepository } from './repositories/NarradorJevRepository';
 import { leerConfigJev } from './config/jev';
@@ -220,7 +221,7 @@ const ritualSignupRepository = new RitualSignupRepository();
 const ritualService = new RitualService(ritualRepository, userRepository, villacuervosService, ritualSignupRepository);
 const ritualController = new RitualController(ritualService);
 
-const salaConfiguracionController = new SalaConfiguracionController(new SalaConfiguracionRepository());
+const salaConfiguracionController = new SalaConfiguracionController(new SalaConfiguracionService(new SalaConfiguracionRepository()));
 
 // Estadísticas de las partidas de la sala (se guardan al revelar el grimorio)
 const estadisticasRepository = new EstadisticasRepository();
