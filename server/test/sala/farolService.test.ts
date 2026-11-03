@@ -32,7 +32,7 @@ describe('los faroles', () => {
       ok: false,
       error: 'Antes hay que elegir un guion.',
     });
-    await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'prueba' });
+    await arnes.hacer(narradora, 'preparacion:guion', { predeterminado: 'prueba' });
     expect(await arnes.pedir(ana, 'faroles:preparar', { posicion: 0, personajeId: 'chef' })).toEqual({
       ok: false,
       error: 'Solo un narrador prepara los faroles.',
@@ -48,7 +48,7 @@ describe('los faroles', () => {
   });
 
   it('la casilla y el personaje, del guion; lo que no se entiende ni llega al servicio', async () => {
-    await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'prueba' });
+    await arnes.hacer(narradora, 'preparacion:guion', { predeterminado: 'prueba' });
     expect(await arnes.pedir(narradora, 'faroles:preparar', { posicion: '0', personajeId: 'chef' })).toEqual({
       ok: false,
       error: 'Esa casilla de farol no existe.',
@@ -69,7 +69,7 @@ describe('los faroles', () => {
   });
 
   it('copiar los que ha enseñado el narrador, y solo esos', async () => {
-    await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'prueba' });
+    await arnes.hacer(narradora, 'preparacion:guion', { predeterminado: 'prueba' });
     await arnes.hacer(narradora, 'fase:noche');
     expect(await arnes.pedir(ana, 'faroles:copiar', { personajes: ['chef'] })).toEqual({ ok: false, error: 'No tienes ningún despertar abierto.' });
     await arnes.hacer(narradora, 'noche:despertar', { jugadorId: idAsiento(0) });

@@ -21,7 +21,7 @@ const idAsiento = (i: number) => narradora.estado.plaza[i].id;
 /** Mete en la bolsa los 7 personajes de una partida de 7 y los reparte. */
 async function repartir() {
   for (const personajeId of BOLSA_DE_SIETE) await arnes.pedir(narradora, 'bolsa:meter', { personajeId });
-  await arnes.accion(narradora, 'narrador:asignarPersonajes');
+  await arnes.hacer(narradora, 'preparacion:asignarPersonajes');
 }
 
 const alDia = async () => {
@@ -36,7 +36,7 @@ beforeEach(async () => {
   bea = await arnes.entrar('Bea');
   vera = await arnes.entrar('Vera');
   await arnes.accion(narradora, 'sala:hacerseNarrador');
-  await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'prueba' });
+  await arnes.hacer(narradora, 'preparacion:guion', { predeterminado: 'prueba' });
   await arnes.accion(ana, 'sala:sentarse', { jugadorId: idAsiento(0) });
   await arnes.accion(bea, 'sala:sentarse', { jugadorId: idAsiento(1) });
 });
@@ -105,16 +105,16 @@ describe('lo que ve cada uno', () => {
   });
 
   it('con el Gardener, nadie ve su personaje hasta que la narradora los entrega', async () => {
-    await arnes.accion(narradora, 'narrador:npc', { personajeId: 'gardener' });
+    await arnes.hacer(narradora, 'preparacion:npc', { personajeId: 'gardener' });
     await repartir();
     expect(ana.estado.fichasRetenidas).toBe(true);
     expect(ana.miAsiento?.personaje).toBeNull();
-    await arnes.accion(narradora, 'narrador:entregarFichas');
+    await arnes.hacer(narradora, 'preparacion:entregarFichas');
     expect(ana.miAsiento?.personaje).toBe(asiento(narradora, 0).personaje);
   });
 
   it('con Tor, el jugador no sabe quién es hasta que muere', async () => {
-    await arnes.accion(narradora, 'narrador:npc', { personajeId: 'tor' });
+    await arnes.hacer(narradora, 'preparacion:npc', { personajeId: 'tor' });
     await repartir();
     expect(ana.miAsiento?.personaje).toBeNull();
     await alDia();

@@ -56,7 +56,7 @@ export class Privados extends EtapaConReloj {
     const { narrador } = ctx.juego;
     narrador.actualizar({ listos: muertosSentados(ctx.juego), turno: null });
     await ctx.plaza.darPalabra(null);
-    await ctx.plaza.accion('narrador:privados', { abiertos: true });
+    await ctx.plaza.privados(true);
   }
 
   protected siguiente(): Etapa {
@@ -81,7 +81,7 @@ export class PuestaEnComun extends EtapaConReloj {
     await ctx.plaza.sonarGong();
     this.cancelarCierre = ctx.temporizador.programar(TRAS_GONG_MS, () => {
       this.cancelarCierre = null;
-      void ctx.plaza.accion('narrador:privados', { abiertos: false });
+      void ctx.plaza.privados(false);
     });
   }
 
@@ -119,7 +119,7 @@ export class Nominaciones implements Etapa {
   }
 
   async alEntrar(ctx: ContextoEtapa): Promise<void> {
-    await ctx.plaza.accion('narrador:privados', { abiertos: false });
+    await ctx.plaza.privados(false);
   }
 
   async alPedir(ctx: ContextoEtapa, jugador: string, accion: AccionJugador, datos: unknown): Promise<string | null> {

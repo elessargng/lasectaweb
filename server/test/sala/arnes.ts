@@ -9,6 +9,7 @@ import { DiaController } from '../../src/controllers/sala/DiaController';
 import { FaseController } from '../../src/controllers/sala/FaseController';
 import { NarradorVirtualController } from '../../src/controllers/sala/NarradorVirtualController';
 import { NocheController } from '../../src/controllers/sala/NocheController';
+import { PreparacionController } from '../../src/controllers/sala/PreparacionController';
 import { RelojController } from '../../src/controllers/sala/RelojController';
 import { RevelacionController } from '../../src/controllers/sala/RevelacionController';
 import { SenalamientoController } from '../../src/controllers/sala/SenalamientoController';
@@ -116,6 +117,7 @@ export class Arnes {
       fase: new FaseController(salaService.fase),
       narradorVirtual: new NarradorVirtualController(salaService.narradorVirtual),
       noche: new NocheController(salaService.noche),
+      preparacion: new PreparacionController(salaService.preparacion),
       reloj: new RelojController(salaService.reloj),
       revelacion: new RevelacionController(salaService.revelacion),
       senalamiento: new SenalamientoController(salaService.senalamiento),

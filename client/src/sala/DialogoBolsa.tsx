@@ -22,7 +22,8 @@ interface DialogoBolsaProps {
   puedeAsignar: boolean;
   /** Meter, sacar, llenar al azar y vaciar la bolsa. */
   acciones: AccionesBolsa;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Reparte los personajes de la bolsa (ver AccionesPreparacion). */
+  asignar: () => Promise<ResultadoAccion>;
   /** Se han repartido los personajes. */
   onRepartido: () => void;
   onCerrar: () => void;
@@ -59,7 +60,7 @@ const ListaNombres = ({ personajes }: { personajes: PersonajeMostrado[] }) => (
  * bolsa por unos al azar (los elige el servidor): si sale el Borracho o la
  * Marioneta, no van y se dice qué falta, para que el narrador ponga su ficha.
  */
-const DialogoBolsa = ({ bolsa, distribucion, reparto, npcs, puedeAsignar, acciones, pedir, onRepartido, onCerrar }: DialogoBolsaProps) => {
+const DialogoBolsa = ({ bolsa, distribucion, reparto, npcs, puedeAsignar, acciones, asignar: asignarPersonajes, onRepartido, onCerrar }: DialogoBolsaProps) => {
   const { personajes, viajeros, porId } = useFichas();
   // Guion (aldeanos… demonios) o Viajeros (todos, del guion o no)
   const [pestana, setPestana] = useState('guion');
@@ -150,7 +151,7 @@ const DialogoBolsa = ({ bolsa, distribucion, reparto, npcs, puedeAsignar, accion
   const repartir = async () => {
     setEnviando(true);
     setError('');
-    const r = await pedir('narrador:asignarPersonajes');
+    const r = await asignarPersonajes();
     setEnviando(false);
     if (!r.ok) {
       setConfirmando(false);

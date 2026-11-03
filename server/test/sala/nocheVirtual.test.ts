@@ -88,6 +88,19 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
       desmarcar: async () => hecha('dia:desmarcar', undefined, deDia.desmarcar(bot)),
       cerrarNominacion: async () => hecha('dia:cerrarNominacion', undefined, deDia.cerrarNominacion(bot)),
       ejecutar: async (jugadorId) => hecha('dia:ejecutar', { jugadorId }, deDia.ejecutar(bot, jugadorId)),
+      cambiarGuion: async () => ({ ok: false, error: 'En esta prueba el guion ya está puesto.' }),
+      configurar: async (cambios) => {
+        const error = juego.partida.configurar(cambios);
+        return hecha('preparacion:configurar', cambios, error ? { ok: false, error } : { ok: true });
+      },
+      asignarPersonajes: async () => {
+        const error = juego.partida.repartirPersonajes();
+        return hecha('preparacion:asignarPersonajes', undefined, error ? { ok: false, error } : { ok: true });
+      },
+      privados: async (abiertos) => {
+        juego.partida.configuracion.permitirPrivados(abiertos);
+        return hecha('preparacion:privados', { abiertos }, { ok: true });
+      },
       accion: async (accion, datos) => {
         const r = await ejecutarAccion(juego, sala.participantes.buscar(bot), accion, datos, deps);
         if (r.ok) hechas.push({ accion, datos });
@@ -574,7 +587,7 @@ describe('los privados del narrador virtual', () => {
     programados.find((p) => p.ms === TRAS_GONG_MS)!.hacer();
     await new Promise((r) => setTimeout(r, 0));
     expect(partida.configuracion.privadosPermitidos()).toBe(false);
-    expect(acciones().indexOf('narrador:privados')).toBeGreaterThan(acciones().indexOf('reloj:sonarGong'));
+    expect(acciones().indexOf('preparacion:privados')).toBeGreaterThan(acciones().indexOf('reloj:sonarGong'));
   });
 });
 

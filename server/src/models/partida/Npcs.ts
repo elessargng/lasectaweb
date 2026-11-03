@@ -72,8 +72,18 @@ export class Npcs {
   }
 
   /** Cambia las reglas del Bootlegger (null: vuelven las del guion). No las valida. */
-  escribirBootlegger(reglas: string[] | null): void {
-    this.reglasBootlegger = reglas;
+  /**
+   * Las reglas del Bootlegger: una por elemento, limpias (sin espacios de más,
+   * hasta 600 letras cada una y 20 reglas; las vacías, fuera). null vuelve a las del guion.
+   */
+  escribirBootlegger(reglas: readonly string[] | null): void {
+    this.reglasBootlegger =
+      reglas === null
+        ? null
+        : reglas
+            .map((r) => r.replace(/\s+/g, ' ').trim().slice(0, 600))
+            .filter(Boolean)
+            .slice(0, 20);
   }
 
   rolStormcatcher(): string | null {

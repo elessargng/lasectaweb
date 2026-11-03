@@ -4,7 +4,6 @@ import type { DependenciasAcciones } from '../puertos';
 import type { Accion, SalaEfecto } from './Accion';
 import { ACCIONES_GRIMORIO } from './grimorio';
 import { ACCIONES_PARTICIPANTES } from './participantes';
-import { ACCIONES_PREPARACION } from './preparacion';
 
 export type { SalaEfecto } from './Accion';
 
@@ -19,7 +18,6 @@ export type { SalaEfecto } from './Accion';
  */
 export const SALA_ACCIONES: Record<string, Accion> = {
   ...ACCIONES_PARTICIPANTES,
-  ...ACCIONES_PREPARACION,
   ...ACCIONES_GRIMORIO,
 };
 

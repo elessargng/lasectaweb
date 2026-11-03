@@ -9,13 +9,14 @@ import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import PanelGuion, { type RecordatoriosNoche } from './PanelGuion';
 import { botonIcono } from './estilos';
 import { aspectoDeGuion, usePredeterminados, type Genero, type GuionResuelto } from './guiones';
-import type { AccionesBolsa, Distribucion, RepartoDto, ResultadoAccion } from './useSala';
+import type { AccionesBolsa, AccionesPreparacion, Distribucion, RepartoDto } from './useSala';
 
 interface TituloGuionProps {
   guion: GuionResuelto | null;
   /** El narrador puede cambiar el guion (lo decide el servidor). */
   puedeCambiar: boolean;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Cambiar el guion y repartir los personajes de la bolsa (ver AccionesPreparacion). */
+  preparacion: Pick<AccionesPreparacion, 'guion' | 'asignarPersonajes'>;
   onError: (mensaje: string) => void;
   /** Idiomas (ids) en que se ven los nombres y las descripciones de los personajes. */
   idiomas: { nombres: string; descripciones: string; genero: Genero };
@@ -63,7 +64,7 @@ const ID_BOTON_BOLSA = 'sala-boton-bolsa';
 const TituloGuion = ({
   guion,
   puedeCambiar,
-  pedir,
+  preparacion,
   onError,
   idiomas,
   onCambiarIdiomaDescripciones,
@@ -101,7 +102,7 @@ const TituloGuion = ({
       setPendiente({ datos, nombre });
       return false;
     }
-    const r = await pedir('narrador:cambiarGuion', datos);
+    const r = await preparacion.guion(datos);
     if (!r.ok) onError(r.error);
     return false;
   };
@@ -213,7 +214,7 @@ const TituloGuion = ({
         <DialogoConfirmar
           titulo="Cambiar de guion"
           confirmar="Cambiar y limpiar"
-          onConfirmar={() => pedir('narrador:cambiarGuion', pendiente.datos)}
+          onConfirmar={() => preparacion.guion(pendiente.datos)}
           onCerrar={() => setPendiente(null)}
         >
           Para jugar con <span lang="en">{pendiente.nombre}</span> se limpia el grimorio: se borra el registro de
@@ -230,7 +231,7 @@ const TituloGuion = ({
           npcs={bolsa.npcs}
           puedeAsignar={bolsa.puedeAsignar}
           acciones={bolsa.acciones}
-          pedir={pedir}
+          asignar={preparacion.asignarPersonajes}
           onRepartido={() => onAnuncio('bolsa', 'Personajes repartidos.')}
           onCerrar={() => setPreparandoBolsa(false)}
         />

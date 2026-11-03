@@ -372,7 +372,7 @@ describe('despertar guiado por el socket', () => {
     const narradora = await arnes.entrar('Nora');
     const ana = await arnes.entrar('Ana');
     await arnes.accion(narradora, 'sala:hacerseNarrador');
-    await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'troublebrewing' });
+    await arnes.hacer(narradora, 'preparacion:guion', { predeterminado: 'troublebrewing' });
     const asientos = () => narradora.estado.plaza;
     await arnes.accion(ana, 'sala:sentarse', { jugadorId: asientos()[0].id });
     await arnes.accion(narradora, 'narrador:cambiarPersonaje', { jugadorId: asientos()[0].id, personajeId: 'poisoner' });
@@ -397,7 +397,7 @@ describe('despertar guiado por el socket', () => {
     const narradora = await arnes.entrar('Nora');
     const ana = await arnes.entrar('Ana');
     await arnes.accion(narradora, 'sala:hacerseNarrador');
-    await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'troublebrewing' });
+    await arnes.hacer(narradora, 'preparacion:guion', { predeterminado: 'troublebrewing' });
     const asientos = () => narradora.estado.plaza;
     await arnes.accion(ana, 'sala:sentarse', { jugadorId: asientos()[0].id });
     await arnes.accion(narradora, 'narrador:cambiarPersonaje', { jugadorId: asientos()[0].id, personajeId: 'chef' });

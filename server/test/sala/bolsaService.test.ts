@@ -28,7 +28,7 @@ const meter = (c: Cliente, personajeId: unknown) => arnes.pedir(c, 'bolsa:meter'
 describe('la bolsa', () => {
   it('sin guion no se prepara, y solo la prepara un narrador', async () => {
     expect(await meter(narradora, 'chef')).toEqual({ ok: false, error: 'Antes hay que elegir un guion.' });
-    await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'prueba' });
+    await arnes.hacer(narradora, 'preparacion:guion', { predeterminado: 'prueba' });
     expect(await meter(ana, 'chef')).toEqual({ ok: false, error: 'Solo un narrador puede preparar la bolsa.' });
     expect(await arnes.pedir(ana, 'bolsa:vaciar')).toEqual({ ok: false, error: 'Solo un narrador puede preparar la bolsa.' });
     expect(narradora.estado.acciones).toEqual(expect.arrayContaining(['bolsa:meter', 'bolsa:llenarAlAzar', 'bolsa:aceptarReparto']));
@@ -36,7 +36,7 @@ describe('la bolsa', () => {
   });
 
   it('meter, sacar, cantidad y vaciar; lo que no se entiende ni llega al servicio', async () => {
-    await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'prueba' });
+    await arnes.hacer(narradora, 'preparacion:guion', { predeterminado: 'prueba' });
     expect(await meter(narradora, 'chef')).toEqual({ ok: true });
     expect(narradora.estado.bolsa).toEqual(['chef']);
     expect(ana.estado.bolsa).toEqual([]);
@@ -51,7 +51,7 @@ describe('la bolsa', () => {
   });
 
   it('llenar al azar: el Borracho no va y se dice qué falta', async () => {
-    await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'prueba' });
+    await arnes.hacer(narradora, 'preparacion:guion', { predeterminado: 'prueba' });
     // 8 jugadores: 1 forastero, y en el guion de prueba el único es el Borracho
     await arnes.accion(narradora, 'narrador:asientos', { cambio: 'añadir' });
     const r = await arnes.pedir<ResultadoBolsaAlAzar>(narradora, 'bolsa:llenarAlAzar');
@@ -61,7 +61,7 @@ describe('la bolsa', () => {
   });
 
   it('el reparto llega calculado al narrador; si no cuadra avisa, hasta darlo por bueno', async () => {
-    await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'prueba' });
+    await arnes.hacer(narradora, 'preparacion:guion', { predeterminado: 'prueba' });
     for (const id of ['washerwoman', 'librarian', 'investigator', 'chef', 'poisoner', 'spy', 'imp']) await meter(narradora, id);
     const reparto = narradora.estado.reparto!;
     expect(reparto.cuenta).toMatchObject({ donde: 'bolsa', firma: '7:4/0/2/1', aviso: true });

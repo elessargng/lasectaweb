@@ -5,6 +5,7 @@
 
 import type { Alineamiento } from '../compartido/jugador';
 import type { BorradorDespertar } from '../partida/mensajeDespertar';
+import type { CambiosAjustes } from '../partida/Configuracion';
 
 /**
  * El narrador virtual en la plaza: hace lo que haría un narrador, con las mismas
@@ -62,6 +63,14 @@ export interface Narrador {
   cerrarNominacion(): Promise<RespuestaAccion>;
   /** Ejecuta a quien lleva la calavera. */
   ejecutar(jugadorId: string): Promise<RespuestaAccion>;
+  /** Carga uno de los guiones por defecto. */
+  cambiarGuion(predeterminado: string): Promise<RespuestaAccion>;
+  /** Cambia los ajustes de la partida. */
+  configurar(cambios: CambiosAjustes): Promise<RespuestaAccion>;
+  /** Abre o cierra las conversaciones privadas. */
+  privados(abiertos: boolean): Promise<RespuestaAccion>;
+  /** Reparte al azar los personajes de la bolsa entre los asientos. */
+  asignarPersonajes(): Promise<RespuestaAccion>;
 }
 
 /** Lo que contesta la sala a una acción: hecha (con lo que devuelva) o no, y por qué. */

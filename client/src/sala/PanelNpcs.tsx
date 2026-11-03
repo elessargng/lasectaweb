@@ -8,7 +8,7 @@ import { botonPrincipal } from './estilos';
 import type { PersonajeMostrado, ReglaDjinnMostrada } from './guiones';
 import CasillaFarol from './CasillaFarol';
 import { colocarDesplegable } from './colocarDesplegable';
-import type { ResultadoAccion } from './useSala';
+import type { AccionesPreparacion, ResultadoAccion } from './useSala';
 
 interface PanelNpcsProps {
   /** Los NPCs en juego (ids), en el orden en que se añadieron. */
@@ -27,6 +27,8 @@ interface PanelNpcsProps {
   /** Los personajes buenos del guion, para nombrar el del Storm Catcher. */
   buenos: PersonajeMostrado[];
   pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Los NPC, el Bootlegger y el Storm Catcher (ver AccionesPreparacion). */
+  preparacion: Pick<AccionesPreparacion, 'npc' | 'bootlegger' | 'stormcatcher'>;
   onError: (mensaje: string) => void;
 }
 
@@ -44,7 +46,7 @@ const TIPO: Record<string, string> = { fabled: 'Legendario', loric: 'Lórico' };
  * en la bolsa) y los quita con la ✕ de su esquina. Sin ninguno, lo dice y cómo
  * se añaden.
  */
-const PanelNpcs = ({ npcs, disponibles, narro, hayGuion, bootlegger, djinn, rolStormcatcher, buenos, pedir, onError }: PanelNpcsProps) => {
+const PanelNpcs = ({ npcs, disponibles, narro, hayGuion, bootlegger, djinn, rolStormcatcher, buenos, pedir, preparacion, onError }: PanelNpcsProps) => {
   const [anadiendo, setAnadiendo] = useState(false);
   // Los diálogos de los NPCs con algo que decidir (el narrador)
   const [editandoReglas, setEditandoReglas] = useState(false);
@@ -62,7 +64,7 @@ const PanelNpcs = ({ npcs, disponibles, narro, hayGuion, bootlegger, djinn, rolS
   };
 
   const quitar = async (p: PersonajeMostrado) => {
-    const r = await pedir('narrador:npc', { personajeId: p.id });
+    const r = await preparacion.npc(p.id);
     if (!r.ok) return onError(r.error);
     // Su botón desaparece: el foco va a «Añadir NPC»
     window.setTimeout(() => document.getElementById(ID_ANADIR)?.focus(), 0);
@@ -231,7 +233,7 @@ const PanelNpcs = ({ npcs, disponibles, narro, hayGuion, bootlegger, djinn, rolS
         <DialogoBootlegger
           reglas={bootlegger}
           onGuardar={async (reglas) => {
-            const r = await pedir('narrador:bootlegger', { reglas });
+            const r = await preparacion.bootlegger(reglas);
             if (!r.ok) onError(r.error);
             return r.ok;
           }}
@@ -245,7 +247,7 @@ const PanelNpcs = ({ npcs, disponibles, narro, hayGuion, bootlegger, djinn, rolS
           personajes={buenos}
           actual={rolStormcatcher?.id ?? null}
           onElegir={(personajeId) => {
-            void pedir('narrador:stormcatcher', { personajeId }).then((r) => {
+            void preparacion.stormcatcher(personajeId).then((r) => {
               if (!r.ok) onError(r.error);
             });
           }}
@@ -253,7 +255,7 @@ const PanelNpcs = ({ npcs, disponibles, narro, hayGuion, bootlegger, djinn, rolS
         />
       )}
       {anadiendo && (
-        <DialogoNpcs npcs={npcs} disponibles={disponibles} pedir={pedir} onCerrar={() => setAnadiendo(false)} />
+        <DialogoNpcs npcs={npcs} disponibles={disponibles} alternar={preparacion.npc} onCerrar={() => setAnadiendo(false)} />
       )}
     </section>
   );

@@ -6,6 +6,7 @@ import type { FaseController } from '../../controllers/sala/FaseController';
 import type { FarolController } from '../../controllers/sala/FarolController';
 import type { NarradorVirtualController } from '../../controllers/sala/NarradorVirtualController';
 import type { NocheController } from '../../controllers/sala/NocheController';
+import type { PreparacionController } from '../../controllers/sala/PreparacionController';
 import type { RelojController } from '../../controllers/sala/RelojController';
 import type { RevelacionController } from '../../controllers/sala/RevelacionController';
 import type { SenalamientoController } from '../../controllers/sala/SenalamientoController';
@@ -39,6 +40,7 @@ export interface ControladoresSala {
   fase: FaseController;
   narradorVirtual: NarradorVirtualController;
   noche: NocheController;
+  preparacion: PreparacionController;
   reloj: RelojController;
   revelacion: RevelacionController;
   senalamiento: SenalamientoController;
@@ -92,6 +94,18 @@ const PETICIONES_PARTES = {
     'noche:resolverHabilidad': 'resolverHabilidad',
     'noche:nuevoImp': 'nuevoImp',
     'noche:recordatorio': 'recordatorio',
+  },
+  preparacion: {
+    'preparacion:configurar': 'configurar',
+    'preparacion:privados': 'privados',
+    'preparacion:guion': 'guion',
+    'preparacion:fondo': 'fondo',
+    'preparacion:npc': 'npc',
+    'preparacion:bootlegger': 'bootlegger',
+    'preparacion:stormcatcher': 'stormcatcher',
+    'preparacion:silencio': 'silencio',
+    'preparacion:asignarPersonajes': 'asignarPersonajes',
+    'preparacion:entregarFichas': 'entregarFichas',
   },
   reloj: {
     'reloj:sonarGong': 'sonarGong',

@@ -5,11 +5,11 @@ import type { FichaEnviada } from './Entregas';
 import { NUM_FAROLES, type Alineamiento } from '../compartido/jugador';
 import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA } from '../compartido/partida';
 import type { AsientoDiario, HechoDiario } from '../compartido/diario';
-import type { GuionResuelto } from '../guiones';
+import { TIPOS_NPC, type GuionResuelto, type TipoPersonaje } from '../guiones';
 import type { Participante } from '../sala/Participantes';
 import type { Sala } from '../sala/Sala';
 import { AccesoGrimorio } from './AccesoGrimorio';
-import { Configuracion } from './Configuracion';
+import { Configuracion, cambiosNoValen, type CambiosAjustes } from './Configuracion';
 import { Declaraciones } from './Declaraciones';
 import { DespertarGuiado, errorDeEleccion } from './DespertarGuiado';
 import { componerMensaje, type BorradorDespertar } from './mensajeDespertar';
@@ -199,6 +199,8 @@ export class Partida {
   cambiarGuion(guion: GuionResuelto): void {
     this.limpiarGrimorio();
     this.guion.cambiar(guion);
+    // Si el guion trae su imagen de fondo, es la de la sala (luego se puede cambiar)
+    if (guion.fondo) this.configuracion.cambiar({ fondo: guion.fondo });
     // La bolsa, los faroles y los NPCs eran de los personajes del otro guion. Los
     // legendarios y lóricos que trae el guion, en juego desde el principio
     this.bolsa.vaciar();
@@ -208,10 +210,38 @@ export class Partida {
   }
 
   /** Pone en juego un NPC, o lo quita si ya estaba. No comprueba que sea del guion. */
-  alternarNpc(personajeId: string): void {
-    this.npcs.alternar(personajeId);
+  /**
+   * Pone en juego un NPC (un legendario o un lórico, del guion o del catálogo), o lo
+   * quita si ya estaba. Devuelve el error, si lo hay.
+   */
+  alternarNpc(personajeId: string): string | null {
+    const personaje = this.guion.personaje(personajeId);
+    if (!personaje) return 'Ese personaje no existe.';
+    if (!TIPOS_NPC.includes(personaje.tipo as TipoPersonaje)) return 'Como NPC solo van legendarios y lóricos.';
+    this.npcs.alternar(personaje.id);
     // Sin el Gardener ya no hay nada que retener: los personajes se entregan (como estén ahora)
     if (this.entregas.fichasRetenidas() && !this.npcs.activo(NPC_GARDENER)) this.entregas.entregarFichas();
+    return null;
+  }
+
+  /** El personaje bueno que nombra el Storm Catcher (un aldeano o un forastero), o null. Devuelve el error, si lo hay. */
+  nombrarStormcatcher(personajeId: string | null): string | null {
+    const tipo = personajeId === null ? null : this.guion.personaje(personajeId)?.tipo;
+    if (personajeId !== null && tipo !== 'townsfolk' && tipo !== 'outsider') return 'El Storm Catcher nombra un personaje bueno (aldeano o forastero).';
+    this.npcs.nombrarStormcatcher(personajeId);
+    return null;
+  }
+
+  /**
+   * Cambia los ajustes de la partida (ver cambiosNoValen). Con narrador virtual, los
+   * jugadores siempre tienen su grimorio. Devuelve el error, si lo hay.
+   */
+  configurar(cambios: CambiosAjustes): string | null {
+    const error = cambiosNoValen(cambios);
+    if (error) return error;
+    if (cambios.grimorioJugadores === false && this.entorno.hayNarradorVirtual()) return 'Con narrador virtual, los jugadores siempre tienen su grimorio.';
+    this.configuracion.cambiar(cambios);
+    return null;
   }
 
   /**

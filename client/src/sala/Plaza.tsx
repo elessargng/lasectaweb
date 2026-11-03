@@ -49,7 +49,7 @@ import DialogoIntercambio from './DialogoIntercambio';
 import DialogoPatoso from './DialogoPatoso';
 import DialogoRegistroEspia from './DialogoRegistroEspia';
 import { useNominacion } from './useNominacion';
-import type { AccionesDia, AccionesNarradorVirtual, AccionesReloj, AccionesRevelacion, AccionesSenalamiento, SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
+import type { AccionesDia, AccionesNarradorVirtual, AccionesPreparacion, AccionesReloj, AccionesRevelacion, AccionesSenalamiento, SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
 
 export interface TamanosPlaza {
   avatar: number;
@@ -87,6 +87,8 @@ interface PlazaProps {
   dia: AccionesDia;
   /** Lo que se pide al narrador virtual de día: nominar, el turno, las declaraciones (ver AccionesNarradorVirtual). */
   narradorVirtual: Pick<AccionesNarradorVirtual, 'turno' | 'declarar'>;
+  /** Con el Gardener: entrega los personajes repartidos (ver AccionesPreparacion). */
+  entregarFichas: AccionesPreparacion['entregarFichas'];
   /** Señalar, Lil' Monsta y terminar el señalamiento (ver AccionesSenalamiento). */
   senalamientos: Pick<AccionesSenalamiento, 'senalar' | 'lilmonsta' | 'terminar'>;
   onError: (mensaje: string) => void;
@@ -268,6 +270,7 @@ const Plaza = ({
   revelacion: accionesRevelacion,
   dia,
   narradorVirtual,
+  entregarFichas: entregarFichasDeLaBolsa,
   senalamientos,
   onError,
   onAnuncio,
@@ -578,7 +581,7 @@ const Plaza = ({
     else onAnuncio('muertes', `Muerte anunciada: ${nombreDeAsiento(estado, jugadorId)}.`);
   };
   const entregarFichas = async () => {
-    const r = await pedir('narrador:entregarFichas');
+    const r = await entregarFichasDeLaBolsa();
     if (!r.ok) return onError(r.error);
     onAnuncio('bolsa', 'Personajes entregados a los jugadores.');
     if (plaza[0]) window.setTimeout(() => document.getElementById(idNombreAsiento(plaza[0].id))?.focus(), 0);
@@ -1103,7 +1106,7 @@ const Plaza = ({
           )}
           {/* Gardener: los personajes repartidos esperan a que el narrador los entregue */}
           {estado.fichasRetenidas &&
-            (acciones.includes('narrador:entregarFichas') ? (
+            (acciones.includes('preparacion:entregarFichas') ? (
               <button
                 type="button"
                 onClick={() => void entregarFichas()}

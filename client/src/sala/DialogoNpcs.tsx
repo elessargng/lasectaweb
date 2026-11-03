@@ -5,14 +5,15 @@ import { useAriaLive } from './avisosConfig';
 import { botonSecundario } from './estilos';
 import type { PersonajeMostrado } from './guiones';
 import RejillaFichas from './RejillaFichas';
-import type { ResultadoAccion } from './useSala';
+import type { AccionesPreparacion } from './useSala';
 
 interface DialogoNpcsProps {
   /** Los NPCs en juego (ids). */
   npcs: string[];
   /** Los legendarios y lóricos que se pueden poner. */
   disponibles: PersonajeMostrado[];
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Pone o quita un NPC (ver AccionesPreparacion). */
+  alternar: AccionesPreparacion['npc'];
   onCerrar: () => void;
 }
 
@@ -21,13 +22,13 @@ interface DialogoNpcsProps {
  * legendarios y los lóricos (los del guion y todos los del catálogo). Pulsar uno
  * lo pone en juego o lo quita (pulsado: en juego).
  */
-const DialogoNpcs = ({ npcs, disponibles, pedir, onCerrar }: DialogoNpcsProps) => {
+const DialogoNpcs = ({ npcs, disponibles, alternar: alternarNpc, onCerrar }: DialogoNpcsProps) => {
   const [error, setError] = useState('');
   const ariaLiveErrores = useAriaLive('errores');
 
   const alternar = async (p: PersonajeMostrado) => {
     setError('');
-    const r = await pedir('narrador:npc', { personajeId: p.id });
+    const r = await alternarNpc(p.id);
     if (!r.ok) setError(r.error);
   };
 

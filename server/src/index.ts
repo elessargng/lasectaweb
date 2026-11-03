@@ -101,6 +101,7 @@ import { DiaController } from './controllers/sala/DiaController';
 import { FaseController } from './controllers/sala/FaseController';
 import { NarradorVirtualController } from './controllers/sala/NarradorVirtualController';
 import { NocheController } from './controllers/sala/NocheController';
+import { PreparacionController } from './controllers/sala/PreparacionController';
 import { RelojController } from './controllers/sala/RelojController';
 import { RevelacionController } from './controllers/sala/RevelacionController';
 import { SenalamientoController } from './controllers/sala/SenalamientoController';
@@ -480,6 +481,7 @@ DatabaseRepository.getInstance()
       fase: new FaseController(salaService.fase),
       narradorVirtual: new NarradorVirtualController(salaService.narradorVirtual),
       noche: new NocheController(salaService.noche),
+      preparacion: new PreparacionController(salaService.preparacion),
       reloj: new RelojController(salaService.reloj),
       revelacion: new RevelacionController(salaService.revelacion),
       senalamiento: new SenalamientoController(salaService.senalamiento),

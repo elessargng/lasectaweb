@@ -13,7 +13,7 @@ export class EsperandoJugadores implements Etapa {
     const { partida } = ctx.juego;
     const jugadores = partida.plaza();
     if (jugadores.length === 0 || jugadores.some((a) => !a.participanteId)) return;
-    const reparto = await ctx.plaza.accion('narrador:asignarPersonajes');
+    const reparto = await ctx.plaza.asignarPersonajes();
     if (!reparto.ok) return;
     const noche = await ctx.plaza.irANoche();
     if (!noche.ok) return;

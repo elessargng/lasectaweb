@@ -51,7 +51,7 @@ export const guionDePrueba = (): GuionResuelto => ({
   ],
   primeraNoche: [],
   otrasNoches: [],
-  npcs: [personaje('gardener', 'fabled'), personaje('tor', 'loric'), personaje('hellslibrarian', 'loric'), personaje('revolutionary', 'fabled', ['Used'])],
+  npcs: [personaje('gardener', 'fabled'), personaje('tor', 'loric'), personaje('hellslibrarian', 'loric'), personaje('revolutionary', 'fabled', ['Used']), personaje('pope', 'fabled')],
   viajeros: [personaje('voudon', 'traveller'), personaje('butcher', 'traveller'), personaje('apprentice', 'traveller', ['Is The Apprentice'])],
   bootlegger: [],
   fondo: null,

@@ -18,7 +18,7 @@ beforeEach(async () => {
   narradora = await arnes.entrar('Nora');
   ana = await arnes.entrar('Ana');
   await arnes.accion(narradora, 'sala:hacerseNarrador');
-  await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'prueba' });
+  await arnes.hacer(narradora, 'preparacion:guion', { predeterminado: 'prueba' });
   await arnes.accion(ana, 'sala:sentarse', { jugadorId: idAsiento(0) });
 });
 

@@ -94,7 +94,7 @@ describe('narrador virtual', () => {
     const [ana] = await entran(1);
     await arnes.hacer(ana, 'narradorVirtual:anadir', TONTO);
     await ana.esperarQue((e) => e.configuracion.grimorioJugadores);
-    expect(ana.estado.acciones).not.toContain('narrador:configurarPartida');
+    expect(ana.estado.acciones).not.toContain('preparacion:configurar');
   });
 
   it('al añadirlo saluda con una de sus frases de saludo', async () => {

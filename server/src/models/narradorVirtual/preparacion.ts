@@ -56,8 +56,9 @@ export async function prepararPartida(
       if (ultimo.participanteId && libre) await paso('narrador:asientos', { cambio: 'mover', desde: ultimo.id, hasta: libre.id });
       await paso('narrador:asientos', { cambio: 'quitar' });
     }
-    await paso('narrador:cambiarGuion', { predeterminado: guion });
-    await paso('narrador:configurarPartida', { grimorioJugadores: true });
+    for (const hecho of [await plaza.cambiarGuion(guion), await plaza.configurar({ grimorioJugadores: true })]) {
+      if (!hecho.ok) throw new Error(hecho.error);
+    }
     const personajes = partida.guion.actual()?.personajes ?? [];
     const bolsa = await elegirBolsa(personajes, partida.bolsa.distribucion(), partida.bolsa, decidir, { azar, recientes });
     if (!bolsa) return { error: 'No hay reparto para tantos jugadores.' };

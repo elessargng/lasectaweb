@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { notifySessionExpired } from '../utils/session';
 import type { SalaDto, ResultadoAccion, ResultadoBolsaAlAzar } from '@views/sala';
+import type { ConfiguracionDto } from '@views/partida';
 import type { MensajeChatDto, SusurroDto } from '@views/chat';
 import type { Alineamiento } from '@models/jugador';
 import type { GuionResuelto } from './guiones';
@@ -368,6 +369,22 @@ export function useSala(
     [pedirAlSocket],
   );
 
+  /** La preparación de la partida (el narrador), por sus eventos. */
+  const preparacion: AccionesPreparacion = useMemo(
+    () => ({
+      configurar: (cambios) => pedirAlSocket<ResultadoAccion>('preparacion:configurar', cambios),
+      guion: (datos) => pedirAlSocket<ResultadoAccion>('preparacion:guion', datos),
+      fondo: (cambio) => pedirAlSocket<ResultadoAccion>('preparacion:fondo', cambio),
+      npc: (personajeId) => pedirAlSocket<ResultadoAccion>('preparacion:npc', { personajeId }),
+      bootlegger: (reglas) => pedirAlSocket<ResultadoAccion>('preparacion:bootlegger', { reglas }),
+      stormcatcher: (personajeId) => pedirAlSocket<ResultadoAccion>('preparacion:stormcatcher', { personajeId }),
+      silencio: (activo) => pedirAlSocket<ResultadoAccion>('preparacion:silencio', { activo }),
+      asignarPersonajes: () => pedirAlSocket<ResultadoAccion>('preparacion:asignarPersonajes', {}),
+      entregarFichas: () => pedirAlSocket<ResultadoAccion>('preparacion:entregarFichas', {}),
+    }),
+    [pedirAlSocket],
+  );
+
   /** Vuelve a pedir los mensajes que se pueden leer (al cambiar de papel cambian). */
   const pedirHistorial = useCallback(() => {
     socketRef.current?.emit('chat:historial');
@@ -406,7 +423,29 @@ export function useSala(
     noche,
     dia,
     narradorVirtual,
+    preparacion,
   };
+}
+
+/** Lo que hace el narrador al preparar la partida (ver useSala). */
+export interface AccionesPreparacion {
+  /** Los ajustes de la partida (Preferencias > Partida). */
+  configurar(cambios: Partial<ConfiguracionDto>): Promise<ResultadoAccion>;
+  /** Carga un guion: uno por defecto o uno importado de un JSON. */
+  guion(datos: { predeterminado: string } | { json: string; archivo: string }): Promise<ResultadoAccion>;
+  /** El fondo de la sala: el de por defecto, una imagen subida o una de la Biblioteca. */
+  fondo(cambio: { predeterminado: true } | { imagen: string } | { biblioteca: string }): Promise<ResultadoAccion>;
+  /** Pone o quita un NPC. */
+  npc(personajeId: string): Promise<ResultadoAccion>;
+  /** Las reglas del Bootlegger (null: las del guion). */
+  bootlegger(reglas: string[] | null): Promise<ResultadoAccion>;
+  /** El personaje bueno que nombra el Storm Catcher, o null. */
+  stormcatcher(personajeId: string | null): Promise<ResultadoAccion>;
+  silencio(activo: boolean): Promise<ResultadoAccion>;
+  /** Reparte al azar los personajes de la bolsa. */
+  asignarPersonajes(): Promise<ResultadoAccion>;
+  /** Con el Gardener: entrega los personajes repartidos. */
+  entregarFichas(): Promise<ResultadoAccion>;
 }
 
 /** Lo que un jugador pide al narrador virtual en su turno del día (nominar, con el nominado). */

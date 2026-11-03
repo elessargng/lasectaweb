@@ -110,6 +110,7 @@ import {
   type AccionesDia,
   type AccionesNarradorVirtual,
   type TurnoVirtual,
+  type AccionesPreparacion,
   type ResultadoAccion,
   type ResultadoBolsaAlAzar,
 } from './useSala';
@@ -624,6 +625,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     noche: accionesNoche,
     dia,
     narradorVirtual,
+    preparacion,
   } = useSala(
     cuenta?.token ?? null,
     cuenta ? null : invitado,
@@ -1538,7 +1540,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   };
 
   const configurarPartida = async (cambios: Partial<ConfiguracionDto>) => {
-    const r = await pedir('narrador:configurarPartida', cambios);
+    const r = await preparacion.configurar(cambios);
     if (!r.ok) setAviso(r.error);
   };
 
@@ -1635,7 +1637,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       ),
     },
     // Solo si el servidor deja configurar la partida (narradores).
-    ...(estado?.acciones.includes('narrador:configurarPartida')
+    ...(estado?.acciones.includes('preparacion:configurar')
       ? [
           {
             id: 'partida',
@@ -1645,7 +1647,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
               <PanelPartida
                 configuracion={estado.configuracion}
                 onCambiar={configurarPartida}
-                onCambiarFondo={(cambio) => pedir('narrador:cambiarFondo', cambio)}
+                onCambiarFondo={(cambio) => preparacion.fondo(cambio)}
               />
             ),
           },
@@ -1721,6 +1723,17 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     quitar: () => propia(() => narradorVirtual.quitar()),
     turno: (turno, jugadorId) => propia(() => narradorVirtual.turno(turno, jugadorId)),
     declarar: (id, datos) => propia(() => narradorVirtual.declarar(id, datos)),
+  };
+  const preparacionPropia: AccionesPreparacion = {
+    configurar: (cambios) => propia(() => preparacion.configurar(cambios)),
+    guion: (datos) => propia(() => preparacion.guion(datos)),
+    fondo: (cambio) => propia(() => preparacion.fondo(cambio)),
+    npc: (personajeId) => propia(() => preparacion.npc(personajeId)),
+    bootlegger: (reglas) => propia(() => preparacion.bootlegger(reglas)),
+    stormcatcher: (personajeId) => propia(() => preparacion.stormcatcher(personajeId)),
+    silencio: (activo) => propia(() => preparacion.silencio(activo)),
+    asignarPersonajes: () => propia(() => preparacion.asignarPersonajes()),
+    entregarFichas: () => propia(() => preparacion.entregarFichas()),
   };
 
   // Faroles: los del narrador (narradores y visitantes) o, si soy el demonio o un esbirro, los míos.
@@ -1847,6 +1860,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                 rolStormcatcher={estado.rolStormcatcher ? (personajesGuionPorId.get(estado.rolStormcatcher) ?? null) : null}
                 buenos={personajesGuion.filter((p) => p.tipo === 'townsfolk' || p.tipo === 'outsider')}
                 pedir={pedirPropio}
+                preparacion={preparacionPropia}
                 onError={setAviso}
               />
             ),
@@ -2021,8 +2035,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                 />
                 <TituloGuion
                   guion={guion}
-                  puedeCambiar={estado.acciones.includes('narrador:cambiarGuion')}
-                  pedir={pedirPropio}
+                  puedeCambiar={estado.acciones.includes('preparacion:guion')}
+                  preparacion={preparacionPropia}
                   onError={setAviso}
                   idiomas={{
                     nombres: preferencias.idiomaNombres,
@@ -2038,7 +2052,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                           reparto: estado.reparto.bolsa,
                           npcs: estado.npcs,
                           acciones: bolsaPropia,
-                          puedeAsignar: estado.acciones.includes('narrador:asignarPersonajes'),
+                          puedeAsignar: estado.acciones.includes('preparacion:asignarPersonajes'),
                         }
                       : null
                   }
@@ -2083,11 +2097,11 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   motivoSilencio={estado.silencio ? 'El narrador ha pedido silencio.' : 'Ahora tiene la palabra otro jugador.'}
                   voz={controlVoz}
                   silencio={
-                    estado.acciones.includes('narrador:silencio')
+                    estado.acciones.includes('preparacion:silencio')
                       ? {
                           activo: estado.silencio,
                           onAlternar: () => {
-                            void pedirPropio('narrador:silencio', { activo: !estado.silencio }).then((r) => {
+                            void preparacionPropia.silencio(!estado.silencio).then((r) => {
                               if (!r.ok) setAviso(r.error);
                               else anunciar('comunicaciones', estado.silencio ? 'Silencio levantado.' : 'Has pedido silencio.');
                             });
@@ -2262,6 +2276,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   pedir={pedirPropio}
                   dia={diaPropio}
                   narradorVirtual={virtualPropio}
+                  entregarFichas={preparacionPropia.entregarFichas}
                   reloj={relojPropio}
                   revelacion={revelacionPropia}
                   senalamientos={senalamientoPropio}
