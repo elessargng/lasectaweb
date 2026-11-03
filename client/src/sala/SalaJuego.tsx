@@ -106,6 +106,7 @@ import {
   type AccionesSenalamiento,
   type AccionesFaroles,
   type AccionesFase,
+  type AccionesNoche,
   type ResultadoAccion,
   type ResultadoBolsaAlAzar,
 } from './useSala';
@@ -489,7 +490,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       porCanibal,
       viajeros,
       onAlternar: (id: string) => {
-        void pedirPropio('narrador:recordatorio', { id, activo: !activo(id) }).then((r) => {
+        void nochePropia.recordatorio(id, !activo(id)).then((r) => {
           if (!r.ok) setAviso(r.error);
         });
       },
@@ -518,7 +519,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       for (const jugadorId of h.jugadores) await abrirDespertar(jugadorId);
       return;
     }
-    const r = await pedirPropio('narrador:despertarHabilidad', { personajeId: h.personaje });
+    const r = await nochePropia.despertarHabilidad(h.personaje);
     if (!r.ok) return setAviso(r.error);
     const nombre = nombreHabilidad(personajesGuionPorId, h.personaje);
     if (esFilaFija(h.personaje)) return anunciar('despertar', `${nombre}: ${h.jugadores.length === 1 ? 'despertado' : 'despertados'}.`);
@@ -617,6 +618,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     senalamiento,
     faroles,
     fase,
+    noche: accionesNoche,
   } = useSala(
     cuenta?.token ?? null,
     cuenta ? null : invitado,
@@ -728,7 +730,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const abrirDespertar = async (jugadorId: string) => {
     if (!estado) return;
     if (!estado.despertares.some((d) => d.jugador === jugadorId)) {
-      const r = await pedirPropio('narrador:despertar', { jugadorId });
+      const r = await nochePropia.despertar(jugadorId);
       if (!r.ok) {
         setAviso(r.error);
         return;
@@ -1369,7 +1371,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // narrador, en la ventana de despertar que tiene delante. Al llegar, se cierra como siempre.
   const despertarEntendido = narro ? activoNarrador : miDespertar ? miDespertar.jugador : null;
   const mandarEntendido = async () => {
-    const r = await pedirPropio('despertar:enviar', narro ? { ficha: 'entendido', jugadorId: despertarEntendido } : { ficha: 'entendido' });
+    const r = await nochePropia.enviar(narro && despertarEntendido ? [despertarEntendido] : [], { ficha: 'entendido' });
     if (r.ok) anunciar('despertar', 'Enviado: Entendido.');
     else setAviso(r.error);
   };
@@ -1398,7 +1400,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     // Retroceso: salir de la conversación privada (o dejar de escuchar)
     ...(miConversacion ? [['salirConversacion', () => void salirDeConversacion()] as [AccionAtajo, () => void]] : []),
     // E: «Entendido» en el despertar (el propio, o el que el narrador tiene abierto)
-    ...(despertarEntendido && estado?.acciones.includes('despertar:enviar')
+    ...(despertarEntendido && estado?.acciones.includes('noche:enviar')
       ? [['entendidoDespertar', () => void mandarEntendido()] as [AccionAtajo, () => void]]
       : []),
     // D: volver a abrir el despertar propio, si se había cerrado
@@ -1690,6 +1692,14 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     amanecer: () => propia(() => fase.amanecer()),
     volverAtras: () => propia(() => fase.volverAtras()),
     limpiarGrimorio: () => propia(() => fase.limpiarGrimorio()),
+  };
+  const nochePropia: AccionesNoche = {
+    despertar: (jugadorId) => propia(() => accionesNoche.despertar(jugadorId)),
+    enviar: (jugadorIds, envio) => propia(() => accionesNoche.enviar(jugadorIds, envio)),
+    despertarHabilidad: (personajeId) => propia(() => accionesNoche.despertarHabilidad(personajeId)),
+    resolverHabilidad: (personajeId, envio) => propia(() => accionesNoche.resolverHabilidad(personajeId, envio)),
+    nuevoImp: (jugadorId) => propia(() => accionesNoche.nuevoImp(jugadorId)),
+    recordatorio: (id, activo) => propia(() => accionesNoche.recordatorio(id, activo)),
   };
 
   // Faroles: los del narrador (narradores y visitantes) o, si soy el demonio o un esbirro, los míos.
@@ -2327,6 +2337,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             personajes={[...personajesGuion, ...viajerosCatalogo.filter((v) => !personajesGuion.some((p) => p.id === v.id))]}
             porId={personajesGuionPorId}
             pedir={pedirPropio}
+            noche={nochePropia}
             onError={setAviso}
             onEnviado={(t) => anunciar('despertar', t)}
             oculta={!!eleccion}
@@ -2341,7 +2352,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             onCerrar={() => setWakeCerradoJugador(true)}
             personajes={personajesGuion}
             porId={personajesGuionPorId}
-            pedir={pedirPropio}
+            noche={nochePropia}
             copiarFaroles={farolesPropios.copiar}
             onError={setAviso}
             onEnviado={(t) => anunciar('despertar', t)}
@@ -2357,7 +2368,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             estado={estado}
             muere={estado.nuevoImp}
             porId={personajesGuionPorId}
-            pedir={pedirPropio}
+            nuevoImp={nochePropia.nuevoImp}
             onElegido={(t) => anunciar('despertar', t)}
             onCerrar={() => setNuevoImpAplazado(estado.nuevoImp)}
           />

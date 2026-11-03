@@ -21,7 +21,7 @@ export async function resolverRevision(ctx: ContextoEtapa, fila: HabilidadNoche)
   const desenlaces = fila.avisos.find((a) => a.tipo === 'desenlaces');
   if (desenlaces?.tipo === 'desenlaces') await aplicarDesenlace(ctx, fila.personaje, desenlaces.desenlaces);
   const envio = fila.opciones.length ? ((await droison(ctx, fila)) ?? (await elegirOpcion(ctx, fila))) : OK;
-  return (await ctx.plaza.accion('narrador:resolverHabilidad', { personajeId: fila.personaje, ...envio })).ok;
+  return (await ctx.plaza.resolverHabilidad(fila.personaje, envio)).ok;
 }
 
 /** Una de las respuestas propuestas (la primera es la de verdad; las demás, registrando como otro). */

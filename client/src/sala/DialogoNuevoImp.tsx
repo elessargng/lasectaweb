@@ -4,14 +4,15 @@ import { useAriaLive } from './avisosConfig';
 import { nombreDeAsiento } from './despertar';
 import { botonPrincipal, botonSecundario } from './estilos';
 import type { PersonajeMostrado } from './guiones';
-import type { SalaDto, ResultadoAccion } from './useSala';
+import type { AccionesNoche, SalaDto } from './useSala';
 
 interface DialogoNuevoImpProps {
   estado: SalaDto;
   /** El asiento del Imp que se ha elegido a sí mismo (muere esta noche). */
   muere: string;
   porId: Map<string, PersonajeMostrado>;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Elige al nuevo Imp (ver AccionesNoche). */
+  nuevoImp: AccionesNoche['nuevoImp'];
   /** Confirmar al lector quién es el nuevo. */
   onElegido: (texto: string) => void;
   /** Ahora no (Escape): se puede elegir luego, vuelve a salir. */
@@ -23,7 +24,7 @@ interface DialogoNuevoImpProps {
  * nuevo. Se le cambia la ficha y se le despierta con «Tú eres: Imp, Malvado».
  * Salen los vivos, primero los esbirros. Al abrirse se lee el título y la explicación.
  */
-const DialogoNuevoImp = ({ estado, muere, porId, pedir, onElegido, onCerrar }: DialogoNuevoImpProps) => {
+const DialogoNuevoImp = ({ estado, muere, porId, nuevoImp, onElegido, onCerrar }: DialogoNuevoImpProps) => {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
   const ariaLive = useAriaLive('errores');
@@ -35,7 +36,7 @@ const DialogoNuevoImp = ({ estado, muere, porId, pedir, onElegido, onCerrar }: D
     if (enviando) return;
     setEnviando(true);
     setError('');
-    const r = await pedir('narrador:nuevoImp', { jugadorId });
+    const r = await nuevoImp(jugadorId);
     setEnviando(false);
     if (r.ok) onElegido(`${nombreDeAsiento(estado, jugadorId)} es el nuevo Imp.`);
     else setError(r.error);

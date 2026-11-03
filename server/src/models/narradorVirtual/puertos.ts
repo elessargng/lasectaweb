@@ -4,6 +4,7 @@
  */
 
 import type { Alineamiento } from '../compartido/jugador';
+import type { BorradorDespertar } from '../partida/mensajeDespertar';
 
 /**
  * El narrador virtual en la plaza: hace lo que haría un narrador, con las mismas
@@ -38,6 +39,16 @@ export interface Narrador {
   amanecer(): Promise<RespuestaAccion>;
   /** Limpia el grimorio: vuelve a la preparación, como al principio. */
   limpiarGrimorio(): Promise<RespuestaAccion>;
+  /** Abre el despertar de un asiento. */
+  despertar(jugadorId: string): Promise<RespuestaAccion>;
+  /** Manda un mensaje al despertar de un asiento (ver Partida.enviarAlDespertar). */
+  enviarDespertar(jugadorId: string, mensaje: BorradorDespertar): Promise<RespuestaAccion>;
+  /** El despertar guiado de una fila del orden de noche, si está listo. */
+  despertarHabilidad(personajeId: string): Promise<RespuestaAccion>;
+  /** El despertar guiado, revisado: lo que se manda al de esa fila. */
+  resolverHabilidad(personajeId: string, mensaje: BorradorDespertar): Promise<RespuestaAccion>;
+  /** El Imp se ha elegido a sí mismo: el nuevo es el de ese asiento. */
+  nuevoImp(jugadorId: string): Promise<RespuestaAccion>;
 }
 
 /** Lo que contesta la sala a una acción: hecha (con lo que devuelva) o no, y por qué. */

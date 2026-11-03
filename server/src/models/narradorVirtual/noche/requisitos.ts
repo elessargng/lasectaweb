@@ -60,8 +60,8 @@ export async function ponerFaroles(ctx: ContextoEtapa): Promise<boolean> {
 
 /** Le despierta y le dice «cero» (no hay nadie que enseñarle). La fila no queda hecha: no hace falta. */
 async function decirCero(ctx: ContextoEtapa, jugadorId: string): Promise<false> {
-  if ((await ctx.plaza.accion('narrador:despertar', { jugadorId })).ok) {
-    await ctx.plaza.accion('despertar:enviar', { jugadorId, ficha: 'cero' });
+  if ((await ctx.plaza.despertar(jugadorId)).ok) {
+    await ctx.plaza.enviarDespertar(jugadorId, { ficha: 'cero' });
   }
   return false;
 }

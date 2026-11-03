@@ -72,8 +72,8 @@ describe('los faroles', () => {
     await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'prueba' });
     await arnes.hacer(narradora, 'fase:noche');
     expect(await arnes.pedir(ana, 'faroles:copiar', { personajes: ['chef'] })).toEqual({ ok: false, error: 'No tienes ningún despertar abierto.' });
-    await arnes.accion(narradora, 'narrador:despertar', { jugadorId: idAsiento(0) });
-    await arnes.accion(narradora, 'despertar:enviar', { jugadorId: idAsiento(0), tarjeta: 'noEnJuego', personajes: ['chef', 'empath', 'librarian'] });
+    await arnes.hacer(narradora, 'noche:despertar', { jugadorId: idAsiento(0) });
+    await arnes.hacer(narradora, 'noche:enviar', { jugadorId: idAsiento(0), tarjeta: 'noEnJuego', personajes: ['chef', 'empath', 'librarian'] });
     expect(ana.estado.acciones).toContain('faroles:copiar');
     expect(await arnes.pedir(ana, 'faroles:copiar', { personajes: ['chef', 'empath'] })).toEqual({
       ok: false,

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { SalaDeJuego } from '../../src/models/SalaDeJuego';
 import { ejecutarAccion } from '../../src/services/sala/acciones';
+import { NocheService } from '../../src/services/sala/NocheService';
+import type { RespuestaAccion } from '../../src/models/narradorVirtual/puertos';
 import type { DependenciasAcciones } from '../../src/services/sala/puertos';
 import { MemoriaImagenRepository } from '../../src/repositories/ImagenRepository';
 import { ImagenesSala } from '../../src/services/sala/ImagenesSala';
@@ -60,9 +62,23 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
   const frases: string[] = [];
   let etapa: Etapa | null = null;
   let siguiente: Etapa | null = null;
+  // La noche, con sus permisos de verdad (como el narrador virtual de la sala)
+  const deNoche = new NocheService(juego, () => {});
+  const hecha = (accion: string, datos: unknown, r: RespuestaAccion) => {
+    if (r.ok) hechas.push({ accion, datos });
+    void etapa?.alCambiar?.(ctx);
+    return r;
+  };
   const ctx: ContextoEtapa = {
     juego: juego,
     plaza: {
+      despertar: async (jugadorId) => hecha('noche:despertar', { jugadorId }, deNoche.despertar(bot, jugadorId)),
+      enviarDespertar: async (jugadorId, mensaje) => hecha('noche:enviar', { jugadorId, ...mensaje }, deNoche.enviar(bot, [jugadorId], mensaje)),
+      despertarHabilidad: async (personajeId) =>
+        hecha('noche:despertarHabilidad', { personajeId }, deNoche.despertarHabilidad(bot, personajeId)),
+      resolverHabilidad: async (personajeId, mensaje) =>
+        hecha('noche:resolverHabilidad', { personajeId, ...mensaje }, deNoche.resolverHabilidad(bot, personajeId, mensaje)),
+      nuevoImp: async (jugadorId) => hecha('noche:nuevoImp', { jugadorId }, deNoche.nuevoImp(bot, jugadorId)),
       accion: async (accion, datos) => {
         const r = await ejecutarAccion(juego, sala.participantes.buscar(bot), accion, datos, deps);
         if (r.ok) hechas.push({ accion, datos });
@@ -157,7 +173,7 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
    */
   const despertados = () =>
     hechas
-      .filter((h) => h.accion === 'narrador:despertarHabilidad' || h.accion === 'narrador:resolverHabilidad')
+      .filter((h) => h.accion === 'noche:despertarHabilidad' || h.accion === 'noche:resolverHabilidad')
       .map((h) => (h.datos as { personajeId: string }).personajeId)
       .filter((p, i, todos) => todos.indexOf(p) === i || todos[i - 1] !== p);
   return { juego, ctx, hechas, frases, noche, asiento, textos, despertados };
@@ -234,7 +250,7 @@ describe('la noche del narrador virtual', () => {
       partida.grimorio.ponerRecordatorio(m.asiento('empath').id, { personaje: 'poisoner', indice, texto: 'Poisoned' });
       partida.irANoche();
       await m.noche();
-      const enviado = m.hechas.find((h) => h.accion === 'narrador:resolverHabilidad' && (h.datos as { personajeId: string }).personajeId === 'empath');
+      const enviado = m.hechas.find((h) => h.accion === 'noche:resolverHabilidad' && (h.datos as { personajeId: string }).personajeId === 'empath');
       const f = (enviado?.datos as { ficha: string }).ficha;
       expect(['cero', 'uno', 'dos']).toContain(f);
       if (f === 'uno') deVerdad++;
@@ -275,7 +291,7 @@ describe('la noche del narrador virtual', () => {
     expect(orden[orden.length - 1]).toBe('spy');
     // El Bibliotecario sin forasteros (aunque el Espía pudiera registrar como uno): «cero»
     const bibliotecario = m.asiento('librarian').id;
-    expect(m.hechas).toContainEqual({ accion: 'despertar:enviar', datos: { jugadorId: bibliotecario, ficha: 'cero' } });
+    expect(m.hechas).toContainEqual({ accion: 'noche:enviar', datos: { jugadorId: bibliotecario, ficha: 'cero' } });
     expect(partida.plaza().some((a) => a.recordatorios.some((r) => r.personaje === 'librarian'))).toBe(false);
   });
 
@@ -300,7 +316,7 @@ describe('la noche del narrador virtual', () => {
     // Un rato después, sigue sin pedirle que elija: espera a que lo entienda
     await new Promise((r) => setTimeout(r, 100));
     expect(mensajes().some((x) => x.eleccion)).toBe(false);
-    expect(await ejecutarAccion(m.juego, sala.participantes.buscar(id), 'despertar:enviar', { ficha: 'entendido' }, {} as DependenciasAcciones)).toMatchObject({ ok: true });
+    expect(new NocheService(m.juego, () => {}).enviar(id, [], { ficha: 'entendido' })).toMatchObject({ ok: true });
     await noche.alCambiar!();
     await hasta(() => !!mensajes()[mensajes().length - 1]?.eleccion);
     // (Mientras esperaba, el recordatorio de «Entendido»: el reloj de la prueba no espera el minuto)

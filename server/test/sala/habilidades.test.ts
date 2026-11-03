@@ -380,12 +380,12 @@ describe('despertar guiado por el socket', () => {
     expect(narradora.estado.habilidadesNoche.find((h) => h.personaje === 'poisoner')?.estado).toBe('listo');
     expect(ana.estado.habilidadesNoche).toEqual([]);
 
-    await arnes.accion(narradora, 'narrador:despertarHabilidad', { personajeId: 'poisoner' });
+    await arnes.hacer(narradora, 'noche:despertarHabilidad', { personajeId: 'poisoner' });
     expect(ana.estado.despertares[0].mensajes.slice(-1)[0]?.eleccion).toEqual({ cantidad: 1, puedeElegirse: true });
-    const dos = await arnes.intentar(ana, 'despertar:enviar', { ficha: 'jugador', jugadores: [asientos()[1].id, asientos()[2].id] });
+    const dos = await arnes.pedir(ana, 'noche:enviar', { ficha: 'jugador', jugadores: [asientos()[1].id, asientos()[2].id] });
     expect(dos).toEqual({ ok: false, error: 'Elige un jugador.' });
-    expect((await arnes.intentar(ana, 'despertar:enviar', { ficha: 'entendido' })).ok).toBe(false);
-    await arnes.accion(ana, 'despertar:enviar', { ficha: 'jugador', jugadores: [asientos()[1].id] });
+    expect((await arnes.pedir(ana, 'noche:enviar', { ficha: 'entendido' })).ok).toBe(false);
+    await arnes.hacer(ana, 'noche:enviar', { ficha: 'jugador', jugadores: [asientos()[1].id] });
     expect(narradora.estado.plaza[1].recordatorios.map((r) => r.texto)).toEqual(['Poisoned']);
     expect(ana.estado.despertares[0].mensajes.slice(-1)[0]).toMatchObject({ autor: 'narrador', ficha: 'entendido' });
   });
@@ -403,16 +403,16 @@ describe('despertar guiado por el socket', () => {
     await arnes.accion(narradora, 'narrador:cambiarPersonaje', { jugadorId: asientos()[0].id, personajeId: 'chef' });
     await arnes.hacer(narradora, 'fase:noche');
 
-    await arnes.accion(narradora, 'narrador:despertarHabilidad', { personajeId: 'chef' });
+    await arnes.hacer(narradora, 'noche:despertarHabilidad', { personajeId: 'chef' });
     expect(ana.estado.despertares[0].mensajes.slice(-1)[0]).toMatchObject({ autor: 'narrador', guiado: true });
-    const si = await arnes.intentar(ana, 'despertar:enviar', { ficha: 'si' });
+    const si = await arnes.pedir(ana, 'noche:enviar', { ficha: 'si' });
     expect(si).toEqual({ ok: false, error: 'Contesta «Entendido» o escribe un mensaje al narrador.' });
-    await arnes.accion(ana, 'despertar:enviar', { ficha: 'personalizado', texto: '¿Seguro?' });
-    await arnes.accion(ana, 'despertar:enviar', { ficha: 'entendido' });
+    await arnes.hacer(ana, 'noche:enviar', { ficha: 'personalizado', texto: '¿Seguro?' });
+    await arnes.hacer(ana, 'noche:enviar', { ficha: 'entendido' });
 
     // Si después el narrador le manda algo a mano, contesta con lo que quiera
-    await arnes.accion(narradora, 'despertar:enviar', { jugadorId: asientos()[0].id, tarjeta: 'habilidad' });
+    await arnes.hacer(narradora, 'noche:enviar', { jugadorId: asientos()[0].id, tarjeta: 'habilidad' });
     expect(ana.estado.despertares[0].mensajes.slice(-1)[0]).toMatchObject({ autor: 'narrador', guiado: false });
-    await arnes.accion(ana, 'despertar:enviar', { ficha: 'si' });
+    await arnes.hacer(ana, 'noche:enviar', { ficha: 'si' });
   });
 });

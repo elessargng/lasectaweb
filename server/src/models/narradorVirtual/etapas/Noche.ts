@@ -111,7 +111,7 @@ export class Noche implements Etapa {
     if (!faltan.length) return;
     await ctx.plaza.sonarGong();
     for (const jugadorId of faltan) {
-      await ctx.plaza.accion('despertar:enviar', { jugadorId, ficha: 'personalizado', texto: RECORDAR_ENTENDIDO });
+      await ctx.plaza.enviarDespertar(jugadorId, { ficha: 'personalizado', texto: RECORDAR_ENTENDIDO });
     }
   }
 
@@ -185,7 +185,7 @@ export class Noche implements Etapa {
       if (fila.estado === 'falta') {
         if (!(await cumplirRequisitos(ctx, fila))) return;
       } else if (fila.estado === 'listo') {
-        if (!(await ctx.plaza.accion('narrador:despertarHabilidad', { personajeId: personaje })).ok) return;
+        if (!(await ctx.plaza.despertarHabilidad(personaje)).ok) return;
       } else if (fila.estado === 'esperando') {
         await this.esperarEleccion(ctx, fila);
       } else if (fila.estado === 'revisar') {
@@ -213,7 +213,7 @@ export class Noche implements Etapa {
         eleccion.cantidad,
       );
       const jugadores = elegidos.map((a) => a.id);
-      await ctx.plaza.accion('despertar:enviar', { jugadorId: jugador.id, ficha: 'jugador', jugadores });
+      await ctx.plaza.enviarDespertar(jugador.id, { ficha: 'jugador', jugadores });
     }
     // Si aún no se le ha pedido (espera a que entienda lo anterior: ver DespertarGuiado), se le recuerda
     const elegido = () => this.fila(ctx, fila.personaje)?.estado !== 'esperando';
@@ -233,7 +233,7 @@ export class Noche implements Etapa {
       opciones: opcionesDeAsientos(ctx.juego, esbirros),
     });
     const era = identidadDe(nuevo);
-    if ((await ctx.plaza.accion('narrador:nuevoImp', { jugadorId: nuevo.id })).ok && era) ctx.recuerdos.cronica.antes.set(nuevo.id, era);
+    if ((await ctx.plaza.nuevoImp(nuevo.id)).ok && era) ctx.recuerdos.cronica.antes.set(nuevo.id, era);
   }
 
   /**

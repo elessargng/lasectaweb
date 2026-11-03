@@ -8,7 +8,7 @@ import { listaFaroles } from './fichas';
 import type { PersonajeMostrado } from './guiones';
 import { nombreDeAsiento, textoEleccion } from './despertar';
 import { BotoneraDespertar, EditorAdjunto, HistorialDespertar, MensajeVisto } from './PiezasDespertar';
-import type { AccionesFaroles, DespertarDto, SalaDto, ResultadoAccion } from './useSala';
+import type { AccionesFaroles, AccionesNoche, DespertarDto, SalaDto } from './useSala';
 import { FICHAS_RESPUESTA_GUIADA } from '@models/despertar';
 
 interface DespertarJugadorProps {
@@ -18,7 +18,8 @@ interface DespertarJugadorProps {
   faroles: (string | null)[] | null;
   personajes: PersonajeMostrado[];
   porId: Map<string, PersonajeMostrado>;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Contestar en el despertar (ver AccionesNoche). */
+  noche: Pick<AccionesNoche, 'enviar' | 'resolverHabilidad'>;
   /** Copia en mis faroles los que me enseña el narrador (ver AccionesFaroles). */
   copiarFaroles: AccionesFaroles['copiar'];
   onError: (mensaje: string) => void;
@@ -48,7 +49,7 @@ const DespertarJugador = ({
   faroles,
   personajes,
   porId,
-  pedir,
+  noche,
   copiarFaroles,
   onError,
   onEnviado,
@@ -127,7 +128,7 @@ const DespertarJugador = ({
             cantidad={pide.cantidad}
             personajes={personajes}
             onEnviar={async (envio) => {
-              const r = await pedir('despertar:enviar', envio);
+              const r = await noche.enviar([], envio);
               if (r.ok) onEnviado(`Enviado: ${(envio.jugadores ?? []).map((id) => nombreDeAsiento(estado, id)).join(', ')}.`);
               return r;
             }}
@@ -140,7 +141,7 @@ const DespertarJugador = ({
             conTarjetas={false}
             tituloFichas="Contestar"
             soloFichas={soloFichas}
-            pedir={pedir}
+            noche={noche}
             onError={onError}
             onEnviado={onEnviado}
           />

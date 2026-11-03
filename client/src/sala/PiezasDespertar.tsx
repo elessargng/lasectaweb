@@ -20,7 +20,7 @@ import { botonPrincipal, botonSecundario, campo } from './estilos';
 import { useElegirEnPlaza } from './elegirEnPlaza';
 import { alineamientoDe, iconoDe } from './fichas';
 import { porTipos, type PersonajeMostrado } from './guiones';
-import type { MensajeDespertar, Alineamiento, SalaDto, ResultadoAccion } from './useSala';
+import type { AccionesNoche, MensajeDespertar, Alineamiento, SalaDto, ResultadoAccion } from './useSala';
 
 const foco = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main';
 const MAX_TEXTO = 200;
@@ -511,13 +511,14 @@ interface BotoneraDespertarProps {
   conTarjetas: boolean;
   /** Título de la fila de fichas («Fichas», «Contestar»). */
   tituloFichas: string;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Mandar al despertar y el despertar guiado revisado (ver AccionesNoche). */
+  noche: Pick<AccionesNoche, 'enviar' | 'resolverHabilidad'>;
   onError: (mensaje: string) => void;
   /** Confirmar al lector lo que se acaba de mandar. */
   onEnviado: (texto: string) => void;
   /**
    * El despertar guiado, para revisar (el narrador): lo que se manda va por
-   * 'narrador:resolverHabilidad' con ese personaje, y encima de las fichas, lo que
+   * resolverHabilidad con ese personaje, y encima de las fichas, lo que
    * se propone mandar (ver Propuesta).
    */
   revision?: { personajeId: string; propuestas: Propuesta[] };
@@ -549,7 +550,7 @@ export const BotoneraDespertar = ({
   personajes,
   conTarjetas,
   tituloFichas,
-  pedir,
+  noche,
   onError,
   onEnviado,
   revision,
@@ -590,11 +591,8 @@ export const BotoneraDespertar = ({
 
   const mandar = async (envio: Envio, titulo: string) => {
     const r = revision
-      ? await pedir('narrador:resolverHabilidad', { ...envio, personajeId: revision.personajeId })
-      : await pedir(
-          'despertar:enviar',
-          jugadorId ? (conjunto.length ? { ...envio, jugadorIds: [jugadorId, ...conjunto] } : { ...envio, jugadorId }) : envio,
-        );
+      ? await noche.resolverHabilidad(revision.personajeId, envio)
+      : await noche.enviar(jugadorId ? [jugadorId, ...conjunto] : [], envio);
     if (r.ok) {
       onEnviado(conjunto.length ? `Enviado a los ${conjunto.length + 1}: ${titulo}.` : `Enviado: ${titulo}.`);
       setPendiente(null);

@@ -5,6 +5,7 @@ import type { SalaDto, ResultadoAccion, ResultadoBolsaAlAzar } from '@views/sala
 import type { MensajeChatDto, SusurroDto } from '@views/chat';
 import type { Alineamiento } from '@models/jugador';
 import type { GuionResuelto } from './guiones';
+import type { Envio } from './despertar';
 
 // Lo que comparte con el servidor: los Dto que manda (@views) y los valores del dominio (@models).
 // Se reexporta aquí para que la sala lo siga importando de useSala.
@@ -327,6 +328,19 @@ export function useSala(
     [pedirAlSocket],
   );
 
+  /** La noche: los despertares, el nuevo Imp y la estrella de cada fila, por sus eventos. */
+  const noche: AccionesNoche = useMemo(
+    () => ({
+      despertar: (jugadorId) => pedirAlSocket<ResultadoAccion>('noche:despertar', { jugadorId }),
+      enviar: (jugadorIds, envio) => pedirAlSocket<ResultadoAccion>('noche:enviar', { ...envio, jugadorIds }),
+      despertarHabilidad: (personajeId) => pedirAlSocket<ResultadoAccion>('noche:despertarHabilidad', { personajeId }),
+      resolverHabilidad: (personajeId, envio) => pedirAlSocket<ResultadoAccion>('noche:resolverHabilidad', { ...envio, personajeId }),
+      nuevoImp: (jugadorId) => pedirAlSocket<ResultadoAccion>('noche:nuevoImp', { jugadorId }),
+      recordatorio: (id, activo) => pedirAlSocket<ResultadoAccion>('noche:recordatorio', { id, activo }),
+    }),
+    [pedirAlSocket],
+  );
+
   /** Vuelve a pedir los mensajes que se pueden leer (al cambiar de papel cambian). */
   const pedirHistorial = useCallback(() => {
     socketRef.current?.emit('chat:historial');
@@ -362,7 +376,24 @@ export function useSala(
     senalamiento,
     faroles,
     fase,
+    noche,
   };
+}
+
+/** Lo que se hace de noche (ver useSala). */
+export interface AccionesNoche {
+  /** El narrador abre el despertar de un asiento. */
+  despertar(jugadorId: string): Promise<ResultadoAccion>;
+  /** Un mensaje en un despertar: el narrador, a esos asientos; el jugador, en el suyo (sin asientos). */
+  enviar(jugadorIds: string[], envio: Envio): Promise<ResultadoAccion>;
+  /** El despertar guiado de una fila del orden de noche. */
+  despertarHabilidad(personajeId: string): Promise<ResultadoAccion>;
+  /** El despertar guiado, revisado: lo que se manda al de esa fila. */
+  resolverHabilidad(personajeId: string, envio: Envio): Promise<ResultadoAccion>;
+  /** El Imp se ha elegido a sí mismo: el nuevo. */
+  nuevoImp(jugadorId: string): Promise<ResultadoAccion>;
+  /** Pone o quita la estrella de una fila del orden de noche. */
+  recordatorio(id: string, activo: boolean): Promise<ResultadoAccion>;
 }
 
 /** Lo que hace el narrador con las fases (ver useSala). */

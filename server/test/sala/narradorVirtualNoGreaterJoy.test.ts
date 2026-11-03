@@ -75,9 +75,9 @@ describe('narrador virtual con No Greater Joy', () => {
         if (ultimo?.autor === 'narrador' && ultimo.eleccion) {
           const { cantidad, puedeElegirse } = ultimo.eleccion;
           const elegidos = c.estado.plaza.filter((a) => puedeElegirse || a.participanteId !== c.id).slice(0, cantidad).map((a) => a.id);
-          await arnes.intentar(c, 'despertar:enviar', { ficha: 'jugador', jugadores: elegidos });
+          await arnes.pedir(c, 'noche:enviar', { ficha: 'jugador', jugadores: elegidos });
         } else if (ultimo?.autor === 'narrador') {
-          await arnes.intentar(c, 'despertar:enviar', { ficha: 'entendido' });
+          await arnes.pedir(c, 'noche:enviar', { ficha: 'entendido' });
         }
         await new Promise((r) => setTimeout(r, 20));
       }

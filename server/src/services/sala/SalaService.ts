@@ -14,6 +14,7 @@ import { RevelacionService } from './RevelacionService';
 import { SenalamientoService } from './SenalamientoService';
 import { FarolService } from './FarolService';
 import { FaseService } from './FaseService';
+import { NocheService } from './NocheService';
 import { ImagenesSala } from './ImagenesSala';
 import type { DependenciasAcciones, DependenciasSala, DifusorSala } from './puertos';
 
@@ -72,6 +73,8 @@ export class SalaService {
   readonly faroles: FarolService;
   /** El paso de las fases (ver FaseController). */
   readonly fase: FaseService;
+  /** La noche: los despertares (ver NocheController). */
+  readonly noche: NocheService;
   private readonly conversaciones: ConversacionService;
   private readonly videollamada: VideollamadaService | null;
   private readonly narradorVirtual: NarradorVirtualService;
@@ -106,6 +109,7 @@ export class SalaService {
     this.senalamiento = new SenalamientoService(this.juego, () => this.difundir());
     this.faroles = new FarolService(this.juego, () => this.difundir());
     this.fase = new FaseService(this.juego, () => this.difundir());
+    this.noche = new NocheService(this.juego, () => this.difundir());
     this.conversaciones = new ConversacionService(this.juego);
     // Sin servidor de vídeo configurado, la sala funciona igual, sin cámaras ni micrófonos
     this.videollamada = deps.video ? new VideollamadaService(deps.video, this.juego, this.conversaciones) : null;
@@ -128,6 +132,11 @@ export class SalaService {
         irANoche: async () => this.fase.irANoche(participanteId),
         amanecer: async () => this.fase.amanecer(participanteId),
         limpiarGrimorio: async () => this.fase.limpiarGrimorio(participanteId),
+        despertar: async (jugadorId) => this.noche.despertar(participanteId, jugadorId),
+        enviarDespertar: async (jugadorId, mensaje) => this.noche.enviar(participanteId, [jugadorId], mensaje),
+        despertarHabilidad: async (personajeId) => this.noche.despertarHabilidad(participanteId, personajeId),
+        resolverHabilidad: async (personajeId, mensaje) => this.noche.resolverHabilidad(participanteId, personajeId, mensaje),
+        nuevoImp: async (jugadorId) => this.noche.nuevoImp(participanteId, jugadorId),
       }),
       {
         decir: (texto) => {
@@ -184,7 +193,7 @@ export class SalaService {
       conversaciones: this.conversaciones.lista(),
       invitacionesDe: (participanteId: string) => this.conversaciones.invitacionesDe(participanteId),
       video: !!this.videollamada,
-      accionesDe: (yo: Participante) => [...accionesPermitidas(this.juego, yo), ...this.bolsa.permitidas(yo), ...this.reloj.permitidas(yo), ...this.revelacion.permitidas(yo), ...this.senalamiento.permitidas(yo), ...this.faroles.permitidas(yo), ...this.fase.permitidas(yo)],
+      accionesDe: (yo: Participante) => [...accionesPermitidas(this.juego, yo), ...this.bolsa.permitidas(yo), ...this.reloj.permitidas(yo), ...this.revelacion.permitidas(yo), ...this.senalamiento.permitidas(yo), ...this.faroles.permitidas(yo), ...this.fase.permitidas(yo), ...this.noche.permitidas(yo)],
     };
   }
 

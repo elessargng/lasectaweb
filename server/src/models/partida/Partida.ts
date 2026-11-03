@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { Azar } from './azar';
-import type { EleccionDespertar, EnvioDespertar, MensajeDespertar } from '../compartido/despertar';
+import { FICHAS_RESPUESTA_GUIADA, type EleccionDespertar, type EnvioDespertar, type MensajeDespertar } from '../compartido/despertar';
 import type { FichaEnviada } from './Entregas';
 import { NUM_FAROLES, type Alineamiento } from '../compartido/jugador';
 import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA } from '../compartido/partida';
@@ -11,7 +11,8 @@ import type { Sala } from '../sala/Sala';
 import { AccesoGrimorio } from './AccesoGrimorio';
 import { Configuracion } from './Configuracion';
 import { Declaraciones } from './Declaraciones';
-import { DespertarGuiado } from './DespertarGuiado';
+import { DespertarGuiado, errorDeEleccion } from './DespertarGuiado';
+import { componerMensaje, type BorradorDespertar } from './mensajeDespertar';
 import { Despertares } from './Despertares';
 import { Entregas } from './Entregas';
 import { type Diario, type EventoPartida, type FotoAsiento, type OyentePartida } from './eventos';
@@ -361,9 +362,82 @@ export class Partida {
     return { ...this.recordatorios };
   }
 
-  /** Pone (true) o quita (false) a mano la ficha recordatorio de una fila del orden de noche. */
-  cambiarRecordatorio(id: string, activo: boolean): void {
+  /**
+   * Pone (true) o quita (false) a mano la ficha recordatorio de una fila del orden
+   * de noche: un personaje del guion, 'esbirros' o 'demonios'. Devuelve el error, si lo hay.
+   */
+  cambiarRecordatorio(id: string, activo: boolean): string | null {
+    if (id !== 'esbirros' && id !== 'demonios' && !this.guion.personaje(id)) return 'Ese personaje no está en el guion.';
     this.recordatorios[id] = activo;
+    return null;
+  }
+
+  /**
+   * Un mensaje en un despertar (ver componerMensaje). El narrador manda una ficha o
+   * una tarjeta a los de esos asientos (a uno, en su despertar; a varios, de noche,
+   * despertando a los que aún no lo están); `virtual`: lo manda el narrador virtual.
+   * El jugador (participanteId), solo fichas al narrador, en el suyo. Si su habilidad
+   * le ha pedido que elija (el despertar guiado), solo contesta con a quiénes elige;
+   * por un asiento libre (cuenta como un jugador) elige el narrador. Devuelve el error, si lo hay.
+   */
+  enviarAlDespertar(
+    de: { narrador: string[]; virtual: boolean } | { jugador: string },
+    borrador: BorradorDespertar,
+  ): string | null {
+    const narra = 'narrador' in de;
+    const jugadorIds = narra ? de.narrador : [this.despertares.asientoDespiertoDe(de.jugador)].filter((id): id is string => !!id);
+    if (!jugadorIds.length || jugadorIds.some((id) => !this.sala.jugador(id))) return 'Ese despertar ya no está abierto.';
+    // A uno solo, en su despertar; a varios, también a los que aún no están despiertos (de noche)
+    const despiertaMas = jugadorIds.length > 1 && this.fases.actual().momento === 'noche';
+    if (!despiertaMas && jugadorIds.some((id) => !this.despertares.hayDespertar(id))) return 'Ese despertar ya no está abierto.';
+    const mensaje = this.componerMensaje(borrador, narra);
+    if ('error' in mensaje) return mensaje.error;
+    const destinos = jugadorIds.map((jugadorId) => {
+      const libre = !this.plaza().find((a) => a.id === jugadorId)?.participanteId;
+      const pide = !narra || libre ? this.guiado.eleccionPendiente(jugadorId) : null;
+      return { jugadorId, pide, eligiendo: !!pide && (!narra || mensaje.ficha === 'jugador') };
+    });
+    for (const { jugadorId, pide, eligiendo } of destinos) {
+      if (pide && eligiendo) {
+        const error = errorDeEleccion(pide, mensaje, jugadorId);
+        if (error) return error;
+      }
+      // A lo demás del despertar guiado, el jugador solo contesta «Entendido» o con un texto
+      if (!narra && !pide && this.despertares.respuestaGuiada(jugadorId) && !(mensaje.ficha && FICHAS_RESPUESTA_GUIADA.includes(mensaje.ficha))) {
+        return 'Contesta «Entendido» o escribe un mensaje al narrador.';
+      }
+    }
+    for (const { jugadorId, eligiendo } of destinos) {
+      if (!this.despertares.hayDespertar(jugadorId)) this.despertares.despertar(jugadorId);
+      // «Tú eres»: su ficha pasa a ser la que se le dice (con alineamiento, solo si se le dice)
+      // Lo que escribe el narrador virtual en un despertar guiado (que diga «Entendido»)
+      // lo sigue siendo: el jugador sigue contestando solo «Entendido» o un texto
+      if (narra) this.mandarDelNarrador(jugadorId, mensaje, { guiado: de.virtual && this.despertares.respuestaGuiada(jugadorId) });
+      else this.despertares.enviar(jugadorId, { ...mensaje, autor: jugadorId });
+      if (eligiendo) this.guiado.alElegir(jugadorId, mensaje.jugadores);
+      // Entendido lo anterior (lo dice el jugador, o el narrador a lo que eligió): le llega lo siguiente de su cola
+      if (mensaje.ficha === 'entendido') this.guiado.alEntender(jugadorId);
+    }
+    return null;
+  }
+
+  /**
+   * El despertar guiado, revisado: el narrador manda lo que ha decidido (una de las
+   * opciones, o cambiada) al de una fila que había que revisar. Devuelve el error, si lo hay.
+   */
+  resolverHabilidad(personajeId: string, borrador: BorradorDespertar): string | null {
+    const mensaje = this.componerMensaje(borrador, true);
+    return 'error' in mensaje ? mensaje.error : this.guiado.resolver(personajeId, mensaje);
+  }
+
+  /** El Imp se ha elegido a sí mismo: el nuevo es el de ese asiento. Devuelve el error, si lo hay. */
+  elegirNuevoImp(jugadorId: string): string | null {
+    return this.sala.jugador(jugadorId) ? this.guiado.elegirNuevoImp(jugadorId) : 'Ese asiento ya no existe.';
+  }
+
+  /** El mensaje de un despertar, limpio (ver componerMensaje); con tarjetas, si lo manda el narrador. */
+  private componerMensaje(borrador: BorradorDespertar, conTarjetas: boolean) {
+    return componerMensaje(borrador, conTarjetas, { hayAsiento: (id) => !!this.sala.jugador(id), personaje: (id) => this.guion.personaje(id) });
   }
 
   /**

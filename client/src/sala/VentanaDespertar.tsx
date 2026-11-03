@@ -7,7 +7,7 @@ import { botonPrincipal, botonSecundario } from './estilos';
 import type { PersonajeMostrado } from './guiones';
 import { ID_TITULO_DESPERTAR } from './ids';
 import { BotoneraDespertar, EditorAdjunto, HistorialDespertar, type Propuesta } from './PiezasDespertar';
-import type { DespertarDto, SalaDto, ResultadoAccion } from './useSala';
+import type { AccionesNoche, DespertarDto, SalaDto, ResultadoAccion } from './useSala';
 
 interface VentanaDespertarProps {
   estado: SalaDto;
@@ -23,6 +23,8 @@ interface VentanaDespertarProps {
   personajes: PersonajeMostrado[];
   porId: Map<string, PersonajeMostrado>;
   pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Mandar al despertar y el despertar guiado revisado (ver AccionesNoche). */
+  noche: Pick<AccionesNoche, 'enviar' | 'resolverHabilidad'>;
   onError: (mensaje: string) => void;
   onEnviado: (texto: string) => void;
   /** Visitantes que ven el grimorio: solo leen lo que se dicen (no mandan nada). */
@@ -69,6 +71,7 @@ const VentanaDespertar = ({
   personajes,
   porId,
   pedir,
+  noche,
   onError,
   onEnviado,
   soloLectura = false,
@@ -251,7 +254,7 @@ const VentanaDespertar = ({
               personajes={personajes}
               conTarjetas
               tituloFichas="Fichas"
-              pedir={pedir}
+              noche={noche}
               onError={onError}
               onEnviado={onEnviado}
             />

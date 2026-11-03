@@ -126,7 +126,7 @@ describe('lo que ve cada uno', () => {
     await repartir();
     await alDia();
     await arnes.accion(narradora, 'narrador:nominar', { desde: idAsiento(0), hasta: idAsiento(1) });
-    await arnes.accion(narradora, 'narrador:recordatorio', { id: 'imp', activo: false });
+    await arnes.hacer(narradora, 'noche:recordatorio', { id: 'imp', activo: false });
     expect(narradora.estado.bolsa).toHaveLength(7);
     expect(narradora.estado.votaciones).toHaveLength(1);
     expect(narradora.estado.recordatoriosNoche).toEqual({ imp: false });
@@ -171,12 +171,12 @@ describe('lo que ve cada uno', () => {
 
   it('un despertar lo ven la narradora y el jugador despierto, nadie más', async () => {
     await arnes.hacer(narradora, 'fase:noche');
-    await arnes.accion(narradora, 'narrador:despertar', { jugadorId: idAsiento(0) });
+    await arnes.hacer(narradora, 'noche:despertar', { jugadorId: idAsiento(0) });
     expect(narradora.estado.despertares).toHaveLength(1);
     // El jugador no se entera hasta que la narradora le manda algo
     expect(ana.estado.despertares).toEqual([]);
-    expect(ana.estado.acciones).not.toContain('despertar:enviar');
-    await arnes.accion(narradora, 'despertar:enviar', { jugadorId: idAsiento(0), ficha: 'entendido' });
+    expect(ana.estado.acciones).not.toContain('noche:enviar');
+    await arnes.hacer(narradora, 'noche:enviar', { jugadorId: idAsiento(0), ficha: 'entendido' });
     expect(ana.estado.despertares).toHaveLength(1);
     expect(bea.estado.despertares).toEqual([]);
     expect(vera.estado.despertares).toEqual([]);
@@ -184,13 +184,13 @@ describe('lo que ve cada uno', () => {
 
   it('la narradora manda lo mismo a varios: despierta a los que aún no lo estaban', async () => {
     await arnes.hacer(narradora, 'fase:noche');
-    await arnes.accion(narradora, 'narrador:despertar', { jugadorId: idAsiento(0) });
-    await arnes.accion(narradora, 'despertar:enviar', { jugadorIds: [idAsiento(0), idAsiento(1)], tarjeta: 'habilidad' });
+    await arnes.hacer(narradora, 'noche:despertar', { jugadorId: idAsiento(0) });
+    await arnes.hacer(narradora, 'noche:enviar', { jugadorIds: [idAsiento(0), idAsiento(1)], tarjeta: 'habilidad' });
     expect(narradora.estado.despertares.map((d) => d.jugador)).toEqual([idAsiento(0), idAsiento(1)]);
     for (const c of [ana, bea]) expect(c.estado.despertares[0].mensajes).toMatchObject([{ autor: 'narrador', tarjeta: 'habilidad' }]);
     expect(vera.estado.despertares).toEqual([]);
     // A uno solo, solo en su despertar
-    const cerrado = await arnes.intentar(narradora, 'despertar:enviar', { jugadorId: idAsiento(2), ficha: 'si' });
+    const cerrado = await arnes.pedir(narradora, 'noche:enviar', { jugadorId: idAsiento(2), ficha: 'si' });
     expect(cerrado).toEqual({ ok: false, error: 'Ese despertar ya no está abierto.' });
   });
 

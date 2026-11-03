@@ -75,18 +75,18 @@ export class Violinista implements Etapa {
   private async eligeElDemonio(ctx: ContextoEtapa, demonio: string, buenos: string[]): Promise<string | null> {
     const { partida } = ctx.juego;
     if (!partida.plaza().find((a) => a.id === demonio)?.participanteId) return null;
-    if (!(await ctx.plaza.accion('narrador:despertar', { jugadorId: demonio })).ok) return null;
-    await ctx.plaza.accion('despertar:enviar', { jugadorId: demonio, ficha: 'personalizado', texto: PIDE_AL_DEMONIO });
+    if (!(await ctx.plaza.despertar(demonio)).ok) return null;
+    await ctx.plaza.enviarDespertar(demonio, { ficha: 'personalizado', texto: PIDE_AL_DEMONIO });
     const limite = Date.now() + ELIGE_EL_DEMONIO_MS;
     for (let vuelta = 0; this.seguir && Date.now() < limite && vuelta < ELIGE_EL_DEMONIO_MS / 250; vuelta++) {
       const ultimo = partida.despertares.despertares().find((d) => d.jugador === demonio)?.mensajes.slice(-1)[0];
       if (ultimo && ultimo.autor !== 'narrador' && ultimo.ficha === 'jugador') {
         const elegido = ultimo.jugadores.find((j) => buenos.includes(j));
         if (elegido) {
-          await ctx.plaza.accion('despertar:enviar', { jugadorId: demonio, ficha: 'entendido' });
+          await ctx.plaza.enviarDespertar(demonio, { ficha: 'entendido' });
           return elegido;
         }
-        await ctx.plaza.accion('despertar:enviar', { jugadorId: demonio, ficha: 'personalizado', texto: 'Ese no es un jugador bueno: elige otro.' });
+        await ctx.plaza.enviarDespertar(demonio, { ficha: 'personalizado', texto: 'Ese no es un jugador bueno: elige otro.' });
       }
       await this.esperar(ctx, 250);
     }

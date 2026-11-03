@@ -6,6 +6,7 @@ import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
 import { BolsaController } from '../../src/controllers/sala/BolsaController';
 import { FarolController } from '../../src/controllers/sala/FarolController';
 import { FaseController } from '../../src/controllers/sala/FaseController';
+import { NocheController } from '../../src/controllers/sala/NocheController';
 import { RelojController } from '../../src/controllers/sala/RelojController';
 import { RevelacionController } from '../../src/controllers/sala/RevelacionController';
 import { SenalamientoController } from '../../src/controllers/sala/SenalamientoController';
@@ -110,6 +111,7 @@ export class Arnes {
       bolsa: new BolsaController(salaService.bolsa),
       faroles: new FarolController(salaService.faroles),
       fase: new FaseController(salaService.fase),
+      noche: new NocheController(salaService.noche),
       reloj: new RelojController(salaService.reloj),
       revelacion: new RevelacionController(salaService.revelacion),
       senalamiento: new SenalamientoController(salaService.senalamiento),

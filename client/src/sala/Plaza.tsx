@@ -390,7 +390,7 @@ const Plaza = ({
   const despertarDe = (jugadorId: string) => {
     if (modoFichas !== 'narrador' || editando || !despertares) return undefined;
     const abierto = despertares.hilos.has(jugadorId);
-    if (!abierto && !acciones.includes('narrador:despertar')) return undefined;
+    if (!abierto && !acciones.includes('noche:despertar')) return undefined;
     return { abierto, onAbrir: () => despertares.onAbrir(jugadorId) };
   };
   const ariaLiveAsientos = useAriaLive('editarAsientos');
