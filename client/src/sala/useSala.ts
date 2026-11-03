@@ -3,6 +3,7 @@ import { io, type Socket } from 'socket.io-client';
 import { notifySessionExpired } from '../utils/session';
 import type { SalaDto, ResultadoAccion, ResultadoBolsaAlAzar } from '@views/sala';
 import type { ConfiguracionDto } from '@views/partida';
+import type { FichaEnviadaDto } from '@views/grimorio';
 import type { MensajeChatDto, SusurroDto } from '@views/chat';
 import type { Alineamiento } from '@models/jugador';
 import type { GuionResuelto } from './guiones';
@@ -385,6 +386,26 @@ export function useSala(
     [pedirAlSocket],
   );
 
+  /** El grimorio del narrador, por sus eventos. */
+  const grimorio: AccionesGrimorio = useMemo(
+    () => ({
+      personaje: (jugadorId, personajeId) => pedirAlSocket<ResultadoAccion>('grimorio:personaje', { jugadorId, personajeId }),
+      intercambiar: (desde, hasta) => pedirAlSocket<ResultadoAccion>('grimorio:intercambiar', { desde, hasta }),
+      alineamiento: (jugadorId, alineamiento) => pedirAlSocket<ResultadoAccion>('grimorio:alineamiento', { jugadorId, alineamiento }),
+      vida: (jugadorId, muerto) => pedirAlSocket<ResultadoAccion>('grimorio:vida', { jugadorId, muerto }),
+      confirmarMuerte: (jugadorId) => pedirAlSocket<ResultadoAccion>('grimorio:confirmarMuerte', { jugadorId }),
+      voto: (jugadorId, gastado) => pedirAlSocket<ResultadoAccion>('grimorio:voto', { jugadorId, gastado }),
+      barquero: () => pedirAlSocket<ResultadoAccion>('grimorio:barquero', {}),
+      recordatorio: (jugadorId, personajeId, indice) => pedirAlSocket<ResultadoAccion>('grimorio:recordatorio', { jugadorId, personajeId, indice }),
+      recordatorioTexto: (jugadorId, texto, icono) => pedirAlSocket<ResultadoAccion>('grimorio:recordatorioTexto', { jugadorId, texto, icono }),
+      quitarRecordatorio: (jugadorId, recordatorioId) => pedirAlSocket<ResultadoAccion>('grimorio:quitarRecordatorio', { jugadorId, recordatorioId }),
+      nota: (jugadorId, texto) => pedirAlSocket<ResultadoAccion>('grimorio:nota', { jugadorId, texto }),
+      borrarNota: (jugadorId) => pedirAlSocket<ResultadoAccion>('grimorio:borrarNota', { jugadorId }),
+      enviar: (jugadorId, fichas, faroles) => pedirAlSocket<ResultadoAccion>('grimorio:enviar', { jugadorId, fichas, faroles }),
+    }),
+    [pedirAlSocket],
+  );
+
   /** Vuelve a pedir los mensajes que se pueden leer (al cambiar de papel cambian). */
   const pedirHistorial = useCallback(() => {
     socketRef.current?.emit('chat:historial');
@@ -424,7 +445,34 @@ export function useSala(
     dia,
     narradorVirtual,
     preparacion,
+    grimorio,
   };
+}
+
+/** Lo que hace el narrador con el grimorio (ver useSala). */
+export interface AccionesGrimorio {
+  /** El personaje de una ficha (null: se lo quita). */
+  personaje(jugadorId: string, personajeId: string | null): Promise<ResultadoAccion>;
+  /** Con el Gardener: intercambia dos fichas. */
+  intercambiar(desde: string, hasta: string): Promise<ResultadoAccion>;
+  alineamiento(jugadorId: string, alineamiento: Alineamiento): Promise<ResultadoAccion>;
+  /** Mata o revive (de noche, la muerte queda pendiente). */
+  vida(jugadorId: string, muerto: boolean): Promise<ResultadoAccion>;
+  /** Anuncia una muerte pendiente. */
+  confirmarMuerte(jugadorId: string): Promise<ResultadoAccion>;
+  /** Quita o devuelve el voto de un muerto. */
+  voto(jugadorId: string, gastado: boolean): Promise<ResultadoAccion>;
+  /** El Barquero: los muertos recuperan su voto. */
+  barquero(): Promise<ResultadoAccion>;
+  /** Uno de los recordatorios de un personaje del guion. */
+  recordatorio(jugadorId: string, personajeId: string, indice: number): Promise<ResultadoAccion>;
+  /** Un recordatorio con texto propio (y su icono, si lo lleva). */
+  recordatorioTexto(jugadorId: string, texto: string, icono?: string | null): Promise<ResultadoAccion>;
+  quitarRecordatorio(jugadorId: string, recordatorioId: string): Promise<ResultadoAccion>;
+  nota(jugadorId: string, texto: string): Promise<ResultadoAccion>;
+  borrarNota(jugadorId: string): Promise<ResultadoAccion>;
+  /** Envía una copia del grimorio (el Espía, la Viuda) a quien se sienta en un asiento. */
+  enviar(jugadorId: string, fichas: FichaEnviadaDto[], faroles: string[]): Promise<ResultadoAccion>;
 }
 
 /** Lo que hace el narrador al preparar la partida (ver useSala). */

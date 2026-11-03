@@ -81,5 +81,5 @@ async function aplicarDesenlace(ctx: ContextoEtapa, demonio: string, desenlaces:
   if (elegido.gasta) await ponerRecordatorio(ctx, elegido.gasta.asiento, elegido.gasta.personaje, elegido.gasta.texto);
   if (!elegido.muere) return;
   await ponerRecordatorio(ctx, elegido.muere, demonio, 'Dead');
-  await ctx.plaza.accion('narrador:cambiarVida', { jugadorId: elegido.muere, muerto: true });
+  await ctx.plaza.cambiarVida(elegido.muere, true);
 }

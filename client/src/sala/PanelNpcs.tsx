@@ -8,7 +8,7 @@ import { botonPrincipal } from './estilos';
 import type { PersonajeMostrado, ReglaDjinnMostrada } from './guiones';
 import CasillaFarol from './CasillaFarol';
 import { colocarDesplegable } from './colocarDesplegable';
-import type { AccionesPreparacion, ResultadoAccion } from './useSala';
+import type { AccionesGrimorio, AccionesPreparacion } from './useSala';
 
 interface PanelNpcsProps {
   /** Los NPCs en juego (ids), en el orden en que se añadieron. */
@@ -26,7 +26,8 @@ interface PanelNpcsProps {
   rolStormcatcher: PersonajeMostrado | null;
   /** Los personajes buenos del guion, para nombrar el del Storm Catcher. */
   buenos: PersonajeMostrado[];
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** El Barquero: los muertos recuperan su voto (ver AccionesGrimorio). */
+  barquero: AccionesGrimorio['barquero'];
   /** Los NPC, el Bootlegger y el Storm Catcher (ver AccionesPreparacion). */
   preparacion: Pick<AccionesPreparacion, 'npc' | 'bootlegger' | 'stormcatcher'>;
   onError: (mensaje: string) => void;
@@ -46,7 +47,7 @@ const TIPO: Record<string, string> = { fabled: 'Legendario', loric: 'Lórico' };
  * en la bolsa) y los quita con la ✕ de su esquina. Sin ninguno, lo dice y cómo
  * se añaden.
  */
-const PanelNpcs = ({ npcs, disponibles, narro, hayGuion, bootlegger, djinn, rolStormcatcher, buenos, pedir, preparacion, onError }: PanelNpcsProps) => {
+const PanelNpcs = ({ npcs, disponibles, narro, hayGuion, bootlegger, djinn, rolStormcatcher, buenos, barquero, preparacion, onError }: PanelNpcsProps) => {
   const [anadiendo, setAnadiendo] = useState(false);
   // Los diálogos de los NPCs con algo que decidir (el narrador)
   const [editandoReglas, setEditandoReglas] = useState(false);
@@ -210,7 +211,7 @@ const PanelNpcs = ({ npcs, disponibles, narro, hayGuion, bootlegger, djinn, rolS
                   // a todos les llega el aviso)
                   <button
                     type="button"
-                    onClick={() => void pedir('narrador:barquero').then((r) => !r.ok && onError(r.error))}
+                    onClick={() => void barquero().then((r) => !r.ok && onError(r.error))}
                     className={botonNpc}
                   >
                     <Flame size={12} />

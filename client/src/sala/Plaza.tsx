@@ -49,7 +49,7 @@ import DialogoIntercambio from './DialogoIntercambio';
 import DialogoPatoso from './DialogoPatoso';
 import DialogoRegistroEspia from './DialogoRegistroEspia';
 import { useNominacion } from './useNominacion';
-import type { AccionesDia, AccionesNarradorVirtual, AccionesPreparacion, AccionesReloj, AccionesRevelacion, AccionesSenalamiento, SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
+import type { AccionesDia, AccionesGrimorio, AccionesNarradorVirtual, AccionesPreparacion, AccionesReloj, AccionesRevelacion, AccionesSenalamiento, SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
 
 export interface TamanosPlaza {
   avatar: number;
@@ -85,6 +85,8 @@ interface PlazaProps {
   revelacion: Pick<AccionesRevelacion, 'revelarFicha' | 'terminar'>;
   /** Las nominaciones, la calavera y la ejecución (ver AccionesDia). */
   dia: AccionesDia;
+  /** El grimorio del narrador (ver AccionesGrimorio). */
+  accionesGrimorio: AccionesGrimorio;
   /** Lo que se pide al narrador virtual de día: nominar, el turno, las declaraciones (ver AccionesNarradorVirtual). */
   narradorVirtual: Pick<AccionesNarradorVirtual, 'turno' | 'declarar'>;
   /** Con el Gardener: entrega los personajes repartidos (ver AccionesPreparacion). */
@@ -269,6 +271,7 @@ const Plaza = ({
   reloj,
   revelacion: accionesRevelacion,
   dia,
+  accionesGrimorio,
   narradorVirtual,
   entregarFichas: entregarFichasDeLaBolsa,
   senalamientos,
@@ -293,7 +296,7 @@ const Plaza = ({
   // El narrador usa las fichas (matar, revivir…) si el servidor se lo permite; un
   // jugador con grimorio, para cambiarlas en el suyo; si no, solo se ven. Revelando el
   // grimorio, el jugador con grimorio ve las del narrador (lo de verdad), no lo que anotó.
-  const modoFichas = acciones.includes('narrador:cambiarVida') ? 'narrador' : grimorio && !estado.revelacion ? 'grimorio' : 'ver';
+  const modoFichas = acciones.includes('grimorio:vida') ? 'narrador' : grimorio && !estado.revelacion ? 'grimorio' : 'ver';
   const plazaRef = useRef<HTMLDivElement>(null);
 
   // El señalamiento (si lo veo): si me toca señalar, las fichas que se pueden señalar son
@@ -446,7 +449,7 @@ const Plaza = ({
     if (anotadoPorMi(jugadorId, r)) {
       anotarRecordatorios(jugadorId, (notasRecordatorios[jugadorId] ?? []).filter((x) => x.id !== r.id));
     } else {
-      const res = await pedir('narrador:quitarRecordatorio', { jugadorId, recordatorioId: r.id });
+      const res = await accionesGrimorio.quitarRecordatorio(jugadorId, r.id);
       if (!res.ok) return onError(res.error);
     }
     window.setTimeout(() => document.getElementById(`sala-ficha-${jugadorId}-boton`)?.focus(), 0);
@@ -471,7 +474,7 @@ const Plaza = ({
       escribirNota(jugadorId, texto);
       return null;
     }
-    const r = texto === null ? await pedir('narrador:borrarNota', { jugadorId }) : await pedir('narrador:escribirNota', { jugadorId, texto });
+    const r = texto === null ? await accionesGrimorio.borrarNota(jugadorId) : await accionesGrimorio.nota(jugadorId, texto);
     return r.ok ? null : r.error;
   };
 
@@ -543,11 +546,11 @@ const Plaza = ({
   const secreta = votacionOculta(estado);
   // Con el Gardener: arrastrar una ficha sobre otra (o «Intercambiar con…») intercambia sus personajes
   const puedeIntercambiar =
-    acciones.includes('narrador:intercambiarFichas') && modoFichas === 'narrador' && !editando && !revelacion;
+    acciones.includes('grimorio:intercambiar') && modoFichas === 'narrador' && !editando && !revelacion;
   const [intercambiando, setIntercambiando] = useState<string | null>(null);
   const intercambio = useIntercambiarFichas({
     activo: puedeIntercambiar,
-    pedir,
+    intercambiar: accionesGrimorio.intercambiar,
     onError,
     onHecho: (desde, hasta) =>
       onAnuncio('bolsa', `Fichas intercambiadas: ${nombreDeAsiento(estado, desde)} y ${nombreDeAsiento(estado, hasta)}.`),
@@ -576,7 +579,7 @@ const Plaza = ({
   const gardener = todosPorId.get('gardener');
   // Hace efectiva una muerte de la noche (el sudario semitransparente): ya la ven todos
   const anunciarMuerte = async (jugadorId: string) => {
-    const r = await pedir('narrador:confirmarMuerte', { jugadorId });
+    const r = await accionesGrimorio.confirmarMuerte(jugadorId);
     if (!r.ok) onError(r.error);
     else onAnuncio('muertes', `Muerte anunciada: ${nombreDeAsiento(estado, jugadorId)}.`);
   };
@@ -843,7 +846,7 @@ const Plaza = ({
                       numero={i + 1}
                       ocupante={ocupante}
                       modo={modoFichas}
-                      pedir={pedir}
+                      grimorio={accionesGrimorio}
                       dia={dia}
                       onError={onError}
                       onNominar={nominar.onNominar?.(a.id)}
@@ -884,7 +887,7 @@ const Plaza = ({
                       }
                       onHumo={(ancla, bando) => humoRef.current?.soltar(ancla, bando)}
                     />
-                    {a.muertePendiente && acciones.includes('narrador:confirmarMuerte') && !editando && (
+                    {a.muertePendiente && acciones.includes('grimorio:confirmarMuerte') && !editando && (
                       // La muerte de la noche, por anunciar: el sudario semitransparente es un botón que
                       // la hace efectiva (la ven todos). Al pasar el ratón o con el foco se ve ya entero.
                       <button

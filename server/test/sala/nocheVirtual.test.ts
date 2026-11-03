@@ -3,6 +3,7 @@ import { SalaDeJuego } from '../../src/models/SalaDeJuego';
 import { ejecutarAccion } from '../../src/services/sala/acciones';
 import { NocheService } from '../../src/services/sala/NocheService';
 import { DiaService } from '../../src/services/sala/DiaService';
+import { GrimorioService } from '../../src/services/sala/GrimorioService';
 import type { RespuestaAccion } from '../../src/models/narradorVirtual/puertos';
 import type { DependenciasAcciones } from '../../src/services/sala/puertos';
 import { MemoriaImagenRepository } from '../../src/repositories/ImagenRepository';
@@ -66,6 +67,7 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
   // La noche, con sus permisos de verdad (como el narrador virtual de la sala)
   const deNoche = new NocheService(juego, () => {});
   const deDia = new DiaService(juego, () => {});
+  const delGrimorio = new GrimorioService(juego, () => {});
   const hecha = (accion: string, datos: unknown, r: RespuestaAccion) => {
     if (r.ok) hechas.push({ accion, datos });
     void etapa?.alCambiar?.(ctx);
@@ -88,6 +90,14 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
       desmarcar: async () => hecha('dia:desmarcar', undefined, deDia.desmarcar(bot)),
       cerrarNominacion: async () => hecha('dia:cerrarNominacion', undefined, deDia.cerrarNominacion(bot)),
       ejecutar: async (jugadorId) => hecha('dia:ejecutar', { jugadorId }, deDia.ejecutar(bot, jugadorId)),
+      cambiarPersonaje: async (jugadorId, personajeId) =>
+        hecha('grimorio:personaje', { jugadorId, personajeId }, delGrimorio.personaje(bot, jugadorId, personajeId)),
+      cambiarVida: async (jugadorId, muerto) => hecha('grimorio:vida', { jugadorId, muerto }, delGrimorio.vida(bot, jugadorId, muerto)),
+      confirmarMuerte: async (jugadorId) => hecha('grimorio:confirmarMuerte', { jugadorId }, delGrimorio.confirmarMuerte(bot, jugadorId)),
+      ponerRecordatorio: async (jugadorId, personajeId, indice) =>
+        hecha('grimorio:recordatorio', { jugadorId, personajeId, indice }, delGrimorio.recordatorio(bot, jugadorId, personajeId, indice)),
+      quitarRecordatorio: async (jugadorId, recordatorioId) =>
+        hecha('grimorio:quitarRecordatorio', { jugadorId, recordatorioId }, delGrimorio.quitarRecordatorio(bot, jugadorId, recordatorioId)),
       cambiarGuion: async () => ({ ok: false, error: 'En esta prueba el guion ya está puesto.' }),
       configurar: async (cambios) => {
         const error = juego.partida.configurar(cambios);
@@ -503,7 +513,7 @@ describe('la noche del narrador virtual', () => {
       // Se le dijo «Tú eres el Imp» y luego despertó como el Imp (a elegir)
       const despertados = m.despertados();
       expect(despertados.indexOf('imp')).toBeGreaterThan(despertados.indexOf('scarletwoman'));
-      expect(m.hechas).toContainEqual({ accion: 'narrador:cambiarPersonaje', datos: { jugadorId: escarlata, personajeId: 'imp' } });
+      expect(m.hechas).toContainEqual({ accion: 'grimorio:personaje', datos: { jugadorId: escarlata, personajeId: 'imp' } });
     });
 
     it('si acaba antes de esa noche, al revelar la Mujer Escarlata que ha heredado ya es el Imp', async () => {

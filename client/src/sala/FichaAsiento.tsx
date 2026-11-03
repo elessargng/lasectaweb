@@ -23,7 +23,7 @@ import type { PersonajeMostrado } from './guiones';
 import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { idFichaNominar, idRevelarFicha } from './ids';
 import { describirAsiento } from './nombresAsiento';
-import type { AccionesDia, Alineamiento, JugadorDto, ParticipanteDto, ResultadoAccion } from './useSala';
+import type { AccionesDia, AccionesGrimorio, Alineamiento, JugadorDto, ParticipanteDto } from './useSala';
 
 interface FichaAsientoProps {
   jugador: JugadorDto;
@@ -40,7 +40,8 @@ interface FichaAsientoProps {
    * - ver: solo se ve.
    */
   modo: 'narrador' | 'grimorio' | 'ver';
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Lo que el narrador cambia en la ficha (ver AccionesGrimorio). */
+  grimorio: AccionesGrimorio;
   /** Ejecutar y la calavera (ver AccionesDia). */
   dia: Pick<AccionesDia, 'ejecutar' | 'marcar'>;
   onError: (mensaje: string) => void;
@@ -131,7 +132,7 @@ const FichaAsiento = ({
   numero,
   ocupante,
   modo,
-  pedir,
+  grimorio,
   dia,
   onError,
   onNominar,
@@ -368,7 +369,7 @@ const FichaAsiento = ({
   // Revivir quita también una muerte pendiente
   const vivo = !jugador.muerto && !jugador.muertePendiente;
   const cambiarVida = async () => {
-    const r = await pedir('narrador:cambiarVida', { jugadorId: jugador.id, muerto: vivo });
+    const r = await grimorio.vida(jugador.id, vivo);
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha, que ya dice su estado.
     return false;
@@ -376,13 +377,13 @@ const FichaAsiento = ({
   // De noche: primero el recordatorio de quien lo mata; la muerte queda pendiente
   const matarDeNoche = async (recordatorio: { personaje: PersonajeMostrado; indice: number } | null) => {
     if (recordatorio) {
-      const r = await pedir('narrador:ponerRecordatorio', { jugadorId: jugador.id, personajeId: recordatorio.personaje.id, indice: recordatorio.indice });
+      const r = await grimorio.recordatorio(jugador.id, recordatorio.personaje.id, recordatorio.indice);
       if (!r.ok) {
         onError(r.error);
         return;
       }
     }
-    const r = await pedir('narrador:cambiarVida', { jugadorId: jugador.id, muerto: true });
+    const r = await grimorio.vida(jugador.id, true);
     if (!r.ok) onError(r.error);
   };
   // Ejecutar al que lleva la calavera: muere, se le ponen los recordatorios de las
@@ -395,14 +396,14 @@ const FichaAsiento = ({
     return false;
   };
   const confirmarMuerte = async () => {
-    const r = await pedir('narrador:confirmarMuerte', { jugadorId: jugador.id });
+    const r = await grimorio.confirmarMuerte(jugador.id);
     if (!r.ok) onError(r.error);
     return false;
   };
 
   // El voto que le queda a un muerto: el narrador se lo quita o se lo devuelve a mano.
   const cambiarVoto = async () => {
-    const r = await pedir('narrador:cambiarVoto', { jugadorId: jugador.id, gastado: !jugador.votoGastado });
+    const r = await grimorio.voto(jugador.id, !jugador.votoGastado);
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha, que ya dice si le queda el voto.
     return false;
@@ -422,7 +423,7 @@ const FichaAsiento = ({
       anotar(jugador.id, { personaje: personajeId, alineamiento: null });
       return;
     }
-    const r = await pedir('narrador:cambiarPersonaje', { jugadorId: jugador.id, personajeId });
+    const r = await grimorio.personaje(jugador.id, personajeId);
     if (!r.ok) onError(r.error);
   };
   const ponerAlineamiento = async (alineamiento: Alineamiento) => {
@@ -430,7 +431,7 @@ const FichaAsiento = ({
       anotar(jugador.id, { personaje: contenido.personaje, alineamiento });
       return false;
     }
-    const r = await pedir('narrador:cambiarAlineamiento', { jugadorId: jugador.id, alineamiento });
+    const r = await grimorio.alineamiento(jugador.id, alineamiento);
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha, que ya dice su alineamiento.
     return false;
@@ -468,7 +469,7 @@ const FichaAsiento = ({
       anotarRecordatorios(jugador.id, [...sin(jugador.id), { id: crypto.randomUUID(), personaje: p.id, indice, texto }]);
       return;
     }
-    const r = await pedir('narrador:ponerRecordatorio', { jugadorId: jugador.id, personajeId: p.id, indice });
+    const r = await grimorio.recordatorio(jugador.id, p.id, indice);
     if (!r.ok) onError(r.error);
   };
   // Con texto propio: igual, pero sin personaje (va en redondo en la ficha)
@@ -478,7 +479,7 @@ const FichaAsiento = ({
       anotarRecordatorios(jugador.id, [...(notasRecordatorios[jugador.id] ?? []), nuevo]);
       return;
     }
-    const r = await pedir('narrador:ponerRecordatorioTexto', { jugadorId: jugador.id, texto, icono });
+    const r = await grimorio.recordatorioTexto(jugador.id, texto, icono);
     if (!r.ok) onError(r.error);
   };
   const opcionRecordatorio: OpcionMenu = {

@@ -71,6 +71,15 @@ export interface Narrador {
   privados(abiertos: boolean): Promise<RespuestaAccion>;
   /** Reparte al azar los personajes de la bolsa entre los asientos. */
   asignarPersonajes(): Promise<RespuestaAccion>;
+  /** Pone un personaje en la ficha de un asiento. */
+  cambiarPersonaje(jugadorId: string, personajeId: string | null): Promise<RespuestaAccion>;
+  /** Mata o revive la ficha de un asiento. */
+  cambiarVida(jugadorId: string, muerto: boolean): Promise<RespuestaAccion>;
+  /** Anuncia la muerte pendiente de un asiento. */
+  confirmarMuerte(jugadorId: string): Promise<RespuestaAccion>;
+  /** Pone junto a una ficha uno de los recordatorios de un personaje. */
+  ponerRecordatorio(jugadorId: string, personajeId: string, indice: number): Promise<RespuestaAccion>;
+  quitarRecordatorio(jugadorId: string, recordatorioId: string): Promise<RespuestaAccion>;
 }
 
 /** Lo que contesta la sala a una acción: hecha (con lo que devuelva) o no, y por qué. */

@@ -22,9 +22,9 @@ export async function heredadosADemonio(ctx: ContextoEtapa): Promise<void> {
     const pasa = partida.reglas.pasaASerDemonio(a);
     if (!pasa || !a.personaje) continue;
     ctx.recuerdos.cronica.antes.set(a.id, a.personaje);
-    await ctx.plaza.accion('narrador:cambiarPersonaje', { jugadorId: a.id, personajeId: pasa.personaje });
+    await ctx.plaza.cambiarPersonaje(a.id, pasa.personaje);
     for (const r of a.recordatorios.filter(pasa.quitar)) {
-      await ctx.plaza.accion('narrador:quitarRecordatorio', { jugadorId: a.id, recordatorioId: r.id });
+      await ctx.plaza.quitarRecordatorio(a.id, r.id);
     }
   }
 }

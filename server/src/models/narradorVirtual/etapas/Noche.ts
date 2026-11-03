@@ -255,7 +255,7 @@ export class Noche implements Etapa {
     // Antes de que se cierren los despertares: lo que se ha dado y quién ha matado a quién
     apuntarNoche(ctx.recuerdos.cronica, juego);
     if (!(await ctx.plaza.amanecer()).ok) return;
-    for (const a of muertos) await ctx.plaza.accion('narrador:confirmarMuerte', { jugadorId: a.id });
+    for (const a of muertos) await ctx.plaza.confirmarMuerte(a.id);
     abrirPatosos(juego, muertos.map((a) => a.id), 'anochecer');
     const buenosDias = partida.fases.actual().numero === 1 ? FRASES.primerDia(duracionPrivados(juego) / 1000) : FRASES.buenosDias(nombres);
     // Si con las muertes de la noche se acaba la partida, se revela

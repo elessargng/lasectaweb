@@ -111,6 +111,7 @@ import {
   type AccionesNarradorVirtual,
   type TurnoVirtual,
   type AccionesPreparacion,
+  type AccionesGrimorio,
   type ResultadoAccion,
   type ResultadoBolsaAlAzar,
 } from './useSala';
@@ -626,6 +627,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     dia,
     narradorVirtual,
     preparacion,
+    grimorio,
   } = useSala(
     cuenta?.token ?? null,
     cuenta ? null : invitado,
@@ -1735,6 +1737,21 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     asignarPersonajes: () => propia(() => preparacion.asignarPersonajes()),
     entregarFichas: () => propia(() => preparacion.entregarFichas()),
   };
+  const grimorioPropio: AccionesGrimorio = {
+    personaje: (jugadorId, personajeId) => propia(() => grimorio.personaje(jugadorId, personajeId)),
+    intercambiar: (desde, hasta) => propia(() => grimorio.intercambiar(desde, hasta)),
+    alineamiento: (jugadorId, alineamiento) => propia(() => grimorio.alineamiento(jugadorId, alineamiento)),
+    vida: (jugadorId, muerto) => propia(() => grimorio.vida(jugadorId, muerto)),
+    confirmarMuerte: (jugadorId) => propia(() => grimorio.confirmarMuerte(jugadorId)),
+    voto: (jugadorId, gastado) => propia(() => grimorio.voto(jugadorId, gastado)),
+    barquero: () => propia(() => grimorio.barquero()),
+    recordatorio: (jugadorId, personajeId, indice) => propia(() => grimorio.recordatorio(jugadorId, personajeId, indice)),
+    recordatorioTexto: (jugadorId, texto, icono) => propia(() => grimorio.recordatorioTexto(jugadorId, texto, icono)),
+    quitarRecordatorio: (jugadorId, recordatorioId) => propia(() => grimorio.quitarRecordatorio(jugadorId, recordatorioId)),
+    nota: (jugadorId, texto) => propia(() => grimorio.nota(jugadorId, texto)),
+    borrarNota: (jugadorId) => propia(() => grimorio.borrarNota(jugadorId)),
+    enviar: (jugadorId, fichas, faroles) => propia(() => grimorio.enviar(jugadorId, fichas, faroles)),
+  };
 
   // Faroles: los del narrador (narradores y visitantes) o, si soy el demonio o un esbirro, los míos.
   // Soy el demonio (o esbirro) si mi ficha lo lleva (o, sin personaje dado, si me lo he anotado).
@@ -1859,7 +1876,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                 djinn={reglasDjinn}
                 rolStormcatcher={estado.rolStormcatcher ? (personajesGuionPorId.get(estado.rolStormcatcher) ?? null) : null}
                 buenos={personajesGuion.filter((p) => p.tipo === 'townsfolk' || p.tipo === 'outsider')}
-                pedir={pedirPropio}
+                barquero={grimorioPropio.barquero}
                 preparacion={preparacionPropia}
                 onError={setAviso}
               />
@@ -2275,6 +2292,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   grimorio={yo?.rol === 'jugador' && estado.configuracion.grimorioJugadores}
                   pedir={pedirPropio}
                   dia={diaPropio}
+                  accionesGrimorio={grimorioPropio}
                   narradorVirtual={virtualPropio}
                   entregarFichas={preparacionPropia.entregarFichas}
                   reloj={relojPropio}
@@ -2374,7 +2392,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             // También los viajeros del catálogo (no solo los del guion): «Tú eres» a un viajero
             personajes={[...personajesGuion, ...viajerosCatalogo.filter((v) => !personajesGuion.some((p) => p.id === v.id))]}
             porId={personajesGuionPorId}
-            pedir={pedirPropio}
+            enviarGrimorio={grimorioPropio.enviar}
             noche={nochePropia}
             onError={setAviso}
             onEnviado={(t) => anunciar('despertar', t)}

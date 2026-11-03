@@ -1,5 +1,11 @@
 import { randomUUID } from 'crypto';
-import { ICONOS_RECORDATORIO_TEXTO, RECORDATORIO_TEXTO, SALA_RECORDATORIO_TEXTO_MAX, type Recordatorio } from '../compartido/grimorio';
+import {
+  ICONOS_RECORDATORIO_TEXTO,
+  RECORDATORIO_TEXTO,
+  SALA_NOTA_LARGO_MAX,
+  SALA_RECORDATORIO_TEXTO_MAX,
+  type Recordatorio,
+} from '../compartido/grimorio';
 import { type Alineamiento } from '../compartido/jugador';
 import type { AsientoDiario, HechoDiario } from '../compartido/diario';
 import type { PersonajeDeGuion } from '../guiones';
@@ -141,13 +147,14 @@ export class Grimorio {
    * Intercambia el personaje y el alineamiento de dos jugadores (con el Gardener, el
    * narrador decide quién tiene qué). Lo demás (muerte, calavera, recordatorios) se queda.
    */
-  intercambiarFichas(desdeId: string, hastaId: string): void {
-    if (desdeId === hastaId) return;
+  intercambiarFichas(desdeId: string, hastaId: string): string | null {
     const desde = this.jugador(desdeId);
     const hasta = this.jugador(hastaId);
-    if (!desde || !hasta) return;
+    if (!desde || !hasta) return 'Ese asiento ya no existe.';
+    if (desde === hasta) return 'Elige otra ficha.';
     [desde.personaje, hasta.personaje] = [hasta.personaje, desde.personaje];
     [desde.alineamiento, hasta.alineamiento] = [hasta.alineamiento, desde.alineamiento];
+    return null;
   }
 
   /** Pone una ficha recordatorio junto al jugador de un asiento (y lo apunta en el diario, si `anotar`). */
@@ -259,15 +266,55 @@ export class Grimorio {
   }
 
   /**
-   * Escribe la nota del jugador de un asiento (sustituye la que hubiera); con null, la borra.
-   * Devuelve false si el asiento no existe.
+   * Escribe la nota del jugador de un asiento (sustituye la que hubiera; se respetan
+   * los saltos de línea, sin espacios en los extremos y hasta SALA_NOTA_LARGO_MAX);
+   * con null, la borra. Devuelve el error, si lo hay.
    */
-  escribirNota(jugadorId: string, texto: string | null): boolean {
+  escribirNota(jugadorId: string, texto: string | null): string | null {
     const jugador = this.jugador(jugadorId);
-    if (!jugador) return false;
-    if (texto === null) this.notaDe.delete(jugador.id);
-    else this.notaDe.set(jugador.id, texto);
-    return true;
+    if (!jugador) return 'Ese asiento ya no existe.';
+    if (texto === null) {
+      this.notaDe.delete(jugador.id);
+      return null;
+    }
+    const limpio = texto.replace(/\r\n?/g, '\n').trim();
+    if (!limpio) return 'La nota está vacía.';
+    if (limpio.length > SALA_NOTA_LARGO_MAX) return `Una nota puede tener como mucho ${SALA_NOTA_LARGO_MAX} caracteres.`;
+    this.notaDe.set(jugador.id, limpio);
+    return null;
+  }
+
+  /** Cambia el alineamiento de una ficha que tiene personaje. Devuelve el error, si lo hay. */
+  elegirAlineamiento(jugadorId: string, alineamiento: Alineamiento): string | null {
+    const jugador = this.jugador(jugadorId);
+    if (!jugador) return 'Ese asiento ya no existe.';
+    if (!jugador.personaje) return 'Esa ficha no tiene personaje.';
+    this.cambiarAlineamiento(jugadorId, alineamiento);
+    return null;
+  }
+
+  /** Mata o revive la ficha de un asiento (ver cambiarVida). Devuelve el error, si lo hay. */
+  elegirVida(jugadorId: string, muerto: boolean): string | null {
+    if (!this.jugador(jugadorId)) return 'Ese asiento ya no existe.';
+    this.cambiarVida(jugadorId, muerto);
+    return null;
+  }
+
+  /** Anuncia la muerte pendiente de un asiento (ver confirmarMuerte). Devuelve el error, si lo hay. */
+  anunciarMuerte(jugadorId: string): string | null {
+    if (!this.jugador(jugadorId)) return 'Ese asiento ya no existe.';
+    return this.confirmarMuerte(jugadorId) ? null : 'Esa ficha no tiene una muerte por anunciar.';
+  }
+
+  /** Quita o devuelve a mano el voto de un muerto (ver cambiarVoto). Devuelve el error, si lo hay. */
+  elegirVoto(jugadorId: string, gastado: boolean): string | null {
+    if (!this.jugador(jugadorId)) return 'Ese asiento ya no existe.';
+    return this.cambiarVoto(jugadorId, gastado) ? null : 'Solo los muertos tienen un voto que quitar o devolver.';
+  }
+
+  /** El Barquero: los muertos recuperan su voto (ver devolverVotos); si nadie lo había gastado, el error. */
+  barquero(): string | null {
+    return this.devolverVotos() > 0 ? null : 'Ningún muerto ha gastado su voto.';
   }
 
   /** Cambia el alineamiento del jugador de un asiento. */

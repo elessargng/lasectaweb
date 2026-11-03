@@ -1,5 +1,5 @@
 import { useRef, useState, type MouseEvent, type PointerEvent } from 'react';
-import type { ResultadoAccion } from './useSala';
+import type { AccionesGrimorio } from './useSala';
 
 /** Lo que hay que mover el puntero para que deje de ser un clic y sea un arrastre (px). */
 const UMBRAL = 6;
@@ -15,7 +15,8 @@ interface Arrastre {
 interface Opciones {
   /** Se puede (narradores con el Gardener en juego, sin editar ni revelar). */
   activo: boolean;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Intercambia dos fichas (ver AccionesGrimorio). */
+  intercambiar: AccionesGrimorio['intercambiar'];
   onError: (mensaje: string) => void;
   /** Se ha hecho: lo que se anuncia (desde y hasta, ids de asiento). */
   onHecho: (desde: string, hasta: string) => void;
@@ -28,7 +29,7 @@ interface Opciones {
  * arrastrar, ese clic no llega. Para el teclado y el lector, la opción
  * «Intercambiar con…» del menú de la ficha.
  */
-export function useIntercambiarFichas({ activo, pedir, onError, onHecho }: Opciones) {
+export function useIntercambiarFichas({ activo, intercambiar: intercambiarFichas, onError, onHecho }: Opciones) {
   const [arrastre, setArrastre] = useState<Arrastre | null>(null);
   const inicio = useRef<{ desde: string; x: number; y: number } | null>(null);
   // Tras soltar, el clic que sigue no abre el menú
@@ -43,7 +44,7 @@ export function useIntercambiarFichas({ activo, pedir, onError, onHecho }: Opcio
   };
 
   const intercambiar = async (desde: string, hasta: string) => {
-    const r = await pedir('narrador:intercambiarFichas', { desde, hasta });
+    const r = await intercambiarFichas(desde, hasta);
     if (r.ok) onHecho(desde, hasta);
     else onError(r.error);
   };

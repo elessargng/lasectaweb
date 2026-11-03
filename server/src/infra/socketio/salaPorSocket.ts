@@ -4,6 +4,7 @@ import type { BolsaController } from '../../controllers/sala/BolsaController';
 import type { DiaController } from '../../controllers/sala/DiaController';
 import type { FaseController } from '../../controllers/sala/FaseController';
 import type { FarolController } from '../../controllers/sala/FarolController';
+import type { GrimorioController } from '../../controllers/sala/GrimorioController';
 import type { NarradorVirtualController } from '../../controllers/sala/NarradorVirtualController';
 import type { NocheController } from '../../controllers/sala/NocheController';
 import type { PreparacionController } from '../../controllers/sala/PreparacionController';
@@ -38,6 +39,7 @@ export interface ControladoresSala {
   faroles: FarolController;
   dia: DiaController;
   fase: FaseController;
+  grimorio: GrimorioController;
   narradorVirtual: NarradorVirtualController;
   noche: NocheController;
   preparacion: PreparacionController;
@@ -77,6 +79,21 @@ const PETICIONES_PARTES = {
     'fase:amanecer': 'amanecer',
     'fase:volverAtras': 'volverAtras',
     'fase:limpiarGrimorio': 'limpiarGrimorio',
+  },
+  grimorio: {
+    'grimorio:personaje': 'personaje',
+    'grimorio:intercambiar': 'intercambiar',
+    'grimorio:alineamiento': 'alineamiento',
+    'grimorio:vida': 'vida',
+    'grimorio:confirmarMuerte': 'confirmarMuerte',
+    'grimorio:voto': 'voto',
+    'grimorio:barquero': 'barquero',
+    'grimorio:recordatorio': 'recordatorio',
+    'grimorio:recordatorioTexto': 'recordatorioTexto',
+    'grimorio:quitarRecordatorio': 'quitarRecordatorio',
+    'grimorio:nota': 'nota',
+    'grimorio:borrarNota': 'borrarNota',
+    'grimorio:enviar': 'enviar',
   },
   narradorVirtual: {
     'narradorVirtual:anadir': 'anadir',

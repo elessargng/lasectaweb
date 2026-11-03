@@ -13,7 +13,7 @@ let ana: Cliente;
 
 const idAsiento = (i: number) => narradora.estado.plaza[i].id;
 const darPersonaje = (i: number, personajeId: string) =>
-  arnes.accion(narradora, 'narrador:cambiarPersonaje', { jugadorId: idAsiento(i), personajeId });
+  arnes.hacer(narradora, 'grimorio:personaje', { jugadorId: idAsiento(i), personajeId });
 const empezar = (c: Cliente, datos: unknown) => arnes.pedir(c, 'revelacion:empezar', datos);
 
 /** El de prueba, con la Doncel y el Matademonios (tienen causa de final). */

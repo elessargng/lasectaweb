@@ -7,7 +7,7 @@ import { botonPrincipal, botonSecundario } from './estilos';
 import type { PersonajeMostrado } from './guiones';
 import { ID_TITULO_DESPERTAR } from './ids';
 import { BotoneraDespertar, EditorAdjunto, HistorialDespertar, type Propuesta } from './PiezasDespertar';
-import type { AccionesNoche, DespertarDto, SalaDto, ResultadoAccion } from './useSala';
+import type { AccionesGrimorio, AccionesNoche, DespertarDto, SalaDto } from './useSala';
 
 interface VentanaDespertarProps {
   estado: SalaDto;
@@ -22,7 +22,8 @@ interface VentanaDespertarProps {
   /** Todos los personajes del guion (y por id, para pintar los mensajes). */
   personajes: PersonajeMostrado[];
   porId: Map<string, PersonajeMostrado>;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Envía una copia del grimorio (ver AccionesGrimorio). */
+  enviarGrimorio: AccionesGrimorio['enviar'];
   /** Mandar al despertar y el despertar guiado revisado (ver AccionesNoche). */
   noche: Pick<AccionesNoche, 'enviar' | 'resolverHabilidad'>;
   onError: (mensaje: string) => void;
@@ -70,7 +71,7 @@ const VentanaDespertar = ({
   onCerrar,
   personajes,
   porId,
-  pedir,
+  enviarGrimorio,
   noche,
   onError,
   onEnviado,
@@ -87,7 +88,7 @@ const VentanaDespertar = ({
   const veGrimorio =
     !soloLectura &&
     !!jugador?.participanteId &&
-    estado.acciones.includes('narrador:enviarGrimorio') &&
+    estado.acciones.includes('grimorio:enviar') &&
     (PERSONAJES_GRIMORIO.includes(jugador.personaje ?? '') || PERSONAJES_GRIMORIO.includes(identidadDe(jugador).personaje ?? ''));
   const conPestanas = abiertos.length > 1;
   const revision = revisiones?.get(actual.jugador);
@@ -272,7 +273,7 @@ const VentanaDespertar = ({
             <EnviarGrimorio
               estado={estado}
               destino={actual.jugador}
-              pedir={pedir}
+              enviar={enviarGrimorio}
               onEnviado={onEnviado}
               onCerrar={() => setEnviandoGrimorio(false)}
             />

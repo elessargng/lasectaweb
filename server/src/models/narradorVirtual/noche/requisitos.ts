@@ -20,7 +20,7 @@ const TIPO_DEL_CORRECTO: Record<string, string> = { townsfolk: 'townsfolk', outs
 export async function ponerRecordatorio(ctx: ContextoEtapa, jugadorId: string, personaje: string, texto: string): Promise<boolean> {
   const indice = indiceRecordatorio(ctx.juego, personaje, texto);
   if (indice < 0) return false;
-  return (await ctx.plaza.accion('narrador:ponerRecordatorio', { jugadorId, personajeId: personaje, indice })).ok;
+  return (await ctx.plaza.ponerRecordatorio(jugadorId, personaje, indice)).ok;
 }
 
 /**

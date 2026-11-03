@@ -9,7 +9,7 @@ import MiniGrimorio, { nombresDeAsientos } from './MiniGrimorio';
 import { nombreDeAsiento } from './despertar';
 import { botonIcono, botonPrincipal, botonSecundario } from './estilos';
 import { alineamientoDe, describirRecordatorio, RECORDATORIO_TEXTO, useFichas } from './fichas';
-import type { Alineamiento, SalaDto, FichaEnviadaDto, Recordatorio, ResultadoAccion } from './useSala';
+import type { AccionesGrimorio, Alineamiento, SalaDto, FichaEnviadaDto, Recordatorio } from './useSala';
 
 /** Los personajes que ven el grimorio del narrador: se les envía desde su despertar. */
 export const PERSONAJES_GRIMORIO = ['spy', 'widow'];
@@ -28,7 +28,8 @@ interface EnviarGrimorioProps {
   estado: SalaDto;
   /** El asiento al que se envía (quien se sienta en él lo verá). */
   destino: string;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Envía la copia (ver AccionesGrimorio). */
+  enviar: AccionesGrimorio['enviar'];
   /** Se ha enviado: lo que se anuncia. */
   onEnviado: (texto: string) => void;
   onCerrar: () => void;
@@ -45,7 +46,7 @@ interface EnviarGrimorioProps {
  * Elegir personaje o recordatorio abre su diálogo en lugar de este (un diálogo
  * modal cada vez); al cerrarlo se vuelve aquí, al mismo sitio.
  */
-const EnviarGrimorio = ({ estado, destino, pedir, onEnviado, onCerrar }: EnviarGrimorioProps) => {
+const EnviarGrimorio = ({ estado, destino, enviar: enviarCopia, onEnviado, onCerrar }: EnviarGrimorioProps) => {
   const { personajes, viajeros, todos, todosPorId } = useFichas();
   // La copia, de cuando se abre (si la partida cambia mientras, no se pisa lo editado)
   const [copia] = useState(() => copiaDelGrimorio(estado));
@@ -92,7 +93,7 @@ const EnviarGrimorio = ({ estado, destino, pedir, onEnviado, onCerrar }: EnviarG
     if (enviando) return;
     setEnviando(true);
     setError('');
-    const r = await pedir('narrador:enviarGrimorio', { jugadorId: destino, fichas, faroles });
+    const r = await enviarCopia(destino, fichas, faroles);
     setEnviando(false);
     if (!r.ok) {
       setError(r.error);

@@ -2,7 +2,6 @@ import type { Participante } from '../../../models/sala/Participantes';
 import type { SalaDeJuego } from '../../../models/SalaDeJuego';
 import type { DependenciasAcciones } from '../puertos';
 import type { Accion, SalaEfecto } from './Accion';
-import { ACCIONES_GRIMORIO } from './grimorio';
 import { ACCIONES_PARTICIPANTES } from './participantes';
 
 export type { SalaEfecto } from './Accion';
@@ -18,7 +17,6 @@ export type { SalaEfecto } from './Accion';
  */
 export const SALA_ACCIONES: Record<string, Accion> = {
   ...ACCIONES_PARTICIPANTES,
-  ...ACCIONES_GRIMORIO,
 };
 
 /** Las acciones que este participante puede usar ahora mismo. */

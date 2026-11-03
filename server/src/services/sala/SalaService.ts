@@ -17,6 +17,7 @@ import { FaseService } from './FaseService';
 import { NocheService } from './NocheService';
 import { DiaService } from './DiaService';
 import { PreparacionService } from './PreparacionService';
+import { GrimorioService } from './GrimorioService';
 import { ImagenesSala } from './ImagenesSala';
 import type { DependenciasAcciones, DependenciasSala, DifusorSala } from './puertos';
 
@@ -81,6 +82,8 @@ export class SalaService {
   readonly dia: DiaService;
   /** La preparación: ajustes, guion, fondo, NPCs, repartir y entregar (ver PreparacionController). */
   readonly preparacion: PreparacionService;
+  /** El grimorio del narrador: fichas, recordatorios, notas y enviarlo (ver GrimorioController). */
+  readonly grimorio: GrimorioService;
   private readonly conversaciones: ConversacionService;
   private readonly videollamada: VideollamadaService | null;
   /** El narrador virtual: añadirlo, quitarlo y lo que le piden los jugadores (ver NarradorVirtualController). */
@@ -123,6 +126,7 @@ export class SalaService {
     this.fase = new FaseService(this.juego, alCambiar);
     this.noche = new NocheService(this.juego, alCambiar);
     this.dia = new DiaService(this.juego, alCambiar);
+    this.grimorio = new GrimorioService(this.juego, alCambiar);
     this.preparacion = new PreparacionService(this.juego, alCambiar, {
       guiones: deps.guiones,
       imagenesBiblioteca: deps.imagenesBiblioteca,
@@ -166,6 +170,11 @@ export class SalaService {
         configurar: async (cambios) => this.preparacion.configurar(participanteId, cambios),
         privados: async (abiertos) => this.preparacion.privados(participanteId, abiertos),
         asignarPersonajes: async () => this.preparacion.asignarPersonajes(participanteId),
+        cambiarPersonaje: async (jugadorId, personajeId) => this.grimorio.personaje(participanteId, jugadorId, personajeId),
+        cambiarVida: async (jugadorId, muerto) => this.grimorio.vida(participanteId, jugadorId, muerto),
+        confirmarMuerte: async (jugadorId) => this.grimorio.confirmarMuerte(participanteId, jugadorId),
+        ponerRecordatorio: async (jugadorId, personajeId, indice) => this.grimorio.recordatorio(participanteId, jugadorId, personajeId, indice),
+        quitarRecordatorio: async (jugadorId, recordatorioId) => this.grimorio.quitarRecordatorio(participanteId, jugadorId, recordatorioId),
       }),
       {
         decir: (texto) => {
@@ -221,7 +230,7 @@ export class SalaService {
       conversaciones: this.conversaciones.lista(),
       invitacionesDe: (participanteId: string) => this.conversaciones.invitacionesDe(participanteId),
       video: !!this.videollamada,
-      accionesDe: (yo: Participante) => [...accionesPermitidas(this.juego, yo), ...this.bolsa.permitidas(yo), ...this.reloj.permitidas(yo), ...this.revelacion.permitidas(yo), ...this.senalamiento.permitidas(yo), ...this.faroles.permitidas(yo), ...this.fase.permitidas(yo), ...this.noche.permitidas(yo), ...this.dia.permitidas(yo), ...this.preparacion.permitidas(yo), ...this.narradorVirtual.permitidas(yo)],
+      accionesDe: (yo: Participante) => [...accionesPermitidas(this.juego, yo), ...this.bolsa.permitidas(yo), ...this.reloj.permitidas(yo), ...this.revelacion.permitidas(yo), ...this.senalamiento.permitidas(yo), ...this.faroles.permitidas(yo), ...this.fase.permitidas(yo), ...this.noche.permitidas(yo), ...this.dia.permitidas(yo), ...this.preparacion.permitidas(yo), ...this.grimorio.permitidas(yo), ...this.narradorVirtual.permitidas(yo)],
     };
   }
 

@@ -13,6 +13,7 @@ import { Configuracion, cambiosNoValen, type CambiosAjustes } from './Configurac
 import { Declaraciones } from './Declaraciones';
 import { DespertarGuiado, errorDeEleccion } from './DespertarGuiado';
 import { componerMensaje, type BorradorDespertar } from './mensajeDespertar';
+import { componerGrimorio, type BorradorFicha } from './grimorioEnviado';
 import { Despertares } from './Despertares';
 import { Entregas } from './Entregas';
 import { type Diario, type EventoPartida, type FotoAsiento, type OyentePartida } from './eventos';
@@ -686,6 +687,25 @@ export class Partida {
     const hilo = this.despertares.despertares().find((d) => d.jugador === jugadorId);
     if (!hilo?.mensajes.some(mismos)) return 'El narrador no te ha enseñado esos personajes.';
     this.faroles.copiarFaroles(jugadorId, personajes.slice(0, NUM_FAROLES));
+    return null;
+  }
+
+  /**
+   * Envía un grimorio (el Espía, la Viuda) a quien se sienta en un asiento: una copia
+   * del de la partida que el narrador puede haber cambiado (ver componerGrimorio).
+   * Devuelve el error, si lo hay.
+   */
+  enviarGrimorio(jugadorId: string, fichas: readonly BorradorFicha[], faroles: readonly string[]): string | null {
+    const destino = this.plaza().find((a) => a.id === jugadorId);
+    if (!destino) return 'Ese asiento ya no existe.';
+    if (!destino.participanteId) return 'En ese asiento no hay nadie a quien enviárselo.';
+    const grimorio = componerGrimorio(fichas, faroles, {
+      hayAsiento: (id) => this.plaza().some((a) => a.id === id),
+      personaje: (id) => this.guion.personaje(id),
+      iconoDeRecordatorio: (icono) => this.grimorio.iconoDeRecordatorio(icono),
+    });
+    if ('error' in grimorio) return grimorio.error;
+    this.entregas.enviarGrimorio(jugadorId, grimorio.fichas, grimorio.faroles);
     return null;
   }
 
