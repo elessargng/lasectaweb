@@ -3,6 +3,7 @@ import { Server } from 'socket.io';
 import type { BolsaController } from '../../controllers/sala/BolsaController';
 import type { RelojController } from '../../controllers/sala/RelojController';
 import type { RevelacionController } from '../../controllers/sala/RevelacionController';
+import type { SenalamientoController } from '../../controllers/sala/SenalamientoController';
 import type { Credenciales, SalaController } from '../../controllers/sala/SalaController';
 import type { SalaService } from '../../services/sala/SalaService';
 import { DifusorSocketIo } from './DifusorSocketIo';
@@ -48,12 +49,21 @@ const PETICIONES_REVELACION = {
   'revelacion:terminar': 'terminar',
 } as const satisfies Record<string, keyof RevelacionController>;
 
+/** Los de los señalamientos, y el método de SenalamientoController que los atiende. */
+const PETICIONES_SENALAMIENTO = {
+  'senalamiento:empezar': 'empezar',
+  'senalamiento:lilmonsta': 'lilmonsta',
+  'senalamiento:terminar': 'terminar',
+  'senalamiento:senalar': 'senalar',
+} as const satisfies Record<string, keyof SenalamientoController>;
+
 /** Los controladores de la sala: el general y el de cada parte. */
 export interface ControladoresSala {
   sala: SalaController;
   bolsa: BolsaController;
   reloj: RelojController;
   revelacion: RevelacionController;
+  senalamiento: SenalamientoController;
 }
 
 /** Contesta por el ack del evento, si el cliente lo ha pedido. */
@@ -69,7 +79,7 @@ const contestar = (ack: unknown) => (respuesta: unknown) => {
 export function abrirSalaPorSocket(
   httpServer: HttpServer,
   salaService: SalaService,
-  { sala: salaController, bolsa: bolsaController, reloj: relojController, revelacion: revelacionController }: ControladoresSala,
+  { sala: salaController, bolsa: bolsaController, reloj: relojController, revelacion: revelacionController, senalamiento: senalamientoController }: ControladoresSala,
 ): void {
   const io = new Server(httpServer, {
     path: SALA_SOCKET_PATH,
@@ -102,6 +112,9 @@ export function abrirSalaPorSocket(
     }
     for (const [evento, metodo] of Object.entries(PETICIONES_REVELACION)) {
       socket.on(evento, (peticion: unknown, ack?: unknown) => revelacionController[metodo](sesion, peticion, contestar(ack)));
+    }
+    for (const [evento, metodo] of Object.entries(PETICIONES_SENALAMIENTO)) {
+      socket.on(evento, (peticion: unknown, ack?: unknown) => senalamientoController[metodo](sesion, peticion, contestar(ack)));
     }
     socket.on('chat:historial', () => salaController.historial(sesion));
     socket.on('disconnect', (reason) => salaController.salir(sesion, reason === 'client namespace disconnect'));

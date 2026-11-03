@@ -21,6 +21,15 @@ export interface Narrador {
   revelarGrimorio(ganador: Alineamiento): Promise<RespuestaAccion>;
   /** Revela la ficha de un asiento, para todos. */
   revelarFicha(jugadorId: string): Promise<RespuestaAccion>;
+  /** Pide que se señale (listas vacías: todos; segundos null: sin cuenta atrás). */
+  empezarSenalamiento(peticion: {
+    mensaje: string;
+    segundos: number | null;
+    senaladores: readonly string[];
+    objetivos: readonly string[];
+  }): Promise<RespuestaAccion>;
+  /** Quita el señalamiento. */
+  terminarSenalamiento(): Promise<RespuestaAccion>;
 }
 
 /** Lo que contesta la sala a una acción: hecha (con lo que devuelva) o no, y por qué. */

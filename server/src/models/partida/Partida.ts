@@ -470,15 +470,34 @@ export class Partida {
     return this.senalamientos.veSenalamiento(participante);
   }
 
-  /** Empieza un señalamiento (ver Senalamientos.empezar); quien lo ve baja la mano. */
-  empezarSenalamiento(datos: Parameters<Senalamientos['empezar']>[0]): void {
-    this.senalamientos.empezar(datos);
+  /** Empieza un señalamiento (ver Senalamientos.empezar); quien lo ve baja la mano. Devuelve el error, si lo hay. */
+  empezarSenalamiento(datos: Parameters<Senalamientos['empezar']>[0]): string | null {
+    const error = this.senalamientos.empezar(datos);
+    if (error) return error;
     // Quien lo ve baja la mano (no se puede levantar mientras dure)
     for (const participante of this.sala.participantes.participantes()) {
       if (participante.manoLevantada && this.senalamientos.veSenalamiento(participante)) {
         this.sala.participantes.levantarMano(participante.id, false);
       }
     }
+    return null;
+  }
+
+  /**
+   * Lil' Monsta (de noche, con él en el guion, sin demonio y con un esbirro de más):
+   * despierta a los esbirros vivos y señalan, sin cuenta atrás, hasta que todos
+   * eligen al mismo (ese lo cuida: ver senalar). Si no se puede, el error.
+   */
+  empezarLilmonsta(): string | null {
+    const esbirros = this.esbirrosLilmonsta();
+    if (!esbirros) return "Lil' Monsta se empieza de noche, sin demonio en la plaza y con un esbirro de más.";
+    return this.empezarSenalamiento({
+      tipo: 'lilmonsta',
+      mensaje: "Esbirros, elegid quién cuida de Lil' Monsta",
+      segundos: null,
+      senaladores: esbirros,
+      objetivos: esbirros,
+    });
   }
 
   /**

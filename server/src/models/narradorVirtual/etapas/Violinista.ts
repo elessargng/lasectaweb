@@ -54,15 +54,16 @@ export class Violinista implements Etapa {
         })
       ).id;
     if (!this.seguir) return;
-    await ctx.plaza.accion('narrador:senalamiento', {
+    await ctx.plaza.empezarSenalamiento({
       mensaje: '¿Quién gana? Señala a uno de los dos',
       segundos: SENALAMIENTO_SEGUNDOS,
+      senaladores: [],
       objetivos: [demonio.id, bueno],
     });
     await this.esperar(ctx, SENALAMIENTO_SEGUNDOS * 1000 + 500);
     if (!this.seguir) return;
     const senales = Object.values(partida.senalamientos.senalamiento()?.senales ?? {});
-    await ctx.plaza.accion('narrador:terminarSenalamiento');
+    await ctx.plaza.terminarSenalamiento();
     const alDemonio = senales.filter((s) => s === demonio.id).length;
     const alBueno = senales.filter((s) => s === bueno).length;
     const ganador: Ganador =

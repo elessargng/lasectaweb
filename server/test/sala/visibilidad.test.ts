@@ -196,7 +196,7 @@ describe('lo que ve cada uno', () => {
 
   it('de noche, el señalamiento solo lo ven la narradora y quien señala', async () => {
     await arnes.accion(narradora, 'narrador:irANoche');
-    await arnes.accion(narradora, 'narrador:senalamiento', { mensaje: '', segundos: null, senaladores: [idAsiento(0)], objetivos: [] });
+    await arnes.pedir(narradora, 'senalamiento:empezar', { mensaje: '', segundos: null, senaladores: [idAsiento(0)], objetivos: [] });
     expect(narradora.estado.senalamiento).not.toBeNull();
     expect(ana.estado.senalamiento).not.toBeNull();
     expect(bea.estado.senalamiento).toBeNull();

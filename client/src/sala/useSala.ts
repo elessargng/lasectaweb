@@ -294,6 +294,17 @@ export function useSala(
     [pedirAlSocket],
   );
 
+  /** Los señalamientos (el narrador los pide; quien le toca, señala), por sus eventos. */
+  const senalamiento: AccionesSenalamiento = useMemo(
+    () => ({
+      empezar: (peticion) => pedirAlSocket<ResultadoAccion>('senalamiento:empezar', peticion),
+      lilmonsta: () => pedirAlSocket<ResultadoAccion>('senalamiento:lilmonsta', {}),
+      terminar: () => pedirAlSocket<ResultadoAccion>('senalamiento:terminar', {}),
+      senalar: (jugadorId) => pedirAlSocket<ResultadoAccion>('senalamiento:senalar', { jugadorId }),
+    }),
+    [pedirAlSocket],
+  );
+
   /** Vuelve a pedir los mensajes que se pueden leer (al cambiar de papel cambian). */
   const pedirHistorial = useCallback(() => {
     socketRef.current?.emit('chat:historial');
@@ -326,7 +337,20 @@ export function useSala(
     bolsa,
     reloj,
     revelacion,
+    senalamiento,
   };
+}
+
+/** Lo que se hace con los señalamientos (ver useSala). */
+export interface AccionesSenalamiento {
+  /** El narrador pide que se señale: quiénes señalan, a quiénes (listas vacías: todos), el mensaje y la cuenta atrás (null: sin ella). */
+  empezar(peticion: { mensaje: string; segundos: number | null; senaladores: string[]; objetivos: string[] }): Promise<ResultadoAccion>;
+  /** Lil' Monsta: los esbirros eligen quién lo cuida. */
+  lilmonsta(): Promise<ResultadoAccion>;
+  /** El narrador lo quita. */
+  terminar(): Promise<ResultadoAccion>;
+  /** Quien le toca señala a un asiento (null: deja de señalar). */
+  senalar(jugadorId: string | null): Promise<ResultadoAccion>;
 }
 
 /** Lo que el narrador hace al revelar el grimorio (ver useSala). */

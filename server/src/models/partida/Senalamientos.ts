@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { Participante } from '../sala/Participantes';
-import type { Fase } from '../compartido/partida';
+import { SALA_SENALAMIENTO, type Fase } from '../compartido/partida';
 import type { Jugador } from './Jugador';
 
 /**
@@ -83,23 +83,30 @@ export class Senalamientos {
   /**
    * Empieza un señalamiento (sustituye al que hubiera). Sin asientos que señalan
    * o que se pueden señalar, todos. De día es público; de noche se despierta a
-   * los que señalan. `segundos` null: sin cuenta atrás. No valida los datos.
+   * los que señalan. `segundos` null: sin cuenta atrás. Si la cuenta atrás no
+   * dura lo que puede durar o algún asiento ya no está, el error.
    */
   empezar(datos: {
     tipo?: Senalamiento['tipo'];
     mensaje: string;
     segundos: number | null;
-    senaladores: string[];
-    objetivos: string[];
-  }): void {
+    senaladores: readonly string[];
+    objetivos: readonly string[];
+  }): string | null {
+    const { minSegundos, maxSegundos, mensajeMax } = SALA_SENALAMIENTO;
+    if (datos.segundos !== null && !Number.isInteger(datos.segundos)) return 'Indica cuántos segundos dura la cuenta atrás.';
+    if (datos.segundos !== null && (datos.segundos < minSegundos || datos.segundos > maxSegundos)) {
+      return `La cuenta atrás tiene que durar entre ${minSegundos} y ${maxSegundos} segundos.`;
+    }
     const todos = this.entorno.plaza().map((a) => a.id);
-    const deLaPlaza = (ids: string[]) => (ids.length ? todos.filter((id) => ids.includes(id)) : todos);
+    if ([...datos.senaladores, ...datos.objetivos].some((id) => !todos.includes(id))) return 'Alguno de esos asientos ya no existe.';
+    const deLaPlaza = (ids: readonly string[]) => (ids.length ? todos.filter((id) => ids.includes(id)) : todos);
     const publico = this.entorno.fase().momento !== 'noche';
     const inicio = Date.now();
     this.actual = {
       id: randomUUID(),
       tipo: datos.tipo ?? 'normal',
-      mensaje: datos.mensaje,
+      mensaje: datos.mensaje.replace(/\s+/g, ' ').trim().slice(0, mensajeMax),
       senaladores: deLaPlaza(datos.senaladores),
       objetivos: deLaPlaza(datos.objetivos),
       publico,
@@ -109,6 +116,7 @@ export class Senalamientos {
       senales: {},
     };
     if (!publico) for (const id of this.actual.senaladores) this.entorno.despertar(id);
+    return null;
   }
 
   /** El jugador de un asiento que señala, señala a otro (null: deja de señalar). Devuelve el error, si lo hay. */

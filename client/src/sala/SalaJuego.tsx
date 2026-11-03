@@ -103,6 +103,7 @@ import {
   type AccionesBolsa,
   type AccionesReloj,
   type AccionesRevelacion,
+  type AccionesSenalamiento,
   type ResultadoAccion,
   type ResultadoBolsaAlAzar,
 } from './useSala';
@@ -611,6 +612,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     bolsa,
     reloj,
     revelacion,
+    senalamiento,
   } = useSala(
     cuenta?.token ?? null,
     cuenta ? null : invitado,
@@ -745,7 +747,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // Me toca señalar (un señalamiento sin congelar): la ventana del despertar se esconde
   // para que se vean y se pulsen las fichas; al congelarse, vuelve
   const senalCongelada = useSenalamientoCongelado(estado?.senalamiento ?? null, desfaseReloj);
-  const senalandoYo = !!estado?.senalamiento && !senalCongelada && !!estado.acciones.includes('jugador:senalar');
+  const senalandoYo = !!estado?.senalamiento && !senalCongelada && !!estado.acciones.includes('senalamiento:senalar');
 
   // Elegir a un jugador del despertar en la plaza (Preferencias > Accesibilidad): la
   // ventana del despertar se esconde, las fichas se pulsan para elegir y, al elegir
@@ -1667,6 +1669,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     revelarFicha: (jugadorId) => propia(() => revelacion.revelarFicha(jugadorId)),
     terminar: () => propia(() => revelacion.terminar()),
   };
+  const senalamientoPropio: AccionesSenalamiento = {
+    empezar: (peticion) => propia(() => senalamiento.empezar(peticion)),
+    lilmonsta: () => propia(() => senalamiento.lilmonsta()),
+    terminar: () => propia(() => senalamiento.terminar()),
+    senalar: (jugadorId) => propia(() => senalamiento.senalar(jugadorId)),
+  };
 
   // Faroles: los del narrador (narradores y visitantes) o, si soy el demonio o un esbirro, los míos.
   // Soy el demonio (o esbirro) si mi ficha lo lleva (o, sin personaje dado, si me lo he anotado).
@@ -1952,6 +1960,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   revelando={revelandoGrimorio}
                   onRevelando={setRevelandoGrimorio}
                   revelarGrimorio={revelacionPropia.empezar}
+                  empezarSenalamiento={senalamientoPropio.empezar}
                   atajoFase={atajos.cambiarFase}
                   atajoRevelar={atajos.revelarGrimorio}
                   atajoGong={atajos.sonarGong}
@@ -2205,6 +2214,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   pedir={pedirEnPlaza}
                   reloj={relojPropio}
                   revelacion={revelacionPropia}
+                  senalamientos={senalamientoPropio}
                   onError={setAviso}
                   onAnuncio={anunciar}
                   focoAsientoRef={focoAsientoRef}

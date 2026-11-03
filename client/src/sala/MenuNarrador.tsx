@@ -9,7 +9,7 @@ import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { botonIcono } from './estilos';
 import { ID_MENU_NARRADOR } from './ids';
 import type { Atajo } from './atajos';
-import type { AccionesReloj, AccionesRevelacion, SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
+import type { AccionesReloj, AccionesRevelacion, AccionesSenalamiento, SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
 
 interface MenuNarradorProps {
   estado: SalaDto;
@@ -22,6 +22,8 @@ interface MenuNarradorProps {
   onRevelando: (abierto: boolean) => void;
   /** Revela el grimorio (ver AccionesRevelacion). */
   revelarGrimorio: AccionesRevelacion['empezar'];
+  /** Pide que se señale (ver AccionesSenalamiento). */
+  empezarSenalamiento: AccionesSenalamiento['empezar'];
   /** Teclas de cambiar de fase (noche/amanecer) y de revelar el grimorio (se ven al lado). */
   atajoFase?: Atajo;
   atajoRevelar?: Atajo;
@@ -98,6 +100,7 @@ const MenuNarrador = ({
   revelando,
   onRevelando,
   revelarGrimorio,
+  empezarSenalamiento,
   atajoFase,
   atajoRevelar,
   atajoGong,
@@ -121,7 +124,7 @@ const MenuNarrador = ({
     { id: 'narrador:irANoche', etiqueta: 'Ir a la noche', atajo: atajoFase, elegir: () => void pedir('narrador:irANoche') },
     { id: 'narrador:amanecer', etiqueta: 'Amanece', atajo: atajoFase, elegir: () => void pedir('narrador:amanecer') },
     { id: 'reloj:sonarGong', etiqueta: 'Sonar gong', atajo: atajoGong, elegir: onSonarGong },
-    { id: 'narrador:senalamiento', etiqueta: 'Señalar', abreDialogo: true, elegir: () => setSenalando(true) },
+    { id: 'senalamiento:empezar', etiqueta: 'Señalar', abreDialogo: true, elegir: () => setSenalando(true) },
     { id: 'reloj:poner', etiqueta: 'Reloj', atajo: atajoReloj, abreDialogo: true, elegir: () => onPoniendoReloj(true) },
     { id: 'revelacion:empezar', etiqueta: 'Revelar grimorio', atajo: atajoRevelar, abreDialogo: true, elegir: () => onRevelando(true) },
     { id: 'narrador:limpiarGrimorio', etiqueta: 'Limpiar grimorio', abreDialogo: true, elegir: () => setLimpiando(true) },
@@ -158,7 +161,7 @@ const MenuNarrador = ({
       )}
       {revelando && <DialogoRevelar estado={estado} revelar={revelarGrimorio} onCerrar={() => onRevelando(false)} />}
       {poniendoReloj && <DialogoReloj poner={ponerReloj} onPuesto={onRelojPuesto} onCerrar={() => onPoniendoReloj(false)} />}
-      {senalando && <DialogoSenalamiento estado={estado} pedir={pedir} onCerrar={() => setSenalando(false)} />}
+      {senalando && <DialogoSenalamiento estado={estado} empezar={empezarSenalamiento} onCerrar={() => setSenalando(false)} />}
       {limpiando && (
         <DialogoConfirmar
           titulo="Limpiar grimorio"

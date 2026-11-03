@@ -4,11 +4,12 @@ import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario, campo } from './estilos';
 import { datosAsiento, describirAsiento } from './nombresAsiento';
-import { SENALAMIENTO, type SalaDto, type ResultadoAccion } from './useSala';
+import { SENALAMIENTO, type AccionesSenalamiento, type SalaDto } from './useSala';
 
 interface DialogoSenalamientoProps {
   estado: SalaDto;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Pide que se señale (ver AccionesSenalamiento). */
+  empezar: AccionesSenalamiento['empezar'];
   onCerrar: () => void;
 }
 
@@ -21,7 +22,7 @@ let ultimo = { mensaje: '', segundos: String(SENALAMIENTO.defectoSegundos), conC
  * si no son todos, quién señala y a quién. De día lo ven todos; de noche se
  * despierta a los que señalan y solo lo ven ellos.
  */
-const DialogoSenalamiento = ({ estado, pedir, onCerrar }: DialogoSenalamientoProps) => {
+const DialogoSenalamiento = ({ estado, empezar: pedirSenalamiento, onCerrar }: DialogoSenalamientoProps) => {
   const [mensaje, setMensaje] = useState(ultimo.mensaje);
   const [segundos, setSegundos] = useState(ultimo.segundos);
   const [conCuenta, setConCuenta] = useState(ultimo.conCuenta);
@@ -42,7 +43,7 @@ const DialogoSenalamiento = ({ estado, pedir, onCerrar }: DialogoSenalamientoPro
     }
     setEnviando(true);
     setError('');
-    const r = await pedir('narrador:senalamiento', {
+    const r = await pedirSenalamiento({
       mensaje: mensaje.trim(),
       segundos: conCuenta ? n : null,
       senaladores,

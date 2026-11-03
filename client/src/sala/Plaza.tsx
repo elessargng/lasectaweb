@@ -49,7 +49,7 @@ import DialogoIntercambio from './DialogoIntercambio';
 import DialogoPatoso from './DialogoPatoso';
 import DialogoRegistroEspia from './DialogoRegistroEspia';
 import { useNominacion } from './useNominacion';
-import type { AccionesReloj, AccionesRevelacion, SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
+import type { AccionesReloj, AccionesRevelacion, AccionesSenalamiento, SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
 
 export interface TamanosPlaza {
   avatar: number;
@@ -83,6 +83,8 @@ interface PlazaProps {
   reloj: Pick<AccionesReloj, 'terminar' | 'quitar'>;
   /** Revelar las fichas al acabar la partida (ver AccionesRevelacion). */
   revelacion: Pick<AccionesRevelacion, 'revelarFicha' | 'terminar'>;
+  /** Señalar, Lil' Monsta y terminar el señalamiento (ver AccionesSenalamiento). */
+  senalamientos: Pick<AccionesSenalamiento, 'senalar' | 'lilmonsta' | 'terminar'>;
   onError: (mensaje: string) => void;
   /** Avisos solo para el lector, con su tipo (p. ej. que otro te ha levantado del asiento). */
   onAnuncio: (tipo: TipoAviso, mensaje: string) => void;
@@ -260,6 +262,7 @@ const Plaza = ({
   pedir,
   reloj,
   revelacion: accionesRevelacion,
+  senalamientos,
   onError,
   onAnuncio,
   focoAsientoRef,
@@ -325,11 +328,11 @@ const Plaza = ({
         ];
   const listos = new Set(estado.narradorVirtual?.etapa === 'nominaciones' ? estado.narradorVirtual.listos : []);
   const senalo =
-    !!senalamiento && !senalCongelada && !!miAsiento && senalamiento.senaladores.includes(miAsiento) && acciones.includes('jugador:senalar');
+    !!senalamiento && !senalCongelada && !!miAsiento && senalamiento.senaladores.includes(miAsiento) && acciones.includes('senalamiento:senalar');
   const miSenal = senalamiento && miAsiento ? (senalamiento.senales[miAsiento] ?? null) : null;
   const senalar = async (jugadorId: string) => {
     const hasta = miSenal === jugadorId ? null : jugadorId;
-    const r = await pedir('jugador:senalar', { jugadorId: hasta });
+    const r = await senalamientos.senalar(hasta);
     if (!r.ok) return onError(r.error);
     onAnuncio('senalamientos', hasta ? `Señalas al ${nombreDeAsiento(estado, hasta).replace(/^A/, 'a')}.` : 'Ya no señalas a nadie.');
   };
@@ -343,7 +346,7 @@ const Plaza = ({
       : undefined;
   // El narrador lo termina: el botón desaparece, el foco va a la lista de asientos
   const terminarSenalamiento = async () => {
-    const r = await pedir('narrador:terminarSenalamiento');
+    const r = await senalamientos.terminar();
     if (!r.ok) return onError(r.error);
     onAnuncio('senalamientos', 'Señalamiento terminado.');
     window.setTimeout(() => document.getElementById('sala-asientos')?.focus(), 0);
@@ -375,7 +378,7 @@ const Plaza = ({
         const donde = miSenal ?? miAsiento;
         document.getElementById(donde ? idNombreAsiento(donde) : 'sala-asientos')?.focus();
       }, 0);
-    } else if (!s && antes && !antes.congelado && !acciones.includes('narrador:senalamiento')) {
+    } else if (!s && antes && !antes.congelado && !acciones.includes('senalamiento:empezar')) {
       onAnuncio('senalamientos', 'El narrador ha terminado el señalamiento.');
     }
     // Solo al empezar, congelarse o quitarse
@@ -845,8 +848,8 @@ const Plaza = ({
                       probables={probables}
                       senal={senalamiento ? senalDeFicha(estado, senalamiento, a.id) : null}
                       onLilmonsta={
-                        acciones.includes('narrador:lilmonsta') && !editando
-                          ? () => void pedir('narrador:lilmonsta').then((r) => !r.ok && onError(r.error))
+                        acciones.includes('senalamiento:lilmonsta') && !editando
+                          ? () => void senalamientos.lilmonsta().then((r) => !r.ok && onError(r.error))
                           : undefined
                       }
                       onEscribirNota={
@@ -1144,7 +1147,7 @@ const Plaza = ({
               congelado={senalCongelada}
               desfase={desfaseReloj}
               puedoSenalar={senalo}
-              onTerminar={acciones.includes('narrador:terminarSenalamiento') ? () => void terminarSenalamiento() : undefined}
+              onTerminar={acciones.includes('senalamiento:terminar') ? () => void terminarSenalamiento() : undefined}
               // Lo que queda dentro del círculo de las fichas (con la distancia por defecto), con margen
               anchoMax={Math.max(180, (ladoPlaza || 600) - avatar - 0.75 * (avatar + ficha) - 1.8 * ficha)}
             />

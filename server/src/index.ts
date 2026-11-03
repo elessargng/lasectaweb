@@ -98,6 +98,7 @@ import { EstadisticasService } from './services/estadisticas/EstadisticasService
 import { BolsaController } from './controllers/sala/BolsaController';
 import { RelojController } from './controllers/sala/RelojController';
 import { RevelacionController } from './controllers/sala/RevelacionController';
+import { SenalamientoController } from './controllers/sala/SenalamientoController';
 import { SalaController } from './controllers/sala/SalaController';
 import { abrirSalaPorSocket } from './infra/socketio/salaPorSocket';
 import { SalaService } from './services/sala/SalaService';
@@ -471,6 +472,7 @@ DatabaseRepository.getInstance()
       bolsa: new BolsaController(salaService.bolsa),
       reloj: new RelojController(salaService.reloj),
       revelacion: new RevelacionController(salaService.revelacion),
+      senalamiento: new SenalamientoController(salaService.senalamiento),
     });
     httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

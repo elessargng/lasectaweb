@@ -94,6 +94,16 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
         if (!error) hechas.push({ accion: 'revelacion:revelarFicha', datos: { jugadorId } });
         return error ? { ok: false, error } : { ok: true };
       },
+      empezarSenalamiento: async (peticion) => {
+        const error = juego.partida.empezarSenalamiento(peticion);
+        if (!error) hechas.push({ accion: 'senalamiento:empezar', datos: peticion });
+        return error ? { ok: false, error } : { ok: true };
+      },
+      terminarSenalamiento: async () => {
+        juego.partida.senalamientos.terminar();
+        hechas.push({ accion: 'senalamiento:terminar', datos: undefined });
+        return { ok: true };
+      },
     },
     ...decisionesDe(juego, () => estrategia),
     azar,
@@ -484,7 +494,7 @@ describe('la noche del narrador virtual', () => {
       const limite = Date.now() + 3000;
       while (!siguiente && Date.now() < limite) await new Promise((r) => setTimeout(r, 5));
       expect(siguiente).toBe('revelando');
-      const senalamiento = m.hechas.find((h) => h.accion === 'narrador:senalamiento')?.datos as { objetivos: string[] };
+      const senalamiento = m.hechas.find((h) => h.accion === 'senalamiento:empezar')?.datos as { objetivos: string[] };
       expect(senalamiento.objetivos[0]).toBe(m.asiento('imp').id);
       expect(partida.grimorio.alineamiento(partida.plaza().find((a) => a.id === senalamiento.objetivos[1])!)).toBe('bueno');
     });
