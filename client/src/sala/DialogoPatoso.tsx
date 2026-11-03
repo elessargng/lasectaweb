@@ -11,7 +11,8 @@ interface DialogoPatosoProps {
   miAsiento: string;
   /** Es el Patoso de verdad (su ficha lo dice): tiene que elegir, no puede cancelar. */
   obligado: boolean;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Se declara Patoso y elige (ver AccionesNarradorVirtual.declarar). */
+  declararse: (datos: unknown) => Promise<ResultadoAccion>;
   onCerrar: () => void;
 }
 
@@ -22,7 +23,7 @@ interface DialogoPatosoProps {
  * se acaba esa noche o ese día. Al Patoso de verdad se le abre solo y no se puede
  * cancelar: tiene que elegir. Al abrirse, el foco va al título.
  */
-const DialogoPatoso = ({ estado, miAsiento, obligado, pedir, onCerrar }: DialogoPatosoProps) => {
+const DialogoPatoso = ({ estado, miAsiento, obligado, declararse, onCerrar }: DialogoPatosoProps) => {
   const vivos = estado.plaza.filter((a) => a.id !== miAsiento && !a.muerto && !a.muertePendiente);
   const [elegido, setElegido] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -35,7 +36,7 @@ const DialogoPatoso = ({ estado, miAsiento, obligado, pedir, onCerrar }: Dialogo
     if (!elegido) return setError('Elige a un jugador vivo.');
     setEnviando(true);
     setError('');
-    const r = await pedir('jugador:patoso', { jugadorId: elegido });
+    const r = await declararse({ jugadorId: elegido });
     setEnviando(false);
     if (r.ok) onCerrar();
     else setError(r.error);

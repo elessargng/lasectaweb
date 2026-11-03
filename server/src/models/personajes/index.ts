@@ -18,7 +18,7 @@ import { xaan } from './xaan';
 
 /**
  * Las declaraciones del día con narrador virtual. Un personaje nuevo con la suya
- * es un archivo más y una línea aquí: las acciones de la sala (`jugador:<id>`) y el
+ * es un archivo más y una línea aquí: los eventos de la sala (`declarar:<id>`) y el
  * servicio del narrador virtual las recorren sin saber de ninguna.
  */
 export const DECLARACIONES_DIA: readonly DeclaracionDia[] = [exterminador, patoso, artista].flatMap((p) => p.deDia ?? []);

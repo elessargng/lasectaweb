@@ -7,6 +7,7 @@ import { BolsaController } from '../../src/controllers/sala/BolsaController';
 import { FarolController } from '../../src/controllers/sala/FarolController';
 import { DiaController } from '../../src/controllers/sala/DiaController';
 import { FaseController } from '../../src/controllers/sala/FaseController';
+import { NarradorVirtualController } from '../../src/controllers/sala/NarradorVirtualController';
 import { NocheController } from '../../src/controllers/sala/NocheController';
 import { RelojController } from '../../src/controllers/sala/RelojController';
 import { RevelacionController } from '../../src/controllers/sala/RevelacionController';
@@ -113,6 +114,7 @@ export class Arnes {
       faroles: new FarolController(salaService.faroles),
       dia: new DiaController(salaService.dia),
       fase: new FaseController(salaService.fase),
+      narradorVirtual: new NarradorVirtualController(salaService.narradorVirtual),
       noche: new NocheController(salaService.noche),
       reloj: new RelojController(salaService.reloj),
       revelacion: new RevelacionController(salaService.revelacion),

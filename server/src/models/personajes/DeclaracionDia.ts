@@ -14,10 +14,10 @@ export type ResultadoDeclaracion = { error: string } | { valor?: string; contar?
  * Una declaración del día con narrador virtual: un jugador dice ser un personaje
  * (lo sea o no) y usa su habilidad, en público o preguntando al narrador. Cada
  * personaje que la tiene la trae en su archivo y está en la lista de index.ts: ni
- * el servicio del narrador virtual ni las acciones de la sala saben de ninguno.
+ * el servicio del narrador virtual ni los eventos de la sala saben de ninguno.
  */
 export interface DeclaracionDia {
-  /** Su nombre: la acción es `jugador:<id>` y así se apunta en Declaraciones. */
+  /** Su nombre: el evento es `declarar:<id>` y así se apunta en Declaraciones. */
   id: string;
   /** Se cuenta en voz alta a la plaza: hasta que acaba de contarse, no se hace otra pública. */
   publica: boolean;

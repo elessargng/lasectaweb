@@ -6,7 +6,7 @@ import type { RecuerdosNarrador } from '../noche/criterioDroison';
 import type { FueraDeLaBolsa } from '../preparacion';
 import type { Azar, Narrador, Temporizador } from '../puertos';
 
-/** Lo que piden los jugadores al narrador virtual en el día (ver las acciones `jugador:…`). */
+/** Lo que piden los jugadores al narrador virtual en el día (ver NarradorVirtualService.turno). */
 export type AccionJugador = 'nominar' | 'defensa' | 'voto' | 'listo' | 'seguirNominando';
 
 /** Lo que tiene cada etapa a mano para llevar la partida. */

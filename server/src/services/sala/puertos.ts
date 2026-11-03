@@ -12,7 +12,6 @@ import type { RegistroPartida } from '../../models/estadisticas/SeguimientoParti
 import type { Azar } from '../../models/partida/azar';
 import type { Temporizador } from '../../models/narradorVirtual/puertos';
 import type { NarradorIARepository } from '../../repositories/NarradorIARepository';
-import type { ServicioNarradorVirtual } from '../narradorVirtual/NarradorVirtualService';
 import type { ProveedorVideo } from '../videollamada/ProveedorVideo';
 
 /**
@@ -65,12 +64,10 @@ export interface DependenciasAcciones {
   /** Las imágenes de la Biblioteca (para elegir un fondo de la sala). */
   imagenesBiblioteca: ImagenesBiblioteca;
   imagenes: ImagenesSala;
-  /** El narrador virtual de la sala (lo pone SalaService); sin esto, no se puede añadir. */
-  narradorVirtual?: ServicioNarradorVirtual;
 }
 
 /** Lo que necesita la sala de juego (SalaService). */
-export interface DependenciasSala extends Omit<DependenciasAcciones, 'narradorVirtual' | 'imagenes'> {
+export interface DependenciasSala extends Omit<DependenciasAcciones, 'imagenes'> {
   /** Dónde se guardan los avatares y los fondos que se suben a la sala. */
   imagenes: ImagenRepository;
   /** Dónde se guardan los mensajes de texto de la sala. */

@@ -3,7 +3,6 @@ import type { SalaDeJuego } from '../../../models/SalaDeJuego';
 import type { DependenciasAcciones } from '../puertos';
 import type { Accion, SalaEfecto } from './Accion';
 import { ACCIONES_GRIMORIO } from './grimorio';
-import { ACCIONES_NARRADOR_VIRTUAL } from './narradorVirtual';
 import { ACCIONES_PARTICIPANTES } from './participantes';
 import { ACCIONES_PREPARACION } from './preparacion';
 
@@ -20,7 +19,6 @@ export type { SalaEfecto } from './Accion';
  */
 export const SALA_ACCIONES: Record<string, Accion> = {
   ...ACCIONES_PARTICIPANTES,
-  ...ACCIONES_NARRADOR_VIRTUAL,
   ...ACCIONES_PREPARACION,
   ...ACCIONES_GRIMORIO,
 };

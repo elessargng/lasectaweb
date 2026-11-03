@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react';
 import { botonPrincipal, botonSecundario } from './estilos';
-import type { SalaDto, ResultadoAccion } from './useSala';
+import type { AccionesNarradorVirtual, SalaDto, TurnoVirtual } from './useSala';
 
 interface PanelDiaVirtualProps {
   estado: SalaDto;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Lo que pide en su turno (ver AccionesNarradorVirtual). */
+  turno: AccionesNarradorVirtual['turno'];
   onError: (mensaje: string) => void;
 }
 
@@ -23,20 +24,20 @@ const TU_TURNO: Record<string, string> = {
  * Lo que es de uno («Tienes la palabra…») se anuncia; el turno de los demás, no (lo
  * dice la voz del narrador). Al usar un botón que desaparece, el foco va al panel.
  */
-const PanelDiaVirtual = ({ estado, pedir, onError }: PanelDiaVirtualProps) => {
+const PanelDiaVirtual = ({ estado, turno, onError }: PanelDiaVirtualProps) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const [pidiendo, setPidiendo] = useState(false);
   const narrador = estado.narradorVirtual;
   if (narrador?.etapa !== 'nominaciones') return null;
-  const puede = (accion: string) => estado.acciones.includes(accion);
+  const puede = (t: TurnoVirtual) => estado.acciones.includes(`narradorVirtual:${t}`);
   const sentados = estado.plaza.filter((a) => a.participanteId).length;
-  const miTurno = (puede('jugador:defensa') && 'acusacion') || (puede('jugador:voto') && 'defensa') || null;
+  const miTurno = (puede('defensa') && 'acusacion') || (puede('voto') && 'defensa') || null;
 
   // Sin `disabled` mientras responde: el foco no se pierde
-  const usar = async (accion: string) => {
+  const usar = async (t: TurnoVirtual) => {
     if (pidiendo) return;
     setPidiendo(true);
-    const r = await pedir(accion);
+    const r = await turno(t);
     setPidiendo(false);
     if (!r.ok) onError(r.error);
     else panelRef.current?.focus();
@@ -51,23 +52,23 @@ const PanelDiaVirtual = ({ estado, pedir, onError }: PanelDiaVirtualProps) => {
         {miTurno && TU_TURNO[miTurno]}
       </p>
       <div className="flex flex-wrap justify-center gap-2">
-        {puede('jugador:defensa') && (
-          <button type="button" onClick={() => void usar('jugador:defensa')} aria-disabled={pidiendo} className={botonPrincipal}>
+        {puede('defensa') && (
+          <button type="button" onClick={() => void usar('defensa')} aria-disabled={pidiendo} className={botonPrincipal}>
             Defensa
           </button>
         )}
-        {puede('jugador:voto') && (
-          <button type="button" onClick={() => void usar('jugador:voto')} aria-disabled={pidiendo} className={botonPrincipal}>
+        {puede('voto') && (
+          <button type="button" onClick={() => void usar('voto')} aria-disabled={pidiendo} className={botonPrincipal}>
             Empezar votación
           </button>
         )}
-        {puede('jugador:listo') && (
-          <button type="button" onClick={() => void usar('jugador:listo')} aria-disabled={pidiendo} className={botonSecundario}>
+        {puede('listo') && (
+          <button type="button" onClick={() => void usar('listo')} aria-disabled={pidiendo} className={botonSecundario}>
             Listo
           </button>
         )}
-        {puede('jugador:seguirNominando') && (
-          <button type="button" onClick={() => void usar('jugador:seguirNominando')} aria-disabled={pidiendo} className={botonSecundario}>
+        {puede('seguirNominando') && (
+          <button type="button" onClick={() => void usar('seguirNominando')} aria-disabled={pidiendo} className={botonSecundario}>
             Seguir nominando
           </button>
         )}

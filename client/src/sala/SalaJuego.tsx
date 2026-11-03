@@ -108,6 +108,8 @@ import {
   type AccionesFase,
   type AccionesNoche,
   type AccionesDia,
+  type AccionesNarradorVirtual,
+  type TurnoVirtual,
   type ResultadoAccion,
   type ResultadoBolsaAlAzar,
 } from './useSala';
@@ -621,6 +623,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     fase,
     noche: accionesNoche,
     dia,
+    narradorVirtual,
   } = useSala(
     cuenta?.token ?? null,
     cuenta ? null : invitado,
@@ -1216,10 +1219,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const puedeHacermeNarrador = !!estado?.acciones.includes('sala:hacerseNarrador');
   // En lugar de hacerse narrador, uno virtual (ver DialogoNarradorVirtual); quitarlo, solo quien lo añadió
   const [anadiendoVirtual, setAnadiendoVirtual] = useState(false);
-  const puedeAnadirVirtual = !!estado?.acciones.includes('sala:anadirNarradorVirtual');
-  const puedeQuitarVirtual = !!estado?.acciones.includes('sala:quitarNarradorVirtual');
+  const puedeAnadirVirtual = !!estado?.acciones.includes('narradorVirtual:anadir');
+  const puedeQuitarVirtual = !!estado?.acciones.includes('narradorVirtual:quitar');
   const quitarVirtual = async () => {
-    const r = await pedirPropio('sala:quitarNarradorVirtual');
+    const r = await virtualPropio.quitar();
     if (!r.ok) setAviso(r.error);
     return r.ok;
   };
@@ -1337,13 +1340,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // El gong del narrador: desde el menú o con su tecla
   // Con narrador virtual, en las nominaciones: lo que hacen los botones del centro de
   // la plaza (PanelDiaVirtual), con su tecla; se dice que se ha hecho (el panel puede no tener el foco)
-  const avanceNominacion: [string, string] | null = estado?.acciones.includes('jugador:defensa')
-    ? ['jugador:defensa', 'Defensa.']
-    : estado?.acciones.includes('jugador:voto')
-      ? ['jugador:voto', 'Empieza la votación.']
+  const avanceNominacion: [TurnoVirtual, string] | null = estado?.acciones.includes('narradorVirtual:defensa')
+    ? ['defensa', 'Defensa.']
+    : estado?.acciones.includes('narradorVirtual:voto')
+      ? ['voto', 'Empieza la votación.']
       : null;
-  const pasoNominacion = async (accion: string, hecho: string) => {
-    const r = await pedirPropio(accion);
+  const pasoNominacion = async (turno: TurnoVirtual, hecho: string) => {
+    const r = await virtualPropio.turno(turno);
     if (!r.ok) setAviso(r.error);
     else anunciar('nominaciones', hecho);
   };
@@ -1408,8 +1411,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     // D: volver a abrir el despertar propio, si se había cerrado
     ...(miDespertar && wakeCerradoJugador ? [['abrirDespertar', () => setWakeCerradoJugador(false)] as [AccionAtajo, () => void]] : []),
     // L: «Listo» para la noche, con narrador virtual
-    ...(estado?.acciones.includes('jugador:listo')
-      ? [['listo', () => void pasoNominacion('jugador:listo', 'Listo para la noche.')] as [AccionAtajo, () => void]]
+    ...(estado?.acciones.includes('narradorVirtual:listo')
+      ? [['listo', () => void pasoNominacion('listo', 'Listo para la noche.')] as [AccionAtajo, () => void]]
       : []),
     // A: avanzar la nominación (quien nomina, a la defensa; el nominado, a la votación)
     ...(avanceNominacion ? [['avanzarNominacion', () => void pasoNominacion(...avanceNominacion)] as [AccionAtajo, () => void]] : []),
@@ -1471,9 +1474,9 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       ? [{ id: 'sala:hacerseNarrador', etiqueta: 'Hacerse narrador', elegir: hacermeNarrador }]
       : []),
     ...(puedeAnadirVirtual
-      ? [{ id: 'sala:anadirNarradorVirtual', etiqueta: 'Añadir narrador virtual', abreDialogo: true, elegir: () => setAnadiendoVirtual(true) }]
+      ? [{ id: 'narradorVirtual:anadir', etiqueta: 'Añadir narrador virtual', abreDialogo: true, elegir: () => setAnadiendoVirtual(true) }]
       : []),
-    ...(puedeQuitarVirtual ? [{ id: 'sala:quitarNarradorVirtual', etiqueta: 'Quitar narrador virtual', elegir: quitarVirtual }] : []),
+    ...(puedeQuitarVirtual ? [{ id: 'narradorVirtual:quitar', etiqueta: 'Quitar narrador virtual', elegir: quitarVirtual }] : []),
     ...(puedeLevantarme ? [{ id: 'sala:levantarse', etiqueta: 'Levantarse del asiento', elegir: levantarme }] : []),
     ...(puedeDejarDeNarrar ? [{ id: 'narrador:dejar', etiqueta: 'Dejar de ser narrador', elegir: dejarDeNarrar }] : []),
   ];
@@ -1712,6 +1715,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     marcar: (jugadorId, marcado, cerrarNominacion) => propia(() => dia.marcar(jugadorId, marcado, cerrarNominacion)),
     desmarcar: () => propia(() => dia.desmarcar()),
     ejecutar: async (jugadorId) => siFinal(await propia(() => dia.ejecutar(jugadorId))),
+  };
+  const virtualPropio: AccionesNarradorVirtual = {
+    anadir: (opciones) => propia(() => narradorVirtual.anadir(opciones)),
+    quitar: () => propia(() => narradorVirtual.quitar()),
+    turno: (turno, jugadorId) => propia(() => narradorVirtual.turno(turno, jugadorId)),
+    declarar: (id, datos) => propia(() => narradorVirtual.declarar(id, datos)),
   };
 
   // Faroles: los del narrador (narradores y visitantes) o, si soy el demonio o un esbirro, los míos.
@@ -2252,6 +2261,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   grimorio={yo?.rol === 'jugador' && estado.configuracion.grimorioJugadores}
                   pedir={pedirPropio}
                   dia={diaPropio}
+                  narradorVirtual={virtualPropio}
                   reloj={relojPropio}
                   revelacion={revelacionPropia}
                   senalamientos={senalamientoPropio}
@@ -2404,7 +2414,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             noDisponible={{
               jarvis: !cuenta ? 'Necesitas una cuenta.' : undefined,
             }}
-            pedir={pedirPropio}
+            anadir={virtualPropio.anadir}
             onCerrar={() => setAnadiendoVirtual(false)}
           />
         )}

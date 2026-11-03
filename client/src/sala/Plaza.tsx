@@ -49,7 +49,7 @@ import DialogoIntercambio from './DialogoIntercambio';
 import DialogoPatoso from './DialogoPatoso';
 import DialogoRegistroEspia from './DialogoRegistroEspia';
 import { useNominacion } from './useNominacion';
-import type { AccionesDia, AccionesReloj, AccionesRevelacion, AccionesSenalamiento, SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
+import type { AccionesDia, AccionesNarradorVirtual, AccionesReloj, AccionesRevelacion, AccionesSenalamiento, SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
 
 export interface TamanosPlaza {
   avatar: number;
@@ -85,6 +85,8 @@ interface PlazaProps {
   revelacion: Pick<AccionesRevelacion, 'revelarFicha' | 'terminar'>;
   /** Las nominaciones, la calavera y la ejecución (ver AccionesDia). */
   dia: AccionesDia;
+  /** Lo que se pide al narrador virtual de día: nominar, el turno, las declaraciones (ver AccionesNarradorVirtual). */
+  narradorVirtual: Pick<AccionesNarradorVirtual, 'turno' | 'declarar'>;
   /** Señalar, Lil' Monsta y terminar el señalamiento (ver AccionesSenalamiento). */
   senalamientos: Pick<AccionesSenalamiento, 'senalar' | 'lilmonsta' | 'terminar'>;
   onError: (mensaje: string) => void;
@@ -265,6 +267,7 @@ const Plaza = ({
   reloj,
   revelacion: accionesRevelacion,
   dia,
+  narradorVirtual,
   senalamientos,
   onError,
   onAnuncio,
@@ -296,16 +299,16 @@ const Plaza = ({
   const senalCongelada = useSenalamientoCongelado(senalamiento, desfaseReloj);
   const miAsiento = plaza.find((a) => a.participanteId === yo)?.id ?? null;
   // Con narrador virtual: lo que un jugador hace desde la ficha de otro (nominarlo, dispararle)
-  const actuarSobre = (accion: string, jugadorId: string) => async () => {
-    const r = await pedir(accion, { jugadorId });
+  const actuarSobre = (hacer: () => Promise<ResultadoAccion>) => async () => {
+    const r = await hacer();
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha
     return false;
   };
   // Desde la suya: preguntar como Artista (de día, una vez) y, al morir, declararse Patoso
   const [dialogoVirtual, setDialogoVirtual] = useState<'artista' | 'patoso' | null>(null);
-  const puedeArtista = acciones.includes('jugador:artista');
-  const puedePatoso = acciones.includes('jugador:patoso');
+  const puedeArtista = acciones.includes('declarar:artista');
+  const puedePatoso = acciones.includes('declarar:patoso');
   // El Patoso de verdad (lo dice su ficha) tiene que elegir: se le abre solo, sin poder cancelar
   const soyPatoso = !!miAsiento && plaza.find((a) => a.id === miAsiento)?.personaje === 'klutz';
   useEffect(() => {
@@ -319,14 +322,16 @@ const Plaza = ({
     jugadorId === miAsiento
       ? [
           ...(puedeArtista
-            ? [{ id: 'jugador:artista', etiqueta: 'Preguntar como Artista', abreDialogo: true, elegir: () => setDialogoVirtual('artista') }]
+            ? [{ id: 'declarar:artista', etiqueta: 'Preguntar como Artista', abreDialogo: true, elegir: () => setDialogoVirtual('artista') }]
             : []),
-          ...(puedePatoso ? [{ id: 'jugador:patoso', etiqueta: 'Declararte Patoso', abreDialogo: true, elegir: () => setDialogoVirtual('patoso') }] : []),
+          ...(puedePatoso ? [{ id: 'declarar:patoso', etiqueta: 'Declararte Patoso', abreDialogo: true, elegir: () => setDialogoVirtual('patoso') }] : []),
         ]
       : [
-          ...(acciones.includes('jugador:nominar') ? [{ id: 'jugador:nominar', etiqueta: 'Nominar', elegir: actuarSobre('jugador:nominar', jugadorId) }] : []),
-          ...(acciones.includes('jugador:exterminar')
-            ? [{ id: 'jugador:exterminar', etiqueta: 'Exterminar jugador', elegir: actuarSobre('jugador:exterminar', jugadorId) }]
+          ...(acciones.includes('narradorVirtual:nominar')
+            ? [{ id: 'narradorVirtual:nominar', etiqueta: 'Nominar', elegir: actuarSobre(() => narradorVirtual.turno('nominar', jugadorId)) }]
+            : []),
+          ...(acciones.includes('declarar:exterminar')
+            ? [{ id: 'declarar:exterminar', etiqueta: 'Exterminar jugador', elegir: actuarSobre(() => narradorVirtual.declarar('exterminar', { jugadorId })) }]
             : []),
         ];
   const listos = new Set(estado.narradorVirtual?.etapa === 'nominaciones' ? estado.narradorVirtual.listos : []);
@@ -987,12 +992,12 @@ const Plaza = ({
           estado={estado}
           miAsiento={miAsiento}
           libre={estado.narradorVirtual?.id === 'jarvis'}
-          pedir={pedir}
+          preguntar={(datos) => narradorVirtual.declarar('artista', datos)}
           onCerrar={() => setDialogoVirtual(null)}
         />
       )}
       {dialogoVirtual === 'patoso' && miAsiento && (
-        <DialogoPatoso estado={estado} miAsiento={miAsiento} obligado={soyPatoso} pedir={pedir} onCerrar={() => setDialogoVirtual(null)} />
+        <DialogoPatoso estado={estado} miAsiento={miAsiento} obligado={soyPatoso} declararse={(datos) => narradorVirtual.declarar('patoso', datos)} onCerrar={() => setDialogoVirtual(null)} />
       )}
       {intercambiando && (
         <DialogoIntercambio
@@ -1179,7 +1184,7 @@ const Plaza = ({
           )}
           {panelDiaVirtual && (
             <div className="sala-cofre p-4">
-              <PanelDiaVirtual estado={estado} pedir={pedir} onError={onError} />
+              <PanelDiaVirtual estado={estado} turno={narradorVirtual.turno} onError={onError} />
             </div>
           )}
           {editando && (

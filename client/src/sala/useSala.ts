@@ -357,6 +357,17 @@ export function useSala(
     [pedirAlSocket],
   );
 
+  /** El narrador virtual: añadirlo, quitarlo y lo que le piden los jugadores de día, por sus eventos. */
+  const narradorVirtual: AccionesNarradorVirtual = useMemo(
+    () => ({
+      anadir: (opciones) => pedirAlSocket<ResultadoAccion>('narradorVirtual:anadir', opciones),
+      quitar: () => pedirAlSocket<ResultadoAccion>('narradorVirtual:quitar', {}),
+      turno: (turno, jugadorId) => pedirAlSocket<ResultadoAccion>(`narradorVirtual:${turno}`, jugadorId === undefined ? {} : { jugadorId }),
+      declarar: (id, datos) => pedirAlSocket<ResultadoAccion>(`declarar:${id}`, datos),
+    }),
+    [pedirAlSocket],
+  );
+
   /** Vuelve a pedir los mensajes que se pueden leer (al cambiar de papel cambian). */
   const pedirHistorial = useCallback(() => {
     socketRef.current?.emit('chat:historial');
@@ -394,7 +405,20 @@ export function useSala(
     fase,
     noche,
     dia,
+    narradorVirtual,
   };
+}
+
+/** Lo que un jugador pide al narrador virtual en su turno del día (nominar, con el nominado). */
+export type TurnoVirtual = 'nominar' | 'defensa' | 'voto' | 'listo' | 'seguirNominando';
+
+/** Lo que se hace con el narrador virtual (ver useSala). */
+export interface AccionesNarradorVirtual {
+  anadir(opciones: { narrador: string; guion: string; jugadores: number }): Promise<ResultadoAccion>;
+  quitar(): Promise<ResultadoAccion>;
+  turno(turno: TurnoVirtual, jugadorId?: string): Promise<ResultadoAccion>;
+  /** Una declaración del día (el Artista, el Patoso…): lo que lleve, según cuál. */
+  declarar(id: string, datos: unknown): Promise<ResultadoAccion>;
 }
 
 /** Lo que hace el narrador de día (ver useSala). */

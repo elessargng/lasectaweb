@@ -199,17 +199,17 @@ describe('añadir a Jarvis', () => {
   it('un invitado no puede: necesita una cuenta', async () => {
     arnes = await sala({});
     const vera = await arnes.entrar('Vera');
-    expect(await arnes.intentar(vera, 'sala:anadirNarradorVirtual', JARVIS)).toEqual({ ok: false, error: 'Para añadir un narrador virtual necesitas una cuenta.' });
+    expect(await arnes.pedir(vera, 'narradorVirtual:anadir', JARVIS)).toEqual({ ok: false, error: 'Para añadir un narrador virtual necesitas una cuenta.' });
   });
 
   it('sin su modelo, o si no responde, no se añade', async () => {
     arnes = await sala({ conModelo: false });
     const ana = await arnes.entrar('Ana', { cuenta: 'ana' });
-    expect((await arnes.intentar(ana, 'sala:anadirNarradorVirtual', JARVIS)).ok).toBe(false);
+    expect((await arnes.pedir(ana, 'narradorVirtual:anadir', JARVIS)).ok).toBe(false);
     await arnes.cerrar();
     arnes = await sala({ comprobar: 'La key no es válida.' });
     const otra = await arnes.entrar('Ana', { cuenta: 'ana' });
-    expect(await arnes.intentar(otra, 'sala:anadirNarradorVirtual', JARVIS)).toEqual({
+    expect(await arnes.pedir(otra, 'narradorVirtual:anadir', JARVIS)).toEqual({
       ok: false,
       error: 'El modelo de Jarvis no responde: La key no es válida.',
     });
@@ -218,7 +218,7 @@ describe('añadir a Jarvis', () => {
   it('con su modelo, Jarvis prepara la partida eligiendo la bolsa', async () => {
     arnes = await sala({});
     const ana = await arnes.entrar('Ana', { cuenta: 'ana' });
-    await arnes.accion(ana, 'sala:anadirNarradorVirtual', JARVIS);
+    await arnes.hacer(ana, 'narradorVirtual:anadir', JARVIS);
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'esperandoJugadores');
     expect(ana.estado.narradorVirtual?.id).toBe('jarvis');
     expect(ana.estado.participantes.find((p) => p.persona.tipo === 'virtual')?.nombre).toBe('Jarvis');
@@ -231,7 +231,7 @@ describe('añadir a Jarvis', () => {
     ana.socket.on('sala:voz', ({ texto }: { texto: string }) => voces.push(texto));
     // Al preparar la bolsa ya decide 7 veces, pero las de una sola opción no se le preguntan (y cuentan como
     // acierto): con esta semilla le pregunta al menos 5 seguidas, y a la quinta se rinde
-    await arnes.accion(ana, 'sala:anadirNarradorVirtual', JARVIS);
+    await arnes.hacer(ana, 'narradorVirtual:anadir', JARVIS);
     await ana.esperarQue((e) => e.narradorVirtual?.id === 'tontoYTu');
     expect(ana.estado.participantes.find((p) => p.persona.tipo === 'virtual')).toMatchObject({ nombre: 'Tonto y tú', avatar: '/narradores/tonto-y-tu.webp' });
     expect(voces).toContain('Jarvis tiene que irse; os dejo con Tonto y tú, que seguirá la partida.');

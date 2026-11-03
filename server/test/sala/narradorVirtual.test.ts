@@ -37,8 +37,8 @@ describe('narrador virtual', () => {
   it('quien no es narrador lo añade: prepara los asientos, el guion, el grimorio de los jugadores y la bolsa', async () => {
     arnes = await conTroubleBrewing();
     const [ana] = await entran(1);
-    expect(ana.estado.acciones).toContain('sala:anadirNarradorVirtual');
-    await arnes.accion(ana, 'sala:anadirNarradorVirtual', TONTO);
+    expect(ana.estado.acciones).toContain('narradorVirtual:anadir');
+    await arnes.hacer(ana, 'narradorVirtual:anadir', TONTO);
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'esperandoJugadores');
     const { narradorVirtual, participantes, plaza: asientos, configuracion } = ana.estado;
     expect(narradorVirtual).toMatchObject({ id: 'tontoYTu', creador: ana.id, jugadores: 7, guion: 'troublebrewing' });
@@ -47,33 +47,33 @@ describe('narrador virtual', () => {
     expect(configuracion.grimorioJugadores).toBe(true);
     // Ya hay narrador: nadie más puede hacerse narrador ni añadir otro
     expect(ana.estado.acciones).not.toContain('sala:hacerseNarrador');
-    expect(ana.estado.acciones).not.toContain('sala:anadirNarradorVirtual');
+    expect(ana.estado.acciones).not.toContain('narradorVirtual:anadir');
   });
 
   it('un invitado no puede añadirlo: necesita una cuenta', async () => {
     arnes = await conTroubleBrewing();
     const vera = await arnes.entrar('Vera');
-    expect(vera.estado.acciones).not.toContain('sala:anadirNarradorVirtual');
-    expect(await arnes.intentar(vera, 'sala:anadirNarradorVirtual', TONTO)).toEqual({ ok: false, error: 'Para añadir un narrador virtual necesitas una cuenta.' });
+    expect(vera.estado.acciones).not.toContain('narradorVirtual:anadir');
+    expect(await arnes.pedir(vera, 'narradorVirtual:anadir', TONTO)).toEqual({ ok: false, error: 'Para añadir un narrador virtual necesitas una cuenta.' });
   });
 
   it('no deja elegir a Jarvis ni un número de jugadores fuera de 7 a 15', async () => {
     arnes = await conTroubleBrewing();
     const [ana] = await entran(1);
-    expect((await arnes.intentar(ana, 'sala:anadirNarradorVirtual', { ...TONTO, narrador: 'jarvis' })).ok).toBe(false);
-    expect((await arnes.intentar(ana, 'sala:anadirNarradorVirtual', { ...TONTO, jugadores: 6 })).ok).toBe(false);
-    expect((await arnes.intentar(ana, 'sala:anadirNarradorVirtual', { ...TONTO, jugadores: 16 })).ok).toBe(false);
-    expect((await arnes.intentar(ana, 'sala:anadirNarradorVirtual', { ...TONTO, guion: 'badmoonrising' })).ok).toBe(false);
+    expect((await arnes.pedir(ana, 'narradorVirtual:anadir', { ...TONTO, narrador: 'jarvis' })).ok).toBe(false);
+    expect((await arnes.pedir(ana, 'narradorVirtual:anadir', { ...TONTO, jugadores: 6 })).ok).toBe(false);
+    expect((await arnes.pedir(ana, 'narradorVirtual:anadir', { ...TONTO, jugadores: 16 })).ok).toBe(false);
+    expect((await arnes.pedir(ana, 'narradorVirtual:anadir', { ...TONTO, guion: 'badmoonrising' })).ok).toBe(false);
   });
 
   it('solo quien lo añadió puede quitarlo', async () => {
     arnes = await conTroubleBrewing();
     const [ana, bea] = await entran(2);
-    await arnes.accion(ana, 'sala:anadirNarradorVirtual', TONTO);
+    await arnes.hacer(ana, 'narradorVirtual:anadir', TONTO);
     await bea.esperarQue((e) => !!e.narradorVirtual);
-    expect(bea.estado.acciones).not.toContain('sala:quitarNarradorVirtual');
-    expect((await arnes.intentar(bea, 'sala:quitarNarradorVirtual')).ok).toBe(false);
-    await arnes.accion(ana, 'sala:quitarNarradorVirtual');
+    expect(bea.estado.acciones).not.toContain('narradorVirtual:quitar');
+    expect((await arnes.pedir(bea, 'narradorVirtual:quitar')).ok).toBe(false);
+    await arnes.hacer(ana, 'narradorVirtual:quitar');
     expect(ana.estado.narradorVirtual).toBeNull();
     expect(ana.estado.participantes.some((p) => p.persona.tipo === 'virtual')).toBe(false);
     expect(ana.estado.acciones).toContain('sala:hacerseNarrador');
@@ -82,7 +82,7 @@ describe('narrador virtual', () => {
   it('a un visitante que pide ver el grimorio se lo concede al momento', async () => {
     arnes = await conTroubleBrewing();
     const [ana, vera] = await entran(2);
-    await arnes.accion(ana, 'sala:anadirNarradorVirtual', TONTO);
+    await arnes.hacer(ana, 'narradorVirtual:anadir', TONTO);
     await vera.esperarQue((e) => e.acciones.includes('sala:solicitarGrimorio'));
     await arnes.accion(vera, 'sala:solicitarGrimorio');
     await vera.esperarQue((e) => e.participantes.find((p) => p.id === vera.id)?.accesoGrimorio === 'concedido');
@@ -92,7 +92,7 @@ describe('narrador virtual', () => {
   it('con narrador virtual no se puede quitar el grimorio de los jugadores', async () => {
     arnes = await conTroubleBrewing();
     const [ana] = await entran(1);
-    await arnes.accion(ana, 'sala:anadirNarradorVirtual', TONTO);
+    await arnes.hacer(ana, 'narradorVirtual:anadir', TONTO);
     await ana.esperarQue((e) => e.configuracion.grimorioJugadores);
     expect(ana.estado.acciones).not.toContain('narrador:configurarPartida');
   });
@@ -102,7 +102,7 @@ describe('narrador virtual', () => {
     const [ana] = await entran(1);
     const voces: string[] = [];
     ana.socket.on('sala:voz', ({ texto }: { texto: string }) => voces.push(texto));
-    await arnes.accion(ana, 'sala:anadirNarradorVirtual', TONTO);
+    await arnes.hacer(ana, 'narradorVirtual:anadir', TONTO);
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'esperandoJugadores' && !!e.narradorVirtual.frase);
     const frase = ana.estado.narradorVirtual!.frase!;
     expect(Array.from({ length: 6 }, (_, i) => FRASES.saludo(() => i / 6))).toContain(frase);
@@ -115,7 +115,7 @@ describe('narrador virtual', () => {
     const [ana] = jugadores;
     const voces: string[] = [];
     ana.socket.on('sala:voz', ({ texto }: { texto: string }) => voces.push(texto));
-    await arnes.accion(ana, 'sala:anadirNarradorVirtual', TONTO);
+    await arnes.hacer(ana, 'narradorVirtual:anadir', TONTO);
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'esperandoJugadores');
     for (const [i, c] of jugadores.entries()) {
       await arnes.accion(c, 'sala:sentarse', { jugadorId: c.estado.plaza[i].id });
@@ -132,7 +132,7 @@ describe('narrador virtual', () => {
     arnes = await conTroubleBrewing();
     const jugadores = await entran(7);
     const [ana] = jugadores;
-    await arnes.accion(ana, 'sala:anadirNarradorVirtual', TONTO);
+    await arnes.hacer(ana, 'narradorVirtual:anadir', TONTO);
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'esperandoJugadores');
     for (const [i, c] of jugadores.entries()) await arnes.accion(c, 'sala:sentarse', { jugadorId: c.estado.plaza[i].id });
     // Cada uno contesta, cuando se le pide, con quien le deja su habilidad
@@ -175,7 +175,7 @@ describe('narrador virtual', () => {
     arnes = await conTroubleBrewing();
     const jugadores = await entran(7);
     const [ana] = jugadores;
-    await arnes.accion(ana, 'sala:anadirNarradorVirtual', TONTO);
+    await arnes.hacer(ana, 'narradorVirtual:anadir', TONTO);
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'esperandoJugadores');
     for (const [i, c] of jugadores.entries()) await arnes.accion(c, 'sala:sentarse', { jugadorId: c.estado.plaza[i].id });
     // Solo eligen (nadie dice «Entendido»)
@@ -240,7 +240,7 @@ describe('narrador virtual', () => {
     arnes = await conTroubleBrewing();
     const jugadores = await entran(7);
     const [ana] = jugadores;
-    await arnes.accion(ana, 'sala:anadirNarradorVirtual', TONTO);
+    await arnes.hacer(ana, 'narradorVirtual:anadir', TONTO);
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'esperandoJugadores');
     for (const [i, c] of jugadores.entries()) await arnes.accion(c, 'sala:sentarse', { jugadorId: c.estado.plaza[i].id });
     let seguir = true;
@@ -275,24 +275,24 @@ describe('narrador virtual', () => {
     const carla = resto.find((c) => c !== bea)!;
     const voces: string[] = [];
     ana.socket.on('sala:voz', ({ texto }: { texto: string }) => voces.push(texto));
-    expect(ana.estado.acciones).toContain('jugador:nominar');
+    expect(ana.estado.acciones).toContain('narradorVirtual:nominar');
     const asientoDe = (c: Cliente) => c.miAsiento!.id;
 
-    await arnes.accion(ana, 'jugador:nominar', { jugadorId: asientoDe(bea) });
+    await arnes.hacer(ana, 'narradorVirtual:nominar', { jugadorId: asientoDe(bea) });
     await ana.esperarQue((e) => e.narradorVirtual?.turno === 'acusacion');
     expect(ana.estado.palabra).toBe(ana.id);
     expect(voces).toContain(`Jugador1 nomina a ${bea.nombre}, acusación Jugador1.`);
     // Solo quien nomina pasa a la defensa; nadie más nomina mientras tanto
-    expect((await arnes.intentar(bea, 'jugador:defensa')).ok).toBe(false);
-    expect((await arnes.intentar(carla, 'jugador:nominar', { jugadorId: asientoDe(ana) })).ok).toBe(false);
+    expect((await arnes.pedir(bea, 'narradorVirtual:defensa')).ok).toBe(false);
+    expect((await arnes.pedir(carla, 'narradorVirtual:nominar', { jugadorId: asientoDe(ana) })).ok).toBe(false);
     // Quien ha nominado ya está listo, y no puede volver
     expect(ana.estado.narradorVirtual?.listos).toContain(ana.id);
-    expect(ana.estado.acciones).not.toContain('jugador:seguirNominando');
+    expect(ana.estado.acciones).not.toContain('narradorVirtual:seguirNominando');
 
-    await arnes.accion(ana, 'jugador:defensa');
+    await arnes.hacer(ana, 'narradorVirtual:defensa');
     await bea.esperarQue((e) => e.narradorVirtual?.turno === 'defensa');
     expect(bea.estado.palabra).toBe(bea.id);
-    await arnes.accion(bea, 'jugador:voto');
+    await arnes.hacer(bea, 'narradorVirtual:voto');
     await bea.esperarQue((e) => e.narradorVirtual?.turno === 'votacion');
     expect(bea.estado.palabra).toBeNull();
     expect(voces).toContain(`Hacen falta 4 votos para marcar a ${bea.nombre}.`);
@@ -302,10 +302,10 @@ describe('narrador virtual', () => {
     await bea.esperarQue((e) => !e.nominacion && e.calavera?.jugadorId === asientoDe(bea), 15000);
 
     // A Bea ya no se le puede volver a nominar hoy; los demás dicen que están listos
-    expect((await arnes.intentar(carla, 'jugador:nominar', { jugadorId: asientoDe(bea) })).ok).toBe(false);
+    expect((await arnes.pedir(carla, 'narradorVirtual:nominar', { jugadorId: asientoDe(bea) })).ok).toBe(false);
     // Ejecutado el demonio se acaba, salvo que lo herede la Mujer Escarlata
     const eraElDemonio = bea.miAsiento!.personaje === 'imp' && !jugadores.some((c) => c.miAsiento?.personaje === 'scarletwoman');
-    for (const c of resto) await arnes.accion(c, 'jugador:listo');
+    for (const c of resto) await arnes.hacer(c, 'narradorVirtual:listo');
     // Si era el demonio, se acaba la partida y se revela; si no, a la noche
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === (eraElDemonio ? 'revelando' : 'noche'));
     expect(ana.estado.plaza.find((a) => a.id === asientoDe(bea))?.muerto).toBe(true);
@@ -317,7 +317,7 @@ describe('narrador virtual', () => {
   it('sin nadie marcado, todos listos: nadie es ejecutado y anochece', async () => {
     const jugadores = await hastaElDia();
     const [ana] = jugadores;
-    for (const c of jugadores) await arnes.accion(c, 'jugador:listo');
+    for (const c of jugadores) await arnes.hacer(c, 'narradorVirtual:listo');
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'noche');
     expect(ana.estado.narradorVirtual?.frase).toBe('Y nos vamos a la noche.');
     // «Seguir nominando» deshace el listo (antes de que lo estén todos)
@@ -326,15 +326,15 @@ describe('narrador virtual', () => {
   it('«Seguir nominando» quita el listo; nadie puede disparar dos veces', async () => {
     const jugadores = await hastaElDia();
     const [ana, bea] = jugadores;
-    await arnes.accion(ana, 'jugador:listo');
+    await arnes.hacer(ana, 'narradorVirtual:listo');
     expect(ana.estado.narradorVirtual?.listos).toContain(ana.id);
-    await arnes.accion(ana, 'jugador:seguirNominando');
+    await arnes.hacer(ana, 'narradorVirtual:seguirNominando');
     expect(ana.estado.narradorVirtual?.listos).not.toContain(ana.id);
-    await arnes.accion(ana, 'jugador:exterminar', { jugadorId: bea.miAsiento!.id });
-    expect(ana.estado.acciones).not.toContain('jugador:exterminar');
+    await arnes.hacer(ana, 'declarar:exterminar', { jugadorId: bea.miAsiento!.id });
+    expect(ana.estado.acciones).not.toContain('declarar:exterminar');
     // Lo cuenta con pausas y acaba en que la partida continúa o, si era el demonio, en el grimorio
     await ana.esperarQue((e) => e.narradorVirtual?.frase === 'La partida continúa.' || e.narradorVirtual?.etapa === 'revelando', 5000);
-    expect((await arnes.intentar(ana, 'jugador:exterminar', { jugadorId: bea.miAsiento!.id })).ok).toBe(false);
+    expect((await arnes.pedir(ana, 'declarar:exterminar', { jugadorId: bea.miAsiento!.id })).ok).toBe(false);
   });
 
   it('si alguien se va en plena partida y nadie ocupa su asiento, se acaba (Violinista o, sin demonio, gana el bueno)', async () => {
@@ -350,7 +350,7 @@ describe('narrador virtual', () => {
   it('se va solo cuando no queda nadie en la sala', async () => {
     arnes = await conTroubleBrewing();
     const [ana, bea] = await entran(2);
-    await arnes.accion(ana, 'sala:anadirNarradorVirtual', TONTO);
+    await arnes.hacer(ana, 'narradorVirtual:anadir', TONTO);
     await bea.esperarQue((e) => !!e.narradorVirtual);
     ana.socket.disconnect();
     bea.socket.disconnect();

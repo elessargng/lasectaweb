@@ -1,9 +1,9 @@
-import {
-  NARRADORES_VIRTUALES,
-  type GuionNarradorVirtual,
-  type IdNarradorVirtual,
-} from '../../models/compartido/narradorVirtual';
+import { NARRADORES_VIRTUALES } from '../../models/compartido/narradorVirtual';
+import { opcionesNarradorVirtual, type OpcionesNarradorVirtual } from '../../models/narradorVirtual/NarradorVirtual';
+import { noPuedeNominar, nominoHoy } from '../../models/narradorVirtual/dia/reglasDia';
+import type { Participante } from '../../models/sala/Participantes';
 import type { SalaDeJuego } from '../../models/SalaDeJuego';
+import { UsosSala, type Permiso, type ResultadoUso } from '../sala/UsosSala';
 import type { EstrategiaNarrador } from '../../models/narradorVirtual/estrategias/EstrategiaNarrador';
 import { TontoYTu } from '../../models/narradorVirtual/estrategias/TontoYTu';
 import { EsperandoJugadores } from '../../models/narradorVirtual/etapas/EsperandoJugadores';
@@ -19,29 +19,80 @@ import type { Azar, BolsasRecientes, ModelosNarrador, Narrador, Temporizador, Vo
 import { ConRespaldo } from '../../models/narradorVirtual/estrategias/ConRespaldo';
 import { Jarvis } from '../../models/narradorVirtual/estrategias/Jarvis';
 
-/** Lo que se elige al añadir un narrador virtual. */
-export interface OpcionesNarradorVirtual {
-  narrador: IdNarradorVirtual;
-  guion: GuionNarradorVirtual;
-  jugadores: number;
-}
+/** Lo que se puede pedir al narrador virtual (son también los nombres que recibe el cliente para pintar sus botones). */
+export const USOS_NARRADOR_VIRTUAL = [
+  'narradorVirtual:anadir',
+  'narradorVirtual:quitar',
+  'narradorVirtual:nominar',
+  'narradorVirtual:defensa',
+  'narradorVirtual:voto',
+  'narradorVirtual:listo',
+  'narradorVirtual:seguirNominando',
+] as const;
+type UsoNarradorVirtual = (typeof USOS_NARRADOR_VIRTUAL)[number];
 
-/**
- * Lo que las acciones de la sala usan del narrador virtual (se les inyecta): no
- * conocen el servicio concreto.
- */
-export interface ServicioNarradorVirtual {
-  /** Lo añade (preparando la partida) en nombre de `creador`. Devuelve el error, si lo hay. */
-  anadir(creador: string, opciones: OpcionesNarradorVirtual): Promise<string | null>;
-  quitar(): void;
-  /** Un jugador le pide algo en su turno del día (ya comprobado que puede). Devuelve el error, si lo hay. */
-  pedir(jugador: string, accion: AccionJugador, datos: unknown): Promise<string | null>;
-  /**
-   * Un jugador hace una declaración del día (ver models/personajes; ya comprobado
-   * que puede): lo que se le contesta, o el error.
-   */
-  declarar(jugador: string, declaracion: string, datos: unknown): Promise<{ error: string } | { valor?: string }>;
-}
+/** El uso de cada declaración del día (ver models/personajes): `declarar:<id>`. */
+const usoDeDeclarar = (id: string) => `declarar:${id}`;
+
+/** El turno de la nominación del narrador virtual en el que está el de ese jugador (quien nomina o el nominado). */
+const enSuTurno = (juego: SalaDeJuego, yo: Participante, turno: 'acusacion' | 'defensa') => {
+  const { partida, narrador } = juego;
+  const n = partida.nominaciones.nominacion();
+  const mio = partida.jugadorDe(yo.id)?.id;
+  return narrador.actual()?.turno === turno && !!n && !!mio && (turno === 'acusacion' ? n.desde : n.hasta) === mio;
+};
+
+/** Quién puede pedir cada cosa al narrador virtual y, si no, por qué (también cada declaración del día). */
+const PERMISOS: Record<string, Permiso> = {
+  // En lugar de hacerse narrador; solo con cuenta: los invitados, no
+  'narradorVirtual:anadir': ({ sala }, yo) => {
+    if (sala.participantes.hayNarrador() || yo.rol === 'narrador') return 'La sala ya tiene narrador.';
+    return yo.persona.tipo === 'usuario' ? null : 'Para añadir un narrador virtual necesitas una cuenta.';
+  },
+  // Solo quien lo añadió
+  'narradorVirtual:quitar': ({ narrador }, yo) => {
+    if (!narrador.actual()) return 'La sala no tiene narrador virtual.';
+    return narrador.actual()?.creador === yo.id ? null : 'Solo quien añadió al narrador virtual puede quitarlo.';
+  },
+  // De día, un jugador vivo nomina a otro (una vez al día, y a cada uno se le nomina una vez)
+  'narradorVirtual:nominar': (juego, yo) => noPuedeNominar(juego, yo),
+  // Quien nomina termina su acusación: le toca hablar al nominado
+  'narradorVirtual:defensa': (juego, yo) => (enSuTurno(juego, yo, 'acusacion') ? null : 'Ahora no te toca acusar.'),
+  // El nominado termina su defensa: empieza la votación
+  'narradorVirtual:voto': (juego, yo) => (enSuTurno(juego, yo, 'defensa') ? null : 'Ahora no te toca defenderte.'),
+  // Listo para pasar a la noche; en medio de una nominación, no: se decide al acabarla
+  'narradorVirtual:listo': ({ partida, narrador }, yo) =>
+    narrador.actual()?.etapa === 'nominaciones' &&
+    !partida.nominaciones.nominacion() &&
+    !!partida.jugadorDe(yo.id) &&
+    !narrador.actual()!.listos.includes(yo.id)
+      ? null
+      : 'Ahora no hay que decir si estás listo.',
+  // Ya no está listo: quiere seguir nominando (quien ya ha nominado hoy, no)
+  'narradorVirtual:seguirNominando': (juego, yo) => {
+    const { partida, narrador } = juego;
+    const jugador = partida.jugadorDe(yo.id);
+    const puede =
+      narrador.actual()?.etapa === 'nominaciones' &&
+      !partida.nominaciones.nominacion() &&
+      !!jugador &&
+      !jugador.muerto &&
+      narrador.actual()!.listos.includes(yo.id) &&
+      !nominoHoy(juego, jugador.id);
+    return puede ? null : 'Ahora no puedes dejar de estar listo.';
+  },
+  // Las declaraciones del día: sus permisos son los suyos
+  ...Object.fromEntries(DECLARACIONES_DIA.map((d) => [usoDeDeclarar(d.id), ((juego, yo) => (d.puede(juego, yo) ? null : d.noPuede(juego, yo))) as Permiso])),
+};
+
+/** El uso de lo que pide un jugador en su turno del día. */
+const USO_DE_TURNO: Record<AccionJugador, UsoNarradorVirtual> = {
+  nominar: 'narradorVirtual:nominar',
+  defensa: 'narradorVirtual:defensa',
+  voto: 'narradorVirtual:voto',
+  listo: 'narradorVirtual:listo',
+  seguirNominando: 'narradorVirtual:seguirNominando',
+};
 
 /** Lo que espera a que alguien ocupe el asiento de quien se ha ido en plena partida (ms); si no, el Violinista. */
 export const ESPERA_ABANDONO_MS = 120_000;
@@ -56,7 +107,8 @@ const EN_PARTIDA = ['noche', 'privados', 'puestaEnComun', 'nominaciones'];
  * mismas reglas. Cada vez que cambia la sala (`alCambiarSala`), la etapa en curso
  * mira si le toca hacer algo. Sin nadie en la sala, se va solo.
  */
-export class NarradorVirtualService implements ServicioNarradorVirtual {
+export class NarradorVirtualService {
+  private readonly usos: UsosSala<string>;
   private etapa: Etapa | null = null;
   private estrategia: EstrategiaNarrador | null = null;
   /** Lo que salió pero no va en la bolsa (el Borracho, y qué cree ser): se pone la primera noche. */
@@ -84,12 +136,63 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     private readonly modelos: ModelosNarrador | null = null,
     /** Las bolsas de las últimas partidas de quien lo añade (sin esto, no se tienen en cuenta). */
     private readonly bolsas: BolsasRecientes | null = null,
-  ) {}
+  ) {
+    this.usos = new UsosSala(juego, PERMISOS, difundir);
+  }
 
-  async anadir(creador: string, { narrador, guion, jugadores }: OpcionesNarradorVirtual): Promise<string | null> {
+  /** El participante de una sesión (su id), o null si ya no está en la sala. */
+  quienEs(clave: string): string | null {
+    return this.usos.quienEs(clave);
+  }
+
+  /** Lo que puede pedir ahora al narrador virtual (para que el cliente pinte sus botones). */
+  permitidas(yo: Participante): string[] {
+    return this.usos.permitidos(yo, [...USOS_NARRADOR_VIRTUAL, ...DECLARACIONES_DIA.map((d) => usoDeDeclarar(d.id))]);
+  }
+
+  /** Las declaraciones del día que se pueden hacer (sus ids: ver models/personajes). */
+  declaraciones(): string[] {
+    return DECLARACIONES_DIA.map((d) => d.id);
+  }
+
+  /**
+   * En lugar de hacerse narrador, añade un narrador virtual que lleva la partida
+   * solo: el narrador, el guion y los jugadores (ver opcionesNarradorVirtual).
+   */
+  async anadir(yoId: string, pedido: { narrador: string; guion: string; jugadores: number }): Promise<ResultadoUso> {
+    return this.usos.hacerAsincrono(yoId, 'narradorVirtual:anadir', async () => {
+      const opciones = opcionesNarradorVirtual(pedido);
+      return 'error' in opciones ? opciones.error : this.empezar(yoId, opciones);
+    });
+  }
+
+  /** Quita el narrador virtual: solo quien lo añadió. */
+  quitarPor(yoId: string): ResultadoUso {
+    return this.usos.hacer(yoId, 'narradorVirtual:quitar', () => {
+      this.quitar();
+      return null;
+    });
+  }
+
+  /** Un jugador le pide algo en su turno del día (nominar: datos { jugadorId } del nominado). */
+  async turno(yoId: string, accion: AccionJugador, datos?: unknown): Promise<ResultadoUso> {
+    return this.usos.hacerAsincrono(yoId, USO_DE_TURNO[accion], () => this.alPedir(yoId, accion, datos));
+  }
+
+  /** Un jugador hace una declaración del día (ver models/personajes): lo que se le contesta, o el error. */
+  async declarar(yoId: string, id: string, datos: unknown): Promise<ResultadoUso> {
+    if (!DECLARACIONES_DIA.some((d) => d.id === id)) return { ok: false, error: 'Esa declaración no existe.' };
+    return this.usos.hacerAsincrono(yoId, usoDeDeclarar(id), async () => {
+      const r = await this.hacerDeclaracion(yoId, id, datos);
+      if ('error' in r) return r.error;
+      return r.valor === undefined ? null : { valor: r.valor };
+    });
+  }
+
+  /** Lo añade (preparando la partida) en nombre de `creador`. Devuelve el error, si lo hay. */
+  private async empezar(creador: string, { narrador, guion, jugadores }: OpcionesNarradorVirtual): Promise<string | null> {
     const { sala, partida } = this.juego;
-    const datos = NARRADORES_VIRTUALES.find((n) => n.id === narrador);
-    if (!datos?.disponible) return 'Ese narrador virtual aún no está disponible.';
+    const datos = NARRADORES_VIRTUALES.find((n) => n.id === narrador)!;
     const libre = () => {
       if (sala.participantes.hayNarrador()) return 'La sala ya tiene narrador.';
       const sentados = partida.plaza().filter((a) => a.participanteId).length;
@@ -160,12 +263,12 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     narrador.quitar();
   }
 
-  async pedir(jugador: string, accion: AccionJugador, datos: unknown): Promise<string | null> {
+  private async alPedir(jugador: string, accion: AccionJugador, datos: unknown): Promise<string | null> {
     if (!this.etapa || !this.juego.narrador.actual()) return 'La sala no tiene narrador virtual.';
     return this.etapa.alPedir ? this.etapa.alPedir(this.contexto(), jugador, accion, datos) : 'Ahora no es el momento.';
   }
 
-  async declarar(jugador: string, id: string, datos: unknown): Promise<{ error: string } | { valor?: string }> {
+  private async hacerDeclaracion(jugador: string, id: string, datos: unknown): Promise<{ error: string } | { valor?: string }> {
     const { narrador } = this.juego;
     const declaracion = DECLARACIONES_DIA.find((d) => d.id === id);
     if (!declaracion) return { error: 'Esa declaración no existe.' };

@@ -35,11 +35,24 @@ export class UsosSala<U extends string> {
    * algo, { valor }); si sale bien, avisa del cambio.
    */
   hacer(yoId: string, uso: U, hacer: () => string | null | { valor: string }): ResultadoUso {
+    const noPuede = this.noPuede(yoId, uso);
+    return noPuede ? { ok: false, error: noPuede } : this.hecho(hacer());
+  }
+
+  /** Como hacer, con algo que tarda (el narrador virtual prepara la partida, cuenta una declaración…). */
+  async hacerAsincrono(yoId: string, uso: U, hacer: () => Promise<string | null | { valor: string }>): Promise<ResultadoUso> {
+    const noPuede = this.noPuede(yoId, uso);
+    return noPuede ? { ok: false, error: noPuede } : this.hecho(await hacer());
+  }
+
+  /** Por qué no puede (no está en la sala, o su permiso), o null. */
+  private noPuede(yoId: string, uso: U): string | null {
     const yo = this.juego.sala.participantes.buscar(yoId);
-    if (!yo) return { ok: false, error: 'No estás en la sala.' };
-    const noPuede = this.permisos[uso](this.juego, yo);
-    if (noPuede) return { ok: false, error: noPuede };
-    const hecho = hacer();
+    return yo ? this.permisos[uso](this.juego, yo) : 'No estás en la sala.';
+  }
+
+  /** Lo que contesta: el error del dominio o, si ha salido bien (y se avisa del cambio), su valor. */
+  private hecho(hecho: string | null | { valor: string }): ResultadoUso {
     if (typeof hecho === 'string') return { ok: false, error: hecho };
     this.alCambiar();
     return hecho ? { ok: true, valor: hecho.valor } : { ok: true };

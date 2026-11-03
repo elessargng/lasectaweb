@@ -24,3 +24,15 @@ export function como<R>(
   const yoId = quienEs(sesion.clave);
   responder(yoId ? hacer(yoId) : FUERA);
 }
+
+/** Como `como`, con algo que tarda: contesta cuando acaba. */
+export function comoAsincrono<R>(
+  quienEs: (clave: string) => string | null,
+  sesion: Sesion,
+  responder: Responder<R | Fallo>,
+  hacer: (yoId: string) => Promise<R | Fallo>,
+): void {
+  const yoId = quienEs(sesion.clave);
+  if (!yoId) return responder(FUERA);
+  void hacer(yoId).then(responder);
+}

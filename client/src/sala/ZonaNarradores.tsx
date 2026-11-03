@@ -112,7 +112,7 @@ const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas, onAnadirVirt
                   Hacerse narrador
                 </button>
               )}
-              {puede('sala:anadirNarradorVirtual') && (
+              {puede('narradorVirtual:anadir') && (
                 <button type="button" onClick={onAnadirVirtual} aria-haspopup="dialog" className={`${botonSecundario} px-2 py-1 text-xs`}>
                   Narrador virtual
                 </button>

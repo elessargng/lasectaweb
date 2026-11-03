@@ -25,7 +25,8 @@ interface DialogoArtistaProps {
   miAsiento: string;
   /** Pregunta libre (Jarvis la entiende); si no, se monta con piezas. */
   libre: boolean;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Pregunta como Artista (ver AccionesNarradorVirtual.declarar). */
+  preguntar: (datos: unknown) => Promise<ResultadoAccion>;
   onCerrar: () => void;
 }
 
@@ -48,7 +49,7 @@ const leerQuien = (valor: string): QuienPregunta => {
  * respuesta sale en la ventana y el foco va a ella; si pide que la reformule, no
  * se gasta y se puede volver a preguntar.
  */
-const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoArtistaProps) => {
+const DialogoArtista = ({ estado, miAsiento, libre, preguntar: preguntarAlNarrador, onCerrar }: DialogoArtistaProps) => {
   const { personajes, todosPorId } = useFichas();
   const plaza = estado.plaza;
   const [texto, setTexto] = useState('');
@@ -105,7 +106,7 @@ const DialogoArtista = ({ estado, miAsiento, libre, pedir, onCerrar }: DialogoAr
     }
     setEnviando(true);
     setError('');
-    const r = await pedir('jugador:artista', libre ? { texto: texto.trim() } : { pregunta });
+    const r = await preguntarAlNarrador(libre ? { texto: texto.trim() } : { pregunta });
     setEnviando(false);
     if (!r.ok) return setError(r.error);
     setRespuesta((r.valor as RespuestaPregunta) ?? 'reformular');

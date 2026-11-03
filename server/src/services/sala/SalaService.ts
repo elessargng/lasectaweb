@@ -80,7 +80,8 @@ export class SalaService {
   readonly dia: DiaService;
   private readonly conversaciones: ConversacionService;
   private readonly videollamada: VideollamadaService | null;
-  private readonly narradorVirtual: NarradorVirtualService;
+  /** El narrador virtual: añadirlo, quitarlo y lo que le piden los jugadores (ver NarradorVirtualController). */
+  readonly narradorVirtual: NarradorVirtualService;
   private readonly depsAcciones: DependenciasAcciones;
   private difusor: DifusorSala = SIN_DIFUSOR;
   /** El guion no va en cada estado: se manda aparte, solo cuando cambia y a quien entra. */
@@ -106,14 +107,19 @@ export class SalaService {
     }
     this.chat = new ChatService(deps.mensajes, this.juego);
     this.imagenes = new ImagenesSala(deps.imagenes);
-    this.bolsa = new BolsaService(this.juego, () => this.difundir());
-    this.reloj = new RelojService(this.juego, () => this.difundir());
-    this.revelacion = new RevelacionService(this.juego, () => this.difundir());
-    this.senalamiento = new SenalamientoService(this.juego, () => this.difundir());
-    this.faroles = new FarolService(this.juego, () => this.difundir());
-    this.fase = new FaseService(this.juego, () => this.difundir());
-    this.noche = new NocheService(this.juego, () => this.difundir());
-    this.dia = new DiaService(this.juego, () => this.difundir());
+    // Lo que cambia cada parte de la sala se manda a todos (y el guion, si ha cambiado)
+    const alCambiar = () => {
+      this.mandarGuionSiCambia();
+      this.difundir();
+    };
+    this.bolsa = new BolsaService(this.juego, alCambiar);
+    this.reloj = new RelojService(this.juego, alCambiar);
+    this.revelacion = new RevelacionService(this.juego, alCambiar);
+    this.senalamiento = new SenalamientoService(this.juego, alCambiar);
+    this.faroles = new FarolService(this.juego, alCambiar);
+    this.fase = new FaseService(this.juego, alCambiar);
+    this.noche = new NocheService(this.juego, alCambiar);
+    this.dia = new DiaService(this.juego, alCambiar);
     this.conversaciones = new ConversacionService(this.juego);
     // Sin servidor de vídeo configurado, la sala funciona igual, sin cámaras ni micrófonos
     this.videollamada = deps.video ? new VideollamadaService(deps.video, this.juego, this.conversaciones) : null;
@@ -156,7 +162,7 @@ export class SalaService {
         },
       },
       deps.relojNarradorVirtual ?? temporizadorReal,
-      () => this.difundir(),
+      alCambiar,
       deps.azar,
       // Jarvis: con el modelo de la cuenta de quien lo añade, ya comprobado
       deps.modelosIA
@@ -182,12 +188,11 @@ export class SalaService {
           }
         : null,
     );
-    // Las acciones también lo usan (añadirlo y quitarlo)
+    // Lo que usan las acciones que quedan
     this.depsAcciones = {
       guiones: deps.guiones,
       imagenesBiblioteca: deps.imagenesBiblioteca,
       imagenes: this.imagenes,
-      narradorVirtual: this.narradorVirtual,
     };
     // La votación avanza sola con el tiempo: cada paso se manda a todos.
     partida.alCambiarSola = () => this.difundir();
@@ -204,7 +209,7 @@ export class SalaService {
       conversaciones: this.conversaciones.lista(),
       invitacionesDe: (participanteId: string) => this.conversaciones.invitacionesDe(participanteId),
       video: !!this.videollamada,
-      accionesDe: (yo: Participante) => [...accionesPermitidas(this.juego, yo), ...this.bolsa.permitidas(yo), ...this.reloj.permitidas(yo), ...this.revelacion.permitidas(yo), ...this.senalamiento.permitidas(yo), ...this.faroles.permitidas(yo), ...this.fase.permitidas(yo), ...this.noche.permitidas(yo), ...this.dia.permitidas(yo)],
+      accionesDe: (yo: Participante) => [...accionesPermitidas(this.juego, yo), ...this.bolsa.permitidas(yo), ...this.reloj.permitidas(yo), ...this.revelacion.permitidas(yo), ...this.senalamiento.permitidas(yo), ...this.faroles.permitidas(yo), ...this.fase.permitidas(yo), ...this.noche.permitidas(yo), ...this.dia.permitidas(yo), ...this.narradorVirtual.permitidas(yo)],
     };
   }
 

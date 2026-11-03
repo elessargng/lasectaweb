@@ -10,14 +10,15 @@ import {
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario, campo } from './estilos';
-import type { ResultadoAccion } from './useSala';
+import type { AccionesNarradorVirtual } from './useSala';
 
 interface DialogoNarradorVirtualProps {
   /** Cuántos hay ya sentados: no se puede pedir una partida de menos. */
   sentados: number;
   /** Por qué no se puede elegir alguno ahora (Jarvis sin cuenta o sin su modelo comprobado). */
   noDisponible?: Partial<Record<IdNarradorVirtual, string>>;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Lo añade (ver AccionesNarradorVirtual). */
+  anadir: AccionesNarradorVirtual['anadir'];
   onCerrar: () => void;
 }
 
@@ -31,7 +32,7 @@ const NUMEROS = Array.from({ length: max - min + 1 }, (_, i) => min + i);
  * no se pueden elegir salen desactivados, con el motivo). Al añadirlo, prepara la
  * plaza y espera a que se llene. Al abrirse, el foco va al título.
  */
-const DialogoNarradorVirtual = ({ sentados, noDisponible = {}, pedir, onCerrar }: DialogoNarradorVirtualProps) => {
+const DialogoNarradorVirtual = ({ sentados, noDisponible = {}, anadir: anadirVirtual, onCerrar }: DialogoNarradorVirtualProps) => {
   const elegible = (n: (typeof NARRADORES_VIRTUALES)[number]) => n.disponible && !noDisponible[n.id];
   const [jugadores, setJugadores] = useState(Math.min(max, Math.max(min, sentados)));
   const guiones = guionesParaJugadores(jugadores);
@@ -48,7 +49,7 @@ const DialogoNarradorVirtual = ({ sentados, noDisponible = {}, pedir, onCerrar }
     if (enviando) return;
     setEnviando(true);
     setError('');
-    const r = await pedir('sala:anadirNarradorVirtual', { narrador, guion, jugadores });
+    const r = await anadirVirtual({ narrador, guion, jugadores });
     setEnviando(false);
     if (r.ok) onCerrar();
     else setError(r.error);

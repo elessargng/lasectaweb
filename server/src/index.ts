@@ -99,6 +99,7 @@ import { BolsaController } from './controllers/sala/BolsaController';
 import { FarolController } from './controllers/sala/FarolController';
 import { DiaController } from './controllers/sala/DiaController';
 import { FaseController } from './controllers/sala/FaseController';
+import { NarradorVirtualController } from './controllers/sala/NarradorVirtualController';
 import { NocheController } from './controllers/sala/NocheController';
 import { RelojController } from './controllers/sala/RelojController';
 import { RevelacionController } from './controllers/sala/RevelacionController';
@@ -477,6 +478,7 @@ DatabaseRepository.getInstance()
       faroles: new FarolController(salaService.faroles),
       dia: new DiaController(salaService.dia),
       fase: new FaseController(salaService.fase),
+      narradorVirtual: new NarradorVirtualController(salaService.narradorVirtual),
       noche: new NocheController(salaService.noche),
       reloj: new RelojController(salaService.reloj),
       revelacion: new RevelacionController(salaService.revelacion),

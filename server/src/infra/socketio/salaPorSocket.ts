@@ -4,6 +4,7 @@ import type { BolsaController } from '../../controllers/sala/BolsaController';
 import type { DiaController } from '../../controllers/sala/DiaController';
 import type { FaseController } from '../../controllers/sala/FaseController';
 import type { FarolController } from '../../controllers/sala/FarolController';
+import type { NarradorVirtualController } from '../../controllers/sala/NarradorVirtualController';
 import type { NocheController } from '../../controllers/sala/NocheController';
 import type { RelojController } from '../../controllers/sala/RelojController';
 import type { RevelacionController } from '../../controllers/sala/RevelacionController';
@@ -36,6 +37,7 @@ export interface ControladoresSala {
   faroles: FarolController;
   dia: DiaController;
   fase: FaseController;
+  narradorVirtual: NarradorVirtualController;
   noche: NocheController;
   reloj: RelojController;
   revelacion: RevelacionController;
@@ -73,6 +75,15 @@ const PETICIONES_PARTES = {
     'fase:amanecer': 'amanecer',
     'fase:volverAtras': 'volverAtras',
     'fase:limpiarGrimorio': 'limpiarGrimorio',
+  },
+  narradorVirtual: {
+    'narradorVirtual:anadir': 'anadir',
+    'narradorVirtual:quitar': 'quitar',
+    'narradorVirtual:nominar': 'nominar',
+    'narradorVirtual:defensa': 'defensa',
+    'narradorVirtual:voto': 'voto',
+    'narradorVirtual:listo': 'listo',
+    'narradorVirtual:seguirNominando': 'seguirNominando',
   },
   noche: {
     'noche:despertar': 'despertar',
@@ -149,6 +160,11 @@ export function abrirSalaPorSocket(
         const atender = controlador[metodo as keyof typeof controlador] as Atender;
         socket.on(evento, (peticion: unknown, ack?: unknown) => atender(sesion, peticion, contestar(ack)));
       }
+    }
+    // Las declaraciones del día con narrador virtual: una por personaje que la tiene
+    for (const id of controladores.narradorVirtual.declaraciones()) {
+      const atender = controladores.narradorVirtual.declarar(id) as Atender;
+      socket.on(`declarar:${id}`, (peticion: unknown, ack?: unknown) => atender(sesion, peticion, contestar(ack)));
     }
     socket.on('chat:historial', () => salaController.historial(sesion));
     socket.on('disconnect', (reason) => salaController.salir(sesion, reason === 'client namespace disconnect'));
