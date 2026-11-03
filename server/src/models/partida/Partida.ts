@@ -3,6 +3,7 @@ import type { Azar } from './azar';
 import { FICHAS_RESPUESTA_GUIADA, type EleccionDespertar, type EnvioDespertar, type MensajeDespertar } from '../compartido/despertar';
 import type { FichaEnviada } from './Entregas';
 import { NUM_FAROLES, type Alineamiento } from '../compartido/jugador';
+import { SALA_FORMAS_MANO, type FormaMano } from '../compartido/participante';
 import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA } from '../compartido/partida';
 import type { AsientoDiario, HechoDiario } from '../compartido/diario';
 import { TIPOS_NPC, type GuionResuelto, type TipoPersonaje } from '../guiones';
@@ -706,6 +707,45 @@ export class Partida {
     });
     if ('error' in grimorio) return grimorio.error;
     this.entregas.enviarGrimorio(jugadorId, grimorio.fichas, grimorio.faroles);
+    return null;
+  }
+
+  /**
+   * Un jugador o un narrador elige la forma de su mano: una de SALA_FORMAS_MANO o un
+   * personaje del guion (su icono). Devuelve el error, si lo hay.
+   */
+  elegirMano(participanteId: string, forma: string): string | null {
+    if (!SALA_FORMAS_MANO.includes(forma) && !this.guion.personaje(forma)) return 'Forma de mano desconocida.';
+    this.sala.participantes.elegirFormaMano(participanteId, forma as FormaMano);
+    return null;
+  }
+
+  /**
+   * Un jugador o un narrador levanta (una o, `dos`, las dos: la Banshee) o baja la
+   * mano. Mientras se señala no se levanta, ni un jugador sin voto (un muerto que lo
+   * ha gastado, o con el Voudon vivo). La del narrador no vota: es para hacerse ver.
+   * Devuelve el error, si lo hay.
+   */
+  levantarMano(participanteId: string, levantada: boolean, dos = false): string | null {
+    const yo = this.sala.participantes.buscar(participanteId);
+    if (!yo) return 'No estás en la sala.';
+    if (levantada && this.manosBloqueadas(yo)) return 'Mientras se señala no se puede levantar la mano.';
+    if (levantada && yo.rol === 'jugador' && this.sinVoto(yo.id)) {
+      return this.voudonVivo() ? 'Con el Voudon vivo, solo votan él y los muertos.' : 'Ya has gastado tu voto: no puedes levantar la mano.';
+    }
+    this.sala.participantes.levantarMano(yo.id, levantada, levantada && dos);
+    return null;
+  }
+
+  /**
+   * El narrador responde a un visitante que pide ver el grimorio: se lo concede (y ya
+   * no lo pierde mientras sea visitante: lo ha visto) o no. Devuelve el error, si lo hay.
+   */
+  responderAcceso(participanteId: string, conceder: boolean): string | null {
+    const quien = this.sala.participantes.buscar(participanteId);
+    if (!quien || quien.rol !== 'visitante') return 'Esa persona ya no es visitante de la sala.';
+    if (this.acceso.de(quien.id) !== 'solicitado') return 'Esa persona ya no lo está pidiendo.';
+    this.acceso.cambiar(quien.id, conceder ? 'concedido' : 'ninguno');
     return null;
   }
 

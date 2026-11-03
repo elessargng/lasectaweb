@@ -20,6 +20,7 @@ import type { Decision } from './estrategias/EstrategiaNarrador';
 import { instruccionesBolsa } from './estrategias/instruccionesJarvis';
 import type { SalaDeJuego } from '../SalaDeJuego';
 import type { Azar, Narrador } from './puertos';
+import type { CambioAsientos } from '../sala/Sala';
 
 /** Lo que ha salido pero no va en la bolsa (el Borracho) y el aldeano que cree ser (su ficha sí va). */
 export interface FueraDeLaBolsa {
@@ -41,20 +42,20 @@ export async function prepararPartida(
   { guion, jugadores, azar, recientes }: { guion: GuionNarradorVirtual; jugadores: number; azar: Azar; recientes: readonly (readonly string[])[] },
 ): Promise<{ error: string } | { personajes: string[]; fuera: FueraDeLaBolsa[] }> {
   const { partida } = juego;
-  const paso = async (accion: string, datos?: unknown) => {
-    const r = await plaza.accion(accion, datos);
+  const cambiarAsientos = async (cambio: CambioAsientos) => {
+    const r = await plaza.asientos(cambio);
     if (!r.ok) throw new Error(r.error);
   };
   try {
     const limpio = await plaza.limpiarGrimorio();
     if (!limpio.ok) throw new Error(limpio.error);
-    while (partida.plaza().length < jugadores) await paso('narrador:asientos', { cambio: 'añadir' });
+    while (partida.plaza().length < jugadores) await cambiarAsientos({ cambio: 'añadir' });
     while (partida.plaza().length > jugadores) {
       const asientos = partida.plaza();
       const ultimo = asientos[asientos.length - 1];
       const libre = asientos.slice(0, -1).find((a) => !a.participanteId);
-      if (ultimo.participanteId && libre) await paso('narrador:asientos', { cambio: 'mover', desde: ultimo.id, hasta: libre.id });
-      await paso('narrador:asientos', { cambio: 'quitar' });
+      if (ultimo.participanteId && libre) await cambiarAsientos({ cambio: 'mover', desde: ultimo.id, hasta: libre.id });
+      await cambiarAsientos({ cambio: 'quitar' });
     }
     for (const hecho of [await plaza.cambiarGuion(guion), await plaza.configurar({ grimorioJugadores: true })]) {
       if (!hecho.ok) throw new Error(hecho.error);

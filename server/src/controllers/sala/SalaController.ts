@@ -60,12 +60,6 @@ export class SalaController {
     this.salaService.desconectar(clave, conexion, aProposito);
   };
 
-  /** Una sola puerta para todas las acciones: { accion, datos }. */
-  accion = async ({ clave }: Sesion, peticion: unknown, responder: Responder<ResultadoAccion>): Promise<void> => {
-    const { accion, datos } = campos(peticion);
-    await this.salaService.accion(this.salaService.participanteDe(clave), typeof accion === 'string' ? accion : '', datos, responder);
-  };
-
   /** Un mensaje de texto: { para: 'general' | 'visitantes' | id de participante, texto }. */
   enviarMensaje = ({ clave }: Sesion, peticion: unknown, responder: Responder<ResultadoAccion>): void => {
     const { para, texto } = campos(peticion);

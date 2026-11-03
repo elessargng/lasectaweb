@@ -8,12 +8,12 @@ import CuadroNarrador from './CuadroNarrador';
 import { useFichas } from './fichas';
 import { botonPrincipal, botonSecundario } from './estilos';
 import { ID_SIN_NARRADOR } from './ids';
-import type { SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
+import type { AccionesParticipantes, SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
 
 interface ZonaNarradoresProps {
   estado: SalaDto;
-  /** Pide una acción a la sala (ver `useSala`). */
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Hacerse narrador, pedir ver el grimorio y responder a quien lo pide (ver AccionesParticipantes). */
+  participantes: Pick<AccionesParticipantes, 'hacerseNarrador' | 'solicitarGrimorio' | 'accesoGrimorio'>;
   /** Para avisar de errores de las acciones. */
   onError: (mensaje: string) => void;
   /** Escribir y conversar con un narrador (lo que se pueda). */
@@ -33,7 +33,7 @@ interface ZonaNarradoresProps {
  *
  * Debajo, para los narradores, quién pide ver el grimorio.
  */
-const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas, onAnadirVirtual }: ZonaNarradoresProps) => {
+const ZonaNarradores = ({ estado, participantes, onError, contacto, pistas, onAnadirVirtual }: ZonaNarradoresProps) => {
   // El Deus Ex Fiasco en juego (NPC): su ficha va debajo del retrato del narrador
   const { todosPorId } = useFichas();
   const deusExFiasco = estado.npcs.includes('deusexfiasco') ? todosPorId.get('deusexfiasco') : undefined;
@@ -43,8 +43,8 @@ const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas, onAnadirVirt
   const yo = estado.participantes.find((p) => p.id === estado.yo);
   const puede = (accion: string) => estado.acciones.includes(accion);
 
-  const actuar = async (accion: string, datos?: unknown) => {
-    const r = await pedir(accion, datos);
+  const actuar = async (hacer: () => Promise<ResultadoAccion>) => {
+    const r = await hacer();
     if (!r.ok) onError(r.error);
     return r.ok;
   };
@@ -53,7 +53,7 @@ const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas, onAnadirVirt
   const hacerseNarrador = async () => {
     if (pidiendo) return;
     setPidiendo(true);
-    await actuar('sala:hacerseNarrador');
+    await actuar(participantes.hacerseNarrador);
     setPidiendo(false);
   };
 
@@ -83,7 +83,7 @@ const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas, onAnadirVirt
                 }
                 grimorio={
                   puede('sala:solicitarGrimorio')
-                    ? { onSolicitar: () => void actuar('sala:solicitarGrimorio') }
+                    ? { onSolicitar: () => void actuar(participantes.solicitarGrimorio) }
                     : yo?.rol === 'visitante' && yo.accesoGrimorio === 'solicitado'
                       ? 'solicitado'
                       : undefined
@@ -121,7 +121,7 @@ const ZonaNarradores = ({ estado, pedir, onError, contacto, pistas, onAnadirVirt
           }
         />
       )}
-      {yo && <AccesoGrimorio estado={estado} yo={yo} pedir={pedir} onError={onError} />}
+      {yo && <AccesoGrimorio estado={estado} yo={yo} responderAcceso={participantes.accesoGrimorio} onError={onError} />}
     </div>
   );
 };

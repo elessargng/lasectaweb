@@ -1,12 +1,13 @@
 import { useRef } from 'react';
 import { botonPrincipal, botonSecundario } from './estilos';
 import { idNombreNarrador } from './ids';
-import type { SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
+import type { AccionesParticipantes, SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
 
 interface AccesoGrimorioProps {
   estado: SalaDto;
   yo: ParticipanteDto;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Responde a quien pide ver el grimorio (ver AccionesParticipantes). */
+  responderAcceso: AccionesParticipantes['accesoGrimorio'];
   onError: (mensaje: string) => void;
 }
 
@@ -15,11 +16,11 @@ interface AccesoGrimorioProps {
  * y Rechazar. Si no lo pide nadie, no sale. (Quién lo tiene se ve en la lista de
  * participantes, con un libro.)
  */
-const AccesoGrimorio = ({ estado, yo, pedir, onError }: AccesoGrimorioProps) => {
+const AccesoGrimorio = ({ estado, yo, responderAcceso, onError }: AccesoGrimorioProps) => {
   const tituloRef = useRef<HTMLHeadingElement>(null);
 
-  const actuar = async (accion: string, datos?: unknown) => {
-    const r = await pedir(accion, datos);
+  const actuar = async (hacer: () => Promise<ResultadoAccion>) => {
+    const r = await hacer();
     if (!r.ok) onError(r.error);
     return r.ok;
   };
@@ -31,7 +32,7 @@ const AccesoGrimorio = ({ estado, yo, pedir, onError }: AccesoGrimorioProps) => 
 
     // La fila respondida desaparece: el foco va al título (o, si ya no queda nada, al propio nombre).
     const responder = async (p: ParticipanteDto, conceder: boolean) => {
-      if (!(await actuar('narrador:accesoGrimorio', { participanteId: p.id, conceder }))) return;
+      if (!(await actuar(() => responderAcceso(p.id, conceder)))) return;
       window.setTimeout(() => {
         (tituloRef.current ?? document.getElementById(idNombreNarrador(yo.id)))?.focus();
       }, 0);

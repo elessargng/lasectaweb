@@ -9,12 +9,13 @@ import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { botonIcono } from './estilos';
 import { ID_MENU_NARRADOR } from './ids';
 import type { Atajo } from './atajos';
-import type { AccionesFase, AccionesReloj, AccionesRevelacion, AccionesSenalamiento, SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
+import type { AccionesFase, AccionesParticipantes, AccionesReloj, AccionesRevelacion, AccionesSenalamiento, SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
 
 interface MenuNarradorProps {
   estado: SalaDto;
   /** Pide una acción a la sala (ver `useSala`). */
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Lo que el narrador hace con quién está en la sala (ver AccionesParticipantes). */
+  participantes: AccionesParticipantes;
   /** Activa o desactiva la edición de asientos (botones en el centro de la plaza). */
   onAsientos: () => void;
   /** El diálogo de revelar el grimorio, abierto (también se abre con su tecla, desde fuera del menú). */
@@ -53,23 +54,27 @@ const ELEGIR: Record<
     sinCandidatos: string;
     candidatos: (e: SalaDto) => ParticipanteDto[];
     detalle?: (e: SalaDto, p: ParticipanteDto) => string;
+    /** Lo que se hace con quien se elige. */
+    hacer: (participantes: AccionesParticipantes, participanteId: string) => Promise<ResultadoAccion>;
   }
 > = {
-  'narrador:nombrarNarrador': {
+  'sala:nombrarNarrador': {
     etiqueta: 'Añadir narrador',
     titulo: 'Añadir narrador',
     confirmar: 'Nombrar narrador',
     sinCandidatos: 'No hay nadie más en la sala a quien nombrar.',
     candidatos: (e) => e.participantes.filter((p) => p.rol !== 'narrador'),
+    hacer: (participantes, id) => participantes.nombrarNarrador(id),
   },
-  'narrador:expulsarNarrador': {
+  'sala:quitarNarrador': {
     etiqueta: 'Expulsar narrador',
     titulo: 'Expulsar narrador',
     confirmar: 'Quitarle el papel de narrador',
     sinCandidatos: 'No hay otro narrador.',
     candidatos: (e) => e.participantes.filter((p) => p.rol === 'narrador' && p.id !== e.yo),
+    hacer: (participantes, id) => participantes.quitarNarrador(id),
   },
-  'narrador:expulsarJugador': {
+  'sala:expulsar': {
     etiqueta: 'Expulsar jugador',
     titulo: 'Expulsar de la sala',
     confirmar: 'Expulsar de la sala',
@@ -79,14 +84,16 @@ const ELEGIR: Record<
       const asiento = e.plaza.findIndex((a) => a.participanteId === p.id);
       return asiento >= 0 ? `asiento ${asiento + 1}` : 'visitante';
     },
+    hacer: (participantes, id) => participantes.expulsar(id),
   },
-  'narrador:levantarJugador': {
+  'sala:levantarJugador': {
     etiqueta: 'Levantar jugador',
     titulo: 'Levantar jugador',
     confirmar: 'Levantarlo del asiento',
     sinCandidatos: 'No hay nadie sentado.',
     candidatos: (e) => e.participantes.filter((p) => p.rol === 'jugador'),
     detalle: (e, p) => `asiento ${e.plaza.findIndex((a) => a.participanteId === p.id) + 1}`,
+    hacer: (participantes, id) => participantes.levantarJugador(id),
   },
 };
 
@@ -97,7 +104,7 @@ const ELEGIR: Record<
  */
 const MenuNarrador = ({
   estado,
-  pedir,
+  participantes,
   onAsientos,
   revelando,
   onRevelando,
@@ -122,7 +129,7 @@ const MenuNarrador = ({
 
   // id = acción del servidor que la respalda.
   const opciones: OpcionMenu[] = [
-    { id: 'narrador:asientos', etiqueta: 'Asientos', elegir: onAsientos },
+    { id: 'sala:asientos', etiqueta: 'Asientos', elegir: onAsientos },
     // Noche y día: solo sale el que toca
     { id: 'fase:noche', etiqueta: 'Ir a la noche', atajo: atajoFase, elegir: () => void fase.irANoche() },
     { id: 'fase:amanecer', etiqueta: 'Amanece', atajo: atajoFase, elegir: () => void fase.amanecer() },
@@ -158,7 +165,7 @@ const MenuNarrador = ({
           sinCandidatos={dialogo.sinCandidatos}
           candidatos={dialogo.candidatos(estado)}
           detalle={dialogo.detalle && ((p) => dialogo.detalle!(estado, p))}
-          onElegir={(participanteId) => pedir(eligiendo, { participanteId })}
+          onElegir={(participanteId) => dialogo.hacer(participantes, participanteId)}
           onCerrar={() => setEligiendo(null)}
         />
       )}

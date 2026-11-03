@@ -53,7 +53,7 @@ describe('la bolsa', () => {
   it('llenar al azar: el Borracho no va y se dice qué falta', async () => {
     await arnes.hacer(narradora, 'preparacion:guion', { predeterminado: 'prueba' });
     // 8 jugadores: 1 forastero, y en el guion de prueba el único es el Borracho
-    await arnes.accion(narradora, 'narrador:asientos', { cambio: 'añadir' });
+    await arnes.accion(narradora, 'sala:asientos', { cambio: 'añadir' });
     const r = await arnes.pedir<ResultadoBolsaAlAzar>(narradora, 'bolsa:llenarAlAzar');
     expect(r).toMatchObject({ ok: true, fuera: [{ personaje: 'drunk', falta: 'outsider' }], escasos: [] });
     expect(narradora.estado.bolsa).toHaveLength(8);

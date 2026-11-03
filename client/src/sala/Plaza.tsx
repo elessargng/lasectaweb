@@ -49,7 +49,7 @@ import DialogoIntercambio from './DialogoIntercambio';
 import DialogoPatoso from './DialogoPatoso';
 import DialogoRegistroEspia from './DialogoRegistroEspia';
 import { useNominacion } from './useNominacion';
-import type { AccionesDia, AccionesGrimorio, AccionesNarradorVirtual, AccionesPreparacion, AccionesReloj, AccionesRevelacion, AccionesSenalamiento, SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
+import type { AccionesDia, AccionesGrimorio, AccionesParticipantes, AccionesNarradorVirtual, AccionesPreparacion, AccionesReloj, AccionesRevelacion, AccionesSenalamiento, SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
 
 export interface TamanosPlaza {
   avatar: number;
@@ -78,7 +78,8 @@ interface PlazaProps {
   /** Los tamaños con los que se está pintando (para la vista previa de las preferencias). */
   onTamanos: (tamanos: TamanosPlaza) => void;
   /** Pide una acción a la sala (ver `useSala`). */
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Sentarse, los asientos y levantar a un jugador (ver AccionesParticipantes). */
+  accionesParticipantes: AccionesParticipantes;
   /** Terminar y quitar el reloj del narrador (ver AccionesReloj). */
   reloj: Pick<AccionesReloj, 'terminar' | 'quitar'>;
   /** Revelar las fichas al acabar la partida (ver AccionesRevelacion). */
@@ -267,7 +268,7 @@ const Plaza = ({
   manual,
   auto,
   onTamanos,
-  pedir,
+  accionesParticipantes,
   reloj,
   revelacion: accionesRevelacion,
   dia,
@@ -524,16 +525,16 @@ const Plaza = ({
     plaza,
     participantes,
     plazaRef,
-    pedir,
+    asientos: accionesParticipantes.asientos,
     onError,
     onAnuncio: (m) => onAnuncio('moverJugadores', m),
   });
   // Editando asientos, levantar a un jugador desde su asiento (el aviso «… se levanta» ya sale solo)
-  const puedeLevantar = acciones.includes('narrador:levantarJugador');
+  const puedeLevantar = acciones.includes('sala:levantarJugador');
   const [levantando, setLevantando] = useState(false);
   const levantar = async (participanteId: string) => {
     setLevantando(true);
-    const r = await pedir('narrador:levantarJugador', { participanteId });
+    const r = await accionesParticipantes.levantarJugador(participanteId);
     setLevantando(false);
     if (!r.ok) return onError(r.error);
     // El botón desaparece con el jugador: que el foco no se pierda
@@ -653,7 +654,7 @@ const Plaza = ({
 
   const sentarse = async (jugadorId: string) => {
     focoAsientoRef.current = { jugadorId, sentado: true };
-    const r = await pedir('sala:sentarse', { jugadorId });
+    const r = await accionesParticipantes.sentarse(jugadorId);
     if (!r.ok) {
       focoAsientoRef.current = null;
       onError(r.error);
@@ -663,7 +664,7 @@ const Plaza = ({
   const cambiar = async (cambio: 'añadir' | 'quitar' | 'mezclar') => {
     if (pidiendo) return;
     setPidiendo(true);
-    const r = await pedir('narrador:asientos', { cambio });
+    const r = await accionesParticipantes.asientos({ cambio });
     setPidiendo(false);
     if (!r.ok) onError(r.error);
     // Al mezclar no cambia nada donde está el foco: se le dice al lector.

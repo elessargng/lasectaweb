@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
 import { idAsaMover } from './ids';
-import type { JugadorDto, ParticipanteDto, ResultadoAccion } from './useSala';
+import type { AccionesParticipantes, JugadorDto, ParticipanteDto } from './useSala';
 
 interface Movimiento {
   /** Asiento del que se coge al jugador. */
@@ -19,7 +19,8 @@ interface Opciones {
   participantes: ParticipanteDto[];
   /** La plaza: dentro están los asientos, marcados con data-asiento. */
   plazaRef: RefObject<HTMLElement | null>;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Cambia los asientos (ver AccionesParticipantes). */
+  asientos: AccionesParticipantes['asientos'];
   onError: (mensaje: string) => void;
   onAnuncio: (mensaje: string) => void;
 }
@@ -34,7 +35,7 @@ interface Opciones {
  * - Con teclado (y lector): Intro o Espacio coge, las flechas eligen asiento,
  *   Intro o Espacio suelta y Escape cancela. Cada paso se anuncia.
  */
-export function useMoverAsientos({ plaza, participantes, plazaRef, pedir, onError, onAnuncio }: Opciones) {
+export function useMoverAsientos({ plaza, participantes, plazaRef, asientos, onError, onAnuncio }: Opciones) {
   const [movimiento, setMovimiento] = useState<Movimiento | null>(null);
   // Tras soltar con el teclado, el foco va a su asa cuando llega a su nuevo asiento
   // (el id es el de su jugador, que se cambia de silla con él).
@@ -88,7 +89,7 @@ export function useMoverAsientos({ plaza, participantes, plazaRef, pedir, onErro
     // El número de destino, antes de que cambie la plaza
     const numero = numeroDe(hasta);
     if (modo === 'teclado') focoPendienteRef.current = { asiento: desde, numero };
-    const r = await pedir('narrador:asientos', { cambio: 'mover', desde, hasta });
+    const r = await asientos({ cambio: 'mover', desde, hasta });
     if (!r.ok) {
       focoPendienteRef.current = null;
       onError(r.error);

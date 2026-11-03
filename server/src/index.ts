@@ -102,6 +102,7 @@ import { FaseController } from './controllers/sala/FaseController';
 import { GrimorioController } from './controllers/sala/GrimorioController';
 import { NarradorVirtualController } from './controllers/sala/NarradorVirtualController';
 import { NocheController } from './controllers/sala/NocheController';
+import { ParticipantesController } from './controllers/sala/ParticipantesController';
 import { PreparacionController } from './controllers/sala/PreparacionController';
 import { RelojController } from './controllers/sala/RelojController';
 import { RevelacionController } from './controllers/sala/RevelacionController';
@@ -483,6 +484,7 @@ DatabaseRepository.getInstance()
       grimorio: new GrimorioController(salaService.grimorio),
       narradorVirtual: new NarradorVirtualController(salaService.narradorVirtual),
       noche: new NocheController(salaService.noche),
+      participantes: new ParticipantesController(salaService.participantes),
       preparacion: new PreparacionController(salaService.preparacion),
       reloj: new RelojController(salaService.reloj),
       revelacion: new RevelacionController(salaService.revelacion),

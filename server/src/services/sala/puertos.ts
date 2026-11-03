@@ -5,7 +5,6 @@
  */
 import type { ChatRepository } from '../../repositories/ChatRepository';
 import type { ImagenRepository } from '../../repositories/ImagenRepository';
-import type { ImagenesSala } from './ImagenesSala';
 import type { GuionResuelto } from '../../models/guiones';
 import type { MensajeChat, Susurro } from '../../models/chat';
 import type { RegistroPartida } from '../../models/estadisticas/SeguimientoPartida';
@@ -58,16 +57,12 @@ export interface DifusorSala {
   sigueAbierta(conexion: string): boolean;
 }
 
-/** Lo que usan las acciones de la sala (ver acciones/). */
-export interface DependenciasAcciones {
+/** Lo que necesita la sala de juego (SalaService). */
+export interface DependenciasSala {
+  /** Los guiones (los de por defecto y los que se importan). */
   guiones: ServicioGuiones;
   /** Las imágenes de la Biblioteca (para elegir un fondo de la sala). */
   imagenesBiblioteca: ImagenesBiblioteca;
-  imagenes: ImagenesSala;
-}
-
-/** Lo que necesita la sala de juego (SalaService). */
-export interface DependenciasSala extends Omit<DependenciasAcciones, 'imagenes'> {
   /** Dónde se guardan los avatares y los fondos que se suben a la sala. */
   imagenes: ImagenRepository;
   /** Dónde se guardan los mensajes de texto de la sala. */

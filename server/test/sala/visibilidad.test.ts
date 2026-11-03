@@ -69,7 +69,7 @@ describe('lo que ve cada uno', () => {
 
     it('un visitante con el grimorio concedido los ve todos', async () => {
       await arnes.accion(vera, 'sala:solicitarGrimorio');
-      await arnes.accion(narradora, 'narrador:accesoGrimorio', { participanteId: vera.id, conceder: true });
+      await arnes.accion(narradora, 'sala:accesoGrimorio', { participanteId: vera.id, conceder: true });
       expect(vera.estado.plaza).toEqual(narradora.estado.plaza);
     });
 
@@ -219,7 +219,7 @@ describe('lo que ve cada uno', () => {
   it('las acciones que llegan dependen del papel', () => {
     expect(narradora.estado.acciones).toEqual(expect.arrayContaining(['fase:noche', 'bolsa:meter']));
     expect(ana.estado.acciones).toContain('sala:levantarMano');
-    expect(ana.estado.acciones.some((a) => a.startsWith('narrador:'))).toBe(false);
+    for (const deNarrador of ['sala:asientos', 'sala:expulsar', 'fase:noche', 'grimorio:vida', 'bolsa:meter']) expect(ana.estado.acciones).not.toContain(deNarrador);
     expect(vera.estado.acciones).toEqual(expect.arrayContaining(['sala:sentarse', 'sala:solicitarGrimorio']));
     expect(vera.estado.acciones).not.toContain('sala:levantarMano');
   });
@@ -236,12 +236,12 @@ describe('permisos', () => {
 
   it('quien ha visto el grimorio no puede sentarse', async () => {
     await arnes.accion(vera, 'sala:solicitarGrimorio');
-    await arnes.accion(narradora, 'narrador:accesoGrimorio', { participanteId: vera.id, conceder: true });
+    await arnes.accion(narradora, 'sala:accesoGrimorio', { participanteId: vera.id, conceder: true });
     const r = await arnes.intentar(vera, 'sala:sentarse', { jugadorId: idAsiento(3) });
     expect(r).toEqual({ ok: false, error: 'Quien ha visto el grimorio del narrador no puede sentarse en la plaza.' });
   });
 
-  it('una acción que no existe', async () => {
-    expect(await arnes.intentar(ana, 'sala:volar')).toEqual({ ok: false, error: 'Acción desconocida.' });
+  it('una petición que no existe', async () => {
+    expect(await arnes.intentar(ana, 'sala:volar')).toEqual({ ok: false, error: 'Petición desconocida.' });
   });
 });

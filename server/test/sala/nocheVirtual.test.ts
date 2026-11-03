@@ -1,13 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { SalaDeJuego } from '../../src/models/SalaDeJuego';
-import { ejecutarAccion } from '../../src/services/sala/acciones';
 import { NocheService } from '../../src/services/sala/NocheService';
 import { DiaService } from '../../src/services/sala/DiaService';
 import { GrimorioService } from '../../src/services/sala/GrimorioService';
 import type { RespuestaAccion } from '../../src/models/narradorVirtual/puertos';
-import type { DependenciasAcciones } from '../../src/services/sala/puertos';
-import { MemoriaImagenRepository } from '../../src/repositories/ImagenRepository';
-import { ImagenesSala } from '../../src/services/sala/ImagenesSala';
 import { habilidadesDelGuion } from '../../src/models/partida/habilidades';
 import { TontoYTu } from '../../src/models/narradorVirtual/estrategias/TontoYTu';
 import { decisionesDe, type ContextoEtapa, type Etapa } from '../../src/models/narradorVirtual/etapas/Etapa';
@@ -53,11 +49,6 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
   while (partida.plaza().length < personajes.length) sala.anadirAsiento();
   personajes.forEach((p, i) => partida.grimorio.cambiarPersonaje(partida.plaza()[i].id, p));
   const bot = narrador.anadir({ id: 'tontoYTu', creador: 'nadie', guion: 'troublebrewing', jugadores: personajes.length }, 'Tonto y tú', '/logo-2.png');
-  const deps: DependenciasAcciones = {
-    guiones: { guionPredeterminado: async () => guion(), importar: async () => guion() },
-    imagenesBiblioteca: { leerPublica: async () => Promise.reject(new Error('Sin Biblioteca')) },
-    imagenes: new ImagenesSala(new MemoriaImagenRepository()),
-  };
   const azar = conSemilla(semilla);
   const estrategia = new TontoYTu(azar);
   const hechas: { accion: string; datos: unknown }[] = [];
@@ -111,12 +102,13 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
         juego.partida.configuracion.permitirPrivados(abiertos);
         return hecha('preparacion:privados', { abiertos }, { ok: true });
       },
-      accion: async (accion, datos) => {
-        const r = await ejecutarAccion(juego, sala.participantes.buscar(bot), accion, datos, deps);
-        if (r.ok) hechas.push({ accion, datos });
-        // Como al difundir: la etapa mira si ya puede seguir
-        void etapa?.alCambiar?.(ctx);
-        return r;
+      asientos: async (cambio) => {
+        const error = juego.sala.cambiarAsientos(cambio);
+        return hecha('sala:asientos', cambio, error ? { ok: false, error } : { ok: true });
+      },
+      accesoGrimorio: async (participanteId, conceder) => {
+        const error = juego.partida.responderAcceso(participanteId, conceder);
+        return hecha('sala:accesoGrimorio', { participanteId, conceder }, error ? { ok: false, error } : { ok: true });
       },
       llenarBolsa: async (personajes) => {
         const error = juego.partida.bolsa.llenar(personajes);

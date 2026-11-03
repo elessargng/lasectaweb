@@ -5,6 +5,9 @@ import { Participantes } from './Participantes';
 /** Asientos de la plaza: con cuántos empieza la sala y cuántos puede tener. */
 export const SALA_ASIENTOS = { inicial: 7, min: 0, max: 20 };
 
+/** Un cambio en los asientos (ver Sala.cambiarAsientos). */
+export type CambioAsientos = { cambio: 'añadir' | 'quitar' | 'mezclar' } | { cambio: 'mover'; desde: string; hasta: string };
+
 /** Qué jugador se ha quitado de la plaza (al quitar su asiento). */
 export type OyenteQuitar = (jugador: Jugador) => void;
 
@@ -114,6 +117,33 @@ export class Sala {
     const barajados = barajar(this.jugadores(), this.azar);
     this.plaza.splice(0, this.plaza.length, ...barajados);
     return barajados.filter((j) => j.participanteId).length;
+  }
+
+  /** Un narrador levanta a un jugador de su asiento: vuelve a visitante. Devuelve el error, si lo hay. */
+  levantarJugador(participanteId: string): string | null {
+    const elegido = this.participantes.buscar(participanteId);
+    if (!elegido) return 'Esa persona ya no está en la sala.';
+    if (elegido.rol !== 'jugador') return `${elegido.nombre} no está en ningún asiento.`;
+    this.levantar(elegido.id);
+    return null;
+  }
+
+  /**
+   * Cambia los asientos: añade o quita uno al final del círculo, mezcla a quienes
+   * están sentados o mueve a uno a otro asiento (intercambiándolos si está ocupado).
+   * Devuelve el error, si lo hay.
+   */
+  cambiarAsientos(cambio: CambioAsientos): string | null {
+    switch (cambio.cambio) {
+      case 'añadir':
+        return this.anadirAsiento();
+      case 'quitar':
+        return this.quitarAsiento() ? null : 'La plaza ya no tiene asientos.';
+      case 'mover':
+        return this.moverOcupante(cambio.desde, cambio.hasta);
+      case 'mezclar':
+        return this.mezclar() > 0 ? null : 'No hay nadie sentado para mezclar.';
+    }
   }
 
   /** Se apunta a los asientos que se quitan (ver OyenteQuitar). */

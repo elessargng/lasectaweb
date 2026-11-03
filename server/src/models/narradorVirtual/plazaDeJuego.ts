@@ -5,7 +5,7 @@ import type { Jugador } from '../partida/Jugador';
 
 /**
  * Consultas a la plaza que usan las etapas del narrador virtual (solo leen; lo que
- * cambia va por las acciones).
+ * cambia va por la plaza del narrador virtual: ver puertos.ts, Narrador).
  */
 
 /** El tipo de quien es de verdad el de un asiento. */

@@ -10,6 +10,7 @@ import { FaseController } from '../../src/controllers/sala/FaseController';
 import { GrimorioController } from '../../src/controllers/sala/GrimorioController';
 import { NarradorVirtualController } from '../../src/controllers/sala/NarradorVirtualController';
 import { NocheController } from '../../src/controllers/sala/NocheController';
+import { ParticipantesController } from '../../src/controllers/sala/ParticipantesController';
 import { PreparacionController } from '../../src/controllers/sala/PreparacionController';
 import { RelojController } from '../../src/controllers/sala/RelojController';
 import { RevelacionController } from '../../src/controllers/sala/RevelacionController';
@@ -119,6 +120,7 @@ export class Arnes {
       grimorio: new GrimorioController(salaService.grimorio),
       narradorVirtual: new NarradorVirtualController(salaService.narradorVirtual),
       noche: new NocheController(salaService.noche),
+      participantes: new ParticipantesController(salaService.participantes),
       preparacion: new PreparacionController(salaService.preparacion),
       reloj: new RelojController(salaService.reloj),
       revelacion: new RevelacionController(salaService.revelacion),
@@ -150,8 +152,9 @@ export class Arnes {
   }
 
   /**
-   * Pide una acción y, si sale bien, espera a que el estado nuevo les llegue a
-   * todos (cada acción que sale bien se difunde una vez). Falla si la acción falla.
+   * Pide algo por su evento ('sala:sentarse'…) y, si sale bien, espera a que el
+   * estado nuevo les llegue a todos (cada petición que sale bien se difunde). Falla
+   * si la petición falla.
    */
   async accion(cliente: Cliente, accion: string, datos?: unknown): Promise<ResultadoAccion> {
     const resultado = await this.intentar(cliente, accion, datos);
@@ -161,7 +164,7 @@ export class Arnes {
 
   /** Como accion, pero devuelve el resultado aunque falle. */
   async intentar(cliente: Cliente, accion: string, datos?: unknown): Promise<ResultadoAccion> {
-    return this.pedir(cliente, 'sala:accion', { accion, datos });
+    return this.pedir(cliente, accion, datos);
   }
 
   /** Como pedir, pero falla si la petición falla (para preparar un test: 'fase:noche'…). */

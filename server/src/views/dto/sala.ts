@@ -147,11 +147,11 @@ export interface SalaDto {
   grimorioRecibido: GrimorioEnviadoDto | null;
   /** id del participante que recibe el mensaje. */
   yo: string;
-  /** Acciones que puede usar ahora quien recibe el mensaje (ver `services/sala/acciones`). */
+  /** Lo que puede pedir ahora quien recibe el mensaje (los nombres de sus eventos: ver los servicios de services/sala). */
   acciones: string[];
 }
 
-/** La respuesta a una acción ('sala:accion'). `valor`: lo que devuelve a quien la pidió (p. ej. la ruta del avatar subido). */
+/** La respuesta a una petición de la sala. `valor`: lo que devuelve a quien la pidió (p. ej. la ruta del avatar subido). */
 /**
  * El reparto, ya calculado con los personajes que cambian la bolsa (el Barón, el
  * Kazali…): con la bolsa (el diálogo de la bolsa) y con lo que se cuenta en el

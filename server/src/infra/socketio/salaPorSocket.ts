@@ -7,6 +7,7 @@ import type { FarolController } from '../../controllers/sala/FarolController';
 import type { GrimorioController } from '../../controllers/sala/GrimorioController';
 import type { NarradorVirtualController } from '../../controllers/sala/NarradorVirtualController';
 import type { NocheController } from '../../controllers/sala/NocheController';
+import type { ParticipantesController } from '../../controllers/sala/ParticipantesController';
 import type { PreparacionController } from '../../controllers/sala/PreparacionController';
 import type { RelojController } from '../../controllers/sala/RelojController';
 import type { RevelacionController } from '../../controllers/sala/RevelacionController';
@@ -20,7 +21,6 @@ export const SALA_SOCKET_PATH = '/api/socket.io';
 
 /** Los eventos que se contestan por ack, y el método de SalaController que los atiende. */
 const PETICIONES = {
-  'sala:accion': 'accion',
   'chat:enviar': 'enviarMensaje',
   'video:pase': 'pase',
   'conversacion:invitar': 'invitar',
@@ -42,6 +42,7 @@ export interface ControladoresSala {
   grimorio: GrimorioController;
   narradorVirtual: NarradorVirtualController;
   noche: NocheController;
+  participantes: ParticipantesController;
   preparacion: PreparacionController;
   reloj: RelojController;
   revelacion: RevelacionController;
@@ -112,6 +113,27 @@ const PETICIONES_PARTES = {
     'noche:nuevoImp': 'nuevoImp',
     'noche:recordatorio': 'recordatorio',
   },
+  participantes: {
+    'sala:cambiarNombre': 'cambiarNombre',
+    'sala:cambiarAvatar': 'cambiarAvatar',
+    'sala:subirAvatar': 'subirAvatar',
+    'sala:sonido': 'sonido',
+    'sala:estiloMano': 'estiloMano',
+    'sala:elegirMano': 'elegirMano',
+    'sala:levantarMano': 'levantarMano',
+    'sala:levantarDosManos': 'levantarDosManos',
+    'sala:sentarse': 'sentarse',
+    'sala:levantarse': 'levantarse',
+    'sala:solicitarGrimorio': 'solicitarGrimorio',
+    'sala:accesoGrimorio': 'accesoGrimorio',
+    'sala:hacerseNarrador': 'hacerseNarrador',
+    'sala:dejarDeNarrar': 'dejarDeNarrar',
+    'sala:nombrarNarrador': 'nombrarNarrador',
+    'sala:quitarNarrador': 'quitarNarrador',
+    'sala:levantarJugador': 'levantarJugador',
+    'sala:expulsar': 'expulsar',
+    'sala:asientos': 'asientos',
+  },
   preparacion: {
     'preparacion:configurar': 'configurar',
     'preparacion:privados': 'privados',
@@ -145,6 +167,9 @@ const PETICIONES_PARTES = {
 
 /** Cómo atiende un controlador de una parte cada petición. */
 type Atender = (sesion: Sesion, peticion: unknown, responder: (respuesta: unknown) => void) => void;
+
+/** Lo que se contesta a un evento que no se conoce. */
+const DESCONOCIDA = { ok: false, error: 'Petición desconocida.' };
 
 /** Contesta por el ack del evento, si el cliente lo ha pedido. */
 const contestar = (ack: unknown) => (respuesta: unknown) => {
@@ -198,6 +223,10 @@ export function abrirSalaPorSocket(
       socket.on(`declarar:${id}`, (peticion: unknown, ack?: unknown) => atender(sesion, peticion, contestar(ack)));
     }
     socket.on('chat:historial', () => salaController.historial(sesion));
+    // Lo que no se conoce también se contesta (si espera respuesta): no se queda esperando
+    socket.onAny((evento: string, ...argumentos: unknown[]) => {
+      if (socket.listeners(evento).length === 0) contestar(argumentos[argumentos.length - 1])(DESCONOCIDA);
+    });
     socket.on('disconnect', (reason) => salaController.salir(sesion, reason === 'client namespace disconnect'));
   });
 }

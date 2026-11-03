@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { type IdNarradorVirtual } from '../compartido/narradorVirtual';
-import { SALA_PARTIDAS_NOVATO, usuarioDe, type Persona, type FormaMano, type Rol } from '../compartido/participante';
+import { SALA_ESTILOS_MANO, SALA_PARTIDAS_NOVATO, usuarioDe, type Persona, type FormaMano, type Rol } from '../compartido/participante';
 
 /** Margen para volver tras una desconexión (recarga, red caída) sin perder el papel. */
 export const SALA_GRACIA_MS = 20_000;
@@ -355,7 +355,7 @@ export class Participantes {
 
   /**
    * Cambia el papel de alguien. No comprueba permisos: eso lo hace quien lo pide
-   * (ver `services/sala/acciones`).
+   * (ver los servicios de services/sala).
    */
   cambiarRol(id: string, rol: Rol): void {
     const participante = this.buscar(id);
@@ -397,10 +397,56 @@ export class Participantes {
     if (participante) participante.formaMano = forma;
   }
 
-  /** Cómo se ve su mano para todos (su «skin»). No comprueba que el estilo exista. */
-  elegirEstiloMano(id: string, estilo: string): void {
+  /** Cómo se ve su mano para todos (su «skin»): uno de SALA_ESTILOS_MANO. Devuelve el error, si lo hay. */
+  elegirEstiloMano(id: string, estilo: string): string | null {
+    if (!SALA_ESTILOS_MANO.includes(estilo)) return 'Estilo de mano desconocido.';
     const participante = this.buscar(id);
     if (participante) participante.estiloMano = estilo;
+    return null;
+  }
+
+  /**
+   * Cambia el nombre con el que se le ve (limpio: ver limpiarNombreSala). Vacío, vuelve
+   * al de su cuenta (los invitados no tienen). Nadie más puede llevarlo. Devuelve el error, si lo hay.
+   */
+  elegirNombre(id: string, pedido: string): string | null {
+    const participante = this.buscar(id);
+    if (!participante) return 'No estás en la sala.';
+    const nombre = limpiarNombreSala(pedido) || (participante.persona.tipo === 'usuario' ? (this.nombreBase(id) ?? '') : '');
+    if (!nombre) return 'Escribe un nombre.';
+    if (this.nombreOcupado(nombre, id)) return `Ya hay alguien llamado ${nombre} en la sala.`;
+    this.renombrar(id, nombre);
+    return null;
+  }
+
+  /** Hace narrador a alguien de la sala que no lo es. Devuelve el error, si lo hay. */
+  nombrarNarrador(id: string): string | null {
+    const elegido = this.buscar(id);
+    if (!elegido) return 'Esa persona ya no está en la sala.';
+    if (elegido.rol === 'narrador') return `${elegido.nombre} ya es narrador.`;
+    this.cambiarRol(elegido.id, 'narrador');
+    return null;
+  }
+
+  /** Un narrador quita el papel a otro (pasa a visitante; uno mismo, no: eso es dejarlo). Devuelve el error, si lo hay. */
+  quitarNarrador(yoId: string, id: string): string | null {
+    const elegido = this.buscar(id);
+    if (!elegido) return 'Esa persona ya no está en la sala.';
+    if (elegido.id === yoId) return 'Para dejar de narrar, usa «Dejar de ser narrador».';
+    if (elegido.rol !== 'narrador') return `${elegido.nombre} ya no es narrador.`;
+    this.cambiarRol(elegido.id, 'visitante');
+    return null;
+  }
+
+  /**
+   * Un narrador saca de la sala a un jugador o visitante (a otro narrador, no: se le
+   * quita el papel). La conexión que tenga, para cerrarla; o el error.
+   */
+  expulsarDeLaSala(id: string): { error: string } | { conexion: string | null } {
+    const elegido = this.buscar(id);
+    if (!elegido) return { error: 'Esa persona ya no está en la sala.' };
+    if (elegido.rol === 'narrador') return { error: 'Para quitar a un narrador, usa «Expulsar narrador».' };
+    return { conexion: this.expulsar(elegido.id) };
   }
 
   /** Los que siguen en la sala, también los que esperan reconexión, por orden de llegada. */

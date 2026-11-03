@@ -6,13 +6,17 @@
 import type { Alineamiento } from '../compartido/jugador';
 import type { BorradorDespertar } from '../partida/mensajeDespertar';
 import type { CambiosAjustes } from '../partida/Configuracion';
+import type { CambioAsientos } from '../sala/Sala';
 
 /**
- * El narrador virtual en la plaza: hace lo que haría un narrador, con las mismas
- * acciones de la sala (y los mismos permisos), y la sala se difunde a todos.
+ * El narrador virtual en la plaza: hace lo que haría un narrador, por los mismos
+ * casos de uso de la sala (y con los mismos permisos), y la sala se difunde a todos.
  */
 export interface Narrador {
-  accion(nombre: string, datos?: unknown): Promise<RespuestaAccion>;
+  /** Cambia los asientos (añadir, quitar, mover a alguien…). */
+  asientos(cambio: CambioAsientos): Promise<RespuestaAccion>;
+  /** Responde a quien pide ver el grimorio. */
+  accesoGrimorio(participanteId: string, conceder: boolean): Promise<RespuestaAccion>;
   /** Llena la bolsa con estos personajes (los que ha elegido). */
   llenarBolsa(personajes: string[]): Promise<RespuestaAccion>;
   /** Suena el gong. */

@@ -176,27 +176,6 @@ export function useSala(
   }, [token, nombre]);
 
   /**
-   * Pide una acción a la sala (ver `services/sala/acciones` en el servidor) y devuelve su
-   * resultado; nunca falla. El servidor comprueba si se puede.
-   */
-  const pedir = useCallback(
-    (accion: string, datos?: unknown) =>
-      new Promise<ResultadoAccion>((resolve) => {
-        const socket = socketRef.current;
-        if (!socket?.connected) {
-          resolve({ ok: false, error: 'No hay conexión con la sala.' });
-          return;
-        }
-        socket
-          .timeout(5000)
-          .emit('sala:accion', { accion, datos }, (err: Error | null, r: ResultadoAccion) =>
-            resolve(err ? { ok: false, error: 'La sala no ha respondido. Inténtalo de nuevo.' } : r),
-          );
-      }),
-    [],
-  );
-
-  /**
    * Manda un mensaje de texto: `para` es «general», «visitantes» o el id de un
    * participante (en privado). El servidor dice si se puede.
    */
@@ -386,6 +365,32 @@ export function useSala(
     [pedirAlSocket],
   );
 
+  /** Quién está en la sala y dónde: nombre, avatar, mano, asientos y papeles, por sus eventos. */
+  const participantes: AccionesParticipantes = useMemo(
+    () => ({
+      cambiarNombre: (nombre) => pedirAlSocket<ResultadoAccion>('sala:cambiarNombre', { nombre }),
+      cambiarAvatar: (avatar) => pedirAlSocket<ResultadoAccion>('sala:cambiarAvatar', { avatar }),
+      subirAvatar: (imagen) => pedirAlSocket<ResultadoAccion>('sala:subirAvatar', { imagen }),
+      sonido: (sinSonido) => pedirAlSocket<ResultadoAccion>('sala:sonido', { sinSonido }),
+      estiloMano: (estilo) => pedirAlSocket<ResultadoAccion>('sala:estiloMano', { estilo }),
+      elegirMano: (forma) => pedirAlSocket<ResultadoAccion>('sala:elegirMano', { forma }),
+      levantarMano: (levantada) => pedirAlSocket<ResultadoAccion>('sala:levantarMano', { levantada }),
+      levantarDosManos: () => pedirAlSocket<ResultadoAccion>('sala:levantarDosManos', {}),
+      sentarse: (jugadorId) => pedirAlSocket<ResultadoAccion>('sala:sentarse', { jugadorId }),
+      levantarse: () => pedirAlSocket<ResultadoAccion>('sala:levantarse', {}),
+      solicitarGrimorio: () => pedirAlSocket<ResultadoAccion>('sala:solicitarGrimorio', {}),
+      accesoGrimorio: (participanteId, conceder) => pedirAlSocket<ResultadoAccion>('sala:accesoGrimorio', { participanteId, conceder }),
+      hacerseNarrador: () => pedirAlSocket<ResultadoAccion>('sala:hacerseNarrador', {}),
+      dejarDeNarrar: () => pedirAlSocket<ResultadoAccion>('sala:dejarDeNarrar', {}),
+      nombrarNarrador: (participanteId) => pedirAlSocket<ResultadoAccion>('sala:nombrarNarrador', { participanteId }),
+      quitarNarrador: (participanteId) => pedirAlSocket<ResultadoAccion>('sala:quitarNarrador', { participanteId }),
+      levantarJugador: (participanteId) => pedirAlSocket<ResultadoAccion>('sala:levantarJugador', { participanteId }),
+      expulsar: (participanteId) => pedirAlSocket<ResultadoAccion>('sala:expulsar', { participanteId }),
+      asientos: (cambio) => pedirAlSocket<ResultadoAccion>('sala:asientos', cambio),
+    }),
+    [pedirAlSocket],
+  );
+
   /** El grimorio del narrador, por sus eventos. */
   const grimorio: AccionesGrimorio = useMemo(
     () => ({
@@ -422,9 +427,9 @@ export function useSala(
     guion,
     conexion,
     desfaseReloj,
-    pedir,
     reconectar,
     mensajes,
+    participantes,
     enviarMensaje,
     pedirHistorial,
     pedirPaseVideo,
@@ -447,6 +452,41 @@ export function useSala(
     preparacion,
     grimorio,
   };
+}
+
+/** Un cambio en los asientos: añadir o quitar uno, mezclar o mover a alguien. */
+export type CambioAsientos = { cambio: 'añadir' | 'quitar' | 'mezclar' } | { cambio: 'mover'; desde: string; hasta: string };
+
+/** Quién está en la sala y dónde (ver useSala). */
+export interface AccionesParticipantes {
+  /** Su nombre en la sala (vacío: el de su cuenta). */
+  cambiarNombre(nombre: string): Promise<ResultadoAccion>;
+  /** Uno de los avatares de la sala o una imagen subida, o null: el de por defecto. */
+  cambiarAvatar(avatar: string | null): Promise<ResultadoAccion>;
+  /** Sube una imagen como avatar (data URL); contesta su ruta. */
+  subirAvatar(imagen: string): Promise<ResultadoAccion>;
+  sonido(sinSonido: boolean): Promise<ResultadoAccion>;
+  estiloMano(estilo: string): Promise<ResultadoAccion>;
+  elegirMano(forma: string): Promise<ResultadoAccion>;
+  levantarMano(levantada: boolean): Promise<ResultadoAccion>;
+  /** La Banshee: dos votos. */
+  levantarDosManos(): Promise<ResultadoAccion>;
+  sentarse(jugadorId: string): Promise<ResultadoAccion>;
+  levantarse(): Promise<ResultadoAccion>;
+  /** Un visitante pide ver el grimorio. */
+  solicitarGrimorio(): Promise<ResultadoAccion>;
+  /** El narrador responde a quien pide ver el grimorio. */
+  accesoGrimorio(participanteId: string, conceder: boolean): Promise<ResultadoAccion>;
+  hacerseNarrador(): Promise<ResultadoAccion>;
+  dejarDeNarrar(): Promise<ResultadoAccion>;
+  nombrarNarrador(participanteId: string): Promise<ResultadoAccion>;
+  /** Quita el papel a otro narrador. */
+  quitarNarrador(participanteId: string): Promise<ResultadoAccion>;
+  /** Levanta a un jugador de su asiento. */
+  levantarJugador(participanteId: string): Promise<ResultadoAccion>;
+  /** Saca de la sala a un jugador o visitante. */
+  expulsar(participanteId: string): Promise<ResultadoAccion>;
+  asientos(cambio: CambioAsientos): Promise<ResultadoAccion>;
 }
 
 /** Lo que hace el narrador con el grimorio (ver useSala). */

@@ -112,6 +112,7 @@ import {
   type TurnoVirtual,
   type AccionesPreparacion,
   type AccionesGrimorio,
+  type AccionesParticipantes,
   type ResultadoAccion,
   type ResultadoBolsaAlAzar,
 } from './useSala';
@@ -604,7 +605,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     guion,
     conexion,
     desfaseReloj,
-    pedir,
+    participantes,
     reconectar,
     mensajes,
     enviarMensaje,
@@ -999,8 +1000,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const sinSonidoServidor = yo?.sinSonido;
   useEffect(() => {
     if (sinSonidoServidor === undefined || sinSonidoServidor === sinSonidoAqui) return;
-    void pedir('sala:sonido', { sinSonido: sinSonidoAqui });
-  }, [sinSonidoAqui, sinSonidoServidor, pedir]);
+    void participantes.sonido(sinSonidoAqui);
+  }, [sinSonidoAqui, sinSonidoServidor, participantes]);
 
   // Los sonidos de las conversaciones privadas: al entrar (o cambiar de una a otra), al
   // salir y cuando sale alguien con quien se hablaba. Al cargar la página, ninguno.
@@ -1203,7 +1204,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const levantarme = async () => {
     const mio = estado?.plaza.find((a) => a.participanteId === estado.yo);
     if (mio) focoAsientoRef.current = { jugadorId: mio.id, sentado: false };
-    const r = await pedir('sala:levantarse');
+    const r = await participantes.levantarse();
     if (!r.ok) {
       focoAsientoRef.current = null;
       setAviso(r.error);
@@ -1211,12 +1212,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     return r.ok;
   };
   const dejarDeNarrar = async () => {
-    const r = await pedirPropio('narrador:dejar');
+    const r = await participantesPropios.dejarDeNarrar();
     if (!r.ok) setAviso(r.error);
     return r.ok;
   };
   const hacermeNarrador = async () => {
-    const r = await pedirPropio('sala:hacerseNarrador');
+    const r = await participantesPropios.hacerseNarrador();
     if (!r.ok) setAviso(r.error);
     return r.ok;
   };
@@ -1231,7 +1232,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     return r.ok;
   };
   const puedeLevantarme = !!estado?.acciones.includes('sala:levantarse');
-  const puedeDejarDeNarrar = !!estado?.acciones.includes('narrador:dejar');
+  const puedeDejarDeNarrar = !!estado?.acciones.includes('sala:dejarDeNarrar');
   // Levantar o bajar la mano y elegir su forma (jugadores): con el atajo de
   // teclado o desde el menú de la mano de la cabecera. Como no cambia nada donde
   // está el foco, se confirma al lector.
@@ -1262,7 +1263,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       setAviso(estado?.voudon ? 'Con el Voudon vivo, solo votan él y los muertos.' : 'Ya has gastado tu voto: no puedes levantar la mano.');
       return false;
     }
-    const r = await (n === 2 ? pedir('sala:levantarDosManos') : pedir('sala:levantarMano', { levantada: n === 1 }));
+    const r = await (n === 2 ? participantes.levantarDosManos() : participantes.levantarMano(n === 1));
     if (r.ok) anunciar('miMano', n === 2 ? 'Has levantado las dos manos.' : n === 1 ? 'Has levantado la mano.' : manos === 2 ? 'Has bajado las manos.' : 'Has bajado la mano.');
     else setAviso(r.error);
     // false: el menú (si se ha usado) se cierra y el foco vuelve a su botón.
@@ -1272,7 +1273,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const siguientesManos: 0 | 1 | 2 = manos === 0 ? 1 : manos === 1 && puedeDosManos ? 2 : 0;
   const alternarMano = () => ponerManos(siguientesManos);
   const elegirFormaMano = async (forma: FormaMano) => {
-    const r = await pedir('sala:elegirMano', { forma });
+    const r = await participantes.elegirMano(forma);
     if (r.ok) anunciar('miMano', `Tu mano: ${nombreMano(forma, personajesGuionPorId).toLocaleLowerCase('es')}.`);
     else setAviso(r.error);
     return false;
@@ -1310,8 +1311,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     const pendiente = avatarPendienteRef.current;
     if (pendiente === null || conexion !== 'conectada') return;
     avatarPendienteRef.current = null;
-    void pedir('sala:cambiarAvatar', { avatar: pendiente || null });
-  }, [conexion, avatarElegido, pedir]);
+    void participantes.cambiarAvatar(pendiente || null);
+  }, [conexion, avatarElegido, participantes]);
   const {
     carga: cargaConfiguracion,
     perfiles,
@@ -1482,12 +1483,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       : []),
     ...(puedeQuitarVirtual ? [{ id: 'narradorVirtual:quitar', etiqueta: 'Quitar narrador virtual', elegir: quitarVirtual }] : []),
     ...(puedeLevantarme ? [{ id: 'sala:levantarse', etiqueta: 'Levantarse del asiento', elegir: levantarme }] : []),
-    ...(puedeDejarDeNarrar ? [{ id: 'narrador:dejar', etiqueta: 'Dejar de ser narrador', elegir: dejarDeNarrar }] : []),
+    ...(puedeDejarDeNarrar ? [{ id: 'sala:dejarDeNarrar', etiqueta: 'Dejar de ser narrador', elegir: dejarDeNarrar }] : []),
   ];
 
   // Edición de asientos (narradores): botones en el centro de la plaza.
   const [editandoAsientos, setEditandoAsientos] = useState(false);
-  const editando = editandoAsientos && !!estado?.acciones.includes('narrador:asientos');
+  const editando = editandoAsientos && !!estado?.acciones.includes('sala:asientos');
   const terminarAsientos = () => {
     setEditandoAsientos(false);
     document.getElementById(ID_BOTON_MENU_NARRADOR)?.focus();
@@ -1498,7 +1499,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const guardarPerfil = async (nombre: string, avatar: string): Promise<ResultadoPerfil> => {
     const nuevoAlias = limpiarNombre(nombre);
     if (nuevoAlias !== alias) {
-      const r = await pedir('sala:cambiarNombre', { nombre: nuevoAlias });
+      const r = await participantes.cambiarNombre(nuevoAlias);
       if (!r.ok) return { ...r, campo: 'nombre' };
       setPerfil('alias', cuentaId, nuevoAlias);
       setAlias(nuevoAlias);
@@ -1506,11 +1507,11 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     let guardado = avatar;
     if (avatar.startsWith('data:')) {
       // Imagen propia nueva: se sube y queda su ruta
-      const r = await pedir('sala:subirAvatar', { imagen: avatar });
+      const r = await participantes.subirAvatar(avatar);
       if (!r.ok) return { ...r, campo: 'avatar' };
       guardado = r.valor ?? '';
     } else if (avatar !== avatarElegido) {
-      const r = await pedir('sala:cambiarAvatar', { avatar: avatar || null });
+      const r = await participantes.cambiarAvatar(avatar || null);
       if (!r.ok) return { ...r, campo: 'avatar' };
     }
     if (guardado !== avatarElegido) {
@@ -1529,7 +1530,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     let fallo: string | null = null;
     const nuevoAlias = limpiarNombre(typeof datos.alias === 'string' ? datos.alias : '');
     if (nuevoAlias !== alias) {
-      const r = await pedir('sala:cambiarNombre', { nombre: nuevoAlias });
+      const r = await participantes.cambiarNombre(nuevoAlias);
       if (r.ok) {
         setPerfil('alias', cuentaId, nuevoAlias);
         setAlias(nuevoAlias);
@@ -1665,7 +1666,27 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     if (!r.ok) accionPropiaRef.current = false;
     return r;
   };
-  const pedirPropio = (accion: string, datos?: unknown) => propia(() => pedir(accion, datos));
+  const participantesPropios: AccionesParticipantes = {
+    cambiarNombre: (nombre) => propia(() => participantes.cambiarNombre(nombre)),
+    cambiarAvatar: (avatar) => propia(() => participantes.cambiarAvatar(avatar)),
+    subirAvatar: (imagen) => propia(() => participantes.subirAvatar(imagen)),
+    sonido: (sinSonido) => propia(() => participantes.sonido(sinSonido)),
+    estiloMano: (estilo) => propia(() => participantes.estiloMano(estilo)),
+    elegirMano: (forma) => propia(() => participantes.elegirMano(forma)),
+    levantarMano: (levantada) => propia(() => participantes.levantarMano(levantada)),
+    levantarDosManos: () => propia(() => participantes.levantarDosManos()),
+    sentarse: (jugadorId) => propia(() => participantes.sentarse(jugadorId)),
+    levantarse: () => propia(() => participantes.levantarse()),
+    solicitarGrimorio: () => propia(() => participantes.solicitarGrimorio()),
+    accesoGrimorio: (participanteId, conceder) => propia(() => participantes.accesoGrimorio(participanteId, conceder)),
+    hacerseNarrador: () => propia(() => participantes.hacerseNarrador()),
+    dejarDeNarrar: () => propia(() => participantes.dejarDeNarrar()),
+    nombrarNarrador: (participanteId) => propia(() => participantes.nombrarNarrador(participanteId)),
+    quitarNarrador: (participanteId) => propia(() => participantes.quitarNarrador(participanteId)),
+    levantarJugador: (participanteId) => propia(() => participantes.levantarJugador(participanteId)),
+    expulsar: (participanteId) => propia(() => participantes.expulsar(participanteId)),
+    asientos: (cambio) => propia(() => participantes.asientos(cambio)),
+  };
   const bolsaPropia: AccionesBolsa = {
     meter: (personajeId) => propia(() => bolsa.meter(personajeId)),
     cantidad: (personajeId, cantidad) => propia(() => bolsa.cantidad(personajeId, cantidad)),
@@ -1971,7 +1992,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const miEstiloMano = estiloDePartida(preferencias.mano, ESTILOS_MANO, `${semillaPartida}:mano`);
   useEffect(() => {
     if (conexion !== 'conectada' || !yo || yo.estiloMano === miEstiloMano) return;
-    void pedir('sala:estiloMano', { estilo: miEstiloMano });
+    void participantes.estiloMano(miEstiloMano);
     // Solo cuando cambia la tuya o lo que la sala tiene de ti
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conexion, yo?.estiloMano, miEstiloMano]);
@@ -2033,7 +2054,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                 {/* Las opciones de narrador, entre la fase y el guion */}
                 <MenuNarrador
                   estado={estado}
-                  pedir={pedirPropio}
+                  participantes={participantesPropios}
                   onAsientos={() => setEditandoAsientos((v) => !v)}
                   revelando={revelandoGrimorio}
                   onRevelando={setRevelandoGrimorio}
@@ -2232,7 +2253,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                 <ZonaNarradores
                   onAnadirVirtual={() => setAnadiendoVirtual(true)}
                   estado={estado}
-                  pedir={pedirPropio}
+                  participantes={participantesPropios}
                   onError={setAviso}
                   contacto={contacto}
                   pistas={video.plaza}
@@ -2290,7 +2311,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   onTamanos={setTamanosPlaza}
                   editando={editando}
                   grimorio={yo?.rol === 'jugador' && estado.configuracion.grimorioJugadores}
-                  pedir={pedirPropio}
+                  accionesParticipantes={participantesPropios}
                   dia={diaPropio}
                   accionesGrimorio={grimorioPropio}
                   narradorVirtual={virtualPropio}

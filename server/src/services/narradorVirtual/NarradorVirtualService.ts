@@ -103,8 +103,8 @@ const EN_PARTIDA = ['noche', 'privados', 'puestaEnComun', 'nominaciones'];
 /**
  * El narrador virtual de la sala (servicio de aplicación): lo añade y lo quita, y
  * lleva la partida pasando por sus etapas (patrón Estado). Actúa como un narrador
- * más: todo lo que hace va por las acciones de la sala (`Narrador`), con sus
- * mismas reglas. Cada vez que cambia la sala (`alCambiarSala`), la etapa en curso
+ * más: todo lo que hace va por los servicios de la sala (`Narrador`), con sus
+ * mismas reglas y permisos. Cada vez que cambia la sala (`alCambiarSala`), la etapa en curso
  * mira si le toca hacer algo. Sin nadie en la sala, se va solo.
  */
 export class NarradorVirtualService {
@@ -337,7 +337,7 @@ export class NarradorVirtualService {
     if (!narrador) return;
     for (const p of sala.participantes.participantes()) {
       if (p.rol === 'visitante' && partida.acceso.de(p.id) === 'solicitado') {
-        await this.plazaDe(narrador.participante).accion('narrador:accesoGrimorio', { participanteId: p.id, conceder: true });
+        await this.plazaDe(narrador.participante).accesoGrimorio(p.id, true);
       }
     }
   }

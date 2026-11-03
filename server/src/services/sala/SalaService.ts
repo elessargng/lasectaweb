@@ -7,7 +7,6 @@ import { ConversacionError, ConversacionService } from '../conversaciones/Conver
 import { VideollamadaError, VideollamadaService, type PaseVideo } from '../videollamada/VideollamadaService';
 import { NarradorVirtualService } from '../narradorVirtual/NarradorVirtualService';
 import { NarradorIAService } from '../narradorVirtual/NarradorIAService';
-import { accionesPermitidas, ejecutarAccion } from './acciones';
 import { BolsaService } from './BolsaService';
 import { RelojService } from './RelojService';
 import { RevelacionService } from './RevelacionService';
@@ -18,8 +17,9 @@ import { NocheService } from './NocheService';
 import { DiaService } from './DiaService';
 import { PreparacionService } from './PreparacionService';
 import { GrimorioService } from './GrimorioService';
+import { ParticipantesService } from './ParticipantesService';
 import { ImagenesSala } from './ImagenesSala';
-import type { DependenciasAcciones, DependenciasSala, DifusorSala } from './puertos';
+import type { DependenciasSala, DifusorSala } from './puertos';
 
 /** Quien llega a la sala, antes de entrar. */
 export interface PeticionLlegada {
@@ -52,8 +52,6 @@ const SIN_DIFUSOR: DifusorSala = {
   sigueAbierta: () => false,
 };
 
-const sinRespuesta: Responder<unknown> = () => {};
-
 /**
  * La sala de juego en tiempo real (servicio de aplicación): junta la partida, el
  * chat, las conversaciones, la videollamada, el narrador virtual y las
@@ -84,11 +82,12 @@ export class SalaService {
   readonly preparacion: PreparacionService;
   /** El grimorio del narrador: fichas, recordatorios, notas y enviarlo (ver GrimorioController). */
   readonly grimorio: GrimorioService;
+  /** Quién está en la sala y dónde: nombre, avatar, mano, asientos y papeles (ver ParticipantesController). */
+  readonly participantes: ParticipantesService;
   private readonly conversaciones: ConversacionService;
   private readonly videollamada: VideollamadaService | null;
   /** El narrador virtual: añadirlo, quitarlo y lo que le piden los jugadores (ver NarradorVirtualController). */
   readonly narradorVirtual: NarradorVirtualService;
-  private readonly depsAcciones: DependenciasAcciones;
   private difusor: DifusorSala = SIN_DIFUSOR;
   /** El guion no va en cada estado: se manda aparte, solo cuando cambia y a quien entra. */
   private versionGuionMandada: number;
@@ -127,6 +126,7 @@ export class SalaService {
     this.noche = new NocheService(this.juego, alCambiar);
     this.dia = new DiaService(this.juego, alCambiar);
     this.grimorio = new GrimorioService(this.juego, alCambiar);
+    this.participantes = new ParticipantesService(this.juego, alCambiar, this.imagenes, (conexion) => this.difusor.expulsar(conexion, 'narrador'));
     this.preparacion = new PreparacionService(this.juego, alCambiar, {
       guiones: deps.guiones,
       imagenesBiblioteca: deps.imagenesBiblioteca,
@@ -140,9 +140,10 @@ export class SalaService {
     const cuentaDe = (participanteId: string) => sala.participantes.cuentaDe(participanteId);
     this.narradorVirtual = new NarradorVirtualService(
       this.juego,
-      // Actúa como un narrador más: con las mismas acciones, y la sala se difunde
+      // Actúa como un narrador más: por los mismos servicios (y permisos), y la sala se difunde
       (participanteId) => ({
-        accion: (nombre, datos) => this.accion(sala.participantes.buscar(participanteId), nombre, datos),
+        asientos: async (cambio) => this.participantes.asientos(participanteId, cambio),
+        accesoGrimorio: async (otroId, conceder) => this.participantes.accesoGrimorio(participanteId, otroId, conceder),
         llenarBolsa: async (personajes) => this.bolsa.llenar(participanteId, personajes),
         sonarGong: async () => this.reloj.sonarGong(participanteId),
         ponerReloj: async (segundos, mensaje) => this.reloj.poner(participanteId, segundos, mensaje),
@@ -209,12 +210,6 @@ export class SalaService {
           }
         : null,
     );
-    // Lo que usan las acciones que quedan
-    this.depsAcciones = {
-      guiones: deps.guiones,
-      imagenesBiblioteca: deps.imagenesBiblioteca,
-      imagenes: this.imagenes,
-    };
     // La votación avanza sola con el tiempo: cada paso se manda a todos.
     partida.alCambiarSola = () => this.difundir();
   }
@@ -230,7 +225,10 @@ export class SalaService {
       conversaciones: this.conversaciones.lista(),
       invitacionesDe: (participanteId: string) => this.conversaciones.invitacionesDe(participanteId),
       video: !!this.videollamada,
-      accionesDe: (yo: Participante) => [...accionesPermitidas(this.juego, yo), ...this.bolsa.permitidas(yo), ...this.reloj.permitidas(yo), ...this.revelacion.permitidas(yo), ...this.senalamiento.permitidas(yo), ...this.faroles.permitidas(yo), ...this.fase.permitidas(yo), ...this.noche.permitidas(yo), ...this.dia.permitidas(yo), ...this.preparacion.permitidas(yo), ...this.grimorio.permitidas(yo), ...this.narradorVirtual.permitidas(yo)],
+      accionesDe: (yo: Participante) => [
+        ...this.participantes.permitidas(yo),
+        ...this.bolsa.permitidas(yo), ...this.reloj.permitidas(yo), ...this.revelacion.permitidas(yo), ...this.senalamiento.permitidas(yo), ...this.faroles.permitidas(yo), ...this.fase.permitidas(yo), ...this.noche.permitidas(yo), ...this.dia.permitidas(yo), ...this.preparacion.permitidas(yo), ...this.grimorio.permitidas(yo), ...this.narradorVirtual.permitidas(yo),
+      ],
     };
   }
 
@@ -293,21 +291,6 @@ export class SalaService {
     if (aProposito) participantes.salir(clave, conexion);
     else participantes.desconectar(clave, conexion, () => this.difundir());
     this.difundir();
-  }
-
-  /**
-   * Una acción de la sala (ver acciones/), si quien la pide puede. Si sale bien, se
-   * difunde la sala; a quien expulse, se le saca.
-   */
-  async accion(yo: Participante | undefined, nombre: string, datos: unknown, responder: Responder = sinRespuesta): Promise<RespuestaAccion> {
-    const { expulsar = [], ...resultado } = await ejecutarAccion(this.juego, yo, nombre, datos, this.depsAcciones);
-    responder(resultado);
-    for (const conexion of expulsar) this.difusor.expulsar(conexion, 'narrador');
-    if (resultado.ok) {
-      this.mandarGuionSiCambia();
-      this.difundir();
-    }
-    return resultado;
   }
 
   /** Un mensaje de texto: le llega a quien puede leerlo; si es un susurro entre jugadores, las ondas a todos. */
