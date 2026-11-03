@@ -100,6 +100,9 @@ import {
   type HabilidadNocheDto,
   type ParticipanteDto,
   type Recordatorio,
+  type AccionesBolsa,
+  type ResultadoAccion,
+  type ResultadoBolsaAlAzar,
 } from './useSala';
 import type { DespertarFila } from './PanelGuion';
 import type { Revision } from './VentanaDespertar';
@@ -603,6 +606,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     escucharConversacion,
     entrarConversacion,
     salirConversacion,
+    bolsa,
   } = useSala(
     cuenta?.token ?? null,
     cuenta ? null : invitado,
@@ -1632,12 +1636,21 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       : []),
   ];
 
-  const pedirPropio = async (accion: string, datos?: unknown) => {
+  /** Algo que pide uno mismo: el cambio que llegue después es suyo (ver alCambiar). */
+  const propia = async <R extends ResultadoAccion | ResultadoBolsaAlAzar>(hacer: () => Promise<R>) => {
     setAviso('');
     accionPropiaRef.current = true;
-    const r = await pedir(accion, datos);
+    const r = await hacer();
     if (!r.ok) accionPropiaRef.current = false;
     return r;
+  };
+  const pedirPropio = (accion: string, datos?: unknown) => propia(() => pedir(accion, datos));
+  const bolsaPropia: AccionesBolsa = {
+    meter: (personajeId) => propia(() => bolsa.meter(personajeId)),
+    cantidad: (personajeId, cantidad) => propia(() => bolsa.cantidad(personajeId, cantidad)),
+    vaciar: () => propia(() => bolsa.vaciar()),
+    llenarAlAzar: () => propia(() => bolsa.llenarAlAzar()),
+    aceptarReparto: (firma) => propia(() => bolsa.aceptarReparto(firma)),
   };
 
   // Faroles: los del narrador (narradores y visitantes) o, si soy el demonio o un esbirro, los míos.
@@ -1873,12 +1886,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     estado && (
       <RepartoPartida
         distribucion={estado.distribucion}
-        bolsa={estado.acciones.includes('narrador:bolsa') ? estado.bolsa : null}
-        plaza={estado.plaza}
-        npcs={estado.npcs}
-        setupAceptado={estado.setupAceptado}
-        preparacion={estado.fase.momento === 'preparacion'}
-        pedir={pedirPropio}
+        reparto={estado.reparto?.cuenta ?? null}
+        aceptarReparto={bolsaPropia.aceptarReparto}
         onError={setAviso}
         resumido={enHoja}
       />
@@ -1947,11 +1956,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   }}
                   onCambiarIdiomaDescripciones={(idiomaDescripciones) => cambiarPreferencias({ idiomaDescripciones })}
                   bolsa={
-                    estado.acciones.includes('narrador:bolsa')
+                    estado.acciones.includes('bolsa:meter') && estado.reparto
                       ? {
                           bolsa: estado.bolsa,
                           distribucion: estado.distribucion,
+                          reparto: estado.reparto.bolsa,
                           npcs: estado.npcs,
+                          acciones: bolsaPropia,
                           puedeAsignar: estado.acciones.includes('narrador:asignarPersonajes'),
                         }
                       : null

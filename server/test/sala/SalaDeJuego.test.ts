@@ -274,7 +274,7 @@ describe('SalaDeJuego', () => {
       const juego = new SalaDeJuego();
       const { partida } = juego;
       partida.cambiarGuion(guionDePrueba());
-      expect(partida.reparto.distribucion()).toEqual({ jugadores: 7, jugadoresVivos: 7, viajeros: 0, viajerosVivos: 0, aldeanos: 5, forasteros: 0, esbirros: 1, demonios: 1 });
+      expect(partida.bolsa.distribucion()).toEqual({ jugadores: 7, jugadoresVivos: 7, viajeros: 0, viajerosVivos: 0, aldeanos: 5, forasteros: 0, esbirros: 1, demonios: 1 });
     });
 
     it('un viajero puesto a mano no cuenta para el reparto ni para la bolsa', () => {
@@ -282,28 +282,28 @@ describe('SalaDeJuego', () => {
       const { partida } = juego;
       partida.cambiarGuion(guionDePrueba());
       partida.grimorio.cambiarPersonaje(partida.plaza()[0].id, 'voudon');
-      expect(partida.reparto.distribucion()).toMatchObject({ jugadores: 6, viajeros: 1, aldeanos: 3, forasteros: 1 });
-      expect(partida.reparto.fichasParaRepartir()).toBe(6);
+      expect(partida.bolsa.distribucion()).toMatchObject({ jugadores: 6, viajeros: 1, aldeanos: 3, forasteros: 1 });
+      expect(partida.bolsa.fichasParaRepartir()).toBe(6);
     });
 
     it('repartir la bolsa da un personaje de la bolsa a cada asiento y la bolsa se queda igual', () => {
       const juego = new SalaDeJuego();
       const { partida } = juego;
       partida.cambiarGuion(guionDePrueba());
-      BOLSA_DE_SIETE.forEach((id) => partida.reparto.bolsa.alternar(id));
-      partida.reparto.repartir();
+      BOLSA_DE_SIETE.forEach((id) => partida.bolsa.meterOSacar(id));
+      partida.bolsa.repartir();
       const repartidos = partida.plaza().map((a) => a.personaje);
       expect([...repartidos].sort()).toEqual([...BOLSA_DE_SIETE].sort());
       expect(partida.plaza().every((a) => a.alineamiento === null)).toBe(true);
-      expect(partida.reparto.bolsa.bolsa()).toEqual(BOLSA_DE_SIETE);
+      expect(partida.bolsa.fichas()).toEqual(BOLSA_DE_SIETE);
     });
 
     it('meter dos veces un personaje en la bolsa lo saca', () => {
       const juego = new SalaDeJuego();
       const { partida } = juego;
-      partida.reparto.bolsa.alternar('chef');
-      partida.reparto.bolsa.alternar('chef');
-      expect(partida.reparto.bolsa.bolsa()).toEqual([]);
+      partida.bolsa.meterOSacar('chef');
+      partida.bolsa.meterOSacar('chef');
+      expect(partida.bolsa.fichas()).toEqual([]);
     });
 
     it('el jugador ve lo que se le entregó, no lo que el narrador cambia después', () => {
@@ -433,8 +433,8 @@ describe('SalaDeJuego', () => {
     it('limpiar el grimorio deja la partida como al principio, con los jugadores sentados', () => {
       const { juego, ids, asiento } = salaConJugadores('Ana');
       const { partida } = juego;
-      BOLSA_DE_SIETE.forEach((id) => partida.reparto.bolsa.alternar(id));
-      partida.reparto.repartir();
+      BOLSA_DE_SIETE.forEach((id) => partida.bolsa.meterOSacar(id));
+      partida.bolsa.repartir();
       partida.grimorio.ponerRecordatorio(asiento(0).id, { personaje: 'poisoner', indice: 0, texto: 'Poisoned' });
       alDia(juego);
       partida.grimorio.cambiarVida(asiento(0).id, true);
@@ -443,7 +443,7 @@ describe('SalaDeJuego', () => {
       partida.limpiarGrimorio();
       expect(partida.fases.actual()).toEqual({ momento: 'preparacion', numero: 0, reinicios: reinicios + 1 });
       expect(asiento(0)).toMatchObject({ participanteId: ids[0], muerto: false, personaje: null, recordatorios: [] });
-      expect(partida.reparto.bolsa.bolsa()).toEqual([]);
+      expect(partida.bolsa.fichas()).toEqual([]);
       expect(partida.nominaciones.votaciones()).toEqual([]);
       expect(partida.nominaciones.nominacion()).toBeNull();
     });

@@ -1,26 +1,19 @@
 import { TriangleAlert } from 'lucide-react';
 import { Fragment, useRef, useState } from 'react';
 import { useAriaLive } from './avisosConfig';
-import { firmaDelReparto, problemasDelReparto, repartoAjustado } from './comprobarReparto';
 import { botonSecundario } from './estilos';
-import { contarBolsa, identidadDe, TIPOS_REPARTO, useFichas } from './fichas';
-import type { JugadorDto, Distribucion, ResultadoAccion } from './useSala';
+import { TIPOS_REPARTO } from './fichas';
+import type { Distribucion, RepartoDto, ResultadoAccion } from './useSala';
 
 interface RepartoPartidaProps {
   distribucion: Distribucion;
-  /** La bolsa (solo el narrador); null para los demás. */
-  bolsa: string[] | null;
-  plaza: JugadorDto[];
-  /** Los NPCs en juego (el Centinela altera la preparación). */
-  npcs: string[];
-  /** El reparto dado por bueno a mano aunque no cuadre (su firma), o null. */
-  setupAceptado: string | null;
   /**
-   * La partida está en su preparación: solo entonces se comprueba el reparto. Desde
-   * la noche 1, el juego puede cambiar los personajes y ya no tiene por qué cuadrar.
+   * Lo que hay y lo que toca (solo el narrador; lo calcula el servidor): en la bolsa
+   * mientras se prepara o, en cuanto hay personajes en la plaza, en juego. null para los demás.
    */
-  preparacion: boolean;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  reparto: RepartoDto['cuenta'] | null;
+  /** Da el reparto por bueno aunque no cuadre (su firma). */
+  aceptarReparto: (firma: string) => Promise<ResultadoAccion>;
   onError: (mensaje: string) => void;
   /** En una línea (en la cabecera de la hoja del guion): los vivos y cuántos de cada tipo. */
   resumido?: boolean;
@@ -40,44 +33,31 @@ interface RepartoPartidaProps {
  * juego, por quien es cada uno de verdad (un Borracho con la ficha de un aldeano
  * cuenta como forastero). Antes que nada, los viajeros. Si el reparto está
  * completo y no es el de la partida, durante la preparación (luego el juego cambia
- * personajes y ya no tiene por qué), (teniendo en cuenta los personajes que
- * alteran la preparación: el Barón, el Ermitaño…), lo avisa en rojo y dice qué
- * no cuadra. Si el narrador se sale de las reglas a propósito (un Amnésico cuya
- * habilidad es que no haya forasteros), «Es el que quiero» lo da por bueno: el
- * recuadro vuelve a su aspecto de siempre hasta que el reparto cambie.
+ * personajes y ya no tiene por qué), lo avisa en rojo y dice qué no cuadra (lo
+ * decide el servidor, con los personajes que alteran la preparación). Si el
+ * narrador se sale de las reglas a propósito (un Amnésico cuya habilidad es que no
+ * haya forasteros), «Es el que quiero» lo da por bueno: el recuadro vuelve a su
+ * aspecto de siempre hasta que el reparto cambie.
  */
-const RepartoPartida = ({ distribucion, bolsa, plaza, npcs, setupAceptado, preparacion, pedir, onError, resumido = false }: RepartoPartidaProps) => {
-  const { todosPorId } = useFichas();
+const RepartoPartida = ({ distribucion, reparto, aceptarReparto, onError, resumido = false }: RepartoPartidaProps) => {
   const tituloRef = useRef<HTMLHeadingElement>(null);
   const [confirmacion, setConfirmacion] = useState('');
   const ariaLive = useAriaLive('bolsa');
   const { jugadores, jugadoresVivos, viajeros, viajerosVivos } = distribucion;
   const hayReparto = distribucion.aldeanos !== null;
 
-  // Lo que se cuenta: lo que hay en juego (si ya hay personajes en la plaza) o la bolsa
-  const enPlaza = plaza.some((a) => a.personaje);
-  const ids = !bolsa
-    ? null
-    : enPlaza
-      ? plaza.flatMap((a) => {
-          const id = identidadDe(a).personaje;
-          return id ? [id] : [];
-        })
-      : bolsa;
-  const cuentas = ids ? contarBolsa(ids, (id) => todosPorId.get(id)?.tipo) : null;
-  const donde = enPlaza ? 'en juego' : 'en la bolsa';
-  const regulares = cuentas ? TIPOS_REPARTO.reduce((n, { tipo }) => n + (cuentas[tipo] ?? 0), 0) : 0;
-  // Solo con el reparto completo (mientras se prepara, siempre faltaría algo)
-  const problemas =
-    cuentas && ids && hayReparto && regulares === jugadores ? problemasDelReparto(cuentas, distribucion, [...ids, ...npcs]) : [];
-  const firma = cuentas ? firmaDelReparto(cuentas, jugadores) : null;
-  const mal = preparacion && problemas.length > 0 && firma !== setupAceptado;
+  // Lo que se cuenta (el narrador): lo que hay en juego o en la bolsa
+  const cuentas = reparto?.cuentas ?? null;
+  const donde = reparto?.donde === 'juego' ? 'en juego' : 'en la bolsa';
+  const problemas = reparto?.problemas ?? [];
+  const mal = !!reparto?.aviso;
   // Lo que toca de cada tipo, con el Barón y compañía ya contados. Solo el narrador: a los
   // demás no se les cambia (sabrían que están en juego)
-  const ajustado = ids ? repartoAjustado(distribucion, [...ids, ...npcs]) : distribucion;
+  const ajustado = reparto?.ajustado ?? distribucion;
 
   const aceptar = async () => {
-    const r = await pedir('narrador:aceptarSetup', { firma });
+    if (!reparto) return;
+    const r = await aceptarReparto(reparto.firma);
     if (!r.ok) return onError(r.error);
     // El botón desaparece con el aviso: el foco va al título del recuadro, y se confirma
     tituloRef.current?.focus();

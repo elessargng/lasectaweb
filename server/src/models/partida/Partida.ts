@@ -22,12 +22,13 @@ import type { ContextoNoche } from './habilidades/HabilidadNocturna';
 import { Nominaciones } from './Nominaciones';
 import { Npcs } from './Npcs';
 import { NPC_GARDENER, NPC_POPE } from './personajesEspeciales';
+import { PODERES_BOLSA } from '../personajes';
 import { Reglas } from '../personajes/Reglas';
 import type { ContextoReglas, RegistroAlNominar } from '../personajes/ReglaPersonaje';
 import { cuidadorLilmonsta, DEMONIO_LILMONSTA, esbirrosLilmonsta, recordatorioLilmonsta } from '../personajes/lilMonsta';
 import { voudonVivo } from '../personajes/voudon';
 import { RelojSala } from './RelojSala';
-import { Reparto } from './Reparto';
+import { Bolsa } from './Bolsa';
 import { Revelacion } from './Revelacion';
 import { Senalamientos } from './Senalamientos';
 import type { Jugador } from './Jugador';
@@ -141,11 +142,14 @@ export class Partida {
   readonly npcs = new Npcs(() => this.guion.actual());
   /** Lo entregado a cada jugador y los grimorios enviados. */
   readonly entregas = new Entregas(() => this.plaza(), this.diario());
-  /** La bolsa y el reparto de personajes. */
-  readonly reparto = new Reparto({
+  /** La bolsa: sus fichas, sus reglas y el reparto de personajes. */
+  readonly bolsa = new Bolsa({
     plaza: () => this.plaza(),
     esViajero: (id) => this.guion.esViajero(id),
     personaje: (id) => this.guion.personaje(id),
+    personajes: () => this.guion.actual()?.personajes ?? [],
+    npcs: () => this.npcs.npcs(),
+    poderDe: (id) => PODERES_BOLSA.get(id),
     popeEnJuego: () => this.npcs.activo(NPC_POPE),
     reglas: (jugadores, personajes) => this.reglas.repartir(jugadores, personajes),
     darPersonaje: (jugadorId, personaje) => this.grimorio.repartir(jugadorId, personaje),
@@ -190,7 +194,7 @@ export class Partida {
     this.guion.cambiar(guion);
     // La bolsa, los faroles y los NPCs eran de los personajes del otro guion. Los
     // legendarios y lóricos que trae el guion, en juego desde el principio
-    this.reparto.bolsa.vaciar();
+    this.bolsa.vaciar();
     this.npcs.alCambiarGuion();
     this.entregas.retenerFichas(false);
     this.faroles.vaciar();
@@ -407,7 +411,7 @@ export class Partida {
     this.npcs.nuevaPartida();
     this.nominaciones.olvidarTodo();
     this.grimorio.limpiar();
-    this.reparto.olvidar();
+    this.bolsa.olvidar();
     this.entregas.olvidar();
     this.faroles.vaciar();
     this.revelacion.olvidar();
@@ -441,7 +445,7 @@ export class Partida {
     const nominador = plaza.find((a) => a.id === desde);
     const nominado = plaza.find((a) => a.id === hasta);
     // Pedir la expulsión de un viajero no es nominar
-    const efectos = nominador && nominado && !this.reparto.llevaViajero(nominado) ? this.reglas.alNominar(nominador, nominado, registro) : null;
+    const efectos = nominador && nominado && !this.bolsa.llevaViajero(nominado) ? this.reglas.alNominar(nominador, nominado, registro) : null;
     if (efectos && 'pregunta' in efectos) return efectos;
     this.nominaciones.nominar(desde, hasta);
     if (!efectos) return null;
@@ -504,7 +508,7 @@ export class Partida {
     return esbirrosLilmonsta(this.contextoReglas, {
       noche: this.fases.actual().momento === 'noche',
       enElGuion: !!this.guion.actual()?.personajes.some((p) => p.id === DEMONIO_LILMONSTA),
-      esbirrosQueTocan: this.reparto.distribucion().esbirros,
+      esbirrosQueTocan: this.bolsa.distribucion().esbirros,
     });
   }
 
@@ -566,7 +570,7 @@ export class Partida {
     if (a) this.grimorio.cambiarVida(a.id, true, { anotar: false });
     // Los vivos que quedan: los asientos (también los libres, que cuentan como jugadores)
     // sin muerte, sin contar a los viajeros
-    const vivos = this.plaza().filter((a) => !a.muerto && !a.muertePendiente && !this.reparto.llevaViajero(a)).length;
+    const vivos = this.plaza().filter((a) => !a.muerto && !a.muertePendiente && !this.bolsa.llevaViajero(a)).length;
     const final = vivos <= 2;
     // Con narrador virtual, anochece él cuando acaba de decirlo (o revela, si se acaba la partida)
     const anochece = !final && !this.entorno.hayNarradorVirtual() && this.reglas.anocheceTrasEjecutar();
@@ -593,11 +597,11 @@ export class Partida {
    * Devuelve el error, si lo hay.
    */
   repartirPersonajes(): string | null {
-    const hacen = this.reparto.fichasParaRepartir();
-    const hay = this.reparto.bolsa.bolsa().length;
+    const hacen = this.bolsa.fichasParaRepartir();
+    const hay = this.bolsa.fichas().length;
     if (hacen === 0) return 'No hay asientos a los que repartir.';
     if (hay !== hacen) return `En la bolsa tiene que haber ${hacen} personajes y hay ${hay}.`;
-    this.reparto.repartir();
+    this.bolsa.repartir();
     if (this.npcs.activo(NPC_GARDENER)) this.entregas.retenerFichas(true);
     else this.entregas.entregarFichas();
     return null;

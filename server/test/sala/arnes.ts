@@ -3,6 +3,7 @@ import { createServer, type Server as HttpServer } from 'http';
 import type { AddressInfo } from 'net';
 import { io as conectar, type Socket } from 'socket.io-client';
 import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
+import { BolsaController } from '../../src/controllers/sala/BolsaController';
 import { SalaController } from '../../src/controllers/sala/SalaController';
 import { abrirSalaPorSocket, SALA_SOCKET_PATH } from '../../src/infra/socketio/salaPorSocket';
 import { SalaService } from '../../src/services/sala/SalaService';
@@ -97,7 +98,7 @@ export class Arnes {
       ...cambios,
     };
     const salaService = new SalaService(deps);
-    abrirSalaPorSocket(http, salaService, new SalaController(salaService));
+    abrirSalaPorSocket(http, salaService, new SalaController(salaService), new BolsaController(salaService.bolsa));
     await new Promise<void>((resolver) => http.listen(0, '127.0.0.1', resolver));
     const { port } = http.address() as AddressInfo;
     return new Arnes(http, `http://127.0.0.1:${port}`);
@@ -135,10 +136,13 @@ export class Arnes {
 
   /** Como accion, pero devuelve el resultado aunque falle. */
   async intentar(cliente: Cliente, accion: string, datos?: unknown): Promise<ResultadoAccion> {
+    return this.pedir(cliente, 'sala:accion', { accion, datos });
+  }
+
+  /** Una petición por su evento (la bolsa: 'bolsa:meter'…) y, si sale bien, espera a que llegue la sala a todos. */
+  async pedir<R extends { ok: boolean } = ResultadoAccion>(cliente: Cliente, evento: string, datos?: unknown): Promise<R> {
     const antes = this.recuento();
-    const resultado = await new Promise<ResultadoAccion>((resolver) =>
-      cliente.socket.emit('sala:accion', { accion, datos }, resolver),
-    );
+    const resultado = await new Promise<R>((resolver) => cliente.socket.emit(evento, datos, resolver));
     if (resultado.ok) await this.esperarA(antes);
     return resultado;
   }

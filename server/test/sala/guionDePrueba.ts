@@ -1,4 +1,6 @@
 import type { GuionResuelto, PersonajeDeGuion, TipoPersonaje } from '../../src/models/guiones';
+import { Bolsa, type PoderDe } from '../../src/models/partida/Bolsa';
+import { PODERES_BOLSA } from '../../src/models/personajes';
 import type { SalaLlegada } from '../../src/models/sala/Participantes';
 
 /** Un personaje del guion con lo mínimo: su id, su tipo y sus recordatorios. */
@@ -137,3 +139,17 @@ export function conSemilla(semilla: number): () => number {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+
+/** Una bolsa sin partida, solo por sus reglas (con los poderes de verdad de cada personaje). */
+export const bolsaDePrueba = (poderDe: PoderDe = (id) => PODERES_BOLSA.get(id)): Bolsa =>
+  new Bolsa({
+    plaza: () => [],
+    esViajero: () => false,
+    personaje: () => undefined,
+    personajes: () => [],
+    npcs: () => [],
+    poderDe,
+    popeEnJuego: () => false,
+    reglas: (_jugadores, personajes) => personajes,
+    darPersonaje: () => {},
+  });

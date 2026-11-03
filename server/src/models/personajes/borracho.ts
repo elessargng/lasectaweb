@@ -11,4 +11,4 @@ const regla: ReglaPersonaje = {
   droison: (ctx, jugador) => (ctx.identidad(jugador) === 'drunk' ? 'borracho' : null),
 };
 
-export const borracho: DefinicionPersonaje = { regla };
+export const borracho: DefinicionPersonaje = { bolsa: { personaje: 'drunk', noVa: true }, regla };

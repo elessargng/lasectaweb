@@ -252,10 +252,10 @@ describe('reglas de los personajes', () => {
       for (let vez = 0; vez < 40; vez++) {
         const { juego, asiento } = salaConJugadores();
         const { partida } = juego;
-        bolsa.forEach((id) => partida.reparto.bolsa.alternar(id));
+        bolsa.forEach((id) => partida.bolsa.meterOSacar(id));
         partida.grimorio.ponerRecordatorio(asiento(1).id, { personaje: 'revolutionary', indice: 0, texto: 'Used' });
         partida.grimorio.ponerRecordatorio(asiento(4).id, { personaje: 'revolutionary', indice: 0, texto: 'Used' });
-        partida.reparto.repartir();
+        partida.bolsa.repartir();
         expect(buenos.has(asiento(1).personaje!)).toBe(buenos.has(asiento(4).personaje!));
         expect(asiento(1).personaje).not.toBe(asiento(4).personaje);
       }

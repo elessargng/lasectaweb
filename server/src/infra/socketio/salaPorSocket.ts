@@ -1,5 +1,6 @@
 import type { Server as HttpServer } from 'http';
 import { Server } from 'socket.io';
+import type { BolsaController } from '../../controllers/sala/BolsaController';
 import type { Credenciales, SalaController } from '../../controllers/sala/SalaController';
 import type { SalaService } from '../../services/sala/SalaService';
 import { DifusorSocketIo } from './DifusorSocketIo';
@@ -21,6 +22,15 @@ const PETICIONES = {
   'conversacion:salir': 'salirDeConversacion',
 } as const satisfies Record<string, keyof SalaController>;
 
+/** Los de la bolsa, y el método de BolsaController que los atiende. */
+const PETICIONES_BOLSA = {
+  'bolsa:meter': 'meter',
+  'bolsa:cantidad': 'cantidad',
+  'bolsa:vaciar': 'vaciar',
+  'bolsa:llenarAlAzar': 'llenarAlAzar',
+  'bolsa:aceptarReparto': 'aceptarReparto',
+} as const satisfies Record<string, keyof BolsaController>;
+
 /** Contesta por el ack del evento, si el cliente lo ha pedido. */
 const contestar = (ack: unknown) => (respuesta: unknown) => {
   if (typeof ack === 'function') ack(respuesta);
@@ -31,7 +41,12 @@ const contestar = (ack: unknown) => (respuesta: unknown) => {
  * evento a SalaController, como las rutas de la API, y lo que pasa en la sala se
  * manda por DifusorSocketIo.
  */
-export function abrirSalaPorSocket(httpServer: HttpServer, salaService: SalaService, salaController: SalaController): void {
+export function abrirSalaPorSocket(
+  httpServer: HttpServer,
+  salaService: SalaService,
+  salaController: SalaController,
+  bolsaController: BolsaController,
+): void {
   const io = new Server(httpServer, {
     path: SALA_SOCKET_PATH,
     cors: { origin: '*' },
@@ -54,6 +69,9 @@ export function abrirSalaPorSocket(httpServer: HttpServer, salaService: SalaServ
     const sesion = salaController.entrar(socket.id, socket.data.credenciales as Credenciales);
     for (const [evento, metodo] of Object.entries(PETICIONES)) {
       socket.on(evento, (peticion: unknown, ack?: unknown) => void salaController[metodo](sesion, peticion, contestar(ack)));
+    }
+    for (const [evento, metodo] of Object.entries(PETICIONES_BOLSA)) {
+      socket.on(evento, (peticion: unknown, ack?: unknown) => bolsaController[metodo](sesion, peticion, contestar(ack)));
     }
     socket.on('chat:historial', () => salaController.historial(sesion));
     socket.on('disconnect', (reason) => salaController.salir(sesion, reason === 'client namespace disconnect'));

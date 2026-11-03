@@ -1,5 +1,4 @@
-import { NO_VAN_EN_BOLSA } from '../compartido/bolsaAleatoria';
-import { repartoAjustado } from '../compartido/reparto';
+import type { Bolsa } from '../partida/Bolsa';
 import type { GuionNarradorVirtual } from '../compartido/narradorVirtual';
 import type { Distribucion } from '../compartido/partida';
 import type { PersonajeDeGuion } from '../guiones';
@@ -59,9 +58,10 @@ export async function prepararPartida(
     await paso('narrador:cambiarGuion', { predeterminado: guion });
     await paso('narrador:configurarPartida', { grimorioJugadores: true });
     const personajes = partida.guion.actual()?.personajes ?? [];
-    const bolsa = await elegirBolsa(personajes, partida.reparto.distribucion(), decidir, { azar, recientes });
+    const bolsa = await elegirBolsa(personajes, partida.bolsa.distribucion(), partida.bolsa, decidir, { azar, recientes });
     if (!bolsa) return { error: 'No hay reparto para tantos jugadores.' };
-    await paso('narrador:llenarBolsa', { personajes: bolsa.personajes });
+    const llena = await plaza.llenarBolsa(bolsa.personajes);
+    if (!llena.ok) throw new Error(llena.error);
     return { personajes: bolsa.personajes, fuera: bolsa.fuera };
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'No se ha podido preparar la partida.' };
@@ -80,7 +80,7 @@ export interface BolsaElegida {
  * La bolsa que elige el narrador, hueco a hueco y como se hace a mano, con un
  * concepto del bien y uno del mal sorteados (ver bolsa/conceptos): primero el
  * demonio y los esbirros (el primero, el del concepto del mal); con ellos ya
- * elegidos, los forasteros que tocan (el Barón suma dos, ver repartoAjustado), con
+ * elegidos, los forasteros que tocan (el Barón suma dos, ver ajustar), con
  * los del concepto por delante; luego los aldeanos, cada hueco con su categoría.
  * Cada hueco es una decisión con unas pocas opciones barajadas y lo ya elegido. No
  * hay grimorio todavía: a la estrategia se le cuentan los personajes del guion y
@@ -91,6 +91,8 @@ export interface BolsaElegida {
 export async function elegirBolsa(
   personajes: readonly PersonajeDeGuion[],
   distribucion: Distribucion,
+  /** Las reglas de la bolsa de la partida: lo que toca con los ya elegidos y quién no va. */
+  reglas: Pick<Bolsa, 'ajustar' | 'noVa'>,
   decidir: <T>(decision: Decision<T>) => Promise<T>,
   { azar = Math.random, recientes = [] }: { azar?: Azar; recientes?: readonly (readonly string[])[] } = {},
 ): Promise<BolsaElegida | null> {
@@ -130,19 +132,22 @@ export async function elegirBolsa(
   };
 
   for (let i = 0; i < demonios; i++) await elegir(`el demonio (${i + 1} de ${demonios})`, { tipo: 'demon' }, libres(deTipo('demon')));
-  for (let i = 0; i < esbirros; i++) {
+  // Con el demonio elegido, los esbirros que van (con el Kazali, ninguno)
+  const nEsbirros = reglas.ajustar(distribucion, elegidos.map((p) => p.id)).esbirros ?? 0;
+  for (let i = 0; i < nEsbirros; i++) {
     // El primero, el del concepto del mal (si lo tiene el guion)
     const delConcepto = i === 0 ? libres((p) => p.id === mal.esbirro) : [];
-    await elegir(`un esbirro (${i + 1} de ${esbirros})`, { tipo: 'minion' }, delConcepto.length ? delConcepto : libres(deTipo('minion')));
+    await elegir(`un esbirro (${i + 1} de ${nEsbirros})`, { tipo: 'minion' }, delConcepto.length ? delConcepto : libres(deTipo('minion')));
   }
-  const ajustado = repartoAjustado(distribucion, elegidos.map((p) => p.id));
+  const ajustado = reglas.ajustar(distribucion, elegidos.map((p) => p.id));
   const nForasteros = ajustado.forasteros ?? 0;
   let sinForastero = 0;
   for (let i = 0; i < nForasteros; i++) {
     const forastero = await elegir(`un forastero (${i + 1} de ${nForasteros})`, { tipo: 'outsider' }, libres(deTipo('outsider')), mal.forasteros);
     if (!forastero) sinForastero++;
   }
-  const fuera = elegidos.filter((p) => p.id in NO_VAN_EN_BOLSA);
+  const noVa = (p: PersonajeDeGuion) => reglas.noVa(p.id);
+  const fuera = elegidos.filter(noVa);
 
   // Los aldeanos (y uno más por cada forastero que no tenga el guion), cada uno de su
   // categoría; si ya no queda ninguno de ella, de otra que tenga
@@ -176,7 +181,7 @@ export async function elegirBolsa(
   }
 
   return {
-    personajes: elegidos.filter((p) => !(p.id in NO_VAN_EN_BOLSA)).map((p) => p.id),
+    personajes: elegidos.filter((p) => !noVa(p)).map((p) => p.id),
     fuera: fuera.map((p) => ({ personaje: p.id, creeSer: creeSer.get(p.id) ?? null })),
     conceptos,
     categorias,

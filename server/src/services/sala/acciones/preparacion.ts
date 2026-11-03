@@ -5,9 +5,9 @@ import { TIPOS_NPC, type TipoPersonaje } from '../../../models/guiones';
 import { GuionInvalidoError } from '../../../models/guiones/errores';
 import { leerDataUrl } from '../../../models/imagenes';
 import { FONDO_SALA } from '../../../models/sala/imagenes';
-import { type Accion, cadena, esNarrador } from './Accion';
+import { type Accion, esNarrador } from './Accion';
 
-/** La preparación de la partida: ajustes, guion, fondo, NPCs, bolsa y reparto. */
+/** La preparación de la partida: ajustes, guion, fondo, NPCs y el reparto de la bolsa (la bolsa: ver BolsaService). */
 export const ACCIONES_PREPARACION: Record<string, Accion> = {
   /**
    * Ajustes de la partida (Preferencias > Partida). datos: cualquiera de
@@ -211,80 +211,6 @@ export const ACCIONES_PREPARACION: Record<string, Accion> = {
       const activo = (datos as { activo?: unknown } | null)?.activo;
       if (typeof activo !== 'boolean') return { ok: false, error: 'Petición desconocida.' };
       partida.npcs.pedirSilencio(activo);
-      return { ok: true };
-    },
-  },
-
-  /**
-   * Mete en la bolsa un personaje del guion (aldeano, forastero, esbirro o
-   * demonio), o lo saca si ya estaba. No se limita cuántos: lo decide el narrador.
-   * datos: { personajeId }.
-   */
-  'narrador:bolsa': {
-    puede: ({ partida }, yo) => yo.rol === 'narrador' && !!partida.guion.actual(),
-    noPuede: (sala, yo) => (yo.rol !== 'narrador' ? 'Solo un narrador puede preparar la bolsa.' : 'Antes hay que elegir un guion.'),
-    hacer: ({ partida }, _yo, datos) => {
-      const error = partida.reparto.meterOSacar(cadena((datos as { personajeId?: unknown } | null)?.personajeId));
-      return error ? { ok: false, error } : { ok: true };
-    },
-  },
-
-  /**
-   * Cuántas fichas de un personaje hay en la bolsa (0 la saca). Más de una, solo
-   * si puede repetirse (ver Reparto.ponerEnBolsa).
-   * datos: { personajeId, cantidad }.
-   */
-  'narrador:bolsaCantidad': {
-    puede: ({ partida }, yo) => yo.rol === 'narrador' && !!partida.guion.actual(),
-    noPuede: (_sala, yo) => (yo.rol !== 'narrador' ? 'Solo un narrador puede preparar la bolsa.' : 'Antes hay que elegir un guion.'),
-    hacer: ({ partida }, _yo, datos) => {
-      const { personajeId, cantidad } = (datos as { personajeId?: unknown; cantidad?: unknown } | null) ?? {};
-      const error = partida.reparto.ponerEnBolsa(cadena(personajeId), typeof cantidad === 'number' ? cantidad : NaN);
-      return error ? { ok: false, error } : { ok: true };
-    },
-  },
-
-  /** Vacía la bolsa: saca todos los personajes (también los viajeros). */
-  'narrador:vaciarBolsa': {
-    puede: esNarrador,
-    noPuede: 'Solo un narrador puede preparar la bolsa.',
-    hacer: (juego) => {
-      const { partida } = juego;
-      partida.reparto.bolsa.vaciar();
-      return { ok: true };
-    },
-  },
-
-  /**
-   * Llena la bolsa de una vez (el narrador la ha llenado al azar): sustituye sus
-   * aldeanos, forasteros, esbirros y demonios por estos; los viajeros se quedan.
-   * Repetidos, solo los que pueden (ver Reparto.llenarBolsa). datos: { personajes: string[] }.
-   */
-  'narrador:llenarBolsa': {
-    puede: ({ partida }, yo) => yo.rol === 'narrador' && !!partida.guion.actual(),
-    noPuede: (_sala, yo) => (yo.rol !== 'narrador' ? 'Solo un narrador puede preparar la bolsa.' : 'Antes hay que elegir un guion.'),
-    hacer: ({ partida }, _yo, datos) => {
-      const ids = (datos as { personajes?: unknown } | null)?.personajes;
-      if (!Array.isArray(ids) || ids.length > 100 || ids.some((id) => typeof id !== 'string')) {
-        return { ok: false, error: 'Personajes desconocidos.' };
-      }
-      const error = partida.reparto.llenarBolsa(ids as string[]);
-      return error ? { ok: false, error } : { ok: true };
-    },
-  },
-
-  /**
-   * Da por bueno el reparto aunque no cuadre con las reglas (el narrador se sale del
-   * guion a propósito), o deja de darlo (null). datos: { firma: string | null }.
-   */
-  'narrador:aceptarSetup': {
-    puede: esNarrador,
-    noPuede: 'Solo un narrador da por bueno el reparto.',
-    hacer: (juego, _yo, datos) => {
-      const { partida } = juego;
-      const firma = (datos as { firma?: unknown } | null)?.firma;
-      if (firma !== null && (typeof firma !== 'string' || firma.length > 100)) return { ok: false, error: 'Reparto desconocido.' };
-      partida.reparto.aceptarSetup(firma);
       return { ok: true };
     },
   },

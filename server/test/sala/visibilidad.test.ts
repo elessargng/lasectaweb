@@ -20,7 +20,7 @@ const idAsiento = (i: number) => narradora.estado.plaza[i].id;
 
 /** Mete en la bolsa los 7 personajes de una partida de 7 y los reparte. */
 async function repartir() {
-  for (const personajeId of BOLSA_DE_SIETE) await arnes.accion(narradora, 'narrador:bolsa', { personajeId });
+  for (const personajeId of BOLSA_DE_SIETE) await arnes.pedir(narradora, 'bolsa:meter', { personajeId });
   await arnes.accion(narradora, 'narrador:asignarPersonajes');
 }
 
@@ -217,7 +217,7 @@ describe('lo que ve cada uno', () => {
   });
 
   it('las acciones que llegan dependen del papel', () => {
-    expect(narradora.estado.acciones).toEqual(expect.arrayContaining(['narrador:irANoche', 'narrador:bolsa']));
+    expect(narradora.estado.acciones).toEqual(expect.arrayContaining(['narrador:irANoche', 'bolsa:meter']));
     expect(ana.estado.acciones).toContain('sala:levantarMano');
     expect(ana.estado.acciones.some((a) => a.startsWith('narrador:'))).toBe(false);
     expect(vera.estado.acciones).toEqual(expect.arrayContaining(['sala:sentarse', 'sala:solicitarGrimorio']));

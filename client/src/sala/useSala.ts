@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { notifySessionExpired } from '../utils/session';
-import type { SalaDto, ResultadoAccion } from '@views/sala';
+import type { SalaDto, ResultadoAccion, ResultadoBolsaAlAzar } from '@views/sala';
 import type { MensajeChatDto, SusurroDto } from '@views/chat';
 import type { GuionResuelto } from './guiones';
 
@@ -31,7 +31,7 @@ export type {
   SenalamientoDto,
   VotacionDto,
 } from '@views/partida';
-export type { ConversacionDto, SalaDto, InvitacionDto, ResultadoAccion } from '@views/sala';
+export type { ConversacionDto, SalaDto, InvitacionDto, RepartoDto, ResultadoAccion, ResultadoBolsaAlAzar } from '@views/sala';
 export { usuarioDe } from '@models/participante';
 export { SALA_SENALAMIENTO as SENALAMIENTO } from '@models/partida';
 
@@ -260,6 +260,18 @@ export function useSala(
   );
   const salirConversacion = useCallback(() => pedirAlSocket<ResultadoAccion>('conversacion:salir', {}), [pedirAlSocket]);
 
+  /** La bolsa (el narrador), por sus eventos: el servidor comprueba y la sala llega con el cambio. */
+  const bolsa: AccionesBolsa = useMemo(
+    () => ({
+      meter: (personajeId) => pedirAlSocket<ResultadoAccion>('bolsa:meter', { personajeId }),
+      cantidad: (personajeId, cantidad) => pedirAlSocket<ResultadoAccion>('bolsa:cantidad', { personajeId, cantidad }),
+      vaciar: () => pedirAlSocket<ResultadoAccion>('bolsa:vaciar', {}),
+      llenarAlAzar: () => pedirAlSocket<ResultadoBolsaAlAzar>('bolsa:llenarAlAzar', {}),
+      aceptarReparto: (firma) => pedirAlSocket<ResultadoAccion>('bolsa:aceptarReparto', { firma }),
+    }),
+    [pedirAlSocket],
+  );
+
   /** Vuelve a pedir los mensajes que se pueden leer (al cambiar de papel cambian). */
   const pedirHistorial = useCallback(() => {
     socketRef.current?.emit('chat:historial');
@@ -289,5 +301,18 @@ export function useSala(
     escucharConversacion,
     entrarConversacion,
     salirConversacion,
+    bolsa,
   };
+}
+
+/** Lo que el narrador hace con la bolsa (ver useSala). */
+export interface AccionesBolsa {
+  /** Mete un personaje en la bolsa, o lo saca si ya estaba. */
+  meter(personajeId: string): Promise<ResultadoAccion>;
+  /** Cuántas fichas de un personaje (0 lo saca). */
+  cantidad(personajeId: string, cantidad: number): Promise<ResultadoAccion>;
+  vaciar(): Promise<ResultadoAccion>;
+  llenarAlAzar(): Promise<ResultadoBolsaAlAzar>;
+  /** Da por bueno el reparto (su firma) aunque no cuadre, o deja de darlo (null). */
+  aceptarReparto(firma: string | null): Promise<ResultadoAccion>;
 }

@@ -71,12 +71,14 @@ export interface SalaDto {
   faroles: (string | null)[];
   /** Los NPCs de la partida (legendarios y lóricos, ids), en el orden en que se añadieron. Para todos. */
   npcs: string[];
+  /** Lo que se sabe del reparto (ver RepartoDto); solo se manda a los narradores. */
+  reparto: RepartoDto | null;
   /**
-   * El reparto que un narrador ha dado por bueno aunque no cuadre con las reglas
-   * (su firma, la calcula el cliente: «7:5/0/1/1»), o null. Si el reparto cambia,
-   * deja de valer solo. Solo se manda a los narradores.
+   * Con todos los personajes puestos, los que no van en la bolsa y probablemente
+   * están en juego porque el reparto no cuadra (el Borracho, la Marioneta). Para
+   * quien ve el grimorio.
    */
-  setupAceptado: string | null;
+  probables: string[];
   /**
    * El narrador ha pedido silencio (con el Bibliotecario del Infierno en juego):
    * los jugadores no pueden emitir su micrófono, ni en la plaza ni en las
@@ -150,4 +152,32 @@ export interface SalaDto {
 }
 
 /** La respuesta a una acción ('sala:accion'). `valor`: lo que devuelve a quien la pidió (p. ej. la ruta del avatar subido). */
+/**
+ * El reparto, ya calculado con los personajes que cambian la bolsa (el Barón, el
+ * Kazali…): con la bolsa (el diálogo de la bolsa) y con lo que se cuenta en el
+ * recuadro del reparto.
+ */
+export interface RepartoDto {
+  /** Con lo que hay en la bolsa: lo que toca de cada tipo y lo que no cuadra. */
+  bolsa: { ajustado: Distribucion; problemas: string[] };
+  /** Lo que hay en juego (si ya hay personajes en la plaza) o, si no, la bolsa. */
+  cuenta: {
+    donde: 'bolsa' | 'juego';
+    /** Cuántos hay de cada tipo (townsfolk, outsider, minion, demon, traveller). */
+    cuentas: Record<string, number>;
+    ajustado: Distribucion;
+    /** Lo que no cuadra («Forasteros: 2; deberían ser 0 o 1»), con el reparto completo. */
+    problemas: string[];
+    /** La firma del reparto, para darlo por bueno a mano («7:5/0/1/1»). */
+    firma: string;
+    /** Hay que avisar: en la preparación, no cuadra y no se ha dado por bueno. */
+    aviso: boolean;
+  };
+}
+
+/** Lo que contesta la sala al llenar la bolsa al azar: lo que ha salido y no va (con el tipo que falta) y los tipos que escasean. */
+export type ResultadoBolsaAlAzar =
+  | { ok: true; fuera: { personaje: string; falta: string }[]; escasos: string[] }
+  | { ok: false; error: string };
+
 export type ResultadoAccion = { ok: true; valor?: string } | { ok: false; error: string };

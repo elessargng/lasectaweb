@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SalaDeJuego } from '../../src/models/SalaDeJuego';
 import { SALA_ASIENTOS } from '../../src/models/sala/Sala';
 import { MAX_RECORDATORIOS } from '../../src/models/partida/Grimorio';
-import { MAX_REPETIDOS } from '../../src/models/partida/Reparto';
+import { MAX_REPETIDOS } from '../../src/models/partida/Bolsa';
 import { NPC_GARDENER, NPC_POPE } from '../../src/models/partida/personajesEspeciales';
 import { BOLSA_DE_SIETE, guionDePrueba } from './guionDePrueba';
 
@@ -20,37 +20,37 @@ function partidaDePrueba() {
 describe('la bolsa', () => {
   it('solo admite personajes del guion de los tipos que se reparten', () => {
     const { partida } = partidaDePrueba();
-    expect(partida.reparto.meterOSacar('nadie')).toBe('Ese personaje no está en el guion.');
-    expect(partida.reparto.meterOSacar('gardener')).toMatch(/^En la bolsa solo van/);
-    expect(partida.reparto.meterOSacar('chef')).toBeNull();
-    expect(partida.reparto.bolsa.bolsa()).toEqual(['chef']);
-    expect(partida.reparto.meterOSacar('chef')).toBeNull();
-    expect(partida.reparto.bolsa.bolsa()).toEqual([]);
+    expect(partida.bolsa.meterOSacar('nadie')).toBe('Ese personaje no está en el guion.');
+    expect(partida.bolsa.meterOSacar('gardener')).toMatch(/^En la bolsa solo van/);
+    expect(partida.bolsa.meterOSacar('chef')).toBeNull();
+    expect(partida.bolsa.fichas()).toEqual(['chef']);
+    expect(partida.bolsa.meterOSacar('chef')).toBeNull();
+    expect(partida.bolsa.fichas()).toEqual([]);
   });
 
   it('un aldeano solo va repetido con el Pope en juego, y hasta el máximo', () => {
     const { partida } = partidaDePrueba();
-    expect(partida.reparto.ponerEnBolsa('chef', 2)).toBe('Solo con el Pope puede haber aldeanos o forasteros repetidos.');
+    expect(partida.bolsa.ponerEnBolsa('chef', 2)).toBe('Solo con el Pope puede haber aldeanos o forasteros repetidos.');
     partida.alternarNpc(NPC_POPE);
-    expect(partida.reparto.ponerEnBolsa('chef', 2)).toBeNull();
-    expect(partida.reparto.bolsa.bolsa()).toEqual(['chef', 'chef']);
-    expect(partida.reparto.ponerEnBolsa('chef', MAX_REPETIDOS + 1)).toBe('Cantidad desconocida.');
+    expect(partida.bolsa.ponerEnBolsa('chef', 2)).toBeNull();
+    expect(partida.bolsa.fichas()).toEqual(['chef', 'chef']);
+    expect(partida.bolsa.ponerEnBolsa('chef', MAX_REPETIDOS + 1)).toBe('Cantidad desconocida.');
     // Un esbirro, ni con el Pope
-    expect(partida.reparto.ponerEnBolsa('poisoner', 2)).toBe('Solo con el Pope puede haber aldeanos o forasteros repetidos.');
+    expect(partida.bolsa.ponerEnBolsa('poisoner', 2)).toBe('Solo con el Pope puede haber aldeanos o forasteros repetidos.');
   });
 
   it('al llenarla al azar no van viajeros ni repetidos sin el Pope', () => {
     const { partida } = partidaDePrueba();
-    expect(partida.reparto.llenarBolsa(['chef', 'voudon'])).toMatch(/^En la bolsa al azar solo van/);
-    expect(partida.reparto.llenarBolsa(['chef', 'chef'])).toBe('Solo con el Pope puede haber aldeanos o forasteros repetidos.');
-    expect(partida.reparto.llenarBolsa(BOLSA_DE_SIETE)).toBeNull();
-    expect(partida.reparto.bolsa.bolsa()).toEqual(BOLSA_DE_SIETE);
+    expect(partida.bolsa.llenar(['chef', 'voudon'])).toMatch(/^En la bolsa al azar solo van/);
+    expect(partida.bolsa.llenar(['chef', 'chef'])).toBe('Solo con el Pope puede haber aldeanos o forasteros repetidos.');
+    expect(partida.bolsa.llenar(BOLSA_DE_SIETE)).toBeNull();
+    expect(partida.bolsa.fichas()).toEqual(BOLSA_DE_SIETE);
   });
 
   it('se reparte si hay tantos personajes como asientos; con el Gardener, se retienen', () => {
     const { partida } = partidaDePrueba();
     expect(partida.repartirPersonajes()).toBe('En la bolsa tiene que haber 7 personajes y hay 0.');
-    partida.reparto.llenarBolsa(BOLSA_DE_SIETE);
+    partida.bolsa.llenar(BOLSA_DE_SIETE);
     partida.alternarNpc(NPC_GARDENER);
     expect(partida.repartirPersonajes()).toBeNull();
     expect(partida.entregas.fichasRetenidas()).toBe(true);

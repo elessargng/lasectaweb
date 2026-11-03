@@ -225,8 +225,8 @@ export class VistaPartida {
     this.comun = {
       configuracion: configuracionDto(partida.configuracion.actual()),
       fase: partida.fases.actual(),
-      distribucion: partida.reparto.distribucion(),
-      bolsa: partida.reparto.bolsa.bolsa(),
+      distribucion: partida.bolsa.distribucion(),
+      bolsa: partida.bolsa.fichas(),
       faroles: partida.faroles.faroles(),
       npcs: partida.npcs.npcs(),
       despertares: partida.despertares.despertares().map(despertarDto),
@@ -280,7 +280,8 @@ export class VistaPartida {
       // Los faroles del narrador: también los ven los visitantes (no juegan)
       faroles: yo.rol === 'jugador' ? farolesVacios() : comun.faroles,
       npcs: comun.npcs,
-      setupAceptado: narra ? partida.reparto.setupAceptado() : null,
+      reparto: narra ? partida.bolsa.estado(comun.fase.momento === 'preparacion') : null,
+      probables: veGrimorio ? partida.bolsa.probables() : [],
       silencio: partida.npcs.silencio(),
       voudon: partida.voudonVivo(),
       institutriz: partida.institutrizViva(),

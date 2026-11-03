@@ -8,6 +8,7 @@ import { VideollamadaError, VideollamadaService, type PaseVideo } from '../video
 import { NarradorVirtualService } from '../narradorVirtual/NarradorVirtualService';
 import { NarradorIAService } from '../narradorVirtual/NarradorIAService';
 import { accionesPermitidas, ejecutarAccion } from './acciones';
+import { BolsaService } from './BolsaService';
 import { ImagenesSala } from './ImagenesSala';
 import type { DependenciasAcciones, DependenciasSala, DifusorSala } from './puertos';
 
@@ -54,6 +55,8 @@ export class SalaService {
   readonly juego = new SalaDeJuego();
   private readonly chat: ChatService;
   private readonly imagenes: ImagenesSala;
+  /** La bolsa de la partida (ver BolsaController). */
+  readonly bolsa: BolsaService;
   private readonly conversaciones: ConversacionService;
   private readonly videollamada: VideollamadaService | null;
   private readonly narradorVirtual: NarradorVirtualService;
@@ -81,6 +84,7 @@ export class SalaService {
     }
     this.chat = new ChatService(deps.mensajes, this.juego);
     this.imagenes = new ImagenesSala(deps.imagenes);
+    this.bolsa = new BolsaService(this.juego, () => this.difundir(), deps.azarNarradorVirtual);
     this.conversaciones = new ConversacionService(this.juego);
     // Sin servidor de vídeo configurado, la sala funciona igual, sin cámaras ni micrófonos
     this.videollamada = deps.video ? new VideollamadaService(deps.video, this.juego, this.conversaciones) : null;
@@ -90,7 +94,10 @@ export class SalaService {
     this.narradorVirtual = new NarradorVirtualService(
       this.juego,
       // Actúa como un narrador más: con las mismas acciones, y la sala se difunde
-      (participanteId) => ({ accion: (nombre, datos) => this.accion(sala.participantes.buscar(participanteId), nombre, datos) }),
+      (participanteId) => ({
+        accion: (nombre, datos) => this.accion(sala.participantes.buscar(participanteId), nombre, datos),
+        llenarBolsa: async (personajes) => this.bolsa.llenar(participanteId, personajes),
+      }),
       {
         decir: (texto) => {
           this.difusor.voz(texto);
@@ -146,7 +153,7 @@ export class SalaService {
       conversaciones: this.conversaciones.lista(),
       invitacionesDe: (participanteId: string) => this.conversaciones.invitacionesDe(participanteId),
       video: !!this.videollamada,
-      accionesDe: (yo: Participante) => accionesPermitidas(this.juego, yo),
+      accionesDe: (yo: Participante) => [...accionesPermitidas(this.juego, yo), ...this.bolsa.permitidas(yo)],
     };
   }
 

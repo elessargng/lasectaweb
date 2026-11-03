@@ -8,18 +8,20 @@ import { contarBolsa, gruposViajeros, TIPOS_REPARTO, useFichas } from './fichas'
 import type { PersonajeMostrado } from './guiones';
 import PestanasDialogo from './PestanasDialogo';
 import RejillaFichas from './RejillaFichas';
-import { problemasDelReparto, repartoAjustado } from './comprobarReparto';
-import { llenarAlAzar, type BolsaAlAzar } from './bolsaAleatoria';
-import type { Distribucion, ResultadoAccion } from './useSala';
+import type { AccionesBolsa, Distribucion, RepartoDto, ResultadoAccion } from './useSala';
 
 interface DialogoBolsaProps {
   bolsa: string[];
   /** El reparto de la partida; sus jugadores son los asientos a los que se reparte (sin viajeros). */
   distribucion: Distribucion;
-  /** Los NPCs en juego (el Centinela altera la preparación). */
+  /** Lo que toca de cada tipo y lo que no cuadra con lo que hay en la bolsa (lo calcula el servidor). */
+  reparto: RepartoDto['bolsa'];
+  /** Los NPCs en juego (con el Pope, los aldeanos y forasteros pueden ir repetidos). */
   npcs: string[];
   /** Se pueden repartir los personajes (solo en la preparación); si no, no sale «Asignar personajes». */
   puedeAsignar: boolean;
+  /** Meter, sacar, llenar al azar y vaciar la bolsa. */
+  acciones: AccionesBolsa;
   pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   /** Se han repartido los personajes. */
   onRepartido: () => void;
@@ -54,10 +56,10 @@ const ListaNombres = ({ personajes }: { personajes: PersonajeMostrado[] }) => (
  * bolsa?); sin ninguno, si las cuentas no son las de por defecto.
  *
  * «Llenar al azar» cambia los aldeanos, forasteros, esbirros y demonios de la
- * bolsa por unos al azar (ver bolsaAleatoria): si sale el Borracho o la
+ * bolsa por unos al azar (los elige el servidor): si sale el Borracho o la
  * Marioneta, no van y se dice qué falta, para que el narrador ponga su ficha.
  */
-const DialogoBolsa = ({ bolsa, distribucion, npcs, puedeAsignar, pedir, onRepartido, onCerrar }: DialogoBolsaProps) => {
+const DialogoBolsa = ({ bolsa, distribucion, reparto, npcs, puedeAsignar, acciones, pedir, onRepartido, onCerrar }: DialogoBolsaProps) => {
   const { personajes, viajeros, porId } = useFichas();
   // Guion (aldeanos… demonios) o Viajeros (todos, del guion o no)
   const [pestana, setPestana] = useState('guion');
@@ -69,7 +71,7 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, puedeAsignar, pedir, onRepart
   // Pidiendo confirmación antes de repartir (en el propio diálogo, en lugar de los botones)
   const [confirmando, setConfirmando] = useState(false);
   // Lo último que salió al azar (qué falta por el Borracho o la Marioneta): se ve hasta el siguiente
-  const [azar, setAzar] = useState<BolsaAlAzar | null>(null);
+  const [azar, setAzar] = useState<{ fuera: { personaje: PersonajeMostrado; falta: string }[]; escasos: string[] } | null>(null);
   const confirmacionRef = useRef<HTMLParagraphElement>(null);
   const ariaLiveErrores = useAriaLive('errores');
   const ariaLiveBolsa = useAriaLive('bolsa');
@@ -78,10 +80,9 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, puedeAsignar, pedir, onRepart
 
   const conPreparacion = bolsa.map((id) => porId.get(id)).filter((p): p is PersonajeMostrado => !!p?.preparacion);
   // Lo que no cuadra con el reparto de la partida, con lo que alteran la preparación (el
-  // Barón, el Ermitaño…, y el Centinela si es NPC). Sin reparto (menos de 5), nada.
-  const problemas = problemasDelReparto(enBolsa, distribucion, [...bolsa, ...npcs]);
-  // Lo que toca de cada tipo, con el Barón y compañía ya contados (cambia al meterlos o sacarlos)
-  const ajustado = repartoAjustado(distribucion, [...bolsa, ...npcs]);
+  // Barón, el Ermitaño…, y el Centinela si es NPC), y lo que toca de cada tipo con ellos
+  // ya contados (cambia al meterlos o sacarlos). Sin reparto (menos de 5), nada
+  const { problemas, ajustado } = reparto;
 
   // Al pedir confirmación, el foco va a la pregunta (los botones de antes desaparecen)
   useEffect(() => {
@@ -94,7 +95,7 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, puedeAsignar, pedir, onRepart
   const cambiarCantidad = async (personajeId: string, cantidad: number) => {
     setError('');
     setConfirmando(false);
-    const r = await pedir('narrador:bolsaCantidad', { personajeId, cantidad });
+    const r = await acciones.cantidad(personajeId, cantidad);
     if (!r.ok) setError(r.error);
   };
   const cantidadRepetidos = (p: PersonajeMostrado) =>
@@ -109,25 +110,26 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, puedeAsignar, pedir, onRepart
   const alternar = async (personajeId: string) => {
     setError('');
     setConfirmando(false);
-    const r = await pedir('narrador:bolsa', { personajeId });
+    const r = await acciones.meter(personajeId);
     if (!r.ok) setError(r.error);
   };
 
   const sinReparto = distribucion.aldeanos === null;
   const llenar = async () => {
     if (sinReparto || enviando) return;
-    const resultado = llenarAlAzar(personajes, distribucion, npcs);
-    if (!resultado) return;
     setError('');
     setConfirmando(false);
     setEnviando(true);
-    const r = await pedir('narrador:llenarBolsa', { personajes: resultado.personajes });
+    const r = await acciones.llenarAlAzar();
     setEnviando(false);
     if (!r.ok) {
       setError(r.error);
       return;
     }
-    setAzar(resultado);
+    setAzar({
+      fuera: r.fuera.flatMap(({ personaje, falta }) => (porId.has(personaje) ? [{ personaje: porId.get(personaje)!, falta }] : [])),
+      escasos: r.escasos,
+    });
   };
 
   // Vaciar: desmarca todos los personajes de una vez (también los viajeros)
@@ -136,7 +138,7 @@ const DialogoBolsa = ({ bolsa, distribucion, npcs, puedeAsignar, pedir, onRepart
     setError('');
     setConfirmando(false);
     setEnviando(true);
-    const r = await pedir('narrador:vaciarBolsa');
+    const r = await acciones.vaciar();
     setEnviando(false);
     if (!r.ok) {
       setError(r.error);

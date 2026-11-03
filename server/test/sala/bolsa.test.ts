@@ -15,7 +15,7 @@ import {
 import type { Decision } from '../../src/models/narradorVirtual/estrategias/EstrategiaNarrador';
 import { TontoYTu } from '../../src/models/narradorVirtual/estrategias/TontoYTu';
 import { elegirBolsa } from '../../src/models/narradorVirtual/preparacion';
-import { conSemilla, guionTroubleBrewing, personaje } from './guionDePrueba';
+import { bolsaDePrueba, conSemilla, guionTroubleBrewing, personaje } from './guionDePrueba';
 
 /** Trouble Brewing entero (el de prueba no trae al Barón). */
 const PERSONAJES = [...guionTroubleBrewing().personajes, personaje('baron', 'minion')];
@@ -42,7 +42,7 @@ const modelo = (semilla: number) => {
 
 const bolsa = async (jugadores: number, semilla: number) => {
   const { decidir, preguntas } = modelo(semilla);
-  const b = (await elegirBolsa(PERSONAJES, distribucion(jugadores), decidir, { azar: conSemilla(semilla) }))!;
+  const b = (await elegirBolsa(PERSONAJES, distribucion(jugadores), bolsaDePrueba(), decidir, { azar: conSemilla(semilla) }))!;
   return { ...b, preguntas };
 };
 
@@ -79,6 +79,17 @@ describe('la bolsa del narrador virtual, con conceptos', () => {
       }
       expect(vistos).toEqual({ conBaron: true, sinBaron: true });
     }
+  });
+
+  it('con el Kazali de demonio, no elige esbirros: sus huecos son aldeanos', async () => {
+    const conKazali = [...PERSONAJES.filter((p) => p.tipo !== 'demon'), personaje('kazali', 'demon')];
+    const { decidir, preguntas } = modelo(1);
+    const b = (await elegirBolsa(conKazali, distribucion(10), bolsaDePrueba(), decidir, { azar: conSemilla(1) }))!;
+    const tipoDe = (id: string) => conKazali.find((p) => p.id === id)!.tipo;
+    expect(b.personajes).toContain('kazali');
+    expect(b.personajes.filter((id) => tipoDe(id) === 'minion')).toEqual([]);
+    expect(preguntas.some((p) => (p.sinGrimorio!.hueco as { tipo: string }).tipo === 'minion')).toBe(false);
+    expect(b.personajes).toHaveLength(10);
   });
 
   it('el primer esbirro es el del concepto del mal', async () => {
@@ -168,7 +179,7 @@ describe('la bolsa del narrador virtual, con conceptos', () => {
 
   it('al modelo: los conceptos, el hueco, lo ya elegido y lo usado en las partidas recientes', async () => {
     const { decidir, preguntas } = modelo(1);
-    await elegirBolsa(PERSONAJES, distribucion(8), decidir, { azar: conSemilla(1), recientes: [['imp', 'chef', 'empath'], ['imp', 'chef']] });
+    await elegirBolsa(PERSONAJES, distribucion(8), bolsaDePrueba(), decidir, { azar: conSemilla(1), recientes: [['imp', 'chef', 'empath'], ['imp', 'chef']] });
     const [primera] = preguntas;
     expect(primera.instrucciones).toMatch(/Concepto del bien: .+\. Concepto del mal: .+\./);
     expect(primera.instrucciones).toContain('Personajes usados en partidas recientes: chef (2 veces), empath;');
@@ -177,7 +188,7 @@ describe('la bolsa del narrador virtual, con conceptos', () => {
     expect(aldeano.pregunta).toMatch(/un aldeano de .+ \(1 de \d\)\. Ya en la bolsa: imp, /);
     // Sin recientes, no se habla de ellas
     const sin = modelo(1);
-    await elegirBolsa(PERSONAJES, distribucion(8), sin.decidir, { azar: conSemilla(1) });
+    await elegirBolsa(PERSONAJES, distribucion(8), bolsaDePrueba(), sin.decidir, { azar: conSemilla(1) });
     expect(sin.preguntas[0].instrucciones).not.toContain('recientes');
   });
 });

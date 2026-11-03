@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
+import { PODERES_BOLSA } from '../src/models/personajes';
 
 /**
  * Las capas del servidor y quién puede usar a quién. El dominio (models) y los casos
@@ -62,6 +63,12 @@ describe('arquitectura', () => {
   it('los controladores no usan los repositorios ni la infraestructura: piden todo a su servicio', () => {
     const fuera = archivos('controllers').filter((f) => importsDe(f).some((i) => /^(repositories|infra)(\/|$)/.test(i)));
     expect(fuera, 'Estos controladores se saltan el servicio').toEqual([]);
+  });
+
+  it('la bolsa no conoce a ningún personaje: cada uno declara su poder en su archivo (PODERES_BOLSA)', () => {
+    const texto = fs.readFileSync(path.join(SRC, 'models/partida/Bolsa.ts'), 'utf8');
+    const nombrados = [...PODERES_BOLSA.keys()].filter((id) => new RegExp(`['"\`]${id}['"\`]`).test(texto));
+    expect(nombrados).toEqual([]);
   });
 
   it('el dominio no usa los servicios, los controladores, los repositorios ni la infraestructura', () => {
