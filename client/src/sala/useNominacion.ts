@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { ID_CUENTA_ATRAS, ID_REINICIAR, idFichaNominar } from './ids';
 import { datosAsiento, describirAsiento } from './nombresAsiento';
-import type { SalaDto, ResultadoAccion } from './useSala';
+import type { AccionesDia, SalaDto, ResultadoAccion } from './useSala';
 
 interface Opciones {
   estado: SalaDto;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Las nominaciones y la calavera (ver AccionesDia). */
+  dia: AccionesDia;
   onError: (mensaje: string) => void;
   onAnuncio: (mensaje: string) => void;
 }
@@ -24,7 +25,7 @@ const idMenuFicha = (participanteId: string) => `sala-ficha-${participanteId}-bo
  * El foco acompaña: al empezar a elegir va a la siguiente ficha, al abrir la
  * nominación a «Cuenta atrás», y al cancelar, marcar o cerrar a la ficha de quien nominaba.
  */
-export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
+export function useNominacion({ estado, dia, onError, onAnuncio }: Opciones) {
   const { plaza, acciones, nominacion } = estado;
   const [eligiendoDesde, setEligiendoDesde] = useState<string | null>(null);
   // Elemento al que llevar el foco cuando se pinte el cambio.
@@ -84,7 +85,7 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
   };
 
   const mandar = async (desde: string, hasta: string, comoAldeano?: boolean) => {
-    const r = await pedir('narrador:nominar', comoAldeano === undefined ? { desde, hasta } : { desde, hasta, comoAldeano });
+    const r = await dia.nominar(desde, hasta, comoAldeano);
     if (r.ok && r.valor === 'comoAldeano') {
       // Aún no se ha nominado (nadie ve nada): se pregunta y se vuelve a pedir con la respuesta
       setPreguntaEspia({ desde, hasta });
@@ -100,8 +101,8 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
     }
   };
 
-  const actuar = async (accion: string, datos?: unknown) => {
-    const r = await pedir(accion, datos);
+  const actuar = async (hacer: () => Promise<ResultadoAccion>) => {
+    const r = await hacer();
     if (!r.ok) onError(r.error);
     return r.ok;
   };
@@ -118,7 +119,7 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
 
   return {
     /** Para «Nominar a…» en la ficha de cada asiento (si el servidor deja nominar). */
-    onNominar: acciones.includes('narrador:nominar') ? (id: string) => () => empezar(id) : undefined,
+    onNominar: acciones.includes('dia:nominar') ? (id: string) => () => empezar(id) : undefined,
     /** Si el asiento ya ha nominado hoy. */
     yaNomino: (id: string) => nominaronHoy.has(id),
     /**
@@ -154,19 +155,19 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
       : null,
     /** El panel del centro (solo si el servidor deja manejar la nominación). */
     panel:
-      nominacion && acciones.includes('narrador:cerrarNominacion')
+      nominacion && acciones.includes('dia:cerrarNominacion')
         ? {
             marcado: !!nominado && estado.calavera?.jugadorId === nominado.id,
             // Expulsión de un viajero: sin calavera (si sale, muere al terminar la votación)
             expulsion: nominacion.expulsion,
             secreta: !!nominacion.privada,
-            puedeCuentaAtras: acciones.includes('narrador:cuentaAtras'),
-            votos: acciones.includes('narrador:votosNecesarios')
+            puedeCuentaAtras: acciones.includes('dia:cuentaAtras'),
+            votos: acciones.includes('dia:votosNecesarios')
               ? {
                   necesarios: nominacion.votosNecesarios,
                   porDefecto: nominacion.votosNecesariosPorDefecto,
                   maximo: Math.max(1, plaza.length),
-                  onCambiar: (votos: number | null) => void actuar('narrador:votosNecesarios', { votos }),
+                  onCambiar: (votos: number | null) => void actuar(() => dia.votosNecesarios(votos)),
                 }
               : null,
             marcaActual: (() => {
@@ -177,19 +178,19 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
               return `${describirAsiento(numero, ocupante)}${votos === null ? '' : `, ${votos === 1 ? '1 voto' : `${votos} votos`}`}`;
             })(),
             // Desmarcar, como marcar, cierra la nominación: el foco vuelve a la ficha de quien nominaba.
-            onDesmarcar: acciones.includes('narrador:desmarcar') && !nominacion.expulsion
+            onDesmarcar: acciones.includes('dia:desmarcar') && !nominacion.expulsion
               ? async () => {
-                  if (await actuar('narrador:desmarcar')) focoRef.current = idMenuFicha(nominacion.desde);
+                  if (await actuar(dia.desmarcar)) focoRef.current = idMenuFicha(nominacion.desde);
                 }
               : null,
             // El botón desaparece al arrancarla: el foco pasa a «Reiniciar».
             onCuentaAtras: async () => {
-              if (await actuar('narrador:cuentaAtras')) focoRef.current = ID_REINICIAR;
+              if (await actuar(dia.cuentaAtras)) focoRef.current = ID_REINICIAR;
             },
             // Con la cuenta atrás o la votación en marcha: la deja como recién abierta.
-            onReiniciar: acciones.includes('narrador:reiniciarVotacion')
+            onReiniciar: acciones.includes('dia:reiniciarVotacion')
               ? async () => {
-                  if (await actuar('narrador:reiniciarVotacion')) {
+                  if (await actuar(dia.reiniciarVotacion)) {
                     focoRef.current = ID_CUENTA_ATRAS;
                     onAnuncio('Votación reiniciada.');
                   }
@@ -197,11 +198,11 @@ export function useNominacion({ estado, pedir, onError, onAnuncio }: Opciones) {
               : null,
             // Marcar (o desmarcar) cierra la nominación: el foco vuelve a la ficha de quien nominaba.
             onMarca: async () => {
-              const ok = await actuar('narrador:marcar', { jugadorId: nominacion.hasta, marcado: estado.calavera?.jugadorId !== nominacion.hasta });
+              const ok = await actuar(() => dia.marcar(nominacion.hasta, estado.calavera?.jugadorId !== nominacion.hasta));
               if (ok) focoRef.current = idMenuFicha(nominacion.desde);
             },
             onCerrar: async () => {
-              if (await actuar('narrador:cerrarNominacion')) focoRef.current = idMenuFicha(nominacion.desde);
+              if (await actuar(dia.cerrarNominacion)) focoRef.current = idMenuFicha(nominacion.desde);
             },
           }
         : null,

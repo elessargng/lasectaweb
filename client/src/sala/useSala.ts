@@ -341,6 +341,22 @@ export function useSala(
     [pedirAlSocket],
   );
 
+  /** El día: las nominaciones, la votación, la calavera y la ejecución, por sus eventos. */
+  const dia: AccionesDia = useMemo(
+    () => ({
+      nominar: (desde, hasta, comoAldeano) =>
+        pedirAlSocket<ResultadoAccion>('dia:nominar', comoAldeano === undefined ? { desde, hasta } : { desde, hasta, comoAldeano }),
+      cerrarNominacion: () => pedirAlSocket<ResultadoAccion>('dia:cerrarNominacion', {}),
+      votosNecesarios: (votos) => pedirAlSocket<ResultadoAccion>('dia:votosNecesarios', { votos }),
+      cuentaAtras: () => pedirAlSocket<ResultadoAccion>('dia:cuentaAtras', {}),
+      reiniciarVotacion: () => pedirAlSocket<ResultadoAccion>('dia:reiniciarVotacion', {}),
+      marcar: (jugadorId, marcado, cerrarNominacion) => pedirAlSocket<ResultadoAccion>('dia:marcar', { jugadorId, marcado, cerrarNominacion }),
+      desmarcar: () => pedirAlSocket<ResultadoAccion>('dia:desmarcar', {}),
+      ejecutar: (jugadorId) => pedirAlSocket<ResultadoAccion>('dia:ejecutar', { jugadorId }),
+    }),
+    [pedirAlSocket],
+  );
+
   /** Vuelve a pedir los mensajes que se pueden leer (al cambiar de papel cambian). */
   const pedirHistorial = useCallback(() => {
     socketRef.current?.emit('chat:historial');
@@ -377,7 +393,24 @@ export function useSala(
     faroles,
     fase,
     noche,
+    dia,
   };
+}
+
+/** Lo que hace el narrador de día (ver useSala). */
+export interface AccionesDia {
+  /** Nomina; contesta (valor) «comoAldeano» si hay que preguntarlo, «ejecutado» o «final» con la Virgen. */
+  nominar(desde: string, hasta: string, comoAldeano?: boolean): Promise<ResultadoAccion>;
+  cerrarNominacion(): Promise<ResultadoAccion>;
+  /** Los votos que hacen falta (null: los de por defecto). */
+  votosNecesarios(votos: number | null): Promise<ResultadoAccion>;
+  cuentaAtras(): Promise<ResultadoAccion>;
+  reiniciarVotacion(): Promise<ResultadoAccion>;
+  /** Pone o quita la calavera; desde la ficha no cierra la nominación (cerrarNominacion: false). */
+  marcar(jugadorId: string, marcado: boolean, cerrarNominacion?: boolean): Promise<ResultadoAccion>;
+  desmarcar(): Promise<ResultadoAccion>;
+  /** Ejecuta a quien lleva la calavera; con dos vivos contesta «final». */
+  ejecutar(jugadorId: string): Promise<ResultadoAccion>;
 }
 
 /** Lo que se hace de noche (ver useSala). */

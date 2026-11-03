@@ -107,6 +107,7 @@ import {
   type AccionesFaroles,
   type AccionesFase,
   type AccionesNoche,
+  type AccionesDia,
   type ResultadoAccion,
   type ResultadoBolsaAlAzar,
 } from './useSala';
@@ -619,6 +620,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     faroles,
     fase,
     noche: accionesNoche,
+    dia,
   } = useSala(
     cuenta?.token ?? null,
     cuenta ? null : invitado,
@@ -1326,9 +1328,9 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   // Una ejecución que deja solo dos jugadores vivos no anochece sola: quien ejecutó
   // elige entre la noche y revelar el grimorio (DialogoFinal). También al nominar a la Virgen.
   const [decidiendoFinal, setDecidiendoFinal] = useState(false);
-  const pedirEnPlaza = async (accion: string, datos?: unknown) => {
-    const r = await pedirPropio(accion, datos);
-    if ((accion === 'narrador:ejecutar' || accion === 'narrador:nominar') && r.ok && r.valor === 'final') setDecidiendoFinal(true);
+  /** Una ejecución (o nominar a la Virgen) que deja dos vivos: a elegir entre la noche y revelar el grimorio. */
+  const siFinal = (r: ResultadoAccion) => {
+    if (r.ok && r.valor === 'final') setDecidiendoFinal(true);
     return r;
   };
 
@@ -1700,6 +1702,16 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     resolverHabilidad: (personajeId, envio) => propia(() => accionesNoche.resolverHabilidad(personajeId, envio)),
     nuevoImp: (jugadorId) => propia(() => accionesNoche.nuevoImp(jugadorId)),
     recordatorio: (id, activo) => propia(() => accionesNoche.recordatorio(id, activo)),
+  };
+  const diaPropio: AccionesDia = {
+    nominar: async (desde, hasta, comoAldeano) => siFinal(await propia(() => dia.nominar(desde, hasta, comoAldeano))),
+    cerrarNominacion: () => propia(() => dia.cerrarNominacion()),
+    votosNecesarios: (votos) => propia(() => dia.votosNecesarios(votos)),
+    cuentaAtras: () => propia(() => dia.cuentaAtras()),
+    reiniciarVotacion: () => propia(() => dia.reiniciarVotacion()),
+    marcar: (jugadorId, marcado, cerrarNominacion) => propia(() => dia.marcar(jugadorId, marcado, cerrarNominacion)),
+    desmarcar: () => propia(() => dia.desmarcar()),
+    ejecutar: async (jugadorId) => siFinal(await propia(() => dia.ejecutar(jugadorId))),
   };
 
   // Faroles: los del narrador (narradores y visitantes) o, si soy el demonio o un esbirro, los míos.
@@ -2238,7 +2250,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   onTamanos={setTamanosPlaza}
                   editando={editando}
                   grimorio={yo?.rol === 'jugador' && estado.configuracion.grimorioJugadores}
-                  pedir={pedirEnPlaza}
+                  pedir={pedirPropio}
+                  dia={diaPropio}
                   reloj={relojPropio}
                   revelacion={revelacionPropia}
                   senalamientos={senalamientoPropio}

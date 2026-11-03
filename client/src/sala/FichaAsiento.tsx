@@ -23,7 +23,7 @@ import type { PersonajeMostrado } from './guiones';
 import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { idFichaNominar, idRevelarFicha } from './ids';
 import { describirAsiento } from './nombresAsiento';
-import type { Alineamiento, JugadorDto, ParticipanteDto, ResultadoAccion } from './useSala';
+import type { AccionesDia, Alineamiento, JugadorDto, ParticipanteDto, ResultadoAccion } from './useSala';
 
 interface FichaAsientoProps {
   jugador: JugadorDto;
@@ -41,6 +41,8 @@ interface FichaAsientoProps {
    */
   modo: 'narrador' | 'grimorio' | 'ver';
   pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Ejecutar y la calavera (ver AccionesDia). */
+  dia: Pick<AccionesDia, 'ejecutar' | 'marcar'>;
   onError: (mensaje: string) => void;
   /** El narrador puede abrir una nominación desde esta ficha («Nominar a…»). */
   onNominar?: () => void;
@@ -130,6 +132,7 @@ const FichaAsiento = ({
   ocupante,
   modo,
   pedir,
+  dia,
   onError,
   onNominar,
   yaNomino = false,
@@ -386,7 +389,7 @@ const FichaAsiento = ({
   // ejecuciones (el Caníbal, el Enterrador…) y anochece, salvo con el Carnicero vivo o si
   // quedan dos vivos (entonces el narrador elige: noche o revelar el grimorio, ver SalaJuego)
   const ejecutar = async () => {
-    const r = await pedir('narrador:ejecutar', { jugadorId: jugador.id });
+    const r = await dia.ejecutar(jugador.id);
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha, que ya dice que ha muerto.
     return false;
@@ -407,7 +410,7 @@ const FichaAsiento = ({
 
   // Desde aquí la marca no cierra la nominación (el botón «Marca» de la nominación sí).
   const cambiarMarca = async () => {
-    const r = await pedir('narrador:marcar', { jugadorId: jugador.id, marcado: !marcado, cerrarNominacion: false });
+    const r = await dia.marcar(jugador.id, !marcado, false);
     if (!r.ok) onError(r.error);
     // false: el menú se cierra y el foco vuelve a la ficha, que ya dice si lleva la calavera.
     return false;

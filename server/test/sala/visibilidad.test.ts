@@ -125,7 +125,7 @@ describe('lo que ve cada uno', () => {
   it('la bolsa, el registro de votaciones y los recordatorios de noche son solo de la narradora', async () => {
     await repartir();
     await alDia();
-    await arnes.accion(narradora, 'narrador:nominar', { desde: idAsiento(0), hasta: idAsiento(1) });
+    await arnes.hacer(narradora, 'dia:nominar', { desde: idAsiento(0), hasta: idAsiento(1) });
     await arnes.hacer(narradora, 'noche:recordatorio', { id: 'imp', activo: false });
     expect(narradora.estado.bolsa).toHaveLength(7);
     expect(narradora.estado.votaciones).toHaveLength(1);
@@ -206,7 +206,7 @@ describe('lo que ve cada uno', () => {
   it('en una votación secreta (Organ Grinder), quien no ve el grimorio no ve las manos ni el recuento', async () => {
     await arnes.accion(narradora, 'narrador:cambiarPersonaje', { jugadorId: idAsiento(4), personajeId: 'organgrinder' });
     await alDia();
-    await arnes.accion(narradora, 'narrador:nominar', { desde: idAsiento(0), hasta: idAsiento(1) });
+    await arnes.hacer(narradora, 'dia:nominar', { desde: idAsiento(0), hasta: idAsiento(1) });
     await arnes.accion(ana, 'sala:levantarMano', { levantada: true });
     const manoDeAna = (c: Cliente) => c.estado.participantes.find((p) => p.id === ana.id)?.manoLevantada;
     expect(manoDeAna(narradora)).toBe(true);

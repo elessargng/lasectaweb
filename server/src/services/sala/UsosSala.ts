@@ -1,8 +1,8 @@
 import type { Participante } from '../../models/sala/Participantes';
 import type { SalaDeJuego } from '../../models/SalaDeJuego';
 
-/** Lo que contesta un caso de uso de la sala: hecho o no, y por qué. */
-export type ResultadoUso = { ok: true } | { ok: false; error: string };
+/** Lo que contesta un caso de uso de la sala: hecho (con lo que devuelva, si algo) o no, y por qué. */
+export type ResultadoUso = { ok: true; valor?: string } | { ok: false; error: string };
 
 /** Si alguien puede hacer algo ahora: null o, si no, por qué. */
 export type Permiso = (juego: SalaDeJuego, yo: Participante) => string | null;
@@ -30,15 +30,18 @@ export class UsosSala<U extends string> {
     return usos.filter((uso) => this.permisos[uso](this.juego, yo) === null);
   }
 
-  /** Si puede, lo hace (`hacer` devuelve el error del dominio, o null); si sale bien, avisa del cambio. */
-  hacer(yoId: string, uso: U, hacer: () => string | null): ResultadoUso {
+  /**
+   * Si puede, lo hace (`hacer` devuelve el error del dominio, null o, si contesta
+   * algo, { valor }); si sale bien, avisa del cambio.
+   */
+  hacer(yoId: string, uso: U, hacer: () => string | null | { valor: string }): ResultadoUso {
     const yo = this.juego.sala.participantes.buscar(yoId);
     if (!yo) return { ok: false, error: 'No estás en la sala.' };
     const noPuede = this.permisos[uso](this.juego, yo);
     if (noPuede) return { ok: false, error: noPuede };
-    const error = hacer();
-    if (error) return { ok: false, error };
+    const hecho = hacer();
+    if (typeof hecho === 'string') return { ok: false, error: hecho };
     this.alCambiar();
-    return { ok: true };
+    return hecho ? { ok: true, valor: hecho.valor } : { ok: true };
   }
 }

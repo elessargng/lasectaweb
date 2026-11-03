@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SalaDeJuego } from '../../src/models/SalaDeJuego';
 import { ejecutarAccion } from '../../src/services/sala/acciones';
 import { NocheService } from '../../src/services/sala/NocheService';
+import { DiaService } from '../../src/services/sala/DiaService';
 import type { RespuestaAccion } from '../../src/models/narradorVirtual/puertos';
 import type { DependenciasAcciones } from '../../src/services/sala/puertos';
 import { MemoriaImagenRepository } from '../../src/repositories/ImagenRepository';
@@ -64,6 +65,7 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
   let siguiente: Etapa | null = null;
   // La noche, con sus permisos de verdad (como el narrador virtual de la sala)
   const deNoche = new NocheService(juego, () => {});
+  const deDia = new DiaService(juego, () => {});
   const hecha = (accion: string, datos: unknown, r: RespuestaAccion) => {
     if (r.ok) hechas.push({ accion, datos });
     void etapa?.alCambiar?.(ctx);
@@ -79,6 +81,13 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
       resolverHabilidad: async (personajeId, mensaje) =>
         hecha('noche:resolverHabilidad', { personajeId, ...mensaje }, deNoche.resolverHabilidad(bot, personajeId, mensaje)),
       nuevoImp: async (jugadorId) => hecha('noche:nuevoImp', { jugadorId }, deNoche.nuevoImp(bot, jugadorId)),
+      darPalabra: async (participanteId) => hecha('dia:darPalabra', { participanteId }, deDia.darPalabra(bot, participanteId)),
+      nominar: async (desde, hasta, comoAldeano) => hecha('dia:nominar', { desde, hasta, comoAldeano }, deDia.nominar(bot, desde, hasta, comoAldeano)),
+      cuentaAtras: async () => hecha('dia:cuentaAtras', undefined, deDia.cuentaAtras(bot)),
+      marcar: async (jugadorId, marcado) => hecha('dia:marcar', { jugadorId, marcado }, deDia.marcar(bot, jugadorId, marcado, true)),
+      desmarcar: async () => hecha('dia:desmarcar', undefined, deDia.desmarcar(bot)),
+      cerrarNominacion: async () => hecha('dia:cerrarNominacion', undefined, deDia.cerrarNominacion(bot)),
+      ejecutar: async (jugadorId) => hecha('dia:ejecutar', { jugadorId }, deDia.ejecutar(bot, jugadorId)),
       accion: async (accion, datos) => {
         const r = await ejecutarAccion(juego, sala.participantes.buscar(bot), accion, datos, deps);
         if (r.ok) hechas.push({ accion, datos });

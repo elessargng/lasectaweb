@@ -514,16 +514,18 @@ export class Partida {
    * ejecución al momento de quien nomina (se cierra la nominación). Si depende de
    * cómo registra quien nomina (el Espía) y `registro` no lo dice, no se nomina:
    * se devuelve la pregunta, para volver a nominar con la respuesta (y nadie ve
-   * nada hasta entonces). Devuelve la ejecución (ver ejecutar) o null.
+   * nada hasta entonces). Devuelve la ejecución (ver ejecutar) o null; si algún
+   * asiento ya no está, el error.
    */
   nominar(
     desde: string,
     hasta: string,
     registro: RegistroAlNominar = {},
-  ): { pregunta: 'comoAldeano' } | { anochece: boolean; final: boolean } | null {
+  ): { error: string } | { pregunta: 'comoAldeano' } | { anochece: boolean; final: boolean } | null {
     const plaza = this.plaza();
     const nominador = plaza.find((a) => a.id === desde);
     const nominado = plaza.find((a) => a.id === hasta);
+    if (!nominador || !nominado) return { error: 'Ese asiento ya no existe.' };
     // Pedir la expulsión de un viajero no es nominar
     const efectos = nominador && nominado && !this.bolsa.llevaViajero(nominado) ? this.reglas.alNominar(nominador, nominado, registro) : null;
     if (efectos && 'pregunta' in efectos) return efectos;
@@ -533,6 +535,33 @@ export class Partida {
     if (!efectos.ejecutaAlNominador) return null;
     this.nominaciones.cerrarNominacion();
     return this.ejecutar(desde);
+  }
+
+  /** En la nominación, da la palabra a un participante (los demás jugadores callan) o, con null, a todos. Devuelve el error, si lo hay. */
+  darPalabra(participanteId: string | null): string | null {
+    if (participanteId !== null && !this.sala.participantes.buscar(participanteId)) return 'Esa persona ya no está en la sala.';
+    return this.nominaciones.darPalabra(participanteId);
+  }
+
+  /**
+   * Pone o quita la calavera a la ficha de un asiento (solo una puede llevarla) y,
+   * si `cerrarNominacion`, cierra la nominación. Si se marca al nominado de una
+   * nominación ya votada, se guardan sus votos (el narrador los ve, para saber si
+   * otra votación empata). Devuelve el error, si lo hay.
+   */
+  marcar(jugadorId: string, marcado: boolean, cerrarNominacion: boolean): string | null {
+    if (!this.sala.jugador(jugadorId)) return 'Ese asiento ya no existe.';
+    const n = this.nominaciones.nominacion();
+    const votos = n?.votacion?.terminada && n.hasta === jugadorId ? n.votacion.votos : null;
+    this.grimorio.marcar(jugadorId, marcado, votos);
+    if (cerrarNominacion) this.nominaciones.cerrarNominacion();
+    return null;
+  }
+
+  /** Quita la calavera a quien la lleve y, como marcar, cierra la nominación. */
+  desmarcar(): void {
+    this.grimorio.desmarcar();
+    this.nominaciones.cerrarNominacion();
   }
 
   /**

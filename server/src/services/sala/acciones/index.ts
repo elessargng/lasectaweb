@@ -2,7 +2,6 @@ import type { Participante } from '../../../models/sala/Participantes';
 import type { SalaDeJuego } from '../../../models/SalaDeJuego';
 import type { DependenciasAcciones } from '../puertos';
 import type { Accion, SalaEfecto } from './Accion';
-import { ACCIONES_DIA } from './dia';
 import { ACCIONES_GRIMORIO } from './grimorio';
 import { ACCIONES_NARRADOR_VIRTUAL } from './narradorVirtual';
 import { ACCIONES_PARTICIPANTES } from './participantes';
@@ -23,7 +22,6 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   ...ACCIONES_PARTICIPANTES,
   ...ACCIONES_NARRADOR_VIRTUAL,
   ...ACCIONES_PREPARACION,
-  ...ACCIONES_DIA,
   ...ACCIONES_GRIMORIO,
 };
 

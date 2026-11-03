@@ -55,7 +55,7 @@ export class Privados extends EtapaConReloj {
     // Un día nuevo: solo están listos los muertos (no nominan) y la palabra es de todos
     const { narrador } = ctx.juego;
     narrador.actualizar({ listos: muertosSentados(ctx.juego), turno: null });
-    await ctx.plaza.accion('narrador:darPalabra', { participanteId: null });
+    await ctx.plaza.darPalabra(null);
     await ctx.plaza.accion('narrador:privados', { abiertos: true });
   }
 
@@ -144,7 +144,7 @@ export class Nominaciones implements Etapa {
       if (narrador.turno !== 'acusacion' || nominacion?.desde !== miJugador.id) return 'Ahora no te toca.';
       const nominado = partida.plaza().find((a) => a.id === nominacion.hasta)?.participanteId ?? null;
       juego.narrador.actualizar({ turno: 'defensa' });
-      await ctx.plaza.accion('narrador:darPalabra', { participanteId: nominado });
+      await ctx.plaza.darPalabra(nominado);
       ctx.decir(FRASES.defensa(nombreDeAsiento(juego, nominacion.hasta)));
       return null;
     }
@@ -152,9 +152,9 @@ export class Nominaciones implements Etapa {
       if (narrador.turno !== 'defensa' || nominacion?.hasta !== miJugador.id) return 'Ahora no te toca.';
       this.marcaAlVotar = partida.grimorio.calavera()?.votos ?? null;
       juego.narrador.actualizar({ turno: 'votacion' });
-      await ctx.plaza.accion('narrador:darPalabra', { participanteId: null });
+      await ctx.plaza.darPalabra(null);
       ctx.decir(FRASES.votosNecesarios(nominacion.votosNecesarios, nombreDeAsiento(juego, nominacion.hasta), this.marcaAlVotar !== null));
-      const r = await ctx.plaza.accion('narrador:cuentaAtras');
+      const r = await ctx.plaza.cuentaAtras();
       return r.ok ? null : r.error;
     }
     if (accion === 'listo') {
@@ -171,7 +171,7 @@ export class Nominaciones implements Etapa {
 
   private async nominar(ctx: ContextoEtapa, desde: string, hasta: string, jugador: string): Promise<string | null> {
     const { juego } = ctx;
-    let r = await ctx.plaza.accion('narrador:nominar', { desde, hasta });
+    let r = await ctx.plaza.nominar(desde, hasta);
     // Quien nomina puede registrar como aldeano (ver Percepcion): lo decide su estrategia
     if (r.ok && r.valor === 'comoAldeano') {
       const nominador = nombreDeAsiento(juego, desde);
@@ -181,7 +181,7 @@ export class Nominaciones implements Etapa {
         si: `Registra como aldeano: ${nominador} es ejecutado.`,
         no: 'No registra como aldeano: no pasa nada.',
       });
-      r = await ctx.plaza.accion('narrador:nominar', { desde, hasta, comoAldeano });
+      r = await ctx.plaza.nominar(desde, hasta, comoAldeano);
     }
     if (!r.ok) return r.error;
     const quien = nombreDeAsiento(juego, desde);
@@ -192,7 +192,7 @@ export class Nominaciones implements Etapa {
     }
     const narrador = juego.narrador.actual()!;
     juego.narrador.actualizar({ turno: 'acusacion', listos: [...new Set([...narrador.listos, jugador])] });
-    await ctx.plaza.accion('narrador:darPalabra', { participanteId: jugador });
+    await ctx.plaza.darPalabra(jugador);
     ctx.decir(FRASES.nomina(quien, nombreDeAsiento(juego, hasta)));
     return null;
   }
@@ -211,13 +211,13 @@ export class Nominaciones implements Etapa {
     const { votos } = nominacion.votacion;
     juego.narrador.actualizar({ turno: null });
     if (votos >= nominacion.votosNecesarios) {
-      const r = await ctx.plaza.accion('narrador:marcar', { jugadorId: nominacion.hasta, marcado: true });
+      const r = await ctx.plaza.marcar(nominacion.hasta, true);
       if (r.ok) ctx.decir(FRASES.marcado(nombreDeAsiento(juego, nominacion.hasta)));
     } else if (this.marcaAlVotar !== null && votos === this.marcaAlVotar) {
       // Empata con la marca: nadie queda marcado
-      await ctx.plaza.accion('narrador:desmarcar');
+      await ctx.plaza.desmarcar();
     } else {
-      await ctx.plaza.accion('narrador:cerrarNominacion');
+      await ctx.plaza.cerrarNominacion();
     }
     this.marcaAlVotar = null;
     await this.quizaAnochece(ctx);
@@ -238,7 +238,7 @@ export class Nominaciones implements Etapa {
       return;
     }
     const quien = nombreDeAsiento(juego, marcado.id);
-    if ((await ctx.plaza.accion('narrador:ejecutar', { jugadorId: marcado.id })).ok) await this.trasEjecutar(ctx, marcado.id, FRASES.ejecutado(quien));
+    if ((await ctx.plaza.ejecutar(marcado.id)).ok) await this.trasEjecutar(ctx, marcado.id, FRASES.ejecutado(quien));
   }
 
   /**

@@ -15,6 +15,7 @@ import { SenalamientoService } from './SenalamientoService';
 import { FarolService } from './FarolService';
 import { FaseService } from './FaseService';
 import { NocheService } from './NocheService';
+import { DiaService } from './DiaService';
 import { ImagenesSala } from './ImagenesSala';
 import type { DependenciasAcciones, DependenciasSala, DifusorSala } from './puertos';
 
@@ -75,6 +76,8 @@ export class SalaService {
   readonly fase: FaseService;
   /** La noche: los despertares (ver NocheController). */
   readonly noche: NocheService;
+  /** El día: nominaciones, votación, calavera y ejecución (ver DiaController). */
+  readonly dia: DiaService;
   private readonly conversaciones: ConversacionService;
   private readonly videollamada: VideollamadaService | null;
   private readonly narradorVirtual: NarradorVirtualService;
@@ -110,6 +113,7 @@ export class SalaService {
     this.faroles = new FarolService(this.juego, () => this.difundir());
     this.fase = new FaseService(this.juego, () => this.difundir());
     this.noche = new NocheService(this.juego, () => this.difundir());
+    this.dia = new DiaService(this.juego, () => this.difundir());
     this.conversaciones = new ConversacionService(this.juego);
     // Sin servidor de vídeo configurado, la sala funciona igual, sin cámaras ni micrófonos
     this.videollamada = deps.video ? new VideollamadaService(deps.video, this.juego, this.conversaciones) : null;
@@ -137,6 +141,13 @@ export class SalaService {
         despertarHabilidad: async (personajeId) => this.noche.despertarHabilidad(participanteId, personajeId),
         resolverHabilidad: async (personajeId, mensaje) => this.noche.resolverHabilidad(participanteId, personajeId, mensaje),
         nuevoImp: async (jugadorId) => this.noche.nuevoImp(participanteId, jugadorId),
+        darPalabra: async (otroId) => this.dia.darPalabra(participanteId, otroId),
+        nominar: async (desde, hasta, comoAldeano) => this.dia.nominar(participanteId, desde, hasta, comoAldeano),
+        cuentaAtras: async () => this.dia.cuentaAtras(participanteId),
+        marcar: async (jugadorId, marcado) => this.dia.marcar(participanteId, jugadorId, marcado, true),
+        desmarcar: async () => this.dia.desmarcar(participanteId),
+        cerrarNominacion: async () => this.dia.cerrarNominacion(participanteId),
+        ejecutar: async (jugadorId) => this.dia.ejecutar(participanteId, jugadorId),
       }),
       {
         decir: (texto) => {
@@ -193,7 +204,7 @@ export class SalaService {
       conversaciones: this.conversaciones.lista(),
       invitacionesDe: (participanteId: string) => this.conversaciones.invitacionesDe(participanteId),
       video: !!this.videollamada,
-      accionesDe: (yo: Participante) => [...accionesPermitidas(this.juego, yo), ...this.bolsa.permitidas(yo), ...this.reloj.permitidas(yo), ...this.revelacion.permitidas(yo), ...this.senalamiento.permitidas(yo), ...this.faroles.permitidas(yo), ...this.fase.permitidas(yo), ...this.noche.permitidas(yo)],
+      accionesDe: (yo: Participante) => [...accionesPermitidas(this.juego, yo), ...this.bolsa.permitidas(yo), ...this.reloj.permitidas(yo), ...this.revelacion.permitidas(yo), ...this.senalamiento.permitidas(yo), ...this.faroles.permitidas(yo), ...this.fase.permitidas(yo), ...this.noche.permitidas(yo), ...this.dia.permitidas(yo)],
     };
   }
 

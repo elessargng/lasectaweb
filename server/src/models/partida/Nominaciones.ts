@@ -286,9 +286,16 @@ export class Nominaciones {
   }
 
   /** El narrador fija los votos que hacen falta en la nominación en curso (null: los de por defecto). */
-  elegirVotosNecesarios(votos: number | null): void {
+  /**
+   * Los votos que hacen falta en la nominación abierta: de 1 al número de asientos,
+   * o null para volver a los de por defecto. Devuelve el error, si lo hay.
+   */
+  elegirVotosNecesarios(votos: number | null): string | null {
+    const maximo = Math.max(1, this.entorno.plaza().length);
+    if (votos !== null && (!Number.isInteger(votos) || votos < 1 || votos > maximo)) return `Los votos tienen que ser de 1 a ${maximo}.`;
     const n = this.nominacionVigente();
     if (n) n.votosElegidos = votos;
+    return null;
   }
 
   /**

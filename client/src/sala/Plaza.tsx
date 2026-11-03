@@ -49,7 +49,7 @@ import DialogoIntercambio from './DialogoIntercambio';
 import DialogoPatoso from './DialogoPatoso';
 import DialogoRegistroEspia from './DialogoRegistroEspia';
 import { useNominacion } from './useNominacion';
-import type { AccionesReloj, AccionesRevelacion, AccionesSenalamiento, SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
+import type { AccionesDia, AccionesReloj, AccionesRevelacion, AccionesSenalamiento, SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
 
 export interface TamanosPlaza {
   avatar: number;
@@ -83,6 +83,8 @@ interface PlazaProps {
   reloj: Pick<AccionesReloj, 'terminar' | 'quitar'>;
   /** Revelar las fichas al acabar la partida (ver AccionesRevelacion). */
   revelacion: Pick<AccionesRevelacion, 'revelarFicha' | 'terminar'>;
+  /** Las nominaciones, la calavera y la ejecución (ver AccionesDia). */
+  dia: AccionesDia;
   /** Señalar, Lil' Monsta y terminar el señalamiento (ver AccionesSenalamiento). */
   senalamientos: Pick<AccionesSenalamiento, 'senalar' | 'lilmonsta' | 'terminar'>;
   onError: (mensaje: string) => void;
@@ -262,6 +264,7 @@ const Plaza = ({
   pedir,
   reloj,
   revelacion: accionesRevelacion,
+  dia,
   senalamientos,
   onError,
   onAnuncio,
@@ -525,7 +528,7 @@ const Plaza = ({
     // El botón desaparece con el jugador: que el foco no se pierda
     document.getElementById('sala-asientos')?.focus();
   };
-  const nominar = useNominacion({ estado, pedir, onError, onAnuncio: (m) => onAnuncio('nominaciones', m) });
+  const nominar = useNominacion({ estado, dia, onError, onAnuncio: (m) => onAnuncio('nominaciones', m) });
   // Asientos (desde 0) de quien nomina y del nominado, para las agujas.
   const { nominacion, revelacion } = estado;
   // Votación secreta (Organ Grinder): ni los votos que hacen falta ni el recuento
@@ -833,6 +836,7 @@ const Plaza = ({
                       ocupante={ocupante}
                       modo={modoFichas}
                       pedir={pedir}
+                      dia={dia}
                       onError={onError}
                       onNominar={nominar.onNominar?.(a.id)}
                       yaNomino={nominar.yaNomino(a.id)}

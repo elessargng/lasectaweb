@@ -97,6 +97,7 @@ import { EstadisticasRepository } from './repositories/EstadisticasRepository';
 import { EstadisticasService } from './services/estadisticas/EstadisticasService';
 import { BolsaController } from './controllers/sala/BolsaController';
 import { FarolController } from './controllers/sala/FarolController';
+import { DiaController } from './controllers/sala/DiaController';
 import { FaseController } from './controllers/sala/FaseController';
 import { NocheController } from './controllers/sala/NocheController';
 import { RelojController } from './controllers/sala/RelojController';
@@ -474,6 +475,7 @@ DatabaseRepository.getInstance()
       sala: new SalaController(salaService),
       bolsa: new BolsaController(salaService.bolsa),
       faroles: new FarolController(salaService.faroles),
+      dia: new DiaController(salaService.dia),
       fase: new FaseController(salaService.fase),
       noche: new NocheController(salaService.noche),
       reloj: new RelojController(salaService.reloj),

@@ -49,6 +49,19 @@ export interface Narrador {
   resolverHabilidad(personajeId: string, mensaje: BorradorDespertar): Promise<RespuestaAccion>;
   /** El Imp se ha elegido a sí mismo: el nuevo es el de ese asiento. */
   nuevoImp(jugadorId: string): Promise<RespuestaAccion>;
+  /** Da la palabra a un participante (null: a todos). */
+  darPalabra(participanteId: string | null): Promise<RespuestaAccion>;
+  /** Nomina (contesta «comoAldeano», «ejecutado» o «final»: ver DiaService.nominar). */
+  nominar(desde: string, hasta: string, comoAldeano?: boolean): Promise<RespuestaAccion>;
+  /** Arranca la cuenta atrás de la nominación abierta. */
+  cuentaAtras(): Promise<RespuestaAccion>;
+  /** Pone o quita la calavera a un asiento (y cierra la nominación). */
+  marcar(jugadorId: string, marcado: boolean): Promise<RespuestaAccion>;
+  /** Quita la calavera a quien la lleve (y cierra la nominación). */
+  desmarcar(): Promise<RespuestaAccion>;
+  cerrarNominacion(): Promise<RespuestaAccion>;
+  /** Ejecuta a quien lleva la calavera. */
+  ejecutar(jugadorId: string): Promise<RespuestaAccion>;
 }
 
 /** Lo que contesta la sala a una acción: hecha (con lo que devuelva) o no, y por qué. */
