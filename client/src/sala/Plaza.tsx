@@ -49,7 +49,7 @@ import DialogoIntercambio from './DialogoIntercambio';
 import DialogoPatoso from './DialogoPatoso';
 import DialogoRegistroEspia from './DialogoRegistroEspia';
 import { useNominacion } from './useNominacion';
-import type { AccionesReloj, SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
+import type { AccionesReloj, AccionesRevelacion, SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
 
 export interface TamanosPlaza {
   avatar: number;
@@ -81,6 +81,8 @@ interface PlazaProps {
   pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
   /** Terminar y quitar el reloj del narrador (ver AccionesReloj). */
   reloj: Pick<AccionesReloj, 'terminar' | 'quitar'>;
+  /** Revelar las fichas al acabar la partida (ver AccionesRevelacion). */
+  revelacion: Pick<AccionesRevelacion, 'revelarFicha' | 'terminar'>;
   onError: (mensaje: string) => void;
   /** Avisos solo para el lector, con su tipo (p. ej. que otro te ha levantado del asiento). */
   onAnuncio: (tipo: TipoAviso, mensaje: string) => void;
@@ -257,6 +259,7 @@ const Plaza = ({
   onTamanos,
   pedir,
   reloj,
+  revelacion: accionesRevelacion,
   onError,
   onAnuncio,
   focoAsientoRef,
@@ -539,11 +542,11 @@ const Plaza = ({
   const humoRef = useRef<HumoRevelacionHandle>(null);
   const menosMovimiento = useMenosMovimiento();
   // Revelando el grimorio (narradores): pulsar una ficha la revela a todos; «Terminar» revela las que quedan
-  const puedeRevelar = acciones.includes('narrador:revelarFicha');
+  const puedeRevelar = acciones.includes('revelacion:revelarFicha');
   // La ficha revelada deja de ser un botón: el foco va a la siguiente boca abajo (en
   // el sentido del reloj) o, si era la última, al bando ganador.
   const revelar = async (jugadorId: string) => {
-    const r = await pedir('narrador:revelarFicha', { jugadorId });
+    const r = await accionesRevelacion.revelarFicha(jugadorId);
     if (!r.ok) {
       onError(r.error);
       return;
@@ -570,7 +573,7 @@ const Plaza = ({
     if (plaza[0]) window.setTimeout(() => document.getElementById(idNombreAsiento(plaza[0].id))?.focus(), 0);
   };
   const terminarRevelacion = async () => {
-    const r = await pedir('narrador:terminarRevelacion');
+    const r = await accionesRevelacion.terminar();
     if (!r.ok) onError(r.error);
     else window.setTimeout(() => document.getElementById(ID_GANADOR)?.focus(), 0);
   };
@@ -1110,7 +1113,7 @@ const Plaza = ({
                 El narrador aún no ha entregado los personajes.
               </p>
             ))}
-          {revelacion && !revelacion.terminada && acciones.includes('narrador:terminarRevelacion') && (
+          {revelacion && !revelacion.terminada && acciones.includes('revelacion:terminar') && (
             <div className="flex max-w-56 flex-col items-center gap-2 sala-cofre p-4 text-center">
               <p className="text-sm text-on-surface-muted">Pulsa cada ficha para revelarla a todos.</p>
               <button type="button" onClick={() => void terminarRevelacion()} className={botonPrincipal}>

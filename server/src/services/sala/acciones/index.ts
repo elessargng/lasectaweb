@@ -10,7 +10,6 @@ import { ACCIONES_NARRADOR_VIRTUAL } from './narradorVirtual';
 import { ACCIONES_NOCHE } from './noche';
 import { ACCIONES_PARTICIPANTES } from './participantes';
 import { ACCIONES_PREPARACION } from './preparacion';
-import { ACCIONES_REVELACION } from './revelacion';
 import { ACCIONES_SENALAMIENTOS } from './senalamientos';
 
 export type { SalaEfecto } from './Accion';
@@ -34,7 +33,6 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   ...ACCIONES_SENALAMIENTOS,
   ...ACCIONES_GRIMORIO,
   ...ACCIONES_FAROLES,
-  ...ACCIONES_REVELACION,
 };
 
 /** Las acciones que este participante puede usar ahora mismo. */

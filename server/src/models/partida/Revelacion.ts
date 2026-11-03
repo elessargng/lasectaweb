@@ -41,10 +41,12 @@ export class Revelacion {
     this.actual = { ganador, causas, reveladas: [] };
   }
 
-  /** Revela la ficha de un asiento (todos verán su personaje). */
-  revelarFicha(jugadorId: string): void {
+  /** Revela la ficha de un asiento (todos verán su personaje). Si el asiento ya no está, el error. */
+  revelarFicha(jugadorId: string): string | null {
+    if (!this.plaza().some((a) => a.id === jugadorId)) return 'Ese asiento ya no existe.';
     const r = this.actual;
-    if (r && !r.reveladas.includes(jugadorId) && this.plaza().some((a) => a.id === jugadorId)) r.reveladas.push(jugadorId);
+    if (r && !r.reveladas.includes(jugadorId)) r.reveladas.push(jugadorId);
+    return null;
   }
 
   /** Revela de una vez las que quedan. */

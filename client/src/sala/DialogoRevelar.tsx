@@ -7,11 +7,12 @@ import { botonSecundario, campo } from './estilos';
 import { describirAsiento } from './nombresAsiento';
 import { identidadDe, useFichas } from './fichas';
 import Interruptor from './Interruptor';
-import type { Alineamiento, SalaDto, ResultadoAccion } from './useSala';
+import type { AccionesRevelacion, Alineamiento, SalaDto } from './useSala';
 
 interface DialogoRevelarProps {
   estado: SalaDto;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Revela el grimorio (ver AccionesRevelacion). */
+  revelar: AccionesRevelacion['empezar'];
   onCerrar: () => void;
 }
 
@@ -21,7 +22,7 @@ interface DialogoRevelarProps {
  * CAUSAS_FINAL), lo que ha pasado. Al elegir el bando, todas las fichas se dan la
  * vuelta y el narrador las va revelando; lo marcado se ve con el bando ganador.
  */
-const DialogoRevelar = ({ estado, pedir, onCerrar }: DialogoRevelarProps) => {
+const DialogoRevelar = ({ estado, revelar, onCerrar }: DialogoRevelarProps) => {
   const { todosPorId } = useFichas();
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -51,11 +52,7 @@ const DialogoRevelar = ({ estado, pedir, onCerrar }: DialogoRevelarProps) => {
     }
     setEnviando(true);
     setError('');
-    const r = await pedir('narrador:revelarGrimorio', {
-      ganador,
-      causas,
-      esbirros: Object.fromEntries(Object.entries(esbirros).filter(([c]) => causas.includes(c))),
-    });
+    const r = await revelar(ganador, causas, Object.fromEntries(Object.entries(esbirros).filter(([c]) => causas.includes(c))));
     setEnviando(false);
     if (r.ok) onCerrar();
     else setError(r.error);

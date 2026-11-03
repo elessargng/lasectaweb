@@ -84,6 +84,16 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
         if (!error) hechas.push({ accion: 'reloj:poner', datos: { segundos, mensaje } });
         return error ? { ok: false, error } : { ok: true };
       },
+      revelarGrimorio: async (ganador) => {
+        const error = juego.partida.revelarGrimorio(ganador, [], {});
+        if (!error) hechas.push({ accion: 'revelacion:empezar', datos: { ganador } });
+        return error ? { ok: false, error } : { ok: true };
+      },
+      revelarFicha: async (jugadorId) => {
+        const error = juego.partida.revelacion.revelarFicha(jugadorId);
+        if (!error) hechas.push({ accion: 'revelacion:revelarFicha', datos: { jugadorId } });
+        return error ? { ok: false, error } : { ok: true };
+      },
     },
     ...decisionesDe(juego, () => estrategia),
     azar,
@@ -453,8 +463,8 @@ describe('la noche del narrador virtual', () => {
       await new Revelando('bueno').alEntrar(m.ctx);
       expect(partida.revelacion.revelacion()?.ganador).toBe('bueno');
       const limite = Date.now() + 3000;
-      while (m.hechas.filter((h) => h.accion === 'narrador:revelarFicha').length < 7 && Date.now() < limite) await new Promise((r) => setTimeout(r, 5));
-      const orden = m.hechas.filter((h) => h.accion === 'narrador:revelarFicha').map((h) => (h.datos as { jugadorId: string }).jugadorId);
+      while (m.hechas.filter((h) => h.accion === 'revelacion:revelarFicha').length < 7 && Date.now() < limite) await new Promise((r) => setTimeout(r, 5));
+      const orden = m.hechas.filter((h) => h.accion === 'revelacion:revelarFicha').map((h) => (h.datos as { jugadorId: string }).jugadorId);
       expect(orden).toHaveLength(7);
       expect(orden[6]).toBe(m.asiento('imp').id);
       expect(m.frases).toContain('Revelamos el grimorio.');

@@ -91,8 +91,8 @@ describe('lo que ve cada uno', () => {
     });
 
     it('al revelar el grimorio, todos ven las fichas reveladas', async () => {
-      await arnes.accion(narradora, 'narrador:revelarGrimorio', { ganador: 'bueno' });
-      await arnes.accion(narradora, 'narrador:revelarFicha', { jugadorId: idAsiento(1) });
+      await arnes.pedir(narradora, 'revelacion:empezar', { ganador: 'bueno' });
+      await arnes.pedir(narradora, 'revelacion:revelarFicha', { jugadorId: idAsiento(1) });
       expect(asiento(vera, 1).personaje).toBe(asiento(narradora, 1).personaje);
       expect(asiento(vera, 2).personaje).toBeNull();
     });

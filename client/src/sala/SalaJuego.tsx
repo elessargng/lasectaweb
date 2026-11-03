@@ -102,6 +102,7 @@ import {
   type Recordatorio,
   type AccionesBolsa,
   type AccionesReloj,
+  type AccionesRevelacion,
   type ResultadoAccion,
   type ResultadoBolsaAlAzar,
 } from './useSala';
@@ -609,6 +610,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     salirConversacion,
     bolsa,
     reloj,
+    revelacion,
   } = useSala(
     cuenta?.token ?? null,
     cuenta ? null : invitado,
@@ -1372,7 +1374,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     ...(puedeLevantarMano ? [['levantarMano', alternarMano] as [AccionAtajo, () => void]] : []),
     ...(accionFase ? [['cambiarFase', () => void cambiarFase()] as [AccionAtajo, () => void]] : []),
     // G: revelar el grimorio (abre el diálogo de quién gana; al cerrarse, el foco vuelve donde estaba)
-    ...(estado?.acciones.includes('narrador:revelarGrimorio') && !revelandoGrimorio
+    ...(estado?.acciones.includes('revelacion:empezar') && !revelandoGrimorio
       ? [['revelarGrimorio', () => setRevelandoGrimorio(true)] as [AccionAtajo, () => void]]
       : []),
     // R: sonar el gong (todos a la plaza)
@@ -1660,6 +1662,11 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     terminar: () => propia(() => reloj.terminar()),
     quitar: () => propia(() => reloj.quitar()),
   };
+  const revelacionPropia: AccionesRevelacion = {
+    empezar: (ganador, causas, esbirros) => propia(() => revelacion.empezar(ganador, causas, esbirros)),
+    revelarFicha: (jugadorId) => propia(() => revelacion.revelarFicha(jugadorId)),
+    terminar: () => propia(() => revelacion.terminar()),
+  };
 
   // Faroles: los del narrador (narradores y visitantes) o, si soy el demonio o un esbirro, los míos.
   // Soy el demonio (o esbirro) si mi ficha lo lleva (o, sin personaje dado, si me lo he anotado).
@@ -1944,6 +1951,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   onAsientos={() => setEditandoAsientos((v) => !v)}
                   revelando={revelandoGrimorio}
                   onRevelando={setRevelandoGrimorio}
+                  revelarGrimorio={revelacionPropia.empezar}
                   atajoFase={atajos.cambiarFase}
                   atajoRevelar={atajos.revelarGrimorio}
                   atajoGong={atajos.sonarGong}
@@ -2196,6 +2204,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   grimorio={yo?.rol === 'jugador' && estado.configuracion.grimorioJugadores}
                   pedir={pedirEnPlaza}
                   reloj={relojPropio}
+                  revelacion={revelacionPropia}
                   onError={setAviso}
                   onAnuncio={anunciar}
                   focoAsientoRef={focoAsientoRef}

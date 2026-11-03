@@ -2,6 +2,7 @@ import type { Server as HttpServer } from 'http';
 import { Server } from 'socket.io';
 import type { BolsaController } from '../../controllers/sala/BolsaController';
 import type { RelojController } from '../../controllers/sala/RelojController';
+import type { RevelacionController } from '../../controllers/sala/RevelacionController';
 import type { Credenciales, SalaController } from '../../controllers/sala/SalaController';
 import type { SalaService } from '../../services/sala/SalaService';
 import { DifusorSocketIo } from './DifusorSocketIo';
@@ -40,11 +41,19 @@ const PETICIONES_RELOJ = {
   'reloj:quitar': 'quitar',
 } as const satisfies Record<string, keyof RelojController>;
 
+/** Los de la revelación del grimorio, y el método de RevelacionController que los atiende. */
+const PETICIONES_REVELACION = {
+  'revelacion:empezar': 'empezar',
+  'revelacion:revelarFicha': 'revelarFicha',
+  'revelacion:terminar': 'terminar',
+} as const satisfies Record<string, keyof RevelacionController>;
+
 /** Los controladores de la sala: el general y el de cada parte. */
 export interface ControladoresSala {
   sala: SalaController;
   bolsa: BolsaController;
   reloj: RelojController;
+  revelacion: RevelacionController;
 }
 
 /** Contesta por el ack del evento, si el cliente lo ha pedido. */
@@ -60,7 +69,7 @@ const contestar = (ack: unknown) => (respuesta: unknown) => {
 export function abrirSalaPorSocket(
   httpServer: HttpServer,
   salaService: SalaService,
-  { sala: salaController, bolsa: bolsaController, reloj: relojController }: ControladoresSala,
+  { sala: salaController, bolsa: bolsaController, reloj: relojController, revelacion: revelacionController }: ControladoresSala,
 ): void {
   const io = new Server(httpServer, {
     path: SALA_SOCKET_PATH,
@@ -90,6 +99,9 @@ export function abrirSalaPorSocket(
     }
     for (const [evento, metodo] of Object.entries(PETICIONES_RELOJ)) {
       socket.on(evento, (peticion: unknown, ack?: unknown) => relojController[metodo](sesion, peticion, contestar(ack)));
+    }
+    for (const [evento, metodo] of Object.entries(PETICIONES_REVELACION)) {
+      socket.on(evento, (peticion: unknown, ack?: unknown) => revelacionController[metodo](sesion, peticion, contestar(ack)));
     }
     socket.on('chat:historial', () => salaController.historial(sesion));
     socket.on('disconnect', (reason) => salaController.salir(sesion, reason === 'client namespace disconnect'));

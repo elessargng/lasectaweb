@@ -3,6 +3,8 @@
  * así no sabe de sockets ni de relojes, y en los tests se le dan unos falsos.
  */
 
+import type { Alineamiento } from '../compartido/jugador';
+
 /**
  * El narrador virtual en la plaza: hace lo que haría un narrador, con las mismas
  * acciones de la sala (y los mismos permisos), y la sala se difunde a todos.
@@ -15,6 +17,10 @@ export interface Narrador {
   sonarGong(): Promise<RespuestaAccion>;
   /** Pone el reloj: una cuenta atrás para todos con su mensaje. */
   ponerReloj(segundos: number, mensaje: string): Promise<RespuestaAccion>;
+  /** Revela el grimorio: ha ganado ese bando. */
+  revelarGrimorio(ganador: Alineamiento): Promise<RespuestaAccion>;
+  /** Revela la ficha de un asiento, para todos. */
+  revelarFicha(jugadorId: string): Promise<RespuestaAccion>;
 }
 
 /** Lo que contesta la sala a una acción: hecha (con lo que devuelva) o no, y por qué. */

@@ -3,6 +3,7 @@ import type { Azar } from './azar';
 import type { EleccionDespertar, EnvioDespertar } from '../compartido/despertar';
 import type { FichaEnviada } from './Entregas';
 import type { Alineamiento } from '../compartido/jugador';
+import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA } from '../compartido/partida';
 import type { AsientoDiario, HechoDiario } from '../compartido/diario';
 import type { GuionResuelto } from '../guiones';
 import type { Participante } from '../sala/Participantes';
@@ -515,6 +516,26 @@ export class Partida {
       enElGuion: !!this.guion.actual()?.personajes.some((p) => p.id === DEMONIO_LILMONSTA),
       esbirrosQueTocan: this.bolsa.distribucion().esbirros,
     });
+  }
+
+  /**
+   * Revela el grimorio, si lo que ha pasado cuadra: las causas (CAUSAS_FIN_PARTIDA)
+   * son de personajes en juego (quien es de verdad cada uno) y las de esbirro (la
+   * Doncel cazada) dicen qué asiento fue, uno que es esbirro de verdad. Si no, el
+   * error. Ver empezarRevelacion.
+   */
+  revelarGrimorio(ganador: Alineamiento, causas: readonly string[], esbirros: Readonly<Record<string, string>>): string | null {
+    const enJuego = new Set(this.plaza().map((a) => identidadDe(a)));
+    if (causas.some((c) => !CAUSAS_FIN_PARTIDA.includes(c) || !enJuego.has(c))) return 'Hay un personaje que no está en juego.';
+    const esEsbirro = (jugadorId: string | undefined) => {
+      const jugador = this.plaza().find((a) => a.id === jugadorId);
+      const quien = jugador ? identidadDe(jugador) : null;
+      return !!quien && this.guion.personaje(quien)?.tipo === 'minion';
+    };
+    const deEsbirro = causas.filter((c) => CAUSAS_DE_ESBIRRO.includes(c));
+    if (deEsbirro.some((c) => !esEsbirro(esbirros[c]))) return 'Elige qué esbirro descubrió a la Doncel.';
+    this.empezarRevelacion(ganador, [...new Set(causas)], Object.fromEntries(deEsbirro.map((c) => [c, esbirros[c]])));
+    return null;
   }
 
   /**

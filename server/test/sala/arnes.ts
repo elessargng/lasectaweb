@@ -5,6 +5,7 @@ import { io as conectar, type Socket } from 'socket.io-client';
 import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
 import { BolsaController } from '../../src/controllers/sala/BolsaController';
 import { RelojController } from '../../src/controllers/sala/RelojController';
+import { RevelacionController } from '../../src/controllers/sala/RevelacionController';
 import { SalaController } from '../../src/controllers/sala/SalaController';
 import { abrirSalaPorSocket, SALA_SOCKET_PATH } from '../../src/infra/socketio/salaPorSocket';
 import { SalaService } from '../../src/services/sala/SalaService';
@@ -105,6 +106,7 @@ export class Arnes {
       sala: new SalaController(salaService),
       bolsa: new BolsaController(salaService.bolsa),
       reloj: new RelojController(salaService.reloj),
+      revelacion: new RevelacionController(salaService.revelacion),
     });
     await new Promise<void>((resolver) => http.listen(0, '127.0.0.1', resolver));
     const { port } = http.address() as AddressInfo;

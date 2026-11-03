@@ -10,6 +10,7 @@ import { NarradorIAService } from '../narradorVirtual/NarradorIAService';
 import { accionesPermitidas, ejecutarAccion } from './acciones';
 import { BolsaService } from './BolsaService';
 import { RelojService } from './RelojService';
+import { RevelacionService } from './RevelacionService';
 import { ImagenesSala } from './ImagenesSala';
 import type { DependenciasAcciones, DependenciasSala, DifusorSala } from './puertos';
 
@@ -60,6 +61,8 @@ export class SalaService {
   readonly bolsa: BolsaService;
   /** El gong y el reloj del narrador (ver RelojController). */
   readonly reloj: RelojService;
+  /** La revelación del grimorio al acabar (ver RevelacionController). */
+  readonly revelacion: RevelacionService;
   private readonly conversaciones: ConversacionService;
   private readonly videollamada: VideollamadaService | null;
   private readonly narradorVirtual: NarradorVirtualService;
@@ -90,6 +93,7 @@ export class SalaService {
     this.imagenes = new ImagenesSala(deps.imagenes);
     this.bolsa = new BolsaService(this.juego, () => this.difundir());
     this.reloj = new RelojService(this.juego, () => this.difundir());
+    this.revelacion = new RevelacionService(this.juego, () => this.difundir());
     this.conversaciones = new ConversacionService(this.juego);
     // Sin servidor de vídeo configurado, la sala funciona igual, sin cámaras ni micrófonos
     this.videollamada = deps.video ? new VideollamadaService(deps.video, this.juego, this.conversaciones) : null;
@@ -104,6 +108,8 @@ export class SalaService {
         llenarBolsa: async (personajes) => this.bolsa.llenar(participanteId, personajes),
         sonarGong: async () => this.reloj.sonarGong(participanteId),
         ponerReloj: async (segundos, mensaje) => this.reloj.poner(participanteId, segundos, mensaje),
+        revelarGrimorio: async (ganador) => this.revelacion.empezar(participanteId, ganador, [], {}),
+        revelarFicha: async (jugadorId) => this.revelacion.revelarFicha(participanteId, jugadorId),
       }),
       {
         decir: (texto) => {
@@ -160,7 +166,7 @@ export class SalaService {
       conversaciones: this.conversaciones.lista(),
       invitacionesDe: (participanteId: string) => this.conversaciones.invitacionesDe(participanteId),
       video: !!this.videollamada,
-      accionesDe: (yo: Participante) => [...accionesPermitidas(this.juego, yo), ...this.bolsa.permitidas(yo), ...this.reloj.permitidas(yo)],
+      accionesDe: (yo: Participante) => [...accionesPermitidas(this.juego, yo), ...this.bolsa.permitidas(yo), ...this.reloj.permitidas(yo), ...this.revelacion.permitidas(yo)],
     };
   }
 

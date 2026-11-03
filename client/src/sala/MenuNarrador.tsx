@@ -9,7 +9,7 @@ import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { botonIcono } from './estilos';
 import { ID_MENU_NARRADOR } from './ids';
 import type { Atajo } from './atajos';
-import type { AccionesReloj, SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
+import type { AccionesReloj, AccionesRevelacion, SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
 
 interface MenuNarradorProps {
   estado: SalaDto;
@@ -20,6 +20,8 @@ interface MenuNarradorProps {
   /** El diálogo de revelar el grimorio, abierto (también se abre con su tecla, desde fuera del menú). */
   revelando: boolean;
   onRevelando: (abierto: boolean) => void;
+  /** Revela el grimorio (ver AccionesRevelacion). */
+  revelarGrimorio: AccionesRevelacion['empezar'];
   /** Teclas de cambiar de fase (noche/amanecer) y de revelar el grimorio (se ven al lado). */
   atajoFase?: Atajo;
   atajoRevelar?: Atajo;
@@ -95,6 +97,7 @@ const MenuNarrador = ({
   onAsientos,
   revelando,
   onRevelando,
+  revelarGrimorio,
   atajoFase,
   atajoRevelar,
   atajoGong,
@@ -120,7 +123,7 @@ const MenuNarrador = ({
     { id: 'reloj:sonarGong', etiqueta: 'Sonar gong', atajo: atajoGong, elegir: onSonarGong },
     { id: 'narrador:senalamiento', etiqueta: 'Señalar', abreDialogo: true, elegir: () => setSenalando(true) },
     { id: 'reloj:poner', etiqueta: 'Reloj', atajo: atajoReloj, abreDialogo: true, elegir: () => onPoniendoReloj(true) },
-    { id: 'narrador:revelarGrimorio', etiqueta: 'Revelar grimorio', atajo: atajoRevelar, abreDialogo: true, elegir: () => onRevelando(true) },
+    { id: 'revelacion:empezar', etiqueta: 'Revelar grimorio', atajo: atajoRevelar, abreDialogo: true, elegir: () => onRevelando(true) },
     { id: 'narrador:limpiarGrimorio', etiqueta: 'Limpiar grimorio', abreDialogo: true, elegir: () => setLimpiando(true) },
     ...Object.entries(ELEGIR).map(([accion, { etiqueta }]) => ({
       id: accion,
@@ -153,7 +156,7 @@ const MenuNarrador = ({
           onCerrar={() => setEligiendo(null)}
         />
       )}
-      {revelando && <DialogoRevelar estado={estado} pedir={pedir} onCerrar={() => onRevelando(false)} />}
+      {revelando && <DialogoRevelar estado={estado} revelar={revelarGrimorio} onCerrar={() => onRevelando(false)} />}
       {poniendoReloj && <DialogoReloj poner={ponerReloj} onPuesto={onRelojPuesto} onCerrar={() => onPoniendoReloj(false)} />}
       {senalando && <DialogoSenalamiento estado={estado} pedir={pedir} onCerrar={() => setSenalando(false)} />}
       {limpiando && (

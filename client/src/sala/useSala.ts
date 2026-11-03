@@ -3,6 +3,7 @@ import { io, type Socket } from 'socket.io-client';
 import { notifySessionExpired } from '../utils/session';
 import type { SalaDto, ResultadoAccion, ResultadoBolsaAlAzar } from '@views/sala';
 import type { MensajeChatDto, SusurroDto } from '@views/chat';
+import type { Alineamiento } from '@models/jugador';
 import type { GuionResuelto } from './guiones';
 
 // Lo que comparte con el servidor: los Dto que manda (@views) y los valores del dominio (@models).
@@ -283,6 +284,16 @@ export function useSala(
     [pedirAlSocket],
   );
 
+  /** La revelación del grimorio al acabar (el narrador), por sus eventos. */
+  const revelacion: AccionesRevelacion = useMemo(
+    () => ({
+      empezar: (ganador, causas, esbirros) => pedirAlSocket<ResultadoAccion>('revelacion:empezar', { ganador, causas, esbirros }),
+      revelarFicha: (jugadorId) => pedirAlSocket<ResultadoAccion>('revelacion:revelarFicha', { jugadorId }),
+      terminar: () => pedirAlSocket<ResultadoAccion>('revelacion:terminar', {}),
+    }),
+    [pedirAlSocket],
+  );
+
   /** Vuelve a pedir los mensajes que se pueden leer (al cambiar de papel cambian). */
   const pedirHistorial = useCallback(() => {
     socketRef.current?.emit('chat:historial');
@@ -314,7 +325,18 @@ export function useSala(
     salirConversacion,
     bolsa,
     reloj,
+    revelacion,
   };
+}
+
+/** Lo que el narrador hace al revelar el grimorio (ver useSala). */
+export interface AccionesRevelacion {
+  /** Revela el grimorio: quién gana, lo que ha pasado (causas) y, de las de esbirro, qué asiento fue. */
+  empezar(ganador: Alineamiento, causas: string[], esbirros: Record<string, string>): Promise<ResultadoAccion>;
+  /** Revela la ficha de un asiento, para todos. */
+  revelarFicha(jugadorId: string): Promise<ResultadoAccion>;
+  /** Revela de una vez las que quedan. */
+  terminar(): Promise<ResultadoAccion>;
 }
 
 /** Lo que el narrador hace con el gong y el reloj (ver useSala). */
