@@ -3,7 +3,7 @@ import { EstadisticasPartida } from '../../src/models/estadisticas/EstadisticasP
 import type { RegistroPartida } from '../../src/models/estadisticas/SeguimientoPartida';
 import { SALA_CUENTA_ATRAS_MS } from '../../src/models/partida/Nominaciones';
 import { SalaDeJuego } from '../../src/models/SalaDeJuego';
-import { conCuenta, guionDePrueba } from './guionDePrueba';
+import { conCuenta, guionDePrueba, conSemilla } from './guionDePrueba';
 
 /** Lo que se guarda de cada partida para las estadísticas (al revelar el grimorio). */
 
@@ -18,7 +18,7 @@ function guardadas(juego: SalaDeJuego): RegistroPartida[] {
 
 /** Ana (1), Bea (2) y Ceci (3) sentadas en los asientos 1 a 3 con chef, imp y empath; Nora (9) narra. */
 function partida() {
-  const juego = new SalaDeJuego();
+  const juego = new SalaDeJuego(conSemilla(1));
   const { sala } = juego;
   juego.partida.cambiarGuion(guionDePrueba());
   const entra = (userId: string, nombre: string) => sala.participantes.conectar(`s-${nombre}`, `c-${nombre}`, conCuenta(userId, nombre), () => true).id;

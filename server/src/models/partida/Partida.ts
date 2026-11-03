@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import type { Azar } from './azar';
 import type { EleccionDespertar, EnvioDespertar } from '../compartido/despertar';
 import type { FichaEnviada } from './Entregas';
 import type { Alineamiento } from '../compartido/jugador';
@@ -37,6 +38,8 @@ import type { Jugador } from './Jugador';
 export interface EntornoPartida {
   /** Hay un narrador virtual llevando la partida (él decide cuándo anochece tras ejecutar). */
   hayNarradorVirtual(): boolean;
+  /** El azar de la partida: el reparto, la bolsa al azar y las reglas que sortean. */
+  azar: Azar;
 }
 
 /**
@@ -85,6 +88,7 @@ export class Partida {
     percepcion: (jugador) => this.reglas.percepcion(jugador),
     objetivo: (jugador) => this.reglas.objetivo(jugador),
     droison: (jugador) => this.reglas.droison(jugador),
+    azar: this.entorno.azar,
   };
   /** Las reglas de los personajes (ver models/personajes); el final de la partida también les pregunta. */
   readonly reglas = new Reglas(this.contextoReglas);
@@ -153,6 +157,7 @@ export class Partida {
     popeEnJuego: () => this.npcs.activo(NPC_POPE),
     reglas: (jugadores, personajes) => this.reglas.repartir(jugadores, personajes),
     darPersonaje: (jugadorId, personaje) => this.grimorio.repartir(jugadorId, personaje),
+    azar: this.entorno.azar,
   });
   /** El señalamiento en curso. */
   readonly senalamientos = new Senalamientos({

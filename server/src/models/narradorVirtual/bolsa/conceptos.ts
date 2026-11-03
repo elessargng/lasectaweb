@@ -1,4 +1,4 @@
-import { barajarCon as barajar } from '../../partida/azar';
+import { barajar } from '../../partida/azar';
 import type { Azar } from '../puertos';
 
 /**

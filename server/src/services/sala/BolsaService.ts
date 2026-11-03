@@ -42,7 +42,6 @@ export class BolsaService {
     private readonly juego: SalaDeJuego,
     /** La sala ha cambiado: se manda a todos. */
     private readonly alCambiar: () => void,
-    private readonly azar: () => number = Math.random,
   ) {}
 
   /** El participante de una sesión (su id), o null si ya no está en la sala. */
@@ -82,7 +81,7 @@ export class BolsaService {
   llenarAlAzar(yoId: string): ResultadoBolsaAlAzar {
     let sorteo: { fuera: { personaje: string; falta: string }[]; escasos: string[] } = { fuera: [], escasos: [] };
     const hecho = this.hacer(yoId, 'bolsa:llenarAlAzar', (bolsa) => {
-      const r = bolsa.llenarAlAzar(this.azar);
+      const r = bolsa.llenarAlAzar();
       if ('error' in r) return r.error;
       sorteo = { fuera: r.fuera.map(({ personaje, falta }) => ({ personaje: personaje.id, falta })), escasos: r.escasos };
       return null;

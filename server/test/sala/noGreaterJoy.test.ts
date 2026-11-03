@@ -9,13 +9,13 @@ import {
 import { ficha } from '../../src/models/partida/habilidades/HabilidadNocturna';
 import { contestarPregunta } from '../../src/models/narradorVirtual/contestarPregunta';
 import { cronicaNueva } from '../../src/models/narradorVirtual/final/cronica';
-import { guionNoGreaterJoy, invitado, personaje } from './guionDePrueba';
+import { guionNoGreaterJoy, invitado, personaje, conSemilla } from './guionDePrueba';
 
 /** El despertar guiado de No Greater Joy: el Relojero, la Camarera y el Sabio. */
 
 /** Una plaza de No Greater Joy con esos personajes (uno por asiento, en orden) y sus jugadores, de noche. */
 function plaza(...personajes: string[]) {
-  const juego = new SalaDeJuego();
+  const juego = new SalaDeJuego(conSemilla(1));
   const { sala, partida } = juego;
   const guion = guionNoGreaterJoy();
   // La Reclusa y el Espía, para ver cómo registran

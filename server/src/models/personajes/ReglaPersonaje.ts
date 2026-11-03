@@ -1,6 +1,7 @@
 import type { Alineamiento } from '../compartido/jugador';
 import type { PersonajeDeGuion, TipoPersonaje } from '../guiones';
 import type { Recordatorio } from '../compartido/grimorio';
+import type { Azar } from '../partida/azar';
 import type { Jugador } from '../partida/Jugador';
 import type { Objetivo } from './Objetivo';
 import type { Percepcion } from './Percepcion';
@@ -23,6 +24,8 @@ export interface ContextoReglas {
   objetivo(jugador: Jugador): Objetivo;
   /** Si está envenenado o borracho (ver ReglaPersonaje.droison); null si está sano. */
   droison(jugador: Jugador): Droison | null;
+  /** El azar de la partida (el Revolutionary reparte con él). */
+  readonly azar: Azar;
 }
 
 /** Cómo ha perdido la habilidad sin saberlo. */

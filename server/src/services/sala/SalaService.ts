@@ -52,7 +52,7 @@ const sinRespuesta: Responder<unknown> = () => {};
  * participantes; tras cada cambio, la sala se manda entera a todos por el difusor.
  */
 export class SalaService {
-  readonly juego = new SalaDeJuego();
+  readonly juego: SalaDeJuego;
   private readonly chat: ChatService;
   private readonly imagenes: ImagenesSala;
   /** La bolsa de la partida (ver BolsaController). */
@@ -66,6 +66,7 @@ export class SalaService {
   private versionGuionMandada: number;
 
   constructor(private readonly deps: DependenciasSala) {
+    this.juego = new SalaDeJuego(deps.azar);
     const { sala, partida } = this.juego;
     // Las estadísticas escuchan la partida y, al revelar el grimorio, la guardan
     if (deps.guardarPartida) {
@@ -84,7 +85,7 @@ export class SalaService {
     }
     this.chat = new ChatService(deps.mensajes, this.juego);
     this.imagenes = new ImagenesSala(deps.imagenes);
-    this.bolsa = new BolsaService(this.juego, () => this.difundir(), deps.azarNarradorVirtual);
+    this.bolsa = new BolsaService(this.juego, () => this.difundir());
     this.conversaciones = new ConversacionService(this.juego);
     // Sin servidor de vídeo configurado, la sala funciona igual, sin cámaras ni micrófonos
     this.videollamada = deps.video ? new VideollamadaService(deps.video, this.juego, this.conversaciones) : null;
@@ -106,7 +107,7 @@ export class SalaService {
       },
       deps.relojNarradorVirtual ?? temporizadorReal,
       () => this.difundir(),
-      deps.azarNarradorVirtual,
+      deps.azar,
       // Jarvis: con el modelo de la cuenta de quien lo añade, ya comprobado
       deps.modelosIA
         ? {

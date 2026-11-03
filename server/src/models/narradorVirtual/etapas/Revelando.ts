@@ -1,4 +1,4 @@
-import { barajarCon as barajar } from '../../partida/azar';
+import { barajar } from '../../partida/azar';
 import { heredadosADemonio, esDemonio, type Ganador } from '../final/comprobarFinal';
 import { fraseAlRevelar } from '../final/cronica';
 import { duracionFrase, FRASES } from '../frases';

@@ -13,7 +13,7 @@ let narradora: Cliente;
 let ana: Cliente;
 
 beforeEach(async () => {
-  arnes = await Arnes.crear({ azarNarradorVirtual: conSemilla(1) });
+  arnes = await Arnes.crear({ azar: conSemilla(1) });
   narradora = await arnes.entrar('Nora');
   ana = await arnes.entrar('Ana');
   await arnes.accion(narradora, 'sala:hacerseNarrador');

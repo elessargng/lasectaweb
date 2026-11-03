@@ -3,7 +3,7 @@ import { SALA_CUENTA_ATRAS_MS } from '../../src/models/partida/Nominaciones';
 import { SalaDeJuego } from '../../src/models/SalaDeJuego';
 import { Reglas } from '../../src/models/personajes/Reglas';
 import type { ContextoReglas, ReglaPersonaje } from '../../src/models/personajes/ReglaPersonaje';
-import { guionDePrueba, invitado } from './guionDePrueba';
+import { guionDePrueba, invitado, conSemilla } from './guionDePrueba';
 import { Jugador } from '../../src/models/partida/Jugador';
 import { percepcionReal } from '../../src/models/personajes/Percepcion';
 import { reclusa } from '../../src/models/personajes/reclusa';
@@ -16,7 +16,7 @@ import { REGLAS } from '../../src/models/personajes/Reglas';
 /** Las reglas de los personajes que cambian la partida, vistas desde fuera (la sala). */
 
 function salaConJugadores(...nombres: string[]) {
-  const juego = new SalaDeJuego();
+  const juego = new SalaDeJuego(conSemilla(1));
   const { sala, partida } = juego;
   partida.cambiarGuion(guionDePrueba());
   const ids = nombres.map((nombre, i) => {
@@ -313,6 +313,7 @@ describe('Reglas (cómo se combinan)', () => {
   const asiento = (cambios: Partial<Pick<Jugador, 'muerto' | 'votoGastado' | 'personaje' | 'recordatorios'>> = {}): Jugador =>
     Object.assign(new Jugador(), cambios);
   const ctx: ContextoReglas = {
+    azar: conSemilla(1),
     plaza: () => [],
     identidad: (a) => a.personaje,
     alineamiento: () => null,
@@ -356,6 +357,7 @@ describe('Percepción (cómo registra cada uno)', () => {
   const TIPOS: Record<string, string> = { imp: 'demon', baron: 'minion', spy: 'minion', recluse: 'outsider', chef: 'townsfolk', saint: 'outsider' };
   const guion = Object.entries(TIPOS).map(([id, tipo]) => ({ id, tipo }) as PersonajeDeGuion);
   const ctx: ContextoReglas = {
+    azar: conSemilla(1),
     plaza: () => [],
     identidad: (a) => a.personaje,
     alineamiento: (a) => (['demon', 'minion'].includes(TIPOS[a.personaje ?? ''] ?? '') ? 'malvado' : 'bueno'),
@@ -406,6 +408,7 @@ describe('Percepción (cómo registra cada uno)', () => {
 describe('A quién le llega (quién se salva o lo desvía)', () => {
   let plaza: Jugador[] = [];
   const ctx: ContextoReglas = {
+    azar: conSemilla(1),
     plaza: () => plaza,
     identidad: (a) => a.personaje,
     alineamiento: () => 'bueno',

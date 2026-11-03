@@ -187,7 +187,7 @@ describe('añadir a Jarvis', () => {
   /** Una sala con Jarvis: el modelo de la cuenta «ana» (si `conModelo`), si responde, y si falla; con `semilla`, la bolsa sale siempre igual. */
   const sala = (opciones: { conModelo?: boolean; comprobar?: string | null; falla?: boolean; semilla?: number }) =>
     Arnes.crear({
-      azarNarradorVirtual: opciones.semilla === undefined ? undefined : conSemilla(opciones.semilla),
+      azar: opciones.semilla === undefined ? Math.random : conSemilla(opciones.semilla),
       guiones: { guionPredeterminado: async () => tb(), importar: async () => tb() },
       relojNarradorVirtual: { programar: (ms, hacer) => ((t) => () => clearTimeout(t))(setTimeout(hacer, ms / 1000)) },
       modelosIA: async (userId) =>

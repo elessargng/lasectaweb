@@ -71,6 +71,11 @@ describe('arquitectura', () => {
     expect(nombrados).toEqual([]);
   });
 
+  it('el dominio no saca el azar de ningún sitio: se le pasa (models/partida/azar, Azar)', () => {
+    const fuera = archivos('models').filter((f) => /Math\.random|randomInt/.test(fs.readFileSync(path.join(SRC, f), 'utf8')));
+    expect(fuera, 'Estos archivos sacan el azar por su cuenta: que lo reciban').toEqual([]);
+  });
+
   it('el dominio no usa los servicios, los controladores, los repositorios ni la infraestructura', () => {
     const fuera = archivos('models').filter((f) => importsDe(f).some((i) => /^(services|controllers|repositories|infra)(\/|$)/.test(i)));
     expect(fuera).toEqual([]);

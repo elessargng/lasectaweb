@@ -9,7 +9,8 @@ import type { ImagenesSala } from './ImagenesSala';
 import type { GuionResuelto } from '../../models/guiones';
 import type { MensajeChat, Susurro } from '../../models/chat';
 import type { RegistroPartida } from '../../models/estadisticas/SeguimientoPartida';
-import type { Azar, Temporizador } from '../../models/narradorVirtual/puertos';
+import type { Azar } from '../../models/partida/azar';
+import type { Temporizador } from '../../models/narradorVirtual/puertos';
 import type { NarradorIARepository } from '../../repositories/NarradorIARepository';
 import type { ServicioNarradorVirtual } from '../narradorVirtual/NarradorVirtualService';
 import type { ProveedorVideo } from '../videollamada/ProveedorVideo';
@@ -82,9 +83,10 @@ export interface DependenciasSala extends Omit<DependenciasAcciones, 'narradorVi
   guardarPartida?: (registro: RegistroPartida) => Promise<void>;
   /** Cuántas partidas ha jugado alguien (para el pulpito de novato); sin esto, nadie lo es. */
   contarPartidas?: (userId: string) => Promise<number>;
-  /** El reloj y el azar del narrador virtual (en los tests, unos que no esperan y con semilla); si no, los de verdad. */
+  /** El azar de la sala (infra/azar; en los tests, con semilla): el reparto, la bolsa, el narrador virtual… */
+  azar: Azar;
+  /** El reloj del narrador virtual (en los tests, uno que no espera); si no, el de verdad. */
   relojNarradorVirtual?: Temporizador;
-  azarNarradorVirtual?: Azar;
   /**
    * Para Jarvis: el modelo de IA con el que decide para cada usuario (en los tests,
    * uno falso), o null si no tiene. Sin esto, no hay Jarvis.

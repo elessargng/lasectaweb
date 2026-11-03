@@ -42,7 +42,7 @@ const guion = () => ({ ...guionTroubleBrewing(), primeraNoche: PRIMERA_NOCHE, ot
  * las acciones de verdad y anota cuáles, sin esperas.
  */
 function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDeLaBolsa[] } = {}) {
-  const juego = new SalaDeJuego();
+  const juego = new SalaDeJuego(conSemilla(1));
   const { sala, partida, narrador } = juego;
   partida.cambiarGuion(guion());
   while (partida.plaza().length > personajes.length) sala.quitarAsiento();
@@ -561,7 +561,7 @@ describe('la bolsa que elige el narrador', () => {
     const m = plazaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
     const { partida } = m.juego;
     const { decidir, preguntas } = laPrimera();
-    const bolsa = (await elegirBolsa(partida.guion.actual()!.personajes, partida.bolsa.distribucion(), partida.bolsa, decidir))!;
+    const bolsa = (await elegirBolsa(partida.guion.actual()!.personajes, partida.bolsa.distribucion(), partida.bolsa, decidir, { azar: conSemilla(1) }))!;
     const tipos = bolsa.personajes.map((p) => partida.guion.personaje(p)?.tipo);
     expect(tipos.filter((t) => t === 'demon')).toHaveLength(1);
     expect(tipos.filter((t) => t === 'minion')).toHaveLength(1);
@@ -576,7 +576,7 @@ describe('la bolsa que elige el narrador', () => {
     const { partida } = m.juego;
     const personajes = partida.guion.actual()!.personajes;
     const { decidir, preguntas } = laPrimera();
-    await elegirBolsa(personajes, partida.bolsa.distribucion(), partida.bolsa, decidir);
+    await elegirBolsa(personajes, partida.bolsa.distribucion(), partida.bolsa, decidir, { azar: conSemilla(1) });
     const [primera, segunda] = preguntas;
     expect(primera.sinGrimorio).toMatchObject({ decisionesAnteriores: [] });
     expect((primera.sinGrimorio!.guion as unknown[]).length).toBe(personajes.length);

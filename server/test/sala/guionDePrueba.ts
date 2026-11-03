@@ -152,4 +152,5 @@ export const bolsaDePrueba = (poderDe: PoderDe = (id) => PODERES_BOLSA.get(id)):
     popeEnJuego: () => false,
     reglas: (_jugadores, personajes) => personajes,
     darPersonaje: () => {},
+    azar: conSemilla(1),
   });

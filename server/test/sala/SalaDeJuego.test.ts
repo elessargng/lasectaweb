@@ -3,7 +3,7 @@ import { EstadisticasPartida } from '../../src/models/estadisticas/EstadisticasP
 import { SALA_GRACIA_MS } from '../../src/models/sala/Participantes';
 import { SALA_CUENTA_ATRAS_MS } from '../../src/models/partida/Nominaciones';
 import { SalaDeJuego } from '../../src/models/SalaDeJuego';
-import { BOLSA_DE_SIETE, conCuenta, guionDePrueba, invitado } from './guionDePrueba';
+import { BOLSA_DE_SIETE, conCuenta, guionDePrueba, invitado, conSemilla } from './guionDePrueba';
 import { identidadDe } from '../../src/models/partida/Grimorio';
 
 /**
@@ -16,7 +16,7 @@ const siempreViva = () => true;
 
 /** Una sala con guion y los jugadores dados sentados en los primeros asientos, en orden. */
 function salaConJugadores(...nombres: string[]) {
-  const juego = new SalaDeJuego();
+  const juego = new SalaDeJuego(conSemilla(1));
   const { sala, partida } = juego;
   partida.cambiarGuion(guionDePrueba());
   const ids = nombres.map((nombre, i) => {
@@ -38,7 +38,7 @@ function alDia(juego: SalaDeJuego) {
 describe('SalaDeJuego', () => {
   describe('una sala nueva', () => {
     it('empieza en la preparación, con 7 asientos libres y sin nadie', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { sala, partida } = juego;
       expect(partida.fases.actual()).toEqual({ momento: 'preparacion', numero: 0, reinicios: 0 });
       expect(partida.plaza()).toHaveLength(7);
@@ -51,14 +51,14 @@ describe('SalaDeJuego', () => {
 
   describe('conexiones', () => {
     it('quien entra es visitante', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { sala } = juego;
       const { id } = sala.participantes.conectar('s1', 'c1', invitado('Ana'), siempreViva);
       expect(sala.participantes.buscar(id)).toMatchObject({ nombre: 'Ana', rol: 'visitante', persona: { tipo: 'invitado' }, conectado: true });
     });
 
     it('una cuenta que entra otra vez retoma su sitio y echa a la conexión anterior', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { sala, partida } = juego;
       const primera = sala.participantes.conectar('s1', 'c1', conCuenta('42', 'ana'), siempreViva);
       sala.sentar(primera.id, partida.plaza()[0].id);
@@ -70,7 +70,7 @@ describe('SalaDeJuego', () => {
     });
 
     it('un invitado que vuelve con su id de cliente tras perder la conexión retoma su sitio', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { sala } = juego;
       const antes = sala.participantes.conectar('s1', 'c1', invitado('Ana'), siempreViva);
       const despues = sala.participantes.conectar('s2', 'c1', invitado('Ana'), () => false);
@@ -78,7 +78,7 @@ describe('SalaDeJuego', () => {
     });
 
     it('un invitado con otro id de cliente entra como uno nuevo', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { sala } = juego;
       const a = sala.participantes.conectar('s1', 'c1', invitado('Ana'), siempreViva);
       const b = sala.participantes.conectar('s2', 'c2', invitado('Bea'), siempreViva);
@@ -91,7 +91,7 @@ describe('SalaDeJuego', () => {
       afterEach(() => vi.useRealTimers());
 
       it('al perder la conexión se le guarda el sitio un rato y después sale', () => {
-        const juego = new SalaDeJuego();
+        const juego = new SalaDeJuego(conSemilla(1));
         const { sala } = juego;
         const { clave, id } = sala.participantes.conectar('s1', 'c1', invitado('Ana'), siempreViva);
         const alExpulsar = vi.fn();
@@ -106,7 +106,7 @@ describe('SalaDeJuego', () => {
     });
 
     it('quien sale a propósito se va enseguida', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { sala } = juego;
       const { clave, id } = sala.participantes.conectar('s1', 'c1', invitado('Ana'), siempreViva);
       sala.participantes.salir(clave, 's1');
@@ -114,7 +114,7 @@ describe('SalaDeJuego', () => {
     });
 
     it('un invitado no puede usar un nombre que ya tiene otro (sin distinguir mayúsculas)', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { sala } = juego;
       sala.participantes.conectar('s1', 'c1', invitado('Ana'), siempreViva);
       expect(sala.participantes.nombreLibreParaInvitado('ANA', 'c2', siempreViva)).toBe(false);
@@ -122,7 +122,7 @@ describe('SalaDeJuego', () => {
     });
 
     it('con cuenta y menos de 10 partidas es novato', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { sala } = juego;
       const { id } = sala.participantes.conectar('s1', 'c1', conCuenta('7', 'nuevo', 3), siempreViva);
       expect(sala.participantes.buscar(id)?.persona).toEqual({ tipo: 'usuario', usuarioId: '7', novato: true });
@@ -135,7 +135,7 @@ describe('SalaDeJuego', () => {
     const acceso = ({ partida }: SalaDeJuego, id: string) => partida.acceso.de(id);
 
     it('concedido, se recupera al salir y volver (invitado, con el mismo navegador)', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { sala, partida } = juego;
       const { clave, id } = sala.participantes.conectar('s1', 'c1', invitado('Vera'), siempreViva);
       partida.acceso.cambiar(id, 'concedido');
@@ -146,7 +146,7 @@ describe('SalaDeJuego', () => {
     });
 
     it('concedido, se recupera al volver con la misma cuenta', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { sala, partida } = juego;
       const { clave, id } = sala.participantes.conectar('s1', 'c1', conCuenta('9', 'vera'), siempreViva);
       partida.acceso.cambiar(id, 'concedido');
@@ -155,7 +155,7 @@ describe('SalaDeJuego', () => {
     });
 
     it('solicitado, se pierde al salir', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { sala, partida } = juego;
       const { clave, id } = sala.participantes.conectar('s1', 'c1', invitado('Vera'), siempreViva);
       partida.acceso.cambiar(id, 'solicitado');
@@ -165,7 +165,7 @@ describe('SalaDeJuego', () => {
     });
 
     it('se pierde al cambiar de papel (al sentarse) y no vuelve al levantarse', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { sala, partida } = juego;
       const { id } = sala.participantes.conectar('s1', 'c1', invitado('Vera'), siempreViva);
       partida.acceso.cambiar(id, 'concedido');
@@ -176,7 +176,7 @@ describe('SalaDeJuego', () => {
     });
 
     it('expulsado por un narrador, al volver no lo recupera', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { sala, partida } = juego;
       const { id } = sala.participantes.conectar('s1', 'c1', invitado('Vera'), siempreViva);
       partida.acceso.cambiar(id, 'concedido');
@@ -185,7 +185,7 @@ describe('SalaDeJuego', () => {
     });
 
     it('otra partida: lo pierde quien lo tenía (también quien había salido); lo solicitado sigue', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { sala, partida } = juego;
       const vera = sala.participantes.conectar('s1', 'c1', invitado('Vera'), siempreViva);
       const { id: luis } = sala.participantes.conectar('s2', 'c2', invitado('Luis'), siempreViva);
@@ -228,7 +228,7 @@ describe('SalaDeJuego', () => {
     });
 
     it('al quitar el último asiento, quien estaba sentado vuelve a visitante', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { sala, partida } = juego;
       const { id } = sala.participantes.conectar('s1', 'c1', invitado('Ana'), siempreViva);
       sala.sentar(id, partida.plaza()[6].id);
@@ -257,7 +257,7 @@ describe('SalaDeJuego', () => {
     });
 
     it('dos jugadores son vecinos si no hay nadie sentado entre ellos (los libres se saltan)', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { sala, partida } = juego;
       const [a, b, c] = ['Ana', 'Bea', 'Ceci'].map((n) => sala.participantes.conectar(`s-${n}`, `c-${n}`, invitado(n), siempreViva).id);
       sala.sentar(a, partida.plaza()[0].id);
@@ -271,14 +271,14 @@ describe('SalaDeJuego', () => {
 
   describe('fichas, bolsa y reparto', () => {
     it('con 7 asientos, el reparto es de 5 aldeanos, 0 forasteros, 1 esbirro y 1 demonio', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { partida } = juego;
       partida.cambiarGuion(guionDePrueba());
       expect(partida.bolsa.distribucion()).toEqual({ jugadores: 7, jugadoresVivos: 7, viajeros: 0, viajerosVivos: 0, aldeanos: 5, forasteros: 0, esbirros: 1, demonios: 1 });
     });
 
     it('un viajero puesto a mano no cuenta para el reparto ni para la bolsa', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { partida } = juego;
       partida.cambiarGuion(guionDePrueba());
       partida.grimorio.cambiarPersonaje(partida.plaza()[0].id, 'voudon');
@@ -287,7 +287,7 @@ describe('SalaDeJuego', () => {
     });
 
     it('repartir la bolsa da un personaje de la bolsa a cada asiento y la bolsa se queda igual', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { partida } = juego;
       partida.cambiarGuion(guionDePrueba());
       BOLSA_DE_SIETE.forEach((id) => partida.bolsa.meterOSacar(id));
@@ -299,7 +299,7 @@ describe('SalaDeJuego', () => {
     });
 
     it('meter dos veces un personaje en la bolsa lo saca', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { partida } = juego;
       partida.bolsa.meterOSacar('chef');
       partida.bolsa.meterOSacar('chef');
@@ -360,7 +360,7 @@ describe('SalaDeJuego', () => {
     });
 
     it('los NPCs del guion están en juego desde el principio; los del catálogo, al ponerlos', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { partida } = juego;
       partida.cambiarGuion(guionDePrueba());
       expect(partida.npcs.npcs()).toEqual([]);
@@ -369,7 +369,7 @@ describe('SalaDeJuego', () => {
     });
 
     it('el silencio solo vale con el Bibliotecario del Infierno en juego', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { partida } = juego;
       partida.cambiarGuion(guionDePrueba());
       partida.npcs.pedirSilencio(true);
@@ -392,7 +392,7 @@ describe('SalaDeJuego', () => {
 
   describe('fases', () => {
     it('preparación → noche 1 → día 1 → noche 2', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { partida } = juego;
       partida.irANoche();
       expect(partida.fases.actual()).toEqual({ momento: 'noche', numero: 1, reinicios: 0 });
@@ -857,7 +857,7 @@ describe('SalaDeJuego', () => {
     });
 
     it('al revelar el grimorio se guarda la partida de quien tiene cuenta', () => {
-      const juego = new SalaDeJuego();
+      const juego = new SalaDeJuego(conSemilla(1));
       const { sala, partida } = juego;
       partida.cambiarGuion(guionDePrueba());
       const { id } = sala.participantes.conectar('s1', 'c1', conCuenta('42', 'ana'), siempreViva);

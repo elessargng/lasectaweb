@@ -79,7 +79,7 @@ export class NarradorVirtualService implements ServicioNarradorVirtual {
     private readonly temporizador: Temporizador,
     /** Manda la sala a todos (lo que cambia el propio narrador virtual sin pasar por una acción: su etapa). */
     private readonly difundir: () => void,
-    private readonly azar: Azar = Math.random,
+    private readonly azar: Azar,
     /** Para Jarvis (sin esto, no se puede añadir). */
     private readonly modelos: ModelosNarrador | null = null,
     /** Las bolsas de las últimas partidas de quien lo añade (sin esto, no se tienen en cuenta). */

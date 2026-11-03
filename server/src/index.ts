@@ -39,6 +39,7 @@ import { ThreadService } from './services/ThreadService';
 import { ThreadController } from './controllers/ThreadController';
 import { authenticateJWT, optionalAuthenticateJWT } from './controllers/middlewares/auth';
 import { DatabaseRepository } from './repositories/DatabaseRepository';
+import { azarSeguro } from './infra/azar';
 import { seedAdminUser } from './infra/semillas/seeder';
 import { VillacuervosRepository } from './repositories/VillacuervosRepository';
 import { VillacuervosService } from './services/VillacuervosService';
@@ -436,6 +437,8 @@ DatabaseRepository.getInstance()
     const httpServer = http.createServer(app);
     const salaService = new SalaService({
       guiones: guionService,
+      // El azar de verdad (crypto): el reparto, la bolsa al azar, el narrador virtual…
+      azar: azarSeguro,
       avatarDe: async (id) => (await userRepository.findById(id))?.profilePicture || null,
       // Los avatares y fondos que se suben a la sala, en disco (UPLOAD_DIR/sala)
       imagenes: imagenRepository,

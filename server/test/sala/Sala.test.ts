@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { Sala, SALA_ASIENTOS } from '../../src/models/sala/Sala';
-import { invitado } from './guionDePrueba';
+import { invitado, conSemilla } from './guionDePrueba';
 
 const siempreViva = () => true;
 
 /** Una sala con los jugadores dados sentados en los primeros asientos, en orden. */
 function salaConJugadores(...nombres: string[]) {
-  const sala = new Sala();
+  const sala = new Sala(conSemilla(1));
   const ids = nombres.map((nombre, i) => {
     const { id } = sala.participantes.conectar(`socket-${nombre}`, `cliente-${nombre}`, invitado(nombre), siempreViva);
     expect(sala.sentar(id, sala.jugadores()[i].id)).toBeNull();
@@ -20,7 +20,7 @@ const ocupantes = (sala: Sala) => sala.jugadores().map((j) => j.participanteId);
 
 describe('Sala', () => {
   it('empieza con los asientos iniciales, cada uno con un jugador al que no juega nadie', () => {
-    const sala = new Sala();
+    const sala = new Sala(conSemilla(1));
     expect(sala.jugadores()).toHaveLength(SALA_ASIENTOS.inicial);
     expect(sala.jugadores().every((j) => j.ocupante.tipo === 'vacio')).toBe(true);
   });

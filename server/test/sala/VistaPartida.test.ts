@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { SALA_CUENTA_ATRAS_MS } from '../../src/models/partida/Nominaciones';
 import { SalaDeJuego } from '../../src/models/SalaDeJuego';
 import { VistaPartida, type ContextoVista } from '../../src/views/VistaPartida';
-import { guionDePrueba, invitado } from './guionDePrueba';
+import { guionDePrueba, invitado, conSemilla } from './guionDePrueba';
 
 /** Lo que ve cada uno, sin sockets: la vista se prueba sola. */
 
@@ -14,7 +14,7 @@ const contexto: ContextoVista = {
 };
 
 function partida() {
-  const juego = new SalaDeJuego();
+  const juego = new SalaDeJuego(conSemilla(1));
   const { sala } = juego;
   juego.partida.cambiarGuion(guionDePrueba());
   const entra = (nombre: string) => sala.participantes.conectar(`s-${nombre}`, `c-${nombre}`, invitado(nombre), () => true).id;

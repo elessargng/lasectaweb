@@ -10,7 +10,7 @@ import { SalaService } from '../../src/services/sala/SalaService';
 import type { DependenciasSala } from '../../src/services/sala/puertos';
 import { MemoriaImagenRepository } from '../../src/repositories/ImagenRepository';
 import type { SalaDto, ResultadoAccion } from '../../src/views/dto/sala';
-import { guionDePrueba } from './guionDePrueba';
+import { conSemilla, guionDePrueba } from './guionDePrueba';
 
 const ESPERA_MAX_MS = 2000;
 
@@ -96,6 +96,8 @@ export class Arnes {
       imagenesBiblioteca: { leerPublica: async () => Promise.reject(new Error('Sin Biblioteca')) },
       imagenes: new MemoriaImagenRepository(),
       ...cambios,
+      // El azar, con semilla: la misma sala sale siempre igual
+      azar: cambios.azar ?? conSemilla(1),
     };
     const salaService = new SalaService(deps);
     abrirSalaPorSocket(http, salaService, new SalaController(salaService), new BolsaController(salaService.bolsa));

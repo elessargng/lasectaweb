@@ -94,7 +94,7 @@ export async function elegirBolsa(
   /** Las reglas de la bolsa de la partida: lo que toca con los ya elegidos y quién no va. */
   reglas: Pick<Bolsa, 'ajustar' | 'noVa'>,
   decidir: <T>(decision: Decision<T>) => Promise<T>,
-  { azar = Math.random, recientes = [] }: { azar?: Azar; recientes?: readonly (readonly string[])[] } = {},
+  { azar, recientes = [] }: { azar: Azar; recientes?: readonly (readonly string[])[] },
 ): Promise<BolsaElegida | null> {
   const { aldeanos, forasteros, esbirros, demonios } = distribucion;
   if (aldeanos === null || forasteros === null || esbirros === null || demonios === null) return null;

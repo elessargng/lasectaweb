@@ -1,4 +1,5 @@
 import { NarradorVirtual } from './narradorVirtual/NarradorVirtual';
+import type { Azar } from './partida/azar';
 import { Partida } from './partida/Partida';
 import { Sala } from './sala/Sala';
 
@@ -10,10 +11,13 @@ import { Sala } from './sala/Sala';
  * `const { sala, partida } = juego`.
  */
 export class SalaDeJuego {
+  /** El azar viene de fuera (infra/azar; en los tests, con semilla). */
+  constructor(private readonly azar: Azar) {}
+
   /** Quién está en la sala y en qué asiento se sienta cada jugador. */
-  readonly sala = new Sala();
+  readonly sala = new Sala(this.azar);
   /** La partida que se juega en la sala. */
-  readonly partida: Partida = new Partida(this.sala, { hayNarradorVirtual: () => !!this.narrador.actual() });
+  readonly partida: Partida = new Partida(this.sala, { hayNarradorVirtual: () => !!this.narrador.actual(), azar: this.azar });
   /** El narrador virtual, si lo hay: su participante es de la sala; lo que lleva, de la partida. */
   readonly narrador: NarradorVirtual = new NarradorVirtual(this.sala, this.partida);
 }

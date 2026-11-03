@@ -1,4 +1,4 @@
-import { barajar } from '../partida/azar';
+import { barajar, type Azar } from '../partida/azar';
 import { Jugador } from '../partida/Jugador';
 import { Participantes } from './Participantes';
 
@@ -16,6 +16,8 @@ export type OyenteQuitar = (jugador: Jugador) => void;
  * todo lo suyo: lo que se guarda por su id va con él.
  */
 export class Sala {
+  constructor(private readonly azar: Azar) {}
+
   readonly participantes = new Participantes();
   private readonly plaza: Jugador[] = Array.from({ length: SALA_ASIENTOS.inicial }, () => new Jugador());
   private oyentesQuitar: OyenteQuitar[] = [];
@@ -109,7 +111,7 @@ export class Sala {
    * nadie). Devuelve cuántos había sentados.
    */
   mezclar(): number {
-    const barajados = barajar(this.jugadores());
+    const barajados = barajar(this.jugadores(), this.azar);
     this.plaza.splice(0, this.plaza.length, ...barajados);
     return barajados.filter((j) => j.participanteId).length;
   }

@@ -7,7 +7,7 @@ import type { Decision, EstrategiaNarrador, PreguntaSiONo } from './EstrategiaNa
  * aconseja (o a cara o cruz). No mira el grimorio.
  */
 export class TontoYTu implements EstrategiaNarrador {
-  constructor(private readonly sorteo: Azar = Math.random) {}
+  constructor(private readonly sorteo: Azar) {}
 
   async elegir<T>({ opciones }: Decision<T>): Promise<T> {
     return this.elegirAhora(opciones).valor;

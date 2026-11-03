@@ -1,6 +1,6 @@
 import type { Distribucion } from '../compartido/partida';
 import type { PersonajeDeGuion } from '../guiones';
-import { barajar, barajarCon } from './azar';
+import { barajar, type Azar } from './azar';
 import { repartoPara } from './distribucion';
 import { identidadDe } from './Grimorio';
 import type { Jugador } from './Jugador';
@@ -97,6 +97,8 @@ export interface EntornoBolsa {
   reglas(jugadores: Jugador[], personajes: string[]): string[];
   /** Pone en la ficha del asiento el personaje que le ha tocado (ver Grimorio.repartir). */
   darPersonaje(jugadorId: string, personaje: string | null): void;
+  /** El azar con el que se reparte y se llena al azar. */
+  azar: Azar;
 }
 
 /** Cuántos de cada tipo, con los esbirros ya pasados al bien si alguno lo pide. */
@@ -192,8 +194,8 @@ export class Bolsa {
    * Llena la bolsa al azar con los personajes del guion (ver sortear) y la llena
    * (los viajeros se quedan). Sin reparto (menos de 5 jugadores), un error.
    */
-  llenarAlAzar(azar: () => number = Math.random): { error: string } | BolsaAlAzar<PersonajeDeGuion> {
-    const sorteo = this.sortear(this.entorno.personajes(), this.distribucion(), this.entorno.npcs(), azar);
+  llenarAlAzar(): { error: string } | BolsaAlAzar<PersonajeDeGuion> {
+    const sorteo = this.sortear(this.entorno.personajes(), this.distribucion(), this.entorno.npcs(), this.entorno.azar);
     if (!sorteo) return { error: 'No hay reparto para tan pocos jugadores.' };
     const error = this.llenar(sorteo.personajes);
     return error ? { error } : sorteo;
@@ -280,7 +282,7 @@ export class Bolsa {
    */
   repartir(): void {
     const jugadores = this.entorno.plaza().filter((a) => !this.llevaViajero(a));
-    const personajes = this.entorno.reglas(jugadores, barajar(this.personajes));
+    const personajes = this.entorno.reglas(jugadores, barajar(this.personajes, this.entorno.azar));
     jugadores.forEach((a, i) => this.entorno.darPersonaje(a.id, personajes[i] ?? null));
   }
 
@@ -370,7 +372,7 @@ export class Bolsa {
     personajes: readonly P[],
     distribucion: Distribucion,
     npcs: readonly string[],
-    azar: () => number,
+    azar: Azar,
   ): BolsaAlAzar<P> | null {
     if (!this.conPoderes(distribucion, [])) return null;
 
@@ -378,7 +380,7 @@ export class Bolsa {
     const elegir = (tipo: string, cuantos: number) => {
       const candidatos = personajes.filter((p) => p.tipo === tipo);
       if (candidatos.length < cuantos) escasos.add(tipo);
-      return barajarCon(candidatos, azar).slice(0, cuantos);
+      return barajar(candidatos, azar).slice(0, cuantos);
     };
     const ids = (lista: P[]) => lista.map((p) => p.id);
 

@@ -3,13 +3,13 @@ import { SalaDeJuego } from '../../src/models/SalaDeJuego';
 import type { HabilidadNocheDto } from '../../src/views/dto/despertar';
 import { Arnes } from './arnes';
 import { ficha } from '../../src/models/partida/habilidades/HabilidadNocturna';
-import { guionDePrueba, guionTroubleBrewing, invitado } from './guionDePrueba';
+import { guionDePrueba, guionTroubleBrewing, invitado, conSemilla } from './guionDePrueba';
 
 /** El despertar guiado desde el orden de noche: cada personaje de Trouble Brewing, según su habilidad. */
 
 /** Una plaza de Trouble Brewing con esos personajes (uno por asiento, en orden) y sus jugadores, de noche. */
 function plaza(...personajes: string[]) {
-  const juego = new SalaDeJuego();
+  const juego = new SalaDeJuego(conSemilla(1));
   const { sala, partida } = juego;
   partida.cambiarGuion(guionTroubleBrewing());
   while (partida.plaza().length > personajes.length) sala.quitarAsiento();

@@ -26,8 +26,8 @@ export interface Voz {
   decir(texto: string): void;
 }
 
-/** Un número al azar entre 0 (incluido) y 1, como Math.random (en los tests, con semilla). */
-export type Azar = () => number;
+/** El azar (ver models/partida/azar). */
+export type { Azar } from '../partida/azar';
 
 /**
  * El modelo de IA con el que decide Jarvis, sea cual sea (en los tests, uno falso):

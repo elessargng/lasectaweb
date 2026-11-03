@@ -4,14 +4,14 @@ import { SALA_ASIENTOS } from '../../src/models/sala/Sala';
 import { MAX_RECORDATORIOS } from '../../src/models/partida/Grimorio';
 import { MAX_REPETIDOS } from '../../src/models/partida/Bolsa';
 import { NPC_GARDENER, NPC_POPE } from '../../src/models/partida/personajesEspeciales';
-import { BOLSA_DE_SIETE, guionDePrueba } from './guionDePrueba';
+import { BOLSA_DE_SIETE, guionDePrueba, conSemilla } from './guionDePrueba';
 
 /**
  * Las reglas de lo que el narrador hace a mano (la bolsa, las fichas, los
  * recordatorios, la calavera, los asientos): son del dominio, y se prueban sin sala.
  */
 function partidaDePrueba() {
-  const juego = new SalaDeJuego();
+  const juego = new SalaDeJuego(conSemilla(1));
   juego.partida.cambiarGuion(guionDePrueba());
   const asiento = (i: number) => juego.partida.plaza()[i];
   return { ...juego, asiento };

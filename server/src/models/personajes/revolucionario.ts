@@ -1,5 +1,4 @@
-import { randomInt } from 'crypto';
-import { barajar } from '../partida/azar';
+import { barajar, enteroAlAzar } from '../partida/azar';
 import { tieneRecordatorio, type ContextoReglas, type ReglaPersonaje } from './ReglaPersonaje';
 import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
@@ -19,9 +18,9 @@ function mismoAlineamiento(ctx: ContextoReglas, personajes: string[], x: number,
   const pares = (n: number) => (n * (n - 1)) / 2;
   const total = pares(buenos.length) + pares(malvados.length);
   if (total === 0) return personajes;
-  const grupo = randomInt(total) < pares(buenos.length) ? buenos : malvados;
+  const grupo = enteroAlAzar(total, ctx.azar) < pares(buenos.length) ? buenos : malvados;
   // Dos distintos del grupo, cada uno a una de las dos posiciones
-  const [primero, segundo] = barajar(grupo.map((_, i) => i)).slice(0, 2);
+  const [primero, segundo] = barajar(grupo.map((_, i) => i), ctx.azar).slice(0, 2);
   const elegidos = [grupo[primero], grupo[segundo]];
   const resto = [...personajes];
   for (const id of elegidos) resto.splice(resto.indexOf(id), 1);
