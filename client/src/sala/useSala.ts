@@ -316,6 +316,17 @@ export function useSala(
     [pedirAlSocket],
   );
 
+  /** El paso de las fases (el narrador), por sus eventos. */
+  const fase: AccionesFase = useMemo(
+    () => ({
+      irANoche: () => pedirAlSocket<ResultadoAccion>('fase:noche', {}),
+      amanecer: () => pedirAlSocket<ResultadoAccion>('fase:amanecer', {}),
+      volverAtras: () => pedirAlSocket<ResultadoAccion>('fase:volverAtras', {}),
+      limpiarGrimorio: () => pedirAlSocket<ResultadoAccion>('fase:limpiarGrimorio', {}),
+    }),
+    [pedirAlSocket],
+  );
+
   /** Vuelve a pedir los mensajes que se pueden leer (al cambiar de papel cambian). */
   const pedirHistorial = useCallback(() => {
     socketRef.current?.emit('chat:historial');
@@ -350,7 +361,18 @@ export function useSala(
     revelacion,
     senalamiento,
     faroles,
+    fase,
   };
+}
+
+/** Lo que hace el narrador con las fases (ver useSala). */
+export interface AccionesFase {
+  irANoche(): Promise<ResultadoAccion>;
+  amanecer(): Promise<ResultadoAccion>;
+  /** La máquina del tiempo: a la fase anterior. */
+  volverAtras(): Promise<ResultadoAccion>;
+  /** Vuelve a la preparación, con las fichas como al principio. */
+  limpiarGrimorio(): Promise<ResultadoAccion>;
 }
 
 /** Lo que se hace con los faroles (ver useSala). */

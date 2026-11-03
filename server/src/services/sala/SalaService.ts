@@ -13,6 +13,7 @@ import { RelojService } from './RelojService';
 import { RevelacionService } from './RevelacionService';
 import { SenalamientoService } from './SenalamientoService';
 import { FarolService } from './FarolService';
+import { FaseService } from './FaseService';
 import { ImagenesSala } from './ImagenesSala';
 import type { DependenciasAcciones, DependenciasSala, DifusorSala } from './puertos';
 
@@ -69,6 +70,8 @@ export class SalaService {
   readonly senalamiento: SenalamientoService;
   /** Los faroles del demonio y de cada jugador (ver FarolController). */
   readonly faroles: FarolService;
+  /** El paso de las fases (ver FaseController). */
+  readonly fase: FaseService;
   private readonly conversaciones: ConversacionService;
   private readonly videollamada: VideollamadaService | null;
   private readonly narradorVirtual: NarradorVirtualService;
@@ -102,6 +105,7 @@ export class SalaService {
     this.revelacion = new RevelacionService(this.juego, () => this.difundir());
     this.senalamiento = new SenalamientoService(this.juego, () => this.difundir());
     this.faroles = new FarolService(this.juego, () => this.difundir());
+    this.fase = new FaseService(this.juego, () => this.difundir());
     this.conversaciones = new ConversacionService(this.juego);
     // Sin servidor de vídeo configurado, la sala funciona igual, sin cámaras ni micrófonos
     this.videollamada = deps.video ? new VideollamadaService(deps.video, this.juego, this.conversaciones) : null;
@@ -121,6 +125,9 @@ export class SalaService {
         empezarSenalamiento: async (peticion) => this.senalamiento.empezar(participanteId, peticion),
         terminarSenalamiento: async () => this.senalamiento.terminar(participanteId),
         prepararFarol: async (posicion, personajeId) => this.faroles.preparar(participanteId, posicion, personajeId),
+        irANoche: async () => this.fase.irANoche(participanteId),
+        amanecer: async () => this.fase.amanecer(participanteId),
+        limpiarGrimorio: async () => this.fase.limpiarGrimorio(participanteId),
       }),
       {
         decir: (texto) => {
@@ -177,7 +184,7 @@ export class SalaService {
       conversaciones: this.conversaciones.lista(),
       invitacionesDe: (participanteId: string) => this.conversaciones.invitacionesDe(participanteId),
       video: !!this.videollamada,
-      accionesDe: (yo: Participante) => [...accionesPermitidas(this.juego, yo), ...this.bolsa.permitidas(yo), ...this.reloj.permitidas(yo), ...this.revelacion.permitidas(yo), ...this.senalamiento.permitidas(yo), ...this.faroles.permitidas(yo)],
+      accionesDe: (yo: Participante) => [...accionesPermitidas(this.juego, yo), ...this.bolsa.permitidas(yo), ...this.reloj.permitidas(yo), ...this.revelacion.permitidas(yo), ...this.senalamiento.permitidas(yo), ...this.faroles.permitidas(yo), ...this.fase.permitidas(yo)],
     };
   }
 

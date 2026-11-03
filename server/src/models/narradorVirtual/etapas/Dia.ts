@@ -275,7 +275,7 @@ export class Nominaciones implements Etapa {
       await ctx.pasarA(new Revelando(ganador, true));
       return;
     }
-    if (partida.fases.actual().momento !== 'noche') await ctx.plaza.accion('narrador:irANoche');
+    if (partida.fases.actual().momento !== 'noche') await ctx.plaza.irANoche();
     await ctx.pasarA(new Noche());
   }
 

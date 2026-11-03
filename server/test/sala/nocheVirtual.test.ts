@@ -104,6 +104,20 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
         if (!error) hechas.push({ accion: 'faroles:preparar', datos: { posicion, personajeId } });
         return error ? { ok: false, error } : { ok: true };
       },
+      irANoche: async () => {
+        juego.partida.irANoche();
+        hechas.push({ accion: 'fase:noche', datos: undefined });
+        return { ok: true };
+      },
+      limpiarGrimorio: async () => {
+        juego.partida.limpiarGrimorio();
+        return { ok: true };
+      },
+      amanecer: async () => {
+        juego.partida.amanecer();
+        hechas.push({ accion: 'fase:amanecer', datos: undefined });
+        return { ok: true };
+      },
       terminarSenalamiento: async () => {
         juego.partida.senalamientos.terminar();
         hechas.push({ accion: 'senalamiento:terminar', datos: undefined });

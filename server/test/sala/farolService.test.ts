@@ -70,7 +70,7 @@ describe('los faroles', () => {
 
   it('copiar los que ha enseñado el narrador, y solo esos', async () => {
     await arnes.accion(narradora, 'narrador:cambiarGuion', { predeterminado: 'prueba' });
-    await arnes.accion(narradora, 'narrador:irANoche');
+    await arnes.hacer(narradora, 'fase:noche');
     expect(await arnes.pedir(ana, 'faroles:copiar', { personajes: ['chef'] })).toEqual({ ok: false, error: 'No tienes ningún despertar abierto.' });
     await arnes.accion(narradora, 'narrador:despertar', { jugadorId: idAsiento(0) });
     await arnes.accion(narradora, 'despertar:enviar', { jugadorId: idAsiento(0), tarjeta: 'noEnJuego', personajes: ['chef', 'empath', 'librarian'] });

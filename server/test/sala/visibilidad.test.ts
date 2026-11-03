@@ -25,8 +25,8 @@ async function repartir() {
 }
 
 const alDia = async () => {
-  await arnes.accion(narradora, 'narrador:irANoche');
-  await arnes.accion(narradora, 'narrador:amanecer');
+  await arnes.hacer(narradora, 'fase:noche');
+  await arnes.hacer(narradora, 'fase:amanecer');
 };
 
 beforeEach(async () => {
@@ -162,7 +162,7 @@ describe('lo que ve cada uno', () => {
   });
 
   it('la muerte pendiente de la noche solo la ve quien ve el grimorio', async () => {
-    await arnes.accion(narradora, 'narrador:irANoche');
+    await arnes.hacer(narradora, 'fase:noche');
     await arnes.accion(narradora, 'narrador:cambiarVida', { jugadorId: idAsiento(1), muerto: true });
     expect(asiento(narradora, 1).muertePendiente).toBe(true);
     expect(asiento(bea, 1).muertePendiente).toBe(false);
@@ -170,7 +170,7 @@ describe('lo que ve cada uno', () => {
   });
 
   it('un despertar lo ven la narradora y el jugador despierto, nadie más', async () => {
-    await arnes.accion(narradora, 'narrador:irANoche');
+    await arnes.hacer(narradora, 'fase:noche');
     await arnes.accion(narradora, 'narrador:despertar', { jugadorId: idAsiento(0) });
     expect(narradora.estado.despertares).toHaveLength(1);
     // El jugador no se entera hasta que la narradora le manda algo
@@ -183,7 +183,7 @@ describe('lo que ve cada uno', () => {
   });
 
   it('la narradora manda lo mismo a varios: despierta a los que aún no lo estaban', async () => {
-    await arnes.accion(narradora, 'narrador:irANoche');
+    await arnes.hacer(narradora, 'fase:noche');
     await arnes.accion(narradora, 'narrador:despertar', { jugadorId: idAsiento(0) });
     await arnes.accion(narradora, 'despertar:enviar', { jugadorIds: [idAsiento(0), idAsiento(1)], tarjeta: 'habilidad' });
     expect(narradora.estado.despertares.map((d) => d.jugador)).toEqual([idAsiento(0), idAsiento(1)]);
@@ -195,7 +195,7 @@ describe('lo que ve cada uno', () => {
   });
 
   it('de noche, el señalamiento solo lo ven la narradora y quien señala', async () => {
-    await arnes.accion(narradora, 'narrador:irANoche');
+    await arnes.hacer(narradora, 'fase:noche');
     await arnes.pedir(narradora, 'senalamiento:empezar', { mensaje: '', segundos: null, senaladores: [idAsiento(0)], objetivos: [] });
     expect(narradora.estado.senalamiento).not.toBeNull();
     expect(ana.estado.senalamiento).not.toBeNull();
@@ -217,7 +217,7 @@ describe('lo que ve cada uno', () => {
   });
 
   it('las acciones que llegan dependen del papel', () => {
-    expect(narradora.estado.acciones).toEqual(expect.arrayContaining(['narrador:irANoche', 'bolsa:meter']));
+    expect(narradora.estado.acciones).toEqual(expect.arrayContaining(['fase:noche', 'bolsa:meter']));
     expect(ana.estado.acciones).toContain('sala:levantarMano');
     expect(ana.estado.acciones.some((a) => a.startsWith('narrador:'))).toBe(false);
     expect(vera.estado.acciones).toEqual(expect.arrayContaining(['sala:sentarse', 'sala:solicitarGrimorio']));
@@ -227,7 +227,7 @@ describe('lo que ve cada uno', () => {
 
 describe('permisos', () => {
   it('un jugador no puede hacer cosas de narrador', async () => {
-    expect(await arnes.intentar(ana, 'narrador:irANoche')).toEqual({ ok: false, error: 'Solo un narrador puede hacer que anochezca.' });
+    expect(await arnes.pedir(ana, 'fase:noche')).toEqual({ ok: false, error: 'Solo un narrador puede hacer que anochezca.' });
   });
 
   it('no puede haber dos narradores por su cuenta', async () => {

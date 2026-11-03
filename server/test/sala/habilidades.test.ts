@@ -376,7 +376,7 @@ describe('despertar guiado por el socket', () => {
     const asientos = () => narradora.estado.plaza;
     await arnes.accion(ana, 'sala:sentarse', { jugadorId: asientos()[0].id });
     await arnes.accion(narradora, 'narrador:cambiarPersonaje', { jugadorId: asientos()[0].id, personajeId: 'poisoner' });
-    await arnes.accion(narradora, 'narrador:irANoche');
+    await arnes.hacer(narradora, 'fase:noche');
     expect(narradora.estado.habilidadesNoche.find((h) => h.personaje === 'poisoner')?.estado).toBe('listo');
     expect(ana.estado.habilidadesNoche).toEqual([]);
 
@@ -401,7 +401,7 @@ describe('despertar guiado por el socket', () => {
     const asientos = () => narradora.estado.plaza;
     await arnes.accion(ana, 'sala:sentarse', { jugadorId: asientos()[0].id });
     await arnes.accion(narradora, 'narrador:cambiarPersonaje', { jugadorId: asientos()[0].id, personajeId: 'chef' });
-    await arnes.accion(narradora, 'narrador:irANoche');
+    await arnes.hacer(narradora, 'fase:noche');
 
     await arnes.accion(narradora, 'narrador:despertarHabilidad', { personajeId: 'chef' });
     expect(ana.estado.despertares[0].mensajes.slice(-1)[0]).toMatchObject({ autor: 'narrador', guiado: true });

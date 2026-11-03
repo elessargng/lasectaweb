@@ -105,6 +105,7 @@ import {
   type AccionesRevelacion,
   type AccionesSenalamiento,
   type AccionesFaroles,
+  type AccionesFase,
   type ResultadoAccion,
   type ResultadoBolsaAlAzar,
 } from './useSala';
@@ -615,6 +616,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     revelacion,
     senalamiento,
     faroles,
+    fase,
   } = useSala(
     cuenta?.token ?? null,
     cuenta ? null : invitado,
@@ -1306,14 +1308,14 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     borrarPerfil: borrarPerfilConfiguracion,
   } = useConfiguracionCuenta(cuenta?.token ?? null, configuracionActual, aplicarConfiguracion);
   // Narradores: ir a la noche (desde la preparación o el día) o amanecer (desde la noche).
-  const accionFase = estado?.acciones.includes('narrador:irANoche')
-    ? 'narrador:irANoche'
-    : estado?.acciones.includes('narrador:amanecer')
-      ? 'narrador:amanecer'
+  const accionFase = estado?.acciones.includes('fase:noche')
+    ? 'irANoche'
+    : estado?.acciones.includes('fase:amanecer')
+      ? 'amanecer'
       : null;
   const cambiarFase = async () => {
     if (!accionFase) return;
-    const r = await pedirPropio(accionFase);
+    const r = await fasePropia[accionFase]();
     if (!r.ok) setAviso(r.error);
   };
 
@@ -1683,6 +1685,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     usar: (personajeId) => propia(() => faroles.usar(personajeId)),
     copiar: (personajes) => propia(() => faroles.copiar(personajes)),
   };
+  const fasePropia: AccionesFase = {
+    irANoche: () => propia(() => fase.irANoche()),
+    amanecer: () => propia(() => fase.amanecer()),
+    volverAtras: () => propia(() => fase.volverAtras()),
+    limpiarGrimorio: () => propia(() => fase.limpiarGrimorio()),
+  };
 
   // Faroles: los del narrador (narradores y visitantes) o, si soy el demonio o un esbirro, los míos.
   // Soy el demonio (o esbirro) si mi ficha lo lleva (o, sin personaje dado, si me lo he anotado).
@@ -1951,9 +1959,9 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                 <FasePartida
                   fase={estado.fase}
                   onVolverAtras={
-                    estado.acciones.includes('narrador:volverAtras')
+                    estado.acciones.includes('fase:volverAtras')
                       ? async () => {
-                          const r = await pedirPropio('narrador:volverAtras');
+                          const r = await fasePropia.volverAtras();
                           if (!r.ok) setAviso(r.error);
                           return r.ok;
                         }
@@ -1969,6 +1977,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   onRevelando={setRevelandoGrimorio}
                   revelarGrimorio={revelacionPropia.empezar}
                   empezarSenalamiento={senalamientoPropio.empezar}
+                  fase={fasePropia}
                   atajoFase={atajos.cambiarFase}
                   atajoRevelar={atajos.revelarGrimorio}
                   atajoGong={atajos.sonarGong}
@@ -2356,7 +2365,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
         {decidiendoFinal && (
           <DialogoFinal
-            onNoche={() => pedirPropio('narrador:irANoche')}
+            onNoche={() => fasePropia.irANoche()}
             onRevelar={() => {
               setDecidiendoFinal(false);
               setRevelandoGrimorio(true);

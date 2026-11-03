@@ -46,7 +46,8 @@ export async function prepararPartida(
     if (!r.ok) throw new Error(r.error);
   };
   try {
-    await paso('narrador:limpiarGrimorio');
+    const limpio = await plaza.limpiarGrimorio();
+    if (!limpio.ok) throw new Error(limpio.error);
     while (partida.plaza().length < jugadores) await paso('narrador:asientos', { cambio: 'añadir' });
     while (partida.plaza().length > jugadores) {
       const asientos = partida.plaza();

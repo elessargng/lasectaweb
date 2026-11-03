@@ -15,7 +15,7 @@ export class EsperandoJugadores implements Etapa {
     if (jugadores.length === 0 || jugadores.some((a) => !a.participanteId)) return;
     const reparto = await ctx.plaza.accion('narrador:asignarPersonajes');
     if (!reparto.ok) return;
-    const noche = await ctx.plaza.accion('narrador:irANoche');
+    const noche = await ctx.plaza.irANoche();
     if (!noche.ok) return;
     ctx.decir(FRASES.primeraNoche());
     await ctx.pasarA(new Noche());

@@ -32,6 +32,12 @@ export interface Narrador {
   terminarSenalamiento(): Promise<RespuestaAccion>;
   /** Pone un personaje en una casilla de los faroles del demonio. */
   prepararFarol(posicion: number, personajeId: string | null): Promise<RespuestaAccion>;
+  /** Anochece. */
+  irANoche(): Promise<RespuestaAccion>;
+  /** Amanece. */
+  amanecer(): Promise<RespuestaAccion>;
+  /** Limpia el grimorio: vuelve a la preparación, como al principio. */
+  limpiarGrimorio(): Promise<RespuestaAccion>;
 }
 
 /** Lo que contesta la sala a una acción: hecha (con lo que devuelva) o no, y por qué. */

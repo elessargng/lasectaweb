@@ -5,6 +5,7 @@ import { io as conectar, type Socket } from 'socket.io-client';
 import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
 import { BolsaController } from '../../src/controllers/sala/BolsaController';
 import { FarolController } from '../../src/controllers/sala/FarolController';
+import { FaseController } from '../../src/controllers/sala/FaseController';
 import { RelojController } from '../../src/controllers/sala/RelojController';
 import { RevelacionController } from '../../src/controllers/sala/RevelacionController';
 import { SenalamientoController } from '../../src/controllers/sala/SenalamientoController';
@@ -108,6 +109,7 @@ export class Arnes {
       sala: new SalaController(salaService),
       bolsa: new BolsaController(salaService.bolsa),
       faroles: new FarolController(salaService.faroles),
+      fase: new FaseController(salaService.fase),
       reloj: new RelojController(salaService.reloj),
       revelacion: new RevelacionController(salaService.revelacion),
       senalamiento: new SenalamientoController(salaService.senalamiento),
@@ -150,6 +152,12 @@ export class Arnes {
   /** Como accion, pero devuelve el resultado aunque falle. */
   async intentar(cliente: Cliente, accion: string, datos?: unknown): Promise<ResultadoAccion> {
     return this.pedir(cliente, 'sala:accion', { accion, datos });
+  }
+
+  /** Como pedir, pero falla si la petición falla (para preparar un test: 'fase:noche'…). */
+  async hacer(cliente: Cliente, evento: string, datos?: unknown): Promise<void> {
+    const resultado = await this.pedir(cliente, evento, datos);
+    if (!resultado.ok) throw new Error(`${cliente.nombre} no ha podido ${evento}: ${resultado.error}`);
   }
 
   /** Una petición por su evento (la bolsa: 'bolsa:meter'…) y, si sale bien, espera a que llegue la sala a todos. */

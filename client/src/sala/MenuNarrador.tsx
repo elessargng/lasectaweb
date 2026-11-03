@@ -9,7 +9,7 @@ import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { botonIcono } from './estilos';
 import { ID_MENU_NARRADOR } from './ids';
 import type { Atajo } from './atajos';
-import type { AccionesReloj, AccionesRevelacion, AccionesSenalamiento, SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
+import type { AccionesFase, AccionesReloj, AccionesRevelacion, AccionesSenalamiento, SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
 
 interface MenuNarradorProps {
   estado: SalaDto;
@@ -24,6 +24,8 @@ interface MenuNarradorProps {
   revelarGrimorio: AccionesRevelacion['empezar'];
   /** Pide que se señale (ver AccionesSenalamiento). */
   empezarSenalamiento: AccionesSenalamiento['empezar'];
+  /** Anochecer, amanecer y limpiar el grimorio (ver AccionesFase). */
+  fase: Pick<AccionesFase, 'irANoche' | 'amanecer' | 'limpiarGrimorio'>;
   /** Teclas de cambiar de fase (noche/amanecer) y de revelar el grimorio (se ven al lado). */
   atajoFase?: Atajo;
   atajoRevelar?: Atajo;
@@ -101,6 +103,7 @@ const MenuNarrador = ({
   onRevelando,
   revelarGrimorio,
   empezarSenalamiento,
+  fase,
   atajoFase,
   atajoRevelar,
   atajoGong,
@@ -121,13 +124,13 @@ const MenuNarrador = ({
   const opciones: OpcionMenu[] = [
     { id: 'narrador:asientos', etiqueta: 'Asientos', elegir: onAsientos },
     // Noche y día: solo sale el que toca
-    { id: 'narrador:irANoche', etiqueta: 'Ir a la noche', atajo: atajoFase, elegir: () => void pedir('narrador:irANoche') },
-    { id: 'narrador:amanecer', etiqueta: 'Amanece', atajo: atajoFase, elegir: () => void pedir('narrador:amanecer') },
+    { id: 'fase:noche', etiqueta: 'Ir a la noche', atajo: atajoFase, elegir: () => void fase.irANoche() },
+    { id: 'fase:amanecer', etiqueta: 'Amanece', atajo: atajoFase, elegir: () => void fase.amanecer() },
     { id: 'reloj:sonarGong', etiqueta: 'Sonar gong', atajo: atajoGong, elegir: onSonarGong },
     { id: 'senalamiento:empezar', etiqueta: 'Señalar', abreDialogo: true, elegir: () => setSenalando(true) },
     { id: 'reloj:poner', etiqueta: 'Reloj', atajo: atajoReloj, abreDialogo: true, elegir: () => onPoniendoReloj(true) },
     { id: 'revelacion:empezar', etiqueta: 'Revelar grimorio', atajo: atajoRevelar, abreDialogo: true, elegir: () => onRevelando(true) },
-    { id: 'narrador:limpiarGrimorio', etiqueta: 'Limpiar grimorio', abreDialogo: true, elegir: () => setLimpiando(true) },
+    { id: 'fase:limpiarGrimorio', etiqueta: 'Limpiar grimorio', abreDialogo: true, elegir: () => setLimpiando(true) },
     ...Object.entries(ELEGIR).map(([accion, { etiqueta }]) => ({
       id: accion,
       etiqueta,
@@ -166,7 +169,7 @@ const MenuNarrador = ({
         <DialogoConfirmar
           titulo="Limpiar grimorio"
           confirmar="Limpiar grimorio"
-          onConfirmar={() => pedir('narrador:limpiarGrimorio')}
+          onConfirmar={() => fase.limpiarGrimorio()}
           onCerrar={() => setLimpiando(false)}
         >
           Se borra el registro de votaciones, las fichas vuelven a como estaban al principio y la partida vuelve a la

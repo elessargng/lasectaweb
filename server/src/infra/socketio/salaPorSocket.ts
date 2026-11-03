@@ -1,6 +1,7 @@
 import type { Server as HttpServer } from 'http';
 import { Server } from 'socket.io';
 import type { BolsaController } from '../../controllers/sala/BolsaController';
+import type { FaseController } from '../../controllers/sala/FaseController';
 import type { FarolController } from '../../controllers/sala/FarolController';
 import type { RelojController } from '../../controllers/sala/RelojController';
 import type { RevelacionController } from '../../controllers/sala/RevelacionController';
@@ -31,6 +32,7 @@ export interface ControladoresSala {
   sala: SalaController;
   bolsa: BolsaController;
   faroles: FarolController;
+  fase: FaseController;
   reloj: RelojController;
   revelacion: RevelacionController;
   senalamiento: SenalamientoController;
@@ -50,6 +52,12 @@ const PETICIONES_PARTES = {
     'faroles:poner': 'poner',
     'faroles:usar': 'usar',
     'faroles:copiar': 'copiar',
+  },
+  fase: {
+    'fase:noche': 'irANoche',
+    'fase:amanecer': 'amanecer',
+    'fase:volverAtras': 'volverAtras',
+    'fase:limpiarGrimorio': 'limpiarGrimorio',
   },
   reloj: {
     'reloj:sonarGong': 'sonarGong',
