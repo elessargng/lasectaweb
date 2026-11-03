@@ -101,6 +101,7 @@ import {
   type ParticipanteDto,
   type Recordatorio,
   type AccionesBolsa,
+  type AccionesReloj,
   type ResultadoAccion,
   type ResultadoBolsaAlAzar,
 } from './useSala';
@@ -607,6 +608,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     entrarConversacion,
     salirConversacion,
     bolsa,
+    reloj,
   } = useSala(
     cuenta?.token ?? null,
     cuenta ? null : invitado,
@@ -1335,7 +1337,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   };
 
   const sonarGong = async () => {
-    const r = await pedirPropio('narrador:sonarGong');
+    const r = await relojPropio.sonarGong();
     if (!r.ok) setAviso(r.error);
   };
 
@@ -1374,9 +1376,9 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       ? [['revelarGrimorio', () => setRevelandoGrimorio(true)] as [AccionAtajo, () => void]]
       : []),
     // R: sonar el gong (todos a la plaza)
-    ...(estado?.acciones.includes('narrador:sonarGong') ? [['sonarGong', () => void sonarGong()] as [AccionAtajo, () => void]] : []),
+    ...(estado?.acciones.includes('reloj:sonarGong') ? [['sonarGong', () => void sonarGong()] as [AccionAtajo, () => void]] : []),
     // Z: poner el reloj (abre su diálogo; al cerrarse, el foco vuelve donde estaba)
-    ...(estado?.acciones.includes('narrador:reloj') && !poniendoReloj
+    ...(estado?.acciones.includes('reloj:poner') && !poniendoReloj
       ? [['reloj', () => setPoniendoReloj(true)] as [AccionAtajo, () => void]]
       : []),
     ...(estado?.video && puedeEmitirVideo
@@ -1651,6 +1653,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     vaciar: () => propia(() => bolsa.vaciar()),
     llenarAlAzar: () => propia(() => bolsa.llenarAlAzar()),
     aceptarReparto: (firma) => propia(() => bolsa.aceptarReparto(firma)),
+  };
+  const relojPropio: AccionesReloj = {
+    sonarGong: () => propia(() => reloj.sonarGong()),
+    poner: (segundos, mensaje) => propia(() => reloj.poner(segundos, mensaje)),
+    terminar: () => propia(() => reloj.terminar()),
+    quitar: () => propia(() => reloj.quitar()),
   };
 
   // Faroles: los del narrador (narradores y visitantes) o, si soy el demonio o un esbirro, los míos.
@@ -1941,6 +1949,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   atajoGong={atajos.sonarGong}
                   poniendoReloj={poniendoReloj}
                   onPoniendoReloj={setPoniendoReloj}
+                  ponerReloj={relojPropio.poner}
+                  onSonarGong={() => void sonarGong()}
                   atajoReloj={atajos.reloj}
                   onRelojPuesto={(texto) => anunciar('reloj', texto)}
                 />
@@ -2185,6 +2195,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   editando={editando}
                   grimorio={yo?.rol === 'jugador' && estado.configuracion.grimorioJugadores}
                   pedir={pedirEnPlaza}
+                  reloj={relojPropio}
                   onError={setAviso}
                   onAnuncio={anunciar}
                   focoAsientoRef={focoAsientoRef}

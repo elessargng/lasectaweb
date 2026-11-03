@@ -1,6 +1,7 @@
 import type { Server as HttpServer } from 'http';
 import { Server } from 'socket.io';
 import type { BolsaController } from '../../controllers/sala/BolsaController';
+import type { RelojController } from '../../controllers/sala/RelojController';
 import type { Credenciales, SalaController } from '../../controllers/sala/SalaController';
 import type { SalaService } from '../../services/sala/SalaService';
 import { DifusorSocketIo } from './DifusorSocketIo';
@@ -31,6 +32,21 @@ const PETICIONES_BOLSA = {
   'bolsa:aceptarReparto': 'aceptarReparto',
 } as const satisfies Record<string, keyof BolsaController>;
 
+/** Los del gong y el reloj, y el método de RelojController que los atiende. */
+const PETICIONES_RELOJ = {
+  'reloj:sonarGong': 'sonarGong',
+  'reloj:poner': 'poner',
+  'reloj:terminar': 'terminar',
+  'reloj:quitar': 'quitar',
+} as const satisfies Record<string, keyof RelojController>;
+
+/** Los controladores de la sala: el general y el de cada parte. */
+export interface ControladoresSala {
+  sala: SalaController;
+  bolsa: BolsaController;
+  reloj: RelojController;
+}
+
 /** Contesta por el ack del evento, si el cliente lo ha pedido. */
 const contestar = (ack: unknown) => (respuesta: unknown) => {
   if (typeof ack === 'function') ack(respuesta);
@@ -38,14 +54,13 @@ const contestar = (ack: unknown) => (respuesta: unknown) => {
 
 /**
  * La sala de juego por WebSocket (socket.io) sobre ese servidor HTTP: lleva cada
- * evento a SalaController, como las rutas de la API, y lo que pasa en la sala se
+ * evento a su controlador, como las rutas de la API, y lo que pasa en la sala se
  * manda por DifusorSocketIo.
  */
 export function abrirSalaPorSocket(
   httpServer: HttpServer,
   salaService: SalaService,
-  salaController: SalaController,
-  bolsaController: BolsaController,
+  { sala: salaController, bolsa: bolsaController, reloj: relojController }: ControladoresSala,
 ): void {
   const io = new Server(httpServer, {
     path: SALA_SOCKET_PATH,
@@ -72,6 +87,9 @@ export function abrirSalaPorSocket(
     }
     for (const [evento, metodo] of Object.entries(PETICIONES_BOLSA)) {
       socket.on(evento, (peticion: unknown, ack?: unknown) => bolsaController[metodo](sesion, peticion, contestar(ack)));
+    }
+    for (const [evento, metodo] of Object.entries(PETICIONES_RELOJ)) {
+      socket.on(evento, (peticion: unknown, ack?: unknown) => relojController[metodo](sesion, peticion, contestar(ack)));
     }
     socket.on('chat:historial', () => salaController.historial(sesion));
     socket.on('disconnect', (reason) => salaController.salir(sesion, reason === 'client namespace disconnect'));

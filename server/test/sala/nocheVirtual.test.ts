@@ -74,6 +74,16 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
         const error = juego.partida.bolsa.llenar(personajes);
         return error ? { ok: false, error } : { ok: true };
       },
+      sonarGong: async () => {
+        const error = juego.partida.reloj.sonarGong();
+        if (!error) hechas.push({ accion: 'reloj:sonarGong', datos: undefined });
+        return error ? { ok: false, error } : { ok: true };
+      },
+      ponerReloj: async (segundos, mensaje) => {
+        const error = juego.partida.reloj.ponerReloj(segundos, mensaje);
+        if (!error) hechas.push({ accion: 'reloj:poner', datos: { segundos, mensaje } });
+        return error ? { ok: false, error } : { ok: true };
+      },
     },
     ...decisionesDe(juego, () => estrategia),
     azar,
@@ -495,12 +505,12 @@ describe('los privados del narrador virtual', () => {
     const ctx = { ...m.ctx, temporizador: { programar: (ms: number, hacer: () => void) => (programados.push({ ms, hacer }), () => {}) } };
     await new PuestaEnComun().alEntrar(ctx);
     const acciones = () => m.hechas.map((h) => h.accion);
-    expect(acciones()).toContain('narrador:sonarGong');
+    expect(acciones()).toContain('reloj:sonarGong');
     expect(partida.configuracion.privadosPermitidos()).toBe(true);
     programados.find((p) => p.ms === TRAS_GONG_MS)!.hacer();
     await new Promise((r) => setTimeout(r, 0));
     expect(partida.configuracion.privadosPermitidos()).toBe(false);
-    expect(acciones().indexOf('narrador:privados')).toBeGreaterThan(acciones().indexOf('narrador:sonarGong'));
+    expect(acciones().indexOf('narrador:privados')).toBeGreaterThan(acciones().indexOf('reloj:sonarGong'));
   });
 });
 

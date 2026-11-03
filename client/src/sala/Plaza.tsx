@@ -49,7 +49,7 @@ import DialogoIntercambio from './DialogoIntercambio';
 import DialogoPatoso from './DialogoPatoso';
 import DialogoRegistroEspia from './DialogoRegistroEspia';
 import { useNominacion } from './useNominacion';
-import type { SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
+import type { AccionesReloj, SalaDto, ParticipanteDto, Recordatorio, ResultadoAccion } from './useSala';
 
 export interface TamanosPlaza {
   avatar: number;
@@ -79,6 +79,8 @@ interface PlazaProps {
   onTamanos: (tamanos: TamanosPlaza) => void;
   /** Pide una acción a la sala (ver `useSala`). */
   pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Terminar y quitar el reloj del narrador (ver AccionesReloj). */
+  reloj: Pick<AccionesReloj, 'terminar' | 'quitar'>;
   onError: (mensaje: string) => void;
   /** Avisos solo para el lector, con su tipo (p. ej. que otro te ha levantado del asiento). */
   onAnuncio: (tipo: TipoAviso, mensaje: string) => void;
@@ -254,6 +256,7 @@ const Plaza = ({
   auto,
   onTamanos,
   pedir,
+  reloj,
   onError,
   onAnuncio,
   focoAsientoRef,
@@ -573,12 +576,12 @@ const Plaza = ({
   };
   // El reloj del narrador: terminarlo (suena el gong; el foco, al botón que queda) o quitarlo sin más
   const terminarReloj = async () => {
-    const r = await pedir('narrador:terminarReloj');
+    const r = await reloj.terminar();
     if (!r.ok) onError(r.error);
     else window.setTimeout(() => document.getElementById(ID_CANCELAR_RELOJ)?.focus(), 0);
   };
   const cancelarReloj = async () => {
-    const r = await pedir('narrador:quitarReloj');
+    const r = await reloj.quitar();
     if (!r.ok) return onError(r.error);
     onAnuncio('reloj', 'Reloj quitado.');
     window.setTimeout(() => document.getElementById('sala-asientos')?.focus(), 0);
@@ -1079,8 +1082,8 @@ const Plaza = ({
               reloj={estado.reloj}
               desfase={desfaseReloj}
               onAnuncio={(texto) => onAnuncio('reloj', texto)}
-              onTerminar={acciones.includes('narrador:terminarReloj') ? () => void terminarReloj() : undefined}
-              onCancelar={acciones.includes('narrador:quitarReloj') ? () => void cancelarReloj() : undefined}
+              onTerminar={acciones.includes('reloj:terminar') ? () => void terminarReloj() : undefined}
+              onCancelar={acciones.includes('reloj:quitar') ? () => void cancelarReloj() : undefined}
             />
           )}
           {/* Gardener: los personajes repartidos esperan a que el narrador los entregue */}

@@ -96,6 +96,7 @@ import { EstadisticasController } from './controllers/EstadisticasController';
 import { EstadisticasRepository } from './repositories/EstadisticasRepository';
 import { EstadisticasService } from './services/estadisticas/EstadisticasService';
 import { BolsaController } from './controllers/sala/BolsaController';
+import { RelojController } from './controllers/sala/RelojController';
 import { SalaController } from './controllers/sala/SalaController';
 import { abrirSalaPorSocket } from './infra/socketio/salaPorSocket';
 import { SalaService } from './services/sala/SalaService';
@@ -464,7 +465,11 @@ DatabaseRepository.getInstance()
       guardarPartida: (registro) => estadisticasRepository.guardar(registro),
       contarPartidas: (userId) => estadisticasRepository.contarPartidas(userId),
     });
-    abrirSalaPorSocket(httpServer, salaService, new SalaController(salaService), new BolsaController(salaService.bolsa));
+    abrirSalaPorSocket(httpServer, salaService, {
+      sala: new SalaController(salaService),
+      bolsa: new BolsaController(salaService.bolsa),
+      reloj: new RelojController(salaService.reloj),
+    });
     httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });

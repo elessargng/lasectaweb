@@ -11,6 +11,10 @@ export interface Narrador {
   accion(nombre: string, datos?: unknown): Promise<RespuestaAccion>;
   /** Llena la bolsa con estos personajes (los que ha elegido). */
   llenarBolsa(personajes: string[]): Promise<RespuestaAccion>;
+  /** Suena el gong. */
+  sonarGong(): Promise<RespuestaAccion>;
+  /** Pone el reloj: una cuenta atrás para todos con su mensaje. */
+  ponerReloj(segundos: number, mensaje: string): Promise<RespuestaAccion>;
 }
 
 /** Lo que contesta la sala a una acción: hecha (con lo que devuelva) o no, y por qué. */

@@ -4,6 +4,7 @@ import type { AddressInfo } from 'net';
 import { io as conectar, type Socket } from 'socket.io-client';
 import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
 import { BolsaController } from '../../src/controllers/sala/BolsaController';
+import { RelojController } from '../../src/controllers/sala/RelojController';
 import { SalaController } from '../../src/controllers/sala/SalaController';
 import { abrirSalaPorSocket, SALA_SOCKET_PATH } from '../../src/infra/socketio/salaPorSocket';
 import { SalaService } from '../../src/services/sala/SalaService';
@@ -100,7 +101,11 @@ export class Arnes {
       azar: cambios.azar ?? conSemilla(1),
     };
     const salaService = new SalaService(deps);
-    abrirSalaPorSocket(http, salaService, new SalaController(salaService), new BolsaController(salaService.bolsa));
+    abrirSalaPorSocket(http, salaService, {
+      sala: new SalaController(salaService),
+      bolsa: new BolsaController(salaService.bolsa),
+      reloj: new RelojController(salaService.reloj),
+    });
     await new Promise<void>((resolver) => http.listen(0, '127.0.0.1', resolver));
     const { port } = http.address() as AddressInfo;
     return new Arnes(http, `http://127.0.0.1:${port}`);

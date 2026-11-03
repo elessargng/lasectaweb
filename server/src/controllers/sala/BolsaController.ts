@@ -1,14 +1,9 @@
 import type { BolsaService } from '../../services/sala/BolsaService';
 import type { Responder } from '../../services/sala/SalaService';
 import type { ResultadoAccion, ResultadoBolsaAlAzar } from '../../views/dto/sala';
+import { campos, como, type Fallo } from './peticion';
 import type { Sesion } from './SalaController';
 
-/** Los campos de una petición; si no es un objeto, ninguno. */
-const campos = (peticion: unknown): Record<string, unknown> =>
-  typeof peticion === 'object' && peticion !== null ? (peticion as Record<string, unknown>) : {};
-
-type Fallo = { ok: false; error: string };
-const FUERA: Fallo = { ok: false, error: 'Ya no estás en la sala.' };
 const PERSONAJE_DESCONOCIDO: Fallo = { ok: false, error: 'Ese personaje no va en la bolsa.' };
 
 /**
@@ -55,9 +50,7 @@ export class BolsaController {
     );
   };
 
-  /** Hace falta seguir en la sala: lo pide como ese participante y contesta. */
   private como<R>(sesion: Sesion, responder: Responder<R | Fallo>, hacer: (yoId: string) => R | Fallo): void {
-    const yoId = this.bolsaService.quienEs(sesion.clave);
-    responder(yoId ? hacer(yoId) : FUERA);
+    como((clave) => this.bolsaService.quienEs(clave), sesion, responder, hacer);
   }
 }

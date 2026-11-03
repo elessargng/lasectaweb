@@ -10,7 +10,6 @@ import { ACCIONES_NARRADOR_VIRTUAL } from './narradorVirtual';
 import { ACCIONES_NOCHE } from './noche';
 import { ACCIONES_PARTICIPANTES } from './participantes';
 import { ACCIONES_PREPARACION } from './preparacion';
-import { ACCIONES_RELOJ } from './reloj';
 import { ACCIONES_REVELACION } from './revelacion';
 import { ACCIONES_SENALAMIENTOS } from './senalamientos';
 
@@ -32,7 +31,6 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   ...ACCIONES_FASES,
   ...ACCIONES_NOCHE,
   ...ACCIONES_DIA,
-  ...ACCIONES_RELOJ,
   ...ACCIONES_SENALAMIENTOS,
   ...ACCIONES_GRIMORIO,
   ...ACCIONES_FAROLES,

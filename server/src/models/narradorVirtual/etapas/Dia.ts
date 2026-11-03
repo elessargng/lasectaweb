@@ -32,7 +32,7 @@ abstract class EtapaConReloj implements Etapa {
   async alEntrar(ctx: ContextoEtapa): Promise<void> {
     await this.preparar(ctx);
     const ms = this.duracion(ctx);
-    await ctx.plaza.accion('narrador:reloj', { segundos: Math.round(ms / 1000), mensaje: this.mensaje });
+    await ctx.plaza.ponerReloj(Math.round(ms / 1000), this.mensaje);
     this.cancelar = ctx.temporizador.programar(ms, () => void ctx.pasarA(this.siguiente()));
   }
 
@@ -78,7 +78,7 @@ export class PuestaEnComun extends EtapaConReloj {
   }
 
   protected async preparar(ctx: ContextoEtapa): Promise<void> {
-    await ctx.plaza.accion('narrador:sonarGong');
+    await ctx.plaza.sonarGong();
     this.cancelarCierre = ctx.temporizador.programar(TRAS_GONG_MS, () => {
       this.cancelarCierre = null;
       void ctx.plaza.accion('narrador:privados', { abiertos: false });

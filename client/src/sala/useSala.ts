@@ -272,6 +272,17 @@ export function useSala(
     [pedirAlSocket],
   );
 
+  /** El gong y el reloj (el narrador), por sus eventos. */
+  const reloj: AccionesReloj = useMemo(
+    () => ({
+      sonarGong: () => pedirAlSocket<ResultadoAccion>('reloj:sonarGong', {}),
+      poner: (segundos, mensaje) => pedirAlSocket<ResultadoAccion>('reloj:poner', { segundos, mensaje }),
+      terminar: () => pedirAlSocket<ResultadoAccion>('reloj:terminar', {}),
+      quitar: () => pedirAlSocket<ResultadoAccion>('reloj:quitar', {}),
+    }),
+    [pedirAlSocket],
+  );
+
   /** Vuelve a pedir los mensajes que se pueden leer (al cambiar de papel cambian). */
   const pedirHistorial = useCallback(() => {
     socketRef.current?.emit('chat:historial');
@@ -302,7 +313,19 @@ export function useSala(
     entrarConversacion,
     salirConversacion,
     bolsa,
+    reloj,
   };
+}
+
+/** Lo que el narrador hace con el gong y el reloj (ver useSala). */
+export interface AccionesReloj {
+  sonarGong(): Promise<ResultadoAccion>;
+  /** Pone el reloj: una cuenta atrás para todos con su mensaje; al acabar suena el gong. */
+  poner(segundos: number, mensaje: string): Promise<ResultadoAccion>;
+  /** Lo acaba ya: suena el gong. */
+  terminar(): Promise<ResultadoAccion>;
+  /** Lo quita sin que suene. */
+  quitar(): Promise<ResultadoAccion>;
 }
 
 /** Lo que el narrador hace con la bolsa (ver useSala). */

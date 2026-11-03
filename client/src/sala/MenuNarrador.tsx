@@ -9,7 +9,7 @@ import MenuDesplegable, { type OpcionMenu } from './MenuDesplegable';
 import { botonIcono } from './estilos';
 import { ID_MENU_NARRADOR } from './ids';
 import type { Atajo } from './atajos';
-import type { SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
+import type { AccionesReloj, SalaDto, ParticipanteDto, ResultadoAccion } from './useSala';
 
 interface MenuNarradorProps {
   estado: SalaDto;
@@ -28,6 +28,10 @@ interface MenuNarradorProps {
   /** El diálogo del reloj, abierto (también se abre con su tecla, desde fuera del menú). */
   poniendoReloj: boolean;
   onPoniendoReloj: (abierto: boolean) => void;
+  /** Pone el reloj (ver AccionesReloj). */
+  ponerReloj: AccionesReloj['poner'];
+  /** Suena el gong (también con su tecla, desde fuera del menú). */
+  onSonarGong: () => void;
   atajoReloj?: Atajo;
   /** Confirmación para el lector al poner el reloj. */
   onRelojPuesto: (texto: string) => void;
@@ -96,6 +100,8 @@ const MenuNarrador = ({
   atajoGong,
   poniendoReloj,
   onPoniendoReloj,
+  ponerReloj,
+  onSonarGong,
   atajoReloj,
   onRelojPuesto,
 }: MenuNarradorProps) => {
@@ -111,9 +117,9 @@ const MenuNarrador = ({
     // Noche y día: solo sale el que toca
     { id: 'narrador:irANoche', etiqueta: 'Ir a la noche', atajo: atajoFase, elegir: () => void pedir('narrador:irANoche') },
     { id: 'narrador:amanecer', etiqueta: 'Amanece', atajo: atajoFase, elegir: () => void pedir('narrador:amanecer') },
-    { id: 'narrador:sonarGong', etiqueta: 'Sonar gong', atajo: atajoGong, elegir: () => void pedir('narrador:sonarGong') },
+    { id: 'reloj:sonarGong', etiqueta: 'Sonar gong', atajo: atajoGong, elegir: onSonarGong },
     { id: 'narrador:senalamiento', etiqueta: 'Señalar', abreDialogo: true, elegir: () => setSenalando(true) },
-    { id: 'narrador:reloj', etiqueta: 'Reloj', atajo: atajoReloj, abreDialogo: true, elegir: () => onPoniendoReloj(true) },
+    { id: 'reloj:poner', etiqueta: 'Reloj', atajo: atajoReloj, abreDialogo: true, elegir: () => onPoniendoReloj(true) },
     { id: 'narrador:revelarGrimorio', etiqueta: 'Revelar grimorio', atajo: atajoRevelar, abreDialogo: true, elegir: () => onRevelando(true) },
     { id: 'narrador:limpiarGrimorio', etiqueta: 'Limpiar grimorio', abreDialogo: true, elegir: () => setLimpiando(true) },
     ...Object.entries(ELEGIR).map(([accion, { etiqueta }]) => ({
@@ -148,7 +154,7 @@ const MenuNarrador = ({
         />
       )}
       {revelando && <DialogoRevelar estado={estado} pedir={pedir} onCerrar={() => onRevelando(false)} />}
-      {poniendoReloj && <DialogoReloj pedir={pedir} onPuesto={onRelojPuesto} onCerrar={() => onPoniendoReloj(false)} />}
+      {poniendoReloj && <DialogoReloj poner={ponerReloj} onPuesto={onRelojPuesto} onCerrar={() => onPoniendoReloj(false)} />}
       {senalando && <DialogoSenalamiento estado={estado} pedir={pedir} onCerrar={() => setSenalando(false)} />}
       {limpiando && (
         <DialogoConfirmar

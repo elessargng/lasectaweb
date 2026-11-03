@@ -7,7 +7,8 @@ import { anuncioReloj, duracionReloj, RELOJ } from './reloj';
 import type { ResultadoAccion } from './useSala';
 
 interface DialogoRelojProps {
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Pone el reloj (ver AccionesReloj). */
+  poner: (segundos: number, mensaje: string) => Promise<ResultadoAccion>;
   /** Confirmación para el lector, al ponerlo (lo propio no llega con los avisos de la sala). */
   onPuesto: (texto: string) => void;
   onCerrar: () => void;
@@ -21,7 +22,7 @@ let ultimo = { minutos: '5', segundos: '0', mensaje: '' };
  * que verán todos al lado del reparto («Conversaciones privadas»). Al acabar
  * suena el gong. Si ya había uno, lo sustituye.
  */
-const DialogoReloj = ({ pedir, onPuesto, onCerrar }: DialogoRelojProps) => {
+const DialogoReloj = ({ poner: ponerReloj, onPuesto, onCerrar }: DialogoRelojProps) => {
   const [minutos, setMinutos] = useState(ultimo.minutos);
   const [segundos, setSegundos] = useState(ultimo.segundos);
   const [mensaje, setMensaje] = useState(ultimo.mensaje);
@@ -40,7 +41,7 @@ const DialogoReloj = ({ pedir, onPuesto, onCerrar }: DialogoRelojProps) => {
     }
     setEnviando(true);
     setError('');
-    const r = await pedir('narrador:reloj', { segundos: total, mensaje: mensaje.trim() });
+    const r = await ponerReloj(total, mensaje.trim());
     if (r.ok) {
       ultimo = { minutos, segundos, mensaje };
       onCerrar();

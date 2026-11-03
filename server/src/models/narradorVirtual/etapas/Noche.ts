@@ -109,7 +109,7 @@ export class Noche implements Etapa {
   private async recordarEntendido(ctx: ContextoEtapa, asientos: string[]): Promise<void> {
     const faltan = sinEntender(ctx.juego).filter((id) => asientos.includes(id));
     if (!faltan.length) return;
-    await ctx.plaza.accion('narrador:sonarGong');
+    await ctx.plaza.sonarGong();
     for (const jugadorId of faltan) {
       await ctx.plaza.accion('despertar:enviar', { jugadorId, ficha: 'personalizado', texto: RECORDAR_ENTENDIDO });
     }
