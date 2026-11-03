@@ -3,7 +3,6 @@ import type { SalaDeJuego } from '../../../models/SalaDeJuego';
 import type { DependenciasAcciones } from '../puertos';
 import type { Accion, SalaEfecto } from './Accion';
 import { ACCIONES_DIA } from './dia';
-import { ACCIONES_FAROLES } from './faroles';
 import { ACCIONES_FASES } from './fases';
 import { ACCIONES_GRIMORIO } from './grimorio';
 import { ACCIONES_NARRADOR_VIRTUAL } from './narradorVirtual';
@@ -30,7 +29,6 @@ export const SALA_ACCIONES: Record<string, Accion> = {
   ...ACCIONES_NOCHE,
   ...ACCIONES_DIA,
   ...ACCIONES_GRIMORIO,
-  ...ACCIONES_FAROLES,
 };
 
 /** Las acciones que este participante puede usar ahora mismo. */

@@ -8,7 +8,7 @@ import { TIPOS_REPARTO, useFichas } from './fichas';
 import type { PersonajeMostrado } from './guiones';
 import CasillaFarol from './CasillaFarol';
 import RejillaFichas from './RejillaFichas';
-import type { JugadorDto, ResultadoAccion } from './useSala';
+import type { AccionesFaroles, JugadorDto } from './useSala';
 import Interruptor from './Interruptor';
 
 interface DialogoFarolesProps {
@@ -17,7 +17,8 @@ interface DialogoFarolesProps {
   /** La bolsa y las fichas de la plaza: lo que está en juego («asignado»). */
   bolsa: string[];
   plaza: JugadorDto[];
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Pone un personaje en una casilla (ver AccionesFaroles). */
+  preparar: AccionesFaroles['preparar'];
   onCerrar: () => void;
 }
 
@@ -30,7 +31,7 @@ interface DialogoFarolesProps {
  * no están en la bolsa ni en ninguna ficha; desactivado, salen todos y los que
  * están en juego llevan el sello «Asignado» (se pueden elegir igual).
  */
-const DialogoFaroles = ({ faroles, bolsa, plaza, pedir, onCerrar }: DialogoFarolesProps) => {
+const DialogoFaroles = ({ faroles, bolsa, plaza, preparar, onCerrar }: DialogoFarolesProps) => {
   const { personajes, todosPorId } = useFichas();
   const [soloSinAsignar, setSoloSinAsignar] = useState(true);
   const [error, setError] = useState('');
@@ -41,7 +42,7 @@ const DialogoFaroles = ({ faroles, bolsa, plaza, pedir, onCerrar }: DialogoFarol
 
   const poner = async (posicion: number, personajeId: string | null) => {
     setError('');
-    const r = await pedir('narrador:farol', { posicion, personajeId });
+    const r = await preparar(posicion, personajeId);
     if (!r.ok) setError(r.error);
   };
 

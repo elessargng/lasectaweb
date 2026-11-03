@@ -1,8 +1,8 @@
 import { randomUUID } from 'crypto';
 import type { Azar } from './azar';
-import type { EleccionDespertar, EnvioDespertar } from '../compartido/despertar';
+import type { EleccionDespertar, EnvioDespertar, MensajeDespertar } from '../compartido/despertar';
 import type { FichaEnviada } from './Entregas';
-import type { Alineamiento } from '../compartido/jugador';
+import { NUM_FAROLES, type Alineamiento } from '../compartido/jugador';
 import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA } from '../compartido/partida';
 import type { AsientoDiario, HechoDiario } from '../compartido/diario';
 import type { GuionResuelto } from '../guiones';
@@ -140,7 +140,7 @@ export class Partida {
     cambiarPersonaje: (jugadorId, personaje) => this.grimorio.cambiarPersonaje(jugadorId, personaje),
   });
   /** Los faroles para el demonio (del narrador y de cada asiento). */
-  readonly faroles = new Faroles(() => this.sala.jugadores(), this.diario());
+  readonly faroles = new Faroles(() => this.sala.jugadores(), this.diario(), (id) => this.guion.personaje(id));
   /** El final de la partida: qué bando ha ganado y qué fichas se han revelado. */
   readonly revelacion = new Revelacion(() => this.plaza());
   /** Los NPCs en juego y lo que traen (Bootlegger, Storm Catcher, silencio). */
@@ -535,6 +535,25 @@ export class Partida {
       enElGuion: !!this.guion.actual()?.personajes.some((p) => p.id === DEMONIO_LILMONSTA),
       esbirrosQueTocan: this.bolsa.distribucion().esbirros,
     });
+  }
+
+  /**
+   * El jugador despierto de ese participante copia en sus faroles los personajes
+   * que el narrador le ha enseñado con «Estos personajes no están en juego» (los
+   * de esa tarjeta, que tiene que estar en su despertar). Devuelve el error, si lo hay.
+   */
+  copiarFaroles(participanteId: string, personajes: readonly string[]): string | null {
+    const jugadorId = this.despertares.asientoDespiertoDe(participanteId);
+    if (!jugadorId) return 'No tienes ningún despertar abierto.';
+    const mismos = (m: MensajeDespertar) =>
+      m.autor === 'narrador' &&
+      m.tarjeta === 'noEnJuego' &&
+      m.personajes.length === personajes.length &&
+      m.personajes.every((id, i) => id === personajes[i]);
+    const hilo = this.despertares.despertares().find((d) => d.jugador === jugadorId);
+    if (!hilo?.mensajes.some(mismos)) return 'El narrador no te ha enseñado esos personajes.';
+    this.faroles.copiarFaroles(jugadorId, personajes.slice(0, NUM_FAROLES));
+    return null;
   }
 
   /**

@@ -1,10 +1,11 @@
 import type { Server as HttpServer } from 'http';
 import { Server } from 'socket.io';
 import type { BolsaController } from '../../controllers/sala/BolsaController';
+import type { FarolController } from '../../controllers/sala/FarolController';
 import type { RelojController } from '../../controllers/sala/RelojController';
 import type { RevelacionController } from '../../controllers/sala/RevelacionController';
 import type { SenalamientoController } from '../../controllers/sala/SenalamientoController';
-import type { Credenciales, SalaController } from '../../controllers/sala/SalaController';
+import type { Credenciales, SalaController, Sesion } from '../../controllers/sala/SalaController';
 import type { SalaService } from '../../services/sala/SalaService';
 import { DifusorSocketIo } from './DifusorSocketIo';
 
@@ -25,46 +26,52 @@ const PETICIONES = {
   'conversacion:salir': 'salirDeConversacion',
 } as const satisfies Record<string, keyof SalaController>;
 
-/** Los de la bolsa, y el método de BolsaController que los atiende. */
-const PETICIONES_BOLSA = {
-  'bolsa:meter': 'meter',
-  'bolsa:cantidad': 'cantidad',
-  'bolsa:vaciar': 'vaciar',
-  'bolsa:llenarAlAzar': 'llenarAlAzar',
-  'bolsa:aceptarReparto': 'aceptarReparto',
-} as const satisfies Record<string, keyof BolsaController>;
-
-/** Los del gong y el reloj, y el método de RelojController que los atiende. */
-const PETICIONES_RELOJ = {
-  'reloj:sonarGong': 'sonarGong',
-  'reloj:poner': 'poner',
-  'reloj:terminar': 'terminar',
-  'reloj:quitar': 'quitar',
-} as const satisfies Record<string, keyof RelojController>;
-
-/** Los de la revelación del grimorio, y el método de RevelacionController que los atiende. */
-const PETICIONES_REVELACION = {
-  'revelacion:empezar': 'empezar',
-  'revelacion:revelarFicha': 'revelarFicha',
-  'revelacion:terminar': 'terminar',
-} as const satisfies Record<string, keyof RevelacionController>;
-
-/** Los de los señalamientos, y el método de SenalamientoController que los atiende. */
-const PETICIONES_SENALAMIENTO = {
-  'senalamiento:empezar': 'empezar',
-  'senalamiento:lilmonsta': 'lilmonsta',
-  'senalamiento:terminar': 'terminar',
-  'senalamiento:senalar': 'senalar',
-} as const satisfies Record<string, keyof SenalamientoController>;
-
 /** Los controladores de la sala: el general y el de cada parte. */
 export interface ControladoresSala {
   sala: SalaController;
   bolsa: BolsaController;
+  faroles: FarolController;
   reloj: RelojController;
   revelacion: RevelacionController;
   senalamiento: SenalamientoController;
 }
+
+/** Los eventos de cada parte de la sala, y el método de su controlador que los atiende. */
+const PETICIONES_PARTES = {
+  bolsa: {
+    'bolsa:meter': 'meter',
+    'bolsa:cantidad': 'cantidad',
+    'bolsa:vaciar': 'vaciar',
+    'bolsa:llenarAlAzar': 'llenarAlAzar',
+    'bolsa:aceptarReparto': 'aceptarReparto',
+  },
+  faroles: {
+    'faroles:preparar': 'preparar',
+    'faroles:poner': 'poner',
+    'faroles:usar': 'usar',
+    'faroles:copiar': 'copiar',
+  },
+  reloj: {
+    'reloj:sonarGong': 'sonarGong',
+    'reloj:poner': 'poner',
+    'reloj:terminar': 'terminar',
+    'reloj:quitar': 'quitar',
+  },
+  revelacion: {
+    'revelacion:empezar': 'empezar',
+    'revelacion:revelarFicha': 'revelarFicha',
+    'revelacion:terminar': 'terminar',
+  },
+  senalamiento: {
+    'senalamiento:empezar': 'empezar',
+    'senalamiento:lilmonsta': 'lilmonsta',
+    'senalamiento:terminar': 'terminar',
+    'senalamiento:senalar': 'senalar',
+  },
+} as const satisfies { [P in Exclude<keyof ControladoresSala, 'sala'>]: Record<string, keyof ControladoresSala[P]> };
+
+/** Cómo atiende un controlador de una parte cada petición. */
+type Atender = (sesion: Sesion, peticion: unknown, responder: (respuesta: unknown) => void) => void;
 
 /** Contesta por el ack del evento, si el cliente lo ha pedido. */
 const contestar = (ack: unknown) => (respuesta: unknown) => {
@@ -79,8 +86,9 @@ const contestar = (ack: unknown) => (respuesta: unknown) => {
 export function abrirSalaPorSocket(
   httpServer: HttpServer,
   salaService: SalaService,
-  { sala: salaController, bolsa: bolsaController, reloj: relojController, revelacion: revelacionController, senalamiento: senalamientoController }: ControladoresSala,
+  controladores: ControladoresSala,
 ): void {
+  const { sala: salaController } = controladores;
   const io = new Server(httpServer, {
     path: SALA_SOCKET_PATH,
     cors: { origin: '*' },
@@ -104,17 +112,12 @@ export function abrirSalaPorSocket(
     for (const [evento, metodo] of Object.entries(PETICIONES)) {
       socket.on(evento, (peticion: unknown, ack?: unknown) => void salaController[metodo](sesion, peticion, contestar(ack)));
     }
-    for (const [evento, metodo] of Object.entries(PETICIONES_BOLSA)) {
-      socket.on(evento, (peticion: unknown, ack?: unknown) => bolsaController[metodo](sesion, peticion, contestar(ack)));
-    }
-    for (const [evento, metodo] of Object.entries(PETICIONES_RELOJ)) {
-      socket.on(evento, (peticion: unknown, ack?: unknown) => relojController[metodo](sesion, peticion, contestar(ack)));
-    }
-    for (const [evento, metodo] of Object.entries(PETICIONES_REVELACION)) {
-      socket.on(evento, (peticion: unknown, ack?: unknown) => revelacionController[metodo](sesion, peticion, contestar(ack)));
-    }
-    for (const [evento, metodo] of Object.entries(PETICIONES_SENALAMIENTO)) {
-      socket.on(evento, (peticion: unknown, ack?: unknown) => senalamientoController[metodo](sesion, peticion, contestar(ack)));
+    for (const [parte, peticiones] of Object.entries(PETICIONES_PARTES)) {
+      const controlador = controladores[parte as keyof typeof PETICIONES_PARTES];
+      for (const [evento, metodo] of Object.entries(peticiones)) {
+        const atender = controlador[metodo as keyof typeof controlador] as Atender;
+        socket.on(evento, (peticion: unknown, ack?: unknown) => atender(sesion, peticion, contestar(ack)));
+      }
     }
     socket.on('chat:historial', () => salaController.historial(sesion));
     socket.on('disconnect', (reason) => salaController.salir(sesion, reason === 'client namespace disconnect'));

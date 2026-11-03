@@ -104,6 +104,7 @@ import {
   type AccionesReloj,
   type AccionesRevelacion,
   type AccionesSenalamiento,
+  type AccionesFaroles,
   type ResultadoAccion,
   type ResultadoBolsaAlAzar,
 } from './useSala';
@@ -613,6 +614,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     reloj,
     revelacion,
     senalamiento,
+    faroles,
   } = useSala(
     cuenta?.token ?? null,
     cuenta ? null : invitado,
@@ -1675,6 +1677,12 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     terminar: () => propia(() => senalamiento.terminar()),
     senalar: (jugadorId) => propia(() => senalamiento.senalar(jugadorId)),
   };
+  const farolesPropios: AccionesFaroles = {
+    preparar: (posicion, personajeId) => propia(() => faroles.preparar(posicion, personajeId)),
+    poner: (posicion, personajeId) => propia(() => faroles.poner(posicion, personajeId)),
+    usar: (personajeId) => propia(() => faroles.usar(personajeId)),
+    copiar: (personajes) => propia(() => faroles.copiar(personajes)),
+  };
 
   // Faroles: los del narrador (narradores y visitantes) o, si soy el demonio o un esbirro, los míos.
   // Soy el demonio (o esbirro) si mi ficha lo lleva (o, sin personaje dado, si me lo he anotado).
@@ -1815,7 +1823,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                       modo={modoFaroles}
                       faroles={farolesVisibles}
                       estado={estado}
-                      pedir={pedirPropio}
+                      acciones={farolesPropios}
                       onError={setAviso}
                       onAnuncio={(t) => anunciar('faroles', t)}
                       fijados={preferencias.farolesFijados}
@@ -2325,6 +2333,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             personajes={personajesGuion}
             porId={personajesGuionPorId}
             pedir={pedirPropio}
+            copiarFaroles={farolesPropios.copiar}
             onError={setAviso}
             onEnviado={(t) => anunciar('despertar', t)}
             anuncio={eleccion || senalandoYo ? '' : anuncio}

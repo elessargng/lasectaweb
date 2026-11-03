@@ -6,7 +6,7 @@ import DialogoPersonaje from './DialogoPersonaje';
 import { botonIcono, botonPrincipal, botonSecundario } from './estilos';
 import { useFichas } from './fichas';
 import CasillaFarol from './CasillaFarol';
-import type { SalaDto, ResultadoAccion } from './useSala';
+import type { AccionesFaroles, SalaDto } from './useSala';
 
 interface PanelFarolesProps {
   /**
@@ -18,7 +18,8 @@ interface PanelFarolesProps {
   /** Las 3 casillas (id de personaje o null). */
   faroles: (string | null)[];
   estado: SalaDto;
-  pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Preparar, ponerse y usar faroles (ver AccionesFaroles). */
+  acciones: Pick<AccionesFaroles, 'preparar' | 'poner' | 'usar'>;
   onError: (mensaje: string) => void;
   /** Confirmar al lector un cambio («Farol 2: Monje.»). */
   onAnuncio: (texto: string) => void;
@@ -40,7 +41,7 @@ const EXPLICACION: Record<PanelFarolesProps['modo'], string> = {
  * el jugador demonio tiene las suyas (copiadas de lo que le enseña el narrador
  * de noche, o puestas a mano, tenga grimorio o no).
  */
-const PanelFaroles = ({ modo, faroles, estado, pedir, onError, onAnuncio, fijados, onFijar }: PanelFarolesProps) => {
+const PanelFaroles = ({ modo, faroles, estado, acciones, onError, onAnuncio, fijados, onFijar }: PanelFarolesProps) => {
   const { personajes, todosPorId } = useFichas();
   const [asignando, setAsignando] = useState(false);
   // La casilla que el jugador está cambiando (índice), o null
@@ -49,14 +50,14 @@ const PanelFaroles = ({ modo, faroles, estado, pedir, onError, onAnuncio, fijado
   const enUso = propios ? (estado.plaza.find((a) => a.participanteId === estado.yo)?.farolEnUso ?? null) : null;
 
   const usar = async (personajeId: string | null) => {
-    const r = await pedir('jugador:usarFarol', { personajeId });
+    const r = await acciones.usar(personajeId);
     if (!r.ok) return onError(r.error);
     const nombre = personajeId ? todosPorId.get(personajeId)?.nombre.texto : undefined;
     onAnuncio(nombre ? `Usando el farol ${nombre}.` : 'Sin farol en uso.');
   };
 
   const ponerMio = async (posicion: number, personajeId: string | null) => {
-    const r = await pedir('jugador:farol', { posicion, personajeId });
+    const r = await acciones.poner(posicion, personajeId);
     if (!r.ok) return onError(r.error);
     const nombre = personajeId ? todosPorId.get(personajeId)?.nombre.texto : undefined;
     onAnuncio(nombre ? `Farol ${posicion + 1}: ${nombre}.` : `Farol ${posicion + 1} vacío.`);
@@ -138,7 +139,7 @@ const PanelFaroles = ({ modo, faroles, estado, pedir, onError, onAnuncio, fijado
           faroles={faroles}
           bolsa={estado.bolsa}
           plaza={estado.plaza}
-          pedir={pedir}
+          preparar={acciones.preparar}
           onCerrar={() => setAsignando(false)}
         />
       )}

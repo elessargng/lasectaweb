@@ -305,6 +305,17 @@ export function useSala(
     [pedirAlSocket],
   );
 
+  /** Los faroles (los del demonio, que prepara el narrador, y los de cada jugador), por sus eventos. */
+  const faroles: AccionesFaroles = useMemo(
+    () => ({
+      preparar: (posicion, personajeId) => pedirAlSocket<ResultadoAccion>('faroles:preparar', { posicion, personajeId }),
+      poner: (posicion, personajeId) => pedirAlSocket<ResultadoAccion>('faroles:poner', { posicion, personajeId }),
+      usar: (personajeId) => pedirAlSocket<ResultadoAccion>('faroles:usar', { personajeId }),
+      copiar: (personajes) => pedirAlSocket<ResultadoAccion>('faroles:copiar', { personajes }),
+    }),
+    [pedirAlSocket],
+  );
+
   /** Vuelve a pedir los mensajes que se pueden leer (al cambiar de papel cambian). */
   const pedirHistorial = useCallback(() => {
     socketRef.current?.emit('chat:historial');
@@ -338,7 +349,20 @@ export function useSala(
     reloj,
     revelacion,
     senalamiento,
+    faroles,
   };
+}
+
+/** Lo que se hace con los faroles (ver useSala). */
+export interface AccionesFaroles {
+  /** El narrador pone un personaje en una casilla de los faroles del demonio (null: la vacía). */
+  preparar(posicion: number, personajeId: string | null): Promise<ResultadoAccion>;
+  /** Un jugador se pone un farol en una de sus casillas (null: la vacía). */
+  poner(posicion: number, personajeId: string | null): Promise<ResultadoAccion>;
+  /** Un jugador dice qué farol usa (null: ninguno). */
+  usar(personajeId: string | null): Promise<ResultadoAccion>;
+  /** El jugador despierto copia los que le ha enseñado el narrador. */
+  copiar(personajes: string[]): Promise<ResultadoAccion>;
 }
 
 /** Lo que se hace con los señalamientos (ver useSala). */

@@ -54,7 +54,7 @@ export async function ponerFaroles(ctx: ContextoEtapa): Promise<boolean> {
       }),
     );
   }
-  for (const [posicion, personajeId] of faroles.entries()) await ctx.plaza.accion('narrador:farol', { posicion, personajeId });
+  for (const [posicion, personajeId] of faroles.entries()) await ctx.plaza.prepararFarol(posicion, personajeId);
   return faroles.length > 0;
 }
 

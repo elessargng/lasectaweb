@@ -1,4 +1,5 @@
 import { NUM_FAROLES } from '../compartido/jugador';
+import type { PersonajeDeGuion } from '../guiones';
 import type { Jugador } from './Jugador';
 import type { Diario } from './eventos';
 
@@ -14,8 +15,9 @@ function ponerEnCasilla(casillas: (string | null)[], posicion: number, personaje
 
 /**
  * Los faroles para el demonio: los que prepara el narrador y los de cada asiento
- * (los que se pone su jugador o le copia el narrador). Lo que se cambia se apunta
- * en el diario. No comprueba permisos ni el guion.
+ * (los que se pone su jugador o le copia el narrador). Solo van personajes del
+ * guion, en una de sus casillas. Lo que se cambia se apunta en el diario. No
+ * comprueba permisos.
  */
 export class Faroles {
   /** Los faroles que el narrador prepara para el demonio (ver SalaDto.faroles). */
@@ -31,6 +33,8 @@ export class Faroles {
     /** Los jugadores de la plaza, en orden. */
     private readonly plaza: () => readonly Jugador[],
     private readonly diario: Diario,
+    /** Un personaje del guion (o del catálogo). */
+    private readonly personaje: (id: string) => PersonajeDeGuion | undefined,
   ) {}
 
   faroles(): (string | null)[] {
@@ -39,11 +43,14 @@ export class Faroles {
 
   /**
    * Pone un personaje en una casilla de farol del narrador (o la vacía, con
-   * null). Si ya estaba en otra casilla, sale de ella.
+   * null). Si ya estaba en otra casilla, sale de ella. Devuelve el error, si lo hay.
    */
-  ponerFarol(posicion: number, personajeId: string | null): void {
+  ponerFarol(posicion: number, personajeId: string | null): string | null {
+    const error = this.noVale(posicion, personajeId);
+    if (error) return error;
     this.delNarrador = ponerEnCasilla(this.delNarrador, posicion, personajeId);
     this.diario.anotar({ tipo: 'farol', asiento: null, posicion, personaje: personajeId });
+    return null;
   }
 
   /** Los faroles del jugador, si siguen siendo de quien lo juega. */
@@ -58,18 +65,24 @@ export class Faroles {
     return f && f.ocupante === jugador.participanteId ? f.enUso : null;
   }
 
-  /** Pone un farol en una casilla de un asiento (o la vacía). Si el que usaba ya no está, deja de usarlo. */
-  ponerFarolAsiento(jugadorId: string, posicion: number, personajeId: string | null): void {
+  /**
+   * Pone un farol en una casilla de un asiento (o la vacía). Si el que usaba ya no
+   * está, deja de usarlo. Devuelve el error, si lo hay.
+   */
+  ponerFarolAsiento(jugadorId: string, posicion: number, personajeId: string | null): string | null {
+    const error = this.noVale(posicion, personajeId);
+    if (error) return error;
     const jugador = this.plaza().find((j) => j.id === jugadorId);
     if (jugador) this.guardar(jugador, ponerEnCasilla(this.deJugador(jugador), posicion, personajeId), this.enUso(jugador));
     this.diario.anotar({ tipo: 'farol', asiento: this.diario.asiento(jugadorId), posicion, personaje: personajeId });
+    return null;
   }
 
   /** Cambia de una vez los faroles de un asiento (los que le ha enseñado el narrador). */
-  copiarFaroles(jugadorId: string, personajes: string[]): void {
+  copiarFaroles(jugadorId: string, personajes: readonly string[]): void {
     const jugador = this.plaza().find((j) => j.id === jugadorId);
     if (jugador) this.guardar(jugador, farolesVacios().map((_, i) => personajes[i] ?? null), this.enUso(jugador));
-    this.diario.anotar({ tipo: 'copiaFaroles', asiento: this.diario.asiento(jugadorId), personajes });
+    this.diario.anotar({ tipo: 'copiaFaroles', asiento: this.diario.asiento(jugadorId), personajes: [...personajes] });
   }
 
   /** El asiento dice usar uno de sus faroles (o ninguno, con null). Devuelve el error, si lo hay. */
@@ -81,6 +94,12 @@ export class Faroles {
     this.guardar(jugador, faroles, personajeId);
     this.diario.anotar({ tipo: 'usaFarol', asiento: this.diario.asiento(jugadorId), personaje: personajeId });
     return null;
+  }
+
+  /** Si no existe esa casilla o el personaje no está en el guion, por qué. */
+  private noVale(posicion: number, personajeId: string | null): string | null {
+    if (!Number.isInteger(posicion) || posicion < 0 || posicion >= NUM_FAROLES) return 'Esa casilla de farol no existe.';
+    return personajeId === null || this.personaje(personajeId) ? null : 'Ese personaje no está en el guion.';
   }
 
   private guardar(jugador: Jugador, faroles: (string | null)[], enUso: string | null): void {

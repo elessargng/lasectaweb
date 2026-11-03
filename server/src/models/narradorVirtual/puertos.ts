@@ -30,6 +30,8 @@ export interface Narrador {
   }): Promise<RespuestaAccion>;
   /** Quita el señalamiento. */
   terminarSenalamiento(): Promise<RespuestaAccion>;
+  /** Pone un personaje en una casilla de los faroles del demonio. */
+  prepararFarol(posicion: number, personajeId: string | null): Promise<RespuestaAccion>;
 }
 
 /** Lo que contesta la sala a una acción: hecha (con lo que devuelva) o no, y por qué. */

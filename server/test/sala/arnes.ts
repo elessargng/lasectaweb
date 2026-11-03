@@ -4,6 +4,7 @@ import type { AddressInfo } from 'net';
 import { io as conectar, type Socket } from 'socket.io-client';
 import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
 import { BolsaController } from '../../src/controllers/sala/BolsaController';
+import { FarolController } from '../../src/controllers/sala/FarolController';
 import { RelojController } from '../../src/controllers/sala/RelojController';
 import { RevelacionController } from '../../src/controllers/sala/RevelacionController';
 import { SenalamientoController } from '../../src/controllers/sala/SenalamientoController';
@@ -106,6 +107,7 @@ export class Arnes {
     abrirSalaPorSocket(http, salaService, {
       sala: new SalaController(salaService),
       bolsa: new BolsaController(salaService.bolsa),
+      faroles: new FarolController(salaService.faroles),
       reloj: new RelojController(salaService.reloj),
       revelacion: new RevelacionController(salaService.revelacion),
       senalamiento: new SenalamientoController(salaService.senalamiento),

@@ -8,7 +8,7 @@ import { listaFaroles } from './fichas';
 import type { PersonajeMostrado } from './guiones';
 import { nombreDeAsiento, textoEleccion } from './despertar';
 import { BotoneraDespertar, EditorAdjunto, HistorialDespertar, MensajeVisto } from './PiezasDespertar';
-import type { DespertarDto, SalaDto, ResultadoAccion } from './useSala';
+import type { AccionesFaroles, DespertarDto, SalaDto, ResultadoAccion } from './useSala';
 import { FICHAS_RESPUESTA_GUIADA } from '@models/despertar';
 
 interface DespertarJugadorProps {
@@ -19,6 +19,8 @@ interface DespertarJugadorProps {
   personajes: PersonajeMostrado[];
   porId: Map<string, PersonajeMostrado>;
   pedir: (accion: string, datos?: unknown) => Promise<ResultadoAccion>;
+  /** Copia en mis faroles los que me enseña el narrador (ver AccionesFaroles). */
+  copiarFaroles: AccionesFaroles['copiar'];
   onError: (mensaje: string) => void;
   onEnviado: (texto: string) => void;
   /** La cierra (Escape o «Cerrar»); se vuelve a abrir desde la fase de la cabecera. */
@@ -47,6 +49,7 @@ const DespertarJugador = ({
   personajes,
   porId,
   pedir,
+  copiarFaroles,
   onError,
   onEnviado,
   onCerrar,
@@ -69,7 +72,7 @@ const DespertarJugador = ({
   const copiar = async () => {
     if (!aCopiar || copiando || yaCopiados) return;
     setCopiando(true);
-    const r = await pedir('jugador:copiarFaroles', { personajes: aCopiar });
+    const r = await copiarFaroles(aCopiar);
     setCopiando(false);
     if (r.ok) onEnviado(`Faroles copiados: ${listaFaroles(aCopiar.slice(0, 3), porId)}.`);
     else onError(r.error);

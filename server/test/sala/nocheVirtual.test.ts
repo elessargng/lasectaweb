@@ -99,6 +99,11 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
         if (!error) hechas.push({ accion: 'senalamiento:empezar', datos: peticion });
         return error ? { ok: false, error } : { ok: true };
       },
+      prepararFarol: async (posicion, personajeId) => {
+        const error = juego.partida.faroles.ponerFarol(posicion, personajeId);
+        if (!error) hechas.push({ accion: 'faroles:preparar', datos: { posicion, personajeId } });
+        return error ? { ok: false, error } : { ok: true };
+      },
       terminarSenalamiento: async () => {
         juego.partida.senalamientos.terminar();
         hechas.push({ accion: 'senalamiento:terminar', datos: undefined });

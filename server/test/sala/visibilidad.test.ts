@@ -138,26 +138,26 @@ describe('lo que ve cada uno', () => {
   });
 
   it('los faroles de la narradora los ven ella y los visitantes, no los jugadores', async () => {
-    await arnes.accion(narradora, 'narrador:farol', { posicion: 0, personajeId: 'chef' });
+    await arnes.pedir(narradora, 'faroles:preparar', { posicion: 0, personajeId: 'chef' });
     expect(narradora.estado.faroles[0]).toBe('chef');
     expect(vera.estado.faroles[0]).toBe('chef');
     expect(ana.estado.faroles).toEqual([null, null, null]);
   });
 
   it('el farol que usa un jugador: solo uno de los suyos; lo ven él y la narradora, no los demás', async () => {
-    await arnes.accion(ana, 'jugador:farol', { posicion: 0, personajeId: 'chef' });
-    await arnes.accion(ana, 'jugador:farol', { posicion: 1, personajeId: 'empath' });
-    expect((await arnes.intentar(ana, 'jugador:usarFarol', { personajeId: 'monk' })).ok).toBe(false);
-    await arnes.accion(ana, 'jugador:usarFarol', { personajeId: 'empath' });
+    await arnes.pedir(ana, 'faroles:poner', { posicion: 0, personajeId: 'chef' });
+    await arnes.pedir(ana, 'faroles:poner', { posicion: 1, personajeId: 'empath' });
+    expect((await arnes.pedir<{ ok: boolean }>(ana, 'faroles:usar', { personajeId: 'monk' })).ok).toBe(false);
+    await arnes.pedir(ana, 'faroles:usar', { personajeId: 'empath' });
     expect(asiento(ana, 0).farolEnUso).toBe('empath');
     expect(asiento(narradora, 0).farolEnUso).toBe('empath');
     expect(asiento(bea, 0).farolEnUso).toBeNull();
     // Al quitarlo de sus faroles, deja de usarlo
-    await arnes.accion(ana, 'jugador:farol', { posicion: 1, personajeId: null });
+    await arnes.pedir(ana, 'faroles:poner', { posicion: 1, personajeId: null });
     expect(asiento(ana, 0).farolEnUso).toBeNull();
     // Y puede dejar de usar uno sin quitarlo
-    await arnes.accion(ana, 'jugador:usarFarol', { personajeId: 'chef' });
-    await arnes.accion(ana, 'jugador:usarFarol', { personajeId: null });
+    await arnes.pedir(ana, 'faroles:usar', { personajeId: 'chef' });
+    await arnes.pedir(ana, 'faroles:usar', { personajeId: null });
     expect(asiento(narradora, 0).farolEnUso).toBeNull();
   });
 
