@@ -122,7 +122,7 @@ describe('reglas de los personajes', () => {
     it('la primera vez que nominan a la Virgen, un aldeano que la nomina se ejecuta al momento', () => {
       const { juego, asiento, ejecucion } = nominaALaVirgen('chef');
       const { partida } = juego;
-      expect(ejecucion).toEqual({ anochece: true, final: false });
+      expect(ejecucion).toEqual({ anochece: true, final: null });
       expect(asiento(0).muerto).toBe(true);
       expect(textos(juego, 1)).toEqual(['No Ability']);
       expect(partida.nominaciones.nominacion()).toBeNull();
@@ -162,7 +162,7 @@ describe('reglas de los personajes', () => {
       expect(ejecucion).toEqual({ pregunta: 'comoAldeano' });
       expect(partida.nominaciones.nominacion()).toBeNull();
       expect(textos(juego, 1)).toEqual([]);
-      expect(partida.nominar(asiento(0).id, asiento(1).id, { comoAldeano: true })).toEqual({ anochece: true, final: false });
+      expect(partida.nominar(asiento(0).id, asiento(1).id, { comoAldeano: true })).toEqual({ anochece: true, final: null });
       expect(asiento(0).muerto).toBe(true);
       expect(textos(juego, 1)).toEqual(['No Ability']);
     });

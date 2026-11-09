@@ -80,7 +80,7 @@ import { recibidasDe, reconciliarSlots } from './slotsLlamada';
 import { setSonidosActivos, setTonoDespertar, setTonoLlamada, tocarDespertar, tocarPrivado, tocarSinVoto, tocarSolicitud, tocarVoto } from './sonidos';
 import { esTeclaLlamadaBotc, LlamadaBotcContexto } from './llamadaBotc';
 import CieloEstrellado from './CieloEstrellado';
-import DialogoFinal from './DialogoFinal';
+import DialogoFinal, { type FinPropuesto } from './DialogoFinal';
 import { rutaFondo } from './fondos';
 import { idFichaNominar, idPestanaLateral, ID_BOTON_MENU_NARRADOR, ID_SIN_NARRADOR, ID_TITULO_DESPERTAR, idLunaFicha, idNombreNarrador } from './ids';
 import { ElegirEnPlazaContexto, type PedidoEleccion } from './elegirEnPlaza';
@@ -1333,12 +1333,16 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
   // El diálogo de revelar el grimorio: desde el menú del narrador o con su tecla
   const [revelandoGrimorio, setRevelandoGrimorio] = useState(false);
-  // Una ejecución que deja solo dos jugadores vivos no anochece sola: quien ejecutó
-  // elige entre la noche y revelar el grimorio (DialogoFinal). También al nominar a la Virgen.
-  const [decidiendoFinal, setDecidiendoFinal] = useState(false);
-  /** Una ejecución (o nominar a la Virgen) que deja dos vivos: a elegir entre la noche y revelar el grimorio. */
+  // Una ejecución que deja la partida como acabada (dos vivos, o un bando que parece
+  // ganar según el grimorio) no anochece sola: quien ejecutó elige entre la noche y
+  // revelar el grimorio (DialogoFinal). También al nominar a la Virgen.
+  const [decidiendoFinal, setDecidiendoFinal] = useState<FinPropuesto | null>(null);
+  /** Una ejecución (o nominar a la Virgen) que deja la partida como acabada: a elegir entre la noche y revelar el grimorio. */
   const siFinal = (r: ResultadoAccion) => {
-    if (r.ok && r.valor === 'final') setDecidiendoFinal(true);
+    if (r.ok) {
+      const fin = ({ final: 'dosVivos', ganaBueno: 'bueno', ganaMalvado: 'malvado' } as const)[r.valor as string];
+      if (fin) setDecidiendoFinal(fin);
+    }
     return r;
   };
 
@@ -2453,12 +2457,13 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
 
         {decidiendoFinal && (
           <DialogoFinal
+            fin={decidiendoFinal}
             onNoche={() => fasePropia.irANoche()}
             onRevelar={() => {
-              setDecidiendoFinal(false);
+              setDecidiendoFinal(null);
               setRevelandoGrimorio(true);
             }}
-            onCerrar={() => setDecidiendoFinal(false)}
+            onCerrar={() => setDecidiendoFinal(null)}
           />
         )}
 

@@ -99,7 +99,7 @@ describe('la calavera y los asientos', () => {
     partida.amanecer();
     expect(partida.ejecutarConCalavera(asiento(0).id)).toEqual({ error: 'Solo se ejecuta a quien lleva la calavera.' });
     partida.grimorio.marcar(asiento(0).id, true, null);
-    expect(partida.ejecutarConCalavera(asiento(0).id)).toEqual({ final: false });
+    expect(partida.ejecutarConCalavera(asiento(0).id)).toEqual({ final: null });
     expect(asiento(0).muerto).toBe(true);
   });
 

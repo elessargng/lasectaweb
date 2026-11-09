@@ -1,3 +1,4 @@
+import type { FinPropuesto } from '../../models/partida/Partida';
 import type { Participante } from '../../models/sala/Participantes';
 import type { SalaDeJuego } from '../../models/SalaDeJuego';
 import { UsosSala, type Permiso, type ResultadoUso } from './UsosSala';
@@ -17,6 +18,9 @@ export const USOS_DIA = [
 type UsoDia = (typeof USOS_DIA)[number];
 
 const SIN_NOMINACION = 'No hay ninguna nominación abierta.';
+
+/** Lo que se contesta si la partida parece acabada tras ejecutar: «final» (quedan dos vivos), «ganaBueno» o «ganaMalvado». */
+const valorFinal = (fin: FinPropuesto) => (fin === 'dosVivos' ? 'final' : fin === 'bueno' ? 'ganaBueno' : 'ganaMalvado');
 
 /** Un narrador, con una nominación abierta. */
 const conNominacion: Permiso = ({ partida }, yo) => (yo.rol === 'narrador' && partida.nominaciones.nominacion() ? null : SIN_NOMINACION);
@@ -94,7 +98,7 @@ export class DiaService {
    * La ficha de un asiento nomina a la de otro (o a sí misma). `comoAldeano`: si quien
    * nomina registra como aldeano (el Espía que nomina a la Virgen). Contesta (valor):
    * «comoAldeano» si hace falta saberlo y no viene (no se nomina: hay que volver a
-   * pedirlo con la respuesta); con la Virgen, «ejecutado» o, si quedan dos vivos, «final».
+   * pedirlo con la respuesta); con la Virgen, «ejecutado» o, si la partida parece acabada, su final (ver valorFinal).
    */
   nominar(yoId: string, desde: string, hasta: string, comoAldeano?: boolean): ResultadoUso {
     return this.usos.hacer(yoId, 'dia:nominar', () => {
@@ -102,7 +106,7 @@ export class DiaService {
       if (!r) return null;
       if ('error' in r) return r.error;
       if ('pregunta' in r) return { valor: r.pregunta };
-      return { valor: r.final ? 'final' : 'ejecutado' };
+      return { valor: r.final ? valorFinal(r.final) : 'ejecutado' };
     });
   }
 
@@ -148,14 +152,15 @@ export class DiaService {
   }
 
   /**
-   * Ejecuta al que lleva la calavera (ver Partida.ejecutar). Si quedan dos vivos, no
-   * anochece: contesta «final» (el narrador elige entre la noche y revelar el grimorio).
+   * Ejecuta al que lleva la calavera (ver Partida.ejecutar). Si la partida parece
+   * acabada, no anochece: contesta su final (ver valorFinal; el narrador elige entre
+   * la noche y revelar el grimorio).
    */
   ejecutar(yoId: string, jugadorId: string): ResultadoUso {
     return this.usos.hacer(yoId, 'dia:ejecutar', () => {
       const r = this.juego.partida.ejecutarConCalavera(jugadorId);
       if ('error' in r) return r.error;
-      return r.final ? { valor: 'final' } : null;
+      return r.final ? { valor: valorFinal(r.final) } : null;
     });
   }
 }

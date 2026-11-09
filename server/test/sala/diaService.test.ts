@@ -79,6 +79,22 @@ describe('el día', () => {
     expect(ana.estado.plaza[2].muerto).toBe(true);
   });
 
+  it('ejecutar al último demonio no anochece: contesta que parece ganar el bueno', async () => {
+    await arnes.hacer(narradora, 'grimorio:personaje', { jugadorId: idAsiento(1), personajeId: 'imp' });
+    await arnes.hacer(narradora, 'grimorio:personaje', { jugadorId: idAsiento(2), personajeId: 'chef' });
+    await alDia();
+    const ejecutar = async (i: number) => {
+      await arnes.hacer(narradora, 'dia:marcar', { jugadorId: idAsiento(i), marcado: true, cerrarNominacion: false });
+      return arnes.pedir(narradora, 'dia:ejecutar', { jugadorId: idAsiento(i) });
+    };
+    // Con el demonio vivo, nada que proponer: anochece
+    expect(await ejecutar(2)).toEqual({ ok: true });
+    expect(ana.estado.fase.momento).toBe('noche');
+    await arnes.hacer(narradora, 'fase:amanecer');
+    expect(await ejecutar(1)).toEqual({ ok: true, valor: 'ganaBueno' });
+    expect(ana.estado.fase.momento).toBe('dia');
+  });
+
   it('dar la palabra, a alguien que está en la sala', async () => {
     await alDia();
     await arnes.hacer(narradora, 'dia:nominar', { desde: idAsiento(0), hasta: idAsiento(1) });

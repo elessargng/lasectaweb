@@ -38,6 +38,9 @@ import { Revelacion } from './Revelacion';
 import { Senalamientos } from './Senalamientos';
 import type { Jugador } from './Jugador';
 
+/** Tras una ejecución, la partida parece acabada: gana un bando, o quedan dos vivos (ver Partida.ejecutar). */
+export type FinPropuesto = Alineamiento | 'dosVivos';
+
 /** Lo que la partida necesita saber de fuera de la sala. */
 export interface EntornoPartida {
   /** Hay un narrador virtual llevando la partida (él decide cuándo anochece tras ejecutar). */
@@ -553,7 +556,7 @@ export class Partida {
     desde: string,
     hasta: string,
     registro: RegistroAlNominar = {},
-  ): { error: string } | { pregunta: 'comoAldeano' } | { anochece: boolean; final: boolean } | null {
+  ): { error: string } | { pregunta: 'comoAldeano' } | { anochece: boolean; final: FinPropuesto | null } | null {
     const plaza = this.plaza();
     const nominador = plaza.find((a) => a.id === desde);
     const nominado = plaza.find((a) => a.id === hasta);
@@ -803,12 +806,12 @@ export class Partida {
    * Ejecuta al de un asiento (el que lleva la calavera): muere como al matarlo,
    * salvo que no le llegue (ver Objetivo: el Marinero, el Bufón), y se le ponen los
    * recordatorios de los personajes que funcionan con las ejecuciones (ver Reglas). Luego anochece, salvo si una regla lo impide (el
-   * Carnicero vivo: puede haber otra ejecución) o si quedan solo dos
-   * jugadores vivos (`final`): entonces decide el narrador si se va a la noche o
-   * se revela el grimorio. Devuelve si ha anochecido y si quedan dos, o null si
-   * el asiento no existe.
+   * Carnicero vivo: puede haber otra ejecución) o si la partida parece acabada
+   * (`final`, ver finPropuesto): entonces decide el narrador si se va a la noche o
+   * se revela el grimorio. Devuelve si ha anochecido y el final, o null si el
+   * asiento no existe.
    */
-  ejecutar(jugadorId: string): { anochece: boolean; final: boolean } | null {
+  ejecutar(jugadorId: string): { anochece: boolean; final: FinPropuesto | null } | null {
     const jugador = this.plaza().find((a) => a.id === jugadorId);
     if (!jugador) return null;
     // Los recordatorios de los personajes que funcionan con las ejecuciones (ver Reglas)
@@ -827,8 +830,8 @@ export class Partida {
     if (a) this.grimorio.cambiarVida(a.id, true, { anotar: false });
     // Los vivos que quedan: los asientos (también los libres, que cuentan como jugadores)
     // sin muerte, sin contar a los viajeros
-    const vivos = this.plaza().filter((a) => !a.muerto && !a.muertePendiente && !this.bolsa.llevaViajero(a)).length;
-    const final = vivos <= 2;
+    const vivos = this.plaza().filter((a) => !a.muerto && !a.muertePendiente && !this.bolsa.llevaViajero(a));
+    const final = this.finPropuesto(vivos, jugador);
     // Con narrador virtual, anochece él cuando acaba de decirlo (o revela, si se acaba la partida)
     const anochece = !final && !this.entorno.hayNarradorVirtual() && this.reglas.anocheceTrasEjecutar();
     if (anochece) this.irANoche();
@@ -839,12 +842,30 @@ export class Partida {
    * El narrador ejecuta al que lleva la calavera (ver ejecutar; la Virgen, en
    * cambio, ejecuta a quien la nomina sin ella). Devuelve el error, o si quedan dos vivos.
    */
-  ejecutarConCalavera(jugadorId: string): { error: string } | { final: boolean } {
+  ejecutarConCalavera(jugadorId: string): { error: string } | { final: FinPropuesto | null } {
     const jugador = this.plaza().find((a) => a.id === jugadorId);
     if (!jugador) return { error: 'Ese asiento ya no existe.' };
     if (this.grimorio.calavera()?.jugadorId !== jugador.id) return { error: 'Solo se ejecuta a quien lleva la calavera.' };
-    const { final } = this.ejecutar(jugador.id) ?? { final: false };
+    const { final } = this.ejecutar(jugador.id) ?? { final: null };
     return { final };
+  }
+
+  /**
+   * Tras ejecutar, si la partida parece acabada según el grimorio, el narrador
+   * decide: quién gana si lo dice un personaje (el Santo ejecutado, ver
+   * ReglaPersonaje.ganador) o el bueno si el demonio ha muerto y nadie lo hereda;
+   * si no, «dosVivos» si quedan dos o menos. Con narrador virtual solo lo de los
+   * dos vivos: el final lo comprueba él. Sin ningún demonio en el grimorio
+   * (no se usan las fichas), tampoco se propone nada más.
+   */
+  private finPropuesto(vivos: readonly Jugador[], ejecutado: Jugador): FinPropuesto | null {
+    const dosVivos = vivos.length <= 2 ? 'dosVivos' : null;
+    if (this.entorno.hayNarradorVirtual() || !this.plaza().some((a) => this.reglas.esDemonio(a))) return dosVivos;
+    const hayDemonio = vivos.some((a) => this.reglas.esDemonio(a));
+    const ganador = this.reglas.ganador({ vivos, ejecutado, sinEjecucion: false, hayDemonio });
+    if (ganador) return ganador;
+    if (!hayDemonio && !this.reglas.heredarDemonio(vivos)) return 'bueno';
+    return dosVivos;
   }
 
   /**

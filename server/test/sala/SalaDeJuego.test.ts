@@ -740,7 +740,7 @@ describe('SalaDeJuego', () => {
       const { partida } = juego;
       alDia(juego);
       partida.grimorio.marcar(asiento(0).id, true);
-      expect(partida.ejecutar(asiento(0).id)).toEqual({ anochece: true, final: false });
+      expect(partida.ejecutar(asiento(0).id)).toEqual({ anochece: true, final: null });
       expect(asiento(0).muerto).toBe(true);
       expect(partida.fases.actual()).toMatchObject({ momento: 'noche', numero: 2 });
     });
@@ -750,7 +750,7 @@ describe('SalaDeJuego', () => {
       const { partida } = juego;
       partida.grimorio.cambiarPersonaje(asiento(1).id, 'butcher');
       alDia(juego);
-      expect(partida.ejecutar(asiento(0).id)).toEqual({ anochece: false, final: false });
+      expect(partida.ejecutar(asiento(0).id)).toEqual({ anochece: false, final: null });
       expect(partida.fases.actual().momento).toBe('dia');
     });
 
@@ -759,7 +759,7 @@ describe('SalaDeJuego', () => {
       const { partida } = juego;
       alDia(juego);
       for (const i of [3, 4, 5, 6]) partida.grimorio.cambiarVida(asiento(i).id, true);
-      expect(partida.ejecutar(asiento(0).id)).toEqual({ anochece: false, final: true });
+      expect(partida.ejecutar(asiento(0).id)).toEqual({ anochece: false, final: 'dosVivos' });
     });
 
     it('con el Enterrador vivo, el ejecutado lleva su «Die Today» (solo uno en la plaza)', () => {
