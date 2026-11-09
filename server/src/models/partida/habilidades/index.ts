@@ -22,48 +22,41 @@ import { sabio } from '../../personajes/sabio';
 /** Las de noche de esos personajes, en ese orden. */
 const deNoche = (...personajes: DefinicionPersonaje[]): HabilidadNocturna[] => personajes.flatMap((p) => p.deNoche ?? []);
 
-/** Las habilidades de noche de Trouble Brewing. */
-const TROUBLE_BREWING: readonly HabilidadNocturna[] = [
+/**
+ * Todas las habilidades de noche hechas, una por personaje (Esbirros y Demonios,
+ * la información de los malvados, como dos más). Un personaje nuevo con la suya es
+ * un archivo más y una línea aquí (ver models/personajes).
+ */
+const HABILIDADES: readonly HabilidadNocturna[] = [
   esbirros,
   demonios,
   ...deNoche(
-  envenenador,
-  monje,
-  mayordomo,
-  imp,
-  adivina,
-  cuervero,
-  lavandera,
-  bibliotecario,
-  investigador,
-  chef,
-  empatico,
-  enterrador,
-  espia,
-  mujerEscarlata,
+    envenenador,
+    monje,
+    mayordomo,
+    imp,
+    adivina,
+    cuervero,
+    lavandera,
+    bibliotecario,
+    investigador,
+    chef,
+    empatico,
+    enterrador,
+    espia,
+    mujerEscarlata,
+    relojero,
+    camarera,
+    sabio,
   ),
 ];
 
 /**
- * Las de No Greater Joy (para 5 o 6 jugadores): las de Trouble Brewing que trae y
- * las del Relojero, la Camarera y el Sabio. El Artista y el Patoso actúan de día
- * (ver models/personajes/DeclaracionDia); el Borracho y el Barón, al preparar.
+ * Las habilidades de noche de un guion: las de los personajes que trae (venga de
+ * un predeterminado o de un JSON: solo cuenta su lista), y la información de los
+ * malvados. Los personajes sin la suya hecha se despiertan a mano.
  */
-const NO_GREATER_JOY: readonly HabilidadNocturna[] = [esbirros, demonios, ...deNoche(imp, mujerEscarlata, investigador, empatico, relojero, camarera, sabio)];
-
-/**
- * Las habilidades de noche de cada guion, por su id de predeterminado. Solo
- * Trouble Brewing y No Greater Joy, de momento: en otros guiones hay personajes que
- * cambian las reglas (el Vortox, la Marioneta…) y se despierta a mano. Un guion
- * nuevo es una entrada más; cada habilidad está en el archivo de su personaje
- * (models/personajes).
- */
-const POR_EDICION: Record<string, readonly HabilidadNocturna[]> = {
-  troublebrewing: TROUBLE_BREWING,
-  nogreaterjoy: NO_GREATER_JOY,
-};
-
-/** Las habilidades de noche de un guion (por su edición), por personaje; ninguna si no las tiene. */
-export function habilidadesDelGuion(edicion: string | null): ReadonlyMap<string, HabilidadNocturna> {
-  return new Map((edicion ? (POR_EDICION[edicion] ?? []) : []).map((h) => [h.personaje, h]));
+export function habilidadesDelGuion(personajes: readonly string[]): ReadonlyMap<string, HabilidadNocturna> {
+  const enGuion = new Set(personajes);
+  return new Map(HABILIDADES.filter((h) => h === esbirros || h === demonios || enGuion.has(h.personaje)).map((h) => [h.personaje, h]));
 }

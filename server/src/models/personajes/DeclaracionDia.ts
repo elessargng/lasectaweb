@@ -19,6 +19,8 @@ export type ResultadoDeclaracion = { error: string } | { valor?: string; contar?
 export interface DeclaracionDia {
   /** Su nombre: el evento es `declarar:<id>` y así se apunta en Declaraciones. */
   id: string;
+  /** El personaje que se dice ser: solo se puede declarar si el guion lo trae. */
+  personaje: string;
   /** Se cuenta en voz alta a la plaza: hasta que acaba de contarse, no se hace otra pública. */
   publica: boolean;
   /** Si ese participante puede hacerla ahora (solo lee la sala). */
@@ -27,6 +29,12 @@ export interface DeclaracionDia {
   noPuede(juego: SalaDeJuego, yo: Participante): string;
   /** La hace (ya comprobado que puede): valida los datos, decide qué pasa y cómo se cuenta. */
   declarar(ctx: ContextoEtapa, yo: string, datos: unknown): Promise<ResultadoDeclaracion>;
+}
+
+/** Por qué no puede hacerla ahora ese participante (su personaje no está en el guion, o lo que diga ella), o null si puede. */
+export function noPuedeDeclarar(declaracion: DeclaracionDia, juego: SalaDeJuego, yo: Participante): string | null {
+  if (!juego.partida.guion.trae(declaracion.personaje)) return 'Ese personaje no está en este guion.';
+  return declaracion.puede(juego, yo) ? null : declaracion.noPuede(juego, yo);
 }
 
 /**

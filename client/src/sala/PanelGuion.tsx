@@ -56,11 +56,12 @@ export interface RecordatoriosNoche {
 }
 
 /**
- * El despertar guiado de una fila del orden de noche (solo el narrador, con un
- * guion que lo tenga): un botón para despertarlo según su habilidad y cómo está.
+ * El despertar de una fila del orden de noche (solo el narrador): un botón para
+ * despertarlo según su habilidad y cómo está (el guiado) o, si su habilidad no
+ * está hecha (`manual`), para abrir el despertar normal de quien lleva su ficha.
  */
 export interface DespertarFila {
-  estado: HabilidadNocheDto['estado'];
+  estado: HabilidadNocheDto['estado'] | 'manual';
   /** Lo que avisa el servidor, ya en frases. */
   avisos: string[];
   onPulsar: () => void;
@@ -382,8 +383,8 @@ const Fila = ({
   const idEstado = useId();
   // Cómo está (salvo si está listo y no hay nada que decir): debajo del nombre y, para
   // quien llega con el tabulador, como descripción del botón
-  const estado = despertar && (despertar.estado !== 'listo' || despertar.avisos.length > 0)
-    ? [despertar.estado === 'listo' ? '' : `${ESTADO_HABILIDAD[despertar.estado]}.`, ...despertar.avisos].filter(Boolean).join(' ')
+  const estado = despertar && ((despertar.estado !== 'listo' && despertar.estado !== 'manual') || despertar.avisos.length > 0)
+    ? [despertar.estado === 'listo' || despertar.estado === 'manual' ? '' : `${ESTADO_HABILIDAD[despertar.estado]}.`, ...despertar.avisos].filter(Boolean).join(' ')
     : '';
   const [etiqueta, nombreOculto] =
     despertar?.estado === 'revisar'

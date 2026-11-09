@@ -46,7 +46,7 @@ function elegirOpcion(ctx: ContextoEtapa, fila: HabilidadNoche): Promise<EnvioDe
 async function droison(ctx: ContextoEtapa, fila: HabilidadNoche): Promise<EnvioDespertar | null> {
   const { partida } = ctx.juego;
   if (!fila.avisos.some((a) => a.tipo === 'envenenado' || a.tipo === 'borracho')) return null;
-  const habilidad = habilidadesDelGuion(partida.guion.actual()?.edicion ?? null).get(fila.personaje);
+  const habilidad = habilidadesDelGuion(partida.guion.ids()).get(fila.personaje);
   if (!habilidad) return null;
   // La primera opción es la de verdad
   const verdadera = fila.opciones[0].envio;

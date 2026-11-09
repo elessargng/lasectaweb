@@ -208,7 +208,7 @@ describe('la noche del narrador virtual', () => {
     const tb = guionTroubleBrewing();
     const tipo = (id: string) => tb.personajes.find((p) => p.id === id)?.tipo;
     const plan = (orden: string[], primera: boolean) =>
-      planificarNoche({ orden, primera, habilidades: habilidadesDelGuion('troublebrewing'), tipoDe: tipo }).map((t) => [t.tramo, t.personajes]);
+      planificarNoche({ orden, primera, habilidades: habilidadesDelGuion(guionTroubleBrewing().personajes.map((p) => p.id)), tipoDe: tipo }).map((t) => [t.tramo, t.personajes]);
     expect(plan(PRIMERA_NOCHE, true)).toEqual([
       ['malvados', ['esbirros', 'demonios']],
       ['alteraATodos', ['poisoner']],
@@ -242,10 +242,16 @@ describe('la noche del narrador virtual', () => {
     }
   });
 
+  it('las habilidades de un guion son las de sus personajes, venga de donde venga, y la información de los malvados', () => {
+    const ids = (h: ReadonlyMap<string, unknown>) => [...h.keys()].sort();
+    expect(ids(habilidadesDelGuion(['chef', 'artist', 'vortox', 'imp']))).toEqual(['chef', 'demonios', 'esbirros', 'imp']);
+    expect(ids(habilidadesDelGuion([]))).toEqual(['demonios', 'esbirros']);
+  });
+
   it('la información falsa tiene la forma de la verdadera', () => {
     const m = plazaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
     const { partida } = m.juego;
-    const habilidades = habilidadesDelGuion('troublebrewing');
+    const habilidades = habilidadesDelGuion(guionTroubleBrewing().personajes.map((p) => p.id));
     const falsas = (personaje: string, verdadera: Parameters<typeof informacionesFalsas>[0]['verdadera']) =>
       informacionesFalsas({ verdadera, habilidad: habilidades.get(personaje)!, ctx: contextoNoche(m.juego), personajes: partida.guion.actual()!.personajes });
     expect(falsas('fortuneteller', ficha('si'))).toMatchObject([{ ficha: 'no' }]);

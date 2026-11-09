@@ -83,6 +83,7 @@ export async function contarPatoso(ctx: ContextoEtapa, patosoId: string, elegido
  */
 const deDia: DeclaracionDia = {
   id: 'patoso',
+  personaje: 'klutz',
   publica: true,
   puede: ({ partida, narrador }, yo) => {
     const mio = partida.jugadorDe(yo.id)?.id;

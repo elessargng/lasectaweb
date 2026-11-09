@@ -120,7 +120,7 @@ export class Noche implements Etapa {
     const { partida } = juego;
     const guion = partida.guion.actual();
     const primera = partida.fases.actual().numero === 1;
-    const habilidades = habilidadesDelGuion(guion?.edicion ?? null);
+    const habilidades = habilidadesDelGuion((guion?.personajes ?? []).map((p) => p.id));
     if (primera) await this.ponerQuienCreeSerOtro(ctx);
     const plan = planificarNoche({
       orden: (primera ? guion?.primeraNoche : guion?.otrasNoches) ?? [],
@@ -199,7 +199,7 @@ export class Noche implements Etapa {
   /** Espera a que elija; por un asiento libre, elige él (cuenta como un jugador). */
   private async esperarEleccion(ctx: ContextoEtapa, fila: HabilidadNoche): Promise<void> {
     const { partida } = ctx.juego;
-    const eleccion = habilidadesDelGuion(partida.guion.actual()?.edicion ?? null).get(fila.personaje)?.eleccion;
+    const eleccion = habilidadesDelGuion(partida.guion.ids()).get(fila.personaje)?.eleccion;
     const jugador = partida.plaza().find((a) => a.id === fila.jugador);
     if (eleccion && jugador && !jugador.participanteId) {
       const posibles = partida.plaza().filter((a) => eleccion.puedeElegirse || a.id !== jugador.id);

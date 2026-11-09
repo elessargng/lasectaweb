@@ -101,6 +101,7 @@ export async function preguntarComoArtista(
  */
 const deDia: DeclaracionDia = {
   id: 'artista',
+  personaje: 'artist',
   publica: false,
   puede: (juego, yo) => {
     const { partida } = juego;

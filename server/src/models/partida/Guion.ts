@@ -29,6 +29,16 @@ export class Guion {
     return g.personajes.find((p) => p.id === id) ?? g.viajeros?.find((p) => p.id === id) ?? g.npcs?.find((p) => p.id === id);
   }
 
+  /** Si el guion trae ese personaje (sin contar los viajeros ni los NPCs del catálogo). */
+  trae(id: string): boolean {
+    return !!this.guion?.personajes.some((p) => p.id === id);
+  }
+
+  /** Los ids de los personajes que trae el guion (ninguno, sin guion). */
+  ids(): string[] {
+    return this.guion?.personajes.map((p) => p.id) ?? [];
+  }
+
   esViajero(id: string): boolean {
     return this.personaje(id)?.tipo === 'traveller';
   }

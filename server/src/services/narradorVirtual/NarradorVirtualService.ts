@@ -9,6 +9,7 @@ import { TontoYTu } from '../../models/narradorVirtual/estrategias/TontoYTu';
 import { EsperandoJugadores } from '../../models/narradorVirtual/etapas/EsperandoJugadores';
 import { decisionesDe, type AccionJugador, type ContextoEtapa, type Etapa } from '../../models/narradorVirtual/etapas/Etapa';
 import { DECLARACIONES_DIA } from '../../models/personajes';
+import { noPuedeDeclarar } from '../../models/personajes/DeclaracionDia';
 import { comprobarFinal, esDemonio } from '../../models/narradorVirtual/final/comprobarFinal';
 import { Revelando } from '../../models/narradorVirtual/etapas/Revelando';
 import { Violinista } from '../../models/narradorVirtual/etapas/Violinista';
@@ -81,8 +82,8 @@ const PERMISOS: Record<string, Permiso> = {
       !nominoHoy(juego, jugador.id);
     return puede ? null : 'Ahora no puedes dejar de estar listo.';
   },
-  // Las declaraciones del día: sus permisos son los suyos
-  ...Object.fromEntries(DECLARACIONES_DIA.map((d) => [usoDeDeclarar(d.id), ((juego, yo) => (d.puede(juego, yo) ? null : d.noPuede(juego, yo))) as Permiso])),
+  // Las declaraciones del día: sus permisos son los suyos (ver noPuedeDeclarar)
+  ...Object.fromEntries(DECLARACIONES_DIA.map((d) => [usoDeDeclarar(d.id), ((juego, yo) => noPuedeDeclarar(d, juego, yo)) as Permiso])),
 };
 
 /** El uso de lo que pide un jugador en su turno del día. */

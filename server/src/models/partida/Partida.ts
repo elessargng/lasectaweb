@@ -135,7 +135,7 @@ export class Partida {
   /** El despertar guiado desde el orden de noche (ver DespertarGuiado). */
   readonly guiado = new DespertarGuiado({
     ctx: this.contextoNoche(),
-    habilidades: () => habilidadesDelGuion(this.guion.actual()?.edicion ?? null),
+    habilidades: () => habilidadesDelGuion(this.guion.ids()),
     noche: () => this.fases.actual().momento === 'noche',
     despertar: (jugadorId) => this.despertares.despertar(jugadorId),
     mandar: (jugadorId, envio, eleccion) => this.mandarDelNarrador(jugadorId, envio, { eleccion, guiado: true }),

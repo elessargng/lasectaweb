@@ -101,6 +101,9 @@ describe('narrador virtual con No Greater Joy', () => {
     const artista = jugadores.find((c) => c.miAsiento?.personaje === 'artist');
     const otro = jugadores.find((c) => c.miAsiento?.personaje !== 'artist')!;
     expect(otro.estado.acciones).toContain('declarar:artista');
+    // No Greater Joy no trae Exterminador: nadie puede decir serlo
+    expect(otro.estado.acciones).not.toContain('declarar:exterminar');
+    expect(await arnes.pedir(otro, 'declarar:exterminar', { jugadorId: artista?.miAsiento?.id ?? otro.miAsiento!.id })).toEqual({ ok: false, error: 'Ese personaje no está en este guion.' });
     expect((await arnes.pedir(otro, 'declarar:artista', { pregunta: { tipo: 'nada' } })).ok).toBe(false);
     expect(await arnes.pedir(otro, 'declarar:artista', { texto: '¿Lleva gafas el demonio?' })).toEqual({ ok: true, valor: 'broma' });
     expect(otro.estado.acciones).not.toContain('declarar:artista');

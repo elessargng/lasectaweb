@@ -502,7 +502,19 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       },
       despertar: (id: string): DespertarFila | undefined => {
         const h = e.habilidadesNoche.find((x) => x.personaje === id);
-        if (!h) return undefined;
+        if (!h) {
+          // Sin despertar guiado (su habilidad no está hecha), de noche: el despertar normal de quien lleva su ficha
+          const jugadores = e.fase.momento === 'noche' ? e.plaza.filter((a) => a.personaje === id).map((a) => a.id) : [];
+          if (jugadores.length === 0) return undefined;
+          return {
+            estado: 'manual',
+            avisos: [],
+            onPulsar: () =>
+              void (async () => {
+                for (const jugadorId of jugadores) await abrirDespertar(jugadorId);
+              })(),
+          };
+        }
         return {
           estado: h.estado,
           avisos: h.avisos.map((a) => describirAviso(contextoHabilidades(e), a)),

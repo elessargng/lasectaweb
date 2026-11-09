@@ -93,6 +93,7 @@ export async function contarDisparo(ctx: ContextoEtapa, tirador: string, jugador
 /** Disparar como Exterminador: de día, sin nominación en marcha, una vez por partida y persona. datos: { jugadorId }. */
 const deDia: DeclaracionDia = {
   id: 'exterminar',
+  personaje: 'slayer',
   publica: true,
   puede: (juego, yo) => {
     const { partida } = juego;
