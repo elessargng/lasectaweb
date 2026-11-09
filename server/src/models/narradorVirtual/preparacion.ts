@@ -1,5 +1,5 @@
 import type { Bolsa } from '../partida/Bolsa';
-import type { GuionNarradorVirtual } from '../compartido/narradorVirtual';
+import { GUION_DE_LA_SALA } from '../compartido/narradorVirtual';
 import type { Distribucion } from '../compartido/partida';
 import type { PersonajeDeGuion } from '../guiones';
 import {
@@ -39,7 +39,7 @@ export async function prepararPartida(
   juego: SalaDeJuego,
   plaza: Narrador,
   decidir: <T>(decision: Decision<T>) => Promise<T>,
-  { guion, jugadores, azar, recientes }: { guion: GuionNarradorVirtual; jugadores: number; azar: Azar; recientes: readonly (readonly string[])[] },
+  { guion, jugadores, azar, recientes }: { guion: string; jugadores: number; azar: Azar; recientes: readonly (readonly string[])[] },
 ): Promise<{ error: string } | { personajes: string[]; fuera: FueraDeLaBolsa[] }> {
   const { partida } = juego;
   const cambiarAsientos = async (cambio: CambioAsientos) => {
@@ -57,9 +57,13 @@ export async function prepararPartida(
       if (ultimo.participanteId && libre) await cambiarAsientos({ cambio: 'mover', desde: ultimo.id, hasta: libre.id });
       await cambiarAsientos({ cambio: 'quitar' });
     }
-    for (const hecho of [await plaza.cambiarGuion(guion), await plaza.configurar({ grimorioJugadores: true })]) {
-      if (!hecho.ok) throw new Error(hecho.error);
+    // El de la sala ya está cargado; si no, el predeterminado
+    if (guion !== GUION_DE_LA_SALA) {
+      const cambiado = await plaza.cambiarGuion(guion);
+      if (!cambiado.ok) throw new Error(cambiado.error);
     }
+    const configurado = await plaza.configurar({ grimorioJugadores: true });
+    if (!configurado.ok) throw new Error(configurado.error);
     const personajes = partida.guion.actual()?.personajes ?? [];
     const bolsa = await elegirBolsa(personajes, partida.bolsa.distribucion(), partida.bolsa, decidir, { azar, recientes });
     if (!bolsa) return { error: 'No hay reparto para tantos jugadores.' };

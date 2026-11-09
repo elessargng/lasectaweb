@@ -5,7 +5,7 @@
  */
 import type { ChatRepository } from '../../repositories/ChatRepository';
 import type { ImagenRepository } from '../../repositories/ImagenRepository';
-import type { GuionResuelto } from '../../models/guiones';
+import type { GuionPredeterminado, GuionResuelto } from '../../models/guiones';
 import type { MensajeChat, Susurro } from '../../models/chat';
 import type { RegistroPartida } from '../../models/estadisticas/SeguimientoPartida';
 import type { Azar } from '../../models/partida/azar';
@@ -18,6 +18,8 @@ import type { ProveedorVideo } from '../videollamada/ProveedorVideo';
  * rechaza con un GuionInvalidoError.
  */
 export interface ServicioGuiones {
+  /** Los que se pueden elegir sin cargar un archivo. */
+  predeterminados(): GuionPredeterminado[];
   guionPredeterminado(id: string): Promise<GuionResuelto>;
   importar(contenido: unknown, nombreArchivo?: string): Promise<GuionResuelto>;
 }

@@ -1,4 +1,7 @@
-import { NARRADORES_VIRTUALES } from '../../models/compartido/narradorVirtual';
+import { GUION_DE_LA_SALA, NARRADORES_VIRTUALES, type GuionNarrable } from '../../models/compartido/narradorVirtual';
+import type { GuionResuelto } from '../../models/guiones';
+import { desconocidos, jugadoresDelGuion, noSabeNarrar } from '../../models/narradorVirtual/guionNarrable';
+import type { ServicioGuiones } from '../sala/puertos';
 import { opcionesNarradorVirtual, type OpcionesNarradorVirtual } from '../../models/narradorVirtual/NarradorVirtual';
 import { noPuedeNominar, nominoHoy } from '../../models/narradorVirtual/dia/reglasDia';
 import type { Participante } from '../../models/sala/Participantes';
@@ -133,6 +136,8 @@ export class NarradorVirtualService {
     /** Manda la sala a todos (lo que cambia el propio narrador virtual sin pasar por una acción: su etapa). */
     private readonly difundir: () => void,
     private readonly azar: Azar,
+    /** Los guiones predeterminados, para elegir uno que sepa narrar. */
+    private readonly guiones: Pick<ServicioGuiones, 'predeterminados' | 'guionPredeterminado'>,
     /** Para Jarvis (sin esto, no se puede añadir). */
     private readonly modelos: ModelosNarrador | null = null,
     /** Las bolsas de las últimas partidas de quien lo añade (sin esto, no se tienen en cuenta). */
@@ -157,14 +162,47 @@ export class NarradorVirtualService {
   }
 
   /**
+   * Los guiones que puede llevar (quien puede añadirlo): los predeterminados y el de
+   * la sala (GUION_DE_LA_SALA), si conoce todos sus personajes, con cuántos jugadores
+   * se llena su bolsa (ver guionNarrable).
+   */
+  async guionesNarrables(yoId: string): Promise<{ ok: true; valor: GuionNarrable[] } | { ok: false; error: string }> {
+    return this.usos.consultar(yoId, 'narradorVirtual:anadir', async () => {
+      const deLaSala = this.juego.partida.guion.actual();
+      const candidatos: { id: string; nombre: string; guion: GuionResuelto | null }[] = [
+        ...(deLaSala ? [{ id: GUION_DE_LA_SALA, nombre: deLaSala.nombre, guion: deLaSala }] : []),
+        ...(await Promise.all(
+          this.guiones.predeterminados().map(async ({ id, nombre }) => ({ id, nombre, guion: await this.guiones.guionPredeterminado(id).catch(() => null) })),
+        )),
+      ];
+      return candidatos.flatMap(({ id, nombre, guion }) => {
+        if (!guion || desconocidos(guion.personajes).length > 0) return [];
+        const jugadores = jugadoresDelGuion(guion.personajes);
+        return jugadores.length > 0 ? [{ id, nombre, jugadores }] : [];
+      });
+    });
+  }
+
+  /**
    * En lugar de hacerse narrador, añade un narrador virtual que lleva la partida
-   * solo: el narrador, el guion y los jugadores (ver opcionesNarradorVirtual).
+   * solo: el narrador, el guion (un predeterminado o el de la sala, que sepa
+   * narrar con esos jugadores: ver guionNarrable) y los jugadores (ver opcionesNarradorVirtual).
    */
   async anadir(yoId: string, pedido: { narrador: string; guion: string; jugadores: number }): Promise<ResultadoUso> {
     return this.usos.hacerAsincrono(yoId, 'narradorVirtual:anadir', async () => {
       const opciones = opcionesNarradorVirtual(pedido);
-      return 'error' in opciones ? opciones.error : this.empezar(yoId, opciones);
+      if ('error' in opciones) return opciones.error;
+      const guion = await this.guionPedido(opciones.guion);
+      if (typeof guion === 'string') return guion;
+      return noSabeNarrar(guion, opciones.jugadores) ?? this.empezar(yoId, opciones);
     });
+  }
+
+  /** El guion que se pide: el de la sala o un predeterminado; o el error. */
+  private async guionPedido(id: string): Promise<GuionResuelto | string> {
+    if (id === GUION_DE_LA_SALA) return this.juego.partida.guion.actual() ?? 'La sala aún no tiene guion.';
+    if (!this.guiones.predeterminados().some((g) => g.id === id)) return 'Ese guion no existe.';
+    return this.guiones.guionPredeterminado(id).catch(() => 'No se ha podido cargar ese guion.');
   }
 
   /** Quita el narrador virtual: solo quien lo añadió. */

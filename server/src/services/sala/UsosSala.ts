@@ -45,6 +45,12 @@ export class UsosSala<U extends string> {
     return noPuede ? { ok: false, error: noPuede } : this.hecho(await hacer());
   }
 
+  /** Una consulta (no cambia nada, no se avisa): si puede, lo que lee; si no, por qué. */
+  async consultar<T>(yoId: string, uso: U, leer: () => Promise<T>): Promise<{ ok: true; valor: T } | { ok: false; error: string }> {
+    const noPuede = this.noPuede(yoId, uso);
+    return noPuede ? { ok: false, error: noPuede } : { ok: true, valor: await leer() };
+  }
+
   /** Por qué no puede (no está en la sala, o su permiso), o null. */
   private noPuede(yoId: string, uso: U): string | null {
     const yo = this.juego.sala.participantes.buscar(yoId);

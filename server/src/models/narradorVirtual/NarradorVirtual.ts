@@ -1,11 +1,4 @@
-import {
-  GUIONES_NARRADOR_VIRTUAL,
-  JUGADORES_NARRADOR_VIRTUAL,
-  NARRADORES_VIRTUALES,
-  type EtapaNarradorVirtual,
-  type GuionNarradorVirtual,
-  type IdNarradorVirtual,
-} from '../compartido/narradorVirtual';
+import { JUGADORES_NARRADOR_VIRTUAL, NARRADORES_VIRTUALES, type EtapaNarradorVirtual, type IdNarradorVirtual } from '../compartido/narradorVirtual';
 import type { TurnoNominacion } from '../compartido/partida';
 import type { Partida } from '../partida/Partida';
 import type { Sala } from '../sala/Sala';
@@ -17,7 +10,8 @@ export interface EstadoNarradorVirtual {
   participante: string;
   /** Quien lo añadió: el único que puede quitarlo. */
   creador: string;
-  guion: GuionNarradorVirtual;
+  /** El guion que lleva: un predeterminado (su id) o el de la sala (GUION_DE_LA_SALA). */
+  guion: string;
   jugadores: number;
   etapa: EtapaNarradorVirtual;
   /** Lo último que ha dicho (se oye con la voz y sale escrito junto a su cuadro). */
@@ -31,28 +25,24 @@ export interface EstadoNarradorVirtual {
 /** Lo que se elige al añadir un narrador virtual. */
 export interface OpcionesNarradorVirtual {
   narrador: IdNarradorVirtual;
-  guion: GuionNarradorVirtual;
+  /** Un predeterminado (su id) o el de la sala (GUION_DE_LA_SALA); si lo sabe narrar, ver guionNarrable. */
+  guion: string;
   jugadores: number;
 }
 
 /**
  * Lo que se pide al añadir un narrador virtual, si vale: uno que ya se puede elegir
- * (NARRADORES_VIRTUALES), un guion que sabe narrar (GUIONES_NARRADOR_VIRTUAL) y los
- * jugadores que admiten el narrador virtual (JUGADORES_NARRADOR_VIRTUAL) y ese guion.
- * Si no, el error.
+ * (NARRADORES_VIRTUALES) y los jugadores que admite el narrador virtual
+ * (JUGADORES_NARRADOR_VIRTUAL). Si sabe narrar el guion con ellos se mira al
+ * tenerlo (ver guionNarrable). Si no, el error.
  */
 export function opcionesNarradorVirtual(pedido: { narrador: string; guion: string; jugadores: number }): { error: string } | OpcionesNarradorVirtual {
   const { narrador, guion, jugadores } = pedido;
   const elegido = NARRADORES_VIRTUALES.find((n) => n.id === narrador && n.disponible);
   if (!elegido) return { error: 'Ese narrador virtual aún no está disponible.' };
-  const delGuion = GUIONES_NARRADOR_VIRTUAL.find((g) => g.id === guion);
-  if (!delGuion) return { error: 'Ese guion aún no se puede jugar con narrador virtual.' };
   const { min, max } = JUGADORES_NARRADOR_VIRTUAL;
   if (!Number.isInteger(jugadores) || jugadores < min || jugadores > max) return { error: `Tiene que haber de ${min} a ${max} jugadores.` };
-  if (jugadores < delGuion.jugadores.min || jugadores > delGuion.jugadores.max) {
-    return { error: `${delGuion.nombre} es para ${delGuion.jugadores.min} a ${delGuion.jugadores.max} jugadores.` };
-  }
-  return { narrador: elegido.id, guion: delGuion.id, jugadores };
+  return { narrador: elegido.id, guion, jugadores };
 }
 
 /**

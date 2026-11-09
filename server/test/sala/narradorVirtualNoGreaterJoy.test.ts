@@ -32,11 +32,12 @@ describe('narrador virtual con No Greater Joy', () => {
     return clientes;
   };
 
-  it('es para 5 o 6 jugadores; Trouble Brewing, para 7 o más', async () => {
+  it('vale para los jugadores con los que se llena su bolsa: de 5 a 9 (con 10 hacen falta 7 aldeanos y trae 6)', async () => {
     arnes = await conGuiones();
     const [ana] = await entran(1);
-    expect((await arnes.pedir(ana, 'narradorVirtual:anadir', { ...NGJ, jugadores: 7 })).ok).toBe(false);
-    expect((await arnes.pedir(ana, 'narradorVirtual:anadir', { ...NGJ, guion: 'troublebrewing', jugadores: 6 })).ok).toBe(false);
+    const r = await arnes.consultar<{ ok: boolean; valor: { id: string; nombre: string; jugadores: number[] }[] }>(ana, 'narradorVirtual:guiones');
+    expect(r.valor.find((g) => g.id === 'nogreaterjoy')?.jugadores).toEqual([5, 6, 7, 8, 9]);
+    expect(await arnes.pedir(ana, 'narradorVirtual:anadir', { ...NGJ, jugadores: 10 })).toEqual({ ok: false, error: 'No Greater Joy no tiene personajes para 10 jugadores.' });
     expect((await arnes.pedir(ana, 'narradorVirtual:anadir', { ...NGJ, jugadores: 4 })).ok).toBe(false);
   });
 

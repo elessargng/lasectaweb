@@ -1758,6 +1758,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     ejecutar: async (jugadorId) => siFinal(await propia(() => dia.ejecutar(jugadorId))),
   };
   const virtualPropio: AccionesNarradorVirtual = {
+    // Solo lee: la misma función (estable), sin `propia`
+    guiones: narradorVirtual.guiones,
     anadir: (opciones) => propia(() => narradorVirtual.anadir(opciones)),
     quitar: () => propia(() => narradorVirtual.quitar()),
     turno: (turno, jugadorId) => propia(() => narradorVirtual.turno(turno, jugadorId)),
@@ -2485,6 +2487,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             noDisponible={{
               jarvis: !cuenta ? 'Necesitas una cuenta.' : undefined,
             }}
+            guiones={virtualPropio.guiones}
             anadir={virtualPropio.anadir}
             onCerrar={() => setAnadiendoVirtual(false)}
           />

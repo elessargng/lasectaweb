@@ -6,6 +6,7 @@ import type { ConfiguracionDto } from '@views/partida';
 import type { FichaEnviadaDto } from '@views/grimorio';
 import type { MensajeChatDto, SusurroDto } from '@views/chat';
 import type { Alineamiento } from '@models/jugador';
+import type { GuionNarrable } from '@models/narradorVirtual';
 import type { GuionResuelto } from './guiones';
 import type { Envio } from './despertar';
 
@@ -198,7 +199,7 @@ export function useSala(
 
   /** Pide al servidor algo con respuesta (ack), con un tiempo máximo; nunca falla. */
   const pedirAlSocket = useCallback(
-    <T extends ResultadoAccion>(evento: string, datos?: unknown) =>
+    <T extends { ok: true } | { ok: false; error: string }>(evento: string, datos?: unknown) =>
       new Promise<T>((resolve) => {
         const socket = socketRef.current;
         if (!socket?.connected) {
@@ -341,6 +342,7 @@ export function useSala(
   /** El narrador virtual: añadirlo, quitarlo y lo que le piden los jugadores de día, por sus eventos. */
   const narradorVirtual: AccionesNarradorVirtual = useMemo(
     () => ({
+      guiones: () => pedirAlSocket<ResultadoGuionesNarrables>('narradorVirtual:guiones', {}),
       anadir: (opciones) => pedirAlSocket<ResultadoAccion>('narradorVirtual:anadir', opciones),
       quitar: () => pedirAlSocket<ResultadoAccion>('narradorVirtual:quitar', {}),
       turno: (turno, jugadorId) => pedirAlSocket<ResultadoAccion>(`narradorVirtual:${turno}`, jugadorId === undefined ? {} : { jugadorId }),
@@ -540,7 +542,13 @@ export interface AccionesPreparacion {
 export type TurnoVirtual = 'nominar' | 'defensa' | 'voto' | 'listo' | 'seguirNominando';
 
 /** Lo que se hace con el narrador virtual (ver useSala). */
+/** Los guiones que puede llevar el narrador virtual, con cuántos jugadores (ver GuionNarrable). */
+export type ResultadoGuionesNarrables = { ok: true; valor: GuionNarrable[] } | { ok: false; error: string };
+
 export interface AccionesNarradorVirtual {
+  /** Los guiones que puede llevar: los que conoce enteros (predeterminados o el de la sala, GUION_DE_LA_SALA). */
+  guiones(): Promise<ResultadoGuionesNarrables>;
+  /** guion: el id de uno de los que puede llevar (ver guiones). */
   anadir(opciones: { narrador: string; guion: string; jugadores: number }): Promise<ResultadoAccion>;
   quitar(): Promise<ResultadoAccion>;
   turno(turno: TurnoVirtual, jugadorId?: string): Promise<ResultadoAccion>;

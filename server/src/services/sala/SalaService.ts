@@ -186,6 +186,7 @@ export class SalaService {
       deps.relojNarradorVirtual ?? temporizadorReal,
       alCambiar,
       deps.azar,
+      deps.guiones,
       // Jarvis: con el modelo de la cuenta de quien lo añade, ya comprobado
       deps.modelosIA
         ? {

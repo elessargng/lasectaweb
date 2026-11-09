@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FRASES } from '../../src/models/narradorVirtual/frases';
 import { Arnes, type Cliente } from './arnes';
-import { guionTroubleBrewing } from './guionDePrueba';
+import { guionDePrueba, guionTroubleBrewing } from './guionDePrueba';
 
 /** Trouble Brewing con su hoja de noche de verdad. */
 const tb = () => ({
@@ -57,13 +57,42 @@ describe('narrador virtual', () => {
     expect(await arnes.pedir(vera, 'narradorVirtual:anadir', TONTO)).toEqual({ ok: false, error: 'Para añadir un narrador virtual necesitas una cuenta.' });
   });
 
-  it('no deja elegir a Jarvis ni un número de jugadores fuera de 7 a 15', async () => {
+  it('no deja elegir a Jarvis, un número de jugadores fuera de 5 a 15 ni un guion que no existe', async () => {
     arnes = await conTroubleBrewing();
     const [ana] = await entran(1);
     expect((await arnes.pedir(ana, 'narradorVirtual:anadir', { ...TONTO, narrador: 'jarvis' })).ok).toBe(false);
-    expect((await arnes.pedir(ana, 'narradorVirtual:anadir', { ...TONTO, jugadores: 6 })).ok).toBe(false);
+    expect((await arnes.pedir(ana, 'narradorVirtual:anadir', { ...TONTO, jugadores: 4 })).ok).toBe(false);
     expect((await arnes.pedir(ana, 'narradorVirtual:anadir', { ...TONTO, jugadores: 16 })).ok).toBe(false);
-    expect((await arnes.pedir(ana, 'narradorVirtual:anadir', { ...TONTO, guion: 'badmoonrising' })).ok).toBe(false);
+    expect(await arnes.pedir(ana, 'narradorVirtual:anadir', { ...TONTO, guion: 'badmoonrising' })).toEqual({ ok: false, error: 'Ese guion no existe.' });
+  });
+
+  it('solo lleva guiones que conoce enteros, vengan de donde vengan: los predeterminados y el de la sala', async () => {
+    // Trouble Brewing lo conoce; el de prueba (con el Leviatán, la Banshee…), no
+    arnes = await Arnes.crear({
+      guiones: {
+        predeterminados: () => [
+          { id: 'troublebrewing', nombre: 'Trouble Brewing', autor: '' },
+          { id: 'prueba', nombre: 'Guion de prueba', autor: '' },
+        ],
+        guionPredeterminado: async (id: string) => (id === 'troublebrewing' ? tb() : guionDePrueba()),
+        importar: async () => tb(),
+      },
+      relojNarradorVirtual: sinEsperas,
+    });
+    const [ana, bea] = await entran(2);
+    const todos = Array.from({ length: 11 }, (_, i) => i + 5);
+    expect(await arnes.consultar(ana, 'narradorVirtual:guiones')).toEqual({ ok: true, valor: [{ id: 'troublebrewing', nombre: 'Trouble Brewing', jugadores: todos }] });
+    expect((await arnes.pedir(ana, 'narradorVirtual:anadir', { ...TONTO, guion: 'prueba' })) as { error?: string }).toMatchObject({ ok: false, error: expect.stringMatching(/^No conozco todos los personajes de este guion \(.*leviathan/) });
+    expect(await arnes.pedir(ana, 'narradorVirtual:anadir', { ...TONTO, guion: 'sala' })).toEqual({ ok: false, error: 'La sala aún no tiene guion.' });
+    // Un guion cargado desde JSON con los personajes de Trouble Brewing: también lo lleva
+    await arnes.accion(bea, 'sala:hacerseNarrador');
+    await arnes.hacer(bea, 'preparacion:guion', { json: '{}', archivo: 'Mi guion.json' });
+    await arnes.hacer(bea, 'sala:dejarDeNarrar');
+    const { valor } = await arnes.consultar<{ ok: boolean; valor: { id: string; nombre: string; jugadores: number[] }[] }>(ana, 'narradorVirtual:guiones');
+    expect(valor.map((g) => g.id)).toEqual(['sala', 'troublebrewing']);
+    await arnes.hacer(ana, 'narradorVirtual:anadir', { ...TONTO, guion: 'sala' });
+    await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'esperandoJugadores');
+    expect(ana.estado.narradorVirtual?.guion).toBe('sala');
   });
 
   it('solo quien lo añadió puede quitarlo', async () => {

@@ -2,7 +2,7 @@
  * El narrador virtual tal como se envía.
  * Lo que se envía al cliente (alias @views): solo tipos, sin Node ni servicios.
  */
-import type { EtapaNarradorVirtual, GuionNarradorVirtual, IdNarradorVirtual } from '../../models/compartido/narradorVirtual';
+import type { EtapaNarradorVirtual, IdNarradorVirtual } from '../../models/compartido/narradorVirtual';
 import type { TurnoNominacion } from '../../models/compartido/partida';
 
 /** El narrador virtual de la sala, para todos. */
@@ -12,7 +12,8 @@ export interface NarradorVirtualDto {
   participante: string;
   /** Quien lo añadió: el único que puede quitarlo. */
   creador: string;
-  guion: GuionNarradorVirtual;
+  /** Un predeterminado (su id) o el de la sala (GUION_DE_LA_SALA). */
+  guion: string;
   jugadores: number;
   etapa: EtapaNarradorVirtual;
   /** Lo último que ha dicho (se oye con la voz y sale escrito junto a su cuadro). */

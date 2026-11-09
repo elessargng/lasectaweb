@@ -1,6 +1,6 @@
 import type { NarradorVirtualService } from '../../services/narradorVirtual/NarradorVirtualService';
 import type { Responder } from '../../services/sala/SalaService';
-import type { ResultadoAccion } from '../../views/dto/sala';
+import type { ResultadoAccion, ResultadoGuionesNarrables } from '../../views/dto/sala';
 import { campos, como, comoAsincrono, type Fallo } from './peticion';
 import type { Sesion } from './SalaController';
 
@@ -14,6 +14,11 @@ type Atender = (sesion: Sesion, peticion: unknown, responder: Responder<Resultad
  */
 export class NarradorVirtualController {
   constructor(private readonly narradorVirtualService: NarradorVirtualService) {}
+
+  /** Los guiones que puede llevar, con cuántos jugadores (ver NarradorVirtualService.guionesNarrables). */
+  guiones = (sesion: Sesion, _peticion: unknown, responder: Responder<ResultadoGuionesNarrables>): void => {
+    comoAsincrono((clave) => this.narradorVirtualService.quienEs(clave), sesion, responder, (yoId) => this.narradorVirtualService.guionesNarrables(yoId));
+  };
 
   /** Añade un narrador virtual: { narrador, guion, jugadores }. */
   anadir = (sesion: Sesion, peticion: unknown, responder: Responder<ResultadoAccion>): void => {

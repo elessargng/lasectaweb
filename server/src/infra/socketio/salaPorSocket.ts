@@ -97,6 +97,7 @@ const PETICIONES_PARTES = {
     'grimorio:enviar': 'enviar',
   },
   narradorVirtual: {
+    'narradorVirtual:guiones': 'guiones',
     'narradorVirtual:anadir': 'anadir',
     'narradorVirtual:quitar': 'quitar',
     'narradorVirtual:nominar': 'nominar',

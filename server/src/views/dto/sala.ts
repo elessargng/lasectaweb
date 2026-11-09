@@ -10,6 +10,7 @@ import type { NarradorVirtualDto } from './narradorVirtual';
 import type { ParticipanteDto } from './participante';
 import type { ConfiguracionDto, NominacionDto, RelojDto, RevelacionDto, SenalamientoDto } from './partida';
 import type { Distribucion, Fase, RegistroVotacion } from '../../models/compartido/partida';
+import type { GuionNarrable } from '../../models/compartido/narradorVirtual';
 
 /** Una conversación privada (voz y vídeo) entre dos o más jugadores o narradores. */
 export interface ConversacionDto {
@@ -174,6 +175,9 @@ export interface RepartoDto {
     aviso: boolean;
   };
 }
+
+/** Los guiones que puede llevar el narrador virtual, con cuántos jugadores (ver GuionNarrable). */
+export type ResultadoGuionesNarrables = { ok: true; valor: GuionNarrable[] } | { ok: false; error: string };
 
 /** Lo que contesta la sala al llenar la bolsa al azar: lo que ha salido y no va (con el tipo que falta) y los tipos que escasean. */
 export type ResultadoBolsaAlAzar =

@@ -18,10 +18,16 @@ import { SenalamientoController } from '../../src/controllers/sala/SenalamientoC
 import { SalaController } from '../../src/controllers/sala/SalaController';
 import { abrirSalaPorSocket, SALA_SOCKET_PATH } from '../../src/infra/socketio/salaPorSocket';
 import { SalaService } from '../../src/services/sala/SalaService';
-import type { DependenciasSala } from '../../src/services/sala/puertos';
+import type { DependenciasSala, ServicioGuiones } from '../../src/services/sala/puertos';
 import { MemoriaImagenRepository } from '../../src/repositories/ImagenRepository';
 import type { SalaDto, ResultadoAccion } from '../../src/views/dto/sala';
 import { conSemilla, guionDePrueba } from './guionDePrueba';
+
+/** Los guiones predeterminados de los tests (cada test dice qué guion resuelve cada uno). */
+const PREDETERMINADOS = [
+  { id: 'troublebrewing', nombre: 'Trouble Brewing', autor: 'Steven Medway' },
+  { id: 'nogreaterjoy', nombre: 'No Greater Joy', autor: 'Steven Medway' },
+];
 
 const ESPERA_MAX_MS = 2000;
 
@@ -95,18 +101,21 @@ export class Arnes {
     private readonly url: string,
   ) {}
 
-  static async crear(cambios: Partial<DependenciasSala> = {}): Promise<Arnes> {
+  /** `guiones`: lo que cambia de los de por defecto (el guion de prueba, con cualquier id; y los predeterminados, PREDETERMINADOS). */
+  static async crear(cambios: Partial<Omit<DependenciasSala, 'guiones'>> & { guiones?: Partial<ServicioGuiones> } = {}): Promise<Arnes> {
     const http = createServer();
     const deps: DependenciasSala = {
-      guiones: {
-        guionPredeterminado: async () => guionDePrueba(),
-        importar: async () => guionDePrueba(),
-      },
       mensajes: new MemoriaChatRepository(),
       video: null,
       imagenesBiblioteca: { leerPublica: async () => Promise.reject(new Error('Sin Biblioteca')) },
       imagenes: new MemoriaImagenRepository(),
       ...cambios,
+      guiones: {
+        predeterminados: () => PREDETERMINADOS,
+        guionPredeterminado: async () => guionDePrueba(),
+        importar: async () => guionDePrueba(),
+        ...cambios.guiones,
+      },
       // El azar, con semilla: la misma sala sale siempre igual
       azar: cambios.azar ?? conSemilla(1),
     };
@@ -179,6 +188,11 @@ export class Arnes {
     const resultado = await new Promise<R>((resolver) => cliente.socket.emit(evento, datos, resolver));
     if (resultado.ok) await this.esperarA(antes);
     return resultado;
+  }
+
+  /** Una consulta (no cambia la sala: no se espera a que llegue): lo que contesta. */
+  consultar<R>(cliente: Cliente, evento: string, datos?: unknown): Promise<R> {
+    return new Promise<R>((resolver) => cliente.socket.emit(evento, datos, resolver));
   }
 
   async cerrar(): Promise<void> {
