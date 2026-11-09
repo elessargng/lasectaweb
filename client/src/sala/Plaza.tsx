@@ -325,18 +325,22 @@ const Plaza = ({
   if ((dialogoVirtual === 'patoso' && !puedePatoso) || (dialogoVirtual === 'artista' && !puedeArtista && estado.narradorVirtual?.etapa === 'noche')) {
     setDialogoVirtual(null);
   }
+  // Nominar a cualquiera, también a uno mismo
+  const nominarVirtual = (jugadorId: string, etiqueta: string): OpcionMenu[] =>
+    acciones.includes('narradorVirtual:nominar')
+      ? [{ id: 'narradorVirtual:nominar', etiqueta, elegir: actuarSobre(() => narradorVirtual.turno('nominar', jugadorId)) }]
+      : [];
   const opcionesJugador = (jugadorId: string): OpcionMenu[] =>
     jugadorId === miAsiento
       ? [
+          ...nominarVirtual(jugadorId, 'Nominarte'),
           ...(puedeArtista
             ? [{ id: 'declarar:artista', etiqueta: 'Preguntar como Artista', abreDialogo: true, elegir: () => setDialogoVirtual('artista') }]
             : []),
           ...(puedePatoso ? [{ id: 'declarar:patoso', etiqueta: 'Declararte Patoso', abreDialogo: true, elegir: () => setDialogoVirtual('patoso') }] : []),
         ]
       : [
-          ...(acciones.includes('narradorVirtual:nominar')
-            ? [{ id: 'narradorVirtual:nominar', etiqueta: 'Nominar', elegir: actuarSobre(() => narradorVirtual.turno('nominar', jugadorId)) }]
-            : []),
+          ...nominarVirtual(jugadorId, 'Nominar'),
           ...(acciones.includes('declarar:exterminar')
             ? [{ id: 'declarar:exterminar', etiqueta: 'Exterminar jugador', elegir: actuarSobre(() => narradorVirtual.declarar('exterminar', { jugadorId })) }]
             : []),

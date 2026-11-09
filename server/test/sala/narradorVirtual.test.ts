@@ -314,6 +314,20 @@ describe('narrador virtual', () => {
     if (eraElDemonio) expect(ana.estado.revelacion?.ganador).toBe('bueno');
   }, 30_000);
 
+  it('uno puede nominarse a sí mismo: acusa, se defiende y pasa a la votación', async () => {
+    const jugadores = await hastaElDia();
+    // No la Virgen: nominándose, se ejecutaría al momento
+    const ana = jugadores.find((c) => c.miAsiento?.personaje !== 'virgin')!;
+    await arnes.hacer(ana, 'narradorVirtual:nominar', { jugadorId: ana.miAsiento!.id });
+    await ana.esperarQue((e) => e.narradorVirtual?.turno === 'acusacion');
+    expect(ana.estado.nominacion).toMatchObject({ desde: ana.miAsiento!.id, hasta: ana.miAsiento!.id });
+    await arnes.hacer(ana, 'narradorVirtual:defensa');
+    await ana.esperarQue((e) => e.narradorVirtual?.turno === 'defensa');
+    expect(ana.estado.palabra).toBe(ana.id);
+    await arnes.hacer(ana, 'narradorVirtual:voto');
+    await ana.esperarQue((e) => e.narradorVirtual?.turno === 'votacion');
+  });
+
   it('sin nadie marcado, todos listos: nadie es ejecutado y anochece', async () => {
     const jugadores = await hastaElDia();
     const [ana] = jugadores;
