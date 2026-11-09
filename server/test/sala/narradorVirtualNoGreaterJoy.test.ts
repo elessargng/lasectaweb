@@ -95,21 +95,24 @@ describe('narrador virtual con No Greater Joy', () => {
     expect(vera.estado.faroles.every((f) => f === null)).toBe(true);
   }, 20_000);
 
-  it('de día, cualquiera vivo hace una vez la pregunta del Artista; la libre, «Tonto y tú» pide reformularla', async () => {
-    const [ana, bea] = await hastaElDia();
-    expect(ana.estado.acciones).toContain('declarar:artista');
-    // Libre: no la entiende, no se gasta
-    expect(await arnes.pedir(ana, 'declarar:artista', { texto: '¿Lleva gafas el demonio?' })).toEqual({ ok: true, valor: 'reformular' });
-    expect(ana.estado.acciones).toContain('declarar:artista');
-    // Montada: sí o no, y se gasta
-    expect((await arnes.pedir(ana, 'declarar:artista', { pregunta: { tipo: 'nada' } })).ok).toBe(false);
-    const r = await arnes.pedir(ana, 'declarar:artista', { pregunta: HAY_DEMONIO });
+  it('de día, cualquiera vivo hace una vez la pregunta del Artista: a quien no lo es ni lo cree, de broma', async () => {
+    const jugadores = await hastaElDia();
+    // Su ficha: la del Artista la lleva el Artista o el Borracho que cree serlo
+    const artista = jugadores.find((c) => c.miAsiento?.personaje === 'artist');
+    const otro = jugadores.find((c) => c.miAsiento?.personaje !== 'artist')!;
+    expect(otro.estado.acciones).toContain('declarar:artista');
+    expect((await arnes.pedir(otro, 'declarar:artista', { pregunta: { tipo: 'nada' } })).ok).toBe(false);
+    expect(await arnes.pedir(otro, 'declarar:artista', { texto: '¿Lleva gafas el demonio?' })).toEqual({ ok: true, valor: 'broma' });
+    expect(otro.estado.acciones).not.toContain('declarar:artista');
+    expect((await arnes.pedir(otro, 'declarar:artista', { pregunta: HAY_DEMONIO })).ok).toBe(false);
+    if (!artista) return;
+    // Libre: «Tonto y tú» no la entiende, no se gasta
+    expect(await arnes.pedir(artista, 'declarar:artista', { texto: '¿Lleva gafas el demonio?' })).toEqual({ ok: true, valor: 'reformular' });
+    expect(artista.estado.acciones).toContain('declarar:artista');
+    // Montada: sí o no (al de verdad, sano: en este guion nadie envenena, la verdad), y se gasta
+    const r = await arnes.pedir(artista, 'declarar:artista', { pregunta: HAY_DEMONIO });
     expect(r.ok && ['si', 'no'].includes(r.valor ?? '')).toBe(true);
-    // Si es el Artista de verdad (sano: en este guion nadie envenena), la verdad
-    if (ana.miAsiento?.personaje === 'artist') expect(r).toEqual({ ok: true, valor: 'si' });
-    expect(ana.estado.acciones).not.toContain('declarar:artista');
-    expect((await arnes.pedir(ana, 'declarar:artista', { pregunta: HAY_DEMONIO })).ok).toBe(false);
-    expect(bea.estado.acciones).toContain('declarar:artista');
+    expect(artista.estado.acciones).not.toContain('declarar:artista');
   }, 20_000);
 
   it('el ejecutado puede declararse Patoso hasta el amanecer: elige a un vivo y el narrador lo anuncia', async () => {

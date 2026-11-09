@@ -9,7 +9,8 @@
  */
 
 /** Lo que contesta el narrador: sí, no, o que la reformule (no la puede contestar; no se gasta). */
-export type RespuestaPregunta = 'si' | 'no' | 'reformular';
+/** «broma»: a quien no es el Artista ni cree serlo, el narrador no le contesta en serio. */
+export type RespuestaPregunta = 'si' | 'no' | 'reformular' | 'broma';
 
 /** Lo que cabe en una pregunta libre. */
 export const MAX_PREGUNTA_LIBRE = 300;
@@ -160,4 +161,5 @@ export const RESPUESTAS_PREGUNTA: Record<RespuestaPregunta, string> = {
   si: 'Sí.',
   no: 'No.',
   reformular: 'No puedo contestar a eso: reformula la pregunta. No has gastado tu habilidad.',
+  broma: '¿Sí o no? Lo que tú quieras ;)',
 };

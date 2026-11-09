@@ -43,13 +43,13 @@ const POR_MOTIVO: Record<MotivoDecision, string> = {
   registraComoDemonio: 'El Exterminador dispara a quien puede registrar como demonio (la Reclusa): si registra como tal, muere.',
   violinistaBueno: 'El Violinista: el jugador bueno que se enfrenta al demonio; todos votarán entre los dos.',
   artista:
-    'Un jugador dice ser el Artista y te hace en privado una pregunta de sí o no. Si es el Artista de verdad, vivo y ' +
-    'sin envenenar ni emborrachar, contesta la verdad según el grimorio. Si no lo es, o está envenenado o borracho, ' +
-    'puedes contestar lo que quieras pensando en el equilibrio. Si no se puede contestar con sí o no, o no lo sabes ' +
+    'El Artista te hace en privado una pregunta de sí o no. Si es el Artista de verdad, vivo y ' +
+    'sin envenenar ni emborrachar, contesta la verdad según el grimorio. Si está envenenado o borracho, o es el Borracho ' +
+    'que cree ser el Artista, puedes contestar lo que quieras pensando en el equilibrio. Si no se puede contestar con sí o no, o no lo sabes ' +
     'por el grimorio (cómo es la gente, su género, lo que se ve en cámara, lo que piensan o harán), pide que la reformule.',
   artistaSinHabilidad:
-    'Un jugador hace la pregunta del Artista sin poder usar su habilidad (no es el Artista, o está envenenado o ' +
-    'borracho): no tienes que decirle la verdad. Contesta lo que haga la partida más interesante sin romperla.',
+    'El Artista hace su pregunta sin poder usar su habilidad (está envenenado o borracho, o es el Borracho que ' +
+    'cree ser el Artista): no tienes que decirle la verdad. Contesta lo que haga la partida más interesante sin romperla.',
   patoso:
     'El Patoso ha muerto y no ha elegido a tiempo (o nadie juega en su asiento): elige al jugador vivo que elegiría ' +
     'él, un bueno que intenta acertar con quién es bueno.',

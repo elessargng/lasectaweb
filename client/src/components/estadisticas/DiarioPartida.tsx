@@ -152,6 +152,7 @@ const RESPUESTA: Record<Extract<HechoDiario, { tipo: 'artista' }>['respuesta'], 
   si: 'sí',
   no: 'no',
   reformular: 'pide que la reformule',
+  broma: 'no es el Artista y le contesta de broma',
 };
 
 /** Un hecho suelto, en una frase. */

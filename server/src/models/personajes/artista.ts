@@ -17,11 +17,14 @@ import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 /**
  * La pregunta del Artista (una vez por partida y persona, lo sea o no, como el
- * disparo del Exterminador). Libre (con Jarvis): la contesta su estrategia, que
- * puede pedir que la reformule; «Tonto y tú» siempre lo pide, porque no la
- * entiende. Montada con piezas (ver models/compartido/preguntaPartida): al Artista de verdad y sano
- * se le contesta la verdad, mirando el grimorio; a los demás, lo que decida su
- * estrategia. Si se contesta, se gasta: el Artista de verdad pierde su habilidad («No Ability»).
+ * disparo del Exterminador). A quien no es el Artista ni cree serlo (el Borracho
+ * con su ficha sí lo cree), una respuesta de broma («broma»). Al que lo es o lo
+ * cree: libre (con Jarvis), la contesta su estrategia, que puede pedir que la
+ * reformule; «Tonto y tú» siempre lo pide, porque no la entiende. Montada con
+ * piezas (ver models/compartido/preguntaPartida): al Artista de verdad y sano se le
+ * contesta la verdad, mirando el grimorio; al envenenado, borracho o Borracho, sí
+ * o no, lo que decida su estrategia. Si se contesta, se gasta: quien lleva la ficha
+ * del Artista pierde su habilidad («No Ability»).
  */
 export async function preguntarComoArtista(
   ctx: ContextoEtapa,
@@ -34,20 +37,36 @@ export async function preguntarComoArtista(
   if (!asiento) return { error: 'No estás sentado.' };
   const { texto, pregunta } = (datos as { texto?: unknown; pregunta?: unknown } | null) ?? {};
   const esArtista = identidadDe(asiento) === 'artist';
+  // El Borracho que lleva la ficha del Artista cree serlo: como un Artista borracho
+  const creeSerlo = esArtista || asiento.personaje === 'artist';
   const sano = esArtista && !droison(contextoNoche(juego), asiento);
-  const quien = `${nombreDeAsiento(juego, asiento.id)} (${esArtista ? (sano ? 'el Artista, sano' : 'el Artista, envenenado o borracho') : `no es el Artista: es ${identidadDe(asiento) ?? 'nadie'}`})`;
+  const quien = `${nombreDeAsiento(juego, asiento.id)} (${sano ? 'el Artista, sano' : esArtista ? 'el Artista, envenenado o borracho' : `cree ser el Artista, pero es ${identidadDe(asiento) ?? 'nadie'}`})`;
+
+  // La pregunta en palabras y, si está montada con piezas, leída
+  let enPalabras: string;
+  let leida: PreguntaPartida | null = null;
+  if (typeof texto === 'string') {
+    enPalabras = texto.trim();
+    if (!enPalabras) return { error: 'Escribe la pregunta.' };
+    if (enPalabras.length > MAX_PREGUNTA_LIBRE) return { error: `La pregunta no puede pasar de ${MAX_PREGUNTA_LIBRE} letras.` };
+  } else {
+    leida = leerPreguntaPartida(
+      pregunta,
+      partida.plaza().map((a) => a.id),
+      (partida.guion.actual()?.personajes ?? []).map((p) => p.id),
+    );
+    if (!leida) return { error: 'Esa pregunta no se entiende.' };
+    enPalabras = describirPreguntaPartida(leida, { jugador: (id) => nombreDeAsiento(juego, id), personaje: (id) => partida.guion.personaje(id)?.nombre ?? id });
+  }
 
   let respuesta: RespuestaPregunta;
-  let enPalabras: string;
-  if (typeof texto === 'string') {
-    const libre = texto.trim();
-    if (!libre) return { error: 'Escribe la pregunta.' };
-    if (libre.length > MAX_PREGUNTA_LIBRE) return { error: `La pregunta no puede pasar de ${MAX_PREGUNTA_LIBRE} letras.` };
-    enPalabras = libre;
+  if (!creeSerlo) {
+    respuesta = 'broma';
+  } else if (!leida) {
     // «Tonto y tú» no entiende una pregunta libre: solo puede pedir que la reformule
     respuesta = await ctx.decidir<RespuestaPregunta>({
       motivo: 'artista',
-      pregunta: `${quien} pregunta: «${libre}»`,
+      pregunta: `${quien} pregunta: «${enPalabras}»`,
       opciones: [
         { clave: 'si', descripcion: 'Contestar que sí.', valor: 'si', peso: 0 },
         { clave: 'no', descripcion: 'Contestar que no.', valor: 'no', peso: 0 },
@@ -55,14 +74,7 @@ export async function preguntarComoArtista(
       ],
     });
   } else {
-    const leida = leerPreguntaPartida(
-      pregunta,
-      partida.plaza().map((a) => a.id),
-      (partida.guion.actual()?.personajes ?? []).map((p) => p.id),
-    );
-    if (!leida) return { error: 'Esa pregunta no se entiende.' };
     const verdad = contestarPregunta(juego, ctx.recuerdos.cronica, leida);
-    enPalabras = describirPreguntaPartida(leida, { jugador: (id) => nombreDeAsiento(juego, id), personaje: (id) => partida.guion.personaje(id)?.nombre ?? id });
     const si = sano
       ? verdad
       : await ctx.siONo({
@@ -76,7 +88,7 @@ export async function preguntarComoArtista(
 
   partida.anotar({ tipo: 'artista', asiento: partida.asientoDiario(asiento.id), pregunta: enPalabras, respuesta });
   if (respuesta === 'reformular') return { respuesta };
-  if (esArtista) await ponerRecordatorio(ctx, asiento.id, 'artist', 'No Ability');
+  if (creeSerlo) await ponerRecordatorio(ctx, asiento.id, 'artist', 'No Ability');
   partida.declaraciones.apuntar(deDia.id, jugador);
   return { respuesta };
 }
