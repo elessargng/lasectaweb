@@ -35,6 +35,8 @@ const PanelInvitaciones = ({ invitaciones, conversaciones, participantes, yo, on
   const recibidas = invitaciones.filter((i) => (i.conversacion ? i.de !== yo : i.para === yo));
   const enviadas = invitaciones.filter((i) => i.de === yo);
   const miembrosDe = (id?: string) => conversaciones.find((c) => c.id === id)?.miembros ?? [];
+  // A un narrador le llaman aunque esté conversando: al aceptar, deja la suya
+  const mia = conversaciones.find((c) => c.miembros.includes(yo));
 
   return (
     <section
@@ -85,6 +87,7 @@ const PanelInvitaciones = ({ invitaciones, conversaciones, participantes, yo, on
               <p>
                 <span className="font-semibold">{nombre(i.de)}</span> te invita a una conversación privada
                 {suya ? ` (con ${enumerar(con)})` : ''}.
+                {mia && mia !== suya && ' Si aceptas, sales de la tuya.'}
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <button

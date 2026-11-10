@@ -904,6 +904,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     if (noche && yo.rol !== 'narrador' && otro.rol !== 'narrador') return false;
     const mia = estado.conversaciones.find((c) => c.miembros.includes(yo.id));
     if (otro.rol === 'jugador' && !vecinoDeTodos(otro.id, mia ? mia.miembros : [yo.id])) return false;
+    // Al narrador se le llama aunque converse con otros: si acepta, deja la suya
+    if (otro.rol === 'narrador') return !mia?.miembros.includes(otro.id);
     return !estado.conversaciones.some((c) => c.miembros.includes(otro.id));
   };
   // Pedir unirse a la conversación de alguien (con las mismas reglas que invitar)
@@ -925,8 +927,9 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     if (!r.ok) setAviso(r.error);
     else anunciar('conversaciones', `Invitación enviada a ${otro.nombre}.`);
   };
-  // Llamar a un jugador con su tecla (Accesibilidad, ver DialogoLlamar): libre, se le
-  // invita; en una llamada, se pide unirse a ella (si se puede; si no, la sala dice por qué)
+  // Llamar a un jugador con su tecla (Accesibilidad, ver DialogoLlamar): libre (o si es el
+  // narrador), se le invita; en una llamada, se pide unirse a ella (si se puede; si no, la
+  // sala dice por qué)
   const [llamando, setLlamando] = useState(false);
   const puedeLlamar = !!estado?.video && !!yo && conversa(yo);
   const jugadoresLlamables = (): JugadorLlamable[] =>
@@ -937,7 +940,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const llamarA = async (participanteId: string): Promise<ResultadoAccion> => {
     const otro = estado?.participantes.find((p) => p.id === participanteId);
     if (!otro) return { ok: false, error: 'Esa persona ya no está en la sala.' };
-    const unirse = puedePedirUnirseA(otro);
+    const unirse = !puedeInvitarA(otro) && puedePedirUnirseA(otro);
     const r = await (unirse ? pedirUnirse(otro.id) : invitarAConversar(otro.id));
     if (r.ok) anunciar('conversaciones', unirse ? `Petición enviada para unirte a la conversación de ${otro.nombre}.` : `Invitación enviada a ${otro.nombre}.`);
     return r;

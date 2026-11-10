@@ -27,11 +27,9 @@ const escucha = (p: Participante) => p.rol === 'visitante' || p.rol === 'narrado
  *   jugador o narrador; de noche, el narrador a quien quiera y los jugadores solo
  *   al narrador (para pedirle hablar). Si quien invita ya está en una
  *   conversación, quien acepta entra en ella.
- * - De noche, los jugadores solo ven las conversaciones en las que están 
-
- *   salaSocket): por eso, si un jugador invita a un narrador que ya conversa con
- *   otro, la invitación se queda pendiente sin decírselo, y el narrador la acepta
- *   al acabar.
+ * - De noche, los jugadores solo ven las conversaciones en las que están (las
+ *   demás no les llegan): no saben si el narrador conversa con otro, y su llamada
+ *   le llega igual (como de día, ver más abajo).
  * - Los narradores pueden además entrar en cualquier conversación, sin invitación
  *   ni petición: entran como miembros (hablan y se les ve).
  * - Peticiones para unirse: quien podría invitar pide entrar en la conversación
@@ -42,6 +40,10 @@ const escucha = (p: Participante) => p.rol === 'visitante' || p.rol === 'narrado
  *   lo ven).
  * - Cada uno está en una como mucho (para aceptar una invitación hay que salir antes).
  *   Si a quien has llamado entra en otra, tu llamada se cancela sola.
+ * - Salvo el narrador: a él se le llama aunque esté conversando con otros (no se
+ *   pide unirse a su conversación), y si acepta sale de la suya y empieza una nueva
+ *   con quien le llamó (o entra en la de quien le llamó). Las llamadas que le hacen
+ *   no se cancelan al entrar él en otra: las va atendiendo.
  * - Al cambiar de noche a día (o al revés) se terminan todas y caducan las invitaciones.
  *   Limpiar el grimorio (vuelve a la preparación) no las termina: nadie sale de la suya.
  * - Con la Institutriz viva, un jugador solo conversa con sus vecinos de plaza: quien
@@ -160,7 +162,10 @@ export class ConversacionService {
       if (aceptar) this.unir(invitacion.de, invitacion.conversacion);
       return;
     }
-    if (aceptar && this.esMiembro(yoId)) throw new ConversacionError('Sal de tu conversación para aceptar otra.');
+    // El narrador no tiene que salir antes: sale solo al aceptar
+    if (aceptar && this.esMiembro(yoId) && this.sala.participantes.buscar(yoId)?.rol !== 'narrador') {
+      throw new ConversacionError('Sal de tu conversación para aceptar otra.');
+    }
     this.invitaciones = this.invitaciones.filter((i) => i.id !== invitacionId);
     if (!aceptar) return;
     // Se vuelve a comprobar: puede haber cambiado algo desde que se invitó
@@ -181,10 +186,12 @@ export class ConversacionService {
   /**
    * Alguien acaba de entrar en una conversación: las llamadas que tenía
    * pendientes (las que le hacían y sus peticiones para unirse a otras) se
-   * cancelan solas. Sus invitaciones a otros siguen: quien acepte, entra en la suya.
+   * cancelan solas, salvo las que le hacen al narrador, que las va atendiendo.
+   * Sus invitaciones a otros siguen: quien acepte, entra en la suya.
    */
   private haEntrado(id: string): void {
-    this.invitaciones = this.invitaciones.filter((i) => i.para !== id && !(i.de === id && i.conversacion));
+    const narra = this.sala.participantes.buscar(id)?.rol === 'narrador';
+    this.invitaciones = this.invitaciones.filter((i) => (i.para !== id || (narra && !i.conversacion)) && !(i.de === id && i.conversacion));
   }
 
   /** Un narrador entra en una conversación como miembro (sin invitación). */
@@ -312,10 +319,8 @@ export class ConversacionService {
     if (otro.rol === 'jugador') this.comprobarVecinos(otro.id, mia ? mia.miembros : [yo.id]);
     const suya = this.deParticipante(otro.id);
     if (mia && suya === mia) throw new ConversacionError(`${otro.nombre} ya está en la conversación.`);
-    // De noche, un jugador no sabe si el narrador conversa: su invitación espera (al
-    // aceptarla, el narrador ya tiene que haber salido de la suya)
-    const ocultas = noche && yo.rol !== 'narrador';
-    if (suya?.miembros.includes(otro.id) && !ocultas) throw new ConversacionError(`${otro.nombre} ya está en otra conversación.`);
+    // Al narrador se le llama aunque converse con otros: al aceptar, deja la suya
+    if (suya?.miembros.includes(otro.id) && otro.rol !== 'narrador') throw new ConversacionError(`${otro.nombre} ya está en otra conversación.`);
     return { yo, otro };
   }
 
