@@ -34,15 +34,25 @@ const Interruptor = ({ checked, onChange, disabled, children }: { checked: boole
   </label>
 );
 
-/** Una foto que abre la imagen entera: su nombre es lo que se ve en ella y, si es privada, lo dice. */
-export const PhotoLink = ({ photo }: { photo: RitualPhoto }) => (
+/**
+ * Una foto que abre la imagen entera: su nombre es lo que se ve en ella y, si es privada, lo dice.
+ * De entrada, una miniatura recortada; el carrusel la pide entera (`fit`).
+ */
+export const PhotoLink = ({ photo, fit = false }: { photo: RitualPhoto; fit?: boolean }) => (
   <a
     href={urlDelServidor(photo.src)}
     target="_blank"
     rel="noopener noreferrer"
-    className="relative block aspect-[4/3] overflow-hidden rounded-sm border border-outline-ghost/70 hover:border-theme-main/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
+    className={`relative block overflow-hidden rounded-sm border border-outline-ghost/70 hover:border-theme-main/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main ${
+      fit ? 'bg-background/60' : 'aspect-[4/3]'
+    }`}
   >
-    <img src={urlDelServidor(photo.src)} alt={photo.alt} loading="lazy" className="w-full h-full object-cover" />
+    <img
+      src={urlDelServidor(photo.src)}
+      alt={photo.alt}
+      loading="lazy"
+      className={fit ? 'mx-auto max-h-[60vh] w-auto max-w-full object-contain' : 'w-full h-full object-cover'}
+    />
     {!photo.public && (
       <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-background/85 border border-outline-ghost font-ui text-[0.6rem] font-semibold uppercase tracking-[0.14em] text-on-surface">
         <Lock className="w-3 h-3" />

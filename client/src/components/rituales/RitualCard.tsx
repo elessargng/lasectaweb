@@ -3,6 +3,7 @@ import type { Ritual } from '../../utils/ritualsApi';
 import { RITUAL_KINDS, alpha, kindOf } from './ritualKinds';
 import { formatShortDate, formatSpokenDate, formatTime, isMultiDay } from './ritualDates';
 import { attendanceSummary, isIntention } from './ritualSignups';
+import ConFotos from './ConFotos';
 
 interface RitualCardProps {
   ritual: Ritual;
@@ -63,6 +64,7 @@ export const RitualCard = ({ ritual, highlighted = false, userId, onOpen }: Ritu
             className="text-left focus:outline-none after:absolute after:inset-0 after:content-['']"
           >
             {ritual.title}
+            <ConFotos ritual={ritual} className="ml-1.5 align-[-0.1em]" />
           </button>
         </h4>
 

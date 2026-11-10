@@ -2,6 +2,7 @@ import { MapPin, ScrollText, Users } from 'lucide-react';
 import type { Ritual } from '../../utils/ritualsApi';
 import { RITUAL_KINDS, kindOf } from './ritualKinds';
 import { compactPlaces } from './ritualSignups';
+import ConFotos from './ConFotos';
 import { addDays, compareRituals, dayKey, formatShortDate, formatSpokenDate, formatTime, isMultiDay, isSameDay, keyOf, startOfDay } from './ritualDates';
 
 interface RitualAgendaProps {
@@ -112,7 +113,10 @@ const AgendaRow = ({ ritual, focused, onClick }: AgendaRowProps) => {
         {when}
       </span>
       <span className="flex-1 min-w-0">
-        <span className={`block truncate text-on-surface ${cancelled ? 'line-through' : ''}`}>{ritual.title}</span>
+        <span className="flex items-center gap-1.5 min-w-0">
+          <span className={`truncate text-on-surface ${cancelled ? 'line-through' : ''}`}>{ritual.title}</span>
+          <ConFotos ritual={ritual} />
+        </span>
         {(ritual.scriptName || ritual.location || places) && (
           <span className="flex flex-wrap gap-x-3 text-xs text-on-surface-muted [&_svg]:text-theme-main/70">
             {ritual.scriptName && (

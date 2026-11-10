@@ -3,6 +3,7 @@ import type { Ritual } from '../../utils/ritualsApi';
 import { RITUAL_KINDS, alpha, kindOf } from './ritualKinds';
 import { WEEKDAYS, compareRituals, coversDay, formatSpokenDate, formatTime, isMultiDay, isSameDay, keyOf, monthGrid, weekLanes } from './ritualDates';
 import { compactPlaces } from './ritualSignups';
+import ConFotos from './ConFotos';
 
 interface RitualCalendarProps {
   month: Date;
@@ -126,7 +127,7 @@ export const RitualCalendar = ({
                   const cancelled = band.status === 'cancelado';
                   // La cinta repite el título al empezar y al abrir cada semana; solo ese tramo es botón.
                   const labelHere = isSameDay(new Date(band.startsAt), day) || day.getDay() === 1;
-                  const bandClass = `h-6 flex items-center gap-1.5 text-xs leading-tight px-1.5 truncate cursor-pointer hover:brightness-125 ${
+                  const bandClass = `h-6 flex items-center gap-1.5 text-xs leading-tight px-1.5 cursor-pointer hover:brightness-125 ${
                     labelHere ? 'rounded-l-sm -mr-2' : '-mx-2'
                   } ${cancelled ? 'line-through opacity-50' : ''}`;
                   const bandStyle = {
@@ -150,6 +151,7 @@ export const RitualCalendar = ({
                             {band.title}
                             {cancelled && <span className="sr-only"> (cancelado)</span>}
                           </span>
+                          <ConFotos ritual={band} />
                         </button>
                       ) : (
                         <div aria-hidden="true" onClick={() => onSelectRitual(day, band)} className={bandClass} style={bandStyle} />
@@ -182,6 +184,7 @@ export const RitualCalendar = ({
                           {r.title}
                           {cancelled && <span className="sr-only"> (cancelado)</span>}
                         </span>
+                        <ConFotos ritual={r} />
                         {places && <span className="ml-auto shrink-0 pl-1 text-[0.65rem] tabular-nums text-on-surface-muted">{places}</span>}
                       </button>
                     </li>

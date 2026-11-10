@@ -236,3 +236,12 @@ export function weekLanes(week: Date[], rituals: Ritual[]): Array<Array<Ritual |
     return slots;
   });
 }
+
+/** «12 – 14 de octubre de 2026», o el día si dura uno. */
+export function describeDates(ritual: Ritual): string {
+  if (!isMultiDay(ritual)) return formatSpokenDate(ritual.startsAt);
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' };
+  const start = new Date(ritual.startsAt).toLocaleDateString('es-ES', opts);
+  const end = new Date(ritual.endsAt!).toLocaleDateString('es-ES', opts);
+  return `Del ${start} al ${end}`;
+}

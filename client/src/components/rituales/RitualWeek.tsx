@@ -14,6 +14,7 @@ import {
   weekLanes
 } from './ritualDates';
 import { attendanceSummary } from './ritualSignups';
+import ConFotos from './ConFotos';
 
 interface RitualWeekProps {
   /** Cualquier día de la semana que se muestra. */
@@ -88,7 +89,7 @@ export const RitualWeek = ({
                   type="button"
                   onClick={() => onSelectRitual(week[first], ritual)}
                   title={ritual.title}
-                  className={`mx-1 h-6 flex items-center gap-1.5 px-2 text-xs truncate transition-colors hover:brightness-125 ${
+                  className={`mx-1 h-6 flex items-center gap-1.5 px-2 text-xs transition-colors hover:brightness-125 ${
                     startsBefore ? 'rounded-l-none' : 'rounded-l-sm'
                   } ${endsAfter ? 'rounded-r-none' : 'rounded-r-sm'} ${ritual.status === 'cancelado' ? 'line-through opacity-50' : ''}`}
                   style={{
@@ -101,6 +102,7 @@ export const RitualWeek = ({
                   {startsBefore && <ChevronLeft className="w-3 h-3 shrink-0" style={{ color: style.color }} />}
                   <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: style.color }} />
                   <span className="truncate text-on-surface/90">{ritual.title}</span>
+                  <ConFotos ritual={ritual} />
                   {endsAfter && <ChevronRight className="w-3 h-3 shrink-0 ml-auto" style={{ color: style.color }} />}
                 </button>
               );
@@ -229,6 +231,7 @@ const WeekEvent = ({ ritual, className = '', onClick }: WeekEventProps) => {
             <span className="sr-only">, se repite</span>
           </>
         )}
+        <ConFotos ritual={ritual} className={ritual.recurrenceDays || ritual.recurrenceMonths ? '' : 'ml-auto'} />
       </span>
       <span lang="es" className={`block mt-1 text-[0.95rem] leading-snug text-on-surface group-hover/evento:text-gold-bright line-clamp-3 hyphens-auto break-words ${cancelled ? 'line-through' : ''}`}>
         {ritual.title}

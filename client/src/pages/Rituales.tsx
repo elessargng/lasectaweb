@@ -6,7 +6,7 @@ import Button from '../components/Button';
 import RitualCalendar from '../components/rituales/RitualCalendar';
 import RitualWeek from '../components/rituales/RitualWeek';
 import RitualAgenda from '../components/rituales/RitualAgenda';
-import RitualPhotoTimeline from '../components/rituales/RitualPhotoTimeline';
+import RitualPhotoAlbum from '../components/rituales/RitualPhotoAlbum';
 import RitualExportMenu from '../components/rituales/RitualExportMenu';
 import RitualCard from '../components/rituales/RitualCard';
 import RitualFormModal from '../components/rituales/RitualFormModal';
@@ -469,7 +469,7 @@ const Rituales = () => {
                 (timeline === null ? (
                   <Loader2 className="w-6 h-6 animate-spin text-theme-main mx-auto my-12" />
                 ) : (
-                  <RitualPhotoTimeline rituals={timeline} onOpen={(r) => selectDay(startOfDay(new Date(r.startsAt)), keyOf(r))} />
+                  <RitualPhotoAlbum rituals={timeline} onOpen={(r) => selectDay(startOfDay(new Date(r.startsAt)), keyOf(r))} />
                 ))}
             </div>
 
