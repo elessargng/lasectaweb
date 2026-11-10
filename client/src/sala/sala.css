@@ -503,6 +503,11 @@
     0 0 28px -10px rgba(var(--gold-rgb), 0.2);
   transition: border-color 0.4s ease, box-shadow 0.4s ease;
 }
+/* Minimizado: una línea, del ancho de lo que dice */
+.sala-reparto[data-minimizado] {
+  width: auto;
+  padding: 0.55rem 0.8rem;
+}
 .sala-reparto[data-mal] {
   background:
     radial-gradient(130% 70% at 50% 0%, rgba(var(--blood-rgb), 0.3), transparent 65%),

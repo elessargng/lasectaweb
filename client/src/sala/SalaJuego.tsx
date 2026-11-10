@@ -34,7 +34,7 @@ import VentanaConversacion from './VentanaConversacion';
 import VentanaDespertar from './VentanaDespertar';
 import DespertarJugador from './DespertarJugador';
 import { useSenalamientoCongelado } from './senales';
-import { describirMensaje, esEntendido, nombreDeAsiento, textoEleccion } from './despertar';
+import { describirMensaje, esEntendido, nombreDeAsiento, paraLector, textoEleccion } from './despertar';
 import { CAUSAS_FINAL } from './causasFinal';
 import PanelInvitaciones from './PanelInvitaciones';
 import ControlesVideo, { BotonVoz } from './ControlesVideo';
@@ -81,6 +81,7 @@ import { setSonidosActivos, setTonoDespertar, setTonoLlamada, tocarDespertar, to
 import { esTeclaLlamadaBotc, LlamadaBotcContexto } from './llamadaBotc';
 import CieloEstrellado from './CieloEstrellado';
 import DialogoFinal, { type FinPropuesto } from './DialogoFinal';
+import DialogoLlamar, { type JugadorLlamable } from './DialogoLlamar';
 import { rutaFondo } from './fondos';
 import { idFichaNominar, idPestanaLateral, ID_BOTON_MENU_NARRADOR, ID_SIN_NARRADOR, ID_TITULO_DESPERTAR, idLunaFicha, idNombreNarrador } from './ids';
 import { ElegirEnPlazaContexto, type PedidoEleccion } from './elegirEnPlaza';
@@ -416,7 +417,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       for (const h of nuevo.habilidadesNoche) {
         if (guiadoAntes.get(h.personaje) !== 'esperando' || h.estado === 'esperando') continue;
         const nombre = nombreHabilidad(personajesGuionRef.current, h.personaje);
-        const detalles = h.avisos.filter((a) => a.tipo !== 'elegido').map((a) => describirAviso(c, a));
+        const detalles = h.avisos.filter((a) => a.tipo !== 'elegido').map((a) => paraLector(describirAviso(c, a)));
         avisos.push({ tipo: 'despertar', texto: [`${nombre}: ${ESTADO_HABILIDAD[h.estado].toLocaleLowerCase('es')}.`, ...detalles].join(' ') });
       }
     }
@@ -923,6 +924,23 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     const r = await invitarAConversar(otro.id);
     if (!r.ok) setAviso(r.error);
     else anunciar('conversaciones', `Invitación enviada a ${otro.nombre}.`);
+  };
+  // Llamar a un jugador con su tecla (Accesibilidad, ver DialogoLlamar): libre, se le
+  // invita; en una llamada, se pide unirse a ella (si se puede; si no, la sala dice por qué)
+  const [llamando, setLlamando] = useState(false);
+  const puedeLlamar = !!estado?.video && !!yo && conversa(yo);
+  const jugadoresLlamables = (): JugadorLlamable[] =>
+    (estado?.plaza ?? []).flatMap((a) => {
+      const p = a.participanteId && a.participanteId !== yo?.id ? estado!.participantes.find((x) => x.id === a.participanteId) : undefined;
+      return p ? [{ id: p.id, nombre: p.nombre, enLlamada: estado!.conversaciones.some((c) => c.miembros.includes(p.id)) }] : [];
+    });
+  const llamarA = async (participanteId: string): Promise<ResultadoAccion> => {
+    const otro = estado?.participantes.find((p) => p.id === participanteId);
+    if (!otro) return { ok: false, error: 'Esa persona ya no está en la sala.' };
+    const unirse = puedePedirUnirseA(otro);
+    const r = await (unirse ? pedirUnirse(otro.id) : invitarAConversar(otro.id));
+    if (r.ok) anunciar('conversaciones', unirse ? `Petición enviada para unirte a la conversación de ${otro.nombre}.` : `Invitación enviada a ${otro.nombre}.`);
+    return r;
   };
   // Aceptar: se entra en la conversación y el foco va a su título; rechazar: nada más
   const responder = async (invitacionId: string, aceptar: boolean) => {
@@ -1445,6 +1463,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const atajosActivos = [
     // La tecla de leer el reloj (Accesibilidad, no es de la pestaña Atajos): si coincide con un atajo, gana ella
     ...(preferencias.teclaLeerReloj ? [[preferencias.teclaLeerReloj, leerReloj] as [Atajo, () => void]] : []),
+    // La de llamar (Accesibilidad): abre «Llamar a un jugador»
+    ...(preferencias.teclaLlamar && puedeLlamar && !llamando ? [[preferencias.teclaLlamar, () => setLlamando(true)] as [Atajo, () => void]] : []),
     ...accionesActivas.map(([accion, hacer]) => [atajos[accion], hacer] as [Atajo, () => void]),
   ];
   useReconocerGestos(
@@ -1614,6 +1634,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           onInvitacionesFuera={(invitacionesFuera) => cambiarPreferencias({ invitacionesFuera })}
           teclaLeerReloj={preferencias.teclaLeerReloj}
           onTeclaLeerReloj={(teclaLeerReloj) => cambiarPreferencias({ teclaLeerReloj })}
+          teclaLlamar={preferencias.teclaLlamar}
+          onTeclaLlamar={(teclaLlamar) => cambiarPreferencias({ teclaLlamar })}
           atajos={atajos}
           eleccionDespertar={preferencias.eleccionDespertar}
           onEleccionDespertar={(eleccionDespertar) => cambiarPreferencias({ eleccionDespertar })}
@@ -1764,6 +1786,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     quitar: () => propia(() => narradorVirtual.quitar()),
     turno: (turno, jugadorId) => propia(() => narradorVirtual.turno(turno, jugadorId)),
     declarar: (id, datos) => propia(() => narradorVirtual.declarar(id, datos)),
+    terminarReloj: () => propia(() => narradorVirtual.terminarReloj()),
   };
   const preparacionPropia: AccionesPreparacion = {
     configurar: (cambios) => propia(() => preparacion.configurar(cambios)),
@@ -2030,6 +2053,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
         aceptarReparto={bolsaPropia.aceptarReparto}
         onError={setAviso}
         resumido={enHoja}
+        minimizado={preferencias.repartoMinimizado}
+        onMinimizar={(repartoMinimizado) => cambiarPreferencias({ repartoMinimizado })}
       />
     );
 
@@ -2467,6 +2492,10 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             onElegido={(t) => anunciar('despertar', t)}
             onCerrar={() => setNuevoImpAplazado(estado.nuevoImp)}
           />
+        )}
+
+        {llamando && puedeLlamar && (
+          <DialogoLlamar jugadores={jugadoresLlamables()} llamar={llamarA} onCerrar={() => setLlamando(false)} />
         )}
 
         {decidiendoFinal && (

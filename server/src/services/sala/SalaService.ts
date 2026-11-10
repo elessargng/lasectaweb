@@ -147,6 +147,7 @@ export class SalaService {
         llenarBolsa: async (personajes) => this.bolsa.llenar(participanteId, personajes),
         sonarGong: async () => this.reloj.sonarGong(participanteId),
         ponerReloj: async (segundos, mensaje) => this.reloj.poner(participanteId, segundos, mensaje),
+        terminarReloj: async () => this.reloj.terminar(participanteId),
         revelarGrimorio: async (ganador) => this.revelacion.empezar(participanteId, ganador, [], {}),
         revelarFicha: async (jugadorId) => this.revelacion.revelarFicha(participanteId, jugadorId),
         empezarSenalamiento: async (peticion) => this.senalamiento.empezar(participanteId, peticion),

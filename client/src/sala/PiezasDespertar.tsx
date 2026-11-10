@@ -4,18 +4,21 @@ import { urlDelServidor } from '../utils/api';
 import { useAriaLive } from './avisosConfig';
 import { nombreFase } from './avisosSala';
 import {
+  asientosElegibles,
   autorDe,
+  type AsientoElegible,
   NOMBRE_BANDO,
   FICHAS_DESPERTAR,
   fichaDespertar,
-  nombreDeAsiento,
   TARJETAS_DESPERTAR,
   tarjetaDespertar,
   textoEleccion,
   type AdjuntoDespertar,
   type Envio,
+  type Frase,
   type TarjetaDespertar,
 } from './despertar';
+import { FraseVista, NombreAsiento, NombresAsiento, NombreVisto } from './NombreAsiento';
 import { botonPrincipal, botonSecundario, campo } from './estilos';
 import { useElegirEnPlaza } from './elegirEnPlaza';
 import { alineamientoDe, iconoDe } from './fichas';
@@ -85,7 +88,7 @@ export const MensajeVisto = ({ mensaje, estado, personajes, grande = false }: Me
       )}
       {mensaje.jugadores.length > 0 && (
         <span className={grande ? 'text-xl' : 'text-sm'}>
-          {mensaje.jugadores.map((id) => nombreDeAsiento(estado, id)).join(', ')}
+          <NombresAsiento estado={estado} ids={mensaje.jugadores} />
         </span>
       )}
       {elegidos.length > 0 && (
@@ -145,7 +148,9 @@ export const HistorialDespertar = ({ mensajes, estado, personajes, tituloId }: H
               <li className="pt-1 font-ui text-xs uppercase tracking-wide text-on-surface-muted">{fase}</li>
             )}
             <li className="flex flex-wrap items-center gap-x-2 border-b border-outline-ghost/60 py-1 last:border-0">
-              <span className="text-xs font-semibold text-theme-main">{autorDe(m, estado)}:</span>
+              <span className="text-xs font-semibold text-theme-main">
+                {m.autor === 'narrador' || autorDe(m, estado) === 'Tú' ? autorDe(m, estado) : <NombreAsiento estado={estado} jugadorId={m.autor} />}:
+              </span>
               <MensajeVisto mensaje={m} estado={estado} personajes={personajes} />
             </li>
           </Fragment>
@@ -166,8 +171,8 @@ export interface Pendiente {
 
 interface EditorAdjuntoProps {
   pendiente: Pendiente;
-  /** Los asientos (también los libres: cuentan como jugadores), para elegir jugadores. */
-  asientos: { id: string; nombre: string }[];
+  /** Los asientos (también los libres: cuentan como jugadores), para elegir jugadores (ver asientosElegibles). */
+  asientos: AsientoElegible[];
   personajes: PersonajeMostrado[];
   onEnviar: (envio: Envio) => Promise<ResultadoAccion>;
   /** Sin él, no hay «Cancelar» (lo que pide la habilidad del jugador: tiene que elegir). */
@@ -347,7 +352,10 @@ export const EditorAdjunto = ({
                   <button id={idCarta('jugador', id)} type="button" onClick={() => quitar('jugador', id)} className={carta}>
                     <X aria-hidden="true" size={12} className="absolute right-1 top-1 text-on-surface-muted" />
                     <span className="sr-only">Quitar </span>
-                    {nombreJugador(id)}
+                    {(() => {
+                      const a = asientos.find((x) => x.id === id);
+                      return a ? <NombreVisto nombre={a.nombre} jugador={a.jugador} /> : id;
+                    })()}
                   </button>
                 </li>
               ))}
@@ -411,7 +419,7 @@ export const EditorAdjunto = ({
                     onClick={() => anadir('jugador', a.id)}
                     className={`${botonSecundario} aria-disabled:cursor-default aria-disabled:opacity-40 aria-disabled:hover:border-outline-ghost`}
                   >
-                    {a.nombre}
+                    <NombreVisto nombre={a.nombre} jugador={a.jugador} />
                   </button>
                 </li>
               ))}
@@ -531,8 +539,9 @@ interface BotoneraDespertarProps {
 /** Una respuesta propuesta por el despertar guiado: lo que se manda y por qué (cómo registra alguien), en palabras. */
 export interface Propuesta {
   envio: Envio;
-  mensaje: string;
-  registros: string;
+  mensaje: Frase;
+  /** Vacía si no sale de cómo registra nadie. */
+  registros: Frase;
 }
 
 /** El título de lo que se manda: el de su tarjeta o su ficha. */
@@ -615,7 +624,7 @@ export const BotoneraDespertar = ({
   };
 
   if (pendiente) {
-    const asientos = estado.plaza.map((a) => ({ id: a.id, nombre: nombreDeAsiento(estado, a.id) }));
+    const asientos = asientosElegibles(estado);
     return (
       <EditorAdjunto
         pendiente={pendiente}
@@ -641,8 +650,14 @@ export const BotoneraDespertar = ({
             {revision.propuestas.map((p, i) => (
               <li key={i} className="flex flex-wrap items-center gap-3 rounded border border-gold/30 bg-theme-container/40 px-3 py-2">
                 <p id={idPropuesta(i)} className="min-w-0 flex-1 text-sm">
-                  <span className="text-on-surface-bright">{p.mensaje}</span>
-                  {p.registros && <span className="block text-xs text-on-surface-muted">{p.registros}</span>}
+                  <span className="text-on-surface-bright">
+                    <FraseVista frase={p.mensaje} />
+                  </span>
+                  {p.registros.length > 0 && (
+                    <span className="block text-xs text-on-surface-muted">
+                      <FraseVista frase={p.registros} />
+                    </span>
+                  )}
                 </p>
                 <button
                   type="button"

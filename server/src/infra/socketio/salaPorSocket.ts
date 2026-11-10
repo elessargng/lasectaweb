@@ -105,6 +105,7 @@ const PETICIONES_PARTES = {
     'narradorVirtual:voto': 'voto',
     'narradorVirtual:listo': 'listo',
     'narradorVirtual:seguirNominando': 'seguirNominando',
+    'narradorVirtual:terminarReloj': 'terminarReloj',
   },
   noche: {
     'noche:despertar': 'despertar',

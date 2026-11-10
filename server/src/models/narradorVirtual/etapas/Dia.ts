@@ -13,32 +13,67 @@ import { abrirPatosos, cerrarPatosos } from '../../personajes/patoso';
 const PUESTA_EN_COMUN_MS = 60_000;
 /** Lo que pasa entre el gong y el fin de los privados (ms): para despedirse. */
 export const TRAS_GONG_MS = 3_000;
+/** Lo que se espera al amanecer antes de los privados (ms): a que acabe su animación en la plaza (CiudadPlaza, unos 7 s). */
+export const ESPERA_AMANECER_MS = 7_500;
 /** Lo que dan los privados por cada jugador vivo (ms). */
 const PRIVADOS_POR_VIVO_MS = 30_000;
 
 /** Lo que duran los privados (ms): medio minuto por cada jugador vivo. */
 export const duracionPrivados = ({ partida }: SalaDeJuego): number => partida.plaza().filter(vivo).length * PRIVADOS_POR_VIVO_MS;
 
-/** Una etapa que dura un rato con el reloj de la plaza y luego pasa a la siguiente. */
+/**
+ * Una etapa que dura un rato con el reloj de la plaza y luego pasa a la siguiente
+ * (o antes, si quien lo añadió termina el reloj). Puede esperar antes de empezar.
+ */
 abstract class EtapaConReloj implements Etapa {
   abstract readonly id: 'privados' | 'puestaEnComun';
+  /** Lo programado: la espera antes de empezar o el fin del reloj. */
   private cancelar: (() => void) | null = null;
+  /** El reloj está puesto (y aún no ha acabado). */
+  private conReloj = false;
 
   protected abstract duracion(ctx: ContextoEtapa): number;
   protected abstract mensaje: string;
   protected abstract preparar(ctx: ContextoEtapa): Promise<void>;
   protected abstract siguiente(): Etapa;
+  /** Lo que se espera antes de empezar (ms). */
+  protected espera(): number {
+    return 0;
+  }
 
   async alEntrar(ctx: ContextoEtapa): Promise<void> {
+    const espera = this.espera();
+    if (espera > 0) this.cancelar = ctx.temporizador.programar(espera, () => void this.empezar(ctx));
+    else await this.empezar(ctx);
+  }
+
+  private async empezar(ctx: ContextoEtapa): Promise<void> {
     await this.preparar(ctx);
     const ms = this.duracion(ctx);
     await ctx.plaza.ponerReloj(Math.round(ms / 1000), this.mensaje);
-    this.cancelar = ctx.temporizador.programar(ms, () => void ctx.pasarA(this.siguiente()));
+    this.conReloj = true;
+    this.cancelar = ctx.temporizador.programar(ms, () => void this.acabar(ctx));
+  }
+
+  private async acabar(ctx: ContextoEtapa): Promise<void> {
+    this.conReloj = false;
+    await ctx.pasarA(this.siguiente());
+  }
+
+  async terminarReloj(ctx: ContextoEtapa): Promise<string | null> {
+    if (!this.conReloj) return 'Ahora no hay ningún reloj que terminar.';
+    this.cancelar?.();
+    this.cancelar = null;
+    const r = await ctx.plaza.terminarReloj();
+    if (!r.ok) return r.error;
+    await this.acabar(ctx);
+    return null;
   }
 
   alSalir(): void {
     this.cancelar?.();
     this.cancelar = null;
+    this.conReloj = false;
   }
 }
 
@@ -49,6 +84,11 @@ export class Privados extends EtapaConReloj {
 
   protected duracion(ctx: ContextoEtapa): number {
     return duracionPrivados(ctx.juego);
+  }
+
+  // Vienen del amanecer: que acabe de verse antes de que empiece el reloj
+  protected espera(): number {
+    return ESPERA_AMANECER_MS;
   }
 
   protected async preparar(ctx: ContextoEtapa): Promise<void> {

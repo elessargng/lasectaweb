@@ -40,6 +40,11 @@ export interface Etapa {
   alCambiar?(ctx: ContextoEtapa): Promise<void>;
   /** Un jugador pide algo de su turno (nominar, «Defensa», «Voto», «Listo»…). Devuelve el error, si lo hay. */
   alPedir?(ctx: ContextoEtapa, jugador: string, accion: AccionJugador, datos: unknown): Promise<string | null>;
+  /**
+   * Quien lo añadió acaba ya el reloj de esta etapa (los privados, la puesta en común):
+   * suena el gong y se pasa a la siguiente. Devuelve el error, si no hay reloj en marcha.
+   */
+  terminarReloj?(ctx: ContextoEtapa): Promise<string | null>;
   /** Al irse el narrador (o pasar a otra etapa): cancela lo que tuviera programado. */
   alSalir?(): void;
 }

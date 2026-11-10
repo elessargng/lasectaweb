@@ -6,7 +6,7 @@ import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario } from './estilos';
 import { listaFaroles } from './fichas';
 import type { PersonajeMostrado } from './guiones';
-import { nombreDeAsiento, textoEleccion } from './despertar';
+import { asientosElegibles, nombreDeAsiento, textoEleccion } from './despertar';
 import { BotoneraDespertar, EditorAdjunto, HistorialDespertar, MensajeVisto } from './PiezasDespertar';
 import type { AccionesFaroles, AccionesNoche, DespertarDto, SalaDto } from './useSala';
 import { FICHAS_RESPUESTA_GUIADA } from '@models/despertar';
@@ -123,7 +123,7 @@ const DespertarJugador = ({
           <EditorAdjunto
             key={ultimo!.id}
             pendiente={{ base: { ficha: 'jugador' }, titulo: textoEleccion(pide.cantidad), adjunto: { jugadores: true } }}
-            asientos={estado.plaza.map((a) => ({ id: a.id, nombre: nombreDeAsiento(estado, a.id) }))}
+            asientos={asientosElegibles(estado)}
             excluidos={pide.puedeElegirse ? [] : [despertar.jugador]}
             cantidad={pide.cantidad}
             personajes={personajes}

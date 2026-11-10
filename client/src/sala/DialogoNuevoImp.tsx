@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
 import { nombreDeAsiento } from './despertar';
+import { NombreAsiento } from './NombreAsiento';
 import { botonPrincipal, botonSecundario } from './estilos';
 import type { PersonajeMostrado } from './guiones';
 import type { AccionesNoche, SalaDto } from './useSala';
@@ -54,7 +55,7 @@ const DialogoNuevoImp = ({ estado, muere, porId, nuevoImp, onElegido, onCerrar }
           ¿Quién es el nuevo Imp?
         </h2>
         <p id="sala-nuevo-imp-texto" className="text-sm text-on-surface-muted">
-          El Imp ({nombreDeAsiento(estado, muere)}) se ha elegido a sí mismo y muere. Elige quién pasa a ser el Imp: se le
+          El Imp (<NombreAsiento estado={estado} jugadorId={muere} />) se ha elegido a sí mismo y muere. Elige quién pasa a ser el Imp: se le
           cambia la ficha y se le despierta para decírselo.
         </p>
         <ul className="flex flex-col gap-2">
@@ -68,7 +69,7 @@ const DialogoNuevoImp = ({ estado, muere, porId, nuevoImp, onElegido, onCerrar }
                   onClick={() => void elegir(a.id)}
                   className={`${botonPrincipal} w-full justify-start text-left`}
                 >
-                  {nombreDeAsiento(estado, a.id)}
+                  <NombreAsiento estado={estado} jugadorId={a.id} />
                   {personaje && (
                     <>
                       {', '}

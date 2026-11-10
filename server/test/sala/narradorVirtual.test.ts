@@ -138,7 +138,7 @@ describe('narrador virtual', () => {
     await vi.waitFor(() => expect(voces).toContain(frase));
   });
 
-  it('al llenarse la plaza reparte los personajes y empieza la primera noche', async () => {
+  it('al llenarse la plaza mezcla los asientos, reparte los personajes y empieza la primera noche', async () => {
     arnes = await conTroubleBrewing();
     const jugadores = await entran(7);
     const [ana] = jugadores;
@@ -150,6 +150,11 @@ describe('narrador virtual', () => {
       await arnes.accion(c, 'sala:sentarse', { jugadorId: c.estado.plaza[i].id });
     }
     await ana.esperarQue((e) => e.narradorVirtual?.etapa === 'noche');
+    // Cada uno se sentó en el asiento de su número; ya no (los mismos, en otro orden)
+    const sentados = jugadores.map((c) => c.id);
+    const ahora = ana.estado.plaza.map((a) => a.participanteId);
+    expect(ahora).not.toEqual(sentados);
+    expect([...ahora].sort()).toEqual([...sentados].sort());
     expect(ana.estado.fase).toMatchObject({ momento: 'noche', numero: 1 });
     expect(ana.estado.narradorVirtual?.frase).toBe('Noche uno, nos vamos a dormir.');
     expect(voces).toContain('Noche uno, nos vamos a dormir.');

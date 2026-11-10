@@ -1,4 +1,4 @@
-import { describirMensaje, enumerar, nombreDeAsiento, type Envio } from './despertar';
+import { asientoEnFrase, enumerarFrases, fraseDeMensaje, type Envio, type Frase } from './despertar';
 import { textoRecordatorio } from './fichas';
 import type { PersonajeMostrado } from './guiones';
 import type { AvisoHabilidad, EnvioDespertar, SalaDto, HabilidadNocheDto, OpcionDespertar, Registro } from './useSala';
@@ -37,14 +37,19 @@ export const esFilaFija = (id: string) => id in FILAS_FIJAS;
 const nombrePersonaje = (c: ContextoHabilidades, id: string | null | undefined) => (id ? (c.porId.get(id)?.nombre.texto ?? id) : '');
 
 /** «Asiento 3 (Bea), Reclusa»: el asiento y su personaje (el de su ficha). */
-const asientoConPersonaje = (c: ContextoHabilidades, jugadorId: string) => {
+const asientoConPersonaje = (c: ContextoHabilidades, jugadorId: string): Frase => {
   const personaje = c.estado.plaza.find((a) => a.id === jugadorId)?.personaje;
-  const nombre = nombreDeAsiento(c.estado, jugadorId);
-  return personaje ? `${nombre}, ${nombrePersonaje(c, personaje)}` : nombre;
+  const asiento = asientoEnFrase(c.estado, jugadorId);
+  return personaje ? [asiento, `, ${nombrePersonaje(c, personaje)}`] : [asiento];
 };
 
-/** Un aviso del despertar guiado, en una frase. */
-export function describirAviso(c: ContextoHabilidades, aviso: AvisoHabilidad): string {
+/** Un aviso del despertar guiado, en una frase (ver Frase). */
+export function describirAviso(c: ContextoHabilidades, aviso: AvisoHabilidad): Frase {
+  const frase = fraseDeAviso(c, aviso);
+  return typeof frase === 'string' ? [frase] : frase;
+}
+
+function fraseDeAviso(c: ContextoHabilidades, aviso: AvisoHabilidad): Frase | string {
   switch (aviso.tipo) {
     case 'faltaRecordatorio': {
       const personaje = c.porId.get(aviso.personaje);
@@ -63,15 +68,15 @@ export function describirAviso(c: ContextoHabilidades, aviso: AvisoHabilidad): s
     case 'sinEfecto':
       return 'Como está droison, se le ha contestado sin poner el recordatorio.';
     case 'registro':
-      return `${asientoConPersonaje(c, aviso.jugador)}, puede registrar como otra cosa.`;
+      return [...asientoConPersonaje(c, aviso.jugador), ', puede registrar como otra cosa.'];
     case 'protegido':
-      return `${asientoConPersonaje(c, aviso.jugador)}, está protegido: no muere.`;
+      return [...asientoConPersonaje(c, aviso.jugador), ', está protegido: no muere.'];
     case 'desenlaces': {
-      const maneras = aviso.desenlaces.map((d) => (d.muere ? `muere ${nombreDeAsiento(c.estado, d.muere)}` : 'no muere nadie'));
-      return `Ha elegido a ${asientoConPersonaje(c, aviso.jugador)}; puede acabar así: ${enumerar(maneras)}. Decide tú y ponlo en el grimorio.`;
+      const maneras = aviso.desenlaces.map((d): Frase => (d.muere ? ['muere ', asientoEnFrase(c.estado, d.muere)] : ['no muere nadie']));
+      return ['Ha elegido a ', ...asientoConPersonaje(c, aviso.jugador), '; puede acabar así: ', ...enumerarFrases(maneras), '. Decide tú y ponlo en el grimorio.'];
     }
     case 'elegido':
-      return `Ha elegido a ${enumerar(aviso.jugadores.map((id) => nombreDeAsiento(c.estado, id)))}.`;
+      return ['Ha elegido a ', ...enumerarFrases(aviso.jugadores.map((id) => [asientoEnFrase(c.estado, id)])), '.'];
     case 'pocosJugadores':
       return 'Hay menos de 7 jugadores: no se despiertan.';
     case 'faltanFaroles':
@@ -79,12 +84,12 @@ export function describirAviso(c: ContextoHabilidades, aviso: AvisoHabilidad): s
   }
 }
 
-/** Una respuesta posible: lo que se manda y, si sale de cómo registra alguien, cómo («si Asiento 3 (Bea) registra como malvado»). */
-export function describirOpcion(c: ContextoHabilidades, opcion: OpcionDespertar): { mensaje: string; registros: string } {
-  const registros = opcion.registros.map((r) => `${nombreDeAsiento(c.estado, r.jugador)} registra como ${COMO[r.como]}`);
+/** Una respuesta posible: lo que se manda y, si sale de cómo registra alguien, cómo («si Asiento 3 (Bea) registra como malvado»; vacía si no). */
+export function describirOpcion(c: ContextoHabilidades, opcion: OpcionDespertar): { mensaje: Frase; registros: Frase } {
+  const registros = opcion.registros.map((r): Frase => [asientoEnFrase(c.estado, r.jugador), ` registra como ${COMO[r.como]}`]);
   return {
-    mensaje: describirMensaje(opcion.envio, c.estado, c.porId),
-    registros: registros.length ? `Si ${enumerar(registros)}.` : '',
+    mensaje: fraseDeMensaje(opcion.envio, c.estado, c.porId),
+    registros: registros.length ? ['Si ', ...enumerarFrases(registros), '.'] : [],
   };
 }
 

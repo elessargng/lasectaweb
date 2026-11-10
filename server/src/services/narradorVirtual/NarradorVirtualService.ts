@@ -32,6 +32,7 @@ export const USOS_NARRADOR_VIRTUAL = [
   'narradorVirtual:voto',
   'narradorVirtual:listo',
   'narradorVirtual:seguirNominando',
+  'narradorVirtual:terminarReloj',
 ] as const;
 type UsoNarradorVirtual = (typeof USOS_NARRADOR_VIRTUAL)[number];
 
@@ -52,6 +53,13 @@ const PERMISOS: Record<string, Permiso> = {
   'narradorVirtual:anadir': ({ sala }, yo) => {
     if (sala.participantes.hayNarrador() || yo.rol === 'narrador') return 'La sala ya tiene narrador.';
     return yo.persona.tipo === 'usuario' ? null : 'Para añadir un narrador virtual necesitas una cuenta.';
+  },
+  // Solo quien lo añadió, con el reloj de los privados o de la puesta en común en marcha
+  'narradorVirtual:terminarReloj': ({ narrador, partida }, yo) => {
+    const actual = narrador.actual();
+    if (!actual || actual.creador !== yo.id) return 'Solo quien añadió al narrador virtual puede terminar su reloj.';
+    const conReloj = (actual.etapa === 'privados' || actual.etapa === 'puestaEnComun') && partida.reloj.relojEnMarcha();
+    return conReloj ? null : 'Ahora no hay ningún reloj que terminar.';
   },
   // Solo quien lo añadió
   'narradorVirtual:quitar': ({ narrador }, yo) => {
@@ -203,6 +211,13 @@ export class NarradorVirtualService {
     if (id === GUION_DE_LA_SALA) return this.juego.partida.guion.actual() ?? 'La sala aún no tiene guion.';
     if (!this.guiones.predeterminados().some((g) => g.id === id)) return 'Ese guion no existe.';
     return this.guiones.guionPredeterminado(id).catch(() => 'No se ha podido cargar ese guion.');
+  }
+
+  /** Quien lo añadió acaba ya su reloj (ver Etapa.terminarReloj): suena el gong y sigue la partida. */
+  async terminarReloj(yoId: string): Promise<ResultadoUso> {
+    return this.usos.hacerAsincrono(yoId, 'narradorVirtual:terminarReloj', async () =>
+      this.etapa?.terminarReloj ? this.etapa.terminarReloj(this.contexto()) : 'Ahora no hay ningún reloj que terminar.',
+    );
   }
 
   /** Quita el narrador virtual: solo quien lo añadió. */

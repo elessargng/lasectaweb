@@ -17,6 +17,9 @@ interface PanelAccesibilidadProps {
   /** La tecla que lee el reloj del narrador, o null. */
   teclaLeerReloj: Atajo | null;
   onTeclaLeerReloj: (tecla: Atajo | null) => void;
+  /** La tecla que abre «Llamar a un jugador», o null. */
+  teclaLlamar: Atajo | null;
+  onTeclaLlamar: (tecla: Atajo | null) => void;
   /** Los atajos (pestaña Atajos), para avisar si la tecla elegida ya es de uno. */
   atajos: Record<AccionAtajo, Atajo>;
   /** Cómo se eligen los jugadores en el despertar de noche. */
@@ -42,30 +45,50 @@ const MODOS_ELECCION = [
   { id: 'lista', etiqueta: 'En una lista', descripcion: 'Los jugadores salen como botones dentro de la ventana del despertar.' },
 ] as const;
 
+/** Si son la misma tecla (la misma física y los mismos modificadores). */
+const mismaTecla = (a: Atajo, b: Atajo) => a.code === b.code && a.ctrl === b.ctrl && a.alt === b.alt && a.shift === b.shift && a.meta === b.meta;
+
 /** Si una tecla ya es la de un atajo: su nombre, para avisar. */
 function atajoQueLaUsa(tecla: Atajo, atajos: Record<AccionAtajo, Atajo>): string | null {
-  const igual = (a: Atajo) =>
-    a.code === tecla.code && a.ctrl === tecla.ctrl && a.alt === tecla.alt && a.shift === tecla.shift && a.meta === tecla.meta;
-  return ACCIONES_ATAJO.find(({ accion }) => igual(atajos[accion]))?.etiqueta ?? null;
+  return ACCIONES_ATAJO.find(({ accion }) => mismaTecla(atajos[accion], tecla))?.etiqueta ?? null;
 }
 
 /**
- * Una tecla para que el lector diga el reloj del narrador cuando se quiera (lo que
- * queda y su mensaje): los segundos no se leen solos. Sin tecla de entrada.
+ * Una tecla de la pestaña Accesibilidad (no son de la pestaña Atajos): cuál es,
+ * cambiarla y quitarla. Si coincide con un atajo o con la otra tecla, se avisa: gana esta.
  */
-const TeclaLeerReloj = ({ tecla, onCambiar, atajos }: { tecla: Atajo | null; onCambiar: (tecla: Atajo | null) => void; atajos: Record<AccionAtajo, Atajo> }) => {
+const TeclaAccesibilidad = ({
+  id,
+  titulo,
+  descripcion,
+  tecla,
+  onCambiar,
+  atajos,
+  otras,
+}: {
+  /** Para los ids de la tecla. */
+  id: string;
+  /** Lo que hace, como título («Leer el reloj»): también en los avisos. */
+  titulo: string;
+  descripcion: string;
+  tecla: Atajo | null;
+  onCambiar: (tecla: Atajo | null) => void;
+  atajos: Record<AccionAtajo, Atajo>;
+  /** Las otras teclas de esta pestaña, para avisar si coincide. */
+  otras: { titulo: string; tecla: Atajo | null }[];
+}) => {
   const [aviso, setAviso] = useState('');
   const ariaLive = useAriaLive('preferencias');
+  const idTecla = `sala-tecla-${id}`;
+  const otraQueLaUsa = (nueva: Atajo) =>
+    atajoQueLaUsa(nueva, atajos) ?? otras.find((o) => o.tecla && mismaTecla(o.tecla, nueva))?.titulo ?? null;
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="mb-1 font-semibold">Leer el reloj</legend>
-      <p className="text-sm text-on-surface-muted">
-        Cuando el narrador pone un reloj, el lector no dice los segundos. Con esta tecla te lee lo que queda y su mensaje
-        cuando la pulses.
-      </p>
+      <legend className="mb-1 font-semibold">{titulo}</legend>
+      <p className="text-sm text-on-surface-muted">{descripcion}</p>
       <div className="flex flex-wrap items-center gap-3">
-        <p id="sala-tecla-reloj" className="text-sm">
-          Tecla para leer el reloj:{' '}
+        <p id={idTecla} className="text-sm">
+          Tecla:{' '}
           {tecla ? (
             <>
               <span className="sr-only">{describirAtajo(tecla)}</span>
@@ -76,25 +99,25 @@ const TeclaLeerReloj = ({ tecla, onCambiar, atajos }: { tecla: Atajo | null; onC
           )}
         </p>
         <BotonCapturarTecla
-          describedBy="sala-tecla-reloj"
+          describedBy={idTecla}
           texto={tecla ? 'Cambiar' : 'Elegir tecla'}
           onEmpezar={() => setAviso('')}
           onCancelar={() => setAviso('Cambio cancelado.')}
           onCapturar={(nueva) => {
             onCambiar(nueva);
-            const otro = atajoQueLaUsa(nueva, atajos);
+            const otro = otraQueLaUsa(nueva);
             setAviso(
-              `Leer el reloj: ${describirAtajo(nueva)}.${otro ? ` Es también la tecla de «${otro}»: ahora leerá el reloj; cámbiala en Atajos si quieres las dos.` : ''}`,
+              `${titulo}: ${describirAtajo(nueva)}.${otro ? ` Es también la tecla de «${otro}»: ahora gana esta; cámbiala allí si quieres las dos.` : ''}`,
             );
           }}
         />
         {tecla && (
           <button
             type="button"
-            aria-describedby="sala-tecla-reloj"
+            aria-describedby={idTecla}
             onClick={() => {
               onCambiar(null);
-              setAviso('Leer el reloj: sin tecla.');
+              setAviso(`${titulo}: sin tecla.`);
             }}
             className={botonSecundario}
           >
@@ -228,7 +251,7 @@ const SonidoEnvolvente = ({
 
 /**
  * Pestaña Accesibilidad: dónde salen las peticiones de llamada entrantes, cómo
- * se eligen jugadores en el despertar de noche, el sonido envolvente, la tecla de leer el reloj y qué
+ * se eligen jugadores en el despertar de noche, el sonido envolvente, las teclas de leer el reloj y de llamar, y qué
  * avisos dice el lector de pantalla, por grupos. Se aplica al momento; con
  * cuenta se guarda en el servidor.
  */
@@ -240,6 +263,8 @@ const PanelAccesibilidad = ({
   onInvitacionesFuera,
   teclaLeerReloj,
   onTeclaLeerReloj,
+  teclaLlamar,
+  onTeclaLlamar,
   atajos,
   eleccionDespertar,
   onEleccionDespertar,
@@ -288,7 +313,24 @@ const PanelAccesibilidad = ({
       canales={canalesSalida}
       onProbar={onProbarSonido}
     />
-    <TeclaLeerReloj tecla={teclaLeerReloj} onCambiar={onTeclaLeerReloj} atajos={atajos} />
+    <TeclaAccesibilidad
+      id="reloj"
+      titulo="Leer el reloj"
+      descripcion="Cuando el narrador pone un reloj, el lector no dice los segundos. Con esta tecla te lee lo que queda y su mensaje cuando la pulses."
+      tecla={teclaLeerReloj}
+      onCambiar={onTeclaLeerReloj}
+      atajos={atajos}
+      otras={[{ titulo: 'Llamar a un jugador', tecla: teclaLlamar }]}
+    />
+    <TeclaAccesibilidad
+      id="llamar"
+      titulo="Llamar a un jugador"
+      descripcion="Abre una ventana con todos los jugadores, cada uno con «libre» o «en llamada», para llamar al que elijas."
+      tecla={teclaLlamar}
+      onCambiar={onTeclaLlamar}
+      atajos={atajos}
+      otras={[{ titulo: 'Leer el reloj', tecla: teclaLeerReloj }]}
+    />
     <p className="text-sm text-on-surface-muted">
       Elige qué te anuncia el lector de pantalla. Lo que también se ve en pantalla se sigue viendo aunque no se lea.
     </p>

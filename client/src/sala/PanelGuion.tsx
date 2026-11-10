@@ -3,6 +3,8 @@ import { IconoLuna, IconoSol } from './IconosJuego';
 import { Fragment, useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { ESTADO_HABILIDAD } from './habilidadesNoche';
 import type { HabilidadNocheDto } from './useSala';
+import type { Frase } from './despertar';
+import { FraseVista } from './NombreAsiento';
 import { urlDelServidor } from '../utils/api';
 import SelectorIdioma from './SelectorIdioma';
 import {
@@ -62,8 +64,8 @@ export interface RecordatoriosNoche {
  */
 export interface DespertarFila {
   estado: HabilidadNocheDto['estado'] | 'manual';
-  /** Lo que avisa el servidor, ya en frases. */
-  avisos: string[];
+  /** Lo que avisa el servidor, ya en frases (con los asientos: ver Frase). */
+  avisos: Frase[];
   onPulsar: () => void;
 }
 
@@ -383,9 +385,12 @@ const Fila = ({
   const idEstado = useId();
   // Cómo está (salvo si está listo y no hay nada que decir): debajo del nombre y, para
   // quien llega con el tabulador, como descripción del botón
-  const estado = despertar && ((despertar.estado !== 'listo' && despertar.estado !== 'manual') || despertar.avisos.length > 0)
-    ? [despertar.estado === 'listo' || despertar.estado === 'manual' ? '' : `${ESTADO_HABILIDAD[despertar.estado]}.`, ...despertar.avisos].filter(Boolean).join(' ')
-    : '';
+  const estado: Frase = despertar && ((despertar.estado !== 'listo' && despertar.estado !== 'manual') || despertar.avisos.length > 0)
+    ? [
+        ...(despertar.estado === 'listo' || despertar.estado === 'manual' ? [] : [`${ESTADO_HABILIDAD[despertar.estado]}.`]),
+        ...despertar.avisos.flatMap((a) => [' ', ...a]),
+      ]
+    : [];
   const [etiqueta, nombreOculto] =
     despertar?.estado === 'revisar'
       ? ['Revisar', ' el despertar de ']
@@ -428,13 +433,13 @@ const Fila = ({
             </span>
           </>
         )}
-        {estado && (
+        {estado.length > 0 && (
           <span
             id={idEstado}
             className={`block text-xs leading-snug ${despertar?.estado === 'falta' || despertar?.estado === 'revisar' ? 'font-semibold text-hoja-lacre' : 'italic text-hoja-cuerpo'}`}
           >
             <span className="sr-only">. </span>
-            {estado}
+            <FraseVista frase={estado} />
           </span>
         )}
       </p>
@@ -443,7 +448,7 @@ const Fila = ({
         <button
           type="button"
           aria-disabled={despertar.estado === 'falta' || undefined}
-          aria-describedby={estado ? idEstado : undefined}
+          aria-describedby={estado.length > 0 ? idEstado : undefined}
           onClick={despertar.estado === 'falta' ? undefined : despertar.onPulsar}
           className="flex shrink-0 items-center gap-1 self-center rounded border border-hoja-lacre/60 px-2 py-1 font-ui text-xs font-semibold text-hoja-lacre hover:bg-hoja-lacre/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-hoja-lacre aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-transparent"
         >

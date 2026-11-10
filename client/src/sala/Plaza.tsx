@@ -88,8 +88,8 @@ interface PlazaProps {
   dia: AccionesDia;
   /** El grimorio del narrador (ver AccionesGrimorio). */
   accionesGrimorio: AccionesGrimorio;
-  /** Lo que se pide al narrador virtual de día: nominar, el turno, las declaraciones (ver AccionesNarradorVirtual). */
-  narradorVirtual: Pick<AccionesNarradorVirtual, 'turno' | 'declarar'>;
+  /** Lo que se pide al narrador virtual de día: nominar, el turno, las declaraciones y terminar su reloj (ver AccionesNarradorVirtual). */
+  narradorVirtual: Pick<AccionesNarradorVirtual, 'turno' | 'declarar' | 'terminarReloj'>;
   /** Con el Gardener: entrega los personajes repartidos (ver AccionesPreparacion). */
   entregarFichas: AccionesPreparacion['entregarFichas'];
   /** Señalar, Lil' Monsta y terminar el señalamiento (ver AccionesSenalamiento). */
@@ -605,6 +605,13 @@ const Plaza = ({
     if (!r.ok) onError(r.error);
     else window.setTimeout(() => document.getElementById(ID_CANCELAR_RELOJ)?.focus(), 0);
   };
+  // El del narrador virtual, quien lo añadió: suena el gong y la partida sigue (el reloj
+  // cambia por el de la etapa siguiente, o se va): el foco, a los asientos
+  const terminarRelojVirtual = async () => {
+    const r = await narradorVirtual.terminarReloj();
+    if (!r.ok) onError(r.error);
+    else window.setTimeout(() => document.getElementById('sala-asientos')?.focus(), 0);
+  };
   const cancelarReloj = async () => {
     const r = await reloj.quitar();
     if (!r.ok) return onError(r.error);
@@ -622,13 +629,17 @@ const Plaza = ({
 
   // Al sentarse o levantarse, el foco va al nombre del asiento («3, Ana
   // (tú)» / «Asiento 3, libre») cuando llegue el cambio.
-  // Mi asiento en la última pintura, para saber si otro me ha levantado.
+  // Mi asiento en la última pintura (y su número), para saber si otro me ha levantado o cambiado de sitio.
   const miAsientoRef = useRef<string | null>(null);
+  const miNumeroRef = useRef(0);
   useEffect(() => {
     const pendiente = focoAsientoRef.current;
     const antes = miAsientoRef.current;
+    const numeroAntes = miNumeroRef.current;
     const ahora = plaza.find((a) => a.participanteId === yo)?.id ?? null;
+    const numero = plaza.findIndex((a) => a.id === ahora) + 1;
     miAsientoRef.current = ahora;
+    miNumeroRef.current = numero;
 
     if (pendiente) {
       const jugador = plaza.find((a) => a.id === pendiente.jugadorId);
@@ -643,9 +654,9 @@ const Plaza = ({
     // existe), va al asiento.
     // Si he pasado a narrador, ya se avisa de eso (SalaJuego).
     const narro = participantes.some((p) => p.id === yo && p.rol === 'narrador');
-    if (antes && ahora && antes !== ahora) {
-      // Me han cambiado de sitio (mezclar).
-      onAnuncio('miAsiento', `Ahora estás en el asiento ${plaza.findIndex((a) => a.id === ahora) + 1}.`);
+    // Me han cambiado de sitio: al mezclar, el jugador se mueve con todo lo suyo (su id), y cambia su número
+    if (antes && ahora && (antes !== ahora || numero !== numeroAntes)) {
+      onAnuncio('miAsiento', `Ahora estás en el asiento ${numero}.`);
       return;
     }
     if (antes && antes !== ahora) {
@@ -1108,7 +1119,13 @@ const Plaza = ({
               reloj={estado.reloj}
               desfase={desfaseReloj}
               onAnuncio={(texto) => onAnuncio('reloj', texto)}
-              onTerminar={acciones.includes('reloj:terminar') ? () => void terminarReloj() : undefined}
+              onTerminar={
+                acciones.includes('reloj:terminar')
+                  ? () => void terminarReloj()
+                  : acciones.includes('narradorVirtual:terminarReloj')
+                    ? () => void terminarRelojVirtual()
+                    : undefined
+              }
               onCancelar={acciones.includes('reloj:quitar') ? () => void cancelarReloj() : undefined}
             />
           )}

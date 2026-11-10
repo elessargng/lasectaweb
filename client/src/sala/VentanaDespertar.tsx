@@ -2,7 +2,8 @@ import { BookOpen, Maximize2, Minimize2, UserPlus, X } from 'lucide-react';
 import EnviarGrimorio, { PERSONAJES_GRIMORIO } from './EnviarGrimorio';
 import { identidadDe } from './fichas';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { enumerar, nombreDeAsiento } from './despertar';
+import { asientosElegibles, enumerar, nombreDeAsiento, type Frase } from './despertar';
+import { FraseVista, NombreAsiento, NombresAsiento } from './NombreAsiento';
 import { botonPrincipal, botonSecundario } from './estilos';
 import type { PersonajeMostrado } from './guiones';
 import { ID_TITULO_DESPERTAR } from './ids';
@@ -41,7 +42,8 @@ export interface Revision {
   personajeId: string;
   /** Su nombre, en su idioma. */
   nombre: { texto: string; lang: string };
-  avisos: string[];
+  /** Lo que avisa el servidor, en frases (con los asientos: ver Frase). */
+  avisos: Frase[];
   propuestas: Propuesta[];
 }
 
@@ -145,7 +147,9 @@ const VentanaDespertar = ({
           className="min-w-0 flex-1 font-display text-xl text-gold-bright focus:outline-none"
         >
           {soloLectura ? 'Despertar de ' : 'Despierta a '}
-          <strong className="font-normal text-on-surface-bright">{enumerar([nombre, ...conjunto.map((id) => nombreDeAsiento(estado, id))])}</strong>
+          <strong className="font-normal text-on-surface-bright">
+            <NombresAsiento estado={estado} ids={[actual.jugador, ...conjunto]} />
+          </strong>
         </h2>
         <button type="button" onClick={() => setMinimizada((m) => !m)} className={boton}>
           {minimizada ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
@@ -176,7 +180,7 @@ const VentanaDespertar = ({
                   elegida ? 'border-gold/60 bg-theme-container text-gold-bright' : 'border-outline-ghost text-on-surface-muted hover:text-on-surface-bright'
                 }`}
               >
-                {nombreDeAsiento(estado, d.jugador)}
+                <NombreAsiento estado={estado} jugadorId={d.jugador} />
                 {noLeidos.has(d.jugador) && (
                   <>
                     <span aria-hidden="true" className="h-2 w-2 rounded-full bg-gold-bright" />
@@ -203,8 +207,10 @@ const VentanaDespertar = ({
               </h3>
               {revision.avisos.length > 0 && (
                 <ul className="list-disc pl-5 text-sm text-on-surface-bright">
-                  {revision.avisos.map((a) => (
-                    <li key={a}>{a}</li>
+                  {revision.avisos.map((a, i) => (
+                    <li key={i}>
+                      <FraseVista frase={a} />
+                    </li>
                   ))}
                 </ul>
               )}
@@ -221,7 +227,7 @@ const VentanaDespertar = ({
               </button>
               {conjunto.length > 0 && (
                 <button type="button" onClick={() => cambiarJuntos([])} className={boton}>
-                  Solo a {nombre}
+                  Solo a <NombreAsiento estado={estado} jugadorId={actual.jugador} />
                 </button>
               )}
             </div>
@@ -231,7 +237,7 @@ const VentanaDespertar = ({
             <EditorAdjunto
               key={actual.jugador}
               pendiente={{ base: {}, titulo: 'Despertar también a', adjunto: { jugadores: true }, iniciales: { jugadores: conjunto } }}
-              asientos={estado.plaza.map((a) => ({ id: a.id, nombre: nombreDeAsiento(estado, a.id) }))}
+              asientos={asientosElegibles(estado)}
               excluidos={[actual.jugador]}
               personajes={personajes}
               textos={{ enviar: 'Aceptar', cartas: 'También despiertan' }}

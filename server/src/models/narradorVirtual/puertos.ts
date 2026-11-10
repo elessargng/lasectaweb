@@ -23,6 +23,8 @@ export interface Narrador {
   sonarGong(): Promise<RespuestaAccion>;
   /** Pone el reloj: una cuenta atrás para todos con su mensaje. */
   ponerReloj(segundos: number, mensaje: string): Promise<RespuestaAccion>;
+  /** Acaba el reloj ya: suena el gong, como si se hubiera agotado. */
+  terminarReloj(): Promise<RespuestaAccion>;
   /** Revela el grimorio: ha ganado ese bando. */
   revelarGrimorio(ganador: Alineamiento): Promise<RespuestaAccion>;
   /** Revela la ficha de un asiento, para todos. */

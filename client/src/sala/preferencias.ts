@@ -79,6 +79,11 @@ export interface PreferenciasSala {
    */
   teclaLeerReloj: Atajo | null;
   /**
+   * La tecla que abre «Llamar a un jugador» (un desplegable con todos, libres o en
+   * llamada), o null si no hay. De entrada, Ctrl + Alt + L. Pestaña Accesibilidad.
+   */
+  teclaLlamar: Atajo | null;
+  /**
    * Cómo se eligen los jugadores en el despertar de noche: en la plaza (la ventana
    * se esconde y se pulsa su ficha; de entrada) o en una lista dentro de la ventana.
    * Pestaña Accesibilidad.
@@ -97,6 +102,8 @@ export interface PreferenciasSala {
   panelLateralContraido: boolean;
   /** Los faroles fijados arriba de la columna, se vea el panel que se vea. */
   farolesFijados: boolean;
+  /** El reparto de la partida minimizado: solo «5/0/1/1 · 7/7 jugadores vivos» (ver RepartoPartida). */
+  repartoMinimizado: boolean;
   /** Idioma (id del paquete de traducción) de los nombres de los personajes. Pestaña Usuario. */
   idiomaNombres: string;
   /** Idioma de las habilidades y los recordatorios de los personajes. Pestaña Usuario. */
@@ -173,6 +180,7 @@ type ClaveSiNo =
   | 'sonidoEnvolvente'
   | 'panelLateralContraido'
   | 'farolesFijados'
+  | 'repartoMinimizado'
   | 'pobladoCabecera'
   | 'cieloEstrellado'
   | 'llamadaBotc'
@@ -219,6 +227,7 @@ const SI_NO: Record<ClaveSiNo, boolean> = {
   sonidoEnvolvente: false,
   panelLateralContraido: false,
   farolesFijados: false,
+  repartoMinimizado: false,
   pobladoCabecera: true,
   cieloEstrellado: true,
   llamadaBotc: false,
@@ -227,6 +236,9 @@ const SI_NO: Record<ClaveSiNo, boolean> = {
 
 /** Lo que guardaba antes la sala en el navegador (para llevarlo a la cuenta la primera vez). */
 export const KEY_ANTIGUA = 'sala:preferencias';
+
+/** La tecla de llamar de entrada: Ctrl + Alt + L. */
+export const TECLA_LLAMAR_DEFECTO: Atajo = { code: 'KeyL', key: 'l', ctrl: true, alt: true, shift: false, meta: false };
 /** Cámara y micrófono son de este navegador: con cuenta se recuerdan aquí, no en el servidor. */
 const KEY_DISPOSITIVOS = 'sala:dispositivos';
 
@@ -282,11 +294,12 @@ export function normalizarPreferencias(datos: unknown): PreferenciasSala {
   const idDispositivo = (v: unknown) => (typeof v === 'string' && v.length <= 200 ? v : '');
   preferencias.eleccionDespertar = guardadas.eleccionDespertar === 'lista' ? 'lista' : 'plaza';
   preferencias.salidaAudio = esSalidaAudio(guardadas.salidaAudio) ? guardadas.salidaAudio : SALIDA_DEFECTO;
-  // La tecla de leer el reloj: solo lo que es de un atajo
-  const tecla = guardadas.teclaLeerReloj;
-  preferencias.teclaLeerReloj = esAtajoValido(tecla)
-    ? { code: tecla.code, key: tecla.key, ctrl: tecla.ctrl, alt: tecla.alt, shift: tecla.shift, meta: tecla.meta }
-    : null;
+  // Las teclas de la pestaña Accesibilidad: solo lo que es de un atajo
+  const teclaDe = (tecla: unknown): Atajo | null =>
+    esAtajoValido(tecla) ? { code: tecla.code, key: tecla.key, ctrl: tecla.ctrl, alt: tecla.alt, shift: tecla.shift, meta: tecla.meta } : null;
+  preferencias.teclaLeerReloj = teclaDe(guardadas.teclaLeerReloj);
+  // La de llamar: sin guardar, la de entrada; quitada (null), ninguna
+  preferencias.teclaLlamar = guardadas.teclaLlamar === undefined ? TECLA_LLAMAR_DEFECTO : teclaDe(guardadas.teclaLlamar);
   preferencias.idCamara = idDispositivo(guardadas.idCamara);
   preferencias.idMicrofono = idDispositivo(guardadas.idMicrofono);
   return preferencias;

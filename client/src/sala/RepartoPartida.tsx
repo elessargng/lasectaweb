@@ -1,4 +1,4 @@
-import { TriangleAlert } from 'lucide-react';
+import { Maximize2, Minimize2, TriangleAlert } from 'lucide-react';
 import { Fragment, useRef, useState } from 'react';
 import { useAriaLive } from './avisosConfig';
 import { botonSecundario } from './estilos';
@@ -17,6 +17,12 @@ interface RepartoPartidaProps {
   onError: (mensaje: string) => void;
   /** En una línea (en la cabecera de la hoja del guion): los vivos y cuántos de cada tipo. */
   resumido?: boolean;
+  /**
+   * El recuadro minimizado por quien lo ve (Preferencias): solo «5/0/1/1 · 7/7 jugadores
+   * vivos», con su botón para volver a verlo entero. Sin `onMinimizar`, no hay botón.
+   */
+  minimizado?: boolean;
+  onMinimizar?: (minimizado: boolean) => void;
 }
 
 /**
@@ -39,7 +45,7 @@ interface RepartoPartidaProps {
  * haya forasteros), «Es el que quiero» lo da por bueno: el recuadro vuelve a su
  * aspecto de siempre hasta que el reparto cambie.
  */
-const RepartoPartida = ({ distribucion, reparto, aceptarReparto, onError, resumido = false }: RepartoPartidaProps) => {
+const RepartoPartida = ({ distribucion, reparto, aceptarReparto, onError, resumido = false, minimizado = false, onMinimizar }: RepartoPartidaProps) => {
   const tituloRef = useRef<HTMLHeadingElement>(null);
   const [confirmacion, setConfirmacion] = useState('');
   const ariaLive = useAriaLive('bolsa');
@@ -68,129 +74,175 @@ const RepartoPartida = ({ distribucion, reparto, aceptarReparto, onError, resumi
   const numeroDe = (tipo: string, clave: (typeof TIPOS_REPARTO)[number]['clave']) =>
     cuentas ? (cuentas[tipo] ?? 0) : (distribucion[clave] ?? 0);
 
-  // En la hoja del guion: «7/7 jugadores vivos · 7/1/2/1». Para el lector, los tipos con su nombre
+  // En una línea: los vivos («7/7 jugadores vivos») y los tipos («7/1/2/1», en los colores
+  // de su bando; para el lector, con su nombre: «7 aldeanos, 1 forastero…»)
+  const vivos = (
+    <>
+      <span className="tabular-nums">
+        {jugadoresVivos}/{jugadores}
+      </span>{' '}
+      {jugadores === 1 ? 'jugador vivo' : 'jugadores vivos'}
+    </>
+  );
+  const tipos = (colores: { bien: string; mal: string }) => (
+    <>
+      <span aria-hidden="true">
+        {TIPOS_REPARTO.map(({ tipo, clave }, i) => (
+          <Fragment key={tipo}>
+            {i > 0 && '/'}
+            <span className={`font-semibold tabular-nums ${tipo === 'townsfolk' || tipo === 'outsider' ? colores.bien : colores.mal}`}>
+              {numeroDe(tipo, clave)}
+            </span>
+          </Fragment>
+        ))}
+      </span>
+      <span className="sr-only">
+        {TIPOS_REPARTO.map(({ tipo, clave, nombre }) => {
+          const n = numeroDe(tipo, clave);
+          return `${n} ${n === 1 ? nombre.slice(0, -1).toLowerCase() : nombre.toLowerCase()}`;
+        }).join(', ')}
+      </span>
+    </>
+  );
+
+  // En la hoja del guion: «7/7 jugadores vivos · 7/1/2/1»
   if (resumido)
     return (
       <p className="mt-1 text-sm text-hoja-lacre">
-        <span className="tabular-nums">
-          {jugadoresVivos}/{jugadores}
-        </span>{' '}
-        {jugadores === 1 ? 'jugador vivo' : 'jugadores vivos'}
+        {vivos}
         {hayReparto && (
           <>
-            <span aria-hidden="true">
-              {' · '}
-              {TIPOS_REPARTO.map(({ tipo, clave }, i) => (
-                <Fragment key={tipo}>
-                  {i > 0 && '/'}
-                  <span className={`font-semibold tabular-nums ${tipo === 'townsfolk' || tipo === 'outsider' ? 'text-hoja-bueno' : 'text-hoja-malvado'}`}>
-                    {numeroDe(tipo, clave)}
-                  </span>
-                </Fragment>
-              ))}
-            </span>
-            <span className="sr-only">
-              {'. '}
-              {TIPOS_REPARTO.map(({ tipo, clave, nombre }) => {
-                const n = numeroDe(tipo, clave);
-                return `${n} ${n === 1 ? nombre.slice(0, -1).toLowerCase() : nombre.toLowerCase()}`;
-              }).join(', ')}
-            </span>
+            <span aria-hidden="true">{' · '}</span>
+            <span className="sr-only">{'. '}</span>
+            {tipos({ bien: 'text-hoja-bueno', mal: 'text-hoja-malvado' })}
           </>
         )}
       </p>
     );
 
   return (
-    <section aria-labelledby="sala-reparto-titulo" className="sala-reparto text-sm" data-mal={mal || undefined}>
+    <section aria-labelledby="sala-reparto-titulo" className="sala-reparto text-sm" data-mal={mal || undefined} data-minimizado={minimizado || undefined}>
       <DefinicionesArco />
       {/* Las esquinas de latón de la placa */}
       <span aria-hidden="true" className="sala-reparto-esquina left-1 top-1" />
       <span aria-hidden="true" className="sala-reparto-esquina right-1 top-1 rotate-90" />
       <span aria-hidden="true" className="sala-reparto-esquina bottom-1 right-1 rotate-180" />
       <span aria-hidden="true" className="sala-reparto-esquina bottom-1 left-1 -rotate-90" />
+      {/* Minimizarlo y volver a verlo entero: el mismo botón en los dos, para que el foco no se pierda */}
+      {onMinimizar && (
+        <button
+          type="button"
+          aria-label="Reparto completo"
+          aria-expanded={!minimizado}
+          onClick={() => onMinimizar(!minimizado)}
+          className="absolute right-2 top-2 rounded p-1 text-gold-bright hover:bg-gold/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-main"
+        >
+          {minimizado ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
+        </button>
+      )}
+      {/* Minimizado, el título solo para quien navega por títulos */}
       <h2
         ref={tituloRef}
         id="sala-reparto-titulo"
         tabIndex={-1}
-        className="sala-reparto-titulo focus:outline-none"
+        className={`${minimizado ? 'sr-only' : 'sala-reparto-titulo'} focus:outline-none`}
       >
         Reparto de la partida
       </h2>
-      <p className="mt-1 text-center text-xs text-on-surface-muted">
-        <span className="font-display text-base leading-none text-on-surface-bright tabular-nums">
-          {jugadoresVivos}/{jugadores}
-        </span>{' '}
-        {jugadores === 1 ? 'jugador vivo' : 'jugadores vivos'}
-      </p>
-      {viajeros > 0 && (
-        <p className="text-center text-xs text-on-surface-muted">
-          <span className="font-display text-sm leading-none text-gold-bright tabular-nums">
-            {viajerosVivos}/{viajeros}
-          </span>{' '}
-          {viajeros === 1 ? 'viajero vivo' : 'viajeros vivos'}
+      {minimizado ? (
+        // «5/0/1/1 · 7/7 jugadores vivos»; si no cuadra, la placa sigue en rojo y se avisa
+        <p className="pr-6 text-center text-sm text-on-surface-muted">
+          {hayReparto && (
+            <>
+              <span className="font-display text-base leading-none">{tipos({ bien: 'text-good-bright', mal: 'text-blood-bright' })}</span>
+              <span aria-hidden="true">{' · '}</span>
+              <span className="sr-only">{'. '}</span>
+            </>
+          )}
+          <span className="text-on-surface-bright">{vivos}</span>
+          {mal && (
+            <>
+              <TriangleAlert size={14} className="ml-1.5 inline align-[-2px] text-blood-bright" />
+              <span className="sr-only">. La configuración de la partida no es correcta.</span>
+            </>
+          )}
         </p>
-      )}
-      <span aria-hidden="true" className="sala-reparto-filete" />
-      {!hayReparto ? (
-        <p className="text-center text-xs text-on-surface-muted italic">Hacen falta al menos 5 jugadores.</p>
       ) : (
         <>
-          {/* El narrador: los viajeros que hay (no tienen cupo: solo cuántos) */}
-          {!!cuentas?.traveller && (
-            <p className="mb-2 text-center text-xs text-on-surface-muted">
-              Viajeros {donde}:{' '}
-              <span className="font-display text-sm leading-none text-gold-bright tabular-nums">{cuentas.traveller}</span>
+          <p className="mt-1 text-center text-xs text-on-surface-muted">
+            <span className="font-display text-base leading-none text-on-surface-bright tabular-nums">
+              {jugadoresVivos}/{jugadores}
+            </span>{' '}
+            {jugadores === 1 ? 'jugador vivo' : 'jugadores vivos'}
+          </p>
+          {viajeros > 0 && (
+            <p className="text-center text-xs text-on-surface-muted">
+              <span className="font-display text-sm leading-none text-gold-bright tabular-nums">
+                {viajerosVivos}/{viajeros}
+              </span>{' '}
+              {viajeros === 1 ? 'viajero vivo' : 'viajeros vivos'}
             </p>
           )}
-          {/* Un arco por tipo, con el número dentro. Para todos, lo que toca por defecto; el
-              narrador ve lo que hay (en la bolsa o en juego) y, debajo, lo que toca con el
-              Barón y compañía (y el de por defecto, si cambia). El arco que no cuadra, en rojo */}
-          <dl className="grid grid-cols-4 gap-1.5">
-            {TIPOS_REPARTO.map(({ tipo, clave, nombre }) => {
-              const defecto = distribucion[clave] ?? 0;
-              const prevista = ajustado[clave] ?? 0;
-              const numero = numeroDe(tipo, clave);
-              // Lo que hay, mal si no es lo previsto y el reparto no vale (un Ermitaño puede
-              // dejar uno menos sin que esté mal; aceptado a mano, tampoco)
-              const fallo = !!cuentas && mal && numero !== prevista;
-              return (
-                <div
-                  key={tipo}
-                  className="sala-reparto-tipo"
-                  data-bando={tipo === 'townsfolk' || tipo === 'outsider' ? 'bien' : 'mal'}
-                  data-cero={numero === 0 || undefined}
-                  data-fallo={fallo || undefined}
-                >
-                  <dt className="sala-reparto-nombre">{nombre}</dt>
-                  <dd className="contents">
-                    <span className="sala-reparto-arco">
-                      <svg aria-hidden="true" viewBox="0 0 64 74">
-                        <use href="#sala-reparto-arco" />
-                      </svg>
-                      <span className="sala-reparto-numero">{numero}</span>
-                    </span>
-                    {cuentas && (
-                      <>
-                        <span className="sr-only"> {donde}</span>
-                        <span className="sala-reparto-toca">
-                          toca <b>{prevista}</b>
-                          {prevista !== defecto && (
-                            <>
-                              <span aria-hidden="true"> · def. </span>
-                              <span className="sr-only">, por defecto </span>
-                              {defecto}
-                            </>
-                          )}
+          <span aria-hidden="true" className="sala-reparto-filete" />
+          {!hayReparto ? (
+            <p className="text-center text-xs text-on-surface-muted italic">Hacen falta al menos 5 jugadores.</p>
+          ) : (
+            <>
+              {/* El narrador: los viajeros que hay (no tienen cupo: solo cuántos) */}
+              {!!cuentas?.traveller && (
+                <p className="mb-2 text-center text-xs text-on-surface-muted">
+                  Viajeros {donde}:{' '}
+                  <span className="font-display text-sm leading-none text-gold-bright tabular-nums">{cuentas.traveller}</span>
+                </p>
+              )}
+              {/* Un arco por tipo, con el número dentro. Para todos, lo que toca por defecto; el
+                  narrador ve lo que hay (en la bolsa o en juego) y, debajo, lo que toca con el
+                  Barón y compañía (y el de por defecto, si cambia). El arco que no cuadra, en rojo */}
+              <dl className="grid grid-cols-4 gap-1.5">
+                {TIPOS_REPARTO.map(({ tipo, clave, nombre }) => {
+                  const defecto = distribucion[clave] ?? 0;
+                  const prevista = ajustado[clave] ?? 0;
+                  const numero = numeroDe(tipo, clave);
+                  // Lo que hay, mal si no es lo previsto y el reparto no vale (un Ermitaño puede
+                  // dejar uno menos sin que esté mal; aceptado a mano, tampoco)
+                  const fallo = !!cuentas && mal && numero !== prevista;
+                  return (
+                    <div
+                      key={tipo}
+                      className="sala-reparto-tipo"
+                      data-bando={tipo === 'townsfolk' || tipo === 'outsider' ? 'bien' : 'mal'}
+                      data-cero={numero === 0 || undefined}
+                      data-fallo={fallo || undefined}
+                    >
+                      <dt className="sala-reparto-nombre">{nombre}</dt>
+                      <dd className="contents">
+                        <span className="sala-reparto-arco">
+                          <svg aria-hidden="true" viewBox="0 0 64 74">
+                            <use href="#sala-reparto-arco" />
+                          </svg>
+                          <span className="sala-reparto-numero">{numero}</span>
                         </span>
-                        {fallo && <span className="sr-only">, no cuadra</span>}
-                      </>
-                    )}
-                  </dd>
-                </div>
-              );
-            })}
-          </dl>
+                        {cuentas && (
+                          <>
+                            <span className="sr-only"> {donde}</span>
+                            <span className="sala-reparto-toca">
+                              toca <b>{prevista}</b>
+                              {prevista !== defecto && (
+                                <>
+                                  <span aria-hidden="true"> · def. </span>
+                                  <span className="sr-only">, por defecto </span>
+                                  {defecto}
+                                </>
+                              )}
+                            </span>
+                            {fallo && <span className="sr-only">, no cuadra</span>}
+                          </>
+                        )}
+                      </dd>
+                    </div>
+                  );
+                })}
+              </dl>
         </>
       )}
       {mal && (
@@ -215,6 +267,8 @@ const RepartoPartida = ({ distribucion, reparto, aceptarReparto, onError, resumi
       </div>
       {jugadores > 15 && (
         <p className="mt-2 text-center text-xs text-on-surface-muted italic">Más de 15: los que sobran tienen que ser viajeros.</p>
+      )}
+        </>
       )}
     </section>
   );

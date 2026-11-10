@@ -23,7 +23,7 @@ import { comprobarFinal } from '../../src/models/narradorVirtual/final/comprobar
 import { Revelando } from '../../src/models/narradorVirtual/etapas/Revelando';
 import { Violinista } from '../../src/models/narradorVirtual/etapas/Violinista';
 import { contarDisparo, exterminar } from '../../src/models/personajes/exterminador';
-import { duracionPrivados, PuestaEnComun, TRAS_GONG_MS } from '../../src/models/narradorVirtual/etapas/Dia';
+import { duracionPrivados, ESPERA_AMANECER_MS, Privados, PuestaEnComun, TRAS_GONG_MS } from '../../src/models/narradorVirtual/etapas/Dia';
 import { FRASES } from '../../src/models/narradorVirtual/frases';
 import { contextoNoche } from '../../src/models/narradorVirtual/plazaDeJuego';
 import { ficha, numero, tarjeta } from '../../src/models/partida/habilidades/HabilidadNocturna';
@@ -123,6 +123,11 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
         const error = juego.partida.reloj.ponerReloj(segundos, mensaje);
         if (!error) hechas.push({ accion: 'reloj:poner', datos: { segundos, mensaje } });
         return error ? { ok: false, error } : { ok: true };
+      },
+      terminarReloj: async () => {
+        juego.partida.reloj.terminarReloj();
+        hechas.push({ accion: 'reloj:terminar', datos: undefined });
+        return { ok: true };
       },
       revelarGrimorio: async (ganador) => {
         const error = juego.partida.revelarGrimorio(ganador, [], {});
@@ -581,6 +586,33 @@ describe('los privados del narrador virtual', () => {
     expect(FRASES.primerDia(240)).toMatch(/tenéis 4 minutos\.$/);
     expect(FRASES.primerDia(90)).toMatch(/tenéis 1 minuto y medio\.$/);
     expect(FRASES.primerDia(30)).toMatch(/tenéis medio minuto\.$/);
+  });
+
+  it('esperan a que acabe la animación del amanecer para poner el reloj; quien lo añadió puede terminarlo antes', async () => {
+    const m = plazaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
+    const programados: { ms: number; hacer: () => void }[] = [];
+    const siguientes: string[] = [];
+    const ctx: ContextoEtapa = {
+      ...m.ctx,
+      temporizador: { programar: (ms: number, hacer: () => void) => (programados.push({ ms, hacer }), () => {}) },
+      pasarA: async (etapa) => {
+        siguientes.push(etapa.id);
+      },
+    };
+    const acciones = () => m.hechas.map((h) => h.accion);
+    const privados = new Privados();
+    await privados.alEntrar(ctx);
+    // Aún amaneciendo: ni reloj ni privados, ni nada que terminar
+    expect(acciones()).not.toContain('reloj:poner');
+    expect(await privados.terminarReloj(ctx)).toBe('Ahora no hay ningún reloj que terminar.');
+    programados.find((p) => p.ms === ESPERA_AMANECER_MS)!.hacer();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(acciones()).toContain('reloj:poner');
+    expect(m.juego.partida.configuracion.privadosPermitidos()).toBe(true);
+    // Terminarlo: suena el gong (como si se agotara) y sigue la puesta en común
+    expect(await privados.terminarReloj(ctx)).toBeNull();
+    expect(acciones()).toContain('reloj:terminar');
+    expect(siguientes).toEqual(['puestaEnComun']);
   });
 
   it('al acabar suena el gong y, unos segundos después, se cierran', async () => {

@@ -101,33 +101,72 @@ export const nombreDeAsiento = (estado: SalaDto, jugadorId: string) => {
   return texto.charAt(0).toLocaleUpperCase('es') + texto.slice(1);
 };
 
+/** Un asiento para elegirlo en un despertar: su nombre para el lector y los avisos, y el de quien se sienta (null: libre). */
+export interface AsientoElegible {
+  id: string;
+  nombre: string;
+  jugador: string | null;
+}
+
+/** Los asientos de la plaza (también los libres: cuentan como jugadores), para elegirlos (se ven con NombreVisto). */
+export const asientosElegibles = (estado: SalaDto): AsientoElegible[] =>
+  estado.plaza.map((a) => ({ id: a.id, nombre: nombreDeAsiento(estado, a.id), jugador: datosAsiento(estado, a.id).ocupante?.nombre ?? null }));
+
+/**
+ * Una frase con asientos (los avisos y propuestas del despertar): trozos de texto y,
+ * donde va un asiento, su nombre para el lector y el de quien se sienta (null: libre).
+ * Se ve con FraseVista (el nombre del jugador, destacado) y se dice con paraLector.
+ */
+export type Frase = readonly (string | ParteAsiento)[];
+export type ParteAsiento = Pick<AsientoElegible, 'nombre' | 'jugador'>;
+
+/** Un asiento como trozo de una frase. */
+export const asientoEnFrase = (estado: SalaDto, jugadorId: string): ParteAsiento => ({
+  nombre: nombreDeAsiento(estado, jugadorId),
+  jugador: datosAsiento(estado, jugadorId).ocupante?.nombre ?? null,
+});
+
+/** Varias frases, como enumerar: «A, B y C». */
+export const enumerarFrases = (frases: readonly Frase[]): Frase =>
+  frases.flatMap((f, i) => [...(i === 0 ? [] : [i === frases.length - 1 ? ' y ' : ', ']), ...f]);
+
+/** Lo que oye el lector de una frase (con el asiento: «Asiento 3 (Bea)»), para los avisos. */
+export const paraLector = (frase: Frase): string => frase.map((p) => (typeof p === 'string' ? p : p.nombre)).join('');
+
 /** «Ana», «Ana y Luis», «Ana, Luis y Bea». */
 export const enumerar = (nombres: string[]) =>
   nombres.length <= 1 ? (nombres[0] ?? '') : `${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}`;
 
 /**
- * Un mensaje en una frase, para el lector: «Este jugador es: Asiento 3 (Bea);
- * Imp». (Los nombres en inglés no llevan su idioma aquí: es texto de un aviso.)
+ * Un mensaje en una frase: «Este jugador es: Asiento 3 (Bea); Imp». (Los nombres en
+ * inglés no llevan su idioma aquí: es texto de un aviso.)
  */
-export function describirMensaje(
+export function fraseDeMensaje(
   m: EnvioDespertar & Partial<Pick<MensajeDespertar, 'eleccion'>>,
   estado: SalaDto,
   personajes: Map<string, PersonajeMostrado>,
-): string {
+): Frase {
+  // «Personalizado»: solo su texto
+  if (m.ficha === 'personalizado') return [m.texto ?? ''];
   // «Haz una elección» de una habilidad: cuántos
   const cuantos = m.eleccion ? textoEleccion(m.eleccion.cantidad).toLocaleLowerCase('es') : '';
   const titulo = tarjetaDespertar(m.tarjeta)?.texto ?? fichaDespertar(m.ficha)?.etiqueta ?? '';
-  const partes = [
-    m.jugadores.length ? enumerar(m.jugadores.map((id) => nombreDeAsiento(estado, id))) : '',
-    m.personajes.length ? enumerar(m.personajes.map((id) => personajes.get(id)?.nombre.texto ?? id)) : '',
-    m.alineamiento ? NOMBRE_BANDO[m.alineamiento] : '',
-    m.texto ?? '',
-    cuantos,
-  ].filter(Boolean);
-  // «Personalizado»: solo su texto
-  if (m.ficha === 'personalizado') return m.texto ?? '';
-  return partes.length ? `${titulo}: ${partes.join('; ')}` : titulo;
+  const partes: Frase[] = [
+    m.jugadores.length ? enumerarFrases(m.jugadores.map((id) => [asientoEnFrase(estado, id)])) : [],
+    m.personajes.length ? [enumerar(m.personajes.map((id) => personajes.get(id)?.nombre.texto ?? id))] : [],
+    m.alineamiento ? [NOMBRE_BANDO[m.alineamiento]] : [],
+    m.texto ? [m.texto] : [],
+    cuantos ? [cuantos] : [],
+  ].filter((p) => p.length > 0);
+  return partes.length ? [`${titulo}: `, ...partes.flatMap((p, i) => (i === 0 ? p : ['; ', ...p]))] : [titulo];
 }
+
+/** Un mensaje en una frase, para el lector (ver fraseDeMensaje). */
+export const describirMensaje = (
+  m: EnvioDespertar & Partial<Pick<MensajeDespertar, 'eleccion'>>,
+  estado: SalaDto,
+  personajes: Map<string, PersonajeMostrado>,
+): string => paraLector(fraseDeMensaje(m, estado, personajes));
 
 /** Quién manda un mensaje: «Narrador», «Tú» o el asiento del jugador. */
 export const autorDe = (m: MensajeDespertar, estado: SalaDto) =>

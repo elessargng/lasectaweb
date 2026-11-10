@@ -61,6 +61,11 @@ export class NarradorVirtualController {
     this.comoAsincrono(sesion, responder, (yoId) => this.narradorVirtualService.turno(yoId, 'seguirNominando'));
   };
 
+  /** Quien lo añadió termina su reloj. */
+  terminarReloj = (sesion: Sesion, _peticion: unknown, responder: Responder<ResultadoAccion>): void => {
+    this.comoAsincrono(sesion, responder, (yoId) => this.narradorVirtualService.terminarReloj(yoId));
+  };
+
   /** Las declaraciones del día que se pueden hacer (cada una con su evento, `declarar:<id>`). */
   declaraciones(): string[] {
     return this.narradorVirtualService.declaraciones();

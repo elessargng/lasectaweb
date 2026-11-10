@@ -347,6 +347,7 @@ export function useSala(
       quitar: () => pedirAlSocket<ResultadoAccion>('narradorVirtual:quitar', {}),
       turno: (turno, jugadorId) => pedirAlSocket<ResultadoAccion>(`narradorVirtual:${turno}`, jugadorId === undefined ? {} : { jugadorId }),
       declarar: (id, datos) => pedirAlSocket<ResultadoAccion>(`declarar:${id}`, datos),
+      terminarReloj: () => pedirAlSocket<ResultadoAccion>('narradorVirtual:terminarReloj', {}),
     }),
     [pedirAlSocket],
   );
@@ -554,6 +555,8 @@ export interface AccionesNarradorVirtual {
   turno(turno: TurnoVirtual, jugadorId?: string): Promise<ResultadoAccion>;
   /** Una declaración del día (el Artista, el Patoso…): lo que lleve, según cuál. */
   declarar(id: string, datos: unknown): Promise<ResultadoAccion>;
+  /** Quien lo añadió termina su reloj (los privados, la puesta en común): suena el gong y sigue la partida. */
+  terminarReloj(): Promise<ResultadoAccion>;
 }
 
 /** Lo que hace el narrador de día (ver useSala). */
