@@ -18,8 +18,11 @@ function plaza(...personajes: string[]) {
   const juego = new SalaDeJuego(conSemilla(1));
   const { sala, partida } = juego;
   const guion = guionNoGreaterJoy();
-  // La Reclusa y el Espía, para ver cómo registran
-  partida.cambiarGuion({ ...guion, personajes: [...guion.personajes, personaje('recluse', 'outsider'), personaje('spy', 'minion')] });
+  // La Reclusa y el Espía, para ver cómo registran; la Costurera, sin despertar guiado (se despierta a mano)
+  partida.cambiarGuion({
+    ...guion,
+    personajes: [...guion.personajes, personaje('recluse', 'outsider'), personaje('spy', 'minion'), personaje('seamstress', 'townsfolk')],
+  });
   while (partida.plaza().length > personajes.length) sala.quitarAsiento();
   personajes.forEach((p, i) => {
     const { id } = sala.participantes.conectar(`s-${i}`, `c-${i}`, invitado(`J${i}`), () => true);
@@ -72,6 +75,37 @@ describe('No Greater Joy', () => {
     const f = m.fila('chambermaid')!;
     expect(f.estado).toBe('revisar');
     expect(f.opciones.map((o) => o.envio.ficha)).toEqual(['uno']);
+  });
+
+  it('la Camarera cuenta a quien se despierta a mano (aunque diga que no usa su habilidad), no a quien solo recibe la información de los malvados', () => {
+    // Con 7 jugadores, los esbirros y el demonio se conocen
+    const m = plaza('chambermaid', 'empath', 'imp', 'clockmaker', 'baron', 'sage', 'seamstress');
+    const { partida } = m.juego;
+    // El Barón despierta para saber quién es su demonio
+    expect(partida.guiado.despertar('esbirros')).toBeNull();
+    // A la Costurera se le despierta a mano y se le pregunta si usa su habilidad (una vez por partida); dice que no
+    const costurera = m.asiento(6).id;
+    expect(partida.despertares.despertar(costurera)).toBeNull();
+    partida.despertares.enviar(costurera, { ...ficha('si'), autor: 'narrador' });
+    partida.despertares.enviar(costurera, { ...ficha('no'), autor: costurera });
+    expect(partida.guiado.despertar('chambermaid')).toBeNull();
+    m.elegir(0, 4, 6);
+    expect(m.fila('chambermaid')!.opciones.map((o) => o.envio.ficha)).toEqual(['uno']);
+  });
+
+  it('la Camarera cuenta al malvado que, además de su información, despierta por su habilidad (el Espía)', () => {
+    const m = plaza('chambermaid', 'empath', 'imp', 'clockmaker', 'spy', 'sage', 'investigator');
+    const { partida } = m.juego;
+    // El Espía ve a su demonio y luego despierta por su habilidad: ve el grimorio
+    expect(partida.guiado.despertar('esbirros')).toBeNull();
+    expect(partida.guiado.despertar('spy')).toBeNull();
+    // Al Imp se le enseñan sus esbirros a mano: tampoco cuenta
+    const imp = m.asiento(2).id;
+    expect(partida.despertares.despertar(imp)).toBeNull();
+    expect(partida.enviarAlDespertar({ narrador: [imp], virtual: false }, { tarjeta: 'esbirros', jugadores: [m.asiento(4).id] })).toBeNull();
+    expect(partida.guiado.despertar('chambermaid')).toBeNull();
+    m.elegir(0, 2, 4);
+    expect(m.fila('chambermaid')!.opciones.map((o) => o.envio.ficha)).toEqual(['uno']);
   });
 
   it('el Sabio solo despierta si le mata el demonio, y sabe que es uno de dos', () => {

@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { Azar } from './azar';
-import { FICHAS_RESPUESTA_GUIADA, type EleccionDespertar, type EnvioDespertar, type MensajeDespertar } from '../compartido/despertar';
+import { FICHAS_RESPUESTA_GUIADA, TARJETAS_DE_LOS_MALVADOS, type EleccionDespertar, type EnvioDespertar, type MensajeDespertar } from '../compartido/despertar';
 import type { FichaEnviada } from './Entregas';
 import { NUM_FAROLES, type Alineamiento } from '../compartido/jugador';
 import { SALA_FORMAS_MANO, type FormaMano } from '../compartido/participante';
@@ -138,7 +138,8 @@ export class Partida {
     habilidades: () => habilidadesDelGuion(this.guion.ids()),
     noche: () => this.fases.actual().momento === 'noche',
     despertar: (jugadorId) => this.despertares.despertar(jugadorId),
-    mandar: (jugadorId, envio, eleccion) => this.mandarDelNarrador(jugadorId, envio, { eleccion, guiado: true }),
+    despiertos: () => this.despertares.despiertos(),
+    mandar: (jugadorId, envio, eleccion, porOtros) => this.mandarDelNarrador(jugadorId, envio, { eleccion, guiado: true, porOtros }),
     porEntender: (jugadorId) => this.despertares.porEntender(jugadorId),
     ponerRecordatorio: (jugadorId, personaje, texto) => this.ponerRecordatorioDe(jugadorId, personaje, texto),
     matarDeNoche: (jugadorId) => this.grimorio.cambiarVida(jugadorId, true),
@@ -482,9 +483,14 @@ export class Partida {
   mandarDelNarrador(
     jugadorId: string,
     envio: EnvioDespertar,
-    { eleccion, guiado = false }: { eleccion?: EleccionDespertar; guiado?: boolean } = {},
+    {
+      eleccion,
+      guiado = false,
+      // La información de los malvados (guiada o a mano) no es por su habilidad
+      porOtros = !!envio.tarjeta && TARJETAS_DE_LOS_MALVADOS.includes(envio.tarjeta),
+    }: { eleccion?: EleccionDespertar; guiado?: boolean; porOtros?: boolean } = {},
   ): void {
-    this.despertares.enviar(jugadorId, { ...envio, autor: 'narrador', guiado, ...(eleccion ? { eleccion } : {}) });
+    this.despertares.enviar(jugadorId, { ...envio, autor: 'narrador', guiado, porOtros, ...(eleccion ? { eleccion } : {}) });
     if (envio.tarjeta === 'tuEres') this.entregas.comunicarFicha(jugadorId, envio.personajes, envio.alineamiento);
   }
 

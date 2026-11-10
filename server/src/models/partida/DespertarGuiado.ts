@@ -39,8 +39,10 @@ export interface EntornoDespertarGuiado {
   noche: () => boolean;
   /** Abre el despertar de un asiento (ver Despertares.despertar). */
   despertar: (jugadorId: string) => string | null;
-  /** Manda algo del narrador a un asiento (con `eleccion`, se le pide que elija). */
-  mandar: (jugadorId: string, envio: EnvioDespertar, eleccion?: EleccionDespertar) => void;
+  /** Los asientos despertados esta noche por su habilidad (ver Despertares.despiertos). */
+  despiertos: () => string[];
+  /** Manda algo del narrador a un asiento (con `eleccion`, se le pide que elija; `porOtros`: ver MensajeDespertar). */
+  mandar: (jugadorId: string, envio: EnvioDespertar, eleccion?: EleccionDespertar, porOtros?: boolean) => void;
   /** A lo último que se le ha mandado a un asiento aún le falta el «Entendido» (ver Despertares.porEntender). */
   porEntender: (jugadorId: string) => boolean;
   /** Pone un recordatorio de un personaje (por su texto) en un asiento; único en la plaza. */
@@ -57,6 +59,8 @@ export interface EntornoDespertarGuiado {
 interface Envio {
   envio: EnvioDespertar;
   eleccion?: EleccionDespertar;
+  /** Solo le informa de otros (ver MensajeDespertar.porOtros). */
+  porOtros?: boolean;
 }
 
 interface Turno {
@@ -191,7 +195,7 @@ export class DespertarGuiado {
    * pone a la cola. El «Entendido» del narrador (a lo que ha elegido) no es un
    * despertar: va siempre, y cierra lo anterior.
    */
-  private entregar(jugadorId: string, { envio, eleccion }: Envio): void {
+  private entregar(jugadorId: string, { envio, eleccion, porOtros }: Envio): void {
     if (envio.ficha === 'entendido') {
       this.entorno.mandar(jugadorId, envio);
       this.alEntender(jugadorId);
@@ -199,8 +203,8 @@ export class DespertarGuiado {
     }
     const cola = this.colas.get(jugadorId) ?? [];
     const ocupado = !!this.entorno.ctx.plaza().find((a) => a.id === jugadorId)?.participanteId;
-    if (ocupado && (cola.length || this.entorno.porEntender(jugadorId))) this.colas.set(jugadorId, [...cola, { envio, eleccion }]);
-    else this.entorno.mandar(jugadorId, envio, eleccion);
+    if (ocupado && (cola.length || this.entorno.porEntender(jugadorId))) this.colas.set(jugadorId, [...cola, { envio, eleccion, porOtros }]);
+    else this.entorno.mandar(jugadorId, envio, eleccion, porOtros);
   }
 
   /** Lo último de un asiento ya está entendido: se le manda lo siguiente de su cola, si hay. */
@@ -209,7 +213,7 @@ export class DespertarGuiado {
     if (!siguiente) return;
     if (resto.length) this.colas.set(jugadorId, resto);
     else this.colas.delete(jugadorId);
-    this.entorno.mandar(jugadorId, siguiente.envio, siguiente.eleccion);
+    this.entorno.mandar(jugadorId, siguiente.envio, siguiente.eleccion, siguiente.porOtros);
   }
 
 
@@ -234,14 +238,6 @@ export class DespertarGuiado {
     const ctx = { ...this.entorno.ctx, despertados: () => this.despertados() };
     // La respuesta a lo que ha elegido es del mismo despertar: no espera en la cola
     this.aplicar(turno.personaje, jugador, habilidad.alElegir(ctx, jugador, elegidosEnPlaza), true);
-  }
-
-  /**
-   * Los asientos despertados esta noche por su habilidad: los que tienen turno (solo
-   * se guarda al despertarlos), sin la información de los esbirros y del demonio.
-   */
-  private despertados(): string[] {
-    return this.turnos.filter((t) => t.personaje !== 'esbirros' && t.personaje !== 'demonios').map((t) => t.asiento);
   }
 
   /**
@@ -275,9 +271,21 @@ export class DespertarGuiado {
     this.entorno.cambiarPersonaje(jugadorId, 'imp');
     const error = this.entorno.despertar(jugadorId);
     if (error) return error;
-    this.entregar(jugadorId, { envio: tarjeta('tuEres', { personajes: ['imp'], alineamiento: 'malvado' }) });
+    // No despierta por su habilidad: se le dice que es el Imp
+    this.entregar(jugadorId, { envio: tarjeta('tuEres', { personajes: ['imp'], alineamiento: 'malvado' }), porOtros: true });
     this.impQueMuere = null;
     return null;
+  }
+
+  /**
+   * Los asientos despertados esta noche por su habilidad (lo que ve la Camarera): los
+   * que tienen turno de la suya (el Espía, aunque solo se le mande el grimorio) y a
+   * los que el narrador ha mandado algo que no es solo informarles de otros
+   * (ver Despertares.despiertos: también a mano, aunque digan que no la usan).
+   */
+  private despertados(): string[] {
+    const propios = this.turnos.filter((t) => t.personaje !== 'esbirros' && t.personaje !== 'demonios').map((t) => t.asiento);
+    return [...new Set([...propios, ...this.entorno.despiertos()])];
   }
 
   /** Otra noche (u otra partida): se empieza de cero. */

@@ -27,6 +27,12 @@ export const TARJETAS_DESPERTAR = [
 
 export type TarjetaDespertar = (typeof TARJETAS_DESPERTAR)[number];
 
+/**
+ * Las tarjetas de la información de los malvados (su demonio, sus esbirros, los
+ * faroles): quien la recibe no despierta por su habilidad (ver MensajeDespertar.porOtros).
+ */
+export const TARJETAS_DE_LOS_MALVADOS: readonly TarjetaDespertar[] = ['demonio', 'esbirros', 'noEnJuego'];
+
 /** Lo que lleva cada ficha o tarjeta además de sí misma. */
 export interface AdjuntoDespertar {
   jugadores?: boolean;
@@ -74,6 +80,12 @@ export interface MensajeDespertar {
    * «Entendido» o con un texto («Personalizado»).
    */
   guiado: boolean;
+  /**
+   * Solo informa de otros: no despierta por su habilidad (la información de los
+   * malvados, decirle a uno que es el nuevo Imp). Lo demás del narrador de noche sí,
+   * aunque conteste que no la usa: es lo que ve la Camarera (ver Despertares.despiertos).
+   */
+  porOtros: boolean;
   /** En qué momento de la partida se mandó («Noche 2»). */
   fase: { momento: Fase['momento']; numero: number };
   /** ms */
@@ -81,7 +93,7 @@ export interface MensajeDespertar {
 }
 
 /** Lo que se manda en un despertar, sin quién, cuándo ni elección. */
-export type EnvioDespertar = Omit<MensajeDespertar, 'id' | 'autor' | 'fase' | 'hora' | 'eleccion' | 'guiado'>;
+export type EnvioDespertar = Omit<MensajeDespertar, 'id' | 'autor' | 'fase' | 'hora' | 'eleccion' | 'guiado' | 'porOtros'>;
 
 /** La elección que pide una habilidad: a cuántos jugadores y si puede elegirse a sí mismo. */
 export interface EleccionDespertar {

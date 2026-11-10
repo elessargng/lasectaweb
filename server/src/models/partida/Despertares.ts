@@ -92,12 +92,12 @@ export class Despertares {
    */
   enviar(
     jugadorId: string,
-    mensaje: Omit<MensajeDespertar, 'id' | 'hora' | 'fase' | 'eleccion' | 'guiado'> & Partial<Pick<MensajeDespertar, 'eleccion' | 'guiado'>>,
+    mensaje: Omit<MensajeDespertar, 'id' | 'hora' | 'fase' | 'eleccion' | 'guiado' | 'porOtros'> & Partial<Pick<MensajeDespertar, 'eleccion' | 'guiado' | 'porOtros'>>,
   ): void {
     const hilo = this.alDia().find((h) => h.jugador === jugadorId);
     if (!hilo) return;
     const { momento, numero } = this.fase();
-    hilo.mensajes.push({ eleccion: null, guiado: false, ...mensaje, id: randomUUID(), hora: Date.now(), fase: { momento, numero } });
+    hilo.mensajes.push({ eleccion: null, guiado: false, porOtros: false, ...mensaje, id: randomUUID(), hora: Date.now(), fase: { momento, numero } });
     if (hilo.mensajes.length > SALA_MENSAJES_DESPERTAR_MAX) hilo.mensajes.shift();
     this.diario.anotar({
       tipo: 'despertar',
@@ -121,6 +121,17 @@ export class Despertares {
   /** Vuelven los despertares de una instantánea. */
   restaurar(hilos: HiloDespertar[]): void {
     this.hilos = hilos;
+  }
+
+  /**
+   * Los asientos despertados esta noche por su habilidad (los despertares se cierran
+   * al amanecer): a los que el narrador ha mandado algo que no es solo informarle de
+   * otros (ver MensajeDespertar.porOtros), guiado o a mano.
+   */
+  despiertos(): string[] {
+    return this.alDia()
+      .filter((h) => h.mensajes.some((m) => m.autor === 'narrador' && !m.porOtros))
+      .map((h) => h.jugador);
   }
 
   /** Se acaban todos (al amanecer o en otra partida). */
