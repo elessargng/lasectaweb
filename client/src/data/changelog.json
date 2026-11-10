@@ -1,5 +1,51 @@
 [
   {
+    "version": "1.8.0",
+    "date": "2026-11-10",
+    "title": "Álbum",
+    "description": "Llegan las fotos de los eventos, públicas o privadas, con su línea de tiempo en la agenda. El narrador virtual lleva cualquier guion del que conozca todos los personajes, y la sala estrena la tecla de llamada.",
+    "changes": [
+      {
+        "category": "Narrador",
+        "items": [
+          "Añadido el aviso de final de partida al ejecutar al último demonio.",
+          "Añadida la opción de nominarse a uno mismo con narrador virtual.",
+          "El narrador virtual contesta de broma a quien pregunta como Artista sin serlo.",
+          "Las declaraciones del día, solo con personajes del guion.",
+          "Añadidos los despertares guiados a los guiones cargados desde JSON.",
+          "Añadido el botón de despertar en la hoja de noche a los personajes sin despertar guiado.",
+          "El narrador virtual lleva cualquier guion del que conozca todos los personajes, también uno cargado desde JSON.",
+          "La Camarera cuenta también a quien se despierta a mano.",
+          "El narrador virtual mezcla los asientos antes de la primera noche.",
+          "El narrador virtual espera a que acabe el amanecer para poner el reloj.",
+          "Quien añade al narrador virtual puede terminar su reloj.",
+          "Tras votar, se destaca en dorado lo que toca: marcar, desmarcar o cerrar."
+        ]
+      },
+      {
+        "category": "Jugadores",
+        "items": [
+          "Añadido el aviso de tu nuevo asiento al mezclar los jugadores.",
+          "En los despertares se ve el nombre del jugador, más grande y en negrita, y no el del asiento.",
+          "Añadido el botón para minimizar el reparto de la partida."
+        ]
+      },
+      {
+        "category": "Accesibilidad",
+        "items": [
+          "Añadida la tecla de llamada (Ctrl + Alt + L) en Accesibilidad."
+        ]
+      },
+      {
+        "category": "Rituales",
+        "items": [
+          "Añadida la subida de fotos a los eventos, públicas o privadas.",
+          "Añadida la vista «Fotos», con la línea de tiempo de los eventos."
+        ]
+      }
+    ]
+  },
+  {
     "version": "1.7.0",
     "date": "2026-10-30",
     "title": "Jarvis",
@@ -23,13 +69,6 @@
           "Añadida la pausa del narrador virtual al ejecutar, antes de la noche o de revelar el grimorio.",
           "Añadidas las pausas del narrador virtual al contar el disparo del Exterminador.",
           "Añadido el anuncio del bando ganador al revelar el grimorio.",
-          "Añadido el aviso de final de partida al ejecutar al último demonio.",
-          "Añadida la opción de nominarse a uno mismo con narrador virtual.",
-          "El narrador virtual contesta de broma a quien pregunta como Artista sin serlo.",
-          "Las declaraciones del día, solo con personajes del guion.",
-          "Añadidos los despertares guiados a los guiones cargados desde JSON.",
-          "Añadido el botón de despertar en la hoja de noche a los personajes sin despertar guiado.",
-          "El narrador virtual lleva cualquier guion del que conozca todos los personajes, también uno cargado desde JSON.",
           "Añadidas las elecciones de cada noche y el veneno a lo que cuenta el narrador virtual al revelar.",
           "La Mujer Escarlata que hereda el demonio pasa a ser el Imp con narrador virtual.",
           "Al revelar el grimorio se paran el reloj, las votaciones y los señalamientos.",
