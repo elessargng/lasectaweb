@@ -27,6 +27,26 @@ export interface RitualAttendee {
   signedUpAt: string;
 }
 
+/** Cuántas fotos se suben de una vez (como en el servidor). */
+export const MAX_PHOTOS_PER_UPLOAD = 8;
+
+/**
+ * Una foto de un evento, que sube cualquier persona registrada: lo que se ve en ella y
+ * si la ve todo el mundo o solo quien la subió.
+ */
+export interface RitualPhoto {
+  id: string;
+  src: string;
+  alt: string;
+  public: boolean;
+  uploadedBy: string;
+  uploadedByUsername?: string;
+  uploadedAt: string;
+}
+
+/** Una foto al subirla: la imagen en data URL. */
+export type NewRitualPhoto = Pick<RitualPhoto, 'src' | 'alt' | 'public'>;
+
 export interface Ritual {
   id: string;
   type: RitualType;
@@ -66,6 +86,8 @@ export interface Ritual {
    * repetición se queda solo con la suya.
    */
   attendees?: RitualAttendee[];
+  /** Solo en los eventos: las fotos públicas y las privadas propias, en el orden en que se subieron. */
+  photos?: RitualPhoto[];
   /**
    * Solo en el cliente, al desplegar una serie periódica: cuándo empieza la
    * serie (startsAt es el de esta repetición) y una clave única por repetición.
@@ -112,9 +134,17 @@ const authHeaders = (token: string) => ({
   Authorization: `Bearer ${token}`
 });
 
-export async function listRituals(from: Date, to: Date): Promise<Ritual[]> {
+/** Con sesión, para que lleguen también las fotos privadas propias. */
+const sessionHeaders = (token?: string | null): HeadersInit => (token ? { Authorization: `Bearer ${token}` } : {});
+
+export async function listRituals(from: Date, to: Date, token?: string | null): Promise<Ritual[]> {
   const params = new URLSearchParams({ from: from.toISOString(), to: to.toISOString() });
-  return parseApiResponse(await fetch(`${API_URL}/rituals?${params}`));
+  return parseApiResponse(await fetch(`${API_URL}/rituals?${params}`, { headers: sessionHeaders(token) }));
+}
+
+/** Los eventos con fotos (las públicas y las privadas propias), del más reciente al más antiguo. */
+export async function listPhotoTimeline(token?: string | null): Promise<Ritual[]> {
+  return parseApiResponse(await fetch(`${API_URL}/rituals/photos`, { headers: sessionHeaders(token) }));
 }
 
 export async function listStorytellers(token: string): Promise<Storyteller[]> {
@@ -153,6 +183,28 @@ export async function leaveRitual(token: string, ritual: Ritual): Promise<void> 
   const query = occurrence ? `?${new URLSearchParams({ occurrence })}` : '';
   await parseApiResponse(
     await fetch(`${API_URL}/rituals/${ritual.id}/signups${query}`, { method: 'DELETE', headers: authHeaders(token) })
+  );
+}
+
+export async function uploadRitualPhotos(token: string, ritualId: string, photos: NewRitualPhoto[]): Promise<void> {
+  await parseApiResponse(
+    await fetch(`${API_URL}/rituals/${ritualId}/photos`, { method: 'POST', headers: authHeaders(token), body: JSON.stringify({ photos }) })
+  );
+}
+
+export async function setRitualPhotoPublic(token: string, ritualId: string, photoId: string, isPublic: boolean): Promise<void> {
+  await parseApiResponse(
+    await fetch(`${API_URL}/rituals/${ritualId}/photos/${photoId}`, {
+      method: 'PATCH',
+      headers: authHeaders(token),
+      body: JSON.stringify({ public: isPublic })
+    })
+  );
+}
+
+export async function deleteRitualPhoto(token: string, ritualId: string, photoId: string): Promise<void> {
+  await parseApiResponse(
+    await fetch(`${API_URL}/rituals/${ritualId}/photos/${photoId}`, { method: 'DELETE', headers: authHeaders(token) })
   );
 }
 

@@ -31,6 +31,17 @@ export class RitualRepository {
     return rows.map((row) => this.mapRow(row));
   }
 
+  /** Los eventos con alguna foto, del más reciente al más antiguo (para la línea de tiempo). */
+  async listWithPhotos(): Promise<Ritual[]> {
+    const db = await DatabaseRepository.getInstance();
+    const rows = await db.all<any[]>(
+      `${SELECT_RITUAL}
+        WHERE r.type = 'jornada' AND EXISTS (SELECT 1 FROM ritual_photos p WHERE p.ritualId = r.id)
+        ORDER BY r.startsAt DESC`
+    );
+    return rows.map((row) => this.mapRow(row));
+  }
+
   async findById(id: string): Promise<Ritual | undefined> {
     const db = await DatabaseRepository.getInstance();
     const row = await db.get<any>(`${SELECT_RITUAL} WHERE r.id = ?`, [id]);

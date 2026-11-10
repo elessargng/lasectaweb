@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight, Loader2, Plus, ScrollText } from 'lucide-react';
+import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight, Images, Loader2, Plus, ScrollText } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
 import RitualCalendar from '../components/rituales/RitualCalendar';
 import RitualWeek from '../components/rituales/RitualWeek';
 import RitualAgenda from '../components/rituales/RitualAgenda';
+import RitualPhotoTimeline from '../components/rituales/RitualPhotoTimeline';
 import RitualExportMenu from '../components/rituales/RitualExportMenu';
 import RitualCard from '../components/rituales/RitualCard';
 import RitualFormModal from '../components/rituales/RitualFormModal';
@@ -30,6 +31,7 @@ import {
   createRitual,
   deleteRitual,
   leaveRitual,
+  listPhotoTimeline,
   listRituals,
   listStorytellers,
   signUpForRitual,
@@ -40,19 +42,20 @@ import {
 } from '../utils/ritualsApi';
 
 
-type View = 'mes' | 'semana' | 'agenda';
+type View = 'mes' | 'semana' | 'agenda' | 'fotos';
 
 const VIEWS = [
   ['mes', 'Mes', CalendarDays],
   ['semana', 'Semana', CalendarRange],
-  ['agenda', 'Agenda', ScrollText]
+  ['agenda', 'Agenda', ScrollText],
+  ['fotos', 'Fotos', Images]
 ] as const;
 
 /** La vista por defecto es la semana; el mes y la agenda van indicados en la URL. */
 const DEFAULT_VIEW: View = 'semana';
 
 function parseView(raw: string | null): View {
-  return raw === 'mes' || raw === 'semana' || raw === 'agenda' ? raw : DEFAULT_VIEW;
+  return raw === 'mes' || raw === 'semana' || raw === 'agenda' || raw === 'fotos' ? raw : DEFAULT_VIEW;
 }
 
 const Rituales = () => {
@@ -68,6 +71,8 @@ const Rituales = () => {
 
   const [rituals, setRituals] = useState<Ritual[]>([]);
   const [loading, setLoading] = useState(true);
+  // La línea de tiempo de las fotos (vista «Fotos»): null mientras se carga
+  const [timeline, setTimeline] = useState<Ritual[] | null>(null);
   const [error, setError] = useState('');
 
   const [storytellers, setStorytellers] = useState<Storyteller[]>([]);
@@ -110,17 +115,30 @@ const Rituales = () => {
     setError('');
     try {
       // Las partidas periódicas llegan como serie y aquí se despliegan.
-      setRituals(expandOccurrences(await listRituals(range.from, range.to), range.from, range.to));
+      setRituals(expandOccurrences(await listRituals(range.from, range.to, token), range.from, range.to));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cargar la agenda.');
     } finally {
       setLoading(false);
     }
-  }, [range]);
+  }, [range, token]);
 
   useEffect(() => {
     fetchRituals();
   }, [fetchRituals]);
+
+  const fetchTimeline = useCallback(async () => {
+    try {
+      setTimeline(await listPhotoTimeline(token));
+    } catch (err) {
+      setTimeline([]);
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar las fotos.');
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (view === 'fotos') void fetchTimeline();
+  }, [view, fetchTimeline]);
 
   useEffect(() => {
     if (canManage && token) {
@@ -243,6 +261,7 @@ const Rituales = () => {
   const handleSave = async (input: RitualInput) => {
     const saved = editing ? await updateRitual(token!, editing.id, input) : await createRitual(token!, input);
     await fetchRituals();
+    if (view === 'fotos') await fetchTimeline();
     selectDay(startOfDay(new Date(saved.startsAt)));
   };
 
@@ -253,6 +272,7 @@ const Rituales = () => {
     try {
       await deleteRitual(token!, ritual.id);
       await fetchRituals();
+      if (view === 'fotos') await fetchTimeline();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo borrar el ritual.');
     }
@@ -289,6 +309,7 @@ const Rituales = () => {
       ? `${weekStart.getDate()} – ${weekEnd.getDate()} ${weekEnd.toLocaleDateString('es-ES', { month: 'short' })}`
       : `${weekStart.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} – ${weekEnd.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`;
   const unit = view === 'semana' ? 'Semana' : 'Mes';
+  const enFotos = view === 'fotos';
 
   const dayPanel = (
     <DayPanel
@@ -317,6 +338,9 @@ const Rituales = () => {
         <div className="panel-premium rounded-sm mx-3 md:mx-0 px-4 py-6 md:p-8">
           {/* Cabecera: mes, navegación y vista */}
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-5 mb-7">
+            {enFotos ? (
+              <h2 className="font-display text-3xl md:text-[2.6rem] text-gilded leading-tight">Fotos de los eventos</h2>
+            ) : (
             <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
               <div>
                 <p className="eyebrow">
@@ -338,6 +362,7 @@ const Rituales = () => {
                 </button>
               </div>
             </div>
+            )}
 
             <div className="flex flex-wrap items-center gap-3">
               {view === 'agenda' && (
@@ -364,8 +389,9 @@ const Rituales = () => {
             </div>
           </div>
 
-          {/* Leyenda: también sirve de filtro */}
+          {/* Leyenda: también sirve de filtro (no en las fotos, que son todas de eventos) */}
           {/* El color de cada tipo solo vive en su icono; el chip en sí sigue el latón de la web */}
+          {!enFotos && (
           <div role="group" aria-label="Mostrar tipos de ritual" className="flex flex-wrap gap-2 mb-7 pb-6 border-b border-outline-ghost/60">
             {RITUAL_KIND_ORDER.map((kind) => {
               const style = RITUAL_KINDS[kind];
@@ -394,6 +420,7 @@ const Rituales = () => {
               );
             })}
           </div>
+          )}
 
           {error && (
             <div role="alert" className="aviso-error mb-6">{error}</div>
@@ -437,6 +464,13 @@ const Rituales = () => {
                     onSelectRitual={pickRitual}
                   />
                 ))}
+              {/* «Ver el evento» lo abre aquí mismo, encima de la línea de tiempo */}
+              {enFotos &&
+                (timeline === null ? (
+                  <Loader2 className="w-6 h-6 animate-spin text-theme-main mx-auto my-12" />
+                ) : (
+                  <RitualPhotoTimeline rituals={timeline} onOpen={(r) => selectDay(startOfDay(new Date(r.startsAt)), keyOf(r))} />
+                ))}
             </div>
 
             {/* Solo en el móvil y en la vista de mes, donde las casillas no caben más que sellos:
@@ -463,6 +497,12 @@ const Rituales = () => {
         <RitualDetailModal
           ritual={openRitual}
           canManage={canManage}
+          token={token}
+          userId={user?.id}
+          onPhotosChanged={async () => {
+            await fetchRituals();
+            if (view === 'fotos') await fetchTimeline();
+          }}
           signup={signup}
           onClose={closeRitual}
           onEdit={openEdit}

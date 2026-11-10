@@ -1000,6 +1000,27 @@ export class DatabaseRepository {
     await this.applyMigration('033_partidas_diario', async (db) => {
       await db.exec('ALTER TABLE sala_partidas ADD COLUMN diario TEXT;');
     });
+
+    // Migración 034: las fotos de los eventos, que sube cualquier persona registrada
+    //
+    // Cada una, de quien la subió: pública (la ve todo el mundo) o privada (solo quien la subió).
+    await this.applyMigration('034_add_ritual_photos_table', async (db) => {
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS ritual_photos (
+          id TEXT PRIMARY KEY,
+          ritualId TEXT NOT NULL,
+          src TEXT NOT NULL,
+          alt TEXT NOT NULL,
+          public INTEGER NOT NULL DEFAULT 0,
+          uploadedBy TEXT NOT NULL,
+          createdAt DATETIME NOT NULL,
+          FOREIGN KEY (ritualId) REFERENCES rituals(id) ON DELETE CASCADE,
+          FOREIGN KEY (uploadedBy) REFERENCES users(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_ritual_photos_ritual ON ritual_photos(ritualId, createdAt);
+      `);
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

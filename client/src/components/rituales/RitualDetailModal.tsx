@@ -15,6 +15,7 @@ import {
   X
 } from 'lucide-react';
 import type { Ritual } from '../../utils/ritualsApi';
+import RitualPhotos from './RitualPhotos';
 import Dialog from '../Dialog';
 import { RITUAL_KINDS, alpha, kindOf } from './ritualKinds';
 import { describeRecurrence, formatLongDay, formatTime, isMultiDay, ritualPath } from './ritualDates';
@@ -48,6 +49,11 @@ function describeWhen(ritual: Ritual): string {
 interface RitualDetailModalProps {
   ritual: Ritual;
   canManage: boolean;
+  /** Para subir fotos a un evento (sin sesión, solo se miran). */
+  token: string | null;
+  userId?: string;
+  /** Tras subir, cambiar o borrar fotos: recargar la agenda. */
+  onPhotosChanged: () => Promise<void>;
   signup: SignupActions;
   onClose: () => void;
   onEdit: (ritual: Ritual) => void;
@@ -62,7 +68,7 @@ interface RitualDetailModalProps {
  * El color del tipo de ritual solo identifica (medallón y rótulo); el resto
  * del modal usa el latón de la web.
  */
-export const RitualDetailModal = ({ ritual, canManage, signup, onClose, onEdit, onDelete }: RitualDetailModalProps) => {
+export const RitualDetailModal = ({ ritual, canManage, token, userId, onPhotosChanged, signup, onClose, onEdit, onDelete }: RitualDetailModalProps) => {
   const style = RITUAL_KINDS[kindOf(ritual)];
   const Icon = style.icon;
   const cancelled = ritual.status === 'cancelado';
@@ -203,6 +209,11 @@ export const RitualDetailModal = ({ ritual, canManage, signup, onClose, onEdit, 
             <section>
               <RitualAttendees ritual={ritual} actions={signup} />
             </section>
+          )}
+
+          {/* Fotos: solo en los eventos de La Secta; las sube cualquier persona registrada */}
+          {ritual.type === 'jornada' && ritual.source === 'secta' && (
+            <RitualPhotos ritual={ritual} token={token} userId={userId} canManage={canManage} onChanged={onPhotosChanged} />
           )}
 
           {lists.length > 0 && (

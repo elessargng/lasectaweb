@@ -11,6 +11,8 @@ export interface ImagenRepository {
   guardar(coleccion: string, extension: string, datos: Buffer): string;
   /** Si la ruta pública es la de una imagen guardada aquí, en esa colección. */
   existe(coleccion: string, ruta: string): boolean;
+  /** Borra la imagen de esa ruta pública, si es de esa colección (si no, nada). */
+  borrar(coleccion: string, ruta: string): void;
 }
 
 /** El nombre que se le da a cada imagen guardada: un UUID con su extensión. */
@@ -43,6 +45,11 @@ export class ImagenDiscoRepository implements ImagenRepository {
     const nombre = nombreEn(this.rutaBase, coleccion, ruta);
     return !!nombre && fs.existsSync(path.join(this.carpeta, coleccion, nombre));
   }
+
+  borrar(coleccion: string, ruta: string): void {
+    const nombre = nombreEn(this.rutaBase, coleccion, ruta);
+    if (nombre) fs.rmSync(path.join(this.carpeta, coleccion, nombre), { force: true });
+  }
 }
 
 /** Imágenes en memoria (para los tests): solo se apunta su ruta. */
@@ -59,5 +66,9 @@ export class MemoriaImagenRepository implements ImagenRepository {
 
   existe(coleccion: string, ruta: string): boolean {
     return nombreEn(this.rutaBase, coleccion, ruta) !== null && this.guardadas.has(ruta);
+  }
+
+  borrar(coleccion: string, ruta: string): void {
+    if (nombreEn(this.rutaBase, coleccion, ruta) !== null) this.guardadas.delete(ruta);
   }
 }

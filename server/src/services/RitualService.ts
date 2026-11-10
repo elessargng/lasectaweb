@@ -3,6 +3,7 @@ import { RitualRepository } from '../repositories/RitualRepository';
 import { RitualSignupRepository } from '../repositories/RitualSignupRepository';
 import { UserRepository } from '../repositories/UserRepository';
 import { VillacuervosService } from './VillacuervosService';
+import { FotosRitual } from './FotosRitual';
 import { PublicPlayListSchema } from '../infra/villacuervos/esquemas';
 import {
   Ritual,
@@ -55,7 +56,8 @@ export class RitualService {
     private ritualRepository: RitualRepository,
     private userRepository: UserRepository,
     private villacuervosService: VillacuervosService,
-    private signupRepository: RitualSignupRepository
+    private signupRepository: RitualSignupRepository,
+    private fotos: FotosRitual
   ) {}
 
   /**
@@ -103,7 +105,7 @@ export class RitualService {
    * también para las partidas de aquí publicadas allí. Si Villacuervos no
    * responde, la agenda se sirve igualmente, sin sus partidas ni sus listas.
    */
-  async listBetween(from: string, to: string): Promise<Ritual[]> {
+  async listBetween(from: string, to: string, viewerId?: string): Promise<Ritual[]> {
     const fromDate = new Date(from);
     const toDate = new Date(to);
     if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime()) || toDate <= fromDate) {
@@ -115,7 +117,10 @@ export class RitualService {
 
     const fromIso = fromDate.toISOString();
     const toIso = toDate.toISOString();
-    const own = await this.withAttendees((await this.ritualRepository.listBetween(fromIso, toIso)).map(withVillacuervosUrl));
+    const own = await this.fotos.adjuntar(
+      await this.withAttendees((await this.ritualRepository.listBetween(fromIso, toIso)).map(withVillacuervosUrl)),
+      viewerId
+    );
     const external = await this.listVillacuervosPlays(fromIso, toIso, own);
 
     return [...own, ...external].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
@@ -130,9 +135,11 @@ export class RitualService {
       .sort((a, b) => a.username.localeCompare(b.username));
   }
 
-  async getById(id: string): Promise<Ritual | undefined> {
+  /** Un ritual, con las fotos que puede ver quien lo pide. */
+  async getById(id: string, viewerId?: string): Promise<Ritual | undefined> {
     const ritual = await this.ritualRepository.findById(id);
-    return ritual ? (await this.withAttendees([withVillacuervosUrl(ritual)]))[0] : undefined;
+    if (!ritual) return undefined;
+    return (await this.fotos.adjuntar(await this.withAttendees([withVillacuervosUrl(ritual)]), viewerId))[0];
   }
 
   /**
@@ -191,7 +198,7 @@ export class RitualService {
         ritual.attendanceMode === 'intencion' ? 'Ya habías dicho que quieres asistir.' : 'Ya estás apuntado a esta partida.'
       );
     }
-    return (await this.getById(id))!;
+    return (await this.getById(id, userId))!;
   }
 
   async leave(userId: string, id: string, rawOccurrence: unknown): Promise<Ritual> {
@@ -201,7 +208,7 @@ export class RitualService {
         ritual.attendanceMode === 'intencion' ? 'No habías dicho que quisieras asistir.' : 'No estabas apuntado a esta partida.'
       );
     }
-    return (await this.getById(id))!;
+    return (await this.getById(id, userId))!;
   }
 
   /**
@@ -242,7 +249,7 @@ export class RitualService {
     input.signupsInLaSecta = !!villacuervos && raw?.signupsInLaSecta === true;
 
     await this.ritualRepository.create(id, userId, input, villacuervos);
-    return (await this.getById(id))!;
+    return (await this.getById(id, userId))!;
   }
 
   async update(userId: string, id: string, raw: any): Promise<Ritual> {
@@ -252,7 +259,7 @@ export class RitualService {
     }
     const input = await this.validate(raw);
     await this.ritualRepository.update(id, input);
-    return (await this.getById(id))!;
+    return (await this.getById(id, userId))!;
   }
 
   async delete(userId: string, id: string): Promise<void> {
@@ -260,6 +267,8 @@ export class RitualService {
     if (!(await this.ritualRepository.findById(id))) {
       throw new Error('El ritual no existe.');
     }
+    // Sus fotos, del disco (de la base de datos se van con el ritual)
+    await this.fotos.borrarDelRitual(id);
     await this.ritualRepository.delete(id);
   }
 

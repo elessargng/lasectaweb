@@ -1,3 +1,5 @@
+import type { ReglaImagen } from './imagenes';
+
 export type RitualType = 'partida_online' | 'partida_presencial' | 'jornada';
 export type RitualManager = 'secta' | 'villacuervos';
 export type RitualStatus = 'programado' | 'cancelado';
@@ -30,6 +32,26 @@ export interface RitualAttendee {
   username: string;
   profilePicture?: string;
   signedUpAt: string;
+}
+
+/**
+ * Una foto de un evento, que sube cualquier persona registrada (antes, durante o
+ * después): lo que se ve en ella (para quien no la ve) y si la ve todo el mundo o
+ * solo quien la subió.
+ */
+export interface RitualPhoto {
+  id: string;
+  src: string;
+  alt: string;
+  public: boolean;
+  uploadedBy: string;
+  uploadedByUsername?: string;
+  uploadedAt: string;
+}
+
+/** Si alguien (o nadie, sin sesión) puede ver una foto: las públicas, todos; las privadas, quien la subió. */
+export function puedeVerFoto(foto: RitualPhoto, userId?: string): boolean {
+  return foto.public || (!!userId && foto.uploadedBy === userId);
 }
 
 export interface Ritual {
@@ -85,6 +107,8 @@ export interface Ritual {
    * las de todas sus repeticiones, cada una con su occurrence.
    */
   attendees?: RitualAttendee[];
+  /** Solo en los eventos: las fotos que puede ver quien lo pide, en el orden en que se subieron. */
+  photos?: RitualPhoto[];
   status: RitualStatus;
   createdBy: string;
   createdByUsername?: string;
@@ -119,3 +143,20 @@ export interface RitualInput {
 
 export const MAX_RECURRENCE_DAYS = 365;
 export const MAX_RECURRENCE_MONTHS = 12;
+
+/** Cuántas fotos se suben de una vez. */
+export const MAX_PHOTOS_PER_UPLOAD = 8;
+/** Cuántas fotos puede subir cada persona a un evento. */
+export const MAX_PHOTOS_PER_PERSON = 40;
+/** Lo que puede ocupar la descripción de cada foto. */
+export const MAX_RITUAL_PHOTO_ALT = 300;
+
+/**
+ * Las fotos de un evento: imágenes de verdad (nunca SVG). El cliente las manda ya
+ * reducidas (1600 px, JPEG), así que sobra margen.
+ */
+export const FOTO_RITUAL: ReglaImagen = {
+  maximos: { jpg: 3 * 1024 * 1024, png: 3 * 1024 * 1024, webp: 3 * 1024 * 1024, gif: 3 * 1024 * 1024 },
+  noValida: 'Alguna foto no es válida (JPEG, PNG, WebP o GIF).',
+  demasiadoGrande: 'Alguna foto es demasiado grande (máximo 3 MB).',
+};
