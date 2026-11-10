@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ID_CUENTA_ATRAS, ID_REINICIAR, idFichaNominar } from './ids';
 import { datosAsiento, describirAsiento } from './nombresAsiento';
 import type { AccionesDia, SalaDto, ResultadoAccion } from './useSala';
+import type { TrasVotacion } from './PanelNominacion';
 
 interface Opciones {
   estado: SalaDto;
@@ -176,6 +177,18 @@ export function useNominacion({ estado, dia, onError, onAnuncio }: Opciones) {
               const { numero, ocupante } = datosAsiento(estado, calavera.jugadorId);
               const { votos } = calavera;
               return `${describirAsiento(numero, ocupante)}${votos === null ? '' : `, ${votos === 1 ? '1 voto' : `${votos} votos`}`}`;
+            })(),
+            // Acabada la votación, lo que toca: si empata con quien lleva la calavera, desmarcar
+            // (va antes: con una marca, los votos por defecto ya piden uno más); si llega a
+            // los votos y la supera, marcar; si no, cerrar. En una expulsión, solo cerrar.
+            toca: ((): TrasVotacion | null => {
+              const votacion = nominacion.votacion;
+              if (!votacion?.terminada) return null;
+              if (nominacion.expulsion) return 'cerrar';
+              const marca = estado.calavera && estado.calavera.jugadorId !== nominacion.hasta ? estado.calavera.votos : null;
+              if (marca !== null && votacion.votos === marca) return 'desmarcar';
+              if (votacion.votos >= nominacion.votosNecesarios && (marca === null || votacion.votos > marca)) return 'marca';
+              return 'cerrar';
             })(),
             // Desmarcar, como marcar, cierra la nominación: el foco vuelve a la ficha de quien nominaba.
             onDesmarcar: acciones.includes('dia:desmarcar') && !nominacion.expulsion
