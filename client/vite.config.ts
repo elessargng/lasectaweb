@@ -23,6 +23,8 @@ export default defineConfig({
       }
     }
   },
+  // Los workers como módulos (el de la voz neuronal carga sus librerías al usarlas)
+  worker: { format: 'es' },
   server: {
     host: '0.0.0.0', // Esto permite conexiones externas
     port: 5173,

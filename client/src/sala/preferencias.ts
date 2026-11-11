@@ -130,6 +130,11 @@ export interface PreferenciasSala {
   llamadaBotc: boolean;
   /** Oír la voz del narrador virtual (lo que dice también sale escrito). Botón junto al micrófono; de entrada, sí. */
   vozNarrador: boolean;
+  /**
+   * Que el narrador virtual hable con la voz neuronal (un modelo que se descarga
+   * la primera vez) en lugar de con la del navegador. Pestaña Narrador virtual; de entrada, no.
+   */
+  vozNeuronal: boolean;
   /** Los iconos de llamar y de mandar un mensaje: los de siempre (de entrada) o los de botc.app. Pestaña Interfaz. */
   iconosLlamada: IconosLlamada;
   /**
@@ -184,7 +189,8 @@ type ClaveSiNo =
   | 'pobladoCabecera'
   | 'cieloEstrellado'
   | 'llamadaBotc'
-  | 'vozNarrador';
+  | 'vozNarrador'
+  | 'vozNeuronal';
 
 /** Cuándo sale la ciudad de la plaza: al cambiar de fase (de entrada), siempre o nunca. */
 export const MODOS_CIUDAD = ['cambios', 'siempre', 'nunca'] as const;
@@ -232,6 +238,7 @@ const SI_NO: Record<ClaveSiNo, boolean> = {
   cieloEstrellado: true,
   llamadaBotc: false,
   vozNarrador: true,
+  vozNeuronal: false,
 };
 
 /** Lo que guardaba antes la sala en el navegador (para llevarlo a la cuenta la primera vez). */

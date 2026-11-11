@@ -18,6 +18,7 @@ import { useGestos, useReconocerGestos, type Gesto } from './gestos';
 import PanelInterfaz from './PanelInterfaz';
 import CiudadPlaza from './CiudadPlaza';
 import PanelSonido from './PanelSonido';
+import PanelNarradorVirtual from './PanelNarradorVirtual';
 import PanelPartida from './PanelPartida';
 import PanelUsuario, { type ResultadoPerfil } from './PanelUsuario';
 import PanelIdiomas from './PanelIdiomas';
@@ -62,7 +63,7 @@ import { ESTILOS_CALAVERA, ESTILOS_MANO, ESTILOS_SILLA, estiloDePartida, MarcasC
 import { FichasContexto, identidadDe, TIPOS_EN_FICHA, type ContenidoFicha, type ContextoFichas } from './fichas';
 import { actuaAlMorir, mostrarPersonajes, tituloDeGuion, useTraducciones, type PersonajeMostrado } from './guiones';
 import ZonaNarradores from './ZonaNarradores';
-import { callarVoz, decirEnVoz } from './vozNarrador';
+import { useVozNarrador } from './voz/useVozNarrador';
 import DialogoNarradorVirtual from './DialogoNarradorVirtual';
 import {
   accionCogerLlamada,
@@ -653,7 +654,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       alMensaje,
       alSusurro,
       // La voz del narrador virtual, si no se ha quitado
-      alVoz: (texto) => preferencias.vozNarrador && decirEnVoz(texto),
+      alVoz: (texto) => preferencias.vozNarrador && vozNarrador.decir(texto),
     },
   );
   const yo = estado?.participantes.find((p) => p.id === estado.yo);
@@ -699,6 +700,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     cambiar: cambiarPreferencias,
     reemplazar: reemplazarPreferencias,
   } = usePreferencias(!!cuenta);
+  const { voz: vozNarrador, estado: estadoVozNeuronal } = useVozNarrador(preferencias.vozNeuronal);
   useEffect(() => setSonidosActivos(preferencias.sonidos), [preferencias.sonidos]);
   useEffect(() => setTonoLlamada(preferencias.tonoLlamada), [preferencias.tonoLlamada]);
   useEffect(() => setTonoDespertar(preferencias.tonoDespertar), [preferencias.tonoDespertar]);
@@ -852,7 +854,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     ? {
         activa: preferencias.vozNarrador,
         onAlternar: () => {
-          if (preferencias.vozNarrador) callarVoz();
+          if (preferencias.vozNarrador) vozNarrador.callar();
           cambiarPreferencias({ vozNarrador: !preferencias.vozNarrador });
         },
       }
@@ -1623,6 +1625,19 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
       etiqueta: 'Sonido',
       conControles: true,
       contenido: <PanelSonido preferencias={preferencias} onCambiar={cambiarPreferencias} />,
+    },
+    {
+      id: 'narradorVirtual',
+      etiqueta: 'Narrador virtual',
+      conControles: true,
+      contenido: (
+        <PanelNarradorVirtual
+          preferencias={preferencias}
+          onCambiar={cambiarPreferencias}
+          estadoVoz={estadoVozNeuronal}
+          onProbarVoz={() => vozNarrador.decir('Cae la noche sobre el pueblo. Que todos cierren los ojos.')}
+        />
+      ),
     },
     {
       id: 'accesibilidad',
