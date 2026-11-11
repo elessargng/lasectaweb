@@ -38,8 +38,10 @@ const PanelNarradorVirtual = ({ preferencias, onCambiar, estadoVoz, onProbarVoz 
         Activar voz neuronal
       </Interruptor>
       <p id="sala-pref-voz-neuronal-desc" className="ml-12 mt-0.5 text-xs text-on-surface-muted">
-        Una voz más natural para el narrador virtual. La primera vez se descarga (unos 60 MB) y se guarda en este
-        navegador; mientras, suena la del navegador.
+        Una voz más natural para el narrador virtual. Al activarla se descarga el modelo de voz{' '}
+        <span lang="en">Piper</span> «davefx», en castellano de España (unos 60 MB, solo la primera vez), que se guarda
+        y se ejecuta en tu navegador: la voz se genera en tu equipo. Mientras se descarga, suena la voz
+        del navegador.
       </p>
     </div>
 
