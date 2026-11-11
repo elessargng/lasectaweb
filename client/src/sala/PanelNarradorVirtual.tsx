@@ -1,8 +1,9 @@
 import { Volume2 } from 'lucide-react';
 import Interruptor from './Interruptor';
-import { botonSecundario } from './estilos';
+import { botonSecundario, campo } from './estilos';
 import type { PreferenciasSala } from './preferencias';
 import type { EstadoVozNeuronal } from './voz';
+import { esVozNeuronal, VOCES_NEURONALES } from './voz/voces';
 
 interface PanelNarradorVirtualProps {
   preferencias: PreferenciasSala;
@@ -39,10 +40,28 @@ const PanelNarradorVirtual = ({ preferencias, onCambiar, estadoVoz, onProbarVoz 
       </Interruptor>
       <p id="sala-pref-voz-neuronal-desc" className="ml-12 mt-0.5 text-xs text-on-surface-muted">
         Una voz más natural para el narrador virtual. Al activarla se descarga el modelo de voz{' '}
-        <span lang="en">Piper</span> «davefx», en castellano de España (unos 60 MB, solo la primera vez), que se guarda
-        y se ejecuta en tu navegador: la voz se genera en tu equipo. Mientras se descarga, suena la voz
-        del navegador.
+        <span lang="en">Piper</span> que elijas (de 63 a 77 MB, solo la primera vez), que se guarda y se ejecuta en tu
+        navegador: la voz se genera en tu equipo. Mientras se descarga, suena la voz del navegador.
       </p>
+    </div>
+
+    {/* Al cambiarla, se descarga (si no estaba) y suena en cuanto está lista */}
+    <div className="ml-12 flex flex-col gap-1">
+      <label htmlFor="sala-pref-voz-neuronal-elegida" className="text-xs">
+        Voz
+      </label>
+      <select
+        id="sala-pref-voz-neuronal-elegida"
+        value={preferencias.vozNeuronalElegida}
+        onChange={(e) => esVozNeuronal(e.target.value) && onCambiar({ vozNeuronalElegida: e.target.value })}
+        className={`${campo} max-w-sm text-sm`}
+      >
+        {VOCES_NEURONALES.map((v) => (
+          <option key={v.id} value={v.id}>
+            {v.nombre} · {v.acento} · calidad {v.calidad} · {v.megas} MB
+          </option>
+        ))}
+      </select>
     </div>
 
     <div className="ml-12 flex flex-col gap-2">

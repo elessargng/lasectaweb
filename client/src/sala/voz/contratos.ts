@@ -25,6 +25,8 @@ export interface ModeloVoz {
   preparar(): Promise<void>;
   /** El audio de la frase. */
   sintetizar(texto: string): Promise<Blob>;
+  /** Lo suelta de la memoria (al cambiar de voz o apagarla); sigue guardado en el navegador. */
+  liberar(): void;
 }
 
 /** Lo que hace sonar un audio ya hecho. */

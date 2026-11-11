@@ -14,6 +14,8 @@ export class MotorEnSegundoPlano implements MotorVoz {
   private preparado: Promise<void> | null = null;
   private readonly pendientes = new Map<number, { resolver: (audio?: ArrayBuffer) => void; rechazar: (e: Error) => void }>();
   private siguiente = 0;
+  /** Sube al cerrar el worker: una preparación que acaba después ya no arranca otro. */
+  private generacion = 0;
 
   constructor(cargarArchivos: () => Promise<ArchivosPiper>) {
     this.cargarArchivos = cargarArchivos;
@@ -21,7 +23,9 @@ export class MotorEnSegundoPlano implements MotorVoz {
 
   preparar(): Promise<void> {
     this.preparado ??= (async () => {
+      const generacion = this.generacion;
       const archivos = await this.cargarArchivos();
+      if (generacion !== this.generacion) throw new Error('La voz ya no se usa.');
       await this.pedir({ tipo: 'preparar', archivos }, [archivos.modelo]);
     })();
     this.preparado.catch(() => this.reiniciar());
@@ -32,6 +36,11 @@ export class MotorEnSegundoPlano implements MotorVoz {
     await this.preparar();
     const audio = await this.pedir({ tipo: 'sintetizar', texto });
     return new Blob([audio!], { type: 'audio/wav' });
+  }
+
+  /** Cierra el worker, y con él el modelo que tenía cargado. */
+  liberar(): void {
+    this.reiniciar();
   }
 
   private pedir(pedido: Pedido, transferir: Transferable[] = []): Promise<ArrayBuffer | undefined> {
@@ -59,6 +68,7 @@ export class MotorEnSegundoPlano implements MotorVoz {
 
   /** Cierra el worker y hace fallar lo pendiente: lo siguiente empieza de cero. */
   private reiniciar() {
+    this.generacion++;
     this.worker?.terminate();
     this.worker = null;
     this.preparado = null;

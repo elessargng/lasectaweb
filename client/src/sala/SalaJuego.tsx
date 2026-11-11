@@ -700,7 +700,9 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     cambiar: cambiarPreferencias,
     reemplazar: reemplazarPreferencias,
   } = usePreferencias(!!cuenta);
-  const { voz: vozNarrador, estado: estadoVozNeuronal } = useVozNarrador(preferencias.vozNeuronal);
+  const { voz: vozNarrador, estado: estadoVozNeuronal } = useVozNarrador(
+    preferencias.vozNeuronal ? preferencias.vozNeuronalElegida : null,
+  );
   useEffect(() => setSonidosActivos(preferencias.sonidos), [preferencias.sonidos]);
   useEffect(() => setTonoLlamada(preferencias.tonoLlamada), [preferencias.tonoLlamada]);
   useEffect(() => setTonoDespertar(preferencias.tonoDespertar), [preferencias.tonoDespertar]);

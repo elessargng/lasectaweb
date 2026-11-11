@@ -34,6 +34,7 @@ import {
 import { esSalidaAudio, SALIDA_DEFECTO, type SalidaAudio } from './sonidoEnvolvente';
 import { esPreferenciaFondo, FONDO_DEFECTO, type PreferenciaFondo } from './fondos';
 import { COLORES_CIELO_DEFECTO, esColoresCielo, type ColoresCielo } from './cielo';
+import { esVozNeuronal, VOZ_NEURONAL_DEFECTO } from './voz/voces';
 
 /**
  * Preferencias de la sala que solo cambian cómo la ves tú (tamaños, distancias,
@@ -135,6 +136,8 @@ export interface PreferenciasSala {
    * la primera vez) en lugar de con la del navegador. Pestaña Narrador virtual; de entrada, no.
    */
   vozNeuronal: boolean;
+  /** Cuál de las voces neuronales (ver voz/voces.ts). Pestaña Narrador virtual. */
+  vozNeuronalElegida: string;
   /** Los iconos de llamar y de mandar un mensaje: los de siempre (de entrada) o los de botc.app. Pestaña Interfaz. */
   iconosLlamada: IconosLlamada;
   /**
@@ -299,6 +302,7 @@ export function normalizarPreferencias(datos: unknown): PreferenciasSala {
   preferencias.tonoDespertar = esTonoDespertar(guardadas.tonoDespertar) ? guardadas.tonoDespertar : TONO_DESPERTAR_DEFECTO;
   // Los dispositivos: un id del navegador, o vacío (el predeterminado del sistema)
   const idDispositivo = (v: unknown) => (typeof v === 'string' && v.length <= 200 ? v : '');
+  preferencias.vozNeuronalElegida = esVozNeuronal(guardadas.vozNeuronalElegida) ? guardadas.vozNeuronalElegida : VOZ_NEURONAL_DEFECTO;
   preferencias.eleccionDespertar = guardadas.eleccionDespertar === 'lista' ? 'lista' : 'plaza';
   preferencias.salidaAudio = esSalidaAudio(guardadas.salidaAudio) ? guardadas.salidaAudio : SALIDA_DEFECTO;
   // Las teclas de la pestaña Accesibilidad: solo lo que es de un atajo

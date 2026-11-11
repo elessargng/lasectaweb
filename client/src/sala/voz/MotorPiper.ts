@@ -12,6 +12,8 @@ export interface ConfigPiper {
 export interface ArchivosPiper {
   modelo: ArrayBuffer;
   config: ConfigPiper;
+  /** Qué hablante del modelo (los que tienen varios, como Sharvard); 0 si solo hay uno. */
+  hablante: number;
 }
 
 /** Lo que pasa texto a voz con un modelo ya descargado (aquí mismo o en un worker). */
@@ -20,6 +22,8 @@ export interface MotorVoz {
   preparar(): Promise<void>;
   /** El audio de la frase, en WAV. */
   sintetizar(texto: string): Promise<Blob>;
+  /** Suelta el modelo de la memoria. */
+  liberar(): void;
 }
 
 /** Cómo se monta un motor: con de dónde salen el modelo y su configuración. */
@@ -50,7 +54,7 @@ const modulosFonemizador = import.meta.glob<{ createPiperPhonemize: CrearFonemiz
  */
 export class MotorPiper implements MotorVoz {
   private readonly cargarArchivos: () => Promise<ArchivosPiper>;
-  private preparado: Promise<{ sesion: InferenceSession; config: ConfigPiper; ort: typeof import('onnxruntime-web') }> | null = null;
+  private preparado: Promise<{ sesion: InferenceSession; config: ConfigPiper; hablante: number; ort: typeof import('onnxruntime-web') }> | null = null;
   private fonemizador: Promise<Fonemizador> | null = null;
   /** Lo que escribe el fonemizador va a la frase que se esté fonemizando. */
   private alEscribir: ((linea: string) => void) | null = null;
@@ -66,6 +70,13 @@ export class MotorPiper implements MotorVoz {
     await Promise.all([this.cargar(), this.arrancarFonemizador()]);
   }
 
+  liberar(): void {
+    const preparado = this.preparado;
+    this.preparado = null;
+    this.fonemizador = null;
+    void preparado?.then(({ sesion }) => sesion.release()).catch(() => undefined);
+  }
+
   /** El audio de la frase, en WAV. */
   sintetizar(texto: string): Promise<Blob> {
     const turno = this.cola.then(() => this.calcular(texto));
@@ -74,7 +85,7 @@ export class MotorPiper implements MotorVoz {
   }
 
   private async calcular(texto: string): Promise<Blob> {
-    const { sesion, config, ort } = await this.cargar();
+    const { sesion, config, hablante, ort } = await this.cargar();
     const fonemas = await this.fonemas(texto, config.espeak.voice);
     const { noise_scale, length_scale, noise_w } = config.inference;
     const entradas: Record<string, InstanceType<typeof ort.Tensor>> = {
@@ -82,7 +93,7 @@ export class MotorPiper implements MotorVoz {
       input_lengths: new ort.Tensor('int64', BigInt64Array.from([BigInt(fonemas.length)])),
       scales: new ort.Tensor('float32', Float32Array.from([noise_scale, length_scale, noise_w])),
     };
-    if (Object.keys(config.speaker_id_map).length) entradas.sid = new ort.Tensor('int64', BigInt64Array.from([0n]));
+    if (Object.keys(config.speaker_id_map).length) entradas.sid = new ort.Tensor('int64', BigInt64Array.from([BigInt(hablante)]));
     const { output } = await sesion.run(entradas);
     return new Blob([pcmAWav(output.data as Float32Array, config.audio.sample_rate)], { type: 'audio/wav' });
   }
@@ -94,8 +105,8 @@ export class MotorPiper implements MotorVoz {
       // Varios hilos solo si la página está aislada (COOP/COEP); si no, el navegador no los deja
       ort.env.wasm.numThreads = globalThis.crossOriginIsolated ? navigator.hardwareConcurrency : 1;
       ort.env.wasm.wasmPaths = ONNX_BASE;
-      const { modelo, config } = await this.cargarArchivos();
-      return { sesion: await ort.InferenceSession.create(modelo), config, ort };
+      const { modelo, config, hablante } = await this.cargarArchivos();
+      return { sesion: await ort.InferenceSession.create(modelo), config, hablante, ort };
     })();
     // Si falla (sin conexión, sin el modelo), la próxima frase lo vuelve a intentar
     this.preparado.catch(() => (this.preparado = null));

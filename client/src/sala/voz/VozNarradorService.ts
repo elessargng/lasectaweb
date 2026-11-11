@@ -1,6 +1,15 @@
 import { paraLaVoz } from '../pronunciacion';
 import type { ModeloVoz, Voz } from './contratos';
 
+/** Una voz neuronal montada: la que dice las frases y su modelo (para descargarlo, cargarlo y soltarlo). */
+export interface VozNeuronalMontada {
+  voz: Voz;
+  modelo: ModeloVoz;
+}
+
+/** Cómo se monta la voz neuronal con ese id (ver voces.ts). */
+export type CrearVozNeuronal = (vozId: string) => VozNeuronalMontada;
+
 /** En qué está la voz neuronal: apagada, descargándose y cargándose (con cuánto lleva de descarga), lista o con un error. */
 export type EstadoVozNeuronal =
   | { fase: 'apagada' }
@@ -10,8 +19,9 @@ export type EstadoVozNeuronal =
 
 /**
  * La voz del narrador virtual: decide qué voz suena (la del navegador o la
- * neuronal) y prepara la neuronal al activarla (la descarga si no está). Mientras
- * se descarga, o si no se pudo, suena la del navegador. Los nombres ingleses de
+ * neuronal elegida) y prepara la neuronal al activarla o al cambiar de voz (la
+ * descarga si no está y suelta la anterior). Mientras se prepara, o si no se pudo,
+ * suena la del navegador. Los nombres ingleses de
  * los personajes se dicen como se pronuncian en español (ver pronunciacion.ts).
  *
  * Quien quiera saber en qué está la neuronal (la pestaña que la activa) se suscribe.
@@ -22,14 +32,15 @@ export class VozNarradorService {
   /** Sube cada vez que se activa o se desactiva: una descarga que acaba tarde no cambia lo de después. */
   private peticion = 0;
 
-  private readonly navegador: Voz;
-  private readonly neuronal: Voz;
-  private readonly modelo: ModeloVoz;
+  /** La neuronal elegida (null: apagada). */
+  private neuronal: (VozNeuronalMontada & { id: string }) | null = null;
 
-  constructor(navegador: Voz, neuronal: Voz, modelo: ModeloVoz) {
+  private readonly navegador: Voz;
+  private readonly crearNeuronal: CrearVozNeuronal;
+
+  constructor(navegador: Voz, crearNeuronal: CrearVozNeuronal) {
     this.navegador = navegador;
-    this.neuronal = neuronal;
-    this.modelo = modelo;
+    this.crearNeuronal = crearNeuronal;
   }
 
   decir(texto: string): void {
@@ -38,30 +49,33 @@ export class VozNarradorService {
 
   callar(): void {
     this.navegador.callar();
-    this.neuronal.callar();
+    this.neuronal?.voz.callar();
   }
 
-  /** Activa (y descarga si hace falta) o desactiva la voz neuronal. Activarla dos veces no descarga dos veces. */
-  async usarNeuronal(activa: boolean): Promise<void> {
-    const { fase } = this.estado;
-    if (!activa) {
-      if (fase === 'apagada') return;
-      this.peticion++;
-      this.callar();
-      return this.cambiar({ fase: 'apagada' });
-    }
-    if (fase === 'descargando' || fase === 'lista') return;
-
+  /**
+   * Usa la voz neuronal con ese id (y la descarga si hace falta), o ninguna (null).
+   * Pedir la que ya está no descarga dos veces; si falló, se vuelve a intentar.
+   */
+  async usarNeuronal(vozId: string | null): Promise<void> {
+    if (vozId === (this.neuronal?.id ?? null) && this.estado.fase !== 'error') return;
     const peticion = ++this.peticion;
+    this.callar();
+    this.neuronal?.modelo.liberar();
+    this.neuronal = null;
+    if (!vozId) return this.cambiar({ fase: 'apagada' });
+
+    const neuronal = { id: vozId, ...this.crearNeuronal(vozId) };
+    this.neuronal = neuronal;
+    const { modelo } = neuronal;
     this.cambiar({ fase: 'descargando', progreso: 0 });
     try {
-      if (!(await this.modelo.descargado())) {
-        await this.modelo.descargar((progreso) => {
+      if (!(await modelo.descargado())) {
+        await modelo.descargar((progreso) => {
           if (peticion === this.peticion) this.cambiar({ fase: 'descargando', progreso });
         });
       }
       // Cargado en memoria antes de usarlo: hasta entonces habla el navegador, sin esperas
-      await this.modelo.preparar();
+      await modelo.preparar();
       if (peticion === this.peticion) this.cambiar({ fase: 'lista' });
     } catch {
       if (peticion === this.peticion) {
@@ -79,7 +93,7 @@ export class VozNarradorService {
   };
 
   private vozActual(): Voz {
-    return this.estado.fase === 'lista' ? this.neuronal : this.navegador;
+    return this.estado.fase === 'lista' && this.neuronal ? this.neuronal.voz : this.navegador;
   }
 
   private cambiar(estado: EstadoVozNeuronal) {
