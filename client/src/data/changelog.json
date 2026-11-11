@@ -1,5 +1,36 @@
 [
   {
+    "version": "1.8.1",
+    "date": "2026-11-11",
+    "title": "Voz Neuronal",
+    "description": "El narrador virtual estrena una voz neuronal más natural, que se activa en Preferencias. Los eventos con fotos se distinguen en la agenda, y los logros llegan también en las partidas con narrador virtual.",
+    "changes": [
+      {
+        "category": "Narrador",
+        "items": [
+          "Añadida la voz neuronal del narrador virtual, en la pestaña «Narrador virtual» de Preferencias.",
+          "El narrador virtual espera el «Entendido» del Espía tras enviarle el grimorio.",
+          "El grimorio enviado al Espía lleva los faroles del demonio.",
+          "Los logros cuentan en las partidas con narrador virtual."
+        ]
+      },
+      {
+        "category": "Jugadores",
+        "items": [
+          "Al llamar al narrador mientras conversa con otros, se le invita a una conversación nueva."
+        ]
+      },
+      {
+        "category": "Rituales",
+        "items": [
+          "Añadido el icono de fotos a los eventos en el mes, la semana y la agenda.",
+          "Añadida la elección de año y meses en la vista «Fotos».",
+          "Añadida la vista en línea de la vista «Fotos», con un carrusel por evento."
+        ]
+      }
+    ]
+  },
+  {
     "version": "1.8.0",
     "date": "2026-11-10",
     "title": "Álbum",
