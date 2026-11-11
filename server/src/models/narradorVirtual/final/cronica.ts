@@ -32,9 +32,11 @@ export interface Cronica {
   antes: Map<string, string>;
   /** La última noche que se ha jugado. */
   ultimaNoche: number;
+  /** Lo que ha acabado la partida o conviene dejar dicho (CAUSAS_FIN_PARTIDA): de ahí salen los logros. */
+  causas: Set<string>;
 }
 
-export const cronicaNueva = (): Cronica => ({ noches: new Map(), falsas: new Set(), muertes: new Map(), antes: new Map(), ultimaNoche: 0 });
+export const cronicaNueva = (): Cronica => ({ noches: new Map(), falsas: new Set(), muertes: new Map(), antes: new Map(), ultimaNoche: 0, causas: new Set() });
 
 /** Si un mensaje del narrador es información (un número, un sí o un no, un alineamiento, «Este jugador es»). */
 const esInformacion = (m: EnvioDespertar): boolean =>

@@ -25,8 +25,8 @@ export interface Narrador {
   ponerReloj(segundos: number, mensaje: string): Promise<RespuestaAccion>;
   /** Acaba el reloj ya: suena el gong, como si se hubiera agotado. */
   terminarReloj(): Promise<RespuestaAccion>;
-  /** Revela el grimorio: ha ganado ese bando. */
-  revelarGrimorio(ganador: Alineamiento): Promise<RespuestaAccion>;
+  /** Revela el grimorio: ha ganado ese bando, y lo que ha pasado (CAUSAS_FIN_PARTIDA, para los logros). */
+  revelarGrimorio(ganador: Alineamiento, causas: readonly string[]): Promise<RespuestaAccion>;
   /** Revela la ficha de un asiento, para todos. */
   revelarFicha(jugadorId: string): Promise<RespuestaAccion>;
   /** Pide que se señale (listas vacías: todos; segundos null: sin cuenta atrás). */

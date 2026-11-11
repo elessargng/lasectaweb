@@ -1021,6 +1021,57 @@ export class DatabaseRepository {
         CREATE INDEX IF NOT EXISTS idx_ritual_photos_ritual ON ritual_photos(ritualId, createdAt);
       `);
     });
+
+    // Migración 035: el logro del Exterminador en las partidas con narrador virtual
+    //
+    // El narrador virtual revelaba el grimorio sin las causas del final, así que el
+    // Exterminador que mató al demonio (y con eso ganó el bien) se quedaba sin su
+    // logro. Se busca en el diario de cada partida ganada por el bien: un disparo que
+    // mata, a un asiento que era demonio, desde uno que era el Exterminador.
+    await this.applyMigration('035_logro_exterminador_narrador_virtual', async (db) => {
+      const leer = <T>(texto: string | null, porDefecto: T): T => {
+        try {
+          return texto ? (JSON.parse(texto) as T) : porDefecto;
+        } catch {
+          return porDefecto;
+        }
+      };
+      const demonios = new Set(
+        (await db.all<{ id: string }[]>("SELECT id FROM personajes WHERE tipo = 'demon'")).map((p) => p.id)
+      );
+      const partidas = await db.all<{ id: string; causas: string; mesa: string | null; diario: string | null }[]>(
+        "SELECT id, causas, mesa, diario FROM sala_partidas WHERE ganador = 'bueno' AND diario IS NOT NULL"
+      );
+      for (const p of partidas) {
+        const causas = leer<string[]>(p.causas, []);
+        if (causas.includes('slayer')) continue;
+        const mesa = leer<{ numero: number; userId: string | null; personaje: string | null }[]>(p.mesa, []);
+        const diario = leer<{ tipo: string; asiento?: { numero: number }; objetivo?: { numero: number }; muere?: boolean }[]>(p.diario, []);
+        const enMesa = (numero?: number) => mesa.find((a) => a.numero === numero);
+        const disparo = diario.find(
+          (e) =>
+            e.tipo === 'exterminador' &&
+            e.muere &&
+            enMesa(e.asiento?.numero)?.personaje === 'slayer' &&
+            demonios.has(enMesa(e.objetivo?.numero)?.personaje ?? '')
+        );
+        if (!disparo) continue;
+        await db.run('UPDATE sala_partidas SET causas = ? WHERE id = ?', [JSON.stringify([...causas, 'slayer']), p.id]);
+        const userId = enMesa(disparo.asiento?.numero)?.userId;
+        if (!userId) continue;
+        const jugador = await db.get<{ causas: string }>(
+          "SELECT causas FROM sala_partidas_participantes WHERE partidaId = ? AND userId = ? AND papel = 'jugador'",
+          [p.id, userId]
+        );
+        const suyas = leer<string[]>(jugador?.causas ?? null, []);
+        if (jugador && !suyas.includes('slayer')) {
+          await db.run(
+            "UPDATE sala_partidas_participantes SET causas = ? WHERE partidaId = ? AND userId = ? AND papel = 'jugador'",
+            [JSON.stringify([...suyas, 'slayer']), p.id, userId]
+          );
+        }
+      }
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

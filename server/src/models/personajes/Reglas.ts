@@ -204,9 +204,14 @@ export class Reglas {
 
   /** Si la partida acaba por un personaje: quién gana (lo que diga la primera regla), o undefined. */
   ganador(fin: FinDePartida): Alineamiento | undefined {
+    return this.finalPorPersonaje(fin)?.ganador;
+  }
+
+  /** Si la partida acaba por un personaje: quién gana y por qué personaje (el Santo ejecutado, el Alcalde), o undefined. */
+  finalPorPersonaje(fin: FinDePartida): { ganador: Alineamiento; personaje: string } | undefined {
     for (const r of this.reglas) {
       const ganador = r.ganador?.(this.ctx, fin);
-      if (ganador) return ganador;
+      if (ganador) return { ganador, personaje: r.personaje };
     }
     return undefined;
   }

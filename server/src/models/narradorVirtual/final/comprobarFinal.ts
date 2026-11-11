@@ -49,8 +49,12 @@ export async function comprobarFinal(
   const quedan = vivos(juego);
   const hayDemonio = quedan.some((a) => esDemonio(juego, a));
   const ejecutadoHoy = ejecutado ? partida.plaza().find((a) => a.id === ejecutado) : undefined;
-  const ganador = partida.reglas.ganador({ vivos: quedan, ejecutado: ejecutadoHoy, sinEjecucion, hayDemonio });
-  if (ganador) return ganador;
+  const final = partida.reglas.finalPorPersonaje({ vivos: quedan, ejecutado: ejecutadoHoy, sinEjecucion, hayDemonio });
+  if (final) {
+    // Lo ha acabado un personaje (el Santo, el Alcalde): su logro
+    ctx.recuerdos.cronica.causas.add(final.personaje);
+    return final.ganador;
+  }
   if (!hayDemonio) {
     const herencia = partida.reglas.heredarDemonio(quedan);
     if (!herencia) return 'bueno';

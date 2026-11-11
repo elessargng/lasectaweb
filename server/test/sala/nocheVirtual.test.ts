@@ -29,6 +29,7 @@ import { contextoNoche } from '../../src/models/narradorVirtual/plazaDeJuego';
 import { ficha, numero, tarjeta } from '../../src/models/partida/habilidades/HabilidadNocturna';
 import { conSemilla, guionTroubleBrewing, invitado } from './guionDePrueba';
 import { identidadDe } from '../../src/models/partida/Grimorio';
+import { MIRA_EL_GRIMORIO } from '../../src/models/personajes/espia';
 
 /** La hoja de noche de Trouble Brewing (la de verdad). */
 const PRIMERA_NOCHE = ['poisoner', 'spy', 'washerwoman', 'librarian', 'investigator', 'chef', 'empath', 'fortuneteller', 'butler'];
@@ -129,9 +130,9 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
         hechas.push({ accion: 'reloj:terminar', datos: undefined });
         return { ok: true };
       },
-      revelarGrimorio: async (ganador) => {
-        const error = juego.partida.revelarGrimorio(ganador, [], {});
-        if (!error) hechas.push({ accion: 'revelacion:empezar', datos: { ganador } });
+      revelarGrimorio: async (ganador, causas) => {
+        const error = juego.partida.revelarGrimorio(ganador, causas, {});
+        if (!error) hechas.push({ accion: 'revelacion:empezar', datos: { ganador, causas } });
         return error ? { ok: false, error } : { ok: true };
       },
       revelarFicha: async (jugadorId) => {
@@ -359,6 +360,42 @@ describe('la noche del narrador virtual', () => {
     noche.alSalir!();
   });
 
+  it('el Espía con jugador: no amanece hasta que dice «Entendido» al grimorio', async () => {
+    const m = plazaVirtual(['poisoner', 'imp', 'washerwoman', 'librarian', 'investigator', 'fortuneteller', 'spy']);
+    const { sala, partida } = m.juego;
+    const { id } = sala.participantes.conectar('s-ana', 'c-ana', invitado('Ana'), () => true);
+    const asiento = m.asiento('spy').id;
+    expect(sala.sentar(id, asiento)).toBeNull();
+    partida.irANoche();
+    const noche = new Noche();
+    await noche.alEntrar!(m.ctx);
+    const mensajes = () => partida.despertares.despertares().find((d) => d.jugador === asiento)?.mensajes ?? [];
+    const ultimo = () => mensajes()[mensajes().length - 1];
+    const entendido = async () => {
+      expect(new NocheService(m.juego, () => {}).enviar(id, [], { ficha: 'entendido' })).toMatchObject({ ok: true });
+      await noche.alCambiar!();
+    };
+    // Lo de los malvados, entendido, hasta que le llega el grimorio (después, el recordatorio
+    // de «Entendido» puede llegar enseguida: el reloj de la prueba no espera el minuto)
+    const limite = Date.now() + 3000;
+    while (!mensajes().some((x) => x.texto === MIRA_EL_GRIMORIO)) {
+      if (Date.now() > limite) throw new Error('No le ha llegado el grimorio');
+      if (ultimo()?.autor === 'narrador' && ultimo()?.ficha !== 'entendido') await entendido();
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    expect(partida.entregas.grimorioRecibidoPor(id)).not.toBeNull();
+    // Un rato después, sigue siendo de noche: espera a que lo haya visto
+    await new Promise((r) => setTimeout(r, 100));
+    expect(partida.fases.actual().momento).toBe('noche');
+    await entendido();
+    const hastaElDia = Date.now() + 3000;
+    while (partida.fases.actual().momento !== 'dia') {
+      if (Date.now() > hastaElDia) throw new Error('No ha amanecido');
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    noche.alSalir!();
+  });
+
   it('pone al Borracho la primera noche, si salió en la bolsa', async () => {
     const m = plazaVirtual(['poisoner', 'imp', 'chef', 'empath', 'washerwoman', 'investigator', 'soldier'], { fuera: [{ personaje: 'drunk', creeSer: null }] });
     const { partida } = m.juego;
@@ -444,9 +481,10 @@ describe('la noche del narrador virtual', () => {
         const muere = await exterminar(m.ctx, id, m.asiento(objetivo).id);
         // La muerte se pone al contarlo
         const ganador = await contarDisparo(m.ctx, id, m.asiento(objetivo).id, muere);
-        return { muere: muere !== null, muerto: m.asiento(objetivo).muerto, ganador, m };
+        return { muere: muere !== null, muerto: m.asiento(objetivo).muerto, ganador, causas: [...m.ctx.recuerdos.cronica.causas], m };
       };
-      expect(await dispara('slayer', 'imp')).toMatchObject({ muere: true, muerto: true, ganador: 'bueno' });
+      // Matar al demonio y acabar la partida es su logro
+      expect(await dispara('slayer', 'imp')).toMatchObject({ muere: true, muerto: true, ganador: 'bueno', causas: ['slayer'] });
       expect(await dispara('slayer', 'saint')).toMatchObject({ muere: false, muerto: false });
       expect(await dispara('slayer', 'chef')).toMatchObject({ muere: false, muerto: false });
       // Quien no es el Exterminador no mata ni al demonio
@@ -455,7 +493,7 @@ describe('la noche del narrador virtual', () => {
       const reclusa = await Promise.all([1, 2, 3, 4, 5, 6, 7, 8].map((s) => dispara('slayer', 'recluse', s)));
       expect(reclusa.some((r) => r.muere)).toBe(true);
       expect(reclusa.some((r) => !r.muere)).toBe(true);
-      expect(reclusa.every((r) => r.ganador === null)).toBe(true);
+      expect(reclusa.every((r) => r.ganador === null && r.causas.length === 0)).toBe(true);
       // El Exterminador de verdad pierde su habilidad al disparar
       expect((await dispara('slayer', 'saint')).m.textos('slayer')).toEqual(['No Ability']);
     });
@@ -533,6 +571,26 @@ describe('la noche del narrador virtual', () => {
       while (!m.frases.some((f) => / pasó a ser el demonio/.test(f)) && Date.now() < limite) await new Promise((r) => setTimeout(r, 5));
       // El demonio, sin su nombre
       expect(m.frases.find((f) => / pasó a ser el demonio/.test(f))).toMatch(/^.+ era scarletwoman y pasó a ser el demonio/);
+    });
+
+    it('al revelar, pasa lo apuntado para los logros (el Exterminador que mató al demonio, el Santo ejecutado)', async () => {
+      const m = plazaVirtual(['slayer', 'imp', 'saint', 'chef', 'empath', 'monk', 'poisoner']);
+      const { partida } = m.juego;
+      partida.irANoche();
+      partida.amanecer();
+      const tiradora = m.juego.sala.participantes.conectar('s-t', 'c-t', invitado('Tiradora'), () => true).id;
+      m.juego.sala.sentar(tiradora, m.asiento('slayer').id);
+      const imp = m.asiento('imp').id;
+      const ganador = await contarDisparo(m.ctx, tiradora, imp, await exterminar(m.ctx, tiradora, imp));
+      await new Revelando(ganador!).alEntrar(m.ctx);
+      expect(m.hechas.find((h) => h.accion === 'revelacion:empezar')?.datos).toEqual({ ganador: 'bueno', causas: ['slayer'] });
+
+      const s = plazaVirtual(['saint', 'imp', 'chef', 'empath', 'monk', 'soldier', 'poisoner']);
+      s.juego.partida.irANoche();
+      s.juego.partida.amanecer();
+      s.juego.partida.grimorio.cambiarVida(s.asiento('saint').id, true);
+      expect(await comprobarFinal(s.ctx, { ejecutado: s.asiento('saint').id })).toBe('malvado');
+      expect([...s.ctx.recuerdos.cronica.causas]).toEqual(['saint']);
     });
 
     it('revela el grimorio ficha a ficha, con el demonio el último', async () => {

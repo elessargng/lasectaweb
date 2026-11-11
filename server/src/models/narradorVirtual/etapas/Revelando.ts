@@ -1,4 +1,5 @@
 import { barajar } from '../../partida/azar';
+import { identidadDe } from '../../partida/Grimorio';
 import { heredadosADemonio, esDemonio, type Ganador } from '../final/comprobarFinal';
 import { fraseAlRevelar } from '../final/cronica';
 import { duracionFrase, FRASES } from '../frases';
@@ -31,8 +32,11 @@ export class Revelando implements Etapa {
     partida.declaraciones.cerrarTodos();
     // Si acaba antes de la noche en que lo sería, la Mujer Escarlata que ha heredado se revela ya como el Imp
     await heredadosADemonio(ctx);
-    if (!(await ctx.plaza.revelarGrimorio(this.ganador)).ok) return;
     const jugadores = partida.plaza();
+    // Lo apuntado para los logros, de quien sigue en juego (si no, no se podría revelar)
+    const enJuego = new Set(jugadores.map(identidadDe));
+    const causas = [...ctx.recuerdos.cronica.causas].filter((c) => enJuego.has(c));
+    if (!(await ctx.plaza.revelarGrimorio(this.ganador, causas)).ok) return;
     const demonios = jugadores.filter((a) => esDemonio(ctx.juego, a));
     const orden = [...barajar(jugadores.filter((a) => !demonios.includes(a)), ctx.azar), ...barajar(demonios, ctx.azar)];
     void this.revelar(ctx, orden.map((a) => a.id));

@@ -72,7 +72,10 @@ export async function contarPatoso(ctx: ContextoEtapa, patosoId: string, elegido
   ctx.decir(frase);
   await new Promise<void>((seguir) => ctx.temporizador.programar(duracionFrase(frase) + PAUSA_MS, seguir));
   const deVerdad = identidadDe(quien) === 'klutz' && !droison(contextoNoche(juego), quien);
-  if (deVerdad && partida.grimorio.alineamiento(elegido) === 'malvado') return 'malvado';
+  if (deVerdad && partida.grimorio.alineamiento(elegido) === 'malvado') {
+    ctx.recuerdos.cronica.causas.add('klutz');
+    return 'malvado';
+  }
   ctx.decir(FRASES.partidaContinua());
   return null;
 }

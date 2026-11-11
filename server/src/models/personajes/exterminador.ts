@@ -1,7 +1,7 @@
 import { droison } from './ReglaPersonaje';
 import type { ContextoEtapa } from '../narradorVirtual/etapas/Etapa';
 import { apuntarMuerteDeDia } from '../narradorVirtual/final/cronica';
-import { comprobarFinal, type Ganador } from '../narradorVirtual/final/comprobarFinal';
+import { comprobarFinal, esDemonio, type Ganador } from '../narradorVirtual/final/comprobarFinal';
 import { duracionFrase, FRASES, PAUSA_MS } from '../narradorVirtual/frases';
 import { contextoNoche, nombreDeAsiento } from '../narradorVirtual/plazaDeJuego';
 import { ponerRecordatorio } from '../narradorVirtual/noche/requisitos';
@@ -81,8 +81,12 @@ export async function contarDisparo(ctx: ContextoEtapa, tirador: string, jugador
   };
   await decirYEsperar(FRASES.disparo(nombreDeAsiento(juego, desde.id), nombreDeAsiento(juego, jugadorId)));
   if (muere) {
+    const muerto = partida.plaza().find((a) => a.id === muere);
+    const demonio = !!muerto && esDemonio(juego, muerto);
     await morirDeUnDisparo(ctx, muere);
     const ganador = await comprobarFinal(ctx);
+    // Ha matado al demonio y con eso se acaba: el logro del Exterminador
+    if (demonio && ganador === 'bueno') ctx.recuerdos.cronica.causas.add('slayer');
     await decirYEsperar(FRASES.muere(nombreDeAsiento(juego, muere)));
     if (ganador) return ganador;
   }
