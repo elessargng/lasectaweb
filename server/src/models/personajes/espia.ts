@@ -1,4 +1,4 @@
-import { RecibeInformacion, sinEfectos } from '../partida/habilidades/HabilidadNocturna';
+import { RecibeInformacion, ficha, sinEfectos } from '../partida/habilidades/HabilidadNocturna';
 import { oTambien, siONo } from './Percepcion';
 import type { ReglaPersonaje } from './ReglaPersonaje';
 import type { DefinicionPersonaje } from './DefinicionPersonaje';
@@ -23,7 +23,10 @@ const regla: ReglaPersonaje = {
   }),
 };
 
-/** De noche, ve el grimorio. */
+/** Lo que se le dice con el grimorio: su «Entendido» es que ya lo ha visto (hasta entonces no amanece). */
+export const MIRA_EL_GRIMORIO = 'Mira el grimorio que te he enviado y contesta «Entendido» cuando acabes.';
+
+/** De noche, ve el grimorio y dice cuándo lo ha visto. */
 class Espia extends RecibeInformacion {
   constructor() {
     super('spy');
@@ -31,7 +34,10 @@ class Espia extends RecibeInformacion {
   }
 
   protected informacion() {
-    return { opciones: [], efectos: { ...sinEfectos(), grimorio: true } };
+    return {
+      opciones: [{ envio: { ...ficha('personalizado'), texto: MIRA_EL_GRIMORIO }, registros: [] }],
+      efectos: { ...sinEfectos(), grimorio: true },
+    };
   }
 }
 const deNoche = new Espia();

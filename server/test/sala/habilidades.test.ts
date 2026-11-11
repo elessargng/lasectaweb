@@ -4,6 +4,7 @@ import type { HabilidadNocheDto } from '../../src/views/dto/despertar';
 import { Arnes } from './arnes';
 import { ficha } from '../../src/models/partida/habilidades/HabilidadNocturna';
 import { guionDePrueba, guionTroubleBrewing, invitado, conSemilla } from './guionDePrueba';
+import { MIRA_EL_GRIMORIO } from '../../src/models/personajes/espia';
 
 /** El despertar guiado desde el orden de noche: cada personaje de Trouble Brewing, según su habilidad. */
 
@@ -271,11 +272,15 @@ describe('despertar guiado', () => {
       expect(m.ultimo(0)).toMatchObject({ tarjeta: 'esteJugadorEs', jugadores: [m.asiento(1).id], personajes: ['chef'] });
     });
 
-    it('el Espía recibe el grimorio', () => {
+    it('el Espía recibe el grimorio, con los faroles del demonio', () => {
       const m = plaza('spy', 'chef', 'imp');
       const { partida } = m.juego;
+      partida.faroles.ponerFarol(0, 'empath');
       partida.guiado.despertar('spy');
       expect(partida.entregas.grimorioRecibidoPor(m.ids[0])?.fichas.map((f) => f.personaje)).toEqual(['spy', 'chef', 'imp']);
+      expect(partida.entregas.grimorioRecibidoPor(m.ids[0])?.faroles).toEqual(['empath']);
+      // Y algo a lo que contestar «Entendido» cuando lo ha visto
+      expect(m.ultimo(0)).toMatchObject({ ficha: 'personalizado', texto: MIRA_EL_GRIMORIO });
     });
 
     it('la Mujer Escarlata, con su «Is The Demon», sabe que es el Imp', () => {

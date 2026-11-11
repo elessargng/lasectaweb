@@ -504,7 +504,7 @@ export class Partida {
     this.grimorio.ponerRecordatorio(jugadorId, { personaje: personajeId, indice, texto: textos[indice] });
   }
 
-  /** Envía a quien se sienta en un asiento el grimorio tal como está (el Espía); a un asiento libre, nada. */
+  /** Envía a quien se sienta en un asiento el grimorio tal como está, con los faroles del demonio (el Espía); a un asiento libre, nada. */
   private enviarGrimorioDeLaPlaza(jugadorId: string): void {
     const plaza = this.plaza();
     if (!plaza.find((a) => a.id === jugadorId)?.participanteId) return;
@@ -515,7 +515,7 @@ export class Partida {
       muerto: a.muerto,
       recordatorios: a.recordatorios.map((r) => ({ ...r, id: randomUUID() })),
     }));
-    this.entregas.enviarGrimorio(jugadorId, fichas);
+    this.entregas.enviarGrimorio(jugadorId, fichas, this.faroles.faroles().filter((id): id is string => !!id));
   }
 
   /**
