@@ -1,5 +1,22 @@
 [
   {
+    "version": "1.9.0",
+    "date": "2026-11-12",
+    "title": "Historia de la Partida",
+    "description": "El narrador puede deshacer cualquier acción, la partida sobrevive a un reinicio del servidor y el narrador virtual decide sabiendo lo que ha pasado en la partida.",
+    "changes": [
+      {
+        "category": "Narrador",
+        "items": [
+          "Añadida la función de deshacer.",
+          "Volver atrás deja la partida como estaba.",
+          "La partida sobrevive a un reinicio del servidor.",
+          "El narrador virtual decide con la historia de la partida."
+        ]
+      }
+    ]
+  },
+  {
     "version": "1.8.1",
     "date": "2026-11-11",
     "title": "Voz Neuronal",
