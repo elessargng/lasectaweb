@@ -22,6 +22,7 @@ import { Faroles } from './Faroles';
 import { Fases } from './Fases';
 import { Grimorio, identidadDe } from './Grimorio';
 import { Guion } from './Guion';
+import { Historia } from './Historia';
 import { habilidadesDelGuion } from './habilidades';
 import type { ContextoNoche } from './habilidades/HabilidadNocturna';
 import { Nominaciones } from './Nominaciones';
@@ -62,13 +63,19 @@ export class Partida {
     private readonly sala: Sala,
     private readonly entorno: EntornoPartida,
   ) {
-    // Un asiento que se quita se lleva lo que su jugador tenía en el grimorio
-    this.sala.alQuitar((jugador) => this.grimorio.olvidar(jugador));
+    // Un asiento que se quita se lleva lo que su jugador tenía en el grimorio (y la nominación y lo que señalaba)
+    this.sala.alQuitar((jugador) => {
+      this.grimorio.olvidar(jugador);
+      this.nominaciones.alQuitarAsiento(jugador.id);
+      this.senalamientos.alQuitarAsiento(jugador.id);
+    });
     // El acceso al grimorio es de los visitantes: al cambiar de papel se pierde (y se vuelve a pedir)
     this.sala.participantes.alCambiarRol((id) => this.acceso.cambiar(id, 'ninguno'));
     this.sala.participantes.alExpulsar((id, recuerdo) => this.acceso.alExpulsar(id, recuerdo));
   }
 
+  /** Por dónde entra todo lo que cambia la partida (ver Historia). */
+  readonly historia = new Historia();
   /** El guion de la partida y sus personajes. */
   readonly guion = new Guion();
   /** Los ajustes de la partida y si se puede conversar en privado. */
@@ -122,6 +129,7 @@ export class Partida {
     alVotar: (cuenta) => this.avisar({ tipo: 'voto', userId: cuenta }),
     alDesvotar: (cuenta) => this.avisar({ tipo: 'desvoto', userId: cuenta }),
     alExpulsar: (jugadorId) => this.grimorio.cambiarVida(jugadorId, true),
+    sola: (uso, hacer) => this.historia.hacer('sistema', uso, hacer),
     alCambiarSola: () => this.alCambiarSola(),
   });
   /** El gong y el reloj del narrador. */

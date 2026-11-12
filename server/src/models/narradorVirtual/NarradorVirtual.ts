@@ -92,12 +92,22 @@ export class NarradorVirtual {
     this.sala.participantes.relevarVirtual(narrador.participante, nombre, avatar, id);
   }
 
+  /**
+   * Lo que cambia él en la partida sin pasar por un caso de uso (apuntar una
+   * declaración, cerrar las del Patoso…): un paso de la historia, a su nombre.
+   */
+  paso<T>(uso: string, hacer: () => T): T {
+    return this.partida.historia.hacer(this.estado?.participante ?? 'sistema', uso, hacer);
+  }
+
   /** Se va (su participante sale de la sala): la palabra y los privados vuelven a ser de todos. */
   quitar(): void {
     const narrador = this.estado;
     if (narrador) this.sala.participantes.expulsar(narrador.participante);
+    this.paso('narradorVirtual:quitar', () => {
+      this.partida.nominaciones.darPalabra(null);
+      this.partida.configuracion.permitirPrivados(true);
+    });
     this.estado = null;
-    this.partida.nominaciones.darPalabra(null);
-    this.partida.configuracion.permitirPrivados(true);
   }
 }

@@ -41,7 +41,7 @@ export async function exterminar(ctx: ContextoEtapa, tirador: string, jugadorId:
     });
   }
   if (identidadDe(desde) === 'slayer') await ponerRecordatorio(ctx, desde.id, 'slayer', 'No Ability');
-  partida.declaraciones.apuntar(deDia.id, tirador);
+  juego.narrador.paso(`declarar:${deDia.id}`, () => partida.declaraciones.apuntar(deDia.id, tirador));
   if (!esExterminador || objetivo.muerto || !registraComoDemonio) return null;
   const desenlaces = noche.objetivo(objetivo).recibe({ origen: 'habilidad', personaje: 'slayer', efecto: 'matar' }).map(desenlaceDespertar);
   const { muere, gasta } = await elegirDesenlace(ctx, `El Exterminador alcanza a ${nombreDeAsiento(juego, objetivo.id)}: a quién le llega al final.`, desenlaces);
@@ -74,7 +74,9 @@ export async function contarDisparo(ctx: ContextoEtapa, tirador: string, jugador
   const { partida } = juego;
   const desde = partida.jugadorDe(tirador);
   if (!desde) return null;
-  partida.anotar({ tipo: 'exterminador', asiento: partida.asientoDiario(desde.id), objetivo: partida.asientoDiario(jugadorId), muere: muere !== null });
+  juego.narrador.paso(`declarar:${deDia.id}`, () =>
+    partida.anotar({ tipo: 'exterminador', asiento: partida.asientoDiario(desde.id), objetivo: partida.asientoDiario(jugadorId), muere: muere !== null }),
+  );
   const decirYEsperar = async (frase: string) => {
     ctx.decir(frase);
     await new Promise<void>((seguir) => ctx.temporizador.programar(duracionFrase(frase) + PAUSA_MS, seguir));

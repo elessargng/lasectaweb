@@ -31,14 +31,19 @@ export class Despertares {
   ) {}
 
   /**
-   * Se aplica al leer: si el jugador de un asiento se levanta, cambia de asiento,
-   * alguien se sienta en el que estaba libre o el asiento se quita, ese
-   * despertar se cierra (lo dicho era para otro).
+   * Los despertares que siguen abiertos: si el jugador de un asiento se levanta,
+   * cambia de asiento, alguien se sienta en el que estaba libre o el asiento se
+   * quita, ese despertar ya no cuenta (lo dicho era para otro). Al leer no se
+   * quita nada: se quitan al cambiar los despertares (ver podar).
    */
   private alDia(): HiloDespertar[] {
     const plaza = this.plaza();
-    this.hilos = this.hilos.filter((h) => plaza.some((a) => a.id === h.jugador && a.participanteId === h.ocupante));
-    return this.hilos;
+    return this.hilos.filter((h) => plaza.some((a) => a.id === h.jugador && a.participanteId === h.ocupante));
+  }
+
+  /** Se quitan los despertares que ya no cuentan (ver alDia). */
+  private podar(): void {
+    this.hilos = this.alDia();
   }
 
   /** Todos los despertares, en el orden en que se abrieron (copias). */
@@ -64,6 +69,7 @@ export class Despertares {
   despertar(jugadorId: string): string | null {
     const jugador = this.plaza().find((a) => a.id === jugadorId);
     if (!jugador) return 'Ese asiento ya no existe.';
+    this.podar();
     if (!this.hayDespertar(jugadorId)) this.hilos.push({ jugador: jugadorId, ocupante: jugador.participanteId, mensajes: [] });
     return null;
   }
@@ -94,7 +100,8 @@ export class Despertares {
     jugadorId: string,
     mensaje: Omit<MensajeDespertar, 'id' | 'hora' | 'fase' | 'eleccion' | 'guiado' | 'porOtros'> & Partial<Pick<MensajeDespertar, 'eleccion' | 'guiado' | 'porOtros'>>,
   ): void {
-    const hilo = this.alDia().find((h) => h.jugador === jugadorId);
+    this.podar();
+    const hilo = this.hilos.find((h) => h.jugador === jugadorId);
     if (!hilo) return;
     const { momento, numero } = this.fase();
     hilo.mensajes.push({ eleccion: null, guiado: false, porOtros: false, ...mensaje, id: randomUUID(), hora: Date.now(), fase: { momento, numero } });

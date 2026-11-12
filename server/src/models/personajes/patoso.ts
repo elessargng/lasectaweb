@@ -21,12 +21,12 @@ import type { DefinicionPersonaje } from './DefinicionPersonaje';
 
 /** Los muertos que pueden declararse Patoso hasta `hasta` (sin repetir a quien ya puede). */
 export function abrirPatosos(juego: SalaDeJuego, jugadores: string[], hasta: Plazo['hasta']): void {
-  if (juego.narrador.actual()) juego.partida.declaraciones.abrir(deDia.id, jugadores, hasta);
+  if (juego.narrador.actual()) juego.narrador.paso(`declarar:${deDia.id}`, () => juego.partida.declaraciones.abrir(deDia.id, jugadores, hasta));
 }
 
 /** Ya no puede declararse Patoso (lo ha hecho, o se ha acabado su momento). */
 export function quitarPatoso(juego: SalaDeJuego, jugadorId: string): void {
-  juego.partida.declaraciones.cerrar(deDia.id, jugadorId);
+  juego.narrador.paso(`declarar:${deDia.id}`, () => juego.partida.declaraciones.cerrar(deDia.id, jugadorId));
 }
 
 /**
@@ -67,7 +67,9 @@ export async function contarPatoso(ctx: ContextoEtapa, patosoId: string, elegido
   const quien = partida.plaza().find((a) => a.id === patosoId);
   const elegido = partida.plaza().find((a) => a.id === elegidoId);
   if (!quien || !elegido) return null;
-  partida.anotar({ tipo: 'patoso', asiento: partida.asientoDiario(patosoId), objetivo: partida.asientoDiario(elegidoId), porElNarrador });
+  juego.narrador.paso(`declarar:${deDia.id}`, () =>
+    partida.anotar({ tipo: 'patoso', asiento: partida.asientoDiario(patosoId), objetivo: partida.asientoDiario(elegidoId), porElNarrador }),
+  );
   const frase = FRASES.patoso(nombreDeAsiento(juego, patosoId), nombreDeAsiento(juego, elegidoId));
   ctx.decir(frase);
   await new Promise<void>((seguir) => ctx.temporizador.programar(duracionFrase(frase) + PAUSA_MS, seguir));

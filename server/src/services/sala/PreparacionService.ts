@@ -125,7 +125,7 @@ export class PreparacionService {
           'predeterminado' in peticion
             ? await this.deps.guiones.guionPredeterminado(peticion.predeterminado)
             : await this.deps.guiones.importar(peticion.json, peticion.archivo);
-        this.juego.partida.cambiarGuion(guion);
+        this.usos.paso(yoId, 'preparacion:guion', () => this.juego.partida.cambiarGuion(guion));
         return null;
       } catch (e) {
         // Un guion inválido trae un mensaje para quien lo carga; cualquier otro fallo, no.

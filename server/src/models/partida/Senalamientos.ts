@@ -40,6 +40,9 @@ export interface EntornoSenalamiento {
   despertar(jugadorId: string): void;
 }
 
+/** Ya no se puede señalar: lo ha congelado alguien (Lil' Monsta) o se ha acabado su cuenta atrás. */
+const congelado = (s: Senalamiento) => s.congelado || (s.fin !== null && Date.now() >= s.fin);
+
 /**
  * El señalamiento: el narrador pide que unos jugadores señalen a otros (con un
  * mensaje y una cuenta atrás o sin ella). De día lo ven todos; de noche, solo
@@ -51,19 +54,20 @@ export class Senalamientos {
 
   constructor(private readonly entorno: EntornoSenalamiento) {}
 
-  /**
-   * El señalamiento, o null. Al leerlo se pone al día: los asientos que ya no
-   * existen salen, y con la cuenta atrás acabada queda congelado.
-   */
+  /** El señalamiento, o null (una copia): con la cuenta atrás acabada, congelado. */
   senalamiento(): Senalamiento | null {
     const s = this.actual;
     if (!s) return null;
-    const ids = new Set(this.entorno.plaza().map((a) => a.id));
-    s.senaladores = s.senaladores.filter((id) => ids.has(id));
-    s.objetivos = s.objetivos.filter((id) => ids.has(id));
-    for (const [desde, hasta] of Object.entries(s.senales)) if (!ids.has(desde) || !ids.has(hasta)) delete s.senales[desde];
-    if (!s.congelado && s.fin !== null && Date.now() >= s.fin) s.congelado = true;
-    return { ...s, senaladores: [...s.senaladores], objetivos: [...s.objetivos], senales: { ...s.senales } };
+    return { ...s, senaladores: [...s.senaladores], objetivos: [...s.objetivos], senales: { ...s.senales }, congelado: congelado(s) };
+  }
+
+  /** Se quita un asiento: ya no señala ni se le puede señalar. */
+  alQuitarAsiento(jugadorId: string): void {
+    const s = this.actual;
+    if (!s) return;
+    s.senaladores = s.senaladores.filter((id) => id !== jugadorId);
+    s.objetivos = s.objetivos.filter((id) => id !== jugadorId);
+    for (const [desde, hasta] of Object.entries(s.senales)) if (desde === jugadorId || hasta === jugadorId) delete s.senales[desde];
   }
 
   /**
@@ -121,9 +125,9 @@ export class Senalamientos {
 
   /** El jugador de un asiento que señala, señala a otro (null: deja de señalar). Devuelve el error, si lo hay. */
   senalar(participanteId: string, objetivo: string | null): string | null {
-    const s = this.senalamiento() && this.actual!;
+    const s = this.actual;
     if (!s) return 'No hay ningún señalamiento.';
-    if (s.congelado) return 'El señalamiento ya ha terminado.';
+    if (congelado(s)) return 'El señalamiento ya ha terminado.';
     const jugador = this.entorno.jugadorDe(participanteId);
     if (!jugador || !s.senaladores.includes(jugador.id)) return 'No te toca señalar.';
     if (objetivo === null) {

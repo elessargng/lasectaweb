@@ -32,17 +32,27 @@ export class UsosSala<U extends string> {
 
   /**
    * Si puede, lo hace (`hacer` devuelve el error del dominio, null o, si contesta
-   * algo, { valor }); si sale bien, avisa del cambio.
+   * algo, { valor }) como un paso de la historia de la partida; si sale bien, avisa del cambio.
    */
   hacer(yoId: string, uso: U, hacer: () => string | null | { valor: string }): ResultadoUso {
     const noPuede = this.noPuede(yoId, uso);
-    return noPuede ? { ok: false, error: noPuede } : this.hecho(hacer());
+    return noPuede ? { ok: false, error: noPuede } : this.hecho(this.juego.partida.historia.hacer(yoId, uso, hacer));
   }
 
-  /** Como hacer, con algo que tarda (el narrador virtual prepara la partida, cuenta una declaración…). */
+  /**
+   * Como hacer, con algo que tarda (el narrador virtual prepara la partida, cuenta una
+   * declaración…). Mientras espera, otros pueden hacer cosas: no es un paso de la
+   * historia, sino que lo que cambia (tras esperar) va por ella con `paso`, o por
+   * otro caso de uso.
+   */
   async hacerAsincrono(yoId: string, uso: U, hacer: () => Promise<string | null | { valor: string }>): Promise<ResultadoUso> {
     const noPuede = this.noPuede(yoId, uso);
     return noPuede ? { ok: false, error: noPuede } : this.hecho(await hacer());
+  }
+
+  /** Lo que cambia un caso de uso que tarda, ya sin esperar: un paso de la historia de la partida. */
+  paso<T>(yoId: string, uso: U, hacer: () => T): T {
+    return this.juego.partida.historia.hacer(yoId, uso, hacer);
   }
 
   /** Una consulta (no cambia nada, no se avisa): si puede, lo que lee; si no, por qué. */

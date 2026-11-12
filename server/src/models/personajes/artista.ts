@@ -86,10 +86,12 @@ export async function preguntarComoArtista(
     respuesta = si ? 'si' : 'no';
   }
 
-  partida.anotar({ tipo: 'artista', asiento: partida.asientoDiario(asiento.id), pregunta: enPalabras, respuesta });
+  juego.narrador.paso(`declarar:${deDia.id}`, () =>
+    partida.anotar({ tipo: 'artista', asiento: partida.asientoDiario(asiento.id), pregunta: enPalabras, respuesta }),
+  );
   if (respuesta === 'reformular') return { respuesta };
   if (creeSerlo) await ponerRecordatorio(ctx, asiento.id, 'artist', 'No Ability');
-  partida.declaraciones.apuntar(deDia.id, jugador);
+  juego.narrador.paso(`declarar:${deDia.id}`, () => partida.declaraciones.apuntar(deDia.id, jugador));
   return { respuesta };
 }
 

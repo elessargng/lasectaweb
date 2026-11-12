@@ -101,6 +101,8 @@ export interface EntornoVotacion {
   alDesvotar(cuenta: string | null): void;
   /** Sale la expulsión de un viajero: muere al momento. */
   alExpulsar(jugadorId: string): void;
+  /** La votación avanza sola (con el tiempo): cada paso, por la historia de la partida (ver Historia). */
+  sola(uso: string, hacer: () => void): void;
   /** La votación ha avanzado sola (con el tiempo): hay que mandar el estado a todos. */
   alCambiarSola(): void;
 }
@@ -167,7 +169,7 @@ export class Nominaciones {
     n.votacion = { orden, paso: 0, resultados: {}, votos: 0, terminada: false };
     n.gastadosAlVotar = plaza.filter((a) => a.votoGastado).map((a) => a.id);
     this.entorno.alCambiarSola();
-    this.temporizador = setTimeout(() => this.avanzarVotacion(), this.entorno.segundosPorFicha() * 1000);
+    this.temporizador = setTimeout(() => this.entorno.sola('dia:votacion', () => this.avanzarVotacion()), this.entorno.segundosPorFicha() * 1000);
   }
 
   /**
@@ -227,20 +229,24 @@ export class Nominaciones {
         n.registro.votos = v.votos;
       }
     } else {
-      this.temporizador = setTimeout(() => this.avanzarVotacion(), this.entorno.segundosPorFicha() * 1000);
+      this.temporizador = setTimeout(() => this.entorno.sola('dia:votacion', () => this.avanzarVotacion()), this.entorno.segundosPorFicha() * 1000);
     }
     this.entorno.alCambiarSola();
   }
 
-  /** La nominación en curso (la de verdad); se anula sola si alguno de los dos asientos ya no existe. */
+  /** La nominación en curso (la de verdad), si sus dos asientos siguen en la plaza (ver alQuitarAsiento). */
   private nominacionVigente(): NominacionInterna | null {
     const n = this.nominacionEnCurso;
     const existe = (id: string) => this.entorno.plaza().some((a) => a.id === id);
-    if (n && (!existe(n.desde) || !existe(n.hasta))) {
-      this.nominacionEnCurso = null;
-      this.pararTemporizador();
-    }
-    return this.nominacionEnCurso;
+    return n && existe(n.desde) && existe(n.hasta) ? n : null;
+  }
+
+  /** Se quita un asiento: si nominaba o estaba nominado, la nominación se anula. */
+  alQuitarAsiento(jugadorId: string): void {
+    const n = this.nominacionEnCurso;
+    if (n?.desde !== jugadorId && n?.hasta !== jugadorId) return;
+    this.nominacionEnCurso = null;
+    this.pararTemporizador();
   }
 
   /** La nominación en curso (una copia), con los votos que hacen falta. */
@@ -387,6 +393,6 @@ export class Nominaciones {
     if (!this.nominacionEnCurso) return;
     this.pararTemporizador();
     this.nominacionEnCurso.cuentaAtrasFin = ahora + SALA_CUENTA_ATRAS_MS;
-    this.temporizador = setTimeout(() => this.empezarVotacion(), SALA_CUENTA_ATRAS_MS);
+    this.temporizador = setTimeout(() => this.entorno.sola('dia:votacion', () => this.empezarVotacion()), SALA_CUENTA_ATRAS_MS);
   }
 }
