@@ -79,6 +79,7 @@ const PETICIONES_PARTES = {
     'fase:noche': 'irANoche',
     'fase:amanecer': 'amanecer',
     'fase:volverAtras': 'volverAtras',
+    'fase:deshacer': 'deshacer',
     'fase:limpiarGrimorio': 'limpiarGrimorio',
   },
   grimorio: {

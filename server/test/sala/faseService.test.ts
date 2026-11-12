@@ -25,7 +25,8 @@ describe('las fases', () => {
   it('solo un narrador; anochece si no es de noche y amanece si lo es', async () => {
     expect(await arnes.pedir(ana, 'fase:noche')).toEqual({ ok: false, error: 'Solo un narrador puede hacer que anochezca.' });
     expect(await arnes.pedir(narradora, 'fase:amanecer')).toEqual({ ok: false, error: 'Solo amanece de noche.' });
-    expect(await arnes.pedir(narradora, 'fase:volverAtras')).toEqual({ ok: false, error: 'En la preparación no hay a dónde volver.' });
+    expect(await arnes.pedir(narradora, 'fase:volverAtras')).toEqual({ ok: false, error: 'No hay ningún cambio de fase al que volver.' });
+    expect(await arnes.pedir(narradora, 'fase:deshacer')).toEqual({ ok: false, error: 'No hay nada que deshacer.' });
     expect(narradora.estado.acciones).toEqual(expect.arrayContaining(['fase:noche', 'fase:limpiarGrimorio']));
     expect(ana.estado.acciones.some((a) => a.startsWith('fase:'))).toBe(false);
 
@@ -43,6 +44,20 @@ describe('las fases', () => {
     expect(ana.estado.fase).toMatchObject({ momento: 'noche', numero: 1 });
     expect(await arnes.pedir(narradora, 'fase:limpiarGrimorio')).toEqual({ ok: true });
     expect(ana.estado.fase.momento).toBe('preparacion');
-    expect(narradora.estado.acciones).not.toContain('fase:volverAtras');
+    // Limpiar el grimorio también se puede deshacer: se vuelve a la noche 1
+    expect(narradora.estado.acciones).toContain('fase:volverAtras');
+    expect(await arnes.pedir(narradora, 'fase:volverAtras')).toEqual({ ok: true });
+    expect(ana.estado.fase).toMatchObject({ momento: 'noche', numero: 1 });
+  });
+
+  it('deshacer: solo un narrador, lo último que cambió la partida, y el narrador ve qué deshará', async () => {
+    await arnes.hacer(narradora, 'fase:noche');
+    expect(narradora.estado.deshacer).toBe('fase:noche');
+    expect(ana.estado.deshacer).toBeNull();
+    expect(ana.estado.acciones).not.toContain('fase:deshacer');
+    expect(await arnes.pedir(ana, 'fase:deshacer')).toEqual({ ok: false, error: 'Solo un narrador puede deshacer.' });
+    expect(await arnes.pedir(narradora, 'fase:deshacer')).toEqual({ ok: true, valor: 'fase:noche' });
+    expect(ana.estado.fase.momento).toBe('preparacion');
+    expect(narradora.estado.deshacer).toBeNull();
   });
 });

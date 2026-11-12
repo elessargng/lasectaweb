@@ -413,21 +413,39 @@ describe('SalaDeJuego', () => {
       expect(partida.nominaciones.nominacion()).toBeNull();
     });
 
-    it('la máquina del tiempo vuelve a la fase anterior y devuelve la calavera', () => {
+    it('volver atrás deja la partida como justo antes del último cambio de fase', () => {
       const { juego, asiento } = salaConJugadores('Ana', 'Bea');
       const { partida } = juego;
-      expect(partida.fases.anterior()).toBeNull();
-      alDia(juego);
-      partida.grimorio.marcar(asiento(1).id, true, 3);
-      partida.irANoche();
-      expect(partida.volverAtras()).toBe(true);
+      const paso = (hacer: () => unknown) => partida.historia.hacer('narradora', 'prueba', hacer);
+      expect(partida.historia.volverDeFase()).toBeNull();
+      paso(() => partida.irANoche());
+      paso(() => partida.amanecer());
+      paso(() => partida.grimorio.marcar(asiento(1).id, true, 3));
+      paso(() => partida.irANoche());
+      paso(() => partida.grimorio.cambiarVida(asiento(0).id, true));
+      expect(partida.historia.volverDeFase()).not.toBeNull();
       expect(partida.fases.actual()).toMatchObject({ momento: 'dia', numero: 1 });
       expect(partida.grimorio.calavera()).toEqual({ jugadorId: asiento(1).id, votos: 3 });
-      expect(partida.volverAtras()).toBe(true);
+      expect(asiento(0).muerto || asiento(0).muertePendiente).toBe(false);
+      expect(partida.historia.volverDeFase()).not.toBeNull();
       expect(partida.fases.actual()).toMatchObject({ momento: 'noche', numero: 1 });
-      expect(partida.volverAtras()).toBe(true);
+      expect(partida.historia.volverDeFase()).not.toBeNull();
       expect(partida.fases.actual()).toMatchObject({ momento: 'preparacion', numero: 0 });
-      expect(partida.volverAtras()).toBe(false);
+      expect(partida.historia.volverDeFase()).toBeNull();
+    });
+
+    it('deshacer deshace el último paso que cambió algo; lo que no cambia nada no es un paso', () => {
+      const { juego, asiento } = salaConJugadores('Ana', 'Bea');
+      const { partida } = juego;
+      const paso = (hacer: () => unknown) => partida.historia.hacer('narradora', 'prueba', hacer);
+      paso(() => partida.irANoche());
+      paso(() => partida.grimorio.cambiarVida(asiento(0).id, true));
+      paso(() => partida.fases.actual());
+      expect(partida.historia.deshacer()).toMatchObject({ quien: 'narradora', uso: 'prueba', cambiaFase: false });
+      expect(asiento(0).muertePendiente).toBe(false);
+      expect(partida.historia.deshacer()).toMatchObject({ cambiaFase: true });
+      expect(partida.fases.actual().momento).toBe('preparacion');
+      expect(partida.historia.deshacer()).toBeNull();
     });
 
     it('limpiar el grimorio deja la partida como al principio, con los jugadores sentados', () => {

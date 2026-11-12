@@ -25,6 +25,7 @@ import PanelIdiomas from './PanelIdiomas';
 import RegistroVotaciones from './RegistroVotaciones';
 import TituloGuion from './TituloGuion';
 import FasePartida from './FasePartida';
+import { pasoEnPalabras } from './pasosPartida';
 import PanelChat from './PanelChat';
 import PanelComunicaciones from './PanelComunicaciones';
 import PanelConversaciones from './PanelConversaciones';
@@ -1779,6 +1780,7 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     irANoche: () => propia(() => fase.irANoche()),
     amanecer: () => propia(() => fase.amanecer()),
     volverAtras: () => propia(() => fase.volverAtras()),
+    deshacer: () => propia(() => fase.deshacer()),
     limpiarGrimorio: () => propia(() => fase.limpiarGrimorio()),
   };
   const nochePropia: AccionesNoche = {
@@ -2110,6 +2112,19 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                           const r = await fasePropia.volverAtras();
                           if (!r.ok) setAviso(r.error);
                           return r.ok;
+                        }
+                      : undefined
+                  }
+                  deshacer={
+                    estado.acciones.includes('fase:deshacer') && estado.deshacer
+                      ? {
+                          paso: pasoEnPalabras(estado.deshacer),
+                          hacer: async () => {
+                            const r = await fasePropia.deshacer();
+                            if (!r.ok) setAviso(r.error);
+                            else anunciar('deshacer', `Deshecho: ${pasoEnPalabras(r.valor ?? '')}.`);
+                            return r.ok;
+                          },
                         }
                       : undefined
                   }

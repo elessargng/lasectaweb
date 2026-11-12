@@ -3,7 +3,7 @@ import type { SalaDeJuego } from '../../models/SalaDeJuego';
 import { UsosSala, type Permiso, type ResultadoUso } from './UsosSala';
 
 /** Lo que se puede hacer con las fases (son también los nombres que recibe el cliente para pintar sus botones). */
-export const USOS_FASE = ['fase:noche', 'fase:amanecer', 'fase:volverAtras', 'fase:limpiarGrimorio'] as const;
+export const USOS_FASE = ['fase:noche', 'fase:amanecer', 'fase:volverAtras', 'fase:deshacer', 'fase:limpiarGrimorio'] as const;
 type UsoFase = (typeof USOS_FASE)[number];
 
 /** Quién puede hacer cada cosa con las fases y, si no, por qué. */
@@ -18,16 +18,20 @@ const PERMISOS: Record<UsoFase, Permiso> = {
   },
   'fase:volverAtras': ({ partida }, yo) => {
     if (yo.rol !== 'narrador') return 'Solo un narrador puede volver atrás.';
-    return partida.fases.anterior() ? null : 'En la preparación no hay a dónde volver.';
+    return partida.historia.puedeVolverDeFase() ? null : 'No hay ningún cambio de fase al que volver.';
+  },
+  'fase:deshacer': ({ partida }, yo) => {
+    if (yo.rol !== 'narrador') return 'Solo un narrador puede deshacer.';
+    return partida.historia.ultimo() ? null : 'No hay nada que deshacer.';
   },
   'fase:limpiarGrimorio': (_juego, yo) => (yo.rol === 'narrador' ? null : 'Solo un narrador puede limpiar el grimorio.'),
 };
 
 /**
- * Los casos de uso del paso de las fases: anochecer, amanecer, volver atrás (la
- * máquina del tiempo) y limpiar el grimorio para empezar otra vez. Las reglas
- * están en la partida (models/partida/Partida y Fases). Si cambia, avisa para que
- * la sala se mande a todos.
+ * Los casos de uso del paso de las fases: anochecer, amanecer, limpiar el
+ * grimorio para empezar otra vez y la máquina del tiempo (deshacer lo último, o
+ * volver a antes del último cambio de fase; ver Historia). Las reglas están en la
+ * partida (models/partida). Si cambia, avisa para que la sala se mande a todos.
  */
 export class FaseService {
   private readonly usos: UsosSala<UsoFase>;
@@ -70,11 +74,19 @@ export class FaseService {
   }
 
   /**
-   * La máquina del tiempo: vuelve a la fase anterior (del día N a la noche N, de la
-   * noche N al día anterior o, de la noche 1, a la preparación). Ver Partida.volverAtras.
+   * Vuelve a la partida tal como estaba justo antes del último cambio de fase (de la
+   * noche 2, al día 1 justo antes de anochecer): lo que se hizo después se deshace.
    */
   volverAtras(yoId: string): ResultadoUso {
-    return this.usos.hacer(yoId, 'fase:volverAtras', () => (this.juego.partida.volverAtras() ? null : 'No hay a dónde volver.'));
+    return this.usos.hacer(yoId, 'fase:volverAtras', () => (this.juego.partida.historia.volverDeFase() ? null : 'No hay ningún cambio de fase al que volver.'));
+  }
+
+  /** Deshace lo último que se hizo en la partida (lo hiciera quien lo hiciera): contesta (valor) qué se ha deshecho, su caso de uso. */
+  deshacer(yoId: string): ResultadoUso {
+    return this.usos.hacer(yoId, 'fase:deshacer', () => {
+      const paso = this.juego.partida.historia.deshacer();
+      return paso ? { valor: paso.uso } : 'No hay nada que deshacer.';
+    });
   }
 
   /** Borra el registro de votaciones, deja las fichas como al principio y vuelve a la preparación. */

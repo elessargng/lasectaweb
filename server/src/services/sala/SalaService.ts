@@ -109,6 +109,8 @@ export class SalaService {
           .catch((err) => console.error('[SALA] No se ha podido guardar la partida:', err));
       });
       partida.suscribir((evento) => estadisticas.registrar(evento));
+      // Lo apuntado se deshace con la partida
+      partida.historia.registrar('estadisticas', estadisticas);
     }
     this.chat = new ChatService(deps.mensajes, this.juego);
     this.imagenes = new ImagenesSala(deps.imagenes);

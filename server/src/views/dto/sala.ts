@@ -132,6 +132,11 @@ export interface SalaDto {
    * 'demonios'; las demás son las automáticas. Solo se manda a los narradores.
    */
   recordatoriosNoche: Record<string, boolean>;
+  /**
+   * Lo que deshace «Deshacer»: el caso de uso del último paso de la partida (ver
+   * Historia), o null si no hay nada. Solo se manda a los narradores.
+   */
+  deshacer: string | null;
   /** Los despertares: todos, para los narradores; el de su asiento, para un jugador; ninguno, para los demás. */
   despertares: DespertarDto[];
   /** El despertar guiado de cada fila del orden de noche (ver HabilidadNocheDto). Solo para los narradores. */

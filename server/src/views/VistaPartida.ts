@@ -292,6 +292,7 @@ export class VistaPartida {
       // El registro de votaciones es solo para los narradores.
       votaciones: narra ? comun.votaciones : [],
       recordatoriosNoche: narra ? comun.recordatoriosNoche : {},
+      deshacer: narra ? (partida.historia.ultimo()?.uso ?? null) : null,
       habilidadesNoche: narra ? partida.guiado.habilidadesNoche().map(habilidadNocheDto) : [],
       nuevoImp: narra ? partida.guiado.nuevoImp() : null,
       // Los despertares: los narradores y los visitantes que ven el grimorio, todos; un

@@ -24,6 +24,11 @@ export class FaseController {
     this.como(sesion, responder, (yoId) => this.faseService.volverAtras(yoId));
   };
 
+  /** Contesta (valor) qué se ha deshecho: el caso de uso de ese paso. */
+  deshacer = (sesion: Sesion, _peticion: unknown, responder: Responder<ResultadoAccion>): void => {
+    this.como(sesion, responder, (yoId) => this.faseService.deshacer(yoId));
+  };
+
   limpiarGrimorio = (sesion: Sesion, _peticion: unknown, responder: Responder<ResultadoAccion>): void => {
     this.como(sesion, responder, (yoId) => this.faseService.limpiarGrimorio(yoId));
   };

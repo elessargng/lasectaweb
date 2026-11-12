@@ -1,5 +1,5 @@
 import type { EntradaDiario } from '../compartido/diario';
-import { PASOS_DE_FASE_MAX, type EventoPartida, type FotoAsiento } from '../partida/eventos';
+import type { EventoPartida, FotoAsiento } from '../partida/eventos';
 import { SeguimientoPartida, type FotoJugador, type InstantaneaSeguimiento, type RegistroPartida } from './SeguimientoPartida';
 
 /** Cómo están los jugadores con cuenta en una foto de la mesa. */
@@ -13,11 +13,6 @@ const fotosDeCuentas = (mesa: FotoAsiento[]): FotoJugador[] =>
  */
 export class EstadisticasPartida {
   private seguimiento = new SeguimientoPartida();
-  /**
-   * Lo apuntado antes de cada cambio de fase, para que la máquina del tiempo lo
-   * devuelva: va a la par que los pasos que recuerda la sala.
-   */
-  private pasos: { seguimiento: InstantaneaSeguimiento; diario: number }[] = [];
   /** Lo que se ha hecho en la partida, en orden (ver models/compartido/diario). */
   private diario: EntradaDiario[] = [];
 
@@ -30,12 +25,10 @@ export class EstadisticasPartida {
   registrar(evento: EventoPartida): void {
     switch (evento.tipo) {
       case 'anochece':
-        this.recordarPaso();
         if (evento.desdePreparacion || !this.seguimiento.estaEmpezada()) this.seguimiento.empezar(fotosDeCuentas(evento.plaza));
         else for (const userId of evento.conCalavera) this.seguimiento.ejecutado(userId);
         return;
       case 'amanece':
-        this.recordarPaso();
         // El rol con el que empieza el día cuenta como jugado (los cambios de la noche, no)
         this.seguimiento.anotarRoles(fotosDeCuentas(evento.plaza));
         return;
@@ -54,17 +47,7 @@ export class EstadisticasPartida {
       case 'diario':
         this.diario.push(evento.entrada);
         return;
-      case 'vueltaAtras': {
-        // Lo que se hizo desde ese cambio de fase, fuera también del diario
-        const paso = evento.deshace ? this.pasos.pop() : undefined;
-        if (paso) {
-          this.seguimiento.restaurar(paso.seguimiento);
-          this.diario.length = Math.min(this.diario.length, paso.diario);
-        } else if (evento.aPreparacion) this.seguimiento.reiniciar();
-        return;
-      }
       case 'nuevaPartida':
-        this.pasos = [];
         this.diario = [];
         this.seguimiento.reiniciar();
         return;
@@ -74,9 +57,14 @@ export class EstadisticasPartida {
     }
   }
 
-  private recordarPaso(): void {
-    this.pasos.push({ seguimiento: this.seguimiento.instantanea(), diario: this.diario.length });
-    if (this.pasos.length > PASOS_DE_FASE_MAX) this.pasos.shift();
+  /** Una copia de lo apuntado, para deshacerlo con la partida (ver Historia). */
+  instantanea(): InstantaneaEstadisticas {
+    return { seguimiento: this.seguimiento.instantanea(), diario: structuredClone(this.diario) };
+  }
+
+  restaurar({ seguimiento, diario }: InstantaneaEstadisticas): void {
+    this.seguimiento.restaurar(seguimiento);
+    this.diario = structuredClone(diario);
   }
 
   /** Se acaba la partida: se guarda lo de cada uno (si se había empezado a jugar) y la mesa, para el historial. */
@@ -102,4 +90,10 @@ export class EstadisticasPartida {
       narradores,
     });
   }
+}
+
+/** Lo apuntado en un momento (ver EstadisticasPartida.instantanea). */
+export interface InstantaneaEstadisticas {
+  seguimiento: InstantaneaSeguimiento;
+  diario: EntradaDiario[];
 }

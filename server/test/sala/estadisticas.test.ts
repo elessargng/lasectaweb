@@ -13,8 +13,12 @@ function guardadas(juego: SalaDeJuego): RegistroPartida[] {
   const registros: RegistroPartida[] = [];
   const estadisticas = new EstadisticasPartida((registro) => registros.push(registro));
   partida.suscribir((evento) => estadisticas.registrar(evento));
+  partida.historia.registrar('estadisticas', estadisticas);
   return registros;
 }
+
+/** Algo que hace la narradora, como un paso de la historia (para poder deshacerlo). */
+const paso = (juego: SalaDeJuego, hacer: () => unknown) => void juego.partida.historia.hacer('nora', 'prueba', hacer);
 
 /** Ana (1), Bea (2) y Ceci (3) sentadas en los asientos 1 a 3 con chef, imp y empath; Nora (9) narra. */
 function partida() {
@@ -114,40 +118,53 @@ describe('estadísticas de la partida', () => {
     expect(de('3')).toMatchObject({ nominado: 0 });
   });
 
-  it('la máquina del tiempo también devuelve las estadísticas como estaban', () => {
+  it('volver atrás también devuelve las estadísticas como estaban', () => {
     const { juego, asiento, registros } = partida();
-    juego.partida.irANoche();
-    juego.partida.amanecer();
-    juego.partida.grimorio.marcar(asiento(1), true);
-    juego.partida.irANoche();
-    // Se había precipitado: vuelve al día (con la calavera) y no anochece
-    juego.partida.volverAtras();
+    paso(juego, () => juego.partida.irANoche());
+    paso(juego, () => juego.partida.amanecer());
+    paso(juego, () => juego.partida.grimorio.marcar(asiento(1), true));
+    paso(juego, () => juego.partida.irANoche());
+    // Se había precipitado: vuelve al día justo antes de anochecer (con la calavera)
+    juego.partida.historia.volverDeFase();
+    expect(juego.partida.grimorio.calavera()?.jugadorId).toBe(asiento(1));
     juego.partida.grimorio.desmarcar();
     juego.partida.empezarRevelacion('malvado');
     expect(registros[0].jugadores.find((j) => j.userId === '2')?.ejecutado).toBe(0);
   });
 
-  it('volviendo dos fases atrás, cada una deshace lo suyo', () => {
+  it('volviendo dos fases atrás, se deshace todo lo de después de cada una', () => {
     const { juego, asiento, registros } = partida();
-    juego.partida.irANoche();
+    paso(juego, () => juego.partida.irANoche());
+    paso(juego, () => juego.partida.grimorio.cambiarPersonaje(asiento(0), 'librarian'));
     // El rol con el que Ana empieza el día 1 cuenta, salvo que se deshaga ese amanecer
-    juego.partida.grimorio.cambiarPersonaje(asiento(0), 'librarian');
-    juego.partida.amanecer();
-    juego.partida.grimorio.marcar(asiento(1), true);
-    juego.partida.irANoche();
-    juego.partida.volverAtras();
-    juego.partida.volverAtras();
+    paso(juego, () => juego.partida.amanecer());
+    paso(juego, () => juego.partida.grimorio.marcar(asiento(1), true));
+    paso(juego, () => juego.partida.irANoche());
+    juego.partida.historia.volverDeFase();
+    juego.partida.historia.volverDeFase();
     expect(juego.partida.fases.actual()).toMatchObject({ momento: 'noche', numero: 1 });
+    expect(juego.partida.plaza()[0].personaje).toBe('librarian');
     juego.partida.empezarRevelacion('bueno');
     const ana = registros[0].jugadores.find((j) => j.userId === '1');
-    expect(ana).toMatchObject({ roles: ['chef'], rolFinal: 'chef' });
+    expect(ana).toMatchObject({ roles: ['chef'] });
     expect(registros[0].jugadores.find((j) => j.userId === '2')?.ejecutado).toBe(0);
+  });
+
+  it('deshacer devuelve las estadísticas de antes de ese paso', () => {
+    const { juego, asiento, registros } = partida();
+    paso(juego, () => juego.partida.irANoche());
+    paso(juego, () => juego.partida.amanecer());
+    paso(juego, () => juego.partida.nominar(asiento(0), asiento(1)));
+    juego.partida.historia.deshacer();
+    expect(juego.partida.nominaciones.nominacion()).toBeNull();
+    juego.partida.empezarRevelacion('bueno');
+    expect(registros[0].jugadores.find((j) => j.userId === '1')).toMatchObject({ nominaciones: 0 });
   });
 
   it('volviendo a la preparación, la partida no ha empezado: se guarda sin jugadores', () => {
     const { juego, registros } = partida();
-    juego.partida.irANoche();
-    juego.partida.volverAtras();
+    paso(juego, () => juego.partida.irANoche());
+    juego.partida.historia.volverDeFase();
     juego.partida.empezarRevelacion('bueno');
     expect(registros).toHaveLength(1);
     expect(registros[0].jugadores).toEqual([]);
@@ -209,13 +226,14 @@ describe('estadísticas de la partida', () => {
     ]);
   });
 
-  it('la máquina del tiempo saca del diario lo hecho desde el cambio de fase que deshace', () => {
+  it('volver atrás saca del diario lo hecho desde el cambio de fase al que vuelve', () => {
     const { juego, asiento, registros } = partida();
-    juego.partida.irANoche();
-    juego.partida.grimorio.cambiarVida(asiento(2), true);
-    juego.partida.amanecer();
-    juego.partida.grimorio.cambiarAlineamiento(asiento(0), 'malvado');
-    juego.partida.volverAtras();
+    paso(juego, () => juego.partida.irANoche());
+    paso(juego, () => juego.partida.grimorio.cambiarVida(asiento(2), true));
+    paso(juego, () => juego.partida.amanecer());
+    paso(juego, () => juego.partida.grimorio.cambiarAlineamiento(asiento(0), 'malvado'));
+    juego.partida.historia.volverDeFase();
+    expect(juego.partida.grimorio.alineamiento(juego.partida.plaza()[0])).not.toBe('malvado');
     juego.partida.empezarRevelacion('bueno');
     expect(registros[0].diario.map((e) => e.tipo)).toEqual(['muere']);
   });

@@ -15,9 +15,6 @@ export interface Diario {
   asiento(jugadorId: string): AsientoDiario;
 }
 
-/** Cuántos cambios de fase recuerda la máquina del tiempo del narrador. */
-export const PASOS_DE_FASE_MAX = 20;
-
 /** Un asiento de la plaza en un momento de la partida. */
 export interface FotoAsiento {
   /** Su número en la plaza (1, el de las 12). */
@@ -49,12 +46,6 @@ export type EventoPartida =
   | { tipo: 'ejecucion'; userId: string | null }
   /** Algo que se ha hecho en la partida, para su diario (ver models/compartido/diario). */
   | { tipo: 'diario'; entrada: EntradaDiario }
-  /**
-   * La máquina del tiempo: se vuelve a la fase anterior. `deshace`: se deshace el
-   * último cambio de fase (el último anochece o amanece), con lo que trajo; si
-   * no, solo se vuelve atrás. `aPreparacion`: la partida aún no ha empezado.
-   */
-  | { tipo: 'vueltaAtras'; deshace: boolean; aPreparacion: boolean }
   /** Se limpia el grimorio: otra partida, desde el principio. */
   | { tipo: 'nuevaPartida' }
   /** Se revela el grimorio: la partida ha terminado. */

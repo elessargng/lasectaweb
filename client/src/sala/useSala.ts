@@ -305,6 +305,7 @@ export function useSala(
       irANoche: () => pedirAlSocket<ResultadoAccion>('fase:noche', {}),
       amanecer: () => pedirAlSocket<ResultadoAccion>('fase:amanecer', {}),
       volverAtras: () => pedirAlSocket<ResultadoAccion>('fase:volverAtras', {}),
+      deshacer: () => pedirAlSocket<ResultadoAccion>('fase:deshacer', {}),
       limpiarGrimorio: () => pedirAlSocket<ResultadoAccion>('fase:limpiarGrimorio', {}),
     }),
     [pedirAlSocket],
@@ -595,8 +596,10 @@ export interface AccionesNoche {
 export interface AccionesFase {
   irANoche(): Promise<ResultadoAccion>;
   amanecer(): Promise<ResultadoAccion>;
-  /** La máquina del tiempo: a la fase anterior. */
+  /** La máquina del tiempo: la partida como estaba justo antes del último cambio de fase. */
   volverAtras(): Promise<ResultadoAccion>;
+  /** Deshace lo último que cambió la partida (contesta, en valor, qué paso era: ver SalaDto.deshacer). */
+  deshacer(): Promise<ResultadoAccion>;
   /** Vuelve a la preparación, con las fichas como al principio. */
   limpiarGrimorio(): Promise<ResultadoAccion>;
 }

@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { createServer, type Server as HttpServer } from 'http';
 import type { AddressInfo } from 'net';
 import { io as conectar, type Socket } from 'socket.io-client';
+import type { SalaDeJuego } from '../../src/models/SalaDeJuego';
 import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
 import { BolsaController } from '../../src/controllers/sala/BolsaController';
 import { FarolController } from '../../src/controllers/sala/FarolController';
@@ -99,6 +100,8 @@ export class Arnes {
   private constructor(
     private readonly http: HttpServer,
     private readonly url: string,
+    /** La sala de juego del servidor, para mirar lo que no llega a los clientes (la historia de la partida). */
+    readonly juego: SalaDeJuego,
   ) {}
 
   /** `guiones`: lo que cambia de los de por defecto (el guion de prueba, con cualquier id; y los predeterminados, PREDETERMINADOS). */
@@ -137,7 +140,7 @@ export class Arnes {
     });
     await new Promise<void>((resolver) => http.listen(0, '127.0.0.1', resolver));
     const { port } = http.address() as AddressInfo;
-    return new Arnes(http, `http://127.0.0.1:${port}`);
+    return new Arnes(http, `http://127.0.0.1:${port}`, salaService.juego);
   }
 
   /**

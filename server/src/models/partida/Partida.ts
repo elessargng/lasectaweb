@@ -72,6 +72,13 @@ export class Partida {
     // El acceso al grimorio es de los visitantes: al cambiar de papel se pierde (y se vuelve a pedir)
     this.sala.participantes.alCambiarRol((id) => this.acceso.cambiar(id, 'ninguno'));
     this.sala.participantes.alExpulsar((id, recuerdo) => this.acceso.alExpulsar(id, recuerdo));
+    // Lo que se deshace con la historia: la partida
+    this.historia.registrar<InstantaneaPartida>('partida', {
+      instantanea: () => this.instantanea(),
+      restaurar: (i) => this.restaurar(i),
+      // El guion no se copia ni se compara entero: por lo que lo distingue
+      huella: ({ guion, ...resto }) => JSON.stringify([guion && [guion.nombre, guion.edicion, guion.personajes.map((p) => p.id)], resto]),
+    });
   }
 
   /** Por dónde entra todo lo que cambia la partida (ver Historia). */
@@ -345,11 +352,7 @@ export class Partida {
       plaza: this.fotoDeLaPlaza(),
       conCalavera: marcadas.flatMap((a) => this.cuentaDe(a.participanteId) ?? []),
     });
-    // Para poder volver: lo que se quita al anochecer
-    this.fases.anochecer({
-      marcas: calavera ? [{ asiento: calavera.jugadorId, votos: calavera.votos }] : [],
-      maximoDelDia: this.nominaciones.recordDelDia(),
-    });
+    this.fases.anochecer();
     // Otra noche: el despertar guiado empieza de cero
     this.guiado.olvidar();
     // Lo que se señaló de día no sigue de noche (lo verían otros); el reloj tampoco
@@ -365,7 +368,7 @@ export class Partida {
    * se ven de día y la noche siguiente empieza sin ellos.
    */
   amanecer(): void {
-    this.fases.amanecer({ hilos: this.despertares.instantanea(), senalamiento: this.senalamientos.instantanea() });
+    this.fases.amanecer();
     this.avisar({ tipo: 'amanece', plaza: this.fotoDeLaPlaza() });
     this.despertares.cerrarTodos();
     // Lo de la noche no se ve de día (y el reloj se quita)
@@ -373,34 +376,6 @@ export class Partida {
     this.reloj.quitarReloj();
   }
 
-  /**
-   * La máquina del tiempo del narrador: vuelve a la fase anterior (ver Fases.anterior),
-   * por si se pasó de fase antes de tiempo. Si fue este mismo cambio el que se
-   * hizo, devuelve lo que se quitó: al volver al día, la calavera y el récord de
-   * votos; a la noche, sus despertares (con lo que se dijeron) y su señalamiento
-   * (y quien escucha la partida deshace lo de ese cambio). Lo demás de la partida (muertes, fichas,
-   * recordatorios) se queda como está. Se cierra la nominación abierta.
-   */
-  volverAtras(): boolean {
-    if (!this.fases.anterior()) return false;
-    this.nominaciones.cerrarNominacion();
-    this.senalamientos.terminar();
-    this.reloj.quitarReloj();
-    const { fase: anterior, recuerdo: paso } = this.fases.volver()!;
-    if (anterior.momento === 'dia') {
-      // Al día: sin los despertares de la noche (como al amanecer) y, si se puede, con su calavera
-      this.despertares.cerrarTodos();
-      this.nominaciones.ponerRecordDelDia(paso?.maximoDelDia ?? null);
-      for (const m of paso?.marcas ?? []) this.grimorio.marcar(m.asiento, true, m.votos);
-    } else if (anterior.momento === 'noche') {
-      this.grimorio.desmarcar();
-      this.nominaciones.ponerRecordDelDia(null);
-      if (paso?.hilos) this.despertares.restaurar(paso.hilos);
-      if (paso?.senalamiento) this.senalamientos.restaurar(paso.senalamiento);
-    }
-    this.avisar({ tipo: 'vueltaAtras', deshace: !!paso, aPreparacion: anterior.momento === 'preparacion' });
-    return true;
-  }
 
   /**
    * Cómo está ahora la partida (una copia, sin referencias vivas salvo el guion, que

@@ -39,6 +39,7 @@ export type TipoAviso =
   | 'reloj'
   | 'moverJugadores'
   | 'editarAsientos'
+  | 'deshacer'
   | 'errores'
   | 'conexion'
   | 'preferencias';
@@ -108,6 +109,7 @@ export const GRUPOS_AVISOS: { grupo: string; tipos: { tipo: TipoAviso; etiqueta:
       { tipo: 'bolsa', etiqueta: 'Bolsa de personajes: setup modificado y personajes repartidos' },
       { tipo: 'moverJugadores', etiqueta: 'Mover a un jugador de asiento (instrucciones y pasos)' },
       { tipo: 'editarAsientos', etiqueta: 'Número de asientos al añadir o eliminar' },
+      { tipo: 'deshacer', etiqueta: 'Deshacer y volver atrás: qué se ha deshecho' },
     ],
   },
   {
