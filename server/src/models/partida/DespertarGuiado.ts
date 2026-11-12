@@ -47,8 +47,8 @@ export interface EntornoDespertarGuiado {
   porEntender: (jugadorId: string) => boolean;
   /** Pone un recordatorio de un personaje (por su texto) en un asiento; único en la plaza. */
   ponerRecordatorio: (jugadorId: string, personaje: string, texto: string) => void;
-  /** Mata de noche (la muerte queda pendiente). */
-  matarDeNoche: (jugadorId: string) => void;
+  /** Mata de noche (la muerte queda pendiente): la habilidad de ese personaje. */
+  matarDeNoche: (jugadorId: string, personaje: string) => void;
   /** Envía el grimorio de la partida a quien se sienta en el asiento. */
   enviarGrimorio: (jugadorId: string) => void;
   cambiarPersonaje: (jugadorId: string, personaje: string) => void;
@@ -179,7 +179,7 @@ export class DespertarGuiado {
       return;
     }
     for (const r of efectos.recordatorios) this.entorno.ponerRecordatorio(r.asiento, r.personaje ?? personaje, r.texto);
-    if (efectos.muere) this.entorno.matarDeNoche(efectos.muere);
+    if (efectos.muere) this.entorno.matarDeNoche(efectos.muere, personaje);
     if (efectos.grimorio) this.entorno.enviarGrimorio(jugador.id);
     if (efectos.nuevoImp) this.impQueMuere = jugador.id;
     const enviar = (envio: EnvioDespertar) => (respuesta ? this.entorno.mandar(jugador.id, envio) : this.entregar(jugador.id, { envio }));

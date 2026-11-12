@@ -45,6 +45,8 @@ function porFases(diario: EntradaDiario[], votaciones: VotacionHistorial[]): { f
     return f;
   };
   for (const e of diario) {
+    // La muerte de quien se ejecuta ya la dice la ejecución
+    if (e.tipo === 'muere' && e.causa === 'ejecucion') continue;
     const { lineas } = faseDe(e.fase);
     const ultima = lineas[lineas.length - 1];
     if (e.tipo !== 'despertar') lineas.push({ tipo: 'hecho', hora: e.hora, hecho: e });
@@ -186,6 +188,8 @@ const Hecho = ({ h, p }: { h: HechoDiario; p: (id: string) => ReactNode }) => {
           {h.personaje !== RECORDATORIO_TEXTO && <> ({p(h.personaje)})</>}.
         </>
       );
+    case 'votoMuerto':
+      return h.gastado ? <>{mayuscula(quien(h.asiento))} gasta su voto de muerto.</> : <>{mayuscula(quien(h.asiento))} recupera su voto de muerto.</>;
     case 'grimorio':
       return <>El narrador le enseña el grimorio a {quien(h.asiento)}.</>;
     case 'farol':

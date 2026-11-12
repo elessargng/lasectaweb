@@ -4,8 +4,8 @@ import { FICHAS_RESPUESTA_GUIADA, TARJETAS_DE_LOS_MALVADOS, type EleccionDespert
 import type { FichaEnviada } from './Entregas';
 import { NUM_FAROLES, type Alineamiento } from '../compartido/jugador';
 import { SALA_FORMAS_MANO, type FormaMano } from '../compartido/participante';
-import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA } from '../compartido/partida';
-import type { AsientoDiario, HechoDiario } from '../compartido/diario';
+import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA, type RegistroVotacion } from '../compartido/partida';
+import type { AsientoDiario, EntradaDiario, FotoAsiento, HechoDiario } from '../compartido/diario';
 import { TIPOS_NPC, type GuionResuelto, type TipoPersonaje } from '../guiones';
 import type { Participante } from '../sala/Participantes';
 import type { Sala } from '../sala/Sala';
@@ -17,7 +17,9 @@ import { componerMensaje, type BorradorDespertar } from './mensajeDespertar';
 import { componerGrimorio, type BorradorFicha } from './grimorioEnviado';
 import { Despertares } from './Despertares';
 import { Entregas } from './Entregas';
-import { type Diario, type EventoPartida, type FotoAsiento, type OyentePartida } from './eventos';
+import type { Diario } from './eventos';
+import { votaciones as votacionesDe } from './proyecciones/votaciones';
+import { Registro } from './Registro';
 import { Faroles } from './Faroles';
 import { Fases } from './Fases';
 import { Grimorio, identidadDe } from './Grimorio';
@@ -37,7 +39,7 @@ import { RelojSala } from './RelojSala';
 import { Bolsa } from './Bolsa';
 import { Revelacion } from './Revelacion';
 import { Senalamientos } from './Senalamientos';
-import type { Jugador } from './Jugador';
+import type { EstadoJugador, Jugador } from './Jugador';
 
 /** Tras una ejecución, la partida parece acabada: gana un bando, o quedan dos vivos (ver Partida.ejecutar). */
 export type FinPropuesto = Alineamiento | 'dosVivos';
@@ -78,11 +80,14 @@ export class Partida {
       restaurar: (i) => this.restaurar(i),
       // El guion no se copia ni se compara entero: por lo que lo distingue
       huella: ({ guion, ...resto }) => JSON.stringify([guion && [guion.nombre, guion.edicion, guion.personajes.map((p) => p.id)], resto]),
+      cambioSinHecho,
     });
   }
 
   /** Por dónde entra todo lo que cambia la partida (ver Historia). */
   readonly historia = new Historia();
+  /** Todo lo que pasa en la partida, en orden (el diario, ver Registro y models/compartido/diario). */
+  readonly registro = new Registro();
   /** El guion de la partida y sus personajes. */
   readonly guion = new Guion();
   /** Los ajustes de la partida y si se puede conversar en privado. */
@@ -118,12 +123,10 @@ export class Partida {
     plaza: () => this.plaza(),
     buscar: (id) => this.sala.participantes.buscar(id),
     bajarManos: () => this.sala.participantes.bajarManos(),
-    cuentaDe: (id) => this.cuentaDe(id),
     llevaViajero: (jugador) => {
       const id = identidadDe(jugador);
       return !!id && this.guion.esViajero(id);
     },
-    dia: () => this.fases.actual().numero,
     segundosPorFicha: () => this.configuracion.actual().segundosPorFicha,
     sinVoto: (id) => this.sinVoto(id),
     cambiarVoto: (jugadorId, gastado) => this.grimorio.cambiarVoto(jugadorId, gastado),
@@ -131,11 +134,8 @@ export class Partida {
     mayoria: (vivos) => this.reglas.mayoria(vivos),
     valorDelVoto: (jugador, ocupante) => this.reglas.valorDelVoto(jugador, ocupante.dosManos),
     secreta: () => this.votacionSecreta(),
-    alNominar: (desde, hasta) =>
-      this.avisar({ tipo: 'nominacion', nomina: this.cuentaDelAsiento(desde), nominado: this.cuentaDelAsiento(hasta) }),
-    alVotar: (cuenta) => this.avisar({ tipo: 'voto', userId: cuenta }),
-    alDesvotar: (cuenta) => this.avisar({ tipo: 'desvoto', userId: cuenta }),
-    alExpulsar: (jugadorId) => this.grimorio.cambiarVida(jugadorId, true),
+    diario: this.diario(),
+    alExpulsar: (jugadorId) => this.grimorio.cambiarVida(jugadorId, true, 'expulsion'),
     sola: (uso, hacer) => this.historia.hacer('sistema', uso, hacer),
     alCambiarSola: () => this.alCambiarSola(),
   });
@@ -157,7 +157,7 @@ export class Partida {
     mandar: (jugadorId, envio, eleccion, porOtros) => this.mandarDelNarrador(jugadorId, envio, { eleccion, guiado: true, porOtros }),
     porEntender: (jugadorId) => this.despertares.porEntender(jugadorId),
     ponerRecordatorio: (jugadorId, personaje, texto) => this.ponerRecordatorioDe(jugadorId, personaje, texto),
-    matarDeNoche: (jugadorId) => this.grimorio.cambiarVida(jugadorId, true),
+    matarDeNoche: (jugadorId, personaje) => this.grimorio.cambiarVida(jugadorId, true, personaje),
     enviarGrimorio: (jugadorId) => this.enviarGrimorioDeLaPlaza(jugadorId),
     cambiarPersonaje: (jugadorId, personaje) => this.grimorio.cambiarPersonaje(jugadorId, personaje),
   });
@@ -271,33 +271,20 @@ export class Partida {
    */
   alCambiarSola: () => void = () => {};
 
-  /** Quienes escuchan lo que pasa en la partida (ver eventos.ts). */
-  private oyentes: OyentePartida[] = [];
-
   /**
-   * Para enterarse de lo que pasa en la partida (las estadísticas, por ejemplo).
-   * Hay que suscribirse desde el principio. Devuelve cómo dejar de escuchar.
+   * Se ha revelado el grimorio: se acaba la partida, con lo que ha pasado en ella
+   * (su diario, que acaba en «final») y su id. Quien la usa la guarda (las estadísticas).
    */
-  suscribir(oyente: OyentePartida): () => void {
-    this.oyentes.push(oyente);
-    return () => {
-      this.oyentes = this.oyentes.filter((o) => o !== oyente);
-    };
-  }
+  alTerminar: (diario: EntradaDiario[], partida: string) => void = () => {};
 
-  private avisar(evento: EventoPartida): void {
-    for (const oyente of this.oyentes) oyente(evento);
-  }
-
-  /**
-   * Apunta algo que se ha hecho en la partida, para su diario (ver models/compartido/diario).
-   * En la preparación solo cuentan los faroles; revelado el grimorio, ya nada.
-   */
+  /** Apunta algo que pasa en la partida en su diario (ver Registro): todo, en cualquier fase. */
   anotar(hecho: HechoDiario): void {
-    const { momento, numero } = this.fases.actual();
-    if (this.revelacion.revelacion()) return;
-    if (momento === 'preparacion' && !['farol', 'copiaFaroles', 'usaFarol'].includes(hecho.tipo)) return;
-    this.avisar({ tipo: 'diario', entrada: { ...hecho, fase: { momento, numero }, hora: Date.now() } });
+    this.registro.anotar(hecho, this.fases.actual());
+  }
+
+  /** El registro de nominaciones y votaciones de la partida, en el orden en que se nominó (ver proyecciones/votaciones). */
+  votaciones(): RegistroVotacion[] {
+    return votacionesDe(this.registro.hechos());
   }
 
   /** El diario, para las piezas que apuntan lo que se hace con ellas. */
@@ -305,12 +292,17 @@ export class Partida {
     return { anotar: (hecho) => this.anotar(hecho), asiento: (jugadorId) => this.asientoDiario(jugadorId) };
   }
 
-  /** Un asiento para el diario: su número y quien se sienta ahora. */
+  /** Un asiento para el diario: su número, su id y quien se sienta ahora (su nombre y su cuenta). */
   asientoDiario(jugadorId: string): AsientoDiario {
     const plaza = this.plaza();
     const i = plaza.findIndex((a) => a.id === jugadorId);
-    const ocupante = plaza[i]?.participanteId;
-    return { numero: i + 1, nombre: ocupante ? (this.sala.participantes.buscar(ocupante)?.nombre ?? null) : null };
+    const ocupante = plaza[i]?.participanteId ?? null;
+    return {
+      numero: i + 1,
+      nombre: ocupante ? (this.sala.participantes.buscar(ocupante)?.nombre ?? null) : null,
+      id: jugadorId,
+      userId: this.cuentaDe(ocupante),
+    };
   }
 
   /** El id de usuario de un participante con cuenta, o null (invitado, o ya no está). */
@@ -322,11 +314,12 @@ export class Partida {
     return this.cuentaDe(this.plaza().find((a) => a.id === jugadorId)?.participanteId ?? null);
   }
 
-  /** Cómo está ahora la plaza, asiento a asiento (para quien escucha la partida). */
+  /** Cómo está ahora la plaza, asiento a asiento (para el diario). */
   private fotoDeLaPlaza(): FotoAsiento[] {
     return this.plaza().map((a, i) => {
       const personaje = identidadDe(a);
       return {
+        id: a.id,
         numero: i + 1,
         nombre: a.participanteId ? (this.sala.participantes.buscar(a.participanteId)?.nombre ?? null) : null,
         userId: this.cuentaDe(a.participanteId),
@@ -345,14 +338,14 @@ export class Partida {
    */
   irANoche(): void {
     const calavera = this.grimorio.calavera();
-    const marcadas = this.plaza().filter((a) => a.id === calavera?.jugadorId);
-    this.avisar({
-      tipo: 'anochece',
-      desdePreparacion: this.fases.actual().momento === 'preparacion',
-      plaza: this.fotoDeLaPlaza(),
-      conCalavera: marcadas.flatMap((a) => this.cuentaDe(a.participanteId) ?? []),
-    });
+    const desdePreparacion = this.fases.actual().momento === 'preparacion';
     this.fases.anochecer();
+    this.anotar({
+      tipo: 'anochece',
+      desdePreparacion,
+      plaza: this.fotoDeLaPlaza(),
+      calavera: calavera && this.sala.jugador(calavera.jugadorId) ? this.asientoDiario(calavera.jugadorId) : null,
+    });
     // Otra noche: el despertar guiado empieza de cero
     this.guiado.olvidar();
     // Lo que se señaló de día no sigue de noche (lo verían otros); el reloj tampoco
@@ -369,7 +362,7 @@ export class Partida {
    */
   amanecer(): void {
     this.fases.amanecer();
-    this.avisar({ tipo: 'amanece', plaza: this.fotoDeLaPlaza() });
+    this.anotar({ tipo: 'amanece', plaza: this.fotoDeLaPlaza() });
     this.despertares.cerrarTodos();
     // Lo de la noche no se ve de día (y el reloj se quita)
     this.senalamientos.terminar();
@@ -398,6 +391,7 @@ export class Partida {
       senalamiento: this.senalamientos.instantanea(),
       declaraciones: this.declaraciones.instantanea(),
       recordatorios: { ...this.recordatorios },
+      registro: this.registro.instantanea(),
     };
   }
 
@@ -417,6 +411,7 @@ export class Partida {
     this.senalamientos.restaurar(i.senalamiento);
     this.declaraciones.restaurar(i.declaraciones);
     this.recordatorios = { ...i.recordatorios };
+    this.registro.restaurar(i.registro);
   }
 
   recordatoriosNoche(): Record<string, boolean> {
@@ -553,7 +548,6 @@ export class Partida {
     this.nominaciones.cerrarNominacion();
     this.senalamientos.terminar();
     this.reloj.quitarReloj();
-    this.avisar({ tipo: 'nuevaPartida' });
     this.npcs.nuevaPartida();
     this.nominaciones.olvidarTodo();
     this.grimorio.limpiar();
@@ -567,6 +561,8 @@ export class Partida {
     this.declaraciones.olvidar();
     this.recordatorios = {};
     this.fases.nuevaPartida();
+    // Lo que se apunte desde ahora es de otra partida
+    this.anotar({ tipo: 'nuevaPartida', partida: randomUUID() });
   }
 
   /** Las votaciones son secretas (el Organ Grinder, ver personajes/organGrinder.ts). */
@@ -815,8 +811,8 @@ export class Partida {
     this.revelacion.empezar(ganador, causas);
     // Se acaba la partida. Las causas de esbirro (la Doncel cazada), de la cuenta del
     // esbirro que eligió el narrador
-    this.avisar({
-      tipo: 'partidaTerminada',
+    this.anotar({
+      tipo: 'final',
       ganador,
       causas: causas.map((id) => {
         const asiento = esbirros[id];
@@ -826,11 +822,10 @@ export class Partida {
       plaza: this.fotoDeLaPlaza(),
       narradores: this.sala.participantes.narradores().map((p) => ({ userId: this.cuentaDe(p.id), nombre: p.nombre })),
       npcs: this.npcs.npcs(),
-      votaciones: this.nominaciones.votaciones(),
       guion: this.guion.actual()?.nombre ?? null,
       edicion: this.guion.actual()?.edicion ?? null,
-      dias: this.fases.actual().numero,
     });
+    this.alTerminar(this.registro.hechos(), this.registro.partida());
   }
 
   /**
@@ -845,20 +840,19 @@ export class Partida {
   ejecutar(jugadorId: string): { anochece: boolean; final: FinPropuesto | null } | null {
     const jugador = this.plaza().find((a) => a.id === jugadorId);
     if (!jugador) return null;
+    this.anotar({ tipo: 'ejecucion', asiento: this.asientoDiario(jugador.id) });
     // Los recordatorios de los personajes que funcionan con las ejecuciones (ver Reglas)
     for (const { personaje, texto, unico } of this.reglas.recordatoriosAlEjecutar(jugador)) {
       const textos = this.guion.personaje(personaje)?.recordatorios;
       const indice = textos?.findIndex((t) => t.toLowerCase() === texto.toLowerCase()) ?? -1;
       if (indice < 0) continue;
       if (unico) this.grimorio.quitarDeTodas(personaje, indice);
-      this.grimorio.ponerRecordatorio(jugador.id, { personaje, indice, texto: textos![indice] }, { anotar: false });
+      this.grimorio.ponerRecordatorio(jugador.id, { personaje, indice, texto: textos![indice] });
     }
-    this.avisar({ tipo: 'ejecucion', userId: this.cuentaDe(jugador.participanteId) });
-    this.anotar({ tipo: 'ejecucion', asiento: this.asientoDiario(jugador.id) });
     // Ninguna regla deja elegir al ejecutar: el primer desenlace, el que toca
     const [{ a, gasta }] = this.reglas.objetivo(jugador).recibe({ origen: 'ejecucion', personaje: null, efecto: 'matar' });
     if (gasta) this.ponerRecordatorioDe(gasta.asiento, gasta.personaje, gasta.texto);
-    if (a) this.grimorio.cambiarVida(a.id, true, { anotar: false });
+    if (a) this.grimorio.cambiarVida(a.id, true, 'ejecucion');
     // Los vivos que quedan: los asientos (también los libres, que cuentan como jugadores)
     // sin muerte, sin contar a los viajeros
     const vivos = this.plaza().filter((a) => !a.muerto && !a.muertePendiente && !this.bolsa.llevaViajero(a));
@@ -961,4 +955,35 @@ export interface InstantaneaPartida {
   senalamiento: ReturnType<Senalamientos['instantanea']>;
   declaraciones: ReturnType<Declaraciones['instantanea']>;
   recordatorios: Record<string, boolean>;
+  /** Cuántos hechos había apuntados (ver Registro.instantanea). */
+  registro: number;
+}
+
+/**
+ * El guardarraíl del diario (ver Historia): lo que tiene que quedar apuntado si
+ * cambia (la fase; de cada jugador que estaba antes y sigue, su personaje,
+ * alineamiento, vida, voto y recordatorios; los mensajes de los despertares; los
+ * faroles; los votos de la votación; quién gana). Si algo de eso cambia sin que
+ * se apunte nada, qué ha cambiado. Lo demás (notas, la noche guiada por dentro,
+ * NPCs, bolsa, señalamiento…) no cuenta; quitar o añadir asientos es de la sala.
+ */
+function cambioSinHecho(antes: InstantaneaPartida, despues: InstantaneaPartida): string | null {
+  if (despues.registro > antes.registro) return null;
+  const jugador = ([, j]: [string, EstadoJugador]) =>
+    JSON.stringify([j.personaje, j.alineamiento, j.muerto || j.muertePendiente, j.votoGastado, j.recordatorios.map((r) => [r.personaje, r.indice, r.texto])]);
+  const jugadoresDespues = new Map(despues.grimorio.jugadores.map((e) => [e[0], jugador(e)]));
+  const vigilado: [string, (i: InstantaneaPartida) => unknown][] = [
+    ['la fase', (i) => [i.fase.momento, i.fase.numero]],
+    ['los mensajes de los despertares', (i) => i.despertares.reduce((n, h) => n + h.mensajes.length, 0)],
+    ['los faroles', (i) => [i.faroles.delNarrador, i.faroles.deJugadores.map(([id, f]) => [id, f.faroles, f.enUso])]],
+    // Los votos, mientras sigue la misma votación (empezarla o cerrarla no es votar)
+    ['los votos de la votación', (i) => (antes.nominaciones.enCurso?.votacion && despues.nominaciones.enCurso?.votacion ? i.nominaciones.enCurso?.votacion?.votos : null)],
+    ['quién gana', (i) => i.revelacion && [i.revelacion.ganador, i.revelacion.causas]],
+  ];
+  for (const [que, de] of vigilado) if (JSON.stringify(de(antes)) !== JSON.stringify(de(despues))) return que;
+  for (const e of antes.grimorio.jugadores) {
+    const ahora = jugadoresDespues.get(e[0]);
+    if (ahora !== undefined && ahora !== jugador(e)) return 'un jugador';
+  }
+  return null;
 }

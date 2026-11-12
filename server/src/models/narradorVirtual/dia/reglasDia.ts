@@ -11,7 +11,7 @@ import type { SalaDeJuego } from '../../SalaDeJuego';
 export const ETAPAS_DIA: readonly EtapaNarradorVirtual[] = ['privados', 'puestaEnComun', 'nominaciones'];
 
 /** Las nominaciones de hoy (no las expulsiones de viajeros). */
-const deHoy = ({ partida }: SalaDeJuego) => partida.nominaciones.votaciones().filter((v) => v.dia === partida.fases.actual().numero && !v.expulsion);
+const deHoy = ({ partida }: SalaDeJuego) => partida.votaciones().filter((v) => v.dia === partida.fases.actual().numero && !v.expulsion);
 
 /** Si el de ese asiento ya ha nominado hoy. */
 export const nominoHoy = (juego: SalaDeJuego, jugadorId: string): boolean => deHoy(juego).some((v) => v.nominaAsiento === jugadorId);

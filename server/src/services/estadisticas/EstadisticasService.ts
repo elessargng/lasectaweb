@@ -1,6 +1,6 @@
 import type { EstadisticasRepository, PartidaGuardada, Participacion } from '../../repositories/EstadisticasRepository';
 import type { PersonajeRepository } from '../../repositories/PersonajeRepository';
-import { CAUSAS_CON_VICTORIA } from '../../models/compartido/partida';
+import { causaCuenta } from '../../models/compartido/partida';
 
 /** Cuántas veces sale algo (un rol, una causa, un guion), de más a menos. */
 interface Conteo {
@@ -64,7 +64,7 @@ export class EstadisticasService {
     const en = (bando: 'bueno' | 'malvado') => jugadas.filter((p) => p.alineamientoFinal === bando);
     const roles = contar(jugadas.flatMap((p) => p.roles));
     // Los logros que exigen ganar solo cuentan en las partidas ganadas (también las guardadas antes de exigirlo)
-    const causas = contar(jugadas.flatMap((p) => p.causas.filter((c) => !CAUSAS_CON_VICTORIA.includes(c) || p.gano)));
+    const causas = contar(jugadas.flatMap((p) => p.causas.filter((c) => causaCuenta(c, p.gano))));
     const ids = [...new Set([...roles.map((r) => r.id), ...causas.map((c) => c.id), ...jugadas.flatMap((p) => p.roles)])];
     const personajes = Object.fromEntries(
       (await this.personajes.buscarPorIds(ids)).map((p) => [p.id, { nombre: p.nombre, icono: p.icono, tipo: p.tipo }]),

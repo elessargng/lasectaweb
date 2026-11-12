@@ -106,7 +106,7 @@ export function instantaneaGrimorio(juego: SalaDeJuego): Grimorio {
     }),
     personajes: (partida.guion.actual()?.personajes ?? []).map((p) => ({ id: p.id, nombre: p.nombre, tipo: p.tipo })),
     farolesDemonio: partida.faroles.faroles().filter((f): f is string => !!f),
-    votaciones: partida.nominaciones.votaciones(),
+    votaciones: partida.votaciones(),
   };
 }
 

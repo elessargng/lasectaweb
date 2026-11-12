@@ -3,6 +3,7 @@
  * así no sabe de sockets ni de relojes, y en los tests se le dan unos falsos.
  */
 
+import type { CausaMuerte } from '../compartido/diario';
 import type { Alineamiento } from '../compartido/jugador';
 import type { BorradorDespertar } from '../partida/mensajeDespertar';
 import type { CambiosAjustes } from '../partida/Configuracion';
@@ -79,8 +80,8 @@ export interface Narrador {
   asignarPersonajes(): Promise<RespuestaAccion>;
   /** Pone un personaje en la ficha de un asiento. */
   cambiarPersonaje(jugadorId: string, personajeId: string | null): Promise<RespuestaAccion>;
-  /** Mata o revive la ficha de un asiento. */
-  cambiarVida(jugadorId: string, muerto: boolean): Promise<RespuestaAccion>;
+  /** Mata o revive la ficha de un asiento; al matar, por qué (el personaje que mata: ver CausaMuerte). */
+  cambiarVida(jugadorId: string, muerto: boolean, causa?: CausaMuerte): Promise<RespuestaAccion>;
   /** Anuncia la muerte pendiente de un asiento. */
   confirmarMuerte(jugadorId: string): Promise<RespuestaAccion>;
   /** Pone junto a una ficha uno de los recordatorios de un personaje. */

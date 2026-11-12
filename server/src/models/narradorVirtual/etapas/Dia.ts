@@ -204,7 +204,7 @@ export class Nominaciones implements Etapa {
     }
     // Seguir nominando: quien ha nominado hoy y los muertos están listos siempre
     if (miJugador.muerto) return 'Los muertos no nominan: estás listo.';
-    if (partida.nominaciones.votaciones().some((v) => v.dia === partida.fases.actual().numero && v.nominaAsiento === miJugador.id)) return 'Ya has nominado hoy: estás listo.';
+    if (partida.votaciones().some((v) => v.dia === partida.fases.actual().numero && v.nominaAsiento === miJugador.id)) return 'Ya has nominado hoy: estás listo.';
     juego.narrador.actualizar({ listos: narrador.listos.filter((id) => id !== jugador) });
     return null;
   }

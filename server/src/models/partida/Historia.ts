@@ -7,6 +7,19 @@ export interface Restaurable<I = unknown> {
   restaurar(instantanea: I): void;
   /** Lo que se compara para saber si ha cambiado (por defecto, la instantánea en JSON). */
   huella?(instantanea: I): string;
+  /**
+   * El guardarraíl (ver Historia.guardar): si en un paso ha cambiado algo de lo que
+   * tiene que quedar en el diario sin que se apunte nada, qué ha cambiado; si no, null.
+   */
+  cambioSinHecho?(antes: I, despues: I): string | null;
+}
+
+/** Fuera de producción, un cambio sin su hecho en el diario no pasa: en los tests falla, en desarrollo se avisa. */
+function sinHecho(uso: string, que: string): void {
+  if (process.env.NODE_ENV === 'production') return;
+  const aviso = `[Historia] «${uso}» ha cambiado ${que} sin apuntarlo en el diario.`;
+  if (process.env.NODE_ENV === 'test') throw new Error(aviso);
+  console.error(aviso);
 }
 
 /** Cómo estaba todo antes de un paso, y qué paso fue. */
@@ -123,6 +136,10 @@ export class Historia {
   private guardar(quien: Quien, uso: string, antes: Record<string, unknown>): void {
     const despues = this.instantanea();
     if (this.huella(antes) === this.huella(despues)) return;
+    for (const [nombre, parte] of this.partes) {
+      const que = parte.cambioSinHecho?.(antes[nombre], despues[nombre]);
+      if (que) sinHecho(uso, que);
+    }
     const ultimo = this.ultimo();
     if (quien === 'sistema' && ultimo) return;
     const paso: Paso = { quien, uso, antes, cambiaFase: this.fase(antes) !== this.fase(despues) };

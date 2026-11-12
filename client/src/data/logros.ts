@@ -18,8 +18,6 @@ export interface Logro {
   /** Con los personajes entre llaves ({klutz}) y los tipos entre asteriscos (*Demonio*). */
   descripcion: string;
   nivel: NivelLogro;
-  /** Solo cuenta si se gana la partida (como el servidor, CAUSAS_CON_VICTORIA). */
-  exigeVictoria?: boolean;
 }
 
 export const LOGROS: Logro[] = [
@@ -33,24 +31,22 @@ export const LOGROS: Logro[] = [
     nombre: 'Segunda temporada',
     descripcion: 'Como {mastermind}, ejecutaron a tu *Demonio*, la partida siguió un día más y aun así ganasteis.',
     nivel: 'plata',
-    exigeVictoria: true,
   },
   {
     id: 'snakecharmer',
     nombre: 'Cuidado, que muerde',
     descripcion: 'Como {snakecharmer}, picaste al *Demonio* y ganaste la partida.',
     nivel: 'plata',
-    exigeVictoria: true,
   },
   { id: 'klutz', nombre: 'Manos de mantequilla', descripcion: 'Como {klutz}, al morir señalaste justo a un malvado.', nivel: 'bronce' },
   { id: 'eviltwin', nombre: 'El bueno era el otro', descripcion: 'Como {eviltwin}, la plaza ejecutó a tu gemela buena.', nivel: 'oro' },
-  { id: 'fanggu', nombre: 'Salto de fe', descripcion: 'Como {fanggu}, saltaste a un *Forastero* y ganaste la partida.', nivel: 'plata', exigeVictoria: true },
+  { id: 'fanggu', nombre: 'Salto de fe', descripcion: 'Como {fanggu}, saltaste a un *Forastero* y ganaste la partida.', nivel: 'plata' },
   { id: 'vortox', nombre: 'Silencio en la plaza', descripcion: 'Como {vortox}, el pueblo pasó un día sin ejecutar a nadie y perdió.', nivel: 'oro' },
   { id: 'huntsman', nombre: 'Rescate en la torre', descripcion: 'Como {huntsman}, encontraste a la {damsel} y la convertiste.', nivel: 'plata' },
   { id: 'damsel', nombre: 'Damisela en apuros', descripcion: 'Como *Esbirro*, descubriste a la {damsel} y el bien perdió la partida.', nivel: 'oro' },
   { id: 'fearmonger', nombre: 'El miedo manda', descripcion: 'Como {fearmonger}, la plaza ejecutó a tu elegido y su equipo perdió.', nivel: 'oro' },
-  { id: 'leviathan', nombre: 'Monstruo del abismo', descripcion: 'Como {leviathan}, el pueblo no pudo contigo: ganaste la partida.', nivel: 'plata', exigeVictoria: true },
-  { id: 'cultleader', nombre: 'Todos a una', descripcion: 'Como {cultleader}, todo el bien se unió a tu culto y ganasteis.', nivel: 'oro', exigeVictoria: true },
+  { id: 'leviathan', nombre: 'Monstruo del abismo', descripcion: 'Como {leviathan}, el pueblo no pudo contigo: ganaste la partida.', nivel: 'plata' },
+  { id: 'cultleader', nombre: 'Todos a una', descripcion: 'Como {cultleader}, todo el bien se unió a tu culto y ganasteis.', nivel: 'oro' },
   { id: 'puzzlemaster', nombre: 'Puzle resuelto', descripcion: 'Como {puzzlemaster}, adivinaste quién estaba borracho.', nivel: 'plata' },
   { id: 'banshee', nombre: 'El grito', descripcion: 'Como {banshee}, el *Demonio* te mató y despertaste tu habilidad.', nivel: 'bronce' },
   { id: 'amnesiac', nombre: '¡Bingo!', descripcion: 'Como {amnesiac}, acertaste cuál era tu habilidad.', nivel: 'plata' },
@@ -59,14 +55,12 @@ export const LOGROS: Logro[] = [
     nombre: 'Larga vida al Demonio',
     descripcion: 'Como {scarletwoman}, tomaste el relevo del *Demonio* y ganaste la partida.',
     nivel: 'oro',
-    exigeVictoria: true,
   },
   {
     id: 'politician',
     nombre: 'Chaquetero',
     descripcion: 'Como {politician}, fuiste el mayor culpable de la derrota de tu equipo: cambiaste de bando y ganaste.',
     nivel: 'plata',
-    exigeVictoria: true,
   },
 ];
 

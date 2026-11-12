@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { EstadisticasPartida } from '../../src/models/estadisticas/EstadisticasPartida';
+import { resumenPartida } from '../../src/models/estadisticas/resumenPartida';
 import { SALA_GRACIA_MS } from '../../src/models/sala/Participantes';
 import { SALA_CUENTA_ATRAS_MS } from '../../src/models/partida/Nominaciones';
 import { SalaDeJuego } from '../../src/models/SalaDeJuego';
@@ -462,7 +462,7 @@ describe('SalaDeJuego', () => {
       expect(partida.fases.actual()).toEqual({ momento: 'preparacion', numero: 0, reinicios: reinicios + 1 });
       expect(asiento(0)).toMatchObject({ participanteId: ids[0], muerto: false, personaje: null, recordatorios: [] });
       expect(partida.bolsa.fichas()).toEqual([]);
-      expect(partida.nominaciones.votaciones()).toEqual([]);
+      expect(partida.votaciones()).toEqual([]);
       expect(partida.nominaciones.nominacion()).toBeNull();
     });
 
@@ -600,7 +600,7 @@ describe('SalaDeJuego', () => {
       expect(v?.orden[0]).toBe(asiento(2).id);
       expect(v?.orden[v.orden.length - 1]).toBe(asiento(1).id);
       expect(sala.participantes.buscar(ids[0])?.manoLevantada).toBe(false);
-      expect(partida.nominaciones.votaciones()).toEqual([
+      expect(partida.votaciones()).toEqual([
         expect.objectContaining({ dia: 1, nomina: 'Ceci', nominado: 'Bea', votantes: ['Ceci', 'Ana'], votos: 2 }),
       ]);
     });
@@ -639,7 +639,7 @@ describe('SalaDeJuego', () => {
       partida.nominar(asiento(0).id, asiento(1).id);
       partida.nominar(asiento(1).id, asiento(0).id);
       expect(partida.nominaciones.nominacion()).toMatchObject({ desde: asiento(1).id, hasta: asiento(0).id, votacion: null });
-      expect(partida.nominaciones.votaciones().map((v) => v.votantes)).toEqual([null, null]);
+      expect(partida.votaciones().map((v) => v.votantes)).toEqual([null, null]);
     });
 
     it('con el Voudon vivo solo votan él y los muertos, y basta con 1 voto', () => {
@@ -713,7 +713,7 @@ describe('SalaDeJuego', () => {
       expect(partida.nominaciones.nominacion()?.votacion?.votos).toBe(4);
       expect(asiento(0).votoGastado).toBe(false);
       expect(asiento(1).muerto).toBe(true);
-      expect(partida.nominaciones.votaciones()[0]).toMatchObject({ expulsion: true, nominaAsiento: asiento(0).id, nominadoAsiento: asiento(1).id });
+      expect(partida.votaciones()[0]).toMatchObject({ expulsion: true, nominaAsiento: asiento(0).id, nominadoAsiento: asiento(1).id });
       // No deja récord para las nominaciones del día: la mitad de los 4 vivos, no 5
       partida.nominar(asiento(2).id, asiento(2).id);
       expect(partida.nominaciones.nominacion()?.votosNecesariosPorDefecto).toBe(2);
@@ -882,12 +882,12 @@ describe('SalaDeJuego', () => {
       sala.sentar(id, partida.plaza()[0].id);
       partida.grimorio.cambiarPersonaje(partida.plaza()[0].id, 'chef');
       const alTerminar = vi.fn();
-      const estadisticas = new EstadisticasPartida(alTerminar);
-      partida.suscribir((evento) => estadisticas.registrar(evento));
+      partida.alTerminar = alTerminar;
       partida.irANoche();
       partida.empezarRevelacion('bueno');
       expect(alTerminar).toHaveBeenCalledOnce();
-      const registro = alTerminar.mock.calls[0][0];
+      const [diario, idPartida] = alTerminar.mock.calls[0];
+      const registro = resumenPartida(idPartida, diario)!;
       expect(registro).toMatchObject({ ganador: 'bueno', guion: 'Guion de prueba', dias: 1 });
       expect(registro.jugadores).toEqual([expect.objectContaining({ userId: '42' })]);
       expect(registro.mesa[0]).toMatchObject({ numero: 1, nombre: 'ana', userId: '42', personaje: 'chef', alineamiento: 'bueno' });
@@ -897,10 +897,10 @@ describe('SalaDeJuego', () => {
       const { juego } = salaConJugadores('Ana');
       const { partida } = juego;
       const alTerminar = vi.fn();
-      const estadisticas = new EstadisticasPartida(alTerminar);
-      partida.suscribir((evento) => estadisticas.registrar(evento));
+      partida.alTerminar = alTerminar;
       partida.empezarRevelacion('malvado');
-      expect(alTerminar).not.toHaveBeenCalled();
+      const [diario, idPartida] = alTerminar.mock.calls[0];
+      expect(resumenPartida(idPartida, diario)).toBeNull();
     });
 
     it('las causas solo se cuentan cuando todo está revelado', () => {

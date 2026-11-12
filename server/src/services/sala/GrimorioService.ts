@@ -1,3 +1,4 @@
+import type { CausaMuerte } from '../../models/compartido/diario';
 import type { Alineamiento } from '../../models/compartido/jugador';
 import type { BorradorFicha } from '../../models/partida/grimorioEnviado';
 import { NPC_FERRYMAN, NPC_GARDENER } from '../../models/partida/personajesEspeciales';
@@ -111,8 +112,8 @@ export class GrimorioService {
   }
 
   /** Mata o revive la ficha de un asiento (de noche, matar deja la muerte pendiente). */
-  vida(yoId: string, jugadorId: string, muerto: boolean): ResultadoUso {
-    return this.usos.hacer(yoId, 'grimorio:vida', () => this.grimorio().elegirVida(jugadorId, muerto));
+  vida(yoId: string, jugadorId: string, muerto: boolean, causa?: CausaMuerte): ResultadoUso {
+    return this.usos.hacer(yoId, 'grimorio:vida', () => this.grimorio().elegirVida(jugadorId, muerto, causa));
   }
 
   /** Hace efectiva la muerte pendiente de un asiento: ya la ven todos. */

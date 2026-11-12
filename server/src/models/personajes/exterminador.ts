@@ -55,7 +55,7 @@ export async function morirDeUnDisparo(ctx: ContextoEtapa, jugadorId: string): P
   const { partida } = juego;
   const objetivo = partida.plaza().find((a) => a.id === jugadorId);
   if (!objetivo) return;
-  await ctx.plaza.cambiarVida(jugadorId, true);
+  await ctx.plaza.cambiarVida(jugadorId, true, 'slayer');
   apuntarMuerteDeDia(ctx.recuerdos.cronica, juego, jugadorId, 'exterminador');
   abrirPatosos(juego, [jugadorId], 'amanecer');
   const narrador = juego.narrador.actual();

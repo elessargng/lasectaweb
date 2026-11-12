@@ -27,6 +27,13 @@ export const CAUSAS_FIN_PARTIDA = [
 export const CAUSAS_CON_VICTORIA = ['mastermind', 'snakecharmer', 'fanggu', 'scarletwoman', 'leviathan', 'cultleader', 'politician'];
 
 /**
+ * Si el logro de una causa cuenta para quien la tiene, según haya ganado o no: los
+ * de CAUSAS_CON_VICTORIA, solo si ha ganado. El único sitio donde se decide (el
+ * servidor al guardar y al contar, el cliente al enseñarlo).
+ */
+export const causaCuenta = (causa: string, gano: boolean | null | undefined): boolean => !CAUSAS_CON_VICTORIA.includes(causa) || !!gano;
+
+/**
  * Las causas cuyo logro no es de quien lleva ese personaje sino de un esbirro que
  * elige el narrador: la Doncel descubierta es logro del esbirro que la cazó.
  */

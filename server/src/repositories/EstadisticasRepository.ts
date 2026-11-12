@@ -1,6 +1,5 @@
-import { randomUUID } from 'crypto';
 import { DatabaseRepository } from './DatabaseRepository';
-import type { AsientoPartida, RegistroPartida } from '../models/estadisticas/SeguimientoPartida';
+import type { AsientoPartida, RegistroPartida } from '../models/estadisticas/resumenPartida';
 import type { RegistroVotacion } from '../models/compartido/partida';
 import type { EntradaDiario } from '../models/compartido/diario';
 
@@ -80,12 +79,17 @@ export interface PartidaGuardada {
  * jugador y narrador con cuenta en ellas (sala_partidas_participantes).
  */
 export class EstadisticasRepository {
-  /** Guarda una partida terminada y lo de cada uno, de una vez. */
+  /**
+   * Guarda una partida terminada y lo de cada uno, de una vez. Si ya estaba guardada
+   * (se deshizo la revelación y se volvió a revelar), la sustituye.
+   */
   async guardar(r: RegistroPartida): Promise<void> {
     const db = await DatabaseRepository.getInstance();
-    const id = randomUUID();
+    const { id } = r;
     await db.exec('BEGIN TRANSACTION;');
     try {
+      await db.run('DELETE FROM sala_partidas_participantes WHERE partidaId = ?', [id]);
+      await db.run('DELETE FROM sala_partidas WHERE id = ?', [id]);
       await db.run(
         `INSERT INTO sala_partidas (id, fecha, guion, edicion, ganador, dias, jugadores, causas, mesa, narradoresNombres, npcs, votaciones, diario)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,

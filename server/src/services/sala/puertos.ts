@@ -7,7 +7,7 @@ import type { ChatRepository } from '../../repositories/ChatRepository';
 import type { ImagenRepository } from '../../repositories/ImagenRepository';
 import type { GuionPredeterminado, GuionResuelto } from '../../models/guiones';
 import type { MensajeChat, Susurro } from '../../models/chat';
-import type { RegistroPartida } from '../../models/estadisticas/SeguimientoPartida';
+import type { RegistroPartida } from '../../models/estadisticas/resumenPartida';
 import type { Azar } from '../../models/partida/azar';
 import type { Temporizador } from '../../models/narradorVirtual/puertos';
 import type { NarradorIARepository } from '../../repositories/NarradorIARepository';

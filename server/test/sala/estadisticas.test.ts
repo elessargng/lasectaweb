@@ -1,19 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { EstadisticasPartida } from '../../src/models/estadisticas/EstadisticasPartida';
-import type { RegistroPartida } from '../../src/models/estadisticas/SeguimientoPartida';
+import { resumenPartida, type RegistroPartida } from '../../src/models/estadisticas/resumenPartida';
 import { SALA_CUENTA_ATRAS_MS } from '../../src/models/partida/Nominaciones';
 import { SalaDeJuego } from '../../src/models/SalaDeJuego';
 import { conCuenta, guionDePrueba, conSemilla } from './guionDePrueba';
 
 /** Lo que se guarda de cada partida para las estadísticas (al revelar el grimorio). */
 
-/** Las partidas que se mandan guardar: las estadísticas, escuchando a la sala (como en SalaService). */
+/** Las partidas que se mandan guardar: al terminar, sacadas de su diario (como en SalaService). */
 function guardadas(juego: SalaDeJuego): RegistroPartida[] {
-  const { partida } = juego;
   const registros: RegistroPartida[] = [];
-  const estadisticas = new EstadisticasPartida((registro) => registros.push(registro));
-  partida.suscribir((evento) => estadisticas.registrar(evento));
-  partida.historia.registrar('estadisticas', estadisticas);
+  juego.partida.alTerminar = (diario, id) => {
+    const registro = resumenPartida(id, diario);
+    if (registro) registros.push(registro);
+  };
   return registros;
 }
 
@@ -81,8 +80,8 @@ describe('estadísticas de la partida', () => {
       ['bea', 'ceci', null],
     ]);
     expect(r.mesa).toHaveLength(7);
-    expect(r.mesa[2]).toEqual({ numero: 3, nombre: 'ceci', userId: '3', personaje: 'empath', ficha: null, alineamiento: 'bueno', muerto: true });
-    expect(r.mesa[3]).toEqual({ numero: 4, nombre: null, userId: null, personaje: null, ficha: null, alineamiento: null, muerto: false });
+    expect(r.mesa[2]).toEqual({ id: asiento(2), numero: 3, nombre: 'ceci', userId: '3', personaje: 'empath', ficha: null, alineamiento: 'bueno', muerto: true });
+    expect(r.mesa[3]).toEqual({ id: asiento(3), numero: 4, nombre: null, userId: null, personaje: null, ficha: null, alineamiento: null, muerto: false });
     expect(r.jugadores).toEqual([
       {
         userId: '1', roles: ['chef', 'librarian'], rolFinal: 'librarian', alineamientoInicial: 'bueno', alineamientoFinal: 'bueno',
@@ -210,19 +209,17 @@ describe('estadísticas de la partida', () => {
     juego.partida.empezarRevelacion('bueno');
 
     const resumen = registros[0].diario.map(({ fase, hora, ...h }) => [`${fase.momento} ${fase.numero}`, h]);
+    // Cada asiento, con su número, quien se sentaba, su id y su cuenta
+    const bea = { numero: 2, nombre: 'bea', id: asiento(1), userId: '2' };
+    const ceci = { numero: 3, nombre: 'ceci', id: asiento(2), userId: '3' };
     expect(resumen).toEqual([
-      ['preparacion 0', { tipo: 'farol', asiento: { numero: 2, nombre: 'bea' }, posicion: 0, personaje: 'empath' }],
-      [
-        'noche 1',
-        expect.objectContaining({ tipo: 'despertar', asiento: { numero: 2, nombre: 'bea' }, delNarrador: true, tarjeta: 'eleccion', jugadores: [] }),
-      ],
-      [
-        'noche 1',
-        expect.objectContaining({ tipo: 'despertar', delNarrador: false, ficha: 'jugador', jugadores: [{ numero: 3, nombre: 'ceci' }] }),
-      ],
-      ['noche 1', { tipo: 'muere', asiento: { numero: 3, nombre: 'ceci' } }],
-      ['dia 1', { tipo: 'usaFarol', asiento: { numero: 2, nombre: 'bea' }, personaje: 'empath' }],
-      ['dia 1', { tipo: 'ejecucion', asiento: { numero: 2, nombre: 'bea' } }],
+      ['preparacion 0', { tipo: 'farol', asiento: bea, posicion: 0, personaje: 'empath' }],
+      ['noche 1', expect.objectContaining({ tipo: 'despertar', asiento: bea, delNarrador: true, tarjeta: 'eleccion', jugadores: [] })],
+      ['noche 1', expect.objectContaining({ tipo: 'despertar', delNarrador: false, ficha: 'jugador', jugadores: [ceci] })],
+      ['noche 1', { tipo: 'muere', asiento: ceci, causa: 'narrador' }],
+      ['dia 1', { tipo: 'usaFarol', asiento: bea, personaje: 'empath' }],
+      ['dia 1', { tipo: 'ejecucion', asiento: bea }],
+      ['dia 1', { tipo: 'muere', asiento: bea, causa: 'ejecucion' }],
     ]);
   });
 
@@ -236,5 +233,67 @@ describe('estadísticas de la partida', () => {
     expect(juego.partida.grimorio.alineamiento(juego.partida.plaza()[0])).not.toBe('malvado');
     juego.partida.empezarRevelacion('bueno');
     expect(registros[0].diario.map((e) => e.tipo)).toEqual(['muere']);
+  });
+
+  it('una ejecución cuenta una vez, aunque siga con la calavera al anochecer; sin ejecutar, la calavera al anochecer cuenta', () => {
+    const { juego, asiento, registros } = partida();
+    const { partida: p } = juego;
+    p.irANoche();
+    p.amanecer();
+    // Día 1: se ejecuta a Bea, que sigue con la calavera (como el Bufón, que no muere) al anochecer
+    p.ejecutar(asiento(1));
+    p.grimorio.marcar(asiento(1), true);
+    p.irANoche();
+    p.amanecer();
+    // Día 2: el narrador no ejecuta: anochece con la calavera puesta a Ceci
+    p.grimorio.marcar(asiento(2), true);
+    p.irANoche();
+    p.empezarRevelacion('bueno');
+    const de = (userId: string) => registros[0].jugadores.find((j) => j.userId === userId);
+    expect(de('2')?.ejecutado).toBe(1);
+    expect(de('3')?.ejecutado).toBe(1);
+  });
+
+  it('deshacer la revelación y volver a revelar guarda la misma partida (con su id)', () => {
+    const { juego, registros } = partida();
+    paso(juego, () => juego.partida.irANoche());
+    paso(juego, () => juego.partida.empezarRevelacion('bueno'));
+    juego.partida.historia.deshacer();
+    paso(juego, () => juego.partida.empezarRevelacion('malvado'));
+    expect(registros.map((r) => r.ganador)).toEqual(['bueno', 'malvado']);
+    expect(registros[1].id).toBe(registros[0].id);
+    // Otra partida, otro id
+    paso(juego, () => juego.partida.limpiarGrimorio());
+    paso(juego, () => juego.partida.irANoche());
+    paso(juego, () => juego.partida.empezarRevelacion('bueno'));
+    expect(registros[2].id).not.toBe(registros[0].id);
+  });
+
+  it('las votaciones salen del diario: quién nomina a quién, quién vota y cuántos votos', () => {
+    const { juego, ids, asiento, registros } = partida();
+    juego.partida.irANoche();
+    juego.partida.amanecer();
+    juego.partida.nominar(asiento(0), asiento(1));
+    for (const id of [ids[0], ids[1]]) juego.sala.participantes.levantarMano(id, true);
+    votar(juego);
+    juego.partida.empezarRevelacion('bueno');
+    expect(registros[0].votaciones).toEqual([
+      expect.objectContaining({ dia: 1, nomina: 'ana', nominado: 'bea', nominaAsiento: asiento(0), nominadoAsiento: asiento(1), votantes: ['ana', 'bea'], votos: 2 }),
+    ]);
+  });
+});
+
+describe('el guardarraíl del diario', () => {
+  it('un paso que cambia a un jugador sin apuntarlo en el diario falla', () => {
+    const { juego, asiento } = partida();
+    expect(() => paso(juego, () => {
+      juego.partida.plaza().find((a) => a.id === asiento(0))!.muerto = true;
+    })).toThrow('[Historia] «prueba» ha cambiado un jugador sin apuntarlo en el diario.');
+  });
+
+  it('lo mismo, apuntado, pasa; y lo que no cuenta como hecho (una nota) también', () => {
+    const { juego, asiento } = partida();
+    expect(() => paso(juego, () => juego.partida.grimorio.cambiarVida(asiento(0), true))).not.toThrow();
+    expect(() => paso(juego, () => juego.partida.grimorio.escribirNota(asiento(1), 'sospechosa'))).not.toThrow();
   });
 });

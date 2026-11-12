@@ -76,6 +76,12 @@ describe('arquitectura', () => {
     expect(fuera, 'Estos archivos sacan el azar por su cuenta: que lo reciban').toEqual([]);
   });
 
+  it('las proyecciones del diario (y el resumen de las estadísticas) son funciones puras: solo leen el diario (models/compartido y otras proyecciones)', () => {
+    const puras = [...archivos('models/partida/proyecciones'), 'models/estadisticas/resumenPartida.ts'];
+    const fuera = puras.filter((f) => importsDe(f).some((i) => !i.startsWith('models/compartido/') && !i.startsWith('models/partida/proyecciones/')));
+    expect(fuera, 'Estas proyecciones dependen de algo con estado').toEqual([]);
+  });
+
   it('el dominio no usa los servicios, los controladores, los repositorios ni la infraestructura', () => {
     const fuera = archivos('models').filter((f) => importsDe(f).some((i) => /^(services|controllers|repositories|infra)(\/|$)/.test(i)));
     expect(fuera).toEqual([]);

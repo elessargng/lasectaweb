@@ -1,68 +1,8 @@
-import type { AsientoDiario, EntradaDiario, HechoDiario } from '../compartido/diario';
-import type { Alineamiento } from '../compartido/jugador';
-import type { RegistroVotacion } from '../compartido/partida';
+import type { AsientoDiario, HechoDiario } from '../compartido/diario';
 
-/**
- * Lo que va pasando en la partida, para quien quiera enterarse sin que la sala
- * sepa de él (las estadísticas, por ejemplo). La sala los avisa en el orden en
- * que pasan; quien escucha tiene que estar suscrito desde el principio.
- */
-
-/** Donde las piezas de la partida apuntan lo que se hace con ellas (ver Partida.anotar). */
+/** Donde las piezas de la partida apuntan lo que se hace con ellas (ver Partida.anotar y Registro). */
 export interface Diario {
   anotar(hecho: HechoDiario): void;
-  /** Un asiento como se apunta: su número y quien se sienta ahora. */
+  /** Un asiento como se apunta: su número, su id y quien se sienta ahora. */
   asiento(jugadorId: string): AsientoDiario;
 }
-
-/** Un asiento de la plaza en un momento de la partida. */
-export interface FotoAsiento {
-  /** Su número en la plaza (1, el de las 12). */
-  numero: number;
-  /** Quien se sienta (su nombre en la sala), o null si está libre. */
-  nombre: string | null;
-  /** Su cuenta, si la tiene. */
-  userId: string | null;
-  /** Quien es de verdad (su «Is The …» o su ficha). */
-  personaje: string | null;
-  /** La ficha que lleva, si no es quien es de verdad (el Borracho que se cree Lavandera). */
-  ficha: string | null;
-  alineamiento: Alineamiento | null;
-  muerto: boolean;
-}
-
-export type EventoPartida =
-  /** Anochece. `conCalavera`: las cuentas de quien llevaba la calavera al caer la noche (lo ejecutó la plaza). */
-  | { tipo: 'anochece'; desdePreparacion: boolean; plaza: FotoAsiento[]; conCalavera: string[] }
-  /** Amanece: empieza el día con la plaza así. */
-  | { tipo: 'amanece'; plaza: FotoAsiento[] }
-  /** Alguien nomina a alguien (sus cuentas, o null sin cuenta o con el asiento libre). */
-  | { tipo: 'nominacion'; nomina: string | null; nominado: string | null }
-  /** Alguien ha votado (su cuenta, o null). */
-  | { tipo: 'voto'; userId: string | null }
-  /** Se reinicia la votación: el voto que se había contado de esta cuenta (o null) no vale. */
-  | { tipo: 'desvoto'; userId: string | null }
-  /** El narrador ha ejecutado a alguien (su cuenta, o null). */
-  | { tipo: 'ejecucion'; userId: string | null }
-  /** Algo que se ha hecho en la partida, para su diario (ver models/compartido/diario). */
-  | { tipo: 'diario'; entrada: EntradaDiario }
-  /** Se limpia el grimorio: otra partida, desde el principio. */
-  | { tipo: 'nuevaPartida' }
-  /** Se revela el grimorio: la partida ha terminado. */
-  | {
-      tipo: 'partidaTerminada';
-      ganador: Alineamiento;
-      /** Lo que ha pasado (CAUSAS_FIN_PARTIDA) y, si es de alguien concreto (el esbirro que cazó a la Doncel), su cuenta. */
-      causas: { id: string; userId?: string | null }[];
-      plaza: FotoAsiento[];
-      narradores: { userId: string | null; nombre: string }[];
-      npcs: string[];
-      votaciones: RegistroVotacion[];
-      guion: string | null;
-      edicion: string | null;
-      /** Hasta qué día (o noche) se jugó. */
-      dias: number;
-    };
-
-/** Quien escucha lo que pasa en la partida. */
-export type OyentePartida = (evento: EventoPartida) => void;

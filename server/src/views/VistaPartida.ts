@@ -231,7 +231,7 @@ export class VistaPartida {
       npcs: partida.npcs.npcs(),
       despertares: partida.despertares.despertares().map(despertarDto),
       recordatoriosNoche: partida.recordatoriosNoche(),
-      votaciones: partida.nominaciones.votaciones(),
+      votaciones: partida.votaciones(),
       senalamiento: siHay(partida.senalamientos.senalamiento(), senalamientoDto),
       narradorVirtual: siHay(juego.narrador.actual(), narradorVirtualDto),
     };

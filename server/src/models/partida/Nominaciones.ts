@@ -1,5 +1,5 @@
-import type { RegistroVotacion } from '../compartido/partida';
 import type { Participante } from '../sala/Participantes';
+import type { Diario } from './eventos';
 import type { Jugador } from './Jugador';
 
 /**
@@ -47,12 +47,8 @@ type NominacionInterna = Omit<Nominacion, 'votosNecesarios' | 'votosNecesariosPo
   palabra: string | null;
   /** Los votos que ha fijado el narrador; null: los de por defecto. */
   votosElegidos: number | null;
-  /** Su entrada del registro, que se completa al terminar la votación. */
-  registro: RegistroVotacion | null;
   /** Los asientos de muertos que ya no tenían voto al empezar la votación (para la votación secreta). */
   gastadosAlVotar?: string[];
-  /** Las cuentas cuyo voto se ha contado en esta votación (para descontarlo si se reinicia). */
-  votantesContados?: (string | null)[];
   /**
    * Los votos que hacían falta por defecto cuando terminó su votación: se siguen
    * enseñando hasta la siguiente nominación (el récord del día que deja esta
@@ -72,12 +68,8 @@ export interface EntornoVotacion {
   buscar(participanteId: string): Participante | undefined;
   /** Baja todas las manos levantadas. */
   bajarManos(): void;
-  /** La cuenta de un participante, o null (invitado). */
-  cuentaDe(participanteId: string): string | null;
   /** En el asiento hay un viajero: nominarlo es pedir su expulsión. */
   llevaViajero(jugador: Jugador): boolean;
-  /** El día de la partida (para el registro). */
-  dia(): number;
   /** Lo que tarda la aguja en pasar de una ficha a la siguiente. */
   segundosPorFicha(): number;
   /** No puede votar (muerto sin voto; con el Voudon vivo, los vivos que no son él). */
@@ -92,13 +84,8 @@ export interface EntornoVotacion {
   valorDelVoto(jugador: Jugador, ocupante: Participante): number;
   /** La votación es secreta (Organ Grinder). */
   secreta(): boolean;
-  /**
-   * Para las estadísticas: alguien ha nominado a alguien (no cuenta pedir una
-   * expulsión), alguien con esta cuenta ha votado y, al reiniciar la votación, su voto no vale.
-   */
-  alNominar(desdeAsiento: string, hastaAsiento: string): void;
-  alVotar(cuenta: string | null): void;
-  alDesvotar(cuenta: string | null): void;
+  /** Donde se apunta cada nominación, cada voto y cada votación (el registro de la partida). */
+  diario: Diario;
   /** Sale la expulsión de un viajero: muere al momento. */
   alExpulsar(jugadorId: string): void;
   /** La votación avanza sola (con el tiempo): cada paso, por la historia de la partida (ver Historia). */
@@ -109,23 +96,18 @@ export interface EntornoVotacion {
 
 /**
  * Las nominaciones del día y sus votaciones: la cuenta atrás, la aguja que
- * recorre las fichas, el registro para el narrador y el récord del día (lo que
- * tiene que superar la siguiente). No comprueba permisos.
+ * recorre las fichas y el récord del día (lo que tiene que superar la siguiente).
+ * Cada nominación, voto y votación se apunta en el diario de la partida: el
+ * registro de votaciones sale de ahí (ver proyecciones/votaciones). No comprueba permisos.
  */
 export class Nominaciones {
   private nominacionEnCurso: NominacionInterna | null = null;
   /** Lo siguiente que toca en la nominación: el fin de la cuenta atrás o el próximo paso de la votación. */
   private temporizador: NodeJS.Timeout | null = null;
-  private registro: RegistroVotacion[] = [];
   /** Los votos de la votación de hoy que más tuvo (de las que llegaron a los necesarios), o null. */
   private maximoDelDia: number | null = null;
 
   constructor(private readonly entorno: EntornoVotacion) {}
-
-  /** El registro de nominaciones y votaciones, en el orden en que se nominó. */
-  votaciones(): RegistroVotacion[] {
-    return this.registro.map((v) => ({ ...v, votantes: v.votantes && [...v.votantes] }));
-  }
 
   /** El récord de votos del día (ver maximoDelDia), para que la máquina del tiempo lo devuelva. */
   recordDelDia(): number | null {
@@ -136,15 +118,9 @@ export class Nominaciones {
     this.maximoDelDia = votos;
   }
 
-  /**
-   * Una copia de las nominaciones (la de ahora, el registro y el récord), para
-   * volver a ellas (ver restaurar). La entrada del registro de la nominación en
-   * curso va por su posición.
-   */
+  /** Una copia de las nominaciones (la de ahora y el récord), para volver a ellas (ver restaurar). */
   instantanea(): InstantaneaNominaciones {
-    const n = this.nominacionEnCurso;
-    const enCurso = n && { ...n, registro: n.registro ? this.registro.indexOf(n.registro) : null };
-    return structuredClone({ enCurso, registro: this.registro, maximoDelDia: this.maximoDelDia });
+    return structuredClone({ enCurso: this.nominacionEnCurso, maximoDelDia: this.maximoDelDia });
   }
 
   /**
@@ -152,11 +128,10 @@ export class Nominaciones {
    * sigue: la cuenta atrás, hasta su fin; la votación, desde la ficha en la que iba.
    */
   restaurar(instantanea: InstantaneaNominaciones): void {
-    const { enCurso, registro, maximoDelDia } = structuredClone(instantanea);
+    const { enCurso, maximoDelDia } = structuredClone(instantanea);
     this.pararTemporizador();
-    this.registro = registro;
     this.maximoDelDia = maximoDelDia;
-    this.nominacionEnCurso = enCurso && { ...enCurso, registro: enCurso.registro === null ? null : (registro[enCurso.registro] ?? null) };
+    this.nominacionEnCurso = enCurso;
     const n = this.nominacionEnCurso;
     if (n?.votacion && !n.votacion.terminada) {
       this.temporizador = setTimeout(() => this.entorno.sola('dia:votacion', () => this.avanzarVotacion()), this.entorno.segundosPorFicha() * 1000);
@@ -165,24 +140,15 @@ export class Nominaciones {
     }
   }
 
-  /** Otra partida: sin nominación, sin registro y sin récord. */
+  /** Otra partida: sin nominación y sin récord. */
   olvidarTodo(): void {
     this.cerrarNominacion();
-    this.registro = [];
     this.maximoDelDia = null;
   }
 
   private pararTemporizador(): void {
     if (this.temporizador) clearTimeout(this.temporizador);
     this.temporizador = null;
-  }
-
-  /** «Bea» o, si está libre, «asiento 3», como lo verá el narrador en el registro. */
-  private describirAsiento(jugadorId: string): string {
-    const i = this.entorno.plaza().findIndex((a) => a.id === jugadorId);
-    const ocupante = this.entorno.plaza()[i]?.participanteId;
-    const nombre = ocupante ? this.entorno.buscar(ocupante)?.nombre : undefined;
-    return nombre || `asiento ${i + 1}`;
   }
 
   /**
@@ -223,9 +189,7 @@ export class Nominaciones {
       const valor = n.expulsion ? 1 : this.entorno.valorDelVoto(jugador!, ocupante);
       v.votos += valor;
       if (valor !== 1) v.valores = { ...v.valores, [jugadorId]: valor };
-      const cuenta = this.entorno.cuentaDe(ocupante.id);
-      this.entorno.alVotar(cuenta);
-      n.votantesContados = [...(n.votantesContados ?? []), cuenta];
+      this.entorno.diario.anotar({ tipo: 'voto', asiento: this.entorno.diario.asiento(jugadorId), valor });
       // Voto contado: la mano baja sola.
       ocupante.manoLevantada = false;
       ocupante.dosManos = false;
@@ -246,17 +210,7 @@ export class Nominaciones {
         // nadie se quede con la calavera)
         this.maximoDelDia = Math.max(this.maximoDelDia ?? 0, v.votos);
       }
-      // Se completa su entrada del registro (la que se hizo al nominar)
-      if (n.registro) {
-        n.registro.votantes = v.orden
-          .filter((id) => v.resultados[id] !== null && v.resultados[id] !== undefined)
-          .map((id) => {
-            const nombre = this.describirAsiento(id);
-            const valor = v.valores?.[id];
-            return valor !== undefined ? `${nombre} (${valor} votos)` : nombre;
-          });
-        n.registro.votos = v.votos;
-      }
+      this.entorno.diario.anotar({ tipo: 'votacion', votos: v.votos });
     } else {
       this.temporizador = setTimeout(() => this.entorno.sola('dia:votacion', () => this.avanzarVotacion()), this.entorno.segundosPorFicha() * 1000);
     }
@@ -282,7 +236,7 @@ export class Nominaciones {
   nominacion(): Nominacion | null {
     const actual = this.nominacionVigente();
     if (!actual) return null;
-    const { votosElegidos: _, registro: __, palabra: ___, porDefectoAlTerminar, ...resto } = actual;
+    const { votosElegidos: _, palabra: __, porDefectoAlTerminar, ...resto } = actual;
     const votosElegidos = actual.votosElegidos;
     // Votada, los de cuando terminó (no cambian al quedar el récord de esta votación)
     const porDefecto = porDefectoAlTerminar ?? this.votosNecesariosPorDefecto(actual.expulsion);
@@ -335,7 +289,7 @@ export class Nominaciones {
 
   /**
    * Empieza una nominación (sustituye a la que hubiera) y la apunta en el
-   * registro, con su día (si no se llega a votar, queda sin votos). Si el nominado
+   * diario (si no se llega a votar, queda sin votos). Si el nominado
    * es un viajero, es una expulsión (ver Nominacion.expulsion). Baja todas
    * las manos que hubiera levantadas. No comprueba permisos.
    */
@@ -343,21 +297,9 @@ export class Nominaciones {
     this.pararTemporizador();
     const nominado = this.entorno.plaza().find((a) => a.id === hasta);
     const expulsion = !!nominado && this.entorno.llevaViajero(nominado);
-    const registro: RegistroVotacion = {
-      hora: Date.now(),
-      dia: this.entorno.dia(),
-      nomina: this.describirAsiento(desde),
-      nominado: this.describirAsiento(hasta),
-      nominaAsiento: desde,
-      nominadoAsiento: hasta,
-      ...(expulsion && { expulsion }),
-      votantes: null,
-      votos: null,
-    };
-    this.registro.push(registro);
-    // Pedir una expulsión no es nominar (no cuenta para las estadísticas)
-    if (!expulsion) this.entorno.alNominar(desde, hasta);
-    this.nominacionEnCurso = { desde, hasta, cuentaAtrasFin: null, votacion: null, expulsion, votosElegidos: null, registro, palabra: null };
+    const { diario } = this.entorno;
+    diario.anotar({ tipo: 'nominacion', asiento: diario.asiento(desde), objetivo: diario.asiento(hasta), expulsion });
+    this.nominacionEnCurso = { desde, hasta, cuentaAtrasFin: null, votacion: null, expulsion, votosElegidos: null, palabra: null };
     // La nominación empieza con todas las manos bajadas
     this.entorno.bajarManos();
   }
@@ -404,11 +346,10 @@ export class Nominaciones {
       const gastados = new Set(n.gastadosAlVotar);
       for (const a of this.entorno.plaza()) if (a.muerto && !gastados.has(a.id)) this.entorno.cambiarVoto(a.id, false);
     }
-    for (const cuenta of n.votantesContados ?? []) this.entorno.alDesvotar(cuenta);
+    if (n.votacion) this.entorno.diario.anotar({ tipo: 'reinicioVotacion' });
     n.cuentaAtrasFin = null;
     n.votacion = null;
     n.gastadosAlVotar = undefined;
-    n.votantesContados = undefined;
     this.entorno.bajarManos();
   }
 
@@ -426,9 +367,8 @@ export class Nominaciones {
   }
 }
 
-/** Las nominaciones en un momento (ver Nominaciones.instantanea): la entrada del registro de la de ahora, por su posición. */
+/** Las nominaciones en un momento (ver Nominaciones.instantanea). */
 export interface InstantaneaNominaciones {
-  enCurso: (Omit<NominacionInterna, 'registro'> & { registro: number | null }) | null;
-  registro: RegistroVotacion[];
+  enCurso: NominacionInterna | null;
   maximoDelDia: number | null;
 }

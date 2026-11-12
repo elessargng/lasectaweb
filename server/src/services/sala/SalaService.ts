@@ -1,6 +1,6 @@
 import { SalaDeJuego } from '../../models/SalaDeJuego';
 import { limpiarNombreSala, SALA_AVATAR_INVITADO, type Participante, type SalaLlegada } from '../../models/sala/Participantes';
-import { EstadisticasPartida } from '../../models/estadisticas/EstadisticasPartida';
+import { resumenPartida } from '../../models/estadisticas/resumenPartida';
 import { temporizadorReal, type RespuestaAccion } from '../../models/narradorVirtual/puertos';
 import { ChatError, ChatService } from '../chat/ChatService';
 import { ConversacionError, ConversacionService } from '../conversaciones/ConversacionService';
@@ -95,10 +95,12 @@ export class SalaService {
   constructor(private readonly deps: DependenciasSala) {
     this.juego = new SalaDeJuego(deps.azar);
     const { sala, partida } = this.juego;
-    // Las estadísticas escuchan la partida y, al revelar el grimorio, la guardan
+    // Al revelar el grimorio, la partida se guarda para las estadísticas (sacada de su diario)
     if (deps.guardarPartida) {
       const guardar = deps.guardarPartida;
-      const estadisticas = new EstadisticasPartida((registro) => {
+      partida.alTerminar = (diario, id) => {
+        const registro = resumenPartida(id, diario);
+        if (!registro) return;
         guardar(registro)
           .then(async () => {
             // Con una partida más, quien deja de ser novato pierde el pulpito
@@ -107,10 +109,7 @@ export class SalaService {
             this.difundir();
           })
           .catch((err) => console.error('[SALA] No se ha podido guardar la partida:', err));
-      });
-      partida.suscribir((evento) => estadisticas.registrar(evento));
-      // Lo apuntado se deshace con la partida
-      partida.historia.registrar('estadisticas', estadisticas);
+      };
     }
     this.chat = new ChatService(deps.mensajes, this.juego);
     this.imagenes = new ImagenesSala(deps.imagenes);
@@ -175,7 +174,7 @@ export class SalaService {
         privados: async (abiertos) => this.preparacion.privados(participanteId, abiertos),
         asignarPersonajes: async () => this.preparacion.asignarPersonajes(participanteId),
         cambiarPersonaje: async (jugadorId, personajeId) => this.grimorio.personaje(participanteId, jugadorId, personajeId),
-        cambiarVida: async (jugadorId, muerto) => this.grimorio.vida(participanteId, jugadorId, muerto),
+        cambiarVida: async (jugadorId, muerto, causa) => this.grimorio.vida(participanteId, jugadorId, muerto, causa),
         confirmarMuerte: async (jugadorId) => this.grimorio.confirmarMuerte(participanteId, jugadorId),
         ponerRecordatorio: async (jugadorId, personajeId, indice) => this.grimorio.recordatorio(participanteId, jugadorId, personajeId, indice),
         quitarRecordatorio: async (jugadorId, recordatorioId) => this.grimorio.quitarRecordatorio(participanteId, jugadorId, recordatorioId),

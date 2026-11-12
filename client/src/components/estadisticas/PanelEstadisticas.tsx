@@ -1,5 +1,6 @@
 import { BarChart3, Gem, History, Lock, ScrollText, Trophy, Users } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { causaCuenta } from '@models/partida';
 import { LOGRO_PLATINO, LOGROS, type Logro, type NivelLogro } from '../../data/logros';
 import { reliquiasDe } from '../../data/reliquias';
 import { urlDelServidor } from '../../utils/api';
@@ -348,7 +349,7 @@ const TarjetaLogro = ({ logro, veces: n, personajes }: { logro: Logro; veces: nu
         <span className="block font-display text-on-surface">{logro.nombre}</span>
         <span className="block text-xs text-on-surface-muted">
           <TextoLogro texto={logro.descripcion} personajes={personajes} />
-          {logro.exigeVictoria && <span className="italic"> Solo cuenta si ganas.</span>}
+          {!causaCuenta(logro.id, false) && <span className="italic"> Solo cuenta si ganas.</span>}
         </span>
         <span className="mt-0.5 block font-ui text-[0.68rem] font-semibold uppercase tracking-[0.15em]">
           <span className={conseguido ? COLOR_NIVEL[logro.nivel] : 'text-on-surface-muted'}>{NOMBRE_NIVEL[logro.nivel]}</span>
