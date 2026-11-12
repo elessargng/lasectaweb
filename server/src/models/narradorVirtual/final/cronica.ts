@@ -1,11 +1,12 @@
 import type { EnvioDespertar } from '../../compartido/despertar';
-import { droison } from '../../personajes/ReglaPersonaje';
+import type { CausaMuerte } from '../../compartido/diario';
 import type { SalaDeJuego } from '../../SalaDeJuego';
 import { FRASES, type MuerteRevelada, type NocheRevelada } from '../frases';
-import { contextoNoche, nombreDeAsiento, tipoReal } from '../plazaDeJuego';
+import { nombreDeAsiento } from '../plazaDeJuego';
 import { numeroDe } from '../noche/informacionFalsa';
 import { identidadDe } from '../../partida/Grimorio';
 import type { Jugador } from '../../partida/Jugador';
+import { causasApuntadas, muertes, nochesPorAsiento, personajesPorAsiento, ultimaNoche } from '../../partida/proyecciones/historiaAsientos';
 
 /** Lo que hizo alguien una noche: a quiénes eligió, lo que le dio el narrador (y si era falso) y si estaba droison. */
 interface NocheApuntada {
@@ -17,16 +18,14 @@ interface NocheApuntada {
 }
 
 /**
- * Lo que pasa en la partida, apuntado para contarlo al revelar el grimorio: lo que
- * elige y la información que recibe cada uno cada noche (y si era falsa o estaba
- * envenenado) y cómo y cuándo muere. Los despertares se cierran al amanecer, así
- * que se apunta al amanecer.
+ * Lo que ha pasado en la partida, para contarlo al revelar el grimorio y contestar
+ * al Artista: lo que elige y la información que recibe cada uno cada noche (y si
+ * era falsa o estaba envenenado) y cómo y cuándo muere. Sale del diario de la
+ * partida (ver cronicaDe): no se apunta aparte.
  */
 export interface Cronica {
   /** Por asiento, sus noches (solo las que eligió o recibió algo). */
   noches: Map<string, NocheApuntada[]>;
-  /** Las falsas (droison y mentira) de esta noche, por asiento, hasta apuntarlas al amanecer. */
-  falsas: Set<string>;
   muertes: Map<string, MuerteRevelada>;
   /** Por asiento, el personaje que tenía antes de pasar a ser el Imp (la Mujer Escarlata, el esbirro del Imp que se mata). */
   antes: Map<string, string>;
@@ -36,62 +35,51 @@ export interface Cronica {
   causas: Set<string>;
 }
 
-export const cronicaNueva = (): Cronica => ({ noches: new Map(), falsas: new Set(), muertes: new Map(), antes: new Map(), ultimaNoche: 0, causas: new Set() });
-
 /** Si un mensaje del narrador es información (un número, un sí o un no, un alineamiento, «Este jugador es»). */
 const esInformacion = (m: EnvioDespertar): boolean =>
   numeroDe(m) !== null || ['si', 'no', 'bueno', 'malvado'].includes(m.ficha ?? '') || m.tarjeta === 'esteJugadorEs';
 
 /**
- * Al amanecer (antes de cerrar los despertares): lo que ha elegido cada uno esta
- * noche (lo que contesta a «Haz una elección»; por un asiento libre, el narrador),
- * la información que ha dado a los buenos, quién estaba droison y quién ha muerto
- * y por qué (el demonio, si lo ha elegido).
+ * La crónica de la partida, sacada de su diario (ver proyecciones/historiaAsientos).
+ * De los malvados no se cuenta la información (la suya no es de su habilidad). Cada
+ * muerte, por lo que la causó: la ejecución, el Exterminador, el demonio (o el
+ * demonio que se mata a sí mismo) u otra cosa. Lo que tenía antes quien pasa a
+ * ser el demonio (la Mujer Escarlata, el esbirro del Imp que se mata).
  */
-export function apuntarNoche(cronica: Cronica, juego: SalaDeJuego): void {
+export function cronicaDe(juego: SalaDeJuego): Cronica {
   const { partida } = juego;
-  const noche = partida.fases.actual().numero;
-  cronica.ultimaNoche = noche;
-  const jugadores = partida.plaza();
-  const despertares = partida.despertares.despertares();
-  const ctx = contextoNoche(juego);
-  for (const { jugador: asiento, mensajes } of despertares) {
-    const a = jugadores.find((x) => x.id === asiento);
-    if (!a) continue;
-    // Cada elección: lo primero con jugadores que llega tras pedírsela
-    const eligio: string[][] = [];
-    mensajes.forEach((m, i) => {
-      if (m.autor !== 'narrador' || !m.eleccion) return;
-      const respuesta = mensajes.slice(i + 1).find((r) => r.ficha === 'jugador' && r.jugadores.length);
-      if (respuesta) eligio.push(respuesta.jugadores);
-    });
-    const infos =
-      partida.grimorio.alineamiento(a) === 'malvado'
-        ? []
-        : mensajes
-            .filter((m) => m.autor === 'narrador' && !m.eleccion && esInformacion(m))
-            .map((envio) => ({ envio, falsa: cronica.falsas.has(asiento) }));
-    if (!eligio.length && !infos.length) continue;
-    const lista = cronica.noches.get(asiento) ?? [];
-    lista.push({ noche, eligio, infos, droison: droison(ctx, a) });
-    cronica.noches.set(asiento, lista);
+  const diario = partida.registro.hechos();
+  const plaza = partida.plaza();
+  const esDemonio = (personaje: string) => partida.guion.personaje(personaje)?.tipo === 'demon';
+  const malvado = (asiento: string) => {
+    const a = plaza.find((x) => x.id === asiento);
+    return !!a && partida.grimorio.alineamiento(a) === 'malvado';
+  };
+  const noches = new Map<string, NocheApuntada[]>();
+  for (const [asiento, lista] of nochesPorAsiento(diario)) {
+    const apuntadas = lista
+      .map((n) => ({ ...n, infos: malvado(asiento) ? [] : n.infos.filter((i) => esInformacion(i.envio)) }))
+      .filter((n) => n.eligio.length || n.infos.length);
+    if (apuntadas.length) noches.set(asiento, apuntadas);
   }
-  cronica.falsas.clear();
-  // Quién eligió a cada muerto: si fue un demonio, a sus manos (o se mató él, el Imp que pasa)
-  for (const muerto of jugadores.filter((a) => a.muertePendiente)) {
-    const demonio = despertares.find((d) => {
-      const quien = jugadores.find((x) => x.id === d.jugador);
-      return !!quien && tipoReal(juego, quien) === 'demon' && d.mensajes.some((m) => m.ficha === 'jugador' && m.jugadores.includes(muerto.id));
-    });
-    const causa = !demonio ? 'otra' : demonio.jugador === muerto.id ? 'suicidio' : 'demonio';
-    cronica.muertes.set(muerto.id, { momento: 'noche', numero: noche, causa });
+  const causa = (asiento: string, c: CausaMuerte): MuerteRevelada['causa'] => {
+    if (c === 'ejecucion') return 'ejecucion';
+    if (c === 'slayer') return 'exterminador';
+    if (!esDemonio(c)) return 'otra';
+    const muerto = plaza.find((a) => a.id === asiento);
+    return muerto && identidadDe(muerto) === c ? 'suicidio' : 'demonio';
+  };
+  const antes = new Map<string, string>();
+  for (const [asiento, personajes] of personajesPorAsiento(diario)) {
+    if (personajes.length >= 2 && esDemonio(personajes[personajes.length - 1])) antes.set(asiento, personajes[personajes.length - 2]);
   }
-}
-
-/** Una muerte de día (ejecución o disparo del Exterminador). */
-export function apuntarMuerteDeDia(cronica: Cronica, juego: SalaDeJuego, asiento: string, causa: 'ejecucion' | 'exterminador'): void {
-  const { partida } = juego;
-  cronica.muertes.set(asiento, { momento: 'dia', numero: partida.fases.actual().numero, causa });
+  return {
+    noches,
+    muertes: new Map([...muertes(diario)].map(([asiento, m]) => [asiento, { momento: m.momento, numero: m.numero, causa: causa(asiento, m.causa) }])),
+    antes,
+    ultimaNoche: ultimaNoche(diario),
+    causas: new Set(causasApuntadas(diario)),
+  };
 }
 
 /**
@@ -148,4 +136,9 @@ function describirInformacion(envio: EnvioDespertar, nombre: (asiento: string) =
   const lista = quienes.length <= 1 ? (quienes[0] ?? '') : `${quienes.slice(0, -1).join(', ')} o ${quienes[quienes.length - 1]}`;
   const personajes = envio.personajes.map(nombreP).join(' o ');
   return [lista && `a ${lista}`, personajes && `como ${personajes}`].filter(Boolean).join(' ');
+}
+
+/** El narrador virtual apunta en el diario una causa del final (de ahí salen los logros, ver cronicaDe). */
+export function apuntarCausa(juego: SalaDeJuego, id: string): void {
+  juego.narrador.paso('narradorVirtual:causa', () => juego.partida.anotar({ tipo: 'causa', id }));
 }

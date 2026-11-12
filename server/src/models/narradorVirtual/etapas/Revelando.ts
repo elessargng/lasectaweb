@@ -1,7 +1,7 @@
 import { barajar } from '../../partida/azar';
 import { identidadDe } from '../../partida/Grimorio';
 import { heredadosADemonio, esDemonio, type Ganador } from '../final/comprobarFinal';
-import { fraseAlRevelar } from '../final/cronica';
+import { cronicaDe, fraseAlRevelar } from '../final/cronica';
 import { duracionFrase, FRASES } from '../frases';
 import type { ContextoEtapa, Etapa } from './Etapa';
 
@@ -35,7 +35,7 @@ export class Revelando implements Etapa {
     const jugadores = partida.plaza();
     // Lo apuntado para los logros, de quien sigue en juego (si no, no se podría revelar)
     const enJuego = new Set(jugadores.map(identidadDe));
-    const causas = [...ctx.recuerdos.cronica.causas].filter((c) => enJuego.has(c));
+    const causas = [...cronicaDe(ctx.juego).causas].filter((c) => enJuego.has(c));
     if (!(await ctx.plaza.revelarGrimorio(this.ganador, causas)).ok) return;
     const demonios = jugadores.filter((a) => esDemonio(ctx.juego, a));
     const orden = [...barajar(jugadores.filter((a) => !demonios.includes(a)), ctx.azar), ...barajar(demonios, ctx.azar)];
@@ -56,7 +56,7 @@ export class Revelando implements Etapa {
       if (!this.seguir) return;
       const jugador = partida.plaza().find((a) => a.id === jugadorId);
       if (!jugador) continue;
-      const frase = fraseAlRevelar(ctx.recuerdos.cronica, ctx.juego, jugador);
+      const frase = fraseAlRevelar(cronicaDe(ctx.juego), ctx.juego, jugador);
       await ctx.plaza.revelarFicha(jugadorId);
       ctx.decir(frase);
       espera = Math.max(ENTRE_FICHAS_MS, duracionFrase(frase));

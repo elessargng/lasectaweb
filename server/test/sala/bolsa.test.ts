@@ -88,14 +88,14 @@ describe('la bolsa del narrador virtual, con conceptos', () => {
     const tipoDe = (id: string) => conKazali.find((p) => p.id === id)!.tipo;
     expect(b.personajes).toContain('kazali');
     expect(b.personajes.filter((id) => tipoDe(id) === 'minion')).toEqual([]);
-    expect(preguntas.some((p) => (p.sinGrimorio!.hueco as { tipo: string }).tipo === 'minion')).toBe(false);
+    expect(preguntas.some((p) => (p.datos!.hueco as { tipo: string }).tipo === 'minion')).toBe(false);
     expect(b.personajes).toHaveLength(10);
   });
 
   it('el primer esbirro es el del concepto del mal', async () => {
     for (let semilla = 1; semilla <= 30; semilla++) {
       const b = await bolsa(12, semilla);
-      const esbirros = b.preguntas.filter((p) => (p.sinGrimorio!.hueco as { tipo: string }).tipo === 'minion');
+      const esbirros = b.preguntas.filter((p) => (p.datos!.hueco as { tipo: string }).tipo === 'minion');
       expect(esbirros[0].opciones.map((o) => o.clave)).toEqual([CONCEPTOS_MAL[b.conceptos.mal].esbirro]);
       expect(esbirros[1].opciones.length).toBeGreaterThan(1);
     }
@@ -184,7 +184,7 @@ describe('la bolsa del narrador virtual, con conceptos', () => {
     expect(primera.instrucciones).toMatch(/Concepto del bien: .+\. Concepto del mal: .+\./);
     expect(primera.instrucciones).toContain('Personajes usados en partidas recientes: chef (2 veces), empath;');
     expect(primera.instrucciones).not.toMatch(/imp/);
-    const aldeano = preguntas.find((p) => (p.sinGrimorio!.hueco as { tipo: string }).tipo === 'townsfolk')!;
+    const aldeano = preguntas.find((p) => (p.datos!.hueco as { tipo: string }).tipo === 'townsfolk')!;
     expect(aldeano.pregunta).toMatch(/un aldeano de .+ \(1 de \d\)\. Ya en la bolsa: imp, /);
     // Sin recientes, no se habla de ellas
     const sin = modelo(1);

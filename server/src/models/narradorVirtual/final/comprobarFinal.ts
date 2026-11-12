@@ -1,3 +1,4 @@
+import { apuntarCausa } from './cronica';
 import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { ContextoEtapa } from '../etapas/Etapa';
 import { tipoReal } from '../plazaDeJuego';
@@ -21,7 +22,6 @@ export async function heredadosADemonio(ctx: ContextoEtapa): Promise<void> {
   for (const a of partida.plaza()) {
     const pasa = partida.reglas.pasaASerDemonio(a);
     if (!pasa || !a.personaje) continue;
-    ctx.recuerdos.cronica.antes.set(a.id, a.personaje);
     await ctx.plaza.cambiarPersonaje(a.id, pasa.personaje);
     for (const r of a.recordatorios.filter(pasa.quitar)) {
       await ctx.plaza.quitarRecordatorio(a.id, r.id);
@@ -52,7 +52,7 @@ export async function comprobarFinal(
   const final = partida.reglas.finalPorPersonaje({ vivos: quedan, ejecutado: ejecutadoHoy, sinEjecucion, hayDemonio });
   if (final) {
     // Lo ha acabado un personaje (el Santo, el Alcalde): su logro
-    ctx.recuerdos.cronica.causas.add(final.personaje);
+    apuntarCausa(ctx.juego, final.personaje);
     return final.ganador;
   }
   if (!hayDemonio) {

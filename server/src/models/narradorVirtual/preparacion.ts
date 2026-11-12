@@ -131,7 +131,7 @@ export async function elegirBolsa(
         valor: p,
         ...(preferidos.includes(p.id) ? { rasgos: ['concepto' as const], peso: PESO_PREFERIDO } : {}),
       })),
-      sinGrimorio: { guion, hueco, decisionesAnteriores: [...anteriores] },
+      datos: { guion, hueco, decisionesAnteriores: [...anteriores] },
     });
     elegidos.push(elegido);
     anteriores.push({ pregunta, elegido: { id: elegido.id, nombre: elegido.nombre, tipo: elegido.tipo } });

@@ -1,4 +1,4 @@
-import type { Grimorio } from '../grimorio';
+import type { FotoPartida } from '../contexto/FotoPartida';
 import type { Temporizador } from '../puertos';
 import type { Decision, EstrategiaNarrador, MotivoDecision, PreguntaSiONo } from './EstrategiaNarrador';
 
@@ -26,10 +26,10 @@ export class ConRespaldo implements EstrategiaNarrador {
     private readonly apuntar: (texto: string) => void = (texto) => console.warn(texto),
   ) {}
 
-  elegir<T>(decision: Decision<T>, grimorio: Grimorio): Promise<T> {
+  elegir<T>(decision: Decision<T>, foto: FotoPartida): Promise<T> {
     return this.intentar(
       decision.motivo,
-      (e) => e.elegir(decision, grimorio),
+      (e) => e.elegir(decision, foto),
       (valor) => {
         const opcion = decision.opciones.find((o) => o.valor === valor);
         return opcion ? `${opcion.clave} (${opcion.descripcion})` : JSON.stringify(valor);
@@ -37,10 +37,10 @@ export class ConRespaldo implements EstrategiaNarrador {
     );
   }
 
-  siONo(pregunta: PreguntaSiONo, grimorio: Grimorio): Promise<boolean> {
+  siONo(pregunta: PreguntaSiONo, foto: FotoPartida): Promise<boolean> {
     return this.intentar(
       pregunta.motivo,
-      (e) => e.siONo(pregunta, grimorio),
+      (e) => e.siONo(pregunta, foto),
       (si) => (si ? `sí (${pregunta.si})` : `no (${pregunta.no})`),
     );
   }

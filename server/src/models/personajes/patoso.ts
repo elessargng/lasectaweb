@@ -3,6 +3,7 @@ import { droison } from './ReglaPersonaje';
 import type { SalaDeJuego } from '../SalaDeJuego';
 import type { ContextoEtapa } from '../narradorVirtual/etapas/Etapa';
 import type { Ganador } from '../narradorVirtual/final/comprobarFinal';
+import { apuntarCausa } from '../narradorVirtual/final/cronica';
 import { duracionFrase, FRASES, PAUSA_MS } from '../narradorVirtual/frases';
 import { opcionesDeAsientos } from '../narradorVirtual/grimorio';
 import { contextoNoche, nombreDeAsiento, vivo } from '../narradorVirtual/plazaDeJuego';
@@ -46,6 +47,7 @@ export async function cerrarPatosos(ctx: ContextoEtapa, hasta: Plazo['hasta']): 
     const elegido = await ctx.decidir({
       motivo: 'patoso',
       pregunta: `El Patoso (${nombreDeAsiento(juego, asiento)}) no ha elegido: el jugador vivo que elige.`,
+      sujeto: asiento,
       opciones: opcionesDeAsientos(juego, vivos),
     });
     const ganador = await contarPatoso(ctx, asiento, elegido.id, true);
@@ -75,7 +77,7 @@ export async function contarPatoso(ctx: ContextoEtapa, patosoId: string, elegido
   await new Promise<void>((seguir) => ctx.temporizador.programar(duracionFrase(frase) + PAUSA_MS, seguir));
   const deVerdad = identidadDe(quien) === 'klutz' && !droison(contextoNoche(juego), quien);
   if (deVerdad && partida.grimorio.alineamiento(elegido) === 'malvado') {
-    ctx.recuerdos.cronica.causas.add('klutz');
+    apuntarCausa(juego, 'klutz');
     return 'malvado';
   }
   ctx.decir(FRASES.partidaContinua());

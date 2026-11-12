@@ -327,6 +327,7 @@ export class Partida {
         ficha: a.personaje && a.personaje !== personaje ? a.personaje : null,
         alineamiento: this.grimorio.alineamiento(a),
         muerto: a.muerto,
+        droison: this.reglas.droison(a) ?? null,
       };
     });
   }

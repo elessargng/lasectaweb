@@ -101,6 +101,7 @@ export async function cumplirRequisitos(ctx: ContextoEtapa, fila: HabilidadNoche
         motivo: 'correcto',
         pregunta: `El jugador de verdad que se le enseña a ${describirPersonaje(ctx.juego, personaje)} («${texto}»).`,
         opciones: opcionesDeAsientos(ctx.juego, deEseTipo),
+        sujeto: yo?.id,
       });
       correcto = elegido;
     } else if (clave === 'wrong') {
@@ -110,6 +111,7 @@ export async function cumplirRequisitos(ctx: ContextoEtapa, fila: HabilidadNoche
             motivo: 'incorrecto',
             pregunta: `El otro jugador que se le enseña a ${describirPersonaje(ctx.juego, personaje)}, que no es ese personaje («Wrong»).`,
             opciones: opcionesDeAsientos(ctx.juego, posibles),
+            sujeto: yo?.id,
           })
         : null;
     }

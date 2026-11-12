@@ -10,7 +10,6 @@ import { cumplirRequisitos, ponerFaroles, ponerRecordatorio } from '../noche/req
 import { resolverRevision } from '../noche/revisiones';
 import { duracionPrivados, Privados } from './Dia';
 import { comprobarFinal, heredadosADemonio } from '../final/comprobarFinal';
-import { apuntarNoche } from '../final/cronica';
 import { abrirPatosos, cerrarPatosos } from '../../personajes/patoso';
 import { Revelando } from './Revelando';
 import type { ContextoEtapa, Etapa } from './Etapa';
@@ -209,6 +208,7 @@ export class Noche implements Etapa {
           motivo: 'asientoLibre',
           pregunta: `Lo que elige ${describirPersonaje(ctx.juego, fila.personaje)} en un asiento libre (elige el narrador por él).`,
           opciones: opcionesDeAsientos(ctx.juego, posibles),
+          sujeto: fila.jugador,
         },
         eleccion.cantidad,
       );
@@ -233,7 +233,7 @@ export class Noche implements Etapa {
       opciones: opcionesDeAsientos(ctx.juego, esbirros),
     });
     const era = identidadDe(nuevo);
-    if ((await ctx.plaza.nuevoImp(nuevo.id)).ok && era) ctx.recuerdos.cronica.antes.set(nuevo.id, era);
+    await ctx.plaza.nuevoImp(nuevo.id);
   }
 
   /**
@@ -252,8 +252,6 @@ export class Noche implements Etapa {
     }
     const muertos = partida.plaza().filter((a) => a.muertePendiente);
     const nombres = muertos.map((a) => nombreDeAsiento(juego, a.id));
-    // Antes de que se cierren los despertares: lo que se ha dado y quién ha matado a quién
-    apuntarNoche(ctx.recuerdos.cronica, juego);
     if (!(await ctx.plaza.amanecer()).ok) return;
     for (const a of muertos) await ctx.plaza.confirmarMuerte(a.id);
     abrirPatosos(juego, muertos.map((a) => a.id), 'anochecer');

@@ -6,7 +6,6 @@ import type { AccionJugador, ContextoEtapa, Etapa } from './Etapa';
 import { Noche } from './Noche';
 import { Revelando } from './Revelando';
 import { comprobarFinal, type Ganador } from '../final/comprobarFinal';
-import { apuntarMuerteDeDia } from '../final/cronica';
 import { abrirPatosos, cerrarPatosos } from '../../personajes/patoso';
 
 /** Lo que dura la puesta en común (ms). */
@@ -286,7 +285,6 @@ export class Nominaciones implements Etapa {
    * el Santo), se revela; si no, a la noche. El ejecutado puede declararse Patoso hasta el amanecer.
    */
   private async trasEjecutar(ctx: ContextoEtapa, ejecutado: string, frase: string): Promise<void> {
-    apuntarMuerteDeDia(ctx.recuerdos.cronica, ctx.juego, ejecutado, 'ejecucion');
     abrirPatosos(ctx.juego, [ejecutado], 'amanecer');
     await this.terminarDia(ctx, frase, await comprobarFinal(ctx, { ejecutado }));
   }

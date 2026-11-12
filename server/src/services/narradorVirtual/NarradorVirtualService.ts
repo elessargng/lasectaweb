@@ -17,7 +17,6 @@ import { comprobarFinal, esDemonio } from '../../models/narradorVirtual/final/co
 import { Revelando } from '../../models/narradorVirtual/etapas/Revelando';
 import { Violinista } from '../../models/narradorVirtual/etapas/Violinista';
 import { FRASES } from '../../models/narradorVirtual/frases';
-import { recuerdosNuevos } from '../../models/narradorVirtual/noche/criterioDroison';
 import { prepararPartida, type FueraDeLaBolsa } from '../../models/narradorVirtual/preparacion';
 import type { Azar, BolsasRecientes, ModelosNarrador, Narrador, Temporizador, Voz } from '../../models/narradorVirtual/puertos';
 import { ConRespaldo } from '../../models/narradorVirtual/estrategias/ConRespaldo';
@@ -125,8 +124,6 @@ export class NarradorVirtualService {
   private estrategia: EstrategiaNarrador | null = null;
   /** Lo que salió pero no va en la bolsa (el Borracho, y qué cree ser): se pone la primera noche. */
   private fuera: FueraDeLaBolsa[] = [];
-  /** Lo que recuerda de la partida (ver ContextoEtapa.recuerdos). */
-  private recuerdos = recuerdosNuevos();
   /** Contando una declaración pública (con sus pausas): hasta que acaba, no se hace otra. */
   private contando = false;
   /** Revisando la sala ahora; `otraVez`: ha vuelto a cambiar mientras tanto. */
@@ -276,7 +273,6 @@ export class NarradorVirtualService {
     }
     this.fuera = preparada.fuera;
     void this.bolsas?.apuntar(creador, [...preparada.personajes, ...preparada.fuera.map((f) => f.personaje)]).catch(() => undefined);
-    this.recuerdos = recuerdosNuevos();
     // Saluda al llegar (lo oyen y lo ven todos al pasar a esperar jugadores)
     this.contexto().decir(FRASES.saludo(this.azar));
     await this.pasarA(new EsperandoJugadores());
@@ -450,7 +446,6 @@ export class NarradorVirtualService {
       },
       pasarA: (etapa) => this.pasarA(etapa),
       fueraDeLaBolsa: () => this.fueraDeLaBolsa(),
-      recuerdos: this.recuerdos,
     };
   }
 

@@ -1,12 +1,13 @@
-import type { Grimorio } from '../grimorio';
+import type { FotoPartida } from '../contexto/FotoPartida';
 
 /**
  * Lo que decide un narrador virtual (patrón Estrategia): cada narrador decide a
  * su manera; las etapas de la partida le preguntan a ella y no saben cuál es.
- * Cada decisión dice qué se decide (`motivo`), entre qué opciones, y llega con el
- * grimorio del momento: «Tonto y tú» lo ignora y elige al azar; Jarvis se lo
- * manda a su modelo. Lo que no es una decisión (cuánto espera entre paso y paso
- * de la noche, el orden al revelar) no pasa por aquí: va al azar.
+ * Cada decisión dice qué se decide (`motivo`), sobre quién (`sujeto`), entre qué
+ * opciones, y llega con la foto de la partida del momento: «Tonto y tú» la ignora y
+ * elige al azar; Jarvis le cuenta a su modelo lo que de ella sirve para esa decisión
+ * (ver contexto/extractores). Lo que no es una decisión (cuánto espera entre paso y
+ * paso de la noche, el orden al revelar) no pasa por aquí: va al azar.
  */
 
 /** Qué se decide. */
@@ -73,12 +74,13 @@ export interface Decision<T> {
   instrucciones?: string;
   /** Al menos una. */
   opciones: Opcion<T>[];
+  /** El asiento (su id) del que trata la decisión, si es de uno: a quién se le da la información, quién pregunta… */
+  sujeto?: string;
   /**
-   * Para lo que se decide antes de que haya grimorio (la bolsa): lo que se le cuenta
-   * a la estrategia en su lugar (los personajes del guion, lo ya decidido…). Con
-   * esto, Jarvis no manda el grimorio.
+   * Lo que solo sabe quien decide y no está en la partida (la bolsa: el hueco que se
+   * llena y lo ya decidido): se le cuenta a la estrategia con lo demás.
    */
-  sinGrimorio?: Record<string, unknown>;
+  datos?: Record<string, unknown>;
 }
 
 export interface PreguntaSiONo {
@@ -89,11 +91,13 @@ export interface PreguntaSiONo {
   no: string;
   /** La probabilidad de «sí» que aconseja la plaza (0..1): lo que haría un narrador al azar. */
   probabilidad?: number;
+  /** El asiento (su id) del que trata la pregunta, si es de uno. */
+  sujeto?: string;
 }
 
 export interface EstrategiaNarrador {
-  elegir<T>(decision: Decision<T>, grimorio: Grimorio): Promise<T>;
-  siONo(pregunta: PreguntaSiONo, grimorio: Grimorio): Promise<boolean>;
+  elegir<T>(decision: Decision<T>, foto: FotoPartida): Promise<T>;
+  siONo(pregunta: PreguntaSiONo, foto: FotoPartida): Promise<boolean>;
 }
 
 /**

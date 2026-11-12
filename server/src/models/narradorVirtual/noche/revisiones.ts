@@ -6,7 +6,7 @@ import type { ContextoEtapa } from '../etapas/Etapa';
 import { elegirDesenlace } from '../desenlaces';
 import { describirEnvio, describirOpcion, describirPersonaje } from '../grimorio';
 import { contextoNoche } from '../plazaDeJuego';
-import { destapaAlMal, opcionesFalsas, probabilidadVerdad, recordarDroison } from './criterioDroison';
+import { destapaAlMal, opcionesFalsas, probabilidadVerdad } from './criterioDroison';
 import { informacionesFalsas } from './informacionFalsa';
 import { ponerRecordatorio } from './requisitos';
 
@@ -29,6 +29,7 @@ function elegirOpcion(ctx: ContextoEtapa, fila: HabilidadNoche): Promise<EnvioDe
   return ctx.decidir({
     motivo: 'revision',
     pregunta: `Qué se le dice a ${describirPersonaje(ctx.juego, fila.personaje)}: alguien puede registrar como otro.`,
+    sujeto: fila.jugador,
     opciones: fila.opciones.map((o, i) => ({
       clave: `o${i + 1}`,
       descripcion: describirOpcion(ctx.juego, o),
@@ -52,7 +53,6 @@ async function droison(ctx: ContextoEtapa, fila: HabilidadNoche): Promise<EnvioD
   const verdadera = fila.opciones[0].envio;
   const falsas = informacionesFalsas({ verdadera, habilidad, ctx: contextoNoche(ctx.juego), personajes: partida.guion.actual()?.personajes ?? [] });
   if (!falsas.length) return null;
-  const { recuerdos } = ctx;
   const { juego } = ctx;
   const quien = describirPersonaje(juego, fila.personaje);
   const verdad = await ctx.siONo({
@@ -62,16 +62,22 @@ async function droison(ctx: ContextoEtapa, fila: HabilidadNoche): Promise<EnvioD
     }`,
     si: 'Recibe la información de verdad.',
     no: 'Recibe una información falsa.',
-    probabilidad: probabilidadVerdad(juego, fila.jugador, fila.personaje, verdadera, recuerdos),
+    probabilidad: probabilidadVerdad(juego, fila.jugador, fila.personaje, verdadera),
+    sujeto: fila.jugador,
   });
   const dada = verdad
     ? verdadera
     : await ctx.decidir({
         motivo: 'informacionFalsa',
         pregunta: `La información falsa que recibe ${quien} (la de verdad sería: ${describirEnvio(juego, verdadera)}).`,
-        opciones: opcionesFalsas(juego, fila.jugador, fila.personaje, verdadera, falsas, recuerdos),
+        opciones: opcionesFalsas(juego, fila.jugador, fila.personaje, verdadera, falsas),
+        sujeto: fila.jugador,
       });
-  recordarDroison(recuerdos, fila.jugador, fila.personaje, verdadera, dada);
+  // Se apunta en el diario: para ser coherente otras noches y contarlo al revelar
+  const estado = fila.avisos.find((a) => a.tipo === 'envenenado' || a.tipo === 'borracho')?.tipo ?? null;
+  juego.narrador.paso('noche:informacion', () =>
+    partida.anotar({ tipo: 'informacion', asiento: partida.asientoDiario(fila.jugador), personaje: fila.personaje, verdadera, dada, droison: estado as 'envenenado' | 'borracho' | null }),
+  );
   return dada;
 }
 

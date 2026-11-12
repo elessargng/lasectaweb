@@ -9,6 +9,7 @@ import { droison } from './ReglaPersonaje';
 import type { ContextoEtapa } from '../narradorVirtual/etapas/Etapa';
 import { contextoNoche, nombreDeAsiento } from '../narradorVirtual/plazaDeJuego';
 import { contestarPregunta } from '../narradorVirtual/contestarPregunta';
+import { cronicaDe } from '../narradorVirtual/final/cronica';
 import { ponerRecordatorio } from '../narradorVirtual/noche/requisitos';
 import { identidadDe } from '../partida/Grimorio';
 import { diaVirtual } from '../narradorVirtual/dia/reglasDia';
@@ -67,6 +68,7 @@ export async function preguntarComoArtista(
     respuesta = await ctx.decidir<RespuestaPregunta>({
       motivo: 'artista',
       pregunta: `${quien} pregunta: «${enPalabras}»`,
+      sujeto: asiento.id,
       opciones: [
         { clave: 'si', descripcion: 'Contestar que sí.', valor: 'si', peso: 0 },
         { clave: 'no', descripcion: 'Contestar que no.', valor: 'no', peso: 0 },
@@ -74,12 +76,13 @@ export async function preguntarComoArtista(
       ],
     });
   } else {
-    const verdad = contestarPregunta(juego, ctx.recuerdos.cronica, leida);
+    const verdad = contestarPregunta(juego, cronicaDe(juego), leida);
     const si = sano
       ? verdad
       : await ctx.siONo({
           motivo: 'artistaSinHabilidad',
           pregunta: `${quien} pregunta: «${enPalabras}» (la verdad: ${verdad ? 'sí' : 'no'}).`,
+          sujeto: asiento.id,
           si: 'Contestar que sí.',
           no: 'Contestar que no.',
         });

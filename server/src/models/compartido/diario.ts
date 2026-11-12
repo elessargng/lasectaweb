@@ -1,5 +1,5 @@
 import type { RespuestaPregunta } from './preguntaPartida';
-import type { FichaDespertar, TarjetaDespertar } from './despertar';
+import type { EnvioDespertar, FichaDespertar, TarjetaDespertar } from './despertar';
 import type { Alineamiento } from './jugador';
 import type { Fase } from './partida';
 
@@ -42,6 +42,8 @@ export interface FotoAsiento {
   muerto: boolean;
   /** Su id (no está en las partidas guardadas antes). */
   id?: string;
+  /** Si está envenenado o borracho (no está en las partidas guardadas antes). */
+  droison?: 'envenenado' | 'borracho' | null;
 }
 
 /**
@@ -101,6 +103,21 @@ export type HechoDiario =
   | { tipo: 'anochece'; desdePreparacion: boolean; plaza: FotoAsiento[]; calavera: AsientoDiario | null }
   /** Amanece: la plaza como empieza el día. */
   | { tipo: 'amanece'; plaza: FotoAsiento[] }
+  /**
+   * El narrador virtual da información a un rol envenenado o borracho (con su
+   * personaje): la de verdad, la que le da y cómo está. Para ser coherente las
+   * noches siguientes y contarlo al revelar; no sale en el historial.
+   */
+  | {
+      tipo: 'informacion';
+      asiento: AsientoDiario;
+      personaje: string;
+      verdadera: EnvioDespertar;
+      dada: EnvioDespertar;
+      droison: 'envenenado' | 'borracho' | null;
+    }
+  /** El narrador virtual apunta lo que acaba la partida o conviene dejar dicho (CAUSAS_FIN_PARTIDA): de ahí salen los logros. */
+  | { tipo: 'causa'; id: string }
   /** Se limpia el grimorio: empieza otra partida (con ese id). */
   | { tipo: 'nuevaPartida'; partida: string }
   /** Alguien nomina a alguien (o pide la expulsión de un viajero). */

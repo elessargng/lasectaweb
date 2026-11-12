@@ -80,8 +80,8 @@ describe('estadísticas de la partida', () => {
       ['bea', 'ceci', null],
     ]);
     expect(r.mesa).toHaveLength(7);
-    expect(r.mesa[2]).toEqual({ id: asiento(2), numero: 3, nombre: 'ceci', userId: '3', personaje: 'empath', ficha: null, alineamiento: 'bueno', muerto: true });
-    expect(r.mesa[3]).toEqual({ id: asiento(3), numero: 4, nombre: null, userId: null, personaje: null, ficha: null, alineamiento: null, muerto: false });
+    expect(r.mesa[2]).toEqual({ id: asiento(2), numero: 3, nombre: 'ceci', userId: '3', personaje: 'empath', ficha: null, alineamiento: 'bueno', muerto: true, droison: null });
+    expect(r.mesa[3]).toEqual({ id: asiento(3), numero: 4, nombre: null, userId: null, personaje: null, ficha: null, alineamiento: null, muerto: false, droison: null });
     expect(r.jugadores).toEqual([
       {
         userId: '1', roles: ['chef', 'librarian'], rolFinal: 'librarian', alineamientoInicial: 'bueno', alineamientoFinal: 'bueno',

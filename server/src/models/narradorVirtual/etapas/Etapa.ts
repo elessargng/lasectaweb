@@ -1,8 +1,7 @@
 import type { EtapaNarradorVirtual } from '../../compartido/narradorVirtual';
 import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { Decision, EstrategiaNarrador, PreguntaSiONo } from '../estrategias/EstrategiaNarrador';
-import { instantaneaGrimorio } from '../grimorio';
-import type { RecuerdosNarrador } from '../noche/criterioDroison';
+import { fotoPartida } from '../contexto/FotoPartida';
 import type { FueraDeLaBolsa } from '../preparacion';
 import type { Azar, Narrador, Temporizador } from '../puertos';
 
@@ -14,7 +13,7 @@ export interface ContextoEtapa {
   /** Para leer cómo están la sala y la partida (lo que cambia se hace con `plaza`). */
   readonly juego: SalaDeJuego;
   readonly plaza: Narrador;
-  /** Lo que decide su estrategia, con el grimorio del momento. */
+  /** Lo que decide su estrategia, con la foto de la partida del momento. */
   decidir<T>(decision: Decision<T>): Promise<T>;
   siONo(pregunta: PreguntaSiONo): Promise<boolean>;
   /** Lo que no es una decisión (las esperas, el orden al revelar): al azar. */
@@ -26,8 +25,6 @@ export interface ContextoEtapa {
   pasarA(etapa: Etapa): Promise<void>;
   /** Lo que salió al llenar la bolsa pero no va en ella (el Borracho, y qué cree ser): se pone la primera noche. */
   fueraDeLaBolsa(): FueraDeLaBolsa[];
-  /** Lo que recuerda de la partida para ser coherente (lo dado droison). */
-  readonly recuerdos: RecuerdosNarrador;
 }
 
 /**
@@ -49,8 +46,8 @@ export interface Etapa {
   alSalir?(): void;
 }
 
-/** Las decisiones del contexto: las de la estrategia de ahora, cada una con la foto del grimorio. */
+/** Las decisiones del contexto: las de la estrategia de ahora, cada una con la foto de la partida. */
 export const decisionesDe = (juego: SalaDeJuego, estrategia: () => EstrategiaNarrador): Pick<ContextoEtapa, 'decidir' | 'siONo'> => ({
-  decidir: (decision) => estrategia().elegir(decision, instantaneaGrimorio(juego)),
-  siONo: (pregunta) => estrategia().siONo(pregunta, instantaneaGrimorio(juego)),
+  decidir: (decision) => estrategia().elegir(decision, fotoPartida(juego)),
+  siONo: (pregunta) => estrategia().siONo(pregunta, fotoPartida(juego)),
 });

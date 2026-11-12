@@ -8,7 +8,7 @@ import {
 } from '../../src/models/compartido/preguntaPartida';
 import { ficha } from '../../src/models/partida/habilidades/HabilidadNocturna';
 import { contestarPregunta } from '../../src/models/narradorVirtual/contestarPregunta';
-import { cronicaNueva } from '../../src/models/narradorVirtual/final/cronica';
+import { cronicaDe } from '../../src/models/narradorVirtual/final/cronica';
 import { guionNoGreaterJoy, invitado, personaje, conSemilla } from './guionDePrueba';
 
 /** El despertar guiado de No Greater Joy: el Relojero, la Camarera y el Sabio. */
@@ -148,7 +148,7 @@ describe('la pregunta montada sobre la partida', () => {
 
   it('se contesta con el grimorio: en juego, quiénes son, sillas, entre dos y la inicial', () => {
     const x = m();
-    const c = (p: PreguntaPartida) => contestarPregunta(x.juego, cronicaNueva(), p);
+    const c = (p: PreguntaPartida) => contestarPregunta(x.juego, cronicaDe(x.juego), p);
     const demonio = { por: 'tipo', tipo: 'demon' } as const;
     expect(c({ tipo: 'enJuego', quien: { por: 'personaje', personaje: 'sage' } })).toBe(true);
     expect(c({ tipo: 'enJuego', quien: { por: 'personaje', personaje: 'artist' } })).toBe(false);
@@ -166,7 +166,7 @@ describe('la pregunta montada sobre la partida', () => {
 
   it('quién eligió a quién, anoche o alguna noche, con lo apuntado en la crónica', () => {
     const x = m();
-    const cronica = cronicaNueva();
+    const cronica = cronicaDe(x.juego);
     cronica.ultimaNoche = 2;
     cronica.noches.set(x.asiento(1).id, [{ noche: 1, eligio: [[x.asiento(4).id]], infos: [], droison: null }]);
     const malvado = { por: 'alineamiento', alineamiento: 'malvado' } as const;

@@ -11,12 +11,8 @@ import { Noche } from '../../src/models/narradorVirtual/etapas/Noche';
 import { planificarNoche } from '../../src/models/narradorVirtual/noche/planificarNoche';
 import { informacionesFalsas } from '../../src/models/narradorVirtual/noche/informacionFalsa';
 import { ponerFaroles } from '../../src/models/narradorVirtual/noche/requisitos';
-import {
-  opcionesFalsas,
-  probabilidadVerdad,
-  recordarDroison,
-  recuerdosNuevos,
-} from '../../src/models/narradorVirtual/noche/criterioDroison';
+import { opcionesFalsas, probabilidadVerdad } from '../../src/models/narradorVirtual/noche/criterioDroison';
+import { cronicaDe } from '../../src/models/narradorVirtual/final/cronica';
 import { elegirBolsa, type FueraDeLaBolsa } from '../../src/models/narradorVirtual/preparacion';
 import type { Decision } from '../../src/models/narradorVirtual/estrategias/EstrategiaNarrador';
 import { comprobarFinal } from '../../src/models/narradorVirtual/final/comprobarFinal';
@@ -181,7 +177,6 @@ function plazaVirtual(personajes: string[], { semilla = 1, fuera = [] as FueraDe
       siguiente = e;
     },
     fueraDeLaBolsa: () => fuera,
-    recuerdos: recuerdosNuevos(),
   };
   /** Corre una noche hasta que amanece (pasa a la etapa siguiente). */
   const noche = async () => {
@@ -481,7 +476,7 @@ describe('la noche del narrador virtual', () => {
         const muere = await exterminar(m.ctx, id, m.asiento(objetivo).id);
         // La muerte se pone al contarlo
         const ganador = await contarDisparo(m.ctx, id, m.asiento(objetivo).id, muere);
-        return { muere: muere !== null, muerto: m.asiento(objetivo).muerto, ganador, causas: [...m.ctx.recuerdos.cronica.causas], m };
+        return { muere: muere !== null, muerto: m.asiento(objetivo).muerto, ganador, causas: [...cronicaDe(m.juego).causas], m };
       };
       // Matar al demonio y acabar la partida es su logro
       expect(await dispara('slayer', 'imp')).toMatchObject({ muere: true, muerto: true, ganador: 'bueno', causas: ['slayer'] });
@@ -550,7 +545,7 @@ describe('la noche del narrador virtual', () => {
       await m.noche();
       const jugador = partida.plaza().find((a) => a.id === escarlata)!;
       expect(identidadDe(jugador)).toBe('imp');
-      expect(m.ctx.recuerdos.cronica.antes.get(escarlata)).toBe('scarletwoman');
+      expect(cronicaDe(m.juego).antes.get(escarlata)).toBe('scarletwoman');
       // Se le dijo «Tú eres el Imp» y luego despertó como el Imp (a elegir)
       const despertados = m.despertados();
       expect(despertados.indexOf('imp')).toBeGreaterThan(despertados.indexOf('scarletwoman'));
@@ -590,7 +585,7 @@ describe('la noche del narrador virtual', () => {
       s.juego.partida.amanecer();
       s.juego.partida.grimorio.cambiarVida(s.asiento('saint').id, true);
       expect(await comprobarFinal(s.ctx, { ejecutado: s.asiento('saint').id })).toBe('malvado');
-      expect([...s.ctx.recuerdos.cronica.causas]).toEqual(['saint']);
+      expect([...cronicaDe(s.juego).causas]).toEqual(['saint']);
     });
 
     it('revela el grimorio ficha a ficha, con el demonio el último', async () => {
@@ -695,25 +690,27 @@ describe('droison con criterio', () => {
   it('la verdad que no le cuesta nada al mal se dice más a menudo que la que lo señala', () => {
     const m = plaza();
     const empatico = m.asiento('empath').id;
-    const inofensiva = probabilidadVerdad(m.juego, empatico, 'empath', numero(0), recuerdosNuevos());
-    const destapa = probabilidadVerdad(m.juego, empatico, 'empath', numero(1), recuerdosNuevos());
+    const inofensiva = probabilidadVerdad(m.juego, empatico, 'empath', numero(0));
+    const destapa = probabilidadVerdad(m.juego, empatico, 'empath', numero(1));
     expect(inofensiva).toBeGreaterThanOrEqual(0.3);
     expect(destapa).toBeLessThanOrEqual(0.1);
     expect(inofensiva).toBeGreaterThan(destapa);
   });
 
-  it('a lo mismo que otra noche, lo mismo: repite la mentira', () => {
+  it('a lo mismo que otra noche, lo mismo (lo apuntado en el diario): repite la mentira', () => {
     const m = plaza();
+    const { partida } = m.juego;
     const empatico = m.asiento('empath').id;
-    const recuerdos = recuerdosNuevos();
-    recordarDroison(recuerdos, empatico, 'empath', numero(1), numero(2));
-    expect(probabilidadVerdad(m.juego, empatico, 'empath', numero(1), recuerdos)).toBeLessThanOrEqual(0.05);
-    const opciones = opcionesFalsas(m.juego, empatico, 'empath', numero(1), [numero(0), numero(2)], recuerdos);
+    const dio = (dada: ReturnType<typeof numero>) =>
+      partida.anotar({ tipo: 'informacion', asiento: partida.asientoDiario(empatico), personaje: 'empath', verdadera: numero(1), dada, droison: 'envenenado' });
+    dio(numero(2));
+    expect(probabilidadVerdad(m.juego, empatico, 'empath', numero(1))).toBeLessThanOrEqual(0.05);
+    const opciones = opcionesFalsas(m.juego, empatico, 'empath', numero(1), [numero(0), numero(2)]);
     const pesos = Object.fromEntries(opciones.map((o) => [o.valor.ficha, o.peso ?? 1]));
     expect(pesos.dos).toBeGreaterThan(pesos.cero * 5);
     // Y si entonces dijo la verdad, la vuelve a decir
-    recordarDroison(recuerdos, empatico, 'empath', numero(1), numero(1));
-    expect(probabilidadVerdad(m.juego, empatico, 'empath', numero(1), recuerdos)).toBeGreaterThanOrEqual(0.9);
+    dio(numero(1));
+    expect(probabilidadVerdad(m.juego, empatico, 'empath', numero(1))).toBeGreaterThanOrEqual(0.9);
   });
 
   it('las mentiras que confirman el farol que usa un malvado pesan más', () => {
@@ -725,7 +722,7 @@ describe('droison con criterio', () => {
     const jugadores = [m.asiento('soldier').id, envenenador];
     const verdadera = tarjeta('esteJugadorEs', { jugadores, personajes: ['soldier'] });
     const falsas = ['monk', 'chef'].map((p) => tarjeta('esteJugadorEs', { jugadores, personajes: [p] }));
-    const [monje, chef] = opcionesFalsas(m.juego, m.asiento('washerwoman').id, 'washerwoman', verdadera, falsas, recuerdosNuevos());
+    const [monje, chef] = opcionesFalsas(m.juego, m.asiento('washerwoman').id, 'washerwoman', verdadera, falsas);
     expect(monje.rasgos).toContain('confirmaFarol');
     expect(monje.peso!).toBeGreaterThan(chef.peso ?? 1);
   });
@@ -756,19 +753,19 @@ describe('la bolsa que elige el narrador', () => {
     expect(preguntas[1].pregunta).toMatch(/Ya en la bolsa: imp./);
   });
 
-  it('sin grimorio: a cada hueco, los personajes del guion y las decisiones anteriores', async () => {
+  it('en sus datos: a cada hueco, los personajes del guion y las decisiones anteriores', async () => {
     const m = plazaVirtual(['empath', 'imp', 'chef', 'washerwoman', 'monk', 'soldier', 'mayor']);
     const { partida } = m.juego;
     const personajes = partida.guion.actual()!.personajes;
     const { decidir, preguntas } = laPrimera();
     await elegirBolsa(personajes, partida.bolsa.distribucion(), partida.bolsa, decidir, { azar: conSemilla(1) });
     const [primera, segunda] = preguntas;
-    expect(primera.sinGrimorio).toMatchObject({ decisionesAnteriores: [] });
-    expect((primera.sinGrimorio!.guion as unknown[]).length).toBe(personajes.length);
-    expect(segunda.sinGrimorio!.decisionesAnteriores).toEqual([
+    expect(primera.datos).toMatchObject({ decisionesAnteriores: [] });
+    expect((primera.datos!.guion as unknown[]).length).toBe(personajes.length);
+    expect(segunda.datos!.decisionesAnteriores).toEqual([
       { pregunta: primera.pregunta, elegido: { id: 'imp', nombre: expect.any(String), tipo: 'demon' } },
     ]);
-    expect(preguntas[preguntas.length - 1].sinGrimorio!.decisionesAnteriores).toHaveLength(preguntas.length - 1);
+    expect(preguntas[preguntas.length - 1].datos!.decisionesAnteriores).toHaveLength(preguntas.length - 1);
   });
 });
 
