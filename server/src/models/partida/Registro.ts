@@ -12,7 +12,7 @@ import type { Fase } from '../compartido/partida';
 export class Registro {
   private entradas: EntradaDiario[] = [];
   /** La primera partida de la sala no empieza con «nuevaPartida»: su id. */
-  private readonly primera = randomUUID();
+  private primera: string = randomUUID();
 
   /** Apunta un hecho, en esa fase y ahora. */
   anotar(hecho: HechoDiario, fase: Fase): void {
@@ -45,8 +45,25 @@ export class Registro {
     this.entradas.length = Math.min(this.entradas.length, cuantos);
   }
 
+  /** Todo lo apuntado y el id de la primera partida: para guardarlo y recuperarlo tras un reinicio (ver cargar). */
+  exportar(): RegistroGuardado {
+    return { primera: this.primera, entradas: structuredClone(this.entradas) };
+  }
+
+  /** Vuelve a tener lo apuntado (lo exportado antes de un reinicio). */
+  cargar({ primera, entradas }: RegistroGuardado): void {
+    this.primera = primera;
+    this.entradas = structuredClone(entradas);
+  }
+
   /** Dónde empieza la partida de ahora: justo después de su «nuevaPartida». */
   private inicio(): number {
     return this.entradas.map((e) => e.tipo).lastIndexOf('nuevaPartida') + 1;
   }
+}
+
+/** El registro tal como se guarda (ver Registro.exportar). */
+export interface RegistroGuardado {
+  primera: string;
+  entradas: EntradaDiario[];
 }

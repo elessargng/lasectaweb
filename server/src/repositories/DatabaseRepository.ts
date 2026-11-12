@@ -1072,6 +1072,22 @@ export class DatabaseRepository {
         }
       }
     });
+
+    // Migración 036: la partida en curso de la sala
+    //
+    // Para que la partida sobreviva a un reinicio del servidor: tras cada cambio se
+    // guarda entera (la partida, su diario, los asientos con sus cuentas, el narrador
+    // virtual…) en una sola fila, y al arrancar se recupera (ver PartidaEnCursoRepository).
+    await this.applyMigration('036_sala_partida_en_curso', async (db) => {
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS sala_en_curso (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          version INTEGER NOT NULL,
+          datos TEXT NOT NULL,
+          actualizada DATETIME NOT NULL
+        );
+      `);
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

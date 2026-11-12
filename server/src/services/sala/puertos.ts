@@ -9,8 +9,13 @@ import type { GuionPredeterminado, GuionResuelto } from '../../models/guiones';
 import type { MensajeChat, Susurro } from '../../models/chat';
 import type { RegistroPartida } from '../../models/estadisticas/resumenPartida';
 import type { Azar } from '../../models/partida/azar';
+import type { Ajustes } from '../../models/partida/Configuracion';
+import type { InstantaneaPartida } from '../../models/partida/Partida';
+import type { RegistroGuardado } from '../../models/partida/Registro';
+import type { NarradorVirtualGuardado } from '../narradorVirtual/NarradorVirtualService';
 import type { Temporizador } from '../../models/narradorVirtual/puertos';
 import type { NarradorIARepository } from '../../repositories/NarradorIARepository';
+import type { PartidaEnCurso } from '../../repositories/PartidaEnCursoRepository';
 import type { ProveedorVideo } from '../videollamada/ProveedorVideo';
 
 /**
@@ -88,4 +93,26 @@ export interface DependenciasSala {
   modelosIA?: (userId: string) => Promise<NarradorIARepository | null>;
   /** Las bolsas del narrador virtual en las últimas partidas de cada usuario; sin esto, no se tienen en cuenta. */
   bolsasRecientes?: { de(userId: string): Promise<string[][]>; apuntar(userId: string, personajes: string[]): Promise<void> };
+  /** Dónde se guarda la partida en curso para recuperarla tras un reinicio; sin esto, se pierde al reiniciar. */
+  partidaEnCurso?: PartidaEnCurso;
+}
+
+/** La versión de lo que se guarda de la partida en curso: si cambia su forma, se sube y lo de antes se descarta. */
+export const VERSION_PARTIDA_GUARDADA = 1;
+
+/**
+ * La sala tal como se guarda para recuperarla tras un reinicio (ver
+ * SalaService.recuperar): la partida y su diario, los asientos con la cuenta de quien
+ * se sentaba, quién narraba, los ajustes y el narrador virtual. Quien no tiene
+ * cuenta no se puede reconocer al volver: pierde su sitio.
+ */
+export interface PartidaGuardada {
+  asientos: { id: string; userId: string | null }[];
+  /** Las cuentas de quienes narraban. */
+  narradores: string[];
+  partida: InstantaneaPartida;
+  diario: RegistroGuardado;
+  ajustes: Ajustes;
+  privados: boolean;
+  narradorVirtual: NarradorVirtualGuardado | null;
 }

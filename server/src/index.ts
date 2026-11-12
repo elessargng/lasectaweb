@@ -96,6 +96,7 @@ import { NarradorJevRepository } from './repositories/NarradorJevRepository';
 import { leerConfigJev } from './config/jev';
 import { EstadisticasController } from './controllers/EstadisticasController';
 import { EstadisticasRepository } from './repositories/EstadisticasRepository';
+import { PartidaEnCursoRepository } from './repositories/PartidaEnCursoRepository';
 import { EstadisticasService } from './services/estadisticas/EstadisticasService';
 import { BolsaController } from './controllers/sala/BolsaController';
 import { FarolController } from './controllers/sala/FarolController';
@@ -482,6 +483,8 @@ DatabaseRepository.getInstance()
       video: configVideollamada ? new LiveKitProveedor(configVideollamada) : null,
       guardarPartida: (registro) => estadisticasRepository.guardar(registro),
       contarPartidas: (userId) => estadisticasRepository.contarPartidas(userId),
+      // La partida en curso, en la base de datos: sobrevive a un reinicio del servidor
+      partidaEnCurso: new PartidaEnCursoRepository(),
     });
     abrirSalaPorSocket(httpServer, salaService, {
       sala: new SalaController(salaService),
@@ -498,6 +501,12 @@ DatabaseRepository.getInstance()
       revelacion: new RevelacionController(salaService.revelacion),
       senalamiento: new SenalamientoController(salaService.senalamiento),
     });
+    // La partida que había antes de reiniciar, antes de que entre nadie
+    await salaService.recuperar();
+    // Al apagar, lo último que haya cambiado (se guarda al rato de cada cambio) no se pierde
+    for (const senal of ['SIGINT', 'SIGTERM'] as const) {
+      process.once(senal, () => void salaService.guardarAhora().finally(() => process.exit(0)));
+    }
     httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });

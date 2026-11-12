@@ -100,9 +100,14 @@ export class Arnes {
   private constructor(
     private readonly http: HttpServer,
     private readonly url: string,
-    /** La sala de juego del servidor, para mirar lo que no llega a los clientes (la historia de la partida). */
-    readonly juego: SalaDeJuego,
+    /** El servicio de la sala (para recuperarla o guardarla, como al reiniciar el servidor). */
+    readonly servicio: SalaService,
   ) {}
+
+  /** La sala de juego del servidor, para mirar lo que no llega a los clientes (la historia de la partida). */
+  get juego(): SalaDeJuego {
+    return this.servicio.juego;
+  }
 
   /** `guiones`: lo que cambia de los de por defecto (el guion de prueba, con cualquier id; y los predeterminados, PREDETERMINADOS). */
   static async crear(cambios: Partial<Omit<DependenciasSala, 'guiones'>> & { guiones?: Partial<ServicioGuiones> } = {}): Promise<Arnes> {
@@ -140,7 +145,7 @@ export class Arnes {
     });
     await new Promise<void>((resolver) => http.listen(0, '127.0.0.1', resolver));
     const { port } = http.address() as AddressInfo;
-    return new Arnes(http, `http://127.0.0.1:${port}`, salaService.juego);
+    return new Arnes(http, `http://127.0.0.1:${port}`, salaService);
   }
 
   /**

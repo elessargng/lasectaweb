@@ -120,6 +120,8 @@ export interface ModeloNarrador {
 /** Para Jarvis: el modelo de quien lo añade, ya comprobado; o por qué no se puede. */
 export interface ModelosNarrador {
   modeloDe(participanteId: string): Promise<ModeloNarrador | string>;
+  /** El de una cuenta (al retomar tras un reinicio, cuando quien lo añadió aún no ha vuelto). */
+  modeloDeCuenta?(userId: string): Promise<ModeloNarrador | string>;
 }
 
 /**

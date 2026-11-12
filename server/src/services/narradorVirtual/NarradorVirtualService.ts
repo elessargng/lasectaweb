@@ -1,4 +1,4 @@
-import { GUION_DE_LA_SALA, NARRADORES_VIRTUALES, type GuionNarrable } from '../../models/compartido/narradorVirtual';
+import { GUION_DE_LA_SALA, NARRADORES_VIRTUALES, type EtapaNarradorVirtual, type GuionNarrable, type IdNarradorVirtual } from '../../models/compartido/narradorVirtual';
 import type { GuionResuelto } from '../../models/guiones';
 import { desconocidos, jugadoresDelGuion, noSabeNarrar } from '../../models/narradorVirtual/guionNarrable';
 import type { ServicioGuiones } from '../sala/puertos';
@@ -10,6 +10,8 @@ import { UsosSala, type Permiso, type ResultadoUso } from '../sala/UsosSala';
 import type { EstrategiaNarrador } from '../../models/narradorVirtual/estrategias/EstrategiaNarrador';
 import { TontoYTu } from '../../models/narradorVirtual/estrategias/TontoYTu';
 import { EsperandoJugadores } from '../../models/narradorVirtual/etapas/EsperandoJugadores';
+import { Noche } from '../../models/narradorVirtual/etapas/Noche';
+import { Nominaciones, Privados, PuestaEnComun } from '../../models/narradorVirtual/etapas/Dia';
 import { decisionesDe, type AccionJugador, type ContextoEtapa, type Etapa } from '../../models/narradorVirtual/etapas/Etapa';
 import { DECLARACIONES_DIA } from '../../models/personajes';
 import { noPuedeDeclarar } from '../../models/personajes/DeclaracionDia';
@@ -124,6 +126,10 @@ export class NarradorVirtualService {
   private estrategia: EstrategiaNarrador | null = null;
   /** Lo que salió pero no va en la bolsa (el Borracho, y qué cree ser): se pone la primera noche. */
   private fuera: FueraDeLaBolsa[] = [];
+  /** Retomado tras un reinicio: la cuenta de quien lo añadió, hasta que vuelve a entrar (ver alConectar). */
+  private creadorPendiente: string | null = null;
+  /** Retomado tras un reinicio: la etapa que sigue cuando vuelvan los jugadores (ver reanudar). */
+  private pendiente: { etapa: Etapa | null } | null = null;
   /** Contando una declaración pública (con sus pausas): hasta que acaba, no se hace otra. */
   private contando = false;
   /** Revisando la sala ahora; `otraVez`: ha vuelto a cambiar mientras tanto. */
@@ -286,9 +292,78 @@ export class NarradorVirtualService {
   private async estrategiaJarvis(creador: string): Promise<EstrategiaNarrador | string> {
     if (!this.modelos) return 'Jarvis no está disponible en este servidor.';
     const modelo = await this.modelos.modeloDe(creador);
-    if (typeof modelo === 'string') return modelo;
+    return typeof modelo === 'string' ? modelo : this.conRespaldo(modelo);
+  }
+
+  /** Jarvis con ese modelo y «Tonto y tú» de respaldo. */
+  private conRespaldo(modelo: Exclude<Awaited<ReturnType<ModelosNarrador['modeloDe']>>, string>): EstrategiaNarrador {
     const respaldo = new TontoYTu(this.azar);
     return new ConRespaldo(new Jarvis(modelo), respaldo, this.temporizador, () => this.jarvisSeVa(respaldo));
+  }
+
+  /** Lo que hace falta para retomarlo tras un reinicio (ver retomar), o null si no hay narrador virtual. */
+  guardable(): NarradorVirtualGuardado | null {
+    const n = this.juego.narrador.actual();
+    if (!n) return null;
+    const creador = this.juego.sala.participantes.cuentaDe(n.creador) ?? this.creadorPendiente;
+    return { id: n.id, creador, guion: n.guion, jugadores: n.jugadores, etapa: n.etapa, fuera: structuredClone(this.fuera) };
+  }
+
+  /**
+   * Tras un reinicio, vuelve el narrador virtual que llevaba la partida (ya
+   * recuperada) y retoma la etapa en que estaba: la noche, sin repetir lo hecho (la
+   * noche guiada va en la partida); la parte del día, desde el principio de su reloj.
+   * Revelando el grimorio, ya no hace nada (la revelación va en la partida). Jarvis,
+   * con el modelo de la cuenta de quien lo añadió; si no puede, «Tonto y tú». Quien
+   * lo añadió vuelve a poder quitarlo al entrar con su cuenta (ver alConectar).
+   * No sigue hasta que vuelven los jugadores (ver reanudar), como mucho
+   * ESPERA_ABANDONO_MS: si no, decidiría por ellos como si sus asientos estuvieran libres.
+   */
+  async retomar(g: NarradorVirtualGuardado): Promise<void> {
+    const modelo = g.id === 'jarvis' && g.creador && this.modelos?.modeloDeCuenta ? await this.modelos.modeloDeCuenta(g.creador) : null;
+    const id: IdNarradorVirtual = modelo && typeof modelo !== 'string' ? g.id : 'tontoYTu';
+    const datos = NARRADORES_VIRTUALES.find((n) => n.id === id)!;
+    this.juego.narrador.anadir({ id, creador: '', guion: g.guion, jugadores: g.jugadores }, datos.nombre, datos.avatar);
+    this.estrategia = modelo && typeof modelo !== 'string' ? this.conRespaldo(modelo) : new TontoYTu(this.azar);
+    this.fuera = g.fuera;
+    this.creadorPendiente = g.creador;
+    this.pendiente = { etapa: this.etapaRetomada(g.etapa) };
+    this.juego.narrador.actualizar({ etapa: g.etapa });
+    this.temporizador.programar(ESPERA_ABANDONO_MS, () => void this.reanudar());
+  }
+
+  /** Retomado tras un reinicio, sigue con su etapa: han vuelto los jugadores (o se ha acabado la espera). */
+  async reanudar(): Promise<void> {
+    const pendiente = this.pendiente;
+    this.pendiente = null;
+    if (pendiente?.etapa && this.juego.narrador.actual()) await this.pasarA(pendiente.etapa);
+  }
+
+  /** Alguien entra con su cuenta: si es quien añadió al narrador virtual (antes de un reinicio), vuelve a serlo. */
+  alConectar(participanteId: string, cuenta: string | null): void {
+    if (!cuenta || cuenta !== this.creadorPendiente) return;
+    this.creadorPendiente = null;
+    this.juego.narrador.cambiarCreador(participanteId);
+  }
+
+  /** La etapa con la que se retoma (ver retomar), o null si no hay que hacer nada. */
+  private etapaRetomada(etapa: EtapaNarradorVirtual): Etapa | null {
+    switch (etapa) {
+      case 'esperandoJugadores':
+        return new EsperandoJugadores();
+      case 'noche':
+        return new Noche(true);
+      case 'privados':
+        return new Privados();
+      case 'puestaEnComun':
+        return new PuestaEnComun();
+      case 'nominaciones':
+        return new Nominaciones();
+      case 'violinista':
+        return new Violinista();
+      case 'revelando':
+        return null;
+    }
   }
 
   /** Jarvis no consigue hablar con su modelo: lo dice y sigue la partida «Tonto y tú». */
@@ -306,6 +381,7 @@ export class NarradorVirtualService {
     const { narrador } = this.juego;
     for (const cancelar of this.vacios.values()) cancelar();
     this.vacios.clear();
+    this.pendiente = null;
     this.etapa?.alSalir?.();
     this.etapa = null;
     this.estrategia = null;
@@ -366,6 +442,8 @@ export class NarradorVirtualService {
       do {
         this.otraVez = false;
         if (!narrador.actual()) return;
+        // Retomado tras un reinicio, espera a que vuelvan los jugadores
+        if (this.pendiente) return;
         // Sin nadie en la sala (solo él), se va
         if (!sala.participantes.participantes().some((p) => p.persona.tipo !== 'virtual')) {
           this.quitar();
@@ -464,4 +542,15 @@ export class NarradorVirtualService {
     // Por si ya le toca algo (la plaza ya estaba llena)
     this.alCambiarSala();
   }
+}
+
+/** Lo que se guarda del narrador virtual para retomarlo tras un reinicio (ver NarradorVirtualService.retomar). */
+export interface NarradorVirtualGuardado {
+  id: IdNarradorVirtual;
+  /** La cuenta de quien lo añadió (null: un invitado, que no podrá quitarlo). */
+  creador: string | null;
+  guion: string;
+  jugadores: number;
+  etapa: EtapaNarradorVirtual;
+  fuera: FueraDeLaBolsa[];
 }

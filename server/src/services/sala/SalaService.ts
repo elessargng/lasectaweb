@@ -19,7 +19,7 @@ import { PreparacionService } from './PreparacionService';
 import { GrimorioService } from './GrimorioService';
 import { ParticipantesService } from './ParticipantesService';
 import { ImagenesSala } from './ImagenesSala';
-import type { DependenciasSala, DifusorSala } from './puertos';
+import { VERSION_PARTIDA_GUARDADA, type DependenciasSala, type DifusorSala, type PartidaGuardada } from './puertos';
 
 /** Quien llega a la sala, antes de entrar. */
 export interface PeticionLlegada {
@@ -36,6 +36,9 @@ export interface PeticionLlegada {
 
 /** Por qué no puede entrar: sin nombre, o con el de otro (el cliente lo devuelve a elegir otro). */
 export type ErrorLlegada = 'SIN_NOMBRE' | 'NOMBRE_OCUPADO';
+
+/** Cuánto se espera tras un cambio para guardar la partida en curso (los que llegan mientras, van juntos). */
+export const ESPERA_GUARDAR_MS = 1000;
 
 /** Cómo se contesta a quien pide algo; se le contesta antes de difundir la sala, para que le llegue antes. */
 export type Responder<R = RespuestaAccion> = (respuesta: R) => void;
@@ -91,6 +94,14 @@ export class SalaService {
   private difusor: DifusorSala = SIN_DIFUSOR;
   /** El guion no va en cada estado: se manda aparte, solo cuando cambia y a quien entra. */
   private versionGuionMandada: number;
+  /**
+   * Recuperada la sala tras un reinicio: el asiento (o el papel de narrador) de cada
+   * cuenta, hasta que vuelve a entrar (ver recuperar).
+   */
+  private readonly reservas = new Map<string, { asiento: string | null; narrador: boolean }>();
+  /** Lo que se está guardando de la partida en curso (en orden), y si hay un guardado esperando. */
+  private guardando: Promise<void> = Promise.resolve();
+  private guardadoPendiente = false;
 
   constructor(private readonly deps: DependenciasSala) {
     this.juego = new SalaDeJuego(deps.azar);
@@ -197,6 +208,7 @@ export class SalaService {
               if (!cuenta) return 'Para añadir a Jarvis necesitas una cuenta.';
               return NarradorIAService.para(await deps.modelosIA!(cuenta));
             },
+            modeloDeCuenta: async (cuenta) => NarradorIAService.para(await deps.modelosIA!(cuenta)),
           }
         : null,
       // Las bolsas recientes, de la cuenta de quien lo añade
@@ -279,6 +291,8 @@ export class SalaService {
     this.difusor.guion(this.juego.partida.guion.actual(), conexion);
     const { clave, expulsar } = this.juego.sala.participantes.conectar(conexion, clienteId, llegada, (c) => this.difusor.sigueAbierta(c));
     if (expulsar) this.difusor.expulsar(expulsar, 'otraConexion');
+    const yo = this.participanteDe(clave);
+    if (yo) this.volverASuSitio(yo.id);
     this.difundir();
     this.mandarHistorial(clave, conexion);
     return clave;
@@ -374,12 +388,104 @@ export class SalaService {
     this.difusor.guion(guion.actual());
   }
 
-  /** Tras cada cambio: todo al día con la sala, a cada uno lo suyo, y el narrador virtual mira si le toca algo. */
+  /** Tras cada cambio: todo al día con la sala, a cada uno lo suyo, el narrador virtual mira si le toca algo y se guarda. */
   private difundir(): void {
     // Las conversaciones y el servidor de vídeo, al día con la sala (papeles, fase, quién está)
     this.conversaciones.depurar();
     this.videollamada?.sincronizar();
     this.difusor.estado();
     this.narradorVirtual.alCambiarSala();
+    this.guardarPronto();
+  }
+
+  /**
+   * Recupera la sala guardada antes de un reinicio (ver PartidaGuardada): la plaza
+   * con sus asientos, la partida y su diario, los ajustes y el narrador virtual, que
+   * retoma su etapa. Cada cuenta recupera su asiento o su papel de narrador al
+   * volver a entrar (ver volverASuSitio). Lo que se puede deshacer empieza de cero.
+   * Si lo guardado es de otra versión, se descarta. Devuelve si se ha recuperado.
+   */
+  async recuperar(): Promise<boolean> {
+    const leida = await this.deps.partidaEnCurso?.leer().catch((err) => {
+      console.error('[SALA] No se ha podido leer la partida en curso:', err);
+      return null;
+    });
+    if (!leida) return false;
+    if (leida.version !== VERSION_PARTIDA_GUARDADA) {
+      console.warn(`[SALA] La partida en curso guardada es de otra versión (${leida.version}): se descarta.`);
+      return false;
+    }
+    const guardada = leida.datos as PartidaGuardada;
+    const { sala, partida } = this.juego;
+    sala.rehacerPlaza(guardada.asientos.map((a) => a.id));
+    // El diario antes que la partida: la partida recuerda cuánto había apuntado
+    partida.registro.cargar(guardada.diario);
+    partida.restaurar(guardada.partida);
+    partida.configuracion.cambiar(guardada.ajustes);
+    partida.configuracion.permitirPrivados(guardada.privados);
+    for (const a of guardada.asientos) if (a.userId) this.reservas.set(a.userId, { asiento: a.id, narrador: false });
+    for (const userId of guardada.narradores) this.reservas.set(userId, { asiento: null, narrador: true });
+    if (guardada.narradorVirtual) await this.narradorVirtual.retomar(guardada.narradorVirtual);
+    this.versionGuionMandada = partida.guion.version();
+    console.log(`[SALA] Recuperada la partida en curso (${partida.fases.actual().momento} ${partida.fases.actual().numero}).`);
+    return true;
+  }
+
+  /** Guarda ya la partida en curso (sin esperar a ESPERA_GUARDAR_MS): al apagar el servidor, y en los tests. */
+  async guardarAhora(): Promise<void> {
+    const destino = this.deps.partidaEnCurso;
+    if (!destino) return;
+    const guardada = this.guardable();
+    this.guardando = this.guardando.then(() => destino.guardar(VERSION_PARTIDA_GUARDADA, guardada)).catch((err) => console.error('[SALA] No se ha podido guardar la partida en curso:', err));
+    await this.guardando;
+  }
+
+  /** Tras un cambio, se guarda la partida en curso al rato (los cambios que lleguen mientras, juntos). */
+  private guardarPronto(): void {
+    if (!this.deps.partidaEnCurso || this.guardadoPendiente) return;
+    this.guardadoPendiente = true;
+    setTimeout(() => {
+      this.guardadoPendiente = false;
+      void this.guardarAhora();
+    }, ESPERA_GUARDAR_MS);
+  }
+
+  /**
+   * La sala para guardarla (ver PartidaGuardada). De cada asiento, la cuenta de quien
+   * se sienta o, si aún no ha vuelto tras un reinicio, la de quien lo tenía.
+   */
+  private guardable(): PartidaGuardada {
+    const { sala, partida } = this.juego;
+    const pendientes = [...this.reservas];
+    const asientos = sala.asientos().map((a) => ({
+      id: a.id,
+      userId: sala.participantes.cuentaDe(a.participanteId) ?? pendientes.find(([, r]) => r.asiento === a.id)?.[0] ?? null,
+    }));
+    const narradores = [
+      ...sala.participantes.narradores().flatMap((p) => (p.persona.tipo === 'virtual' ? [] : (sala.participantes.cuentaDe(p.id) ?? []))),
+      ...pendientes.filter(([, r]) => r.narrador).map(([userId]) => userId),
+    ];
+    return {
+      asientos,
+      narradores: [...new Set(narradores)],
+      partida: partida.instantanea(),
+      diario: partida.registro.exportar(),
+      ajustes: partida.configuracion.actual(),
+      privados: partida.configuracion.privadosPermitidos(),
+      narradorVirtual: this.narradorVirtual.guardable(),
+    };
+  }
+
+  /** Recuperada la sala tras un reinicio, quien entra con su cuenta vuelve a su asiento o a narrar (si sigue libre). */
+  private volverASuSitio(participanteId: string): void {
+    const cuenta = this.juego.sala.participantes.cuentaDe(participanteId);
+    this.narradorVirtual.alConectar(participanteId, cuenta);
+    const reserva = cuenta ? this.reservas.get(cuenta) : undefined;
+    if (!cuenta || !reserva) return;
+    this.reservas.delete(cuenta);
+    if (reserva.narrador) this.juego.sala.participantes.cambiarRol(participanteId, 'narrador');
+    else if (reserva.asiento) this.juego.sala.sentar(participanteId, reserva.asiento);
+    // Han vuelto todos los que tenían asiento: el narrador virtual sigue
+    if (![...this.reservas.values()].some((r) => r.asiento)) void this.narradorVirtual.reanudar();
   }
 }

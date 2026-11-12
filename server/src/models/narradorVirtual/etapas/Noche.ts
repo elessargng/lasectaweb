@@ -41,6 +41,9 @@ const ESPERA_PASO = { min: 2000, max: 6000 };
  */
 export class Noche implements Etapa {
   readonly id = 'noche' as const;
+
+  /** `retomada`: se retoma tras un reinicio (lo de la primera noche que ya se hizo no se repite). */
+  constructor(private readonly retomada = false) {}
   private cancelada = false;
   private readonly cancelar: (() => void)[] = [];
   private esperas: { cumple: () => boolean; seguir: () => void }[] = [];
@@ -120,7 +123,7 @@ export class Noche implements Etapa {
     const guion = partida.guion.actual();
     const primera = partida.fases.actual().numero === 1;
     const habilidades = habilidadesDelGuion((guion?.personajes ?? []).map((p) => p.id));
-    if (primera) await this.ponerQuienCreeSerOtro(ctx);
+    if (primera && !this.retomada) await this.ponerQuienCreeSerOtro(ctx);
     const plan = planificarNoche({
       orden: (primera ? guion?.primeraNoche : guion?.otrasNoches) ?? [],
       primera,

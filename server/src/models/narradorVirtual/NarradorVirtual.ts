@@ -92,6 +92,11 @@ export class NarradorVirtual {
     this.sala.participantes.relevarVirtual(narrador.participante, nombre, avatar, id);
   }
 
+  /** Quien lo añadió es ahora este participante (vuelve a la sala tras un reinicio con la misma cuenta). */
+  cambiarCreador(participanteId: string): void {
+    if (this.estado) this.estado = { ...this.estado, creador: participanteId };
+  }
+
   /**
    * Lo que cambia él en la partida sin pasar por un caso de uso (apuntar una
    * declaración, cerrar las del Patoso…): un paso de la historia, a su nombre.

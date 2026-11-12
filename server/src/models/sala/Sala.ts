@@ -146,6 +146,16 @@ export class Sala {
     }
   }
 
+  /** Los asientos, en orden, con quién se sienta en cada uno (para guardar la sala y recuperarla tras un reinicio). */
+  asientos(): { id: string; participanteId: string | null }[] {
+    return this.jugadores().map((j) => ({ id: j.id, participanteId: j.participanteId }));
+  }
+
+  /** Rehace la plaza con esos asientos (sus ids, en orden), libres: al recuperar la sala tras un reinicio. */
+  rehacerPlaza(ids: readonly string[]): void {
+    this.plaza.splice(0, this.plaza.length, ...ids.map((id) => new Jugador(id)));
+  }
+
   /** Se apunta a los asientos que se quitan (ver OyenteQuitar). */
   alQuitar(oyente: OyenteQuitar): void {
     this.oyentesQuitar.push(oyente);
