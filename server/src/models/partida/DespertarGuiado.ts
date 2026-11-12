@@ -54,16 +54,16 @@ export interface EntornoDespertarGuiado {
   cambiarPersonaje: (jugadorId: string, personaje: string) => void;
 }
 
-/** Lo que ya se ha hecho esta noche con una habilidad. */
 /** Lo que se le manda a un asiento: un despertar. */
-interface Envio {
+export interface Envio {
   envio: EnvioDespertar;
   eleccion?: EleccionDespertar;
   /** Solo le informa de otros (ver MensajeDespertar.porOtros). */
   porOtros?: boolean;
 }
 
-interface Turno {
+/** Lo que ya se ha hecho esta noche con una habilidad. */
+export interface Turno {
   personaje: string;
   asiento: string;
   estado: 'esperando' | 'revisar' | 'hecho';
@@ -294,4 +294,23 @@ export class DespertarGuiado {
     this.impQueMuere = null;
     this.colas.clear();
   }
+
+  /** Una copia de cómo va la noche guiada, para volver a ello (ver restaurar). */
+  instantanea(): InstantaneaGuiado {
+    return structuredClone({ turnos: this.turnos, impQueMuere: this.impQueMuere, colas: [...this.colas] });
+  }
+
+  restaurar(instantanea: InstantaneaGuiado): void {
+    const { turnos, impQueMuere, colas } = structuredClone(instantanea);
+    this.turnos = turnos;
+    this.impQueMuere = impQueMuere;
+    this.colas = new Map(colas);
+  }
+}
+
+/** El despertar guiado en un momento (ver DespertarGuiado.instantanea). */
+export interface InstantaneaGuiado {
+  turnos: Turno[];
+  impQueMuere: string | null;
+  colas: [string, Envio[]][];
 }

@@ -98,4 +98,18 @@ export class Jugador {
     this.muertePendiente = false;
     this.votoGastado = false;
   }
+
+  /** Lo que es de la partida (no quién lo juega), una copia: para volver a ello (ver Grimorio.instantanea). */
+  estado(): EstadoJugador {
+    const { personaje, alineamiento, muerto, muertePendiente, votoGastado, recordatorios } = this;
+    return structuredClone({ personaje, alineamiento, muerto, muertePendiente, votoGastado, recordatorios });
+  }
+
+  /** Vuelve a lo de la partida de un estado (ver estado). Quien lo juega sigue. */
+  restaurar(estado: EstadoJugador): void {
+    Object.assign(this, structuredClone(estado));
+  }
 }
+
+/** Lo que es de la partida en un jugador (ver Jugador.estado). */
+export type EstadoJugador = Pick<Jugador, 'personaje' | 'alineamiento' | 'muerto' | 'muertePendiente' | 'votoGastado' | 'recordatorios'>;

@@ -84,4 +84,18 @@ export class Fases {
     this.pasos = [];
     this.fase = { momento: 'preparacion', numero: 0, reinicios: this.fase.reinicios + 1 };
   }
+
+  /** La fase de ahora, para volver a ella (ver restaurar). */
+  instantanea(): Fase {
+    return this.actual();
+  }
+
+  /**
+   * Vuelve a esa fase. Si era de otra partida (antes de limpiar el grimorio), cuenta
+   * un reinicio más: los reinicios nunca bajan (quien los mira sabe así que todo ha cambiado).
+   */
+  restaurar(fase: Fase): void {
+    const reinicios = fase.reinicios === this.fase.reinicios ? fase.reinicios : this.fase.reinicios + 1;
+    this.fase = { ...fase, reinicios };
+  }
 }

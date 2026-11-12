@@ -149,12 +149,12 @@ export class Senalamientos {
     this.actual = null;
   }
 
-  /** El señalamiento tal cual, para que la máquina del tiempo lo devuelva. */
+  /** Una copia del señalamiento (o null), para volver a él (ver restaurar). */
   instantanea(): Senalamiento | null {
-    return this.actual;
+    return structuredClone(this.actual);
   }
 
-  restaurar(senalamiento: Senalamiento): void {
-    this.actual = senalamiento;
+  restaurar(senalamiento: Senalamiento | null): void {
+    this.actual = structuredClone(senalamiento);
   }
 }

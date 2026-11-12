@@ -136,6 +136,35 @@ export class Nominaciones {
     this.maximoDelDia = votos;
   }
 
+  /**
+   * Una copia de las nominaciones (la de ahora, el registro y el récord), para
+   * volver a ellas (ver restaurar). La entrada del registro de la nominación en
+   * curso va por su posición.
+   */
+  instantanea(): InstantaneaNominaciones {
+    const n = this.nominacionEnCurso;
+    const enCurso = n && { ...n, registro: n.registro ? this.registro.indexOf(n.registro) : null };
+    return structuredClone({ enCurso, registro: this.registro, maximoDelDia: this.maximoDelDia });
+  }
+
+  /**
+   * Vuelve a como estaban. Si la nominación estaba en la cuenta atrás o votando,
+   * sigue: la cuenta atrás, hasta su fin; la votación, desde la ficha en la que iba.
+   */
+  restaurar(instantanea: InstantaneaNominaciones): void {
+    const { enCurso, registro, maximoDelDia } = structuredClone(instantanea);
+    this.pararTemporizador();
+    this.registro = registro;
+    this.maximoDelDia = maximoDelDia;
+    this.nominacionEnCurso = enCurso && { ...enCurso, registro: enCurso.registro === null ? null : (registro[enCurso.registro] ?? null) };
+    const n = this.nominacionEnCurso;
+    if (n?.votacion && !n.votacion.terminada) {
+      this.temporizador = setTimeout(() => this.entorno.sola('dia:votacion', () => this.avanzarVotacion()), this.entorno.segundosPorFicha() * 1000);
+    } else if (n && !n.votacion && n.cuentaAtrasFin !== null) {
+      this.temporizador = setTimeout(() => this.entorno.sola('dia:votacion', () => this.empezarVotacion()), Math.max(0, n.cuentaAtrasFin - Date.now()));
+    }
+  }
+
   /** Otra partida: sin nominación, sin registro y sin récord. */
   olvidarTodo(): void {
     this.cerrarNominacion();
@@ -395,4 +424,11 @@ export class Nominaciones {
     this.nominacionEnCurso.cuentaAtrasFin = ahora + SALA_CUENTA_ATRAS_MS;
     this.temporizador = setTimeout(() => this.entorno.sola('dia:votacion', () => this.empezarVotacion()), SALA_CUENTA_ATRAS_MS);
   }
+}
+
+/** Las nominaciones en un momento (ver Nominaciones.instantanea): la entrada del registro de la de ahora, por su posición. */
+export interface InstantaneaNominaciones {
+  enCurso: (Omit<NominacionInterna, 'registro'> & { registro: number | null }) | null;
+  registro: RegistroVotacion[];
+  maximoDelDia: number | null;
 }

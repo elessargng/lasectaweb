@@ -111,4 +111,21 @@ export class Faroles {
     this.delNarrador = farolesVacios();
     this.deJugadores.clear();
   }
+
+  /** Una copia de los faroles, para volver a ellos (ver restaurar). */
+  instantanea(): InstantaneaFaroles {
+    return structuredClone({ delNarrador: this.delNarrador, deJugadores: [...this.deJugadores] });
+  }
+
+  restaurar(instantanea: InstantaneaFaroles): void {
+    const { delNarrador, deJugadores } = structuredClone(instantanea);
+    this.delNarrador = delNarrador;
+    this.deJugadores = new Map(deJugadores);
+  }
+}
+
+/** Los faroles en un momento (ver Faroles.instantanea). */
+export interface InstantaneaFaroles {
+  delNarrador: (string | null)[];
+  deJugadores: [string, { ocupante: string | null; faroles: (string | null)[]; enUso: string | null }][];
 }

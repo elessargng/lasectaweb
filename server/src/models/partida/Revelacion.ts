@@ -58,4 +58,16 @@ export class Revelacion {
   olvidar(): void {
     this.actual = null;
   }
+
+  /** Una copia de lo revelado (o null), para volver a ello (ver restaurar). */
+  instantanea(): InstantaneaRevelacion {
+    return structuredClone(this.actual);
+  }
+
+  restaurar(instantanea: InstantaneaRevelacion): void {
+    this.actual = structuredClone(instantanea);
+  }
 }
+
+/** La revelación en un momento (ver Revelacion.instantanea). */
+export type InstantaneaRevelacion = { ganador: Alineamiento; causas: string[]; reveladas: string[] } | null;

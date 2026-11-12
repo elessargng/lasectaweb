@@ -59,4 +59,21 @@ export class Declaraciones {
     this.hechas.clear();
     this.plazos.clear();
   }
+
+  /** Una copia de lo declarado y los plazos, para volver a ello (ver restaurar). */
+  instantanea(): InstantaneaDeclaraciones {
+    return structuredClone({ hechas: [...this.hechas], plazos: [...this.plazos] });
+  }
+
+  restaurar(instantanea: InstantaneaDeclaraciones): void {
+    const { hechas, plazos } = structuredClone(instantanea);
+    this.hechas = new Map(hechas);
+    this.plazos = new Map(plazos);
+  }
+}
+
+/** Las declaraciones en un momento (ver Declaraciones.instantanea). */
+export interface InstantaneaDeclaraciones {
+  hechas: [string, string[]][];
+  plazos: [string, Plazo[]][];
 }

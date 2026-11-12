@@ -9,7 +9,7 @@ import {
 import { type Alineamiento } from '../compartido/jugador';
 import type { AsientoDiario, HechoDiario } from '../compartido/diario';
 import type { PersonajeDeGuion } from '../guiones';
-import type { Jugador } from './Jugador';
+import type { EstadoJugador, Jugador } from './Jugador';
 
 /** Los tipos de personaje que pueden ir en la ficha de un jugador (no los legendarios ni los lóricos). */
 export const TIPOS_EN_FICHA: readonly string[] = ['townsfolk', 'outsider', 'minion', 'demon', 'traveller'];
@@ -412,4 +412,36 @@ export class Grimorio {
     this.notaDe.clear();
     this.conCalavera = null;
   }
+
+  /** Cómo está ahora (una copia): lo de cada jugador por su id, las notas y la calavera. */
+  instantanea(): InstantaneaGrimorio {
+    return {
+      jugadores: this.entorno.jugadores().map((j) => [j.id, j.estado()]),
+      notas: [...this.notaDe],
+      calavera: this.conCalavera && { ...this.conCalavera },
+    };
+  }
+
+  /**
+   * Vuelve a como estaba. Cada jugador, por su id, sin cambiar quién lo juega ni
+   * dónde se sienta; el que no estaba entonces (un asiento añadido después), como
+   * al principio de la partida.
+   */
+  restaurar(instantanea: InstantaneaGrimorio): void {
+    const estados = new Map(instantanea.jugadores);
+    for (const jugador of this.entorno.jugadores()) {
+      const estado = estados.get(jugador.id);
+      if (estado) jugador.restaurar(estado);
+      else jugador.nuevaPartida();
+    }
+    this.notaDe = new Map(instantanea.notas);
+    this.conCalavera = instantanea.calavera && { ...instantanea.calavera };
+  }
+}
+
+/** El grimorio en un momento (ver Grimorio.instantanea). */
+export interface InstantaneaGrimorio {
+  jugadores: [string, EstadoJugador][];
+  notas: [string, string][];
+  calavera: { jugadorId: string; votos: number | null } | null;
 }

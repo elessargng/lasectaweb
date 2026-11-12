@@ -120,14 +120,14 @@ export class Despertares {
     });
   }
 
-  /** Una copia de los despertares abiertos, para devolverlos con la máquina del tiempo. */
+  /** Una copia de los despertares abiertos, para volver a ellos (ver restaurar). */
   instantanea(): HiloDespertar[] {
-    return this.hilos.map((h) => ({ ...h, mensajes: [...h.mensajes] }));
+    return structuredClone(this.hilos);
   }
 
   /** Vuelven los despertares de una instantánea. */
-  restaurar(hilos: HiloDespertar[]): void {
-    this.hilos = hilos;
+  restaurar(hilos: readonly HiloDespertar[]): void {
+    this.hilos = structuredClone([...hilos]);
   }
 
   /**

@@ -101,4 +101,30 @@ export class Npcs {
   pedirSilencio(activo: boolean): void {
     this.silencioPedido = activo;
   }
+
+  /** Una copia de lo que hay en juego, para volver a ello (ver restaurar). */
+  instantanea(): InstantaneaNpcs {
+    return structuredClone({
+      actuales: this.actuales,
+      reglasBootlegger: this.reglasBootlegger,
+      rolStormcatcher: this.rolStormcatcherActual,
+      silencio: this.silencioPedido,
+    });
+  }
+
+  restaurar(instantanea: InstantaneaNpcs): void {
+    const { actuales, reglasBootlegger, rolStormcatcher, silencio } = structuredClone(instantanea);
+    this.actuales = actuales;
+    this.reglasBootlegger = reglasBootlegger;
+    this.rolStormcatcherActual = rolStormcatcher;
+    this.silencioPedido = silencio;
+  }
+}
+
+/** Los NPCs en un momento (ver Npcs.instantanea). */
+export interface InstantaneaNpcs {
+  actuales: string[];
+  reglasBootlegger: string[] | null;
+  rolStormcatcher: string | null;
+  silencio: boolean;
 }

@@ -104,4 +104,23 @@ export class Entregas {
     this.grimoriosEnviados.clear();
     this.retenidas = false;
   }
+
+  /** Una copia de lo entregado y enviado, para volver a ello (ver restaurar). */
+  instantanea(): InstantaneaEntregas {
+    return structuredClone({ entregadas: [...this.entregadas], grimoriosEnviados: [...this.grimoriosEnviados], retenidas: this.retenidas });
+  }
+
+  restaurar(instantanea: InstantaneaEntregas): void {
+    const { entregadas, grimoriosEnviados, retenidas } = structuredClone(instantanea);
+    this.entregadas = new Map(entregadas);
+    this.grimoriosEnviados = new Map(grimoriosEnviados);
+    this.retenidas = retenidas;
+  }
+}
+
+/** Lo entregado y enviado en un momento (ver Entregas.instantanea). */
+export interface InstantaneaEntregas {
+  entregadas: [string, FichaEntregada][];
+  grimoriosEnviados: [string, { ocupante: string; grimorio: GrimorioEnviado }][];
+  retenidas: boolean;
 }

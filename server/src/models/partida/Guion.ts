@@ -20,6 +20,21 @@ export class Guion {
   }
 
   /**
+   * El guion de ahora, para volver a él (ver restaurar). No se copia: un guion
+   * resuelto no se cambia nunca, se sustituye.
+   */
+  instantanea(): GuionResuelto | null {
+    return this.guion;
+  }
+
+  /** Vuelve a ese guion; si es otro, sube la versión (para mandarlo). */
+  restaurar(guion: GuionResuelto | null): void {
+    if (guion === this.guion) return;
+    this.guion = guion;
+    this.versionActual += 1;
+  }
+
+  /**
    * Un personaje de la partida: del guion o, aunque el guion no lo traiga, uno de
    * los viajeros o de los NPCs (legendarios y lóricos) del catálogo. undefined si no.
    */

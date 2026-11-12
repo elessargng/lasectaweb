@@ -212,6 +212,16 @@ export class Bolsa {
     this.setupAceptadoActual = null;
   }
 
+  /** Una copia de la bolsa, para volver a ella (ver restaurar). */
+  instantanea(): InstantaneaBolsa {
+    return { personajes: [...this.personajes], setupAceptado: this.setupAceptadoActual };
+  }
+
+  restaurar({ personajes, setupAceptado }: InstantaneaBolsa): void {
+    this.personajes = [...personajes];
+    this.setupAceptadoActual = setupAceptado;
+  }
+
   /**
    * Si un personaje puede ir repetido en la bolsa: los repetibles («bag-duplicate»,
    * como el Village Idiot), siempre; los aldeanos y forasteros, con el Pope en juego.
@@ -505,3 +515,9 @@ function forasterosPosibles({ cuentas, poderes }: { cuentas: Cuentas; poderes: P
 /** «0», «0 o 1», «0, 1 o 2». */
 const enumerar = (numeros: number[]) =>
   numeros.length <= 1 ? String(numeros[0] ?? 0) : `${numeros.slice(0, -1).join(', ')} o ${numeros[numeros.length - 1]}`;
+
+/** La bolsa en un momento (ver Bolsa.instantanea). */
+export interface InstantaneaBolsa {
+  personajes: string[];
+  setupAceptado: string | null;
+}

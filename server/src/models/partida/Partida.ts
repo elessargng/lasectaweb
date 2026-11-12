@@ -402,6 +402,48 @@ export class Partida {
     return true;
   }
 
+  /**
+   * Cómo está ahora la partida (una copia, sin referencias vivas salvo el guion, que
+   * no cambia): para volver a ello (ver restaurar). No lleva lo que es de la sala:
+   * quién se sienta dónde, los ajustes, el acceso al grimorio ni el reloj.
+   */
+  instantanea(): InstantaneaPartida {
+    return {
+      guion: this.guion.instantanea(),
+      fase: this.fases.instantanea(),
+      grimorio: this.grimorio.instantanea(),
+      nominaciones: this.nominaciones.instantanea(),
+      despertares: this.despertares.instantanea(),
+      guiado: this.guiado.instantanea(),
+      faroles: this.faroles.instantanea(),
+      revelacion: this.revelacion.instantanea(),
+      npcs: this.npcs.instantanea(),
+      entregas: this.entregas.instantanea(),
+      bolsa: this.bolsa.instantanea(),
+      senalamiento: this.senalamientos.instantanea(),
+      declaraciones: this.declaraciones.instantanea(),
+      recordatorios: { ...this.recordatorios },
+    };
+  }
+
+  /** Vuelve a como estaba la partida en una instantánea (ver instantanea). */
+  restaurar(i: InstantaneaPartida): void {
+    this.guion.restaurar(i.guion);
+    this.fases.restaurar(i.fase);
+    this.grimorio.restaurar(i.grimorio);
+    this.nominaciones.restaurar(i.nominaciones);
+    this.despertares.restaurar(i.despertares);
+    this.guiado.restaurar(i.guiado);
+    this.faroles.restaurar(i.faroles);
+    this.revelacion.restaurar(i.revelacion);
+    this.npcs.restaurar(i.npcs);
+    this.entregas.restaurar(i.entregas);
+    this.bolsa.restaurar(i.bolsa);
+    this.senalamientos.restaurar(i.senalamiento);
+    this.declaraciones.restaurar(i.declaraciones);
+    this.recordatorios = { ...i.recordatorios };
+  }
+
   recordatoriosNoche(): Record<string, boolean> {
     return { ...this.recordatorios };
   }
@@ -926,4 +968,22 @@ export class Partida {
     const jugador = this.jugadorDe(participanteId);
     return !!jugador && this.reglas.votaDoble(jugador);
   }
+}
+
+/** La partida en un momento (ver Partida.instantanea). */
+export interface InstantaneaPartida {
+  guion: ReturnType<Guion['instantanea']>;
+  fase: ReturnType<Fases['instantanea']>;
+  grimorio: ReturnType<Grimorio['instantanea']>;
+  nominaciones: ReturnType<Nominaciones['instantanea']>;
+  despertares: ReturnType<Despertares['instantanea']>;
+  guiado: ReturnType<DespertarGuiado['instantanea']>;
+  faroles: ReturnType<Faroles['instantanea']>;
+  revelacion: ReturnType<Revelacion['instantanea']>;
+  npcs: ReturnType<Npcs['instantanea']>;
+  entregas: ReturnType<Entregas['instantanea']>;
+  bolsa: ReturnType<Bolsa['instantanea']>;
+  senalamiento: ReturnType<Senalamientos['instantanea']>;
+  declaraciones: ReturnType<Declaraciones['instantanea']>;
+  recordatorios: Record<string, boolean>;
 }
