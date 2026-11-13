@@ -18,7 +18,8 @@
           "Las llamadas dicen «te llama» y se responden con los botones de descolgar y colgar.",
           "El botón de descolgar muestra la tecla que coge la llamada, y el lector de pantalla la lee con su nombre.",
           "Las llamadas que haces salen en el mismo aviso, con el botón de colgar para retirarlas.",
-          "Eliminada la opción de Accesibilidad para mostrar las llamadas fuera del panel de Charlas, que ya salen siempre fuera."
+          "Eliminada la opción de Accesibilidad para mostrar las llamadas fuera del panel de Charlas, que ya salen siempre fuera.",
+          "Añadida un asa en la esquina de la conversación privada para agrandarla o achicarla, con las cámaras a la misma escala. El tamaño se recuerda."
         ]
       },
       {
