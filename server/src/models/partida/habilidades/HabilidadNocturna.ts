@@ -91,9 +91,10 @@ export interface HabilidadNocturna {
    * La forma de la información que da (para inventar una falsa si está droison):
    * hasta qué número puede salir (el Empático, de 0 a 2) y de qué tipo es el
    * personaje que enseña (la Lavandera, un aldeano). Sin esto, no da números y
-   * enseña cualquier personaje.
+   * enseña cualquier personaje. Desde qué número, si no es el 0 (el Relojero, desde 1).
    */
   maximoNumero?(ctx: ContextoNoche): number;
+  minimoNumero?(ctx: ContextoNoche): number;
   tipoEnsenado?: string;
   /** Los que despiertan, si no es el de su ficha (los esbirros, el demonio): cada uno, con su `preparar`. */
   despiertan?(ctx: ContextoNoche): Jugador[];

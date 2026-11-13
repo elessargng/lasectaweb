@@ -264,6 +264,10 @@ describe('la noche del narrador virtual', () => {
     expect(falsas('fortuneteller', ficha('no'))).toMatchObject([{ ficha: 'si' }]);
     // El Empático: los otros números de 0 a 2
     expect(falsas('empath', numero(1)).map((f) => f.ficha)).toEqual(['cero', 'dos']);
+    // El Relojero (7 jugadores): de 1 a 3, nunca el 0
+    const relojero = habilidadesDelGuion(['clockmaker']).get('clockmaker')!;
+    const falsasRelojero = informacionesFalsas({ verdadera: numero(2), habilidad: relojero, ctx: contextoNoche(m.juego), personajes: partida.guion.actual()!.personajes });
+    expect(falsasRelojero.map((f) => f.ficha)).toEqual(['uno', 'tres']);
     // La Lavandera: con los mismos jugadores, otro aldeano
     const jugadores = [partida.plaza()[0].id, partida.plaza()[3].id];
     const lavandera = falsas('washerwoman', tarjeta('esteJugadorEs', { jugadores, personajes: ['chef'] }));

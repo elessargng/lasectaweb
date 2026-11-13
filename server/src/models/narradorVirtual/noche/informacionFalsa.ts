@@ -36,7 +36,8 @@ export function informacionesFalsas({
   if (n !== null) {
     const maximo = habilidad.maximoNumero?.(ctx);
     if (maximo === undefined) return [];
-    return Array.from({ length: maximo + 1 }, (_, i) => i)
+    const minimo = habilidad.minimoNumero?.(ctx) ?? 0;
+    return Array.from({ length: Math.max(0, maximo - minimo + 1) }, (_, i) => minimo + i)
       .filter((i) => i !== n)
       .map(numero);
   }

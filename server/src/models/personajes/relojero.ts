@@ -30,10 +30,15 @@ class Relojero extends RecibeInformacion {
     return Math.floor(ctx.plaza().length / 2);
   }
 
+  /** Nunca 0: el demonio y su esbirro no comparten asiento (tampoco borracho o envenenado). */
+  minimoNumero(): number {
+    return 1;
+  }
+
   protected informacion(ctx: ContextoNoche) {
     const plaza = ctx.plaza();
     const n = plaza.length;
-    const opciones = segunRegistros(ctx, plaza, (a) => comoRegistra(ctx, a), (registro) => {
+    const todas = segunRegistros(ctx, plaza, (a) => comoRegistra(ctx, a), (registro) => {
       const es = (a: Jugador, como: 'demonio' | 'esbirro') => {
         const r = registro(a);
         if (r) return r === como;
@@ -44,6 +49,9 @@ class Relojero extends RecibeInformacion {
       const distancias = posiciones('demonio').flatMap((d) => posiciones('esbirro').map((e) => Math.min(Math.abs(d - e), n - Math.abs(d - e))));
       return numero(distancias.length ? Math.min(...distancias) : 0);
     });
+    // Sin demonio o sin esbirro (el Espía que no registra como esbirro) no sale distancia: el 0 no se da, salvo que no quede otra
+    const conDistancia = todas.filter((o) => o.envio.ficha !== 'cero');
+    const opciones = conDistancia.length ? conDistancia : todas;
     return { opciones };
   }
 }

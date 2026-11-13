@@ -59,9 +59,9 @@ describe('No Greater Joy', () => {
     expect(conReclusa.estado).toBe('revisar');
     expect(conReclusa.opciones.map((o) => o.envio.ficha)).toEqual(['tres', 'uno', 'dos']);
     expect(conReclusa.opciones[1].registros).toEqual([expect.objectContaining({ como: 'esbirro' })]);
-    // El Espía, el único esbirro: si no registra como esbirro, no hay ninguno (cero)
+    // El Espía, el único esbirro: aunque pueda no registrar como esbirro, el Relojero nunca recibe un 0
     const conEspia = plaza('clockmaker', 'imp', 'empath', 'spy', 'sage').fila('clockmaker')!;
-    expect(conEspia.opciones.map((o) => o.envio.ficha)).toEqual(['dos', 'cero']);
+    expect(conEspia.opciones.map((o) => o.envio.ficha)).toEqual(['dos']);
   });
 
   it('la Camarera, la última, sabe cuántos de sus dos elegidos han despertado por su habilidad', () => {
