@@ -14,8 +14,6 @@ interface PanelConversacionesProps {
   onEntrar: (conversacionId: string) => void;
   /** Sin conversaciones: cómo empezar una (o por qué no se puede), según quién mira. */
   ayuda: ReactNode;
-  /** Sin conversaciones y con invitaciones encima: el aviso, en pequeño (sin la ilustración). */
-  compacto: boolean;
 }
 
 /** «Ana», «Ana y Luis», «Ana, Luis y Bea». */
@@ -28,31 +26,23 @@ const enumerar = (nombres: string[]) =>
  * para quien está en ella. Los visitantes pueden entrar a escuchar cualquiera;
  * los narradores, escucharla o entrar en ella (y ven quién escucha; los
  * jugadores, no). Si no hay ninguna, lo dice y explica cómo empezar una: con
- * una ilustración (decorativa, oculta al lector) si el panel está vacío, o en
- * una línea si hay invitaciones encima.
+ * una ilustración (decorativa, oculta al lector).
  */
-const PanelConversaciones = ({ conversaciones, participantes, yo, onEscuchar, onEntrar, ayuda, compacto }: PanelConversacionesProps) => {
+const PanelConversaciones = ({ conversaciones, participantes, yo, onEscuchar, onEntrar, ayuda }: PanelConversacionesProps) => {
   if (conversaciones.length === 0) {
     return (
       <section aria-labelledby="sala-conversaciones-titulo" className="flex flex-col gap-2 p-3 text-sm">
         <h2 id="sala-conversaciones-titulo" className="rotulo">
           Conversaciones privadas
         </h2>
-        {compacto ? (
-          <p className="text-on-surface-muted">Ninguna en curso.</p>
-        ) : (
-          <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
-            {/* Un círculo de latón tenue con las ondas de voz, en silencio */}
-            <span
-              aria-hidden="true"
-              className="sala-medallon-vacio"
-            >
-              <IconoConversar size={28} strokeWidth={1.25} />
-            </span>
-            <p className="font-display text-lg text-on-surface-bright">Nadie conversa en privado</p>
-            <p className="max-w-[15rem] text-xs leading-relaxed text-on-surface-muted">{ayuda}</p>
-          </div>
-        )}
+        <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+          {/* Un círculo de latón tenue con las ondas de voz, en silencio */}
+          <span aria-hidden="true" className="sala-medallon-vacio">
+            <IconoConversar size={28} strokeWidth={1.25} />
+          </span>
+          <p className="font-display text-lg text-on-surface-bright">Nadie conversa en privado</p>
+          <p className="max-w-[15rem] text-xs leading-relaxed text-on-surface-muted">{ayuda}</p>
+        </div>
       </section>
     );
   }

@@ -68,13 +68,6 @@ export interface PreferenciasSala {
    */
   salirConversacionSinNadie: boolean;
   /**
-   * Dónde salen las invitaciones y peticiones de llamada entrantes: dentro del
-   * panel de Charlas (de entrada) o fuera, encima de la columna lateral y a la
-   * vista se vea el panel que se vea (como estaba antes de integrarlas dentro).
-   * Pestaña Accesibilidad.
-   */
-  invitacionesFuera: boolean;
-  /**
    * La tecla que lee el reloj del narrador (lo que queda y su mensaje), o null
    * si no hay. Pestaña Accesibilidad (no es un atajo de la pestaña Atajos).
    */
@@ -184,7 +177,6 @@ type ClaveSiNo =
   | 'avatarAuto'
   | 'fichaAuto'
   | 'salirConversacionSinNadie'
-  | 'invitacionesFuera'
   | 'sonidoEnvolvente'
   | 'panelLateralContraido'
   | 'farolesFijados'
@@ -232,7 +224,6 @@ const SI_NO: Record<ClaveSiNo, boolean> = {
   avatarAuto: true,
   fichaAuto: true,
   salirConversacionSinNadie: false,
-  invitacionesFuera: false,
   sonidoEnvolvente: false,
   panelLateralContraido: false,
   farolesFijados: false,

@@ -11,9 +11,6 @@ interface PanelAccesibilidadProps {
   activos: AvisosActivos;
   onCambiar: (tipo: TipoAviso, activo: boolean) => void;
   onCambiarTodos: (activo: boolean) => void;
-  /** Las peticiones de llamada entrantes fuera del panel de Charlas (encima, a la vista). */
-  invitacionesFuera: boolean;
-  onInvitacionesFuera: (fuera: boolean) => void;
   /** La tecla que lee el reloj del narrador, o null. */
   teclaLeerReloj: Atajo | null;
   onTeclaLeerReloj: (tecla: Atajo | null) => void;
@@ -259,8 +256,6 @@ const PanelAccesibilidad = ({
   activos,
   onCambiar,
   onCambiarTodos,
-  invitacionesFuera,
-  onInvitacionesFuera,
   teclaLeerReloj,
   onTeclaLeerReloj,
   teclaLlamar,
@@ -276,12 +271,6 @@ const PanelAccesibilidad = ({
   onProbarSonido,
 }: PanelAccesibilidadProps) => (
   <div className="flex flex-col gap-6">
-    <fieldset className="flex flex-col gap-2">
-      <legend className="mb-1 font-semibold">Peticiones de llamada entrantes</legend>
-      <Interruptor id="sala-invitaciones-fuera" activo={invitacionesFuera} onCambiar={onInvitacionesFuera} arriba textoClassName="text-sm">
-        Mostrarlas fuera del panel de Charlas, encima de la columna y siempre a la vista (en vez de dentro del panel).
-      </Interruptor>
-    </fieldset>
     <fieldset className="flex flex-col gap-2">
       <legend className="mb-1 font-semibold">Elegir jugadores en el despertar de noche</legend>
       {MODOS_ELECCION.map((m) => (

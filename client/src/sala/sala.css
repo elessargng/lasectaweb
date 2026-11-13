@@ -429,6 +429,163 @@
   box-shadow: 0 0 14px rgba(212, 67, 76, 0.35);
 }
 
+/*
+ * Las llamadas (PanelInvitaciones): un aviso emergente encima de la columna lateral.
+ * Al aparecer se despliega (crece de 0 a su alto: empuja la columna hacia abajo) y
+ * cae un poco; con menos movimiento, solo se funde.
+ */
+.sala-llamadas {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: sala-llamadas-abre 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.sala-llamadas > * {
+  min-height: 0;
+}
+.sala-llamadas-caja {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1px solid rgba(var(--gold-rgb), 0.55);
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(var(--gold-rgb), 0.12), transparent 60%),
+    linear-gradient(180deg, rgba(var(--grimorio-rgb), 0.55), rgba(var(--tinta-rgb), 0.92));
+  box-shadow:
+    inset 0 1px 0 rgba(var(--gold-rgb), 0.2),
+    0 8px 24px rgba(0, 0, 0, 0.45),
+    0 0 18px rgba(var(--gold-rgb), 0.15);
+  animation: sala-llamadas-cae 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* Un filo de latón que recorre el borde de arriba mientras suena */
+.sala-llamadas-caja::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-gold-bright), transparent);
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  animation: sala-llamadas-filo 2.2s ease-in-out infinite;
+}
+.sala-llamada-fila {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.875rem;
+}
+.sala-llamada-fila:first-child {
+  padding-top: 0.4rem;
+}
+
+/* Colgar y descolgar: medallones de solo icono, lacre y verde savia */
+.sala-llamada-boton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+.sala-llamada-boton:hover {
+  transform: translateY(-1px) scale(1.06);
+  filter: brightness(1.12);
+}
+.sala-llamada-boton:active {
+  transform: scale(0.94);
+}
+.sala-llamada-boton:focus-visible {
+  outline: 2px solid var(--color-gold-bright);
+  outline-offset: 2px;
+}
+.sala-llamada-colgar {
+  color: #fde4e6;
+  background: radial-gradient(circle at 50% 30%, #c8343e, #6e1219 80%);
+  border-color: rgba(212, 67, 76, 0.85);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 8px rgba(110, 18, 25, 0.5);
+}
+.sala-llamada-colgar:hover {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 0 14px rgba(212, 67, 76, 0.55);
+}
+.sala-llamada-descolgar {
+  color: #e6f8e8;
+  background: radial-gradient(circle at 50% 30%, #3f9c4c, #17451f 80%);
+  border-color: rgba(98, 190, 112, 0.85);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 8px rgba(18, 51, 26, 0.6);
+  animation: sala-llamada-pulso 1.6s ease-out infinite;
+}
+.sala-llamada-descolgar:hover {
+  animation: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 0 16px rgba(98, 190, 112, 0.6);
+}
+.sala-llamada-descolgar > svg {
+  animation: sala-llamada-timbre 1.6s ease-in-out infinite;
+}
+/* La tecla que coge la llamada, como una tecla pequeña colgada de la esquina */
+.sala-llamada-tecla {
+  position: absolute;
+  right: -0.4rem;
+  bottom: -0.35rem;
+  min-width: 1.15rem;
+  padding: 0.1rem 0.25rem;
+  border-radius: 4px;
+  border: 1px solid rgba(var(--gold-rgb), 0.6);
+  background: var(--theme-background);
+  color: var(--color-gold-bright);
+  font-family: ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  box-shadow: 0 1px 0 rgba(var(--gold-rgb), 0.35), 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+.sala-llamada-timbre {
+  animation: sala-llamada-timbre 1.6s ease-in-out infinite;
+  transform-origin: 50% 60%;
+}
+
+@keyframes sala-llamadas-abre {
+  from { grid-template-rows: 0fr; opacity: 0; }
+  to { grid-template-rows: 1fr; opacity: 1; }
+}
+@keyframes sala-llamadas-cae {
+  from { transform: translateY(-0.6rem); }
+  to { transform: none; }
+}
+@keyframes sala-llamadas-filo {
+  from { background-position: -100% 0; }
+  to { background-position: 200% 0; }
+}
+@keyframes sala-llamada-pulso {
+  0% { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 0 0 0 rgba(98, 190, 112, 0.55); }
+  70%, 100% { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 0 0 10px rgba(98, 190, 112, 0); }
+}
+/* El auricular tiembla un instante y descansa, como un timbre */
+@keyframes sala-llamada-timbre {
+  0%, 40%, 100% { transform: rotate(0); }
+  5%, 15%, 25% { transform: rotate(-14deg); }
+  10%, 20%, 30% { transform: rotate(14deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sala-llamadas { animation-name: sala-bocadillo-funde; animation-duration: 0.2s; }
+  .sala-llamadas-caja,
+  .sala-llamadas-caja::before,
+  .sala-llamada-descolgar,
+  .sala-llamada-descolgar > svg,
+  .sala-llamada-timbre { animation: none; }
+  .sala-llamada-boton,
+  .sala-llamada-boton:hover,
+  .sala-llamada-boton:active { transform: none; transition: none; }
+}
+@media (forced-colors: active) {
+  .sala-llamada-boton { border-color: ButtonText; forced-color-adjust: auto; }
+}
+
 /* Opción de un menú desplegable */
 .sala-opcion {
   position: relative;

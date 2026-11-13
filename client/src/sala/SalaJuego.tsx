@@ -241,8 +241,8 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
         const quien = nombreDe(invitacion.de);
         const base = invitacion.conversacion
           ? `${quien} pide unirse a tu conversación.`
-          : `${quien} te invita a una conversación privada.`;
-        const tecla = slot === null ? '' : ` Pulsa ${describirAtajo(atajos[accionCogerLlamada(slot)])} para cogerla.`;
+          : `${quien} te llama.`;
+        const tecla = slot === null ? '' : ` Pulsa ${describirAtajo(atajos[accionCogerLlamada(slot)])} para descolgar.`;
         avisos.push({ tipo: 'conversaciones', texto: base + tecla });
       }
     }
@@ -1650,8 +1650,6 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
           activos={avisosActivos}
           onCambiar={cambiarAviso}
           onCambiarTodos={cambiarTodosAvisos}
-          invitacionesFuera={preferencias.invitacionesFuera}
-          onInvitacionesFuera={(invitacionesFuera) => cambiarPreferencias({ invitacionesFuera })}
           teclaLeerReloj={preferencias.teclaLeerReloj}
           onTeclaLeerReloj={(teclaLeerReloj) => cambiarPreferencias({ teclaLeerReloj })}
           teclaLlamar={preferencias.teclaLlamar}
@@ -1846,7 +1844,6 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
   const farolesVisibles = (modoFaroles === 'jugador' || modoFaroles === 'esbirro' ? miAsiento?.faroles : estado?.faroles) ?? [null, null, null];
 
   // La columna de la izquierda: Mensajes, Charlas (si hay conversaciones o invitaciones) y Faroles (a quien le tocan)
-  // Invitaciones y peticiones que esperan mi respuesta (las peticiones llegan a todos los miembros)
   // Sin conversaciones: cómo empezar una, según quién mira y el momento de la partida
   // El icono del botón de llamar (un teléfono), en el texto; el lector oye su nombre
   const iconoConversar = (
@@ -1864,8 +1861,6 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
     ) : (
       <>Para hablar en privado con alguien, pulsa {iconoConversar} junto a su nombre.</>
     );
-  const invitacionesRecibidas =
-    estado?.invitaciones.filter((i) => (i.conversacion ? i.de !== estado.yo : i.para === estado.yo)).length ?? 0;
   // Los mensajes se ven si la columna no está contraída y su panel es el elegido (o el
   // elegido ya no sale: entonces se ve el primero, que es el de los mensajes)
   const elegidoDisponible =
@@ -1911,25 +1906,11 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
             id: 'conversaciones' as const,
             etiqueta: 'Charlas',
             Icono: IconoConversar,
-            // Lo que espera respuesta, antes que las conversaciones en curso
-            contador: invitacionesRecibidas > 0
-              ? { valor: invitacionesRecibidas, texto: 'por responder', destacado: true }
-              : { valor: estado.conversaciones.length, texto: 'en curso' },
+            // Las llamadas que esperan respuesta se cuentan en su aviso, encima de la columna
+            contador: { valor: estado.conversaciones.length, texto: 'en curso' },
             contenido: (
               <div className="h-full overflow-y-auto">
-                {/* Las invitaciones y peticiones (recibidas y enviadas), arriba; salvo que
-                    la accesibilidad las saque fuera del panel (entonces van encima de la columna) */}
-                {!preferencias.invitacionesFuera && (
-                  <PanelInvitaciones
-                    invitaciones={estado.invitaciones}
-                    conversaciones={estado.conversaciones}
-                    participantes={estado.participantes}
-                    yo={estado.yo}
-                    onResponder={(i, aceptar) => void responder(i.id, aceptar)}
-                    onCancelar={(i) => void retirar(i.id)}
-                    teclaLlamada={teclaLlamada}
-                  />
-                )}
+                {/* Las llamadas (entrantes y salientes) no van aquí: salen encima de la columna */}
                 <PanelConversaciones
                   conversaciones={estado.conversaciones}
                   participantes={estado.participantes}
@@ -1937,7 +1918,6 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   onEscuchar={(id) => void escuchar(id)}
                   onEntrar={(id) => void entrar(id)}
                   ayuda={ayudaCharlas}
-                  compacto={!preferencias.invitacionesFuera && estado.invitaciones.length > 0}
                 />
               </div>
             ),
@@ -2321,20 +2301,17 @@ const SalaJuego = ({ cuenta, invitado, enfocar, onSalir, onNombreOcupado }: Sala
                   contacto={contacto}
                   pistas={video.plaza}
                 />
-                {/* Si la accesibilidad lo pide, las invitaciones y peticiones de llamada van aquí fuera,
-                    encima de la columna y a la vista se vea el panel que se vea (si no, dentro de Charlas) */}
-                {preferencias.invitacionesFuera && (
-                  <PanelInvitaciones
-                    invitaciones={estado.invitaciones}
-                    conversaciones={estado.conversaciones}
-                    participantes={estado.participantes}
-                    yo={estado.yo}
-                    onResponder={(i, aceptar) => void responder(i.id, aceptar)}
-                    onCancelar={(i) => void retirar(i.id)}
-                    teclaLlamada={teclaLlamada}
-                    fuera
-                  />
-                )}
+                {/* Las llamadas, como un aviso emergente encima de la columna: a la vista se vea el
+                    panel que se vea (o contraída), empujándola hacia abajo para caber */}
+                <PanelInvitaciones
+                  invitaciones={estado.invitaciones}
+                  conversaciones={estado.conversaciones}
+                  participantes={estado.participantes}
+                  yo={estado.yo}
+                  onResponder={(i, aceptar) => void responder(i.id, aceptar)}
+                  onCancelar={(i) => void retirar(i.id)}
+                  teclaLlamada={teclaLlamada}
+                />
                 {/* Mensajes, conversaciones privadas y faroles: uno a la vez, con su barra de iconos */}
                 <ColumnaLateral
                   pestanas={pestanasLaterales}
