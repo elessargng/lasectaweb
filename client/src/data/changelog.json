@@ -1,5 +1,26 @@
 [
   {
+    "version": "1.8.2",
+    "date": "2026-11-13",
+    "title": "Panel Desplegable",
+    "description": "El panel lateral de la sala se pliega pulsando la pestaña que ya está abierta, y el Relojero deja de recibir un 0. Además, se puede elegir la voz neuronal del narrador virtual.",
+    "changes": [
+      {
+        "category": "Sala de Juego",
+        "items": [
+          "Al pulsar la pestaña abierta del panel lateral (Mensajes, Conversaciones, Faroles…), el panel se pliega."
+        ]
+      },
+      {
+        "category": "Narrador",
+        "items": [
+          "Corregido el Relojero: nunca recibe un 0, ni borracho ni envenenado, ni con un Espía que no registra como esbirro.",
+          "Añadida la elección de la voz neuronal del narrador virtual, con su acento, calidad y tamaño."
+        ]
+      }
+    ]
+  },
+  {
     "version": "1.8.1",
     "date": "2026-11-11",
     "title": "Voz Neuronal",
