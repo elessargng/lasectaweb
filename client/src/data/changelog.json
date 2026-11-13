@@ -3,12 +3,22 @@
     "version": "1.8.2",
     "date": "2026-11-13",
     "title": "Panel Desplegable",
-    "description": "El panel lateral de la sala se pliega pulsando la pestaña que ya está abierta, y el Relojero deja de recibir un 0. Además, se puede elegir la voz neuronal del narrador virtual.",
+    "description": "El panel lateral de la sala se pliega pulsando la pestaña que ya está abierta, las llamadas entrantes salen como un aviso emergente encima de la columna y el Relojero deja de recibir un 0. Además, se puede elegir la voz neuronal del narrador virtual.",
     "changes": [
       {
         "category": "Sala de Juego",
         "items": [
           "Al pulsar la pestaña abierta del panel lateral (Mensajes, Conversaciones, Faroles…), el panel se pliega."
+        ]
+      },
+      {
+        "category": "Comunicaciones",
+        "items": [
+          "Las llamadas entrantes salen como un aviso emergente encima de la columna lateral, a la vista sea cual sea la pestaña abierta.",
+          "Las llamadas dicen «te llama» y se responden con los botones de descolgar y colgar.",
+          "El botón de descolgar muestra la tecla que coge la llamada, y el lector de pantalla la lee con su nombre.",
+          "Las llamadas que haces salen en el mismo aviso, con el botón de colgar para retirarlas.",
+          "Eliminada la opción de Accesibilidad para mostrar las llamadas fuera del panel de Charlas, que ya salen siempre fuera."
         ]
       },
       {
