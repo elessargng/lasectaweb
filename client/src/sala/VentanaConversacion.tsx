@@ -37,6 +37,30 @@ const enumerar = (nombres: string[]) =>
 const ANCHO_PEQUENA = 288;
 const PASO = 24;
 
+/** La ventana grande: su ancho mínimo, el de entrada (60rem, sin pasar del 92 % de la pantalla) y el paso de las flechas. */
+const ANCHO_MINIMO = 320;
+const anchoDefecto = () => Math.min(window.innerWidth * 0.92, 960);
+const anchoMaximo = () => Math.max(ANCHO_MINIMO, window.innerWidth * 0.96);
+const PASO_TAMANO = 40;
+/** El ancho que se eligió la última vez (en este navegador), para las siguientes conversaciones. */
+const KEY_ANCHO = 'sala:anchoConversacion';
+const anchoGuardado = (): number | null => {
+  try {
+    const v = Number(localStorage.getItem(KEY_ANCHO));
+    return Number.isFinite(v) && v >= ANCHO_MINIMO ? v : null;
+  } catch {
+    return null;
+  }
+};
+const guardarAncho = (ancho: number | null) => {
+  try {
+    if (ancho === null) localStorage.removeItem(KEY_ANCHO);
+    else localStorage.setItem(KEY_ANCHO, String(Math.round(ancho)));
+  } catch {
+    // Sin almacenamiento: vale para esta conversación
+  }
+};
+
 /**
  * La llamada privada de quien está en ella: en grande en el centro de la pantalla
  * (sin depender del tamaño de los cuadros de la plaza), con un cuadro por persona
@@ -44,6 +68,12 @@ const PASO = 24;
  * ventanita con las cámaras pequeñas que se puede mover por la pantalla
  * (arrastrando su asa, o con las flechas con el foco en ella); «Ampliar» la
  * vuelve a poner en grande. Escape, con el foco dentro, la minimiza.
+ *
+ * En grande, el asa de la esquina de abajo a la derecha la agranda o la achica
+ * (sigue centrada; las cámaras crecen con ella). Es un control deslizante para el
+ * lector: flechas (y Re Pág / Av Pág, de más en más) para cambiarla, Inicio y Fin
+ * al mínimo y al máximo; con doble clic vuelve al tamaño de entrada. El tamaño se
+ * recuerda en este navegador.
  *
  * No es modal: la plaza y el chat se siguen usando.
  */
@@ -64,6 +94,26 @@ const VentanaConversacion = ({
   const [posicion, setPosicion] = useState(() => ({ x: Math.max(8, window.innerWidth - ANCHO_PEQUENA - 24), y: 80 }));
   const ventanaRef = useRef<HTMLElement>(null);
   const arrastreRef = useRef<{ dx: number; dy: number } | null>(null);
+  // El ancho de la ventana grande (px); null: el de entrada
+  const [ancho, setAncho] = useState<number | null>(anchoGuardado);
+  const [redimensionando, setRedimensionando] = useState(false);
+  const tamanoRef = useRef<{ x: number; y: number; ancho: number } | null>(null);
+  const [, setVentana] = useState(0);
+
+  // Al cambiar la ventana del navegador, el ancho se vuelve a ajustar a lo que cabe
+  useEffect(() => {
+    const alCambiar = () => setVentana((n) => n + 1);
+    window.addEventListener('resize', alCambiar);
+    return () => window.removeEventListener('resize', alCambiar);
+  }, []);
+  const anchoGrande = Math.min(Math.max(ancho ?? anchoDefecto(), ANCHO_MINIMO), anchoMaximo());
+  const cambiarAncho = (nuevo: number | null) => {
+    const ajustado = nuevo === null ? null : Math.min(Math.max(nuevo, ANCHO_MINIMO), anchoMaximo());
+    setAncho(ajustado);
+    guardarAncho(ajustado);
+  };
+  // En % de la pantalla, para el lector y la etiqueta mientras se arrastra
+  const porcentaje = Math.round((anchoGrande / window.innerWidth) * 100);
 
   const miembros = conversacion.miembros
     .map((id) => participantes.find((p) => p.id === id))
@@ -121,6 +171,42 @@ const VentanaConversacion = ({
     colocar(posicion.x + paso[0], posicion.y + paso[1]);
   };
 
+  // Agrandar o achicar la grande por su asa. Sigue centrada: la esquina va con el
+  // puntero si el ancho crece el doble de lo que se mueve (en diagonal, lo que más)
+  const alApretarTamano = (e: PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    tamanoRef.current = { x: e.clientX, y: e.clientY, ancho: anchoGrande };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.currentTarget.focus();
+    setRedimensionando(true);
+  };
+  const alMoverTamano = (e: PointerEvent<HTMLDivElement>) => {
+    const t = tamanoRef.current;
+    if (!t) return;
+    const dx = e.clientX - t.x;
+    const dy = (e.clientY - t.y) * (16 / 9);
+    cambiarAncho(t.ancho + 2 * (Math.abs(dx) >= Math.abs(dy) ? dx : dy));
+  };
+  const alSoltarTamano = () => {
+    tamanoRef.current = null;
+    setRedimensionando(false);
+  };
+  const alTeclearTamano = (e: KeyboardEvent<HTMLDivElement>) => {
+    const destinos: Record<string, number> = {
+      ArrowRight: anchoGrande + PASO_TAMANO,
+      ArrowUp: anchoGrande + PASO_TAMANO,
+      ArrowLeft: anchoGrande - PASO_TAMANO,
+      ArrowDown: anchoGrande - PASO_TAMANO,
+      PageUp: anchoGrande + PASO_TAMANO * 4,
+      PageDown: anchoGrande - PASO_TAMANO * 4,
+      Home: ANCHO_MINIMO,
+      End: anchoMaximo(),
+    };
+    if (!(e.key in destinos)) return;
+    e.preventDefault();
+    cambiarAncho(destinos[e.key]);
+  };
+
   const columnas = minimizada ? 'grid-cols-3' : miembros.length <= 1 ? 'grid-cols-1' : miembros.length <= 4 ? 'grid-cols-2' : 'grid-cols-3';
   // Minimizada, los botones son solo su icono (si no, no caben): el nombre, para el lector
   const boton = `${botonSecundario} flex shrink-0 items-center gap-1 py-1 text-xs ${minimizada ? 'px-1.5' : 'px-2'}`;
@@ -130,12 +216,12 @@ const VentanaConversacion = ({
     <section
       ref={ventanaRef}
       aria-labelledby="sala-conversacion-titulo"
-      style={minimizada ? { left: posicion.x, top: posicion.y, width: ANCHO_PEQUENA } : undefined}
+      style={minimizada ? { left: posicion.x, top: posicion.y, width: ANCHO_PEQUENA } : { width: anchoGrande }}
       className={`fixed z-40 flex flex-col gap-2 sala-cofre backdrop-blur ${
         minimizada
           ? 'p-2'
-          : 'left-1/2 top-1/2 max-h-[85vh] w-[min(92vw,60rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto overflow-x-hidden p-4'
-      }`}
+          : 'left-1/2 top-1/2 max-h-[92vh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto overflow-x-hidden p-4'
+      } ${redimensionando ? 'select-none' : ''}`}
     >
       <div className="flex items-center gap-2">
         {minimizada && (
@@ -250,6 +336,47 @@ const VentanaConversacion = ({
           {oyentes.length > 1 ? 'Escuchan (no hablan ni se ven' : 'Escucha (no habla ni se ve'}
           {escucho ? '' : '; los jugadores no lo saben'}): <NombresOyentes nombres={oyentes.map((o) => (o.id === yo ? 'tú' : o.nombre))} />
         </p>
+      )}
+
+      {/* El asa para agrandarla o achicarla: pegada a la esquina de abajo a la derecha
+          (también si se desplaza el contenido). Para el lector, un control deslizante */}
+      {!minimizada && (
+        <div className="pointer-events-none sticky bottom-0 -mb-4 -mr-4 -mt-2 flex justify-end">
+          {redimensionando && (
+            <span aria-hidden="true" className="sala-asa-tamano-cifra">
+              {porcentaje} %
+            </span>
+          )}
+          <div
+            role="slider"
+            tabIndex={0}
+            aria-label="Tamaño de la conversación"
+            aria-describedby="sala-conversacion-tamano"
+            aria-orientation="horizontal"
+            aria-valuemin={Math.round((ANCHO_MINIMO / window.innerWidth) * 100)}
+            aria-valuemax={Math.round((anchoMaximo() / window.innerWidth) * 100)}
+            aria-valuenow={porcentaje}
+            aria-valuetext={`${porcentaje} % del ancho de la pantalla`}
+            title="Arrastra para cambiar el tamaño (doble clic: el de entrada)"
+            onPointerDown={alApretarTamano}
+            onPointerMove={alMoverTamano}
+            onPointerUp={alSoltarTamano}
+            onPointerCancel={alSoltarTamano}
+            onLostPointerCapture={alSoltarTamano}
+            onDoubleClick={() => cambiarAncho(null)}
+            onKeyDown={alTeclearTamano}
+            className="sala-asa-tamano pointer-events-auto"
+            data-activa={redimensionando || undefined}
+          >
+            {/* Tres trazos en diagonal, como el asa de una ventana */}
+            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+              <path d="M14 6 L6 14 M14 10 L10 14 M14 14 L14 14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+            </svg>
+          </div>
+          <span id="sala-conversacion-tamano" className="sr-only">
+            Flechas para agrandarla o achicarla; Inicio y Fin, al mínimo y al máximo.
+          </span>
+        </div>
       )}
     </section>
   );

@@ -586,6 +586,55 @@
   .sala-llamada-boton { border-color: ButtonText; forced-color-adjust: auto; }
 }
 
+/*
+ * El asa de la conversación privada en grande (VentanaConversacion): en la esquina
+ * de abajo a la derecha, tres trazos de latón que se doran al pasar o al arrastrar.
+ */
+.sala-asa-tamano {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0.3rem;
+  border-top-left-radius: 0.6rem;
+  color: rgba(var(--gold-rgb), 0.55);
+  cursor: nwse-resize;
+  touch-action: none;
+  transition: color 0.2s ease, background-color 0.2s ease, filter 0.2s ease;
+}
+.sala-asa-tamano:hover,
+.sala-asa-tamano[data-activa] {
+  color: var(--color-gold-bright);
+  background: radial-gradient(circle at 100% 100%, rgba(var(--gold-rgb), 0.22), transparent 70%);
+  filter: drop-shadow(0 0 4px rgba(var(--gold-rgb), 0.6));
+}
+.sala-asa-tamano:focus-visible {
+  outline: 2px solid var(--color-gold-bright);
+  outline-offset: -2px;
+  color: var(--color-gold-bright);
+}
+/* Mientras se arrastra: cuánto ocupa, en una plaquita al lado del asa */
+.sala-asa-tamano-cifra {
+  align-self: center;
+  margin-right: 0.35rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(var(--gold-rgb), 0.5);
+  background: var(--theme-background);
+  color: var(--color-gold-bright);
+  font-family: ui-monospace, monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sala-asa-tamano { transition: none; }
+}
+@media (forced-colors: active) {
+  .sala-asa-tamano { color: ButtonText; }
+}
+
 /* Opción de un menú desplegable */
 .sala-opcion {
   position: relative;
