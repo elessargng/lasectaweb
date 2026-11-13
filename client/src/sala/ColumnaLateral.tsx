@@ -57,7 +57,8 @@ const claseBoton = (elegido: boolean) =>
  * «expandido»). Contraída queda solo la barra de iconos, con sus contadores; ya
  * no son pestañas sino botones que despliegan el panel de cada uno y llevan el
  * foco a su pestaña. El botón «Panel» es el mismo en los dos estados, así que
- * el foco no se pierde al pulsarlo.
+ * el foco no se pierde al pulsarlo. Desplegada, pulsar la pestaña que ya se ve
+ * la contrae igual que «Panel» (el botón sigue siendo el mismo y conserva el foco).
  *
  * En pantallas anchas, el panel se mete a la izquierda, detrás de la barra (la
  * caja se estrecha hasta el ancho de la barra y el contenido se desliza), y al
@@ -146,7 +147,8 @@ const ColumnaLateral = ({ pestanas, activa, onElegir, contraida, onContraer, fij
                 aria-selected={elegida}
                 aria-controls={idPanel(id)}
                 tabIndex={elegida ? 0 : -1}
-                onClick={() => onElegir(id)}
+                // Pulsar la que ya se ve la contrae (como «Panel»); otra, la elige
+                onClick={() => (elegida ? onContraer(true) : onElegir(id))}
                 onKeyDown={alTeclear}
                 className={`${claseBoton(elegida)} lg:flex-none`}
               >
