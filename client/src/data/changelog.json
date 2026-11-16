@@ -3,7 +3,7 @@
     "version": "1.8.2",
     "date": "2026-11-13",
     "title": "Panel Desplegable",
-    "description": "El panel lateral de la sala se pliega pulsando la pestaña que ya está abierta, las llamadas entrantes salen como un aviso emergente encima de la columna y el Relojero deja de recibir un 0. Además, se puede elegir la voz neuronal del narrador virtual.",
+    "description": "El panel lateral de la sala se pliega pulsando la pestaña que ya está abierta, las llamadas entrantes salen como un aviso emergente encima de la columna y el Relojero deja de recibir un 0. Las partidas presenciales también tienen fotos. Además, se puede elegir la voz neuronal del narrador virtual.",
     "changes": [
       {
         "category": "Sala de Juego",
@@ -27,6 +27,14 @@
         "items": [
           "Corregido el Relojero: nunca recibe un 0, ni borracho ni envenenado, ni con un Espía que no registra como esbirro.",
           "Añadida la elección de la voz neuronal del narrador virtual, con su acento, calidad y tamaño."
+        ]
+      },
+      {
+        "category": "Rituales",
+        "items": [
+          "Las partidas presenciales también llevan fotos: cualquier persona registrada sube las suyas desde la ficha de la partida, públicas o privadas.",
+          "En las partidas presenciales periódicas, cada foto se queda en la sesión en la que se subió.",
+          "Las fotos de las partidas presenciales salen en la vista «Fotos», en la lista y en el carrusel de la línea, junto a las de los eventos."
         ]
       }
     ]
