@@ -23,6 +23,7 @@ import {
   keyOf,
   monthGrid,
   parseDayKey,
+  photosByOccurrence,
   startOfDay,
   startOfWeek
 } from '../components/rituales/ritualDates';
@@ -129,7 +130,7 @@ const Rituales = () => {
 
   const fetchTimeline = useCallback(async () => {
     try {
-      setTimeline(await listPhotoTimeline(token));
+      setTimeline(photosByOccurrence(await listPhotoTimeline(token)));
     } catch (err) {
       setTimeline([]);
       setError(err instanceof Error ? err.message : 'No se pudieron cargar las fotos.');
@@ -339,7 +340,7 @@ const Rituales = () => {
           {/* Cabecera: mes, navegación y vista */}
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-5 mb-7">
             {enFotos ? (
-              <h2 className="font-display text-3xl md:text-[2.6rem] text-gilded leading-tight">Fotos de los eventos</h2>
+              <h2 className="font-display text-3xl md:text-[2.6rem] text-gilded leading-tight">Fotos de eventos y partidas</h2>
             ) : (
             <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
               <div>
@@ -389,7 +390,7 @@ const Rituales = () => {
             </div>
           </div>
 
-          {/* Leyenda: también sirve de filtro (no en las fotos, que son todas de eventos) */}
+          {/* Leyenda: también sirve de filtro (no en las fotos, que son solo de eventos y partidas presenciales) */}
           {/* El color de cada tipo solo vive en su icono; el chip en sí sigue el latón de la web */}
           {!enFotos && (
           <div role="group" aria-label="Mostrar tipos de ritual" className="flex flex-wrap gap-2 mb-7 pb-6 border-b border-outline-ghost/60">

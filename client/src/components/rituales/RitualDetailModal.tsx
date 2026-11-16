@@ -14,7 +14,7 @@ import {
   Users,
   X
 } from 'lucide-react';
-import type { Ritual } from '../../utils/ritualsApi';
+import { admiteFotos, type Ritual } from '../../utils/ritualsApi';
 import RitualPhotos from './RitualPhotos';
 import Dialog from '../Dialog';
 import { RITUAL_KINDS, alpha, kindOf } from './ritualKinds';
@@ -211,8 +211,8 @@ export const RitualDetailModal = ({ ritual, canManage, token, userId, onPhotosCh
             </section>
           )}
 
-          {/* Fotos: solo en los eventos de La Secta; las sube cualquier persona registrada */}
-          {ritual.type === 'jornada' && ritual.source === 'secta' && (
+          {/* Fotos: en los eventos y las partidas presenciales de La Secta; las sube cualquier persona registrada */}
+          {admiteFotos(ritual) && (
             <RitualPhotos ritual={ritual} token={token} userId={userId} canManage={canManage} onChanged={onPhotosChanged} />
           )}
 

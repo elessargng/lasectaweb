@@ -116,11 +116,51 @@ export function expandOccurrences(rituals: Ritual[], from: Date, to: Date): Ritu
         startsAt: iso,
         seriesStartsAt: r.startsAt,
         occurrenceKey: `${r.id}@${iso}`,
-        attendees: r.attendees?.filter((a) => a.occurrence === iso)
+        attendees: r.attendees?.filter((a) => a.occurrence === iso),
+        photos: photosOf(r, iso)
       });
     }
   }
   return result.sort(compareRituals);
+}
+
+/**
+ * Las fotos de una repetición de la serie. Las que no dicen de cuál son (subidas antes
+ * de que el ritual fuera una serie) van a la primera.
+ */
+function photosOf(r: Ritual, iso: string): Ritual['photos'] {
+  if (!r.photos) return undefined;
+  const first = new Date(r.startsAt).toISOString();
+  const own = r.photos.filter((p) => (p.occurrence ?? first) === iso);
+  return own.length > 0 ? own : undefined;
+}
+
+/**
+ * La línea de tiempo de las fotos con cada serie repartida en las repeticiones que
+ * tienen fotos (cada una en su fecha y con su clave, como al desplegar la agenda),
+ * de la más reciente a la más antigua.
+ */
+export function photosByOccurrence(rituals: Ritual[]): Ritual[] {
+  const result: Ritual[] = [];
+  for (const r of rituals) {
+    if (!r.recurrenceDays && !r.recurrenceMonths) {
+      result.push(r);
+      continue;
+    }
+    const first = new Date(r.startsAt).toISOString();
+    const isos = new Set((r.photos ?? []).map((p) => p.occurrence ?? first));
+    for (const iso of isos) {
+      result.push({
+        ...r,
+        startsAt: iso,
+        seriesStartsAt: r.startsAt,
+        occurrenceKey: `${r.id}@${iso}`,
+        attendees: r.attendees?.filter((a) => a.occurrence === iso),
+        photos: photosOf(r, iso)
+      });
+    }
+  }
+  return result.sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime());
 }
 
 const ORDINALS = ['primer', 'segundo', 'tercer', 'cuarto'];

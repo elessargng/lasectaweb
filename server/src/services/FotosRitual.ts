@@ -5,6 +5,7 @@ import {
   MAX_PHOTOS_PER_PERSON,
   MAX_PHOTOS_PER_UPLOAD,
   MAX_RITUAL_PHOTO_ALT,
+  admiteFotos,
   puedeVerFoto,
   type Ritual,
   type RitualPhoto
@@ -26,8 +27,9 @@ interface FotoNueva {
 const coleccion = (ritualId: string) => `rituales/${ritualId}`;
 
 /**
- * Las fotos de los eventos: las sube cualquier persona registrada (antes, durante o
- * después del evento), cada una pública o privada (solo la ve quien la subió).
+ * Las fotos de los eventos y de las partidas presenciales: las sube cualquier persona
+ * registrada (antes, durante o después), cada una pública o privada (solo la ve quien
+ * la subió). En una serie periódica, cada foto es de una repetición.
  */
 export class FotosRitual {
   constructor(
@@ -37,9 +39,9 @@ export class FotosRitual {
     private readonly usuarios: UserRepository
   ) {}
 
-  /** A los eventos, las fotos que puede ver quien los pide (los demás rituales no llevan). */
+  /** A los eventos y partidas presenciales, las fotos que puede ver quien los pide (los demás rituales no llevan). */
   async adjuntar(rituals: Ritual[], viewerId?: string): Promise<Ritual[]> {
-    const eventos = rituals.filter((r) => r.type === 'jornada' && r.source === 'secta');
+    const eventos = rituals.filter(admiteFotos);
     const porEvento = await this.fotos.listForRituals(eventos.map((r) => r.id));
     for (const r of eventos) {
       const visibles = (porEvento.get(r.id) ?? []).filter((f) => puedeVerFoto(f, viewerId));
@@ -48,20 +50,27 @@ export class FotosRitual {
     return rituals;
   }
 
-  /** Los eventos con fotos que puede ver quien la pide, del más reciente al más antiguo. */
+  /**
+   * Los eventos y partidas presenciales con fotos que puede ver quien la pide, del más
+   * reciente al más antiguo (una serie, una vez: el cliente la reparte por repeticiones).
+   */
   async lineaDeTiempo(viewerId?: string): Promise<Ritual[]> {
     return (await this.adjuntar(await this.rituales.listWithPhotos(), viewerId)).filter((r) => r.photos);
   }
 
-  /** Sube fotos a un evento: se comprueban todas antes de guardar nada. */
-  async subir(userId: string, ritualId: string, raw: unknown): Promise<void> {
+  /**
+   * Sube fotos a un evento o partida presencial (en una serie, a una de sus
+   * repeticiones): se comprueban todas antes de guardar nada.
+   */
+  async subir(userId: string, ritualId: string, raw: unknown, rawOccurrence?: unknown): Promise<void> {
     const ritual = await this.rituales.findById(ritualId);
     if (!ritual) throw new Error('El ritual no existe.');
-    if (ritual.type !== 'jornada') throw new Error('Solo los eventos llevan fotos.');
+    if (!admiteFotos(ritual)) throw new Error('Solo los eventos y las partidas presenciales llevan fotos.');
+    const occurrence = repeticion(ritual, rawOccurrence);
     const nuevas = comprobarFotos(raw);
     const yaSubidas = await this.fotos.countByUser(ritualId, userId);
     if (yaSubidas + nuevas.length > MAX_PHOTOS_PER_PERSON) {
-      throw new Error(`Cada persona puede subir ${MAX_PHOTOS_PER_PERSON} fotos a un evento como mucho (llevas ${yaSubidas}).`);
+      throw new Error(`Cada persona puede subir ${MAX_PHOTOS_PER_PERSON} fotos a un evento o partida como mucho (llevas ${yaSubidas}).`);
     }
 
     const ahora = new Date().toISOString();
@@ -74,7 +83,8 @@ export class FotosRitual {
           alt: f.alt,
           public: f.public,
           uploadedBy: userId,
-          uploadedAt: ahora
+          uploadedAt: ahora,
+          occurrence
         });
       }
       await this.fotos.add(ritualId, guardadas);
@@ -130,6 +140,20 @@ export class FotosRitual {
       console.warn('[RITUALES] No se ha podido borrar una foto:', (error as Error).message);
     }
   }
+}
+
+/**
+ * La repetición de la serie a la que van las fotos (su inicio, en ISO), o undefined
+ * si el ritual no es una serie. Tiene que caer dentro de la serie.
+ */
+function repeticion(ritual: Ritual, raw: unknown): string | undefined {
+  if (!ritual.recurrenceDays && !ritual.recurrenceMonths) return undefined;
+  const date = new Date(String(raw ?? ''));
+  if (isNaN(date.getTime())) throw new Error('Indica de qué partida de la serie son las fotos.');
+  if (date < new Date(ritual.startsAt) || (ritual.recurrenceUntil && date > new Date(ritual.recurrenceUntil))) {
+    throw new Error('Esa fecha no pertenece a la serie.');
+  }
+  return date.toISOString();
 }
 
 /** Las fotos que llegan (en data URL), comprobadas: cada una con lo que se ve en ella y si es pública. */

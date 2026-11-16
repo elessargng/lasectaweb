@@ -1,10 +1,10 @@
 import { MapPin } from 'lucide-react';
 import type { Ritual } from '../../utils/ritualsApi';
-import { describeDates } from './ritualDates';
+import { describeDates, keyOf } from './ritualDates';
 import { PhotoGrid } from './RitualPhotos';
 
 interface RitualPhotoTimelineProps {
-  /** Los eventos con fotos, del más reciente al más antiguo. */
+  /** Los eventos y partidas presenciales con fotos, del más reciente al más antiguo. */
   rituals: Ritual[];
   onOpen: (ritual: Ritual) => void;
 }
@@ -17,7 +17,7 @@ export const RitualPhotoTimeline = ({ rituals, onOpen }: RitualPhotoTimelineProp
   if (rituals.length === 0) {
     return (
       <p className="text-center py-12 text-on-surface-muted italic font-body border border-dashed border-outline-ghost/70">
-        Aún no hay fotos de ningún evento.
+        Aún no hay fotos de ningún evento ni partida.
       </p>
     );
   }
@@ -27,7 +27,7 @@ export const RitualPhotoTimeline = ({ rituals, onOpen }: RitualPhotoTimelineProp
       {rituals.map((ritual) => {
         const start = new Date(ritual.startsAt);
         return (
-          <li key={ritual.id} className="relative pl-9 md:pl-10 pb-10 last:pb-0">
+          <li key={keyOf(ritual)} className="relative pl-9 md:pl-10 pb-10 last:pb-0">
             {/* El sello de la fecha: lo dice el texto de debajo */}
             <div
               aria-hidden="true"

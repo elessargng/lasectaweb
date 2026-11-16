@@ -57,14 +57,14 @@ export class RitualController {
     }
   };
 
-  /** Cualquier persona registrada sube fotos a un evento. */
+  /** Cualquier persona registrada sube fotos a un evento o partida presencial (en una serie, a una repetición). */
   uploadPhotos = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       if (!req.user) {
         res.status(401).json({ error: 'No autorizado.' });
         return;
       }
-      await this.fotos.subir(req.user.id, ritualId(req), req.body?.photos);
+      await this.fotos.subir(req.user.id, ritualId(req), req.body?.photos, req.body?.occurrence);
       res.status(201).json(await this.ritualService.getById(ritualId(req), req.user.id));
     } catch (error: any) {
       res.status(errorStatus(error.message)).json({ error: error.message });

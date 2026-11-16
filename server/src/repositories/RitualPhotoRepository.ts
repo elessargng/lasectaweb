@@ -47,8 +47,8 @@ export class RitualPhotoRepository {
     try {
       for (const p of photos) {
         await db.run(
-          'INSERT INTO ritual_photos (id, ritualId, src, alt, public, uploadedBy, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [p.id, ritualId, p.src, p.alt, p.public ? 1 : 0, p.uploadedBy, p.uploadedAt]
+          'INSERT INTO ritual_photos (id, ritualId, src, alt, public, uploadedBy, createdAt, occurrence) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [p.id, ritualId, p.src, p.alt, p.public ? 1 : 0, p.uploadedBy, p.uploadedAt, p.occurrence ?? '']
         );
       }
       await db.exec('COMMIT;');
@@ -76,7 +76,8 @@ export class RitualPhotoRepository {
       public: !!row.public,
       uploadedBy: row.uploadedBy,
       uploadedByUsername: row.uploadedByUsername ?? undefined,
-      uploadedAt: row.createdAt
+      uploadedAt: row.createdAt,
+      occurrence: row.occurrence || undefined
     };
   }
 }

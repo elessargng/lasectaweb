@@ -188,7 +188,7 @@ export const RitualPhotos = ({ ritual, token, userId, canManage, onChanged }: Ri
     setEnviando(true);
     const n = nuevas.length;
     const ok = await hacer(
-      () => uploadRitualPhotos(token, ritual.id, nuevas.map((f) => ({ src: f.src, alt: f.alt.trim(), public: f.public }))),
+      () => uploadRitualPhotos(token, ritual,nuevas.map((f) => ({ src: f.src, alt: f.alt.trim(), public: f.public }))),
       n === 1 ? 'Foto subida.' : `${n} fotos subidas.`,
       'titulo'
     );
@@ -203,7 +203,7 @@ export const RitualPhotos = ({ ritual, token, userId, canManage, onChanged }: Ri
       </h3>
 
       {photos.length === 0 ? (
-        <p className="text-sm italic text-on-surface-muted">Aún no hay fotos de este evento.</p>
+        <p className="text-sm italic text-on-surface-muted">Aún no hay fotos.</p>
       ) : (
         <ul className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {photos.map((photo, i) => {
@@ -254,7 +254,7 @@ export const RitualPhotos = ({ ritual, token, userId, canManage, onChanged }: Ri
       </p>
 
       {!token ? (
-        <p className="text-xs italic text-on-surface-muted">Inicia sesión para subir tus fotos del evento.</p>
+        <p className="text-xs italic text-on-surface-muted">Inicia sesión para subir tus fotos.</p>
       ) : (
         <>
           {nuevas.length > 0 && (

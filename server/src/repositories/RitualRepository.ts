@@ -36,7 +36,7 @@ export class RitualRepository {
     const db = await DatabaseRepository.getInstance();
     const rows = await db.all<any[]>(
       `${SELECT_RITUAL}
-        WHERE r.type = 'jornada' AND EXISTS (SELECT 1 FROM ritual_photos p WHERE p.ritualId = r.id)
+        WHERE r.type IN ('jornada', 'partida_presencial') AND EXISTS (SELECT 1 FROM ritual_photos p WHERE p.ritualId = r.id)
         ORDER BY r.startsAt DESC`
     );
     return rows.map((row) => this.mapRow(row));

@@ -31,8 +31,8 @@ export interface RitualAttendee {
 export const MAX_PHOTOS_PER_UPLOAD = 8;
 
 /**
- * Una foto de un evento, que sube cualquier persona registrada: lo que se ve en ella y
- * si la ve todo el mundo o solo quien la subió.
+ * Una foto de un evento o de una partida presencial, que sube cualquier persona
+ * registrada: lo que se ve en ella y si la ve todo el mundo o solo quien la subió.
  */
 export interface RitualPhoto {
   id: string;
@@ -42,6 +42,13 @@ export interface RitualPhoto {
   uploadedBy: string;
   uploadedByUsername?: string;
   uploadedAt: string;
+  /** En una serie periódica, el inicio (ISO) de la repetición a la que pertenece. */
+  occurrence?: string;
+}
+
+/** Si a un ritual se le pueden subir fotos: los eventos y las partidas presenciales de La Secta. */
+export function admiteFotos(ritual: Pick<Ritual, 'type' | 'source'>): boolean {
+  return ritual.source === 'secta' && (ritual.type === 'jornada' || ritual.type === 'partida_presencial');
 }
 
 /** Una foto al subirla: la imagen en data URL. */
@@ -86,7 +93,7 @@ export interface Ritual {
    * repetición se queda solo con la suya.
    */
   attendees?: RitualAttendee[];
-  /** Solo en los eventos: las fotos públicas y las privadas propias, en el orden en que se subieron. */
+  /** Solo en los eventos y las partidas presenciales (al desplegar una serie, las de cada repetición): las fotos públicas y las privadas propias, en el orden en que se subieron. */
   photos?: RitualPhoto[];
   /**
    * Solo en el cliente, al desplegar una serie periódica: cuándo empieza la
@@ -142,7 +149,10 @@ export async function listRituals(from: Date, to: Date, token?: string | null): 
   return parseApiResponse(await fetch(`${API_URL}/rituals?${params}`, { headers: sessionHeaders(token) }));
 }
 
-/** Los eventos con fotos (las públicas y las privadas propias), del más reciente al más antiguo. */
+/**
+ * Los eventos y partidas presenciales con fotos (las públicas y las privadas propias), del
+ * más reciente al más antiguo. Una serie llega una vez: se reparte con photosByOccurrence.
+ */
 export async function listPhotoTimeline(token?: string | null): Promise<Ritual[]> {
   return parseApiResponse(await fetch(`${API_URL}/rituals/photos`, { headers: sessionHeaders(token) }));
 }
@@ -186,9 +196,14 @@ export async function leaveRitual(token: string, ritual: Ritual): Promise<void> 
   );
 }
 
-export async function uploadRitualPhotos(token: string, ritualId: string, photos: NewRitualPhoto[]): Promise<void> {
+/** Sube fotos a un evento o partida presencial; en una serie, a la repetición que se está viendo. */
+export async function uploadRitualPhotos(token: string, ritual: Ritual, photos: NewRitualPhoto[]): Promise<void> {
   await parseApiResponse(
-    await fetch(`${API_URL}/rituals/${ritualId}/photos`, { method: 'POST', headers: authHeaders(token), body: JSON.stringify({ photos }) })
+    await fetch(`${API_URL}/rituals/${ritual.id}/photos`, {
+      method: 'POST',
+      headers: authHeaders(token),
+      body: JSON.stringify({ photos, occurrence: occurrenceOf(ritual) })
+    })
   );
 }
 

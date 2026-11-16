@@ -4,10 +4,10 @@ import type { Ritual } from '../../utils/ritualsApi';
 import { urlDelServidor } from '../../utils/api';
 import RitualPhotoTimeline from './RitualPhotoTimeline';
 import { PhotoLink } from './RitualPhotos';
-import { addDays, describeDates, startOfDay } from './ritualDates';
+import { addDays, describeDates, keyOf, startOfDay } from './ritualDates';
 
 interface RitualPhotoAlbumProps {
-  /** Todos los eventos con fotos que se pueden ver, del más reciente al más antiguo. */
+  /** Todos los eventos y partidas presenciales (cada repetición de una serie, aparte) con fotos que se pueden ver, del más reciente al más antiguo. */
   rituals: Ritual[];
   onOpen: (ritual: Ritual) => void;
 }
@@ -48,7 +48,7 @@ export const RitualPhotoAlbum = ({ rituals, onOpen }: RitualPhotoAlbumProps) => 
   const inicio = new Date(anio, desde, 1);
   const fin = new Date(anio, hasta + 1, 1);
   const enPeriodo = rituals.filter((r) => new Date(r.startsAt) < fin && new Date(r.endsAt ?? r.startsAt) >= inicio);
-  const elegidoEnPeriodo = enPeriodo.find((r) => r.id === elegido) ?? null;
+  const elegidoEnPeriodo = enPeriodo.find((r) => keyOf(r) === elegido) ?? null;
   const periodo =
     desde === 0 && hasta === 11
       ? `${anio}`
@@ -117,8 +117,8 @@ export const RitualPhotoAlbum = ({ rituals, onOpen }: RitualPhotoAlbumProps) => 
       {/* Cuántos hay: se anuncia al cambiar el periodo */}
       <p role="status" className="text-sm text-on-surface-muted -mt-2">
         {enPeriodo.length === 0
-          ? `No hay fotos de eventos en ${periodo}.`
-          : `${enPeriodo.length === 1 ? 'Un evento' : `${enPeriodo.length} eventos`} con fotos en ${periodo}.`}
+          ? `No hay fotos de eventos ni partidas en ${periodo}.`
+          : `${enPeriodo.length === 1 ? 'Un evento o partida' : `${enPeriodo.length} eventos y partidas`} con fotos en ${periodo}.`}
       </p>
 
       {enPeriodo.length > 0 &&
@@ -132,14 +132,14 @@ export const RitualPhotoAlbum = ({ rituals, onOpen }: RitualPhotoAlbumProps) => 
               fin={fin}
               mesesDesde={desde}
               mesesHasta={hasta}
-              elegido={elegidoEnPeriodo?.id ?? null}
+              elegido={elegidoEnPeriodo ? keyOf(elegidoEnPeriodo) : null}
               onElegir={setElegido}
             />
             {elegidoEnPeriodo ? (
-              <CarruselFotos key={elegidoEnPeriodo.id} ritual={elegidoEnPeriodo} onOpen={onOpen} />
+              <CarruselFotos key={keyOf(elegidoEnPeriodo)} ritual={elegidoEnPeriodo} onOpen={onOpen} />
             ) : (
               <p className="text-center py-8 text-on-surface-muted italic font-body border border-dashed border-outline-ghost/70">
-                Elige un evento de la línea para ver sus fotos.
+                Elige un evento o partida de la línea para ver sus fotos.
               </p>
             )}
           </>
@@ -215,11 +215,11 @@ const LineaDeEventos = ({ rituals, inicio, fin, mesesDesde, mesesHasta, elegido,
 
         <ol>
           {puntos.map(({ ritual, x, xFin, carril }) => {
-            const activo = ritual.id === elegido;
+            const activo = keyOf(ritual) === elegido;
             const n = ritual.photos?.length ?? 0;
             const abajo = 24 - 7 + carril * ALTO_CARRIL;
             return (
-              <li key={ritual.id}>
+              <li key={keyOf(ritual)}>
                 {xFin - x > 0.5 && (
                   <span
                     aria-hidden="true"
@@ -229,7 +229,7 @@ const LineaDeEventos = ({ rituals, inicio, fin, mesesDesde, mesesHasta, elegido,
                 )}
                 <button
                   type="button"
-                  onClick={() => onElegir(ritual.id)}
+                  onClick={() => onElegir(keyOf(ritual))}
                   aria-pressed={activo}
                   aria-label={`${ritual.title}, ${describeDates(ritual)}, ${fotos(n)}`}
                   data-tip={ritual.title}

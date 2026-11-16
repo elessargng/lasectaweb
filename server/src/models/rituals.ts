@@ -35,9 +35,9 @@ export interface RitualAttendee {
 }
 
 /**
- * Una foto de un evento, que sube cualquier persona registrada (antes, durante o
- * después): lo que se ve en ella (para quien no la ve) y si la ve todo el mundo o
- * solo quien la subió.
+ * Una foto de un evento o de una partida presencial, que sube cualquier persona
+ * registrada (antes, durante o después): lo que se ve en ella (para quien no la ve)
+ * y si la ve todo el mundo o solo quien la subió.
  */
 export interface RitualPhoto {
   id: string;
@@ -47,6 +47,13 @@ export interface RitualPhoto {
   uploadedBy: string;
   uploadedByUsername?: string;
   uploadedAt: string;
+  /** En una serie periódica, el inicio (ISO) de la repetición a la que pertenece. */
+  occurrence?: string;
+}
+
+/** Si a un ritual se le pueden subir fotos: los eventos y las partidas presenciales de La Secta. */
+export function admiteFotos(ritual: Pick<Ritual, 'type' | 'source'>): boolean {
+  return ritual.source === 'secta' && (ritual.type === 'jornada' || ritual.type === 'partida_presencial');
 }
 
 /** Si alguien (o nadie, sin sesión) puede ver una foto: las públicas, todos; las privadas, quien la subió. */
@@ -107,7 +114,7 @@ export interface Ritual {
    * las de todas sus repeticiones, cada una con su occurrence.
    */
   attendees?: RitualAttendee[];
-  /** Solo en los eventos: las fotos que puede ver quien lo pide, en el orden en que se subieron. */
+  /** Solo en los eventos y las partidas presenciales: las fotos que puede ver quien lo pide, en el orden en que se subieron. */
   photos?: RitualPhoto[];
   status: RitualStatus;
   createdBy: string;

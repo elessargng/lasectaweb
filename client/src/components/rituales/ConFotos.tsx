@@ -12,7 +12,7 @@ const tieneFotos = (ritual: Ritual) => (ritual.photos?.length ?? 0) > 0;
 export const ConFotos = ({ ritual, className = '' }: { ritual: Ritual; className?: string }) =>
   tieneFotos(ritual) ? (
     <>
-      <span aria-hidden="true" data-tip="Hay fotos del evento" className={`inline-flex shrink-0 text-theme-main ${className}`}>
+      <span aria-hidden="true" data-tip="Hay fotos" className={`inline-flex shrink-0 text-theme-main ${className}`}>
         <Camera className="w-3.5 h-3.5" />
       </span>
       <span className="sr-only">, con fotos</span>

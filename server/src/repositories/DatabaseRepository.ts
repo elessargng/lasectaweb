@@ -1072,6 +1072,15 @@ export class DatabaseRepository {
         }
       }
     });
+
+    // Migración 036: fotos de las partidas presenciales, cada una de su repetición
+    //
+    // Las partidas presenciales también llevan fotos y pueden ser periódicas: cada
+    // foto se queda con la repetición de la serie en la que se hizo (su inicio, en
+    // ISO), como las inscripciones. Vacío en lo que no es una serie.
+    await this.applyMigration('036_ritual_photos_occurrence', async (db) => {
+      await db.exec(`ALTER TABLE ritual_photos ADD COLUMN occurrence TEXT NOT NULL DEFAULT '';`);
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {
