@@ -357,6 +357,10 @@ app.delete('/api/rituals/:id', authenticateJWT as express.RequestHandler, ritual
 // Apuntarse y desapuntarse: cualquier persona registrada.
 app.post('/api/rituals/:id/signups', authenticateJWT as express.RequestHandler, ritualController.signUp as express.RequestHandler);
 app.delete('/api/rituals/:id/signups', authenticateJWT as express.RequestHandler, ritualController.leave as express.RequestHandler);
+// Eventos gestionados: quien organiza acepta, rechaza o inscribe a mano
+app.get('/api/rituals/:id/signups/candidates', authenticateJWT as express.RequestHandler, ritualController.listSignupCandidates as express.RequestHandler);
+app.put('/api/rituals/:id/signups/:userId', authenticateJWT as express.RequestHandler, ritualController.acceptSignup as express.RequestHandler);
+app.delete('/api/rituals/:id/signups/:userId', authenticateJWT as express.RequestHandler, ritualController.removeSignup as express.RequestHandler);
 // Fotos de los eventos: las sube cualquier persona registrada
 app.post('/api/rituals/:id/photos', authenticateJWT as express.RequestHandler, ritualController.uploadPhotos as express.RequestHandler);
 app.patch('/api/rituals/:id/photos/:photoId', authenticateJWT as express.RequestHandler, ritualController.updatePhoto as express.RequestHandler);

@@ -1081,6 +1081,21 @@ export class DatabaseRepository {
     await this.applyMigration('036_ritual_photos_occurrence', async (db) => {
       await db.exec(`ALTER TABLE ritual_photos ADD COLUMN occurrence TEXT NOT NULL DEFAULT '';`);
     });
+
+    // Migración 037: eventos gestionados
+    //
+    // Quien convoca un evento puede gestionar su inscripción: quien se apunta queda
+    // pendiente hasta que la organización la acepta (el pago suele ir por fuera, un
+    // Bizum…). acceptedAt marca la inscripción aceptada y acceptedSeq fija el orden
+    // en que se aceptó, que es el que se muestra (no el de la solicitud). En lo que
+    // no se gestiona no se usan: ahí todo el que se apunta cuenta.
+    await this.applyMigration('037_ritual_managed_signups', async (db) => {
+      await db.exec(`
+        ALTER TABLE rituals ADD COLUMN managedSignups INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE ritual_signups ADD COLUMN acceptedAt DATETIME;
+        ALTER TABLE ritual_signups ADD COLUMN acceptedSeq INTEGER;
+      `);
+    });
   }
 
   private static async applyMigration(name: string, migrationFn: (db: Database) => Promise<void>): Promise<void> {

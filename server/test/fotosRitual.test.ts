@@ -16,7 +16,8 @@ const nueva = (alt: string, isPublic = false) => ({ src: dataUrl('jpeg', JPG), a
 function montar() {
   const rituales: Ritual[] = [
     { id: 'ev', type: 'jornada', title: 'Jornadas', startsAt: '2099-01-01T10:00:00Z', status: 'programado', createdBy: 'n', createdAt: '', source: 'secta' },
-    { id: 'pa', type: 'partida_presencial', title: 'Partida', startsAt: '2099-01-01T10:00:00Z', status: 'programado', createdBy: 'n', createdAt: '', source: 'secta' }
+    { id: 'pa', type: 'partida_presencial', title: 'Partida', startsAt: '2099-01-01T10:00:00Z', status: 'programado', createdBy: 'n', createdAt: '', source: 'secta' },
+    { id: 'on', type: 'partida_online', title: 'Online', startsAt: '2099-01-01T10:00:00Z', status: 'programado', createdBy: 'n', createdAt: '', source: 'secta' }
   ];
   const guardadas: RitualPhotoEn[] = [];
   const fotos = {
@@ -99,9 +100,13 @@ describe('fotos de un evento', () => {
     await expect(servicio.borrar('narradora', 'ev', guardadas[0].id)).rejects.toThrow('La foto no existe.');
   });
 
-  it('solo los eventos llevan fotos', async () => {
-    const { servicio } = montar();
-    await expect(servicio.subir('ana', 'pa', [nueva('Una')])).rejects.toThrow('Solo los eventos llevan fotos.');
+  it('los eventos y las partidas presenciales llevan fotos; las online, no', async () => {
+    const { servicio, guardadas } = montar();
+    await servicio.subir('ana', 'pa', [nueva('En la mesa')]);
+    expect(guardadas).toEqual([expect.objectContaining({ ritualId: 'pa', alt: 'En la mesa' })]);
+    await expect(servicio.subir('ana', 'on', [nueva('Una')])).rejects.toThrow(
+      'Solo los eventos y las partidas presenciales llevan fotos.'
+    );
   });
 
   it('un SVG no se acepta, ni aunque diga ser otra cosa', async () => {

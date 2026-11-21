@@ -59,8 +59,8 @@ export class RitualRepository {
       `INSERT INTO rituals
          (id, type, managedBy, title, description, startsAt, endsAt, location, link,
           scriptName, maxPlayers, storytellerId, recurrenceDays, recurrenceMonths, recurrenceUntil,
-          villacuervosPlayId, villacuervosSlug, signupsInLaSecta, status, createdBy, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          villacuervosPlayId, villacuervosSlug, signupsInLaSecta, managedSignups, status, createdBy, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         input.type,
@@ -80,6 +80,7 @@ export class RitualRepository {
         villacuervos?.playId ?? null,
         villacuervos?.slug ?? null,
         input.signupsInLaSecta ? 1 : 0,
+        input.managedSignups ? 1 : 0,
         input.status ?? 'programado',
         createdBy,
         new Date().toISOString()
@@ -93,7 +94,7 @@ export class RitualRepository {
       `UPDATE rituals
           SET type = ?, managedBy = ?, title = ?, description = ?, startsAt = ?, endsAt = ?,
               location = ?, link = ?, scriptName = ?, maxPlayers = ?, storytellerId = ?,
-              recurrenceDays = ?, recurrenceMonths = ?, recurrenceUntil = ?, signupsInLaSecta = ?, status = ?, updatedAt = ?
+              recurrenceDays = ?, recurrenceMonths = ?, recurrenceUntil = ?, signupsInLaSecta = ?, managedSignups = ?, status = ?, updatedAt = ?
         WHERE id = ?`,
       [
         input.type,
@@ -111,6 +112,7 @@ export class RitualRepository {
         input.recurrenceMonths ?? null,
         input.recurrenceUntil ?? null,
         input.signupsInLaSecta ? 1 : 0,
+        input.managedSignups ? 1 : 0,
         input.status ?? 'programado',
         new Date().toISOString(),
         id
@@ -144,6 +146,7 @@ export class RitualRepository {
       villacuervosPlayId: row.villacuervosPlayId ?? undefined,
       villacuervosSlug: row.villacuervosSlug ?? undefined,
       signupsInLaSecta: row.signupsInLaSecta ? true : undefined,
+      managedSignups: row.managedSignups ? true : undefined,
       status: row.status,
       createdBy: row.createdBy,
       createdByUsername: row.createdByUsername ?? undefined,

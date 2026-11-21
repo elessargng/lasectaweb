@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Feather, Repeat, Sparkles, X } from 'lucide-react';
+import { ClipboardCheck, Feather, Repeat, Sparkles, X } from 'lucide-react';
 import Button from '../Button';
 import type { Ritual, RitualInput, RitualStatus, RitualType, Storyteller } from '../../utils/ritualsApi';
 import { RITUAL_KINDS, kindFromParts } from './ritualKinds';
@@ -64,6 +64,8 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
   const [alsoInVillacuervos, setAlsoInVillacuervos] = useState(false);
   /** Publicada en Villacuervos pero con la inscripción aquí, en La Secta (de entrada, no). */
   const [signupInLaSecta, setSignupInLaSecta] = useState(false);
+  /** Evento gestionado: la organización acepta cada inscripción (de entrada, no). */
+  const [managedSignups, setManagedSignups] = useState(false);
   /** '' no se repite, un número de días, 'mes', u 'otra' para escribir los días a mano. */
   const [recurrence, setRecurrence] = useState('');
   const [customDays, setCustomDays] = useState('');
@@ -86,6 +88,7 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
     setType(ritual?.type ?? 'partida_online');
     setAlsoInVillacuervos(false);
     setSignupInLaSecta(ritual?.signupsInLaSecta ?? false);
+    setManagedSignups(ritual?.managedSignups ?? false);
     const days = ritual?.recurrenceDays;
     setRecurrence(ritual?.recurrenceMonths ? 'mes' : !days ? '' : RECURRENCE_PRESETS.includes(days) ? String(days) : 'otra');
     setCustomDays(days && !RECURRENCE_PRESETS.includes(days) ? String(days) : '');
@@ -162,7 +165,8 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
           (recurrenceDays || recurrenceMonths) && recurrenceUntil ? new Date(`${recurrenceUntil}T23:59:59`).toISOString() : null,
         status,
         alsoInVillacuervos: !ritual && isOnline && alsoInVillacuervos,
-        signupsInLaSecta: showSignupToggle && signupInLaSecta
+        signupsInLaSecta: showSignupToggle && signupInLaSecta,
+        managedSignups: !isGame && managedSignups
       });
       onClose();
     } catch (err) {
@@ -465,6 +469,35 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
               className={inputClass}
             />
           </div>
+
+          {/* Evento gestionado: la inscripción la acepta quien organiza (por ejemplo, al recibir el pago) */}
+          {!isGame && (
+            <label
+              className={`flex items-start gap-3 p-3.5 rounded-sm border cursor-pointer transition-colors ${
+                managedSignups ? 'border-theme-main/70 bg-theme-main/[0.06]' : 'border-outline-ghost hover:border-theme-main/40'
+              }`}
+            >
+              <input
+                type="checkbox"
+                role="switch"
+                checked={managedSignups}
+                onChange={(e) => setManagedSignups(e.target.checked)}
+                className="peer sr-only"
+              />
+              <span aria-hidden="true" className={`${switchClass} mt-0.5`} />
+              <span>
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-on-surface">
+                  <ClipboardCheck className="w-4 h-4 text-theme-main" />
+                  Gestionar evento
+                </span>
+                <span className="block text-xs text-on-surface-muted mt-0.5">
+                  {managedSignups
+                    ? 'Quien se apunta queda pendiente hasta que aceptes su inscripción (por ejemplo, al recibir el pago). Solo se ven las personas aceptadas, en el orden en que las aceptes, y puedes inscribir tú a quien quieras.'
+                    : 'Desactivado, apuntarse es solo decir que se quiere asistir, y se ve enseguida.'}
+                </span>
+              </span>
+            </label>
+          )}
 
           {ritual && (
             <label className="inline-flex items-center gap-3 text-sm text-on-surface-muted cursor-pointer">

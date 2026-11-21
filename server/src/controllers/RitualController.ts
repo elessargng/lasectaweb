@@ -13,6 +13,11 @@ function photoId(req: Request): string {
   return Array.isArray(raw) ? raw[0] : raw;
 }
 
+function signupUserId(req: Request): string {
+  const raw = (req.params as Record<string, string | string[]>).userId;
+  return Array.isArray(raw) ? raw[0] : raw;
+}
+
 function errorStatus(message: string): number {
   if (message.includes('Acceso denegado')) return 403;
   if (message.includes('no existe')) return 404;
@@ -156,6 +161,45 @@ export class RitualController {
         return;
       }
       res.json(await this.ritualService.leave(req.user.id, ritualId(req), req.query.occurrence));
+    } catch (error: any) {
+      res.status(errorStatus(error.message)).json({ error: error.message });
+    }
+  };
+
+  /** Quien organiza un evento gestionado acepta una inscripción, o inscribe a alguien que no la pidió. */
+  acceptSignup = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'No autorizado.' });
+        return;
+      }
+      res.json(await this.ritualService.acceptSignup(req.user.id, ritualId(req), signupUserId(req)));
+    } catch (error: any) {
+      res.status(errorStatus(error.message)).json({ error: error.message });
+    }
+  };
+
+  /** Quien organiza un evento gestionado rechaza una solicitud o quita una inscripción. */
+  removeSignup = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'No autorizado.' });
+        return;
+      }
+      res.json(await this.ritualService.removeSignup(req.user.id, ritualId(req), signupUserId(req)));
+    } catch (error: any) {
+      res.status(errorStatus(error.message)).json({ error: error.message });
+    }
+  };
+
+  /** A quién puede inscribir quien organiza un evento gestionado. */
+  listSignupCandidates = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'No autorizado.' });
+        return;
+      }
+      res.json(await this.ritualService.listSignupCandidates(req.user.id, ritualId(req)));
     } catch (error: any) {
       res.status(errorStatus(error.message)).json({ error: error.message });
     }

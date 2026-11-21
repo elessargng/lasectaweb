@@ -46,6 +46,13 @@ export function attendanceSummary(ritual: Ritual, userId?: string): string | nul
   if (ritual.signupsEnabled) {
     const count = ritual.attendees?.length ?? 0;
     const withYou = !!userId && !!ritual.attendees?.some((a) => a.userId === userId);
+    if (ritual.managedSignups) {
+      // Solo cuentan las inscripciones aceptadas; la propia pendiente se avisa aparte
+      const text = `${count} ${count === 1 ? 'inscrito' : 'inscritos'}`;
+      if (withYou) return `${text}, contigo`;
+      const pending = !!userId && !!ritual.pendingAttendees?.some((a) => a.userId === userId);
+      return pending ? `${text} · tu inscripción, pendiente` : text;
+    }
     const text = isIntention(ritual)
       ? `${count} ${count === 1 ? 'quiere' : 'quieren'} asistir`
       : `${count} ${count === 1 ? 'apuntado' : 'apuntados'}${ritual.maxPlayers ? ` de ${ritual.maxPlayers} plazas` : ''}`;

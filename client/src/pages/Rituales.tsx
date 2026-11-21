@@ -29,12 +29,15 @@ import {
 } from '../components/rituales/ritualDates';
 import { useAuth } from '../context/AuthContext';
 import {
+  acceptRitualSignup,
   createRitual,
   deleteRitual,
   leaveRitual,
   listPhotoTimeline,
+  listRitualSignupCandidates,
   listRituals,
   listStorytellers,
+  removeRitualSignup,
   signUpForRitual,
   updateRitual,
   type Ritual,
@@ -295,12 +298,23 @@ const Rituales = () => {
     }
   };
 
+  // Evento gestionado: quien organiza acepta, inscribe o quita, y se recarga para ver la lista.
+  // El error lo enseña la propia ficha, que es lo que está a la vista.
+  const manageSignup = async (ritual: Ritual, userId: string, accept: boolean) => {
+    if (!token) return;
+    await (accept ? acceptRitualSignup(token, ritual.id, userId) : removeRitualSignup(token, ritual.id, userId));
+    await fetchRituals();
+  };
+
   const signup: SignupActions = {
     userId: token ? user?.id : undefined,
     now,
     busyKey: signupBusy,
     onSignUp: (r) => changeSignup(r, true),
-    onLeave: (r) => changeSignup(r, false)
+    onLeave: (r) => changeSignup(r, false),
+    onAcceptSignup: (r, id) => manageSignup(r, id, true),
+    onRemoveSignup: (r, id) => manageSignup(r, id, false),
+    loadSignupCandidates: (r) => (token ? listRitualSignupCandidates(token, r.id) : Promise.resolve([]))
   };
 
   const monthName = month.toLocaleDateString('es-ES', { month: 'long' });

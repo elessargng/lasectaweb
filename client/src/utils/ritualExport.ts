@@ -97,7 +97,7 @@ function describe(ritual: Ritual): string {
     lines.push(`Plazas: ${ritual.maxPlayers}`);
   }
   if (ritual.signupsEnabled) {
-    lines.push(`${ritual.attendanceMode === 'intencion' ? 'Quieren asistir' : 'Apuntados'}: ${ritual.attendees?.length ?? 0}`);
+    lines.push(`${ritual.managedSignups ? 'Inscritos' : ritual.attendanceMode === 'intencion' ? 'Quieren asistir' : 'Apuntados'}: ${ritual.attendees?.length ?? 0}`);
   }
   if (ritual.link) lines.push(`Enlace: ${ritual.link}`);
   if (ritual.villacuervosUrl) lines.push(`Villacuervos: ${ritual.villacuervosUrl}`);

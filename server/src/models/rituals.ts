@@ -32,6 +32,15 @@ export interface RitualAttendee {
   username: string;
   profilePicture?: string;
   signedUpAt: string;
+  /** En un evento gestionado: cuándo aceptó la organización la inscripción (sin él, está pendiente). */
+  acceptedAt?: string;
+}
+
+/** Una persona a la que la organización de un evento gestionado puede inscribir. */
+export interface RitualSignupCandidate {
+  id: string;
+  username: string;
+  profilePicture?: string;
 }
 
 /**
@@ -114,6 +123,19 @@ export interface Ritual {
    * las de todas sus repeticiones, cada una con su occurrence.
    */
   attendees?: RitualAttendee[];
+  /**
+   * Evento gestionado: quien se apunta queda pendiente hasta que la organización
+   * acepta su inscripción. En attendees solo van las aceptadas, en el orden en que
+   * se aceptaron.
+   */
+  managedSignups?: boolean;
+  /**
+   * En un evento gestionado, las solicitudes pendientes que puede ver quien lo pide:
+   * todas (en el orden en que se pidieron) si organiza; la suya, si la tiene.
+   */
+  pendingAttendees?: RitualAttendee[];
+  /** Si quien lo pide organiza el evento gestionado: acepta, rechaza e inscribe. */
+  canManageSignups?: boolean;
   /** Solo en los eventos y las partidas presenciales: las fotos que puede ver quien lo pide, en el orden en que se subieron. */
   photos?: RitualPhoto[];
   status: RitualStatus;
@@ -146,6 +168,13 @@ export interface RitualInput {
   status?: RitualStatus;
   /** Al crear una online publicada también en Villacuervos: llevar aquí la inscripción. */
   signupsInLaSecta?: boolean;
+  /** Solo en los eventos: la organización acepta cada inscripción. */
+  managedSignups?: boolean;
+}
+
+/** Si la organización de un ritual gestiona su inscripción: solo en los eventos de La Secta. */
+export function admiteGestion(ritual: Pick<Ritual, 'type' | 'source'>): boolean {
+  return ritual.source === 'secta' && ritual.type === 'jornada';
 }
 
 export const MAX_RECURRENCE_DAYS = 365;

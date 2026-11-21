@@ -1,7 +1,8 @@
 import { CalendarCheck, CalendarPlus, CalendarX, Loader2, UserMinus, UserPlus } from 'lucide-react';
-import type { Ritual } from '../../utils/ritualsApi';
+import type { Ritual, RitualSignupCandidate } from '../../utils/ritualsApi';
 import { getAvatarUrl } from '../../utils/api';
 import { isIntention } from './ritualSignups';
+import RitualManagedSignups from './RitualManagedSignups';
 
 /** Lo que necesita la tarjeta para que la persona que mira pueda apuntarse. */
 export interface SignupActions {
@@ -11,6 +12,11 @@ export interface SignupActions {
   busyKey: string | null;
   onSignUp: (ritual: Ritual) => void;
   onLeave: (ritual: Ritual) => void;
+  /** Evento gestionado, si organizas: aceptar (o inscribir a mano) y rechazar o quitar. Fallan con el error. */
+  onAcceptSignup?: (ritual: Ritual, userId: string) => Promise<void>;
+  onRemoveSignup?: (ritual: Ritual, userId: string) => Promise<void>;
+  /** Evento gestionado, si organizas: a quién puedes inscribir. */
+  loadSignupCandidates?: (ritual: Ritual) => Promise<RitualSignupCandidate[]>;
 }
 
 interface RitualAttendeesProps {
@@ -27,7 +33,8 @@ interface RitualAttendeesProps {
  */
 function closesAt(ritual: Ritual): number {
   const start = new Date(ritual.startsAt).getTime();
-  if (!isIntention(ritual) || !ritual.endsAt) return start;
+  // Un evento gestionado admite pedir la inscripción hasta que termina, como la intención de ir
+  if ((!isIntention(ritual) && !ritual.managedSignups) || !ritual.endsAt) return start;
   const duration = new Date(ritual.endsAt).getTime() - new Date(ritual.seriesStartsAt ?? ritual.startsAt).getTime();
   return start + Math.max(0, duration);
 }
@@ -51,6 +58,9 @@ const Tu = () => (
  * asistir, para que se sepa quién piensa ir, sin orden ni prioridad.
  */
 export const RitualAttendees = ({ ritual, actions }: RitualAttendeesProps) => {
+  if (ritual.managedSignups) {
+    return <RitualManagedSignups ritual={ritual} actions={actions} ended={!!actions && closesAt(ritual) <= actions.now} />;
+  }
   if (isIntention(ritual)) return <RitualIntentions ritual={ritual} actions={actions} />;
 
   const attendees = ritual.attendees ?? [];

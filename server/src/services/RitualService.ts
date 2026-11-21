@@ -1,14 +1,18 @@
 import crypto from 'crypto';
 import { RitualRepository } from '../repositories/RitualRepository';
-import { RitualSignupRepository } from '../repositories/RitualSignupRepository';
+import { RitualSignupRepository, type RitualSignupRow } from '../repositories/RitualSignupRepository';
+import type { User } from '../models/User';
 import { UserRepository } from '../repositories/UserRepository';
 import { VillacuervosService } from './VillacuervosService';
 import { FotosRitual } from './FotosRitual';
 import { PublicPlayListSchema } from '../infra/villacuervos/esquemas';
 import {
+  admiteGestion,
   Ritual,
   RitualAttendanceMode,
+  RitualAttendee,
   RitualInput,
+  RitualSignupCandidate,
   RitualSignupList,
   MAX_RECURRENCE_DAYS,
   MAX_RECURRENCE_MONTHS,
@@ -51,6 +55,31 @@ function withVillacuervosUrl(ritual: Ritual): Ritual {
 
 const MAX_RANGE_DAYS = 120;
 
+/** Si alguien organiza un evento gestionado: quien lo convocó, o un administrador. */
+export function organizaEvento(ritual: Pick<Ritual, 'createdBy'>, viewer?: Pick<User, 'id' | 'roles'>): boolean {
+  return !!viewer && (ritual.createdBy === viewer.id || viewer.roles.includes('admin'));
+}
+
+/**
+ * Lo que ve cada cual de la gente apuntada a un evento gestionado. Todo el mundo ve solo
+ * las inscripciones aceptadas, en el orden en que se aceptaron; quien organiza ve además
+ * las pendientes (en el orden en que se pidieron), y quien tiene la suya pendiente, la suya.
+ */
+export function repartirInscripciones(
+  rows: RitualSignupRow[],
+  ritual: Pick<Ritual, 'createdBy'>,
+  viewer?: Pick<User, 'id' | 'roles'>
+): { attendees: RitualAttendee[]; pendingAttendees: RitualAttendee[]; canManageSignups: boolean } {
+  const limpia = ({ acceptedSeq: _seq, ...attendee }: RitualSignupRow): RitualAttendee => attendee;
+  const organiza = organizaEvento(ritual, viewer);
+  const attendees = rows
+    .filter((r) => r.acceptedAt)
+    .sort((a, b) => (a.acceptedSeq ?? 0) - (b.acceptedSeq ?? 0))
+    .map(limpia);
+  const pendingAttendees = rows.filter((r) => !r.acceptedAt && (organiza || r.userId === viewer?.id)).map(limpia);
+  return { attendees, pendingAttendees, canManageSignups: organiza };
+}
+
 export class RitualService {
   constructor(
     private ritualRepository: RitualRepository,
@@ -73,18 +102,85 @@ export class RitualService {
       if (ritual.villacuervosPlayId) return ritual.signupsInLaSecta ? 'inscripcion' : undefined;
       return 'inscripcion';
     }
+    // Un evento gestionado es una inscripción de verdad (la acepta la organización)
+    if (ritual.managedSignups && admiteGestion(ritual)) return 'inscripcion';
     return 'intencion';
   }
 
-  private async withAttendees(rituals: Ritual[]): Promise<Ritual[]> {
+  /**
+   * La gente apuntada, la que puede ver quien lo pide: en un evento gestionado, solo las
+   * inscripciones aceptadas (más las pendientes que le tocan, ver repartirInscripciones).
+   */
+  private async withAttendees(rituals: Ritual[], viewerId?: string): Promise<Ritual[]> {
     const open = rituals.filter((r) => this.attendanceModeOf(r));
     const attendees = await this.signupRepository.listForRituals(open.map((r) => r.id));
+    const gestionados = open.some((r) => r.managedSignups && admiteGestion(r));
+    const viewer = gestionados && viewerId ? await this.userRepository.findById(viewerId) : undefined;
     for (const r of open) {
       r.signupsEnabled = true;
       r.attendanceMode = this.attendanceModeOf(r);
-      r.attendees = attendees.get(r.id) ?? [];
+      const rows = attendees.get(r.id) ?? [];
+      if (r.managedSignups && admiteGestion(r)) {
+        Object.assign(r, repartirInscripciones(rows, r, viewer));
+      } else {
+        r.managedSignups = undefined;
+        r.attendees = rows.map(({ acceptedSeq: _seq, acceptedAt: _at, ...a }) => a);
+      }
     }
     return rituals;
+  }
+
+  /** Un evento gestionado que organiza quien pide: si no, el error que corresponda. */
+  private async managedTarget(actorId: string, id: string): Promise<Ritual> {
+    const ritual = await this.ritualRepository.findById(id);
+    if (!ritual) {
+      throw new Error('El ritual no existe.');
+    }
+    if (!ritual.managedSignups || !admiteGestion(ritual)) {
+      throw new Error('Este ritual no tiene la inscripción gestionada.');
+    }
+    if (!organizaEvento(ritual, await this.userRepository.findById(actorId))) {
+      throw new Error('Acceso denegado. Solo quien organiza el evento gestiona su inscripción.');
+    }
+    return ritual;
+  }
+
+  /**
+   * Quien organiza un evento gestionado da por buena la inscripción de alguien: la que
+   * pidió (por ejemplo, al recibir su pago) o una que no pidió desde la web. Pasa a
+   * verse, detrás de las ya aceptadas.
+   */
+  async acceptSignup(actorId: string, id: string, userId: string): Promise<Ritual> {
+    await this.managedTarget(actorId, id);
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new Error('La persona que quieres inscribir no existe.');
+    }
+    if (!(await this.signupRepository.accept(id, '', userId))) {
+      throw new Error(`${user.username} ya estaba inscrita.`);
+    }
+    return (await this.getById(id, actorId))!;
+  }
+
+  /** Quien organiza un evento gestionado rechaza una solicitud o quita una inscripción. */
+  async removeSignup(actorId: string, id: string, userId: string): Promise<Ritual> {
+    await this.managedTarget(actorId, id);
+    if (!(await this.signupRepository.remove(id, '', userId))) {
+      throw new Error('Esa persona no estaba apuntada.');
+    }
+    return (await this.getById(id, actorId))!;
+  }
+
+  /** A quién puede inscribir la organización: las cuentas confirmadas que aún no están inscritas. */
+  async listSignupCandidates(actorId: string, id: string): Promise<RitualSignupCandidate[]> {
+    await this.managedTarget(actorId, id);
+    const inscritas = new Set(
+      ((await this.signupRepository.listForRituals([id])).get(id) ?? []).filter((a) => a.acceptedAt).map((a) => a.userId)
+    );
+    return (await this.userRepository.listAll())
+      .filter((u) => u.isConfirmed && !inscritas.has(u.id))
+      .map((u) => ({ id: u.id, username: u.username, profilePicture: u.profilePicture ?? undefined }))
+      .sort((a, b) => a.username.localeCompare(b.username, 'es'));
   }
 
   /** Convocar, modificar y cancelar rituales es cosa de narradores y administradores. */
@@ -118,7 +214,7 @@ export class RitualService {
     const fromIso = fromDate.toISOString();
     const toIso = toDate.toISOString();
     const own = await this.fotos.adjuntar(
-      await this.withAttendees((await this.ritualRepository.listBetween(fromIso, toIso)).map(withVillacuervosUrl)),
+      await this.withAttendees((await this.ritualRepository.listBetween(fromIso, toIso)).map(withVillacuervosUrl), viewerId),
       viewerId
     );
     const external = await this.listVillacuervosPlays(fromIso, toIso, own);
@@ -139,7 +235,7 @@ export class RitualService {
   async getById(id: string, viewerId?: string): Promise<Ritual | undefined> {
     const ritual = await this.ritualRepository.findById(id);
     if (!ritual) return undefined;
-    return (await this.fotos.adjuntar(await this.withAttendees([withVillacuervosUrl(ritual)]), viewerId))[0];
+    return (await this.fotos.adjuntar(await this.withAttendees([withVillacuervosUrl(ritual)], viewerId), viewerId))[0];
   }
 
   /**
@@ -159,6 +255,8 @@ export class RitualService {
       );
     }
     const intention = ritual.attendanceMode === 'intencion';
+    // Un evento (gestionado o no) admite apuntarse hasta que termina, como la intención de ir
+    const hastaElFinal = intention || !!ritual.managedSignups;
     if (ritual.status === 'cancelado') {
       throw new Error(intention ? 'El ritual está cancelado.' : 'La partida está cancelada.');
     }
@@ -180,9 +278,9 @@ export class RitualService {
     // La inscripción se cierra al empezar; la intención de ir, al terminar, para
     // que en unas jornadas de varios días se pueda avisar a mitad.
     const duration = ritual.endsAt ? new Date(ritual.endsAt).getTime() - new Date(ritual.startsAt).getTime() : 0;
-    const closesAt = startsAt.getTime() + (intention ? Math.max(0, duration) : 0);
+    const closesAt = startsAt.getTime() + (hastaElFinal ? Math.max(0, duration) : 0);
     if (closesAt <= Date.now()) {
-      throw new Error(intention ? 'El ritual ya ha terminado.' : 'La partida ya ha empezado.');
+      throw new Error(hastaElFinal ? 'El ritual ya ha terminado.' : 'La partida ya ha empezado.');
     }
     return { ritual, occurrence };
   }
@@ -195,14 +293,25 @@ export class RitualService {
     const { ritual, occurrence } = await this.signupTarget(id, rawOccurrence);
     if (!(await this.signupRepository.add(id, occurrence, userId))) {
       throw new Error(
-        ritual.attendanceMode === 'intencion' ? 'Ya habías dicho que quieres asistir.' : 'Ya estás apuntado a esta partida.'
+        ritual.managedSignups
+          ? 'Ya habías pedido la inscripción.'
+          : ritual.attendanceMode === 'intencion'
+            ? 'Ya habías dicho que quieres asistir.'
+            : 'Ya estás apuntado a esta partida.'
       );
     }
     return (await this.getById(id, userId))!;
   }
 
+  /**
+   * Se desapunta uno mismo. En un evento gestionado solo se retira una solicitud
+   * pendiente: una inscripción aceptada (ya pagada, por lo general) la quita la organización.
+   */
   async leave(userId: string, id: string, rawOccurrence: unknown): Promise<Ritual> {
     const { ritual, occurrence } = await this.signupTarget(id, rawOccurrence);
+    if (ritual.managedSignups && (await this.signupRepository.find(id, occurrence, userId))?.acceptedAt) {
+      throw new Error('Tu inscripción ya está confirmada: para borrarte, habla con quien organiza el evento.');
+    }
     if (!(await this.signupRepository.remove(id, occurrence, userId))) {
       throw new Error(
         ritual.attendanceMode === 'intencion' ? 'No habías dicho que quisieras asistir.' : 'No estabas apuntado a esta partida.'
@@ -381,7 +490,9 @@ export class RitualService {
       status,
       // Solo surte efecto en las online publicadas en Villacuervos (ver attendanceModeOf);
       // al crear, create() lo ajusta según si de verdad se publica allí.
-      signupsInLaSecta: raw.signupsInLaSecta === true
+      signupsInLaSecta: raw.signupsInLaSecta === true,
+      // Gestionar la inscripción es cosa de los eventos
+      managedSignups: type === 'jornada' && raw.managedSignups === true
     };
   }
 

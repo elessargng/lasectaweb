@@ -25,6 +25,15 @@ export interface RitualAttendee {
   username: string;
   profilePicture?: string;
   signedUpAt: string;
+  /** En un evento gestionado: cuándo aceptó la organización la inscripción (sin él, está pendiente). */
+  acceptedAt?: string;
+}
+
+/** Una persona a la que la organización de un evento gestionado puede inscribir. */
+export interface RitualSignupCandidate {
+  id: string;
+  username: string;
+  profilePicture?: string;
 }
 
 /** Cuántas fotos se suben de una vez (como en el servidor). */
@@ -93,6 +102,15 @@ export interface Ritual {
    * repetición se queda solo con la suya.
    */
   attendees?: RitualAttendee[];
+  /**
+   * Evento gestionado: quien se apunta queda pendiente hasta que la organización acepta su
+   * inscripción. En attendees solo van las aceptadas, en el orden en que se aceptaron.
+   */
+  managedSignups?: boolean;
+  /** En un evento gestionado: todas las solicitudes pendientes si organizas; si no, la tuya, si la tienes. */
+  pendingAttendees?: RitualAttendee[];
+  /** Si organizas el evento gestionado: aceptas, rechazas e inscribes. */
+  canManageSignups?: boolean;
   /** Solo en los eventos y las partidas presenciales (al desplegar una serie, las de cada repetición): las fotos públicas y las privadas propias, en el orden en que se subieron. */
   photos?: RitualPhoto[];
   /**
@@ -129,6 +147,8 @@ export interface RitualInput {
   alsoInVillacuervos?: boolean;
   /** Publicada en Villacuervos, pero con la inscripción aquí (en La Secta) en vez de allí. */
   signupsInLaSecta?: boolean;
+  /** Solo en los eventos: la organización acepta cada inscripción. */
+  managedSignups?: boolean;
 }
 
 export interface Storyteller {
@@ -194,6 +214,25 @@ export async function leaveRitual(token: string, ritual: Ritual): Promise<void> 
   await parseApiResponse(
     await fetch(`${API_URL}/rituals/${ritual.id}/signups${query}`, { method: 'DELETE', headers: authHeaders(token) })
   );
+}
+
+/** Evento gestionado: quien organiza acepta la inscripción de alguien, o le inscribe aunque no la pidiera. */
+export async function acceptRitualSignup(token: string, ritualId: string, userId: string): Promise<void> {
+  await parseApiResponse(
+    await fetch(`${API_URL}/rituals/${ritualId}/signups/${encodeURIComponent(userId)}`, { method: 'PUT', headers: authHeaders(token) })
+  );
+}
+
+/** Evento gestionado: quien organiza rechaza una solicitud o quita una inscripción. */
+export async function removeRitualSignup(token: string, ritualId: string, userId: string): Promise<void> {
+  await parseApiResponse(
+    await fetch(`${API_URL}/rituals/${ritualId}/signups/${encodeURIComponent(userId)}`, { method: 'DELETE', headers: authHeaders(token) })
+  );
+}
+
+/** Evento gestionado: a quién puede inscribir quien organiza (cuentas confirmadas aún sin inscribir). */
+export async function listRitualSignupCandidates(token: string, ritualId: string): Promise<RitualSignupCandidate[]> {
+  return parseApiResponse(await fetch(`${API_URL}/rituals/${ritualId}/signups/candidates`, { headers: authHeaders(token) }));
 }
 
 /** Sube fotos a un evento o partida presencial; en una serie, a la repetición que se está viendo. */
