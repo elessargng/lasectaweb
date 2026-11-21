@@ -35,7 +35,10 @@
           "Las partidas presenciales también llevan fotos: cualquier persona registrada sube las suyas desde la ficha de la partida, públicas o privadas.",
           "En las partidas presenciales periódicas, cada foto se queda en la sesión en la que se subió.",
           "Las fotos de las partidas presenciales salen en la vista «Fotos», en la lista y en el carrusel de la línea, junto a las de los eventos.",
-          "La vista «Fotos» muestra de entrada el último año (los doce meses hasta el actual), con su atajo en «Periodo» junto a cada año; «Desde» y «Hasta» eligen mes y año, y el periodo puede cruzar de un año a otro."
+          "La vista «Fotos» muestra de entrada el último año (los doce meses hasta el actual), con su atajo en «Periodo» junto a cada año; «Desde» y «Hasta» eligen mes y año, y el periodo puede cruzar de un año a otro.",
+          "Añadido el interruptor «Gestionar evento» al convocar un evento: quien se apunta pide la inscripción y queda pendiente hasta que la organización la acepta (por ejemplo, al recibir el pago). Mientras tanto, solo esa persona ve que está apuntada.",
+          "En los eventos gestionados, los inscritos salen en el orden en que la organización los acepta, y quien organiza puede inscribir a cualquier persona registrada aunque no lo haya pedido desde la web.",
+          "En los eventos gestionados, una solicitud pendiente se puede retirar; una inscripción ya confirmada solo la quita quien organiza."
         ]
       }
     ]
