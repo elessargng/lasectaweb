@@ -85,7 +85,7 @@ function RitualPill({ ritual, day, onHover }: {
   );
 }
 
-function MiniCalendar({ rituals, narrador }: { rituals: Ritual[], narrador: boolean }) {
+function MiniCalendar({ rituals, canCreate }: { rituals: Ritual[], canCreate: boolean }) {
   const days = getNextDays(startOfDay(new Date()), DAYS_SHOWN);
   const [hoveredRitual, setHoveredRitual] = useState<Ritual | null>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
@@ -129,7 +129,7 @@ function MiniCalendar({ rituals, narrador }: { rituals: Ritual[], narrador: bool
                 </div>
               )}
 
-              {narrador && (
+              {canCreate && (
                 <Link
                   to={`/rituales?nuevo=${dayKey(day)}`}
                   aria-label={`Añadir partida el ${day.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}`}
@@ -160,7 +160,7 @@ export default function CalendarWidget() {
 
   const { user } = useAuth();
 
-  const isNarrador = (user?.roles || []).includes('narrador') || (user?.roles || []).includes('admin');
+  // Convocar puede cualquier persona registrada
 
   useEffect(() => {
     // Partidas de La Secta y de Villacuervos, presenciales y jornadas. Las
@@ -176,5 +176,5 @@ export default function CalendarWidget() {
   if (loading) return <p className="text-on-surface-muted italic">Cargando el calendario…</p>;
   if (error) return <p className="text-blood-bright">Error: {error}</p>;
 
-  return <MiniCalendar rituals={rituals} narrador={isNarrador} />;
+  return <MiniCalendar rituals={rituals} canCreate={!!user} />;
 }

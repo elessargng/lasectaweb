@@ -183,14 +183,25 @@ export class RitualService {
       .sort((a, b) => a.username.localeCompare(b.username, 'es'));
   }
 
-  /** Convocar, modificar y cancelar rituales es cosa de narradores y administradores. */
-  private async checkOrganizerPermission(userId: string): Promise<void> {
+  /** Convocar partidas y eventos puede cualquier persona registrada. */
+  private async checkCanConvoke(userId: string): Promise<void> {
+    if (!(await this.userRepository.findById(userId))) {
+      throw new Error('Usuario no encontrado.');
+    }
+  }
+
+  /** Modificar o cancelar un ritual es cosa de quien lo convocó, o de narradores y administradores. */
+  private async checkCanEdit(userId: string, id: string): Promise<void> {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new Error('Usuario no encontrado.');
     }
-    if (!user.roles.includes('narrador') && !user.roles.includes('admin')) {
-      throw new Error('Acceso denegado. Se requiere el rol de narrador.');
+    const ritual = await this.ritualRepository.findById(id);
+    if (!ritual) {
+      throw new Error('El ritual no existe.');
+    }
+    if (ritual.createdBy !== userId && !user.roles.includes('narrador') && !user.roles.includes('admin')) {
+      throw new Error('Acceso denegado. Solo quien convocó el ritual (o un narrador) puede cambiarlo.');
     }
   }
 
@@ -224,7 +235,7 @@ export class RitualService {
 
   /** Quién puede narrar: para elegirlo al convocar un ritual. */
   async listStorytellers(userId: string): Promise<Array<{ id: string; username: string }>> {
-    await this.checkOrganizerPermission(userId);
+    await this.checkCanConvoke(userId);
     return (await this.userRepository.listAll())
       .filter((u) => u.roles.includes('narrador'))
       .map((u) => ({ id: u.id, username: u.username }))
@@ -326,7 +337,7 @@ export class RitualService {
    * guarda nada, para que no quede una mitad sin la otra.
    */
   async create(userId: string, raw: any): Promise<Ritual> {
-    await this.checkOrganizerPermission(userId);
+    await this.checkCanConvoke(userId);
     const input = await this.validate(raw);
     // El id, antes de publicarla en Villacuervos: su descripción enlaza aquí
     const id = crypto.randomUUID();
@@ -362,20 +373,14 @@ export class RitualService {
   }
 
   async update(userId: string, id: string, raw: any): Promise<Ritual> {
-    await this.checkOrganizerPermission(userId);
-    if (!(await this.ritualRepository.findById(id))) {
-      throw new Error('El ritual no existe.');
-    }
+    await this.checkCanEdit(userId, id);
     const input = await this.validate(raw);
     await this.ritualRepository.update(id, input);
     return (await this.getById(id, userId))!;
   }
 
   async delete(userId: string, id: string): Promise<void> {
-    await this.checkOrganizerPermission(userId);
-    if (!(await this.ritualRepository.findById(id))) {
-      throw new Error('El ritual no existe.');
-    }
+    await this.checkCanEdit(userId, id);
     // Sus fotos, del disco (de la base de datos se van con el ritual)
     await this.fotos.borrarDelRitual(id);
     await this.ritualRepository.delete(id);

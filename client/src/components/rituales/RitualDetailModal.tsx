@@ -72,7 +72,8 @@ export const RitualDetailModal = ({ ritual, canManage, token, userId, onPhotosCh
   const style = RITUAL_KINDS[kindOf(ritual)];
   const Icon = style.icon;
   const cancelled = ritual.status === 'cancelado';
-  const editable = canManage && ritual.source === 'secta';
+  // Lo cambia quien lo convocó, o un narrador o administrador
+  const editable = (canManage || (!!userId && ritual.createdBy === userId)) && ritual.source === 'secta';
   const repeats = describeRecurrence(ritual);
   const lists = [...(ritual.signupLists ?? [])].sort((a, b) => a.order - b.order);
   const titleId = 'ritual-detalle-titulo';

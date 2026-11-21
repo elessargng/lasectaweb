@@ -64,7 +64,11 @@ function parseView(raw: string | null): View {
 
 const Rituales = () => {
   const { user, token } = useAuth();
-  const canManage = !!token && ((user?.roles || []).includes('narrador') || (user?.roles || []).includes('admin'));
+  const roles = user?.roles || [];
+  /** Narradores y administradores: cambian cualquier ritual y borran cualquier foto. */
+  const canManage = !!token && (roles.includes('narrador') || roles.includes('admin'));
+  /** Convocar puede cualquier persona registrada. */
+  const canCreate = !!token;
   const [searchParams, setSearchParams] = useSearchParams();
 
   const initialDay = parseDayKey(searchParams.get('dia')) ?? parseDayKey(searchParams.get('nuevo')) ?? startOfDay(new Date());
@@ -145,21 +149,21 @@ const Rituales = () => {
   }, [view, fetchTimeline]);
 
   useEffect(() => {
-    if (canManage && token) {
+    if (canCreate && token) {
       listStorytellers(token).then(setStorytellers).catch(() => setStorytellers([]));
     }
-  }, [canManage, token]);
+  }, [canCreate, token]);
 
   // Enlace directo para convocar (desde el widget del Atrio, por ejemplo).
   useEffect(() => {
     const nuevo = parseDayKey(searchParams.get('nuevo'));
-    if (nuevo && canManage) {
+    if (nuevo && canCreate) {
       openCreate(nuevo);
       writeUrl(nuevo, view);
     }
     // Solo al llegar a la página (o al terminar de cargar la sesión).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canManage]);
+  }, [canCreate]);
 
   // Tras elegir un día en el mes, en el móvil su lista va debajo del calendario: se baja hasta ella.
   useEffect(() => {
@@ -332,7 +336,7 @@ const Rituales = () => {
       rituals={dayRituals}
       focusedKey={focusedKey}
       loading={loading && rituals.length === 0}
-      canManage={canManage}
+      canCreate={canCreate}
       userId={signup.userId}
       onCreate={() => openCreate(selectedDay)}
       onOpen={openFromPanel}
@@ -394,7 +398,7 @@ const Rituales = () => {
                   </button>
                 ))}
               </div>
-              {canManage && (
+              {canCreate && (
                 <Button variant="primary" onClick={() => openCreate(selectedDay)} className="px-4 py-2">
                   <span className="inline-flex items-center gap-2 text-sm">
                     <Plus className="w-4 h-4" /> Convocar
@@ -449,7 +453,7 @@ const Rituales = () => {
                   month={month}
                   rituals={visible}
                   selectedDay={selectedDay}
-                  canCreate={canManage}
+                  canCreate={canCreate}
                   onSelectDay={pickDay}
                   onSelectRitual={pickRitual}
                   onCreateOnDay={openCreate}
@@ -461,7 +465,7 @@ const Rituales = () => {
                   anchor={selectedDay}
                   rituals={visible}
                   selectedDay={selectedDay}
-                  canCreate={canManage}
+                  canCreate={canCreate}
                   onSelectDay={pickDay}
                   onSelectRitual={pickRitual}
                   onCreateOnDay={openCreate}
@@ -530,6 +534,7 @@ const Rituales = () => {
         ritual={editing}
         initialDay={formDay}
         storytellers={storytellers}
+        canPublishVillacuervos={roles.includes('narrador')}
         onClose={() => setFormOpen(false)}
         onSave={handleSave}
       />
@@ -542,14 +547,14 @@ interface DayPanelProps {
   rituals: Ritual[];
   focusedKey: string | null;
   loading: boolean;
-  canManage: boolean;
+  canCreate: boolean;
   userId?: string;
   onCreate: () => void;
   onOpen: (ritual: Ritual) => void;
 }
 
 /** El día elegido, con el resumen de sus rituales; cada uno abre su detalle. */
-const DayPanel = ({ day, rituals, focusedKey, loading, canManage, userId, onCreate, onOpen }: DayPanelProps) => (
+const DayPanel = ({ day, rituals, focusedKey, loading, canCreate, userId, onCreate, onOpen }: DayPanelProps) => (
   <>
     <div className="pb-3 mb-1 border-b border-theme-main/25">
       <h3 className="font-display text-xl text-gilded leading-tight first-letter:uppercase">{formatLongDay(day)}</h3>
@@ -568,7 +573,7 @@ const DayPanel = ({ day, rituals, focusedKey, loading, canManage, userId, onCrea
       <div className="text-center py-10 px-4 border border-dashed border-theme-main/25 rounded-sm bg-[radial-gradient(ellipse_at_center,rgba(18,26,51,0.6),transparent_70%)] text-on-surface-muted">
         <div aria-hidden="true" className="ornament-divider w-24 mx-auto mb-4"><span className="ornament-diamond" /></div>
         <p className="font-['Cormorant_Garamond',serif] italic text-lg mb-4">La noche está en calma.</p>
-        {canManage && (
+        {canCreate && (
           <button type="button" onClick={onCreate} className="btn-sello">
             <Plus className="w-3.5 h-3.5" /> Convocar un ritual este día
           </button>

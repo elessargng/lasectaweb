@@ -13,6 +13,8 @@ interface RitualFormModalProps {
   /** Día propuesto al convocar desde una casilla del calendario. */
   initialDay: Date | null;
   storytellers: Storyteller[];
+  /** Publicar también en Villacuervos: solo narradores (allí se publica con su cuenta). */
+  canPublishVillacuervos: boolean;
   onClose: () => void;
   onSave: (input: RitualInput) => Promise<void>;
 }
@@ -59,7 +61,7 @@ function defaultStart(day: Date | null, type: RitualType): string {
   return toLocalInput(base);
 }
 
-export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onClose, onSave }: RitualFormModalProps) => {
+export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, canPublishVillacuervos, onClose, onSave }: RitualFormModalProps) => {
   const [type, setType] = useState<RitualType>('partida_online');
   const [alsoInVillacuervos, setAlsoInVillacuervos] = useState(false);
   /** Publicada en Villacuervos pero con la inscripción aquí, en La Secta (de entrada, no). */
@@ -164,7 +166,7 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
         recurrenceUntil:
           (recurrenceDays || recurrenceMonths) && recurrenceUntil ? new Date(`${recurrenceUntil}T23:59:59`).toISOString() : null,
         status,
-        alsoInVillacuervos: !ritual && isOnline && alsoInVillacuervos,
+        alsoInVillacuervos: !ritual && isOnline && canPublishVillacuervos && alsoInVillacuervos,
         signupsInLaSecta: showSignupToggle && signupInLaSecta,
         managedSignups: !isGame && managedSignups
       });
@@ -224,7 +226,7 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
             </div>
           </div>
 
-          {isOnline && !ritual && (
+          {isOnline && !ritual && canPublishVillacuervos && (
             <label
               className={`flex items-start gap-3 p-3.5 rounded-sm border cursor-pointer transition-colors ${
                 alsoInVillacuervos ? 'border-theme-main/70 bg-theme-main/[0.06]' : 'border-outline-ghost hover:border-theme-main/40'

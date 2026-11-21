@@ -38,7 +38,8 @@
           "La vista «Fotos» muestra de entrada el último año (los doce meses hasta el actual), con su atajo en «Periodo» junto a cada año; «Desde» y «Hasta» eligen mes y año, y el periodo puede cruzar de un año a otro.",
           "Añadido el interruptor «Gestionar evento» al convocar un evento: quien se apunta pide la inscripción y queda pendiente hasta que la organización la acepta (por ejemplo, al recibir el pago). Mientras tanto, solo esa persona ve que está apuntada.",
           "En los eventos gestionados, los inscritos salen en el orden en que la organización los acepta, y quien organiza puede inscribir a cualquier persona registrada aunque no lo haya pedido desde la web.",
-          "En los eventos gestionados, una solicitud pendiente se puede retirar; una inscripción ya confirmada solo la quita quien organiza."
+          "En los eventos gestionados, una solicitud pendiente se puede retirar; una inscripción ya confirmada solo la quita quien organiza.",
+          "Cualquier persona registrada puede convocar partidas y eventos. Cada ritual lo modifica o cancela quien lo convocó, o un narrador o administrador; publicar también en Villacuervos sigue siendo cosa de narradores."
         ]
       }
     ]
