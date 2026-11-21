@@ -26,35 +26,63 @@ const MESES = Array.from({ length: 12 }, (_, m) => {
 
 const fotos = (n: number) => (n === 1 ? 'una foto' : `${n} fotos`);
 
+/** Un mes como número absoluto (año × 12 + mes), para comparar y recorrer periodos que cruzan años. */
+const mesAbsoluto = (fecha: Date) => fecha.getFullYear() * 12 + fecha.getMonth();
+const anioDe = (mes: number) => Math.floor(mes / 12);
+const primerDia = (mes: number) => new Date(anioDe(mes), mes % 12, 1);
+const nombreMes = (mes: number) => `${MESES[mes % 12].toLowerCase()} de ${anioDe(mes)}`;
+
+/** Cómo se describe el periodo en frases como «… con fotos {periodo}». */
+function describirPeriodo(desde: number, hasta: number): string {
+  if (desde % 12 === 0 && hasta === desde + 11) return `en ${anioDe(desde)}`;
+  if (desde === hasta) return `en ${nombreMes(desde)}`;
+  if (anioDe(desde) === anioDe(hasta)) return `de ${MESES[desde % 12].toLowerCase()} a ${nombreMes(hasta)}`;
+  return `de ${nombreMes(desde)} a ${nombreMes(hasta)}`;
+}
+
 /**
- * Las fotos de los eventos de un periodo (de entrada, el año en curso), en una lista
- * vertical o en una línea horizontal con un punto por evento: al elegir uno, sus fotos
- * salen debajo en un carrusel.
+ * Las fotos de los eventos y partidas de un periodo (de entrada, el último año: los doce
+ * meses hasta el actual), en una lista vertical o en una línea horizontal con un punto
+ * por evento: al elegir uno, sus fotos salen debajo en un carrusel.
  */
 export const RitualPhotoAlbum = ({ rituals, onOpen }: RitualPhotoAlbumProps) => {
-  const esteAnio = new Date().getFullYear();
-  const [anio, setAnio] = useState(esteAnio);
-  const [desde, setDesde] = useState(0);
-  const [hasta, setHasta] = useState(11);
+  const esteMes = mesAbsoluto(new Date());
+  const [desde, setDesde] = useState(esteMes - 11);
+  const [hasta, setHasta] = useState(esteMes);
   const [vista, setVista] = useState<Vista>('lista');
   const [elegido, setElegido] = useState<string | null>(null);
 
-  // Los años con fotos y, aunque no tenga, el actual
+  // Los años con fotos y, aunque no tengan, los del último año
   const anios = useMemo(
-    () => [...new Set([esteAnio, ...rituals.map((r) => new Date(r.startsAt).getFullYear())])].sort((a, b) => b - a),
-    [rituals, esteAnio]
+    () =>
+      [...new Set([anioDe(esteMes), anioDe(esteMes - 11), ...rituals.map((r) => new Date(r.startsAt).getFullYear())])].sort(
+        (a, b) => b - a
+      ),
+    [rituals, esteMes]
   );
+  // Los meses que se pueden elegir: de enero del primer año a diciembre del último
+  const meses = useMemo(() => {
+    const primero = anios[anios.length - 1] * 12;
+    return Array.from({ length: (anios[0] + 1) * 12 - primero }, (_, i) => primero + i);
+  }, [anios]);
 
-  const inicio = new Date(anio, desde, 1);
-  const fin = new Date(anio, hasta + 1, 1);
+  // El atajo que corresponde al periodo elegido: el último año, un año entero o a medida
+  const atajo = desde === esteMes - 11 && hasta === esteMes ? 'ultimo' : desde % 12 === 0 && hasta === desde + 11 ? String(anioDe(desde)) : 'medida';
+  const elegirAtajo = (valor: string) => {
+    if (valor === 'ultimo') {
+      setDesde(esteMes - 11);
+      setHasta(esteMes);
+    } else if (valor !== 'medida') {
+      setDesde(Number(valor) * 12);
+      setHasta(Number(valor) * 12 + 11);
+    }
+  };
+
+  const inicio = primerDia(desde);
+  const fin = primerDia(hasta + 1);
   const enPeriodo = rituals.filter((r) => new Date(r.startsAt) < fin && new Date(r.endsAt ?? r.startsAt) >= inicio);
   const elegidoEnPeriodo = enPeriodo.find((r) => keyOf(r) === elegido) ?? null;
-  const periodo =
-    desde === 0 && hasta === 11
-      ? `${anio}`
-      : desde === hasta
-        ? `${MESES[desde].toLowerCase()} de ${anio}`
-        : `de ${MESES[desde].toLowerCase()} a ${MESES[hasta].toLowerCase()} de ${anio}`;
+  const periodo = describirPeriodo(desde, hasta);
 
   const cambiarDesde = (m: number) => {
     setDesde(m);
@@ -70,15 +98,17 @@ export const RitualPhotoAlbum = ({ rituals, onOpen }: RitualPhotoAlbumProps) => 
       {/* El periodo y la forma de verlo */}
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
         <div>
-          <label htmlFor="fotos-anio" className="campo-etiqueta">
-            Año
+          <label htmlFor="fotos-periodo" className="campo-etiqueta">
+            Periodo
           </label>
-          <select id="fotos-anio" value={anio} onChange={(e) => setAnio(Number(e.target.value))} className="campo w-auto">
+          <select id="fotos-periodo" value={atajo} onChange={(e) => elegirAtajo(e.target.value)} className="campo w-auto">
+            <option value="ultimo">Último año</option>
             {anios.map((a) => (
               <option key={a} value={a}>
                 {a}
               </option>
             ))}
+            {atajo === 'medida' && <option value="medida">A medida</option>}
           </select>
         </div>
         <div>
@@ -86,9 +116,9 @@ export const RitualPhotoAlbum = ({ rituals, onOpen }: RitualPhotoAlbumProps) => 
             Desde
           </label>
           <select id="fotos-desde" value={desde} onChange={(e) => cambiarDesde(Number(e.target.value))} className="campo w-auto">
-            {MESES.map((nombre, m) => (
-              <option key={nombre} value={m}>
-                {nombre}
+            {meses.map((m) => (
+              <option key={m} value={m}>
+                {MESES[m % 12]} {anioDe(m)}
               </option>
             ))}
           </select>
@@ -98,9 +128,9 @@ export const RitualPhotoAlbum = ({ rituals, onOpen }: RitualPhotoAlbumProps) => 
             Hasta
           </label>
           <select id="fotos-hasta" value={hasta} onChange={(e) => cambiarHasta(Number(e.target.value))} className="campo w-auto">
-            {MESES.map((nombre, m) => (
-              <option key={nombre} value={m}>
-                {nombre}
+            {meses.map((m) => (
+              <option key={m} value={m}>
+                {MESES[m % 12]} {anioDe(m)}
               </option>
             ))}
           </select>
@@ -117,8 +147,8 @@ export const RitualPhotoAlbum = ({ rituals, onOpen }: RitualPhotoAlbumProps) => 
       {/* Cuántos hay: se anuncia al cambiar el periodo */}
       <p role="status" className="text-sm text-on-surface-muted -mt-2">
         {enPeriodo.length === 0
-          ? `No hay fotos de eventos ni partidas en ${periodo}.`
-          : `${enPeriodo.length === 1 ? 'Un evento o partida' : `${enPeriodo.length} eventos y partidas`} con fotos en ${periodo}.`}
+          ? `No hay fotos de eventos ni partidas ${periodo}.`
+          : `${enPeriodo.length === 1 ? 'Un evento o partida' : `${enPeriodo.length} eventos y partidas`} con fotos ${periodo}.`}
       </p>
 
       {enPeriodo.length > 0 &&
@@ -153,6 +183,7 @@ interface LineaDeEventosProps {
   rituals: Ritual[];
   inicio: Date;
   fin: Date;
+  /** Primer y último mes del periodo, como número absoluto (año × 12 + mes). */
   mesesDesde: number;
   mesesHasta: number;
   elegido: string | null;
@@ -176,12 +207,15 @@ const LineaDeEventos = ({ rituals, inicio, fin, mesesDesde, mesesHasta, elegido,
   const marcas: Array<{ x: number; texto: string }> =
     mesesDesde === mesesHasta
       ? [1, 8, 15, 22, 29]
-          .map((d) => new Date(inicio.getFullYear(), mesesDesde, d))
+          .map((d) => new Date(inicio.getFullYear(), inicio.getMonth(), d))
           .filter((d) => d < fin)
           .map((d) => ({ x: pos(d), texto: String(d.getDate()) }))
       : Array.from({ length: mesesHasta - mesesDesde + 1 }, (_, i) => {
-          const d = new Date(inicio.getFullYear(), mesesDesde + i, 1);
-          return { x: pos(d), texto: d.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '') };
+          const d = primerDia(mesesDesde + i);
+          const mes = d.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '');
+          // Si el periodo cruza de año, el primer mes y cada enero llevan el año
+          const conAnio = anioDe(mesesDesde) !== anioDe(mesesHasta) && (i === 0 || d.getMonth() === 0);
+          return { x: pos(d), texto: conAnio ? `${mes} ${String(d.getFullYear()).slice(2)}` : mes };
         });
 
   // Cada evento en el carril más bajo donde no pisa al anterior
