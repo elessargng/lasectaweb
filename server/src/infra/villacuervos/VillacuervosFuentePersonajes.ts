@@ -1,5 +1,5 @@
 import { VillacuervosRepository } from '../../repositories/VillacuervosRepository';
-import { PersonajeDeFuente } from '../../models/guiones';
+import { PersonajeDeFuente } from '../../models/catalogo';
 import { FuentePersonajes } from '../../services/comun/FuentePersonajes';
 import { personajeDesdeVillacuervos } from './PersonajeMapper';
 

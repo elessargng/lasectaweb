@@ -1,5 +1,5 @@
 import type { Distribucion } from '../../compartido/partida';
-import type { PersonajeDeGuion } from '../../guiones';
+import type { PersonajeDeGuion } from '../../catalogo';
 import { barajar, type Azar } from './azar';
 import { repartoPara } from './distribucion';
 import { identidadDe } from './Grimorio';

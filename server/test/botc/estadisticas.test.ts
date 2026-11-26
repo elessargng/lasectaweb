@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resumenPartida, type RegistroPartida } from '../../src/models/estadisticas/resumenPartida';
+import { resumenPartida, type RegistroPartida } from '../../src/models/botc/partida/proyecciones/resumenPartida';
 import { SALA_CUENTA_ATRAS_MS } from '../../src/models/botc/partida/Nominaciones';
 import { SalaDeJuego } from '../../src/models/botc/SalaDeJuego';
 import { conCuenta, guionDePrueba, conSemilla } from './guionDePrueba';

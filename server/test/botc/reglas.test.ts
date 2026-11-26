@@ -9,7 +9,7 @@ import { percepcionReal } from '../../src/models/botc/personajes/Percepcion';
 import { reclusa } from '../../src/models/botc/personajes/reclusa';
 import { espia } from '../../src/models/botc/personajes/espia';
 import { envenenador } from '../../src/models/botc/personajes/envenenador';
-import type { PersonajeDeGuion } from '../../src/models/guiones';
+import type { PersonajeDeGuion } from '../../src/models/catalogo';
 import { objetivoReal } from '../../src/models/botc/personajes/Objetivo';
 import { REGLAS } from '../../src/models/botc/personajes/Reglas';
 

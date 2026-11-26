@@ -1,5 +1,5 @@
 import { DatabaseRepository } from './DatabaseRepository';
-import { ReglaDjinn } from '../models/guiones';
+import { ReglaDjinn } from '../models/catalogo';
 
 /**
  * Las reglas del Djinn (tabla reglas_djinn), copia local de las de la fuente.

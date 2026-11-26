@@ -5,9 +5,9 @@
  */
 import type { ChatRepository } from '../../repositories/ChatRepository';
 import type { ImagenRepository } from '../../repositories/ImagenRepository';
-import type { GuionPredeterminado, GuionResuelto } from '../../models/guiones';
+import type { GuionPredeterminado, GuionResuelto } from '../../models/catalogo';
 import type { MensajeChat, Susurro } from '../../models/botc/chat';
-import type { RegistroPartida } from '../../models/estadisticas/resumenPartida';
+import type { RegistroPartida } from '../../models/botc/partida/proyecciones/resumenPartida';
 import type { Azar } from '../../models/botc/partida/azar';
 import type { Ajustes } from '../../models/botc/partida/Configuracion';
 import type { InstantaneaPartida } from '../../models/botc/partida/Partida';

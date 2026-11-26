@@ -1,7 +1,7 @@
 import type { Bolsa } from '../partida/Bolsa';
 import { GUION_DE_LA_SALA } from '../../compartido/narradorVirtual';
 import type { Distribucion } from '../../compartido/partida';
-import type { PersonajeDeGuion } from '../../guiones';
+import type { PersonajeDeGuion } from '../../catalogo';
 import {
   categoriasDeHuecos,
   CATEGORIAS_ALDEANOS,

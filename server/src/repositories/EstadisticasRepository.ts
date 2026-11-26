@@ -1,5 +1,5 @@
 import { DatabaseRepository } from './DatabaseRepository';
-import type { AsientoPartida, RegistroPartida } from '../models/estadisticas/resumenPartida';
+import type { AsientoPartida, RegistroPartida } from '../models/botc/partida/proyecciones/resumenPartida';
 import type { RegistroVotacion } from '../models/compartido/partida';
 import type { EntradaDiario } from '../models/compartido/diario';
 

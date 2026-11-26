@@ -1,5 +1,5 @@
 import { JUGADORES_NARRADOR_VIRTUAL } from '../../compartido/narradorVirtual';
-import type { PersonajeDeGuion } from '../../guiones';
+import type { PersonajeDeGuion } from '../../catalogo';
 import { repartoPara } from '../partida/distribucion';
 
 /**

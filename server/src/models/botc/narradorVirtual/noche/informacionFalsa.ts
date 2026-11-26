@@ -1,5 +1,5 @@
 import { FICHAS_DESPERTAR, type EnvioDespertar } from '../../../compartido/despertar';
-import type { PersonajeDeGuion } from '../../../guiones';
+import type { PersonajeDeGuion } from '../../../catalogo';
 import { ficha, numero, type ContextoNoche, type HabilidadNocturna } from '../../partida/habilidades/HabilidadNocturna';
 
 /** Los números en fichas, por orden (cero, uno…). */

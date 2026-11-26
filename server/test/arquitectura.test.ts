@@ -76,9 +76,8 @@ describe('arquitectura', () => {
     expect(fuera, 'Estos archivos sacan el azar por su cuenta: que lo reciban').toEqual([]);
   });
 
-  it('las proyecciones del diario (y el resumen de las estadísticas) son funciones puras: solo leen el diario (models/compartido y otras proyecciones)', () => {
-    const puras = [...archivos('models/botc/partida/proyecciones'), 'models/estadisticas/resumenPartida.ts'];
-    const fuera = puras.filter((f) => importsDe(f).some((i) => !i.startsWith('models/compartido/') && !i.startsWith('models/botc/partida/proyecciones/')));
+  it('las proyecciones del diario (también el resumen de las estadísticas) son funciones puras: solo leen el diario (models/compartido y otras proyecciones)', () => {
+    const fuera = archivos('models/botc/partida/proyecciones').filter((f) => importsDe(f).some((i) => !i.startsWith('models/compartido/') && !i.startsWith('models/botc/partida/proyecciones/')));
     expect(fuera, 'Estas proyecciones dependen de algo con estado').toEqual([]);
   });
 

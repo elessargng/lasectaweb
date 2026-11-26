@@ -1,6 +1,6 @@
 import { SalaDeJuego } from '../../models/botc/SalaDeJuego';
 import { limpiarNombreSala, SALA_AVATAR_INVITADO, type Participante, type SalaLlegada } from '../../models/botc/sala/Participantes';
-import { resumenPartida } from '../../models/estadisticas/resumenPartida';
+import { resumenPartida } from '../../models/botc/partida/proyecciones/resumenPartida';
 import { temporizadorReal, type RespuestaAccion } from '../../models/botc/narradorVirtual/puertos';
 import { ChatError, ChatService } from './ChatService';
 import { ConversacionError, ConversacionService } from './ConversacionService';

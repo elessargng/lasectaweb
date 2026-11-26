@@ -1,5 +1,5 @@
 import { NUM_FAROLES } from '../../compartido/jugador';
-import type { PersonajeDeGuion } from '../../guiones';
+import type { PersonajeDeGuion } from '../../catalogo';
 import type { Jugador } from './Jugador';
 import type { Diario } from './eventos';
 

@@ -9,9 +9,9 @@ import {
   PersonajeDeGuion,
   PersonajePropio,
   TIPOS_NPC,
-} from '../../models/guiones';
-import { GuionInvalidoError } from '../../models/guiones/errores';
-import { leerGuionJson } from '../../models/guiones/lectorGuionJson';
+} from '../../models/catalogo';
+import { GuionInvalidoError } from '../../models/catalogo/errores';
+import { leerGuionJson } from '../../models/catalogo/lectorGuionJson';
 
 /**
  * Los guiones por defecto: las tres ediciones base, con sus aldeanos, forasteros,

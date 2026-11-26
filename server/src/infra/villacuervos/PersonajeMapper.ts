@@ -1,5 +1,5 @@
 import { PublicRoleSchema } from './esquemas';
-import { PersonajeDeFuente, TIPOS_PERSONAJE, TipoPersonaje } from '../../models/guiones';
+import { PersonajeDeFuente, TIPOS_PERSONAJE, TipoPersonaje } from '../../models/catalogo';
 import { normalizarIdPersonaje } from '../../models/botc/personajes/idPersonaje';
 
 /**

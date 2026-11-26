@@ -1,4 +1,4 @@
-import { ReglaDjinn } from '../../models/guiones';
+import { ReglaDjinn } from '../../models/catalogo';
 
 /**
  * De dónde salen las reglas del Djinn. La sincronización solo conoce esta

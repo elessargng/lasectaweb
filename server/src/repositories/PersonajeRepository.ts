@@ -1,5 +1,5 @@
 import { DatabaseRepository } from './DatabaseRepository';
-import { Personaje, TipoPersonaje } from '../models/guiones';
+import { Personaje, TipoPersonaje } from '../models/catalogo';
 
 /** Lo que se guarda de un personaje además del modelo: de dónde salieron sus iconos y cuándo. */
 export interface PersonajeGuardado extends Personaje {

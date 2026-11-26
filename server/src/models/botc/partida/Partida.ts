@@ -6,7 +6,7 @@ import { NUM_FAROLES, type Alineamiento } from '../../compartido/jugador';
 import { SALA_FORMAS_MANO, type FormaMano } from '../../compartido/participante';
 import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA, type RegistroVotacion } from '../../compartido/partida';
 import type { AsientoDiario, EntradaDiario, FotoAsiento, HechoDiario } from '../../compartido/diario';
-import { TIPOS_NPC, type GuionResuelto, type TipoPersonaje } from '../../guiones';
+import { TIPOS_NPC, type GuionResuelto, type TipoPersonaje } from '../../catalogo';
 import type { Participante } from '../sala/Participantes';
 import type { Sala } from '../sala/Sala';
 import { AccesoGrimorio } from './AccesoGrimorio';

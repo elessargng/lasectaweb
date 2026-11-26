@@ -1,5 +1,5 @@
 import { VillacuervosRepository } from '../../repositories/VillacuervosRepository';
-import { Genero, Idioma, TraduccionPersonaje } from '../../models/guiones';
+import { Genero, Idioma, TraduccionPersonaje } from '../../models/catalogo';
 import { FuenteTraducciones } from '../../services/comun/FuenteTraducciones';
 import { idiomaDesdeVillacuervos, traduccionDesdeVillacuervos } from './TraduccionMapper';
 
