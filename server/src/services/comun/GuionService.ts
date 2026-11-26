@@ -1,16 +1,13 @@
 import { DjinnRepository } from '../../repositories/DjinnRepository';
 import { PersonajeGuardado, PersonajeRepository } from '../../repositories/PersonajeRepository';
-import {
-  GuionImportado,
-  GuionPredeterminado,
-  GuionResuelto,
-  Personaje,
-  ESPECIAL_REPETIBLE,
-  PersonajeDeGuion,
-  PersonajePropio,
-  TIPOS_NPC,
-} from '../../models/catalogo';
-import { GuionInvalidoError } from '../../models/catalogo/errores';
+import { GuionImportado } from '../../models/catalogo/GuionImportado';
+import { GuionPredeterminado } from '../../models/catalogo/GuionPredeterminado';
+import { GuionResuelto } from '../../models/catalogo/GuionResuelto';
+import { Personaje, ESPECIAL_REPETIBLE } from '../../models/catalogo/Personaje';
+import { PersonajeDeGuion } from '../../models/catalogo/PersonajeDeGuion';
+import { PersonajePropio } from '../../models/catalogo/PersonajePropio';
+import { TIPOS_NPC } from '../../models/catalogo/TipoPersonaje';
+import { GuionInvalidoError } from '../../models/catalogo/GuionInvalidoError';
 import { leerGuionJson } from '../../models/catalogo/lectorGuionJson';
 
 /**

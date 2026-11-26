@@ -1,5 +1,6 @@
 import { DatabaseRepository } from './DatabaseRepository';
-import { Genero, TraduccionPersonaje } from '../models/catalogo';
+import { Genero } from '../models/catalogo/Genero';
+import { TraduccionPersonaje } from '../models/catalogo/TraduccionPersonaje';
 
 /** Las traducciones de un idioma en un género, o sin género (null) si el idioma no los distingue. */
 export interface VarianteTraducciones {

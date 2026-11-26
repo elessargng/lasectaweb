@@ -1,5 +1,5 @@
 import { GUION_DE_LA_SALA, NARRADORES_VIRTUALES, type EtapaNarradorVirtual, type GuionNarrable, type IdNarradorVirtual } from '../../models/compartido/narradorVirtual';
-import type { GuionResuelto } from '../../models/catalogo';
+import type { GuionResuelto } from '../../models/catalogo/GuionResuelto';
 import { desconocidos, jugadoresDelGuion, noSabeNarrar } from '../../models/botc/narradorVirtual/guionNarrable';
 import type { ServicioGuiones } from './puertos';
 import { opcionesNarradorVirtual, type OpcionesNarradorVirtual } from '../../models/botc/narradorVirtual/NarradorVirtual';

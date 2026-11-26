@@ -6,7 +6,7 @@ import {
   type FichaDespertar,
   type TarjetaDespertar,
 } from '../../compartido/despertar';
-import type { PersonajeDeGuion } from '../../catalogo';
+import type { PersonajeDeGuion } from '../../catalogo/PersonajeDeGuion';
 
 /** Largo máximo del texto «Personalizado» al despertar. */
 export const SALA_TEXTO_DESPERTAR_MAX = 200;

@@ -1,5 +1,6 @@
 import type { Alineamiento } from '../../compartido/jugador';
-import type { PersonajeDeGuion, TipoPersonaje } from '../../catalogo';
+import type { PersonajeDeGuion } from '../../catalogo/PersonajeDeGuion';
+import type { TipoPersonaje } from '../../catalogo/TipoPersonaje';
 import type { Recordatorio } from '../../compartido/grimorio';
 import type { Azar } from '../partida/azar';
 import type { Jugador } from '../partida/Jugador';

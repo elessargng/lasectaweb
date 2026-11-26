@@ -1,5 +1,6 @@
 import { PublicPackSchema, PublicTranslationSchema } from './esquemas';
-import { IDIOMA_ORIGINAL, Idioma, TraduccionPersonaje } from '../../models/catalogo';
+import { IDIOMA_ORIGINAL, Idioma } from '../../models/catalogo/Idioma';
+import { TraduccionPersonaje } from '../../models/catalogo/TraduccionPersonaje';
 import { normalizarIdPersonaje } from '../../models/botc/personajes/idPersonaje';
 
 /**

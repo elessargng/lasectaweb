@@ -1,4 +1,4 @@
-import { PersonajeDeFuente } from '../../models/catalogo';
+import { PersonajeDeFuente } from '../../models/catalogo/PersonajeDeFuente';
 
 /**
  * De dónde salen los personajes del catálogo. La sincronización solo conoce esta

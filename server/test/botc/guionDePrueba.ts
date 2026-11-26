@@ -1,4 +1,6 @@
-import type { GuionResuelto, PersonajeDeGuion, TipoPersonaje } from '../../src/models/catalogo';
+import type { GuionResuelto } from '../../src/models/catalogo/GuionResuelto';
+import type { PersonajeDeGuion } from '../../src/models/catalogo/PersonajeDeGuion';
+import type { TipoPersonaje } from '../../src/models/catalogo/TipoPersonaje';
 import { Bolsa, type PoderDe } from '../../src/models/botc/partida/Bolsa';
 import { PODERES_BOLSA } from '../../src/models/botc/personajes';
 import type { SalaLlegada } from '../../src/models/botc/sala/Participantes';

@@ -1,4 +1,6 @@
-import { Genero, Idioma, TraduccionPersonaje } from '../../models/catalogo';
+import { Genero } from '../../models/catalogo/Genero';
+import { Idioma } from '../../models/catalogo/Idioma';
+import { TraduccionPersonaje } from '../../models/catalogo/TraduccionPersonaje';
 
 /**
  * De dónde salen las traducciones de los personajes. La sincronización solo

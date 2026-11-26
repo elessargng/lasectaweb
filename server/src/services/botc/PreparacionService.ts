@@ -1,6 +1,6 @@
 import type { CambiosAjustes } from '../../models/botc/partida/Configuracion';
 import { NPC_BOOTLEGGER, NPC_SILENCIO, NPC_STORMCATCHER } from '../../models/botc/partida/personajesEspeciales';
-import { GuionInvalidoError } from '../../models/catalogo/errores';
+import { GuionInvalidoError } from '../../models/catalogo/GuionInvalidoError';
 import { leerDataUrl } from '../../models/imagenes';
 import { FONDO_SALA } from '../../models/botc/sala/imagenes';
 import type { Participante } from '../../models/botc/sala/Participantes';

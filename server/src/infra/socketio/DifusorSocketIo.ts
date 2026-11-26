@@ -1,6 +1,6 @@
 import type { Server } from 'socket.io';
 import type { MensajeChat, Susurro } from '../../models/botc/chat';
-import type { GuionResuelto } from '../../models/catalogo';
+import type { GuionResuelto } from '../../models/catalogo/GuionResuelto';
 import type { SalaService } from '../../services/botc/SalaService';
 import type { DifusorSala, MotivoExpulsion } from '../../services/botc/puertos';
 import { VistaPartida } from '../../views/botc/VistaPartida';

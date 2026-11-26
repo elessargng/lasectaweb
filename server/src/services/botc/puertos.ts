@@ -5,7 +5,8 @@
  */
 import type { ChatRepository } from '../../repositories/ChatRepository';
 import type { ImagenRepository } from '../../repositories/ImagenRepository';
-import type { GuionPredeterminado, GuionResuelto } from '../../models/catalogo';
+import type { GuionPredeterminado } from '../../models/catalogo/GuionPredeterminado';
+import type { GuionResuelto } from '../../models/catalogo/GuionResuelto';
 import type { MensajeChat, Susurro } from '../../models/botc/chat';
 import type { RegistroPartida } from '../../models/botc/partida/proyecciones/resumenPartida';
 import type { Azar } from '../../models/botc/partida/azar';

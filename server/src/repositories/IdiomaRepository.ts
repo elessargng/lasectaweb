@@ -1,5 +1,5 @@
 import { DatabaseRepository } from './DatabaseRepository';
-import { Idioma } from '../models/catalogo';
+import { Idioma } from '../models/catalogo/Idioma';
 
 const COLUMNAS = 'id, nombre, codigo, tieneGeneros';
 const aModelo = (f: any): Idioma => ({ id: f.id, nombre: f.nombre, codigo: f.codigo, tieneGeneros: !!f.tieneGeneros });

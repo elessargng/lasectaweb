@@ -8,7 +8,7 @@ import {
 } from '../../compartido/grimorio';
 import { type Alineamiento } from '../../compartido/jugador';
 import type { AsientoDiario, CausaMuerte, HechoDiario } from '../../compartido/diario';
-import type { PersonajeDeGuion } from '../../catalogo';
+import type { PersonajeDeGuion } from '../../catalogo/PersonajeDeGuion';
 import type { EstadoJugador, Jugador } from './Jugador';
 
 /** Los tipos de personaje que pueden ir en la ficha de un jugador (no los legendarios ni los lóricos). */

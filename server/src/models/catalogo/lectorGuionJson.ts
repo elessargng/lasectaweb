@@ -1,6 +1,10 @@
 import { normalizarIdPersonaje } from '../botc/personajes/idPersonaje';
-import { GuionInvalidoError } from './errores';
-import { Despertar, ESPECIAL_REPETIBLE, GuionImportado, PersonajePropio, TIPOS_PERSONAJE, TipoPersonaje } from './index';
+import { GuionInvalidoError } from './GuionInvalidoError';
+import { Despertar } from './Despertar';
+import { GuionImportado } from './GuionImportado';
+import { ESPECIAL_REPETIBLE } from './Personaje';
+import { PersonajePropio } from './PersonajePropio';
+import { TIPOS_PERSONAJE, TipoPersonaje } from './TipoPersonaje';
 
 
 const MAX_TEXTO = 300 * 1024;
