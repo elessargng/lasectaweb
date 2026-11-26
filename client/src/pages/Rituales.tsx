@@ -27,6 +27,7 @@ import {
   startOfWeek
 } from '../components/rituales/ritualDates';
 import { useAuth } from '../context/AuthContext';
+import { RUTA_BOTC } from '../components/rituales/botcLaSecta';
 import {
   createRitual,
   deleteRitual,
@@ -486,8 +487,8 @@ const Rituales = () => {
         {/* La sala de juego se abre siempre en una ventana aparte. rel="opener" para
             que herede la sesión sin «Recordarme», que vive en sessionStorage */}
         <div className="flex justify-center mt-10 px-4">
-          <Button variant="primary" href="/sala.html" target="_blank" rel="opener" className="px-8 py-3 text-lg">
-            Entrar en la sala de juegos
+          <Button variant="primary" href={RUTA_BOTC} target="_blank" rel="opener" className="px-8 py-3 text-lg">
+            Entrar en Clocktower online
             <span className="sr-only"> (se abre en una ventana nueva)</span>
           </Button>
         </div>

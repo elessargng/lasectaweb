@@ -358,7 +358,7 @@ const Profile = () => {
                       Estadísticas públicas
                     </p>
                     <p className="text-sm font-body text-on-surface-muted mt-1">
-                      Al terminar cada partida en la sala se guardan tus roles, tus bandos y si ganaste.
+                      Al terminar cada partida en Clocktower online se guardan tus roles, tus bandos y si ganaste.
                       Activado, cualquiera puede verlas en tu perfil; si no, solo tú.{' '}
                       <Link to="/estadisticas" className="text-theme-main hover:underline">
                         Ver las de los demás

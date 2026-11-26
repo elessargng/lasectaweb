@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { AsientoDiario, EntradaDiario, HechoDiario } from '@models/diario';
-import { NOMBRE_BANDO, fichaDespertar, tarjetaDespertar, textoEleccion } from '../../sala/despertar';
+import { NOMBRE_BANDO, fichaDespertar, tarjetaDespertar, textoEleccion } from '../../botc/despertar';
 import type { VotacionHistorial } from '../../utils/estadisticasApi';
 import NombrePersonaje from './NombrePersonaje';
 import type { DatosPersonajes } from './personajes';

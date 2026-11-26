@@ -6,7 +6,7 @@ import Button from './Button';
 import { compressImage } from '../utils/image';
 import { parseApiResponse } from '../utils/api';
 import Dialog from './Dialog';
-import Interruptor from '../sala/Interruptor';
+import Interruptor from '../botc/Interruptor';
 
 interface AuthModalProps {
   isOpen: boolean;

@@ -1,0 +1,219 @@
+import jwt from 'jsonwebtoken';
+import { createServer, type Server as HttpServer } from 'http';
+import type { AddressInfo } from 'net';
+import { io as conectar, type Socket } from 'socket.io-client';
+import type { SalaDeJuego } from '../../src/models/botc/SalaDeJuego';
+import { MemoriaChatRepository } from '../../src/repositories/ChatRepository';
+import { BolsaController } from '../../src/controllers/botc/BolsaController';
+import { FarolController } from '../../src/controllers/botc/FarolController';
+import { DiaController } from '../../src/controllers/botc/DiaController';
+import { FaseController } from '../../src/controllers/botc/FaseController';
+import { GrimorioController } from '../../src/controllers/botc/GrimorioController';
+import { NarradorVirtualController } from '../../src/controllers/botc/NarradorVirtualController';
+import { NocheController } from '../../src/controllers/botc/NocheController';
+import { ParticipantesController } from '../../src/controllers/botc/ParticipantesController';
+import { PreparacionController } from '../../src/controllers/botc/PreparacionController';
+import { RelojController } from '../../src/controllers/botc/RelojController';
+import { RevelacionController } from '../../src/controllers/botc/RevelacionController';
+import { SenalamientoController } from '../../src/controllers/botc/SenalamientoController';
+import { SalaController } from '../../src/controllers/botc/SalaController';
+import { abrirSalaPorSocket, SALA_SOCKET_PATH } from '../../src/infra/socketio/salaPorSocket';
+import { SalaService } from '../../src/services/botc/SalaService';
+import type { DependenciasSala, ServicioGuiones } from '../../src/services/botc/puertos';
+import { MemoriaImagenRepository } from '../../src/repositories/ImagenRepository';
+import type { SalaDto, ResultadoAccion } from '../../src/views/botc/dto/sala';
+import { conSemilla, guionDePrueba } from './guionDePrueba';
+
+/** Los guiones predeterminados de los tests (cada test dice qué guion resuelve cada uno). */
+const PREDETERMINADOS = [
+  { id: 'troublebrewing', nombre: 'Trouble Brewing', autor: 'Steven Medway' },
+  { id: 'nogreaterjoy', nombre: 'No Greater Joy', autor: 'Steven Medway' },
+];
+
+const ESPERA_MAX_MS = 2000;
+
+/** Un navegador conectado a la sala: guarda el último estado que le ha llegado. */
+export class Cliente {
+  /** Cuántos estados le han llegado (cada difusión manda uno a cada conexión). */
+  recibidos = 0;
+  private ultimo: SalaDto | null = null;
+  private avisos: (() => void)[] = [];
+
+  constructor(
+    readonly nombre: string,
+    readonly socket: Socket,
+  ) {
+    socket.on('sala:estado', (estado: SalaDto) => {
+      this.ultimo = estado;
+      this.recibidos += 1;
+      for (const avisar of this.avisos.splice(0)) avisar();
+    });
+  }
+
+  get estado(): SalaDto {
+    if (!this.ultimo) throw new Error(`${this.nombre} aún no ha recibido el estado`);
+    return this.ultimo;
+  }
+
+  /** Mi id en la sala. */
+  get id(): string {
+    return this.estado.yo;
+  }
+
+  /** El asiento en el que estoy sentado (como lo veo yo). */
+  get miAsiento() {
+    return this.estado.plaza.find((a) => a.participanteId === this.id);
+  }
+
+  /**
+   * Espera a que el estado cumpla algo (lo que hace solo el narrador virtual llega
+   * cuando llega, no tras una acción de este cliente).
+   */
+  async esperarQue(cumple: (estado: SalaDto) => boolean, espera = ESPERA_MAX_MS): Promise<void> {
+    const limite = Date.now() + espera;
+    while (!this.ultimo || !cumple(this.ultimo)) {
+      if (Date.now() > limite) throw new Error(`${this.nombre}: el estado no ha llegado a lo esperado a tiempo`);
+      await new Promise<void>((resolver) => {
+        this.avisos.push(resolver);
+        setTimeout(resolver, 50);
+      });
+    }
+  }
+
+  /** Espera a haber recibido más de `n` estados. */
+  async esperarMasDe(n: number): Promise<void> {
+    const limite = Date.now() + ESPERA_MAX_MS;
+    while (this.recibidos <= n) {
+      if (Date.now() > limite) throw new Error(`${this.nombre} no ha recibido el estado a tiempo`);
+      await new Promise<void>((resolver) => {
+        this.avisos.push(resolver);
+        setTimeout(resolver, 50);
+      });
+    }
+  }
+}
+
+/** Un servidor de la sala de verdad (socket.io) en un puerto libre, con sus clientes. */
+export class Arnes {
+  readonly clientes: Cliente[] = [];
+
+  private constructor(
+    private readonly http: HttpServer,
+    private readonly url: string,
+    /** El servicio de la sala (para recuperarla o guardarla, como al reiniciar el servidor). */
+    readonly servicio: SalaService,
+  ) {}
+
+  /** La sala de juego del servidor, para mirar lo que no llega a los clientes (la historia de la partida). */
+  get juego(): SalaDeJuego {
+    return this.servicio.juego;
+  }
+
+  /** `guiones`: lo que cambia de los de por defecto (el guion de prueba, con cualquier id; y los predeterminados, PREDETERMINADOS). */
+  static async crear(cambios: Partial<Omit<DependenciasSala, 'guiones'>> & { guiones?: Partial<ServicioGuiones> } = {}): Promise<Arnes> {
+    const http = createServer();
+    const deps: DependenciasSala = {
+      mensajes: new MemoriaChatRepository(),
+      video: null,
+      imagenesBiblioteca: { leerPublica: async () => Promise.reject(new Error('Sin Biblioteca')) },
+      imagenes: new MemoriaImagenRepository(),
+      ...cambios,
+      guiones: {
+        predeterminados: () => PREDETERMINADOS,
+        guionPredeterminado: async () => guionDePrueba(),
+        importar: async () => guionDePrueba(),
+        ...cambios.guiones,
+      },
+      // El azar, con semilla: la misma sala sale siempre igual
+      azar: cambios.azar ?? conSemilla(1),
+    };
+    const salaService = new SalaService(deps);
+    abrirSalaPorSocket(http, salaService, {
+      sala: new SalaController(salaService),
+      bolsa: new BolsaController(salaService.bolsa),
+      faroles: new FarolController(salaService.faroles),
+      dia: new DiaController(salaService.dia),
+      fase: new FaseController(salaService.fase),
+      grimorio: new GrimorioController(salaService.grimorio),
+      narradorVirtual: new NarradorVirtualController(salaService.narradorVirtual),
+      noche: new NocheController(salaService.noche),
+      participantes: new ParticipantesController(salaService.participantes),
+      preparacion: new PreparacionController(salaService.preparacion),
+      reloj: new RelojController(salaService.reloj),
+      revelacion: new RevelacionController(salaService.revelacion),
+      senalamiento: new SenalamientoController(salaService.senalamiento),
+    });
+    await new Promise<void>((resolver) => http.listen(0, '127.0.0.1', resolver));
+    const { port } = http.address() as AddressInfo;
+    return new Arnes(http, `http://127.0.0.1:${port}`, salaService);
+  }
+
+  /**
+   * Entra un invitado con ese nombre (o, con `cuenta`, ese usuario con su token) y
+   * espera a que todos tengan el estado nuevo.
+   */
+  async entrar(nombre: string, { cuenta }: { cuenta?: string } = {}): Promise<Cliente> {
+    const antes = this.recuento();
+    const token = cuenta ? jwt.sign({ id: cuenta, username: nombre }, process.env.JWT_SECRET || 'secret') : undefined;
+    const socket = conectar(this.url, {
+      path: SALA_SOCKET_PATH,
+      transports: ['websocket'],
+      auth: { nombre, clienteId: `cliente-${nombre}`, ...(token ? { token } : {}) },
+      reconnection: false,
+    });
+    const cliente = new Cliente(nombre, socket);
+    await cliente.esperarMasDe(0);
+    await this.esperarA(antes);
+    this.clientes.push(cliente);
+    return cliente;
+  }
+
+  /**
+   * Pide algo por su evento ('sala:sentarse'…) y, si sale bien, espera a que el
+   * estado nuevo les llegue a todos (cada petición que sale bien se difunde). Falla
+   * si la petición falla.
+   */
+  async accion(cliente: Cliente, accion: string, datos?: unknown): Promise<ResultadoAccion> {
+    const resultado = await this.intentar(cliente, accion, datos);
+    if (!resultado.ok) throw new Error(`${cliente.nombre} no ha podido ${accion}: ${resultado.error}`);
+    return resultado;
+  }
+
+  /** Como accion, pero devuelve el resultado aunque falle. */
+  async intentar(cliente: Cliente, accion: string, datos?: unknown): Promise<ResultadoAccion> {
+    return this.pedir(cliente, accion, datos);
+  }
+
+  /** Como pedir, pero falla si la petición falla (para preparar un test: 'fase:noche'…). */
+  async hacer(cliente: Cliente, evento: string, datos?: unknown): Promise<void> {
+    const resultado = await this.pedir(cliente, evento, datos);
+    if (!resultado.ok) throw new Error(`${cliente.nombre} no ha podido ${evento}: ${resultado.error}`);
+  }
+
+  /** Una petición por su evento (la bolsa: 'bolsa:meter'…) y, si sale bien, espera a que llegue la sala a todos. */
+  async pedir<R extends { ok: boolean } = ResultadoAccion>(cliente: Cliente, evento: string, datos?: unknown): Promise<R> {
+    const antes = this.recuento();
+    const resultado = await new Promise<R>((resolver) => cliente.socket.emit(evento, datos, resolver));
+    if (resultado.ok) await this.esperarA(antes);
+    return resultado;
+  }
+
+  /** Una consulta (no cambia la sala: no se espera a que llegue): lo que contesta. */
+  consultar<R>(cliente: Cliente, evento: string, datos?: unknown): Promise<R> {
+    return new Promise<R>((resolver) => cliente.socket.emit(evento, datos, resolver));
+  }
+
+  async cerrar(): Promise<void> {
+    for (const c of this.clientes) c.socket.disconnect();
+    this.http.closeAllConnections();
+    await new Promise<void>((resolver) => this.http.close(() => resolver()));
+  }
+
+  private recuento(): Map<Cliente, number> {
+    return new Map(this.clientes.map((c) => [c, c.recibidos]));
+  }
+
+  private async esperarA(antes: Map<Cliente, number>): Promise<void> {
+    await Promise.all([...antes].map(([c, n]) => c.esperarMasDe(n)));
+  }
+}

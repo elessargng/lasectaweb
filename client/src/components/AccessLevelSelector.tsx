@@ -1,6 +1,6 @@
 import { Globe, Lock, Shield } from 'lucide-react';
 import { LIBRARY_ASSIGNABLE_ROLES, type LibraryAccessLevel } from '../utils/libraryApi';
-import Interruptor from '../sala/Interruptor';
+import Interruptor from '../botc/Interruptor';
 
 interface AccessLevelSelectorProps {
   accessLevel: LibraryAccessLevel;

@@ -5,7 +5,7 @@ import type { Ritual, RitualInput, RitualStatus, RitualType, Storyteller } from 
 import { RITUAL_KINDS, kindFromParts } from './ritualKinds';
 import { describeMonthlyPosition, toLocalDateInput, toLocalInput } from './ritualDates';
 import Dialog from '../Dialog';
-import { SALA_LA_SECTA, esSalaLaSecta } from './salaLaSecta';
+import { BOTC_LA_SECTA, esBotcLaSecta } from './botcLaSecta';
 
 interface RitualFormModalProps {
   isOpen: boolean;
@@ -38,7 +38,7 @@ const inputClass = 'campo';
 const labelClass = 'campo-etiqueta';
 
 /**
- * El cursor de un interruptor (igual que src/sala/Interruptor): el `<input>` va
+ * El cursor de un interruptor (igual que src/botc/Interruptor): el `<input>` va
  * aparte, como `peer` (sr-only), justo antes de este `<span>`.
  */
 const switchClass =
@@ -114,7 +114,7 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
     if (!ritual) {
       if (startsAt.endsWith(`T${defaultTime(type)}`)) setStartsAt(`${startsAt.slice(0, 10)}T${defaultTime(next)}`);
       if (next === 'partida_online' && !link.trim()) setLink(DEFAULT_ONLINE_LINK);
-      if (next !== 'partida_online' && (link === DEFAULT_ONLINE_LINK || esSalaLaSecta(link))) setLink('');
+      if (next !== 'partida_online' && (link === DEFAULT_ONLINE_LINK || esBotcLaSecta(link))) setLink('');
     }
     setType(next);
   };
@@ -124,7 +124,7 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
   // o al modificar una que ya está publicada allí.
   const showSignupToggle = isOnline && (ritual ? !!ritual.villacuervosUrl : alsoInVillacuervos);
   // Jugar en la sala de La Secta (en vez de en botc.app): el enlace es el de la sala
-  const enLaSecta = isOnline && esSalaLaSecta(link);
+  const enLaSecta = isOnline && esBotcLaSecta(link);
   const isInPerson = type === 'partida_presencial';
   const isGame = type !== 'jornada';
   const villacuervosColor = RITUAL_KINDS.online_villacuervos.color;
@@ -388,7 +388,7 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
                   type="checkbox"
                   role="switch"
                   checked={enLaSecta}
-                  onChange={(e) => setLink(e.target.checked ? SALA_LA_SECTA : DEFAULT_ONLINE_LINK)}
+                  onChange={(e) => setLink(e.target.checked ? BOTC_LA_SECTA : DEFAULT_ONLINE_LINK)}
                   aria-describedby="ritual-en-la-secta-ayuda"
                   className="peer sr-only"
                 />
@@ -397,7 +397,7 @@ export const RitualFormModal = ({ isOpen, ritual, initialDay, storytellers, onCl
               </label>
               <p id="ritual-en-la-secta-ayuda" className="text-xs text-on-surface-muted">
                 {enLaSecta
-                  ? 'La partida se juega en la sala de La Secta: «Entrar en la sala» llevará a ella.'
+                  ? 'La partida se juega en Clocktower online: «Entrar en Clocktower online» llevará a ella.'
                   : 'Desactivado, la partida se juega en botc.app, con el enlace de abajo.'}
               </p>
             </div>

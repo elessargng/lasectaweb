@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { causaCuenta } from '@models/partida';
 import { useAuth } from '../../context/AuthContext';
 import { LOGROS } from '../../data/logros';
-import { CAUSAS_FINAL } from '../../sala/causasFinal';
+import { CAUSAS_FINAL } from '../../botc/causasFinal';
 import DiarioPartida from './DiarioPartida';
 import NombrePersonaje, { CadenaRoles } from './NombrePersonaje';
 import TextoLogro from './TextoLogro';
@@ -60,7 +60,7 @@ const HistorialPartidas = ({ usuario, propias, personajes }: HistorialPartidasPr
   if (error) return <p className="text-on-surface-muted">{error}</p>;
   if (!partidas) return <p className="text-on-surface-muted">Cargando el historial…</p>;
   if (partidas.length === 0) {
-    return <p className="text-on-surface-muted">{propias ? 'Todavía no has terminado ninguna partida en la sala.' : 'Todavía no hay partidas terminadas.'}</p>;
+    return <p className="text-on-surface-muted">{propias ? 'Todavía no has terminado ninguna partida en Clocktower online.' : 'Todavía no hay partidas terminadas.'}</p>;
   }
 
   const filtradas = partidas.filter((p) => filtro === 'todas' || (filtro === 'jugadas' ? p.propia?.papel === 'jugador' : p.propia?.papel === 'narrador'));

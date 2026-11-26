@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { azarSeguro } from '../src/infra/azar';
-import { barajar } from '../src/models/partida/azar';
+import { barajar } from '../src/models/botc/partida/azar';
 
 /** El azar de verdad: los tests de la sala usan uno con semilla, así que este no lo prueba nadie más. */
 describe('azarSeguro', () => {

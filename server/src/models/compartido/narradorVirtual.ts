@@ -27,7 +27,7 @@ export const JUGADORES_NARRADOR_VIRTUAL = { min: 5, max: 15 } as const;
 export const GUION_DE_LA_SALA = 'sala';
 
 /**
- * Un guion que puede llevar el narrador virtual (ver models/narradorVirtual/guionNarrable):
+ * Un guion que puede llevar el narrador virtual (ver models/botc/narradorVirtual/guionNarrable):
  * uno predeterminado (su id) o el de la sala (GUION_DE_LA_SALA), y con cuántos
  * jugadores se llena su bolsa.
  */

@@ -1,4 +1,4 @@
-import type { MensajeChat } from '../models/chat';
+import type { MensajeChat } from '../models/botc/chat';
 
 /**
  * Dónde se guardan los mensajes de la sala. El servicio solo conoce esta

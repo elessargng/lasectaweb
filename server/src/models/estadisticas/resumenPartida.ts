@@ -1,7 +1,7 @@
 import { enElHistorial, type EntradaDiario, type FotoAsiento } from '../compartido/diario';
 import type { Alineamiento } from '../compartido/jugador';
 import { causaCuenta, type RegistroVotacion } from '../compartido/partida';
-import { votaciones } from '../partida/proyecciones/votaciones';
+import { votaciones } from '../botc/partida/proyecciones/votaciones';
 
 /** Lo de un jugador en una partida, tal como se guarda. */
 export interface RegistroJugador {

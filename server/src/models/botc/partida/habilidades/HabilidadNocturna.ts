@@ -1,0 +1,360 @@
+import type {
+  FichaDespertar,
+  AvisoHabilidad,
+  EleccionDespertar,
+  EnvioDespertar,
+  OpcionDespertar,
+  Registro,
+  TarjetaDespertar,
+} from '../../../compartido/despertar';
+import type { Alineamiento } from '../../../compartido/jugador';
+import type { Posibles } from '../../personajes/Percepcion';
+import { droison, tieneRecordatorio, type ContextoReglas } from '../../personajes/ReglaPersonaje';
+import type { Jugador } from '../Jugador';
+
+/** Lo que una habilidad puede consultar de la partida: lo mismo que las reglas y los faroles. Tampoco cambia la sala: responde. */
+export interface ContextoNoche extends ContextoReglas {
+  /** Los faroles que el narrador ha preparado para el demonio (casillas vacías: null). */
+  faroles(): (string | null)[];
+  /**
+   * Los asientos despertados esta noche por su habilidad (no por la información de
+   * los esbirros y del demonio): lo sabe el despertar guiado. Sin él, ninguno.
+   */
+  despertados?(): string[];
+}
+
+/** Lo que cambia en la partida al hacerse una habilidad (lo aplica DespertarGuiado). */
+export interface Efectos {
+  /**
+   * Recordatorios que se ponen (cada uno, único en la plaza): del personaje de la
+   * habilidad o, si se dice, de otro (el «No Ability» de quien se salva gastándola).
+   */
+  recordatorios: { asiento: string; texto: string; personaje?: string }[];
+  /** Quien muere esta noche (queda pendiente, como «Matar de noche»), o null. */
+  muere: string | null;
+  /** El demonio se ha elegido a sí mismo: el narrador dice quién es el nuevo. */
+  nuevoImp: boolean;
+  /** Se le envía el grimorio (el Espía). */
+  grimorio: boolean;
+}
+
+/**
+ * Lo que dice una habilidad, al preparar el despertar o cuando el jugador ya ha elegido:
+ * - listo: se hace solo. Se manda lo previo, la primera opción (sin ninguna, nada) y se aplican los efectos;
+ * - falta: falta algo en el grimorio (los avisos dicen qué);
+ * - revisar: el narrador elige entre las opciones o las cambia; los efectos los pone él.
+ */
+export interface Resultado {
+  estado: 'listo' | 'falta' | 'revisar';
+  avisos: AvisoHabilidad[];
+  opciones: OpcionDespertar[];
+  efectos: Efectos;
+  /** Listo: lo que se le manda antes de la primera opción (el demonio, sus esbirros antes de los faroles). */
+  previos?: EnvioDespertar[];
+}
+
+/**
+ * En qué tramo de la noche se resuelve una habilidad, por lo que hace (no por su
+ * nombre: un guion puede mezclar roles de varias ediciones). Un tramo se resuelve
+ * cuando el anterior ya lo está; los del mismo tramo no chocan entre sí:
+ * - malvados: la información de los esbirros y del demonio (la primera noche);
+ * - alteraATodos: los que pueden dejar a cualquiera envenenado o borracho (y entonces su elección no deja recordatorio);
+ * - alteraAlDemonio: los que cambian lo que hará el demonio (proteger a alguien);
+ * - esbirros: el resto de esbirros;
+ * - demonio: el demonio, ya sabiendo quién está protegido;
+ * - informacion: aldeanos y forasteros, después del demonio (alguien puede morir esa noche);
+ * - veTodo: lo último, cuando todos han actuado (el grimorio del Espía).
+ */
+export const TRAMOS_NOCHE = ['malvados', 'alteraATodos', 'alteraAlDemonio', 'esbirros', 'demonio', 'informacion', 'veTodo'] as const;
+export type TramoNoche = (typeof TRAMOS_NOCHE)[number];
+
+/** El tramo de un personaje que no lo dice: por su tipo (los esbirros, el demonio; aldeanos y forasteros, informacion). */
+export const tramoPorTipo = (tipo: string | undefined): TramoNoche =>
+  tipo === 'minion' ? 'esbirros' : tipo === 'demon' ? 'demonio' : 'informacion';
+
+/**
+ * La habilidad de noche de un personaje: cómo se le despierta. Si elige
+ * (`eleccion`), primero se le pide que elija y luego `alElegir` dice qué pasa; si
+ * no, `preparar` ya dice lo que se le manda. Un personaje nuevo es una habilidad
+ * más en index.ts.
+ */
+export interface HabilidadNocturna {
+  /** El personaje (id del catálogo). */
+  personaje: string;
+  /** Lo que elige, o null si no elige. */
+  eleccion: EleccionDespertar | null;
+  /** Despierta aunque muera esta noche (el Ravenkeeper). */
+  despiertaAlMorir: boolean;
+  /** Su tramo de la noche (ver TRAMOS_NOCHE), si no es el de su tipo. */
+  tramo?: TramoNoche;
+  /**
+   * La forma de la información que da (para inventar una falsa si está droison):
+   * hasta qué número puede salir (el Empático, de 0 a 2) y de qué tipo es el
+   * personaje que enseña (la Lavandera, un aldeano). Sin esto, no da números y
+   * enseña cualquier personaje.
+   */
+  maximoNumero?(ctx: ContextoNoche): number;
+  tipoEnsenado?: string;
+  /** Los que despiertan, si no es el de su ficha (los esbirros, el demonio): cada uno, con su `preparar`. */
+  despiertan?(ctx: ContextoNoche): Jugador[];
+  preparar(ctx: ContextoNoche, jugador: Jugador): Resultado;
+  alElegir(ctx: ContextoNoche, jugador: Jugador, elegidos: Jugador[]): Resultado;
+}
+
+// Lo que se manda
+
+export const ficha = (f: FichaDespertar): EnvioDespertar => ({
+  ficha: f,
+  tarjeta: null,
+  jugadores: [],
+  personajes: [],
+  texto: null,
+  alineamiento: null,
+});
+
+export const tarjeta = (
+  t: TarjetaDespertar,
+  { jugadores = [], personajes = [], alineamiento = null }: { jugadores?: string[]; personajes?: string[]; alineamiento?: Alineamiento | null } = {},
+): EnvioDespertar => ({ ficha: null, tarjeta: t, jugadores, personajes, texto: null, alineamiento });
+
+/** El «Entendido» con que se contesta a quien elige. */
+export const OK = ficha('entendido');
+
+const NUMEROS: FichaDespertar[] = ['cero', 'uno', 'dos', 'tres', 'cuatro', 'cinco'];
+/** Un número: su ficha hasta el cinco; más, escrito. */
+export const numero = (n: number): EnvioDespertar => (n < NUMEROS.length ? ficha(NUMEROS[n]) : { ...ficha('personalizado'), texto: String(n) });
+
+// Los resultados
+
+export const sinEfectos = (): Efectos => ({ recordatorios: [], muere: null, nuevoImp: false, grimorio: false });
+
+export const listo = (envio: EnvioDespertar | null, efectos: Efectos = sinEfectos(), avisos: AvisoHabilidad[] = []): Resultado => ({
+  estado: 'listo',
+  avisos,
+  opciones: envio ? [{ envio, registros: [] }] : [],
+  efectos,
+});
+
+/** Listo, con varios mensajes: se mandan en orden. */
+export const listoVarios = (envios: EnvioDespertar[], avisos: AvisoHabilidad[] = []): Resultado => ({
+  ...listo(envios[envios.length - 1] ?? null, sinEfectos(), avisos),
+  previos: envios.slice(0, -1),
+});
+
+export const falta = (avisos: AvisoHabilidad[]): Resultado => ({ estado: 'falta', avisos, opciones: [], efectos: sinEfectos() });
+
+export const revisar = (opciones: OpcionDespertar[], avisos: AvisoHabilidad[]): Resultado => ({
+  estado: 'revisar',
+  avisos,
+  opciones,
+  efectos: sinEfectos(),
+});
+
+// Lo que se consulta
+
+export { droison };
+
+/** Muerto, o muere esta noche. */
+export const fuera = (jugador: Jugador): boolean => jugador.muerto || jugador.muertePendiente;
+
+/** El tipo de quien es de verdad el de un asiento. */
+export const tipoDe = (ctx: ContextoNoche, jugador: Jugador): string | undefined => {
+  const id = ctx.identidad(jugador);
+  return id ? ctx.personaje(id)?.tipo : undefined;
+};
+
+/** El asiento que lleva ese recordatorio (de ese personaje, por su texto en el original), o undefined. */
+export const conRecordatorio = (ctx: ContextoNoche, personaje: string, texto: string): Jugador | undefined =>
+  ctx.plaza().find((a) => a.recordatorios.some((r) => r.personaje === personaje && r.texto.toLowerCase() === texto.toLowerCase()));
+
+/** Si hace falta poner un recordatorio antes: el aviso, o ninguno. */
+export const pideRecordatorio = (ctx: ContextoNoche, personaje: string, texto: string): AvisoHabilidad[] =>
+  conRecordatorio(ctx, personaje, texto) ? [] : [{ tipo: 'faltaRecordatorio', personaje, texto }];
+
+/** Los vecinos vivos más cercanos, a cada lado (los asientos libres cuentan como jugadores). */
+export function vecinosVivos(ctx: ContextoNoche, jugador: Jugador): Jugador[] {
+  const vivos = ctx.plaza().filter((a) => a.id === jugador.id || !fuera(a));
+  const i = vivos.findIndex((a) => a.id === jugador.id);
+  const n = vivos.length;
+  if (i < 0 || n < 2) return [];
+  const [izquierda, derecha] = [vivos[(i - 1 + n) % n], vivos[(i + 1) % n]];
+  return izquierda === derecha ? [izquierda] : [izquierda, derecha];
+}
+
+/**
+ * Cómo puede registrar un jugador en una pregunta de sí o no (ver Percepcion),
+ * para segunRegistros: `si` o `no` por cada respuesta posible, la de verdad
+ * primero; nada, si la respuesta es segura.
+ */
+export const registros = (posibles: Posibles<boolean>, si: Registro, no: Registro): Registro[] =>
+  posibles.length > 1 ? posibles.map((r) => (r ? si : no)) : [];
+
+/** Cómo puede registrar un jugador en su alineamiento: el de verdad y, si puede registrar como otra cosa, también el otro. */
+export const alineamientos = (ctx: ContextoNoche, jugador: Jugador): Registro[] => registros(ctx.percepcion(jugador).esBueno(), 'bueno', 'malvado');
+
+/**
+ * Las respuestas posibles según cómo registren los que pueden registrar como otra
+ * cosa: se prueban todas las combinaciones (`posibles`, la primera es la de
+ * verdad) y queda una opción por respuesta distinta, con cómo registra cada uno
+ * para que salga. La primera es la de verdad. `calcular` recibe cómo registra
+ * cada asiento (null: como es).
+ */
+export function segunRegistros(
+  ctx: ContextoNoche,
+  jugadores: readonly Jugador[],
+  posibles: (jugador: Jugador) => Registro[],
+  calcular: (registro: (jugador: Jugador) => Registro | null) => EnvioDespertar,
+): OpcionDespertar[] {
+  const dudosos = [...new Map(jugadores.filter((a) => posibles(a).length > 1).map((a) => [a.id, a])).values()];
+  let combinaciones: Map<string, Registro>[] = [new Map()];
+  for (const a of dudosos) {
+    combinaciones = combinaciones.flatMap((c) => posibles(a).map((r) => new Map([...c, [a.id, r]])));
+  }
+  const opciones = new Map<string, OpcionDespertar>();
+  for (const c of combinaciones) {
+    const envio = calcular((a) => c.get(a.id) ?? null);
+    const clave = JSON.stringify(envio);
+    if (!opciones.has(clave)) opciones.set(clave, { envio, registros: [...c].map(([jugador, como]) => ({ jugador, como })) });
+  }
+  return [...opciones.values()];
+}
+
+/**
+ * La información que recibe quien despierta, según esté: droison, con varias
+ * respuestas posibles o con alguien que puede registrar como otra cosa, la revisa
+ * el narrador; si no, se manda sola. Con `siempreRevisa`, la revisa siempre.
+ */
+export function informar(
+  ctx: ContextoNoche,
+  jugador: Jugador,
+  info: { opciones: OpcionDespertar[]; avisos?: AvisoHabilidad[]; efectos?: Efectos },
+  previos: AvisoHabilidad[] = [],
+  siempreRevisa = false,
+): Resultado {
+  const estaDroison = droison(ctx, jugador);
+  // Con varias respuestas, quién puede registrar como otra cosa (una vez cada uno)
+  const registran =
+    info.opciones.length > 1
+      ? [...new Set(info.opciones.flatMap((o) => o.registros.map((r) => r.jugador)))].map((id): AvisoHabilidad => ({ tipo: 'registro', jugador: id }))
+      : [];
+  const avisos = [...previos, ...(estaDroison ? [{ tipo: estaDroison } as AvisoHabilidad] : []), ...(info.avisos ?? []), ...registran];
+  const dudas = avisos.some((a) => a.tipo === 'registro');
+  if (siempreRevisa || estaDroison || dudas || (info.opciones.length !== 1 && !info.efectos)) return revisar(info.opciones, avisos);
+  return { estado: 'listo', avisos, opciones: info.opciones, efectos: info.efectos ?? sinEfectos() };
+}
+
+// Las tres clases de habilidad
+
+/** Lo común: quién despierta y qué hace falta antes. */
+abstract class Habilidad implements HabilidadNocturna {
+  eleccion: EleccionDespertar | null = null;
+  despiertaAlMorir = false;
+  tramo?: TramoNoche;
+  tipoEnsenado?: string;
+
+  constructor(readonly personaje: string) {}
+
+  /** Lo que tiene que estar en el grimorio antes de despertarlo (los avisos de lo que falta). */
+  protected requisitos(_ctx: ContextoNoche, _asiento: Jugador): AvisoHabilidad[] {
+    return [];
+  }
+
+  /** Muerto (o muere esta noche) ya no despierta, salvo quien despierta precisamente por morir. */
+  protected muerto(jugador: Jugador): boolean {
+    return this.despiertaAlMorir ? jugador.muerto : fuera(jugador);
+  }
+
+  abstract preparar(ctx: ContextoNoche, jugador: Jugador): Resultado;
+
+  alElegir(_ctx: ContextoNoche, _asiento: Jugador, _elegidos: Jugador[]): Resultado {
+    return falta([]);
+  }
+}
+
+/** Para los que eligen: se les pide que elijan si está todo en el grimorio. */
+abstract class Elige extends Habilidad {
+  constructor(personaje: string, eleccion: EleccionDespertar) {
+    super(personaje);
+    this.eleccion = eleccion;
+  }
+
+  preparar(ctx: ContextoNoche, jugador: Jugador): Resultado {
+    if (this.muerto(jugador)) return falta([{ tipo: 'muerto' }]);
+    const faltan = this.requisitos(ctx, jugador);
+    return faltan.length ? falta(faltan) : listo(null);
+  }
+}
+
+/**
+ * Elige a un jugador y eso le cambia el estado: se le pone el recordatorio (el
+ * Envenenador, el Monje, el Mayordomo, el Imp) y a quien elige se le contesta
+ * «Entendido». Droison, se le contesta igual (que no lo note) pero no se pone nada.
+ */
+export class EligeYMarca extends Elige {
+  constructor(
+    personaje: string,
+    /** El texto (en el original) de su recordatorio. */
+    protected readonly recordatorio: string,
+    { puedeElegirse, tramo }: { puedeElegirse: boolean; tramo?: TramoNoche },
+  ) {
+    super(personaje, { cantidad: 1, puedeElegirse });
+    this.tramo = tramo;
+  }
+
+  alElegir(ctx: ContextoNoche, jugador: Jugador, [elegido]: Jugador[]): Resultado {
+    const avisos: AvisoHabilidad[] = [{ tipo: 'elegido', jugadores: [elegido.id] }];
+    const estaDroison = droison(ctx, jugador);
+    if (estaDroison) return listo(OK, sinEfectos(), [...avisos, { tipo: estaDroison }, { tipo: 'sinEfecto' }]);
+    return this.marcar(ctx, jugador, elegido, avisos);
+  }
+
+  /** Lo que pasa con el elegido: su recordatorio. */
+  protected marcar(_ctx: ContextoNoche, _asiento: Jugador, elegido: Jugador, avisos: AvisoHabilidad[]): Resultado {
+    return listo(OK, { ...sinEfectos(), recordatorios: [{ asiento: elegido.id, texto: this.recordatorio }] }, avisos);
+  }
+}
+
+/**
+ * Elige y eso le da información (la Adivina, el Ravenkeeper). La respuesta la
+ * revisa siempre el narrador: si a veces llegara sola, lo que tarda en llegar
+ * diría si ha tenido que revisarla (si alguien registra como otro o está droison).
+ */
+export abstract class EligeYSabe extends Elige {
+  constructor(personaje: string, cantidad: number, puedeElegirse = true) {
+    super(personaje, { cantidad, puedeElegirse });
+  }
+
+  alElegir(ctx: ContextoNoche, jugador: Jugador, elegidos: Jugador[]): Resultado {
+    return informar(ctx, jugador, this.saber(ctx, jugador, elegidos), [{ tipo: 'elegido', jugadores: elegidos.map((a) => a.id) }], true);
+  }
+
+  /** Lo que sabe por los que ha elegido. */
+  protected abstract saber(ctx: ContextoNoche, jugador: Jugador, elegidos: Jugador[]): { opciones: OpcionDespertar[]; avisos?: AvisoHabilidad[] };
+}
+
+/**
+ * No elige: recibe información, que se calcula con lo que hay en la plaza. Si
+ * falta algo en el grimorio, no se puede; droison, la revisa el narrador (con la
+ * de verdad, si se puede calcular, como propuesta).
+ */
+export abstract class RecibeInformacion extends Habilidad {
+  preparar(ctx: ContextoNoche, jugador: Jugador): Resultado {
+    if (this.muerto(jugador)) return falta([{ tipo: 'muerto' }]);
+    const faltan = this.requisitos(ctx, jugador);
+    if (faltan.length && !droison(ctx, jugador)) return falta(faltan);
+    return informar(ctx, jugador, faltan.length ? { opciones: [], avisos: faltan } : this.informacion(ctx, jugador));
+  }
+
+  /** Lo que se le manda (las opciones; sin ninguna, nada) y lo que cambia (el grimorio del Espía). */
+  protected abstract informacion(ctx: ContextoNoche, jugador: Jugador): { opciones: OpcionDespertar[]; avisos?: AvisoHabilidad[]; efectos?: Efectos };
+}
+
+/** «Este jugador es» con quien es de verdad; si puede registrar como otro, el narrador lo revisa. */
+export function esteJugadorEs(ctx: ContextoNoche, jugadores: readonly Jugador[], quien: Jugador) {
+  const id = ctx.identidad(quien);
+  const avisos: AvisoHabilidad[] = ctx.percepcion(quien).personaje().length > 1 ? [{ tipo: 'registro', jugador: quien.id }] : [];
+  const opciones: OpcionDespertar[] = id
+    ? [{ envio: tarjeta('esteJugadorEs', { jugadores: jugadores.map((a) => a.id), personajes: [id] }), registros: [] }]
+    : [];
+  return { opciones, avisos };
+}

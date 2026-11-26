@@ -82,7 +82,7 @@ const PanelEstadisticas = ({ resumen: r, propias }: { resumen: ResumenEstadistic
 /** La pestaña General: lo principal en grande, cómo le va en cada bando y el resto de cifras. */
 const General = ({ r }: { r: ResumenEstadisticas }) => {
   if (r.jugadas === 0 && r.narradas === 0) {
-    return <p className="text-on-surface-muted">Todavía no hay ninguna partida terminada en la sala.</p>;
+    return <p className="text-on-surface-muted">Todavía no hay ninguna partida terminada en Clocktower online.</p>;
   }
   return (
     <div className="space-y-10">

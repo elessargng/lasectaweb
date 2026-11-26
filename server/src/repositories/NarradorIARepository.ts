@@ -1,4 +1,4 @@
-import type { ModeloNarrador } from '../models/narradorVirtual/puertos';
+import type { ModeloNarrador } from '../models/botc/narradorVirtual/puertos';
 
 /**
  * Un modelo de IA con el que puede decidir Jarvis (hoy, JEV: ver

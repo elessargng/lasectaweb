@@ -1,0 +1,159 @@
+import { randomUUID } from 'crypto';
+import type { Participante } from '../../models/botc/sala/Participantes';
+import { ChatRepository } from '../../repositories/ChatRepository';
+import {
+  CANAL_GENERAL,
+  CANAL_VISITANTES,
+  canalPrivado,
+  LARGO_MAXIMO_MENSAJE,
+  participantesDePrivado,
+} from '../../models/compartido/chat';
+import type { MensajeChat, Susurro } from '../../models/botc/chat';
+import type { SalaDeJuego } from '../../models/botc/SalaDeJuego';
+import type { Sala } from '../../models/botc/sala/Sala';
+import type { Partida } from '../../models/botc/partida/Partida';
+
+/** Un mensaje que no se puede mandar (el mensaje de error es para quien escribe). */
+export class ChatError extends Error {
+  constructor(mensaje: string) {
+    super(mensaje);
+    this.name = 'ChatError';
+  }
+}
+
+/** Lo que pasa al mandar un mensaje: el mensaje, a quién le llega y, si es un susurro, las ondas. */
+export interface EnvioMensaje {
+  mensaje: MensajeChat;
+  /** ids de los participantes que pueden leerlo (incluido quien lo escribe). */
+  lectores: string[];
+  susurro: Susurro | null;
+}
+
+/**
+ * Las reglas de los mensajes de la sala: quién lee cada canal y a quién puede
+ * escribir cada uno.
+ *
+ * - General: jugadores y narradores. Visitantes: visitantes y narradores.
+ * - Privados: con un narrador, siempre (en los dos sentidos). Entre jugadores,
+ *   según la sala: ninguno, solo con sus vecinos (el más cercano sentado a cada
+ *   lado) o con todos. Los visitantes no escriben en privado a los jugadores.
+ * - Los narradores y los visitantes con el grimorio leen también los privados
+ *   entre jugadores (no los de un narrador con alguien): les llegan como a
+ *   ellos, pero no escriben en ellos.
+ *
+ * Lee la sala (papeles, asientos, ajustes) de la sala y la partida y guarda en el repositorio.
+ */
+export class ChatService {
+  private readonly sala: Sala;
+  private readonly partida: Partida;
+
+  constructor(
+    private readonly repositorio: ChatRepository,
+    juego: SalaDeJuego,
+    private readonly ahora: () => number = () => Date.now(),
+  ) {
+    this.sala = juego.sala;
+    this.partida = juego.partida;
+  }
+
+  /** Si alguien puede leer (y escribir en) un canal. */
+  puedeLeer(yo: Participante, canal: string): boolean {
+    if (canal === CANAL_GENERAL) return yo.rol === 'jugador' || yo.rol === 'narrador';
+    if (canal === CANAL_VISITANTES) return yo.rol === 'visitante' || yo.rol === 'narrador';
+    const participantes = participantesDePrivado(canal);
+    if (!participantes) return false;
+    if (participantes.includes(yo.id)) return true;
+    const leeAjenos = yo.rol === 'narrador' || (yo.rol === 'visitante' && this.partida.acceso.de(yo.id) === 'concedido');
+    return leeAjenos && participantes.every((id) => this.sala.participantes.buscar(id)?.rol !== 'narrador');
+  }
+
+  /** Si `yo` puede escribir en privado a `otro`. */
+  puedeEscribirA(yo: Participante, otro: Participante): boolean {
+    if (yo.id === otro.id) return false;
+    if (yo.rol === 'narrador' || otro.rol === 'narrador') return true;
+    if (yo.rol !== 'jugador' || otro.rol !== 'jugador') return false;
+    const modo = this.modoMensajes();
+    if (modo === 'todos') return true;
+    if (modo === 'vecinos') return this.vecinos(yo.id).includes(otro.id);
+    return false;
+  }
+
+  /** Los mensajes que alguien puede leer, del más antiguo al más reciente. */
+  historial(yo: Participante): MensajeChat[] {
+    return this.repositorio.deCanales((canal) => this.puedeLeer(yo, canal));
+  }
+
+  /**
+   * Manda un mensaje. `para`: «general», «visitantes» o el id de un participante
+   * (en privado). Lanza ChatError si no se puede.
+   */
+  enviar(yoId: string, para: string, texto: string): EnvioMensaje {
+    const yo = this.sala.participantes.buscar(yoId);
+    if (!yo) throw new ChatError('Ya no estás en la sala.');
+    const limpio = texto.trim();
+    if (!limpio) throw new ChatError('El mensaje está vacío.');
+    if (limpio.length > LARGO_MAXIMO_MENSAJE) throw new ChatError(`El mensaje es demasiado largo (máximo ${LARGO_MAXIMO_MENSAJE}).`);
+
+    let canal: string;
+    let otro: Participante | undefined;
+    if (para === CANAL_GENERAL || para === CANAL_VISITANTES) {
+      if (!this.puedeLeer(yo, para)) throw new ChatError('No puedes escribir en ese chat.');
+      canal = para;
+    } else {
+      otro = this.sala.participantes.buscar(para);
+      if (!otro) throw new ChatError('Esa persona ya no está en la sala.');
+      if (!this.puedeEscribirA(yo, otro)) throw new ChatError(this.porQueNo(yo, otro));
+      canal = canalPrivado(yo.id, otro.id);
+    }
+
+    const mensaje: MensajeChat = { id: randomUUID(), canal, autor: yo.id, autorNombre: yo.nombre, texto: limpio, hora: this.ahora() };
+    this.repositorio.guardar(mensaje);
+    // En privado, los dos y, si son jugadores, los narradores
+    const lectores = this.sala.participantes.participantes().filter((p) => this.puedeLeer(p, canal)).map((p) => p.id);
+    return { mensaje, lectores, susurro: otro ? this.susurro(yo, otro, limpio) : null };
+  }
+
+  /** Por qué no puede escribirle (para el mensaje de error). */
+  private porQueNo(yo: Participante, otro: Participante): string {
+    if (yo.id === otro.id) return 'No puedes escribirte a ti mismo.';
+    if (yo.rol !== 'jugador' || otro.rol !== 'jugador') return 'Solo puedes escribir en privado a los narradores.';
+    if (this.partida.configuracion.actual().mensajes === 'todos' && this.partida.institutrizViva()) {
+      return 'Con la Institutriz en juego, solo se escribe en privado con los vecinos.';
+    }
+    return this.modoMensajes() === 'vecinos'
+      ? 'En esta sala solo se escribe en privado con los vecinos.'
+      : 'En esta sala no se escriben mensajes privados.';
+  }
+
+  /** Los privados entre jugadores, como están: con la Institutriz viva, «todos» se queda en los vecinos. */
+  private modoMensajes() {
+    const modo = this.partida.configuracion.actual().mensajes;
+    return modo === 'todos' && this.partida.institutrizViva() ? 'vecinos' : modo;
+  }
+
+  /** Los vecinos de un jugador: el más cercano sentado a cada lado de la plaza. */
+  vecinos(participanteId: string): string[] {
+    const plaza = this.partida.plaza();
+    const i = plaza.findIndex((a) => a.participanteId === participanteId);
+    if (i < 0) return [];
+    const n = plaza.length;
+    const cercano = (paso: 1 | -1) => {
+      for (let k = 1; k < n; k++) {
+        const ocupante = plaza[(i + paso * k + n) % n].participanteId;
+        if (ocupante) return ocupante;
+      }
+      return null;
+    };
+    return [...new Set([cercano(1), cercano(-1)].filter((id): id is string => !!id && id !== participanteId))];
+  }
+
+  /** Entre dos jugadores sentados, las ondas del susurro (más intensas cuanto más largo). */
+  private susurro(yo: Participante, otro: Participante, texto: string): Susurro | null {
+    if (yo.rol !== 'jugador' || otro.rol !== 'jugador') return null;
+    const plaza = this.partida.plaza();
+    const desde = plaza.find((a) => a.participanteId === yo.id)?.id;
+    const hasta = plaza.find((a) => a.participanteId === otro.id)?.id;
+    if (!desde || !hasta) return null;
+    return { desde, hasta, intensidad: texto.length < 40 ? 1 : texto.length < 140 ? 2 : 3 };
+  }
+}

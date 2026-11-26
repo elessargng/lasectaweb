@@ -1,11 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
-import { PODERES_BOLSA } from '../src/models/personajes';
+import { PODERES_BOLSA } from '../src/models/botc/personajes';
 
 /**
  * Las capas del servidor y quién puede usar a quién. El dominio (models) y los casos
- * de uso (services) no saben cómo se envían las cosas: los Dto (views/dto) solo los
+ * de uso (services) no saben cómo se envían las cosas: los Dto (views/botc/dto) solo los
  * montan las vistas (VistaPartida) y los usan los controladores.
  */
 
@@ -45,17 +45,17 @@ describe('arquitectura', () => {
     expect(fuera).toEqual([]);
   });
 
-  it('los Dto (views/dto) solo usan otros Dto y models/compartido', () => {
-    const fuera = archivos('views/dto').filter((f) =>
-      importsDe(f).some((i) => !i.startsWith('views/dto/') && !i.startsWith('models/compartido/')),
+  it('los Dto (views/botc/dto) solo usan otros Dto y models/compartido', () => {
+    const fuera = archivos('views/botc/dto').filter((f) =>
+      importsDe(f).some((i) => !i.startsWith('views/botc/dto/') && !i.startsWith('models/compartido/')),
     );
     expect(fuera).toEqual([]);
   });
 
-  it('los servicios y los controladores no conocen a ningún personaje: usan la lista de models/personajes', () => {
-    const comunes = ['models/personajes', 'models/personajes/DeclaracionDia', 'models/personajes/idPersonaje'];
+  it('los servicios y los controladores no conocen a ningún personaje: usan la lista de models/botc/personajes', () => {
+    const comunes = ['models/botc/personajes', 'models/botc/personajes/DeclaracionDia', 'models/botc/personajes/idPersonaje'];
     const fuera = ['services', 'controllers'].flatMap(archivos).filter((f) =>
-      importsDe(f).some((i) => i.startsWith('models/personajes') && !comunes.includes(i)),
+      importsDe(f).some((i) => i.startsWith('models/botc/personajes') && !comunes.includes(i)),
     );
     expect(fuera, 'Estos archivos usan un personaje concreto: que lo traiga su archivo y vaya en la lista').toEqual([]);
   });
@@ -66,19 +66,19 @@ describe('arquitectura', () => {
   });
 
   it('la bolsa no conoce a ningún personaje: cada uno declara su poder en su archivo (PODERES_BOLSA)', () => {
-    const texto = fs.readFileSync(path.join(SRC, 'models/partida/Bolsa.ts'), 'utf8');
+    const texto = fs.readFileSync(path.join(SRC, 'models/botc/partida/Bolsa.ts'), 'utf8');
     const nombrados = [...PODERES_BOLSA.keys()].filter((id) => new RegExp(`['"\`]${id}['"\`]`).test(texto));
     expect(nombrados).toEqual([]);
   });
 
-  it('el dominio no saca el azar de ningún sitio: se le pasa (models/partida/azar, Azar)', () => {
+  it('el dominio no saca el azar de ningún sitio: se le pasa (models/botc/partida/azar, Azar)', () => {
     const fuera = archivos('models').filter((f) => /Math\.random|randomInt/.test(fs.readFileSync(path.join(SRC, f), 'utf8')));
     expect(fuera, 'Estos archivos sacan el azar por su cuenta: que lo reciban').toEqual([]);
   });
 
   it('las proyecciones del diario (y el resumen de las estadísticas) son funciones puras: solo leen el diario (models/compartido y otras proyecciones)', () => {
-    const puras = [...archivos('models/partida/proyecciones'), 'models/estadisticas/resumenPartida.ts'];
-    const fuera = puras.filter((f) => importsDe(f).some((i) => !i.startsWith('models/compartido/') && !i.startsWith('models/partida/proyecciones/')));
+    const puras = [...archivos('models/botc/partida/proyecciones'), 'models/estadisticas/resumenPartida.ts'];
+    const fuera = puras.filter((f) => importsDe(f).some((i) => !i.startsWith('models/compartido/') && !i.startsWith('models/botc/partida/proyecciones/')));
     expect(fuera, 'Estas proyecciones dependen de algo con estado').toEqual([]);
   });
 

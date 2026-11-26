@@ -7,7 +7,7 @@ import type { Fase } from './partida';
  * El diario de la partida: el registro de todo lo que pasa en ella, en orden. Es
  * lo único que se apunta (ver Partida.anotar y Registro): de él salen las
  * estadísticas, las votaciones, el historial, los logros y lo que se cuenta al
- * narrador virtual (ver models/partida/proyecciones). Se apunta todo, también en la
+ * narrador virtual (ver models/botc/partida/proyecciones). Se apunta todo, también en la
  * preparación; el historial enseña solo lo que interesa (ver HECHOS_DEL_HISTORIAL).
  * Lo que solo hace el narrador virtual (el disparo del Exterminador, el Patoso, el
  * Artista) solo sale con él.

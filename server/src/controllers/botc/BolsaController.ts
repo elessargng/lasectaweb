@@ -1,0 +1,56 @@
+import type { BolsaService } from '../../services/botc/BolsaService';
+import type { Responder } from '../../services/botc/SalaService';
+import type { ResultadoAccion, ResultadoBolsaAlAzar } from '../../views/botc/dto/sala';
+import { campos, como, type Fallo } from './peticion';
+import type { Sesion } from './SalaController';
+
+const PERSONAJE_DESCONOCIDO: Fallo = { ok: false, error: 'Ese personaje no va en la bolsa.' };
+
+/**
+ * La bolsa de la sala (hoy por WebSocket, ver infra/socketio): cada método lee una
+ * petición, se la pasa a BolsaService y contesta. Lo que cambia le llega a cada uno
+ * con la sala, por el difusor.
+ */
+export class BolsaController {
+  constructor(private readonly bolsaService: BolsaService) {}
+
+  /** Mete un personaje en la bolsa o lo saca: { personajeId }. */
+  meter = (sesion: Sesion, peticion: unknown, responder: Responder<ResultadoAccion>): void => {
+    const { personajeId } = campos(peticion);
+    this.como(sesion, responder, (yoId) =>
+      typeof personajeId === 'string' ? this.bolsaService.meter(yoId, personajeId) : PERSONAJE_DESCONOCIDO,
+    );
+  };
+
+  /** Cuántas fichas de un personaje: { personajeId, cantidad }. */
+  cantidad = (sesion: Sesion, peticion: unknown, responder: Responder<ResultadoAccion>): void => {
+    const { personajeId, cantidad } = campos(peticion);
+    this.como(sesion, responder, (yoId) => {
+      if (typeof personajeId !== 'string') return PERSONAJE_DESCONOCIDO;
+      if (typeof cantidad !== 'number') return { ok: false, error: 'Cantidad desconocida.' };
+      return this.bolsaService.cantidad(yoId, personajeId, cantidad);
+    });
+  };
+
+  vaciar = (sesion: Sesion, _peticion: unknown, responder: Responder<ResultadoAccion>): void => {
+    this.como(sesion, responder, (yoId) => this.bolsaService.vaciar(yoId));
+  };
+
+  llenarAlAzar = (sesion: Sesion, _peticion: unknown, responder: Responder<ResultadoBolsaAlAzar>): void => {
+    this.como(sesion, responder, (yoId) => this.bolsaService.llenarAlAzar(yoId));
+  };
+
+  /** Da por bueno el reparto (su firma, «7:5/0/1/1») o deja de darlo: { firma: string | null }. */
+  aceptarReparto = (sesion: Sesion, peticion: unknown, responder: Responder<ResultadoAccion>): void => {
+    const { firma } = campos(peticion);
+    this.como(sesion, responder, (yoId) =>
+      firma === null || (typeof firma === 'string' && firma.length <= 100)
+        ? this.bolsaService.aceptarReparto(yoId, firma)
+        : { ok: false, error: 'Reparto desconocido.' },
+    );
+  };
+
+  private como<R>(sesion: Sesion, responder: Responder<R | Fallo>, hacer: (yoId: string) => R | Fallo): void {
+    como((clave) => this.bolsaService.quienEs(clave), sesion, responder, hacer);
+  }
+}

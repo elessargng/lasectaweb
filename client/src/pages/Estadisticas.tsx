@@ -19,7 +19,7 @@ const Estadisticas = () => {
     <div className="flex flex-col w-full">
       <PageHeader
         title="Estadísticas"
-        subtitle="Lo que se ha jugado en la sala de La Secta"
+        subtitle="Lo que se ha jugado en Clocktower online"
         imageSrc="/profile_banner_wide.jpg"
         imageAlt="Estadísticas de las partidas"
         maxWidthClass="max-w-4xl"
@@ -56,7 +56,7 @@ const EstadisticasDeUsuario = ({ userId }: { userId: string }) => {
     <div className="flex flex-col w-full">
       <PageHeader
         title={propias ? 'Tus estadísticas' : resumen ? `Estadísticas de ${resumen.usuario.username}` : 'Estadísticas'}
-        subtitle={propias ? 'Tus partidas en la sala de La Secta' : 'Sus partidas en la sala de La Secta'}
+        subtitle={propias ? 'Tus partidas en Clocktower online' : 'Sus partidas en Clocktower online'}
         imageSrc="/profile_banner_wide.jpg"
         imageAlt=""
         maxWidthClass="max-w-5xl"

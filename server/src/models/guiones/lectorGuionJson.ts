@@ -1,4 +1,4 @@
-import { normalizarIdPersonaje } from '../personajes/idPersonaje';
+import { normalizarIdPersonaje } from '../botc/personajes/idPersonaje';
 import { GuionInvalidoError } from './errores';
 import { Despertar, ESPECIAL_REPETIBLE, GuionImportado, PersonajePropio, TIPOS_PERSONAJE, TipoPersonaje } from './index';
 

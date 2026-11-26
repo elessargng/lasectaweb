@@ -1,19 +1,19 @@
 import type { Server as HttpServer } from 'http';
 import { Server } from 'socket.io';
-import type { BolsaController } from '../../controllers/sala/BolsaController';
-import type { DiaController } from '../../controllers/sala/DiaController';
-import type { FaseController } from '../../controllers/sala/FaseController';
-import type { FarolController } from '../../controllers/sala/FarolController';
-import type { GrimorioController } from '../../controllers/sala/GrimorioController';
-import type { NarradorVirtualController } from '../../controllers/sala/NarradorVirtualController';
-import type { NocheController } from '../../controllers/sala/NocheController';
-import type { ParticipantesController } from '../../controllers/sala/ParticipantesController';
-import type { PreparacionController } from '../../controllers/sala/PreparacionController';
-import type { RelojController } from '../../controllers/sala/RelojController';
-import type { RevelacionController } from '../../controllers/sala/RevelacionController';
-import type { SenalamientoController } from '../../controllers/sala/SenalamientoController';
-import type { Credenciales, SalaController, Sesion } from '../../controllers/sala/SalaController';
-import type { SalaService } from '../../services/sala/SalaService';
+import type { BolsaController } from '../../controllers/botc/BolsaController';
+import type { DiaController } from '../../controllers/botc/DiaController';
+import type { FaseController } from '../../controllers/botc/FaseController';
+import type { FarolController } from '../../controllers/botc/FarolController';
+import type { GrimorioController } from '../../controllers/botc/GrimorioController';
+import type { NarradorVirtualController } from '../../controllers/botc/NarradorVirtualController';
+import type { NocheController } from '../../controllers/botc/NocheController';
+import type { ParticipantesController } from '../../controllers/botc/ParticipantesController';
+import type { PreparacionController } from '../../controllers/botc/PreparacionController';
+import type { RelojController } from '../../controllers/botc/RelojController';
+import type { RevelacionController } from '../../controllers/botc/RevelacionController';
+import type { SenalamientoController } from '../../controllers/botc/SenalamientoController';
+import type { Credenciales, SalaController, Sesion } from '../../controllers/botc/SalaController';
+import type { SalaService } from '../../services/botc/SalaService';
 import { DifusorSocketIo } from './DifusorSocketIo';
 
 /** Bajo /api para que pase por el mismo proxy que el resto de la API. */

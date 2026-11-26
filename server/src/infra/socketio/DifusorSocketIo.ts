@@ -1,10 +1,10 @@
 import type { Server } from 'socket.io';
-import type { MensajeChat, Susurro } from '../../models/chat';
+import type { MensajeChat, Susurro } from '../../models/botc/chat';
 import type { GuionResuelto } from '../../models/guiones';
-import type { SalaService } from '../../services/sala/SalaService';
-import type { DifusorSala, MotivoExpulsion } from '../../services/sala/puertos';
-import { VistaPartida } from '../../views/VistaPartida';
-import { mensajeChatDto, susurroDto } from '../../views/VistaChat';
+import type { SalaService } from '../../services/botc/SalaService';
+import type { DifusorSala, MotivoExpulsion } from '../../services/botc/puertos';
+import { VistaPartida } from '../../views/botc/VistaPartida';
+import { mensajeChatDto, susurroDto } from '../../views/botc/VistaChat';
 
 /** Lo que pasa en la sala, por socket.io: a cada conexión, lo suyo (ver VistaPartida). */
 export class DifusorSocketIo implements DifusorSala {

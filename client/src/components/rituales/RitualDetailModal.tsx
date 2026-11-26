@@ -21,13 +21,13 @@ import { RITUAL_KINDS, alpha, kindOf } from './ritualKinds';
 import { describeRecurrence, formatLongDay, formatTime, isMultiDay, ritualPath } from './ritualDates';
 import { isFull } from './ritualSignups';
 import RitualAttendees, { type SignupActions } from './RitualAttendees';
-import { RUTA_SALA, esSalaLaSecta } from './salaLaSecta';
+import { RUTA_BOTC, esBotcLaSecta } from './botcLaSecta';
 
 const VILLACUERVOS_COLOR = RITUAL_KINDS.online_villacuervos.color;
 
 function linkLabel(ritual: Ritual): string {
   if (ritual.source === 'villacuervos') return 'Ver en Villacuervos';
-  if (ritual.type === 'partida_online') return 'Entrar en la sala';
+  if (ritual.type === 'partida_online') return esBotcLaSecta(ritual.link) ? 'Entrar en Clocktower online' : 'Entrar en la sala';
   return 'Más información';
 }
 
@@ -187,9 +187,9 @@ export const RitualDetailModal = ({ ritual, canManage, token, userId, onPhotosCh
                 // La sala de La Secta se abre en esta web, con rel="opener" para que herede la
                 // sesión sin «Recordarme» (vive en sessionStorage), como el botón de Rituales
                 <a
-                  href={esSalaLaSecta(ritual.link) ? RUTA_SALA : ritual.link}
+                  href={esBotcLaSecta(ritual.link) ? RUTA_BOTC : ritual.link}
                   target="_blank"
-                  rel={esSalaLaSecta(ritual.link) ? 'opener' : 'noopener noreferrer'}
+                  rel={esBotcLaSecta(ritual.link) ? 'opener' : 'noopener noreferrer'}
                   className="btn-runic btn-runic-primary px-4 py-2 text-xs gap-2"
                 >
                   {linkLabel(ritual)} <ExternalLink className="w-3.5 h-3.5" />
