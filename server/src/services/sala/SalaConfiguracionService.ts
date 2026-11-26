@@ -1,5 +1,5 @@
-import { MAX_PERFILES, nombreDePerfil, prepararConfiguracion } from '../models/sala/configuracion';
-import type { PerfilSala, SalaConfiguracionRepository } from '../repositories/SalaConfiguracionRepository';
+import { MAX_PERFILES, nombreDePerfil, prepararConfiguracion } from '../../models/sala/configuracion';
+import type { PerfilSala, SalaConfiguracionRepository } from '../../repositories/SalaConfiguracionRepository';
 
 /** Lo que se pide no vale (el mensaje es para el usuario). */
 export class ConfiguracionError extends Error {}

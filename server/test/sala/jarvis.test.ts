@@ -6,7 +6,7 @@ import type { FotoPartida } from '../../src/models/narradorVirtual/contexto/Foto
 import { contextoPara } from '../../src/models/narradorVirtual/contexto/extractores';
 import type { AsientoGrimorio } from '../../src/models/narradorVirtual/grimorio';
 import type { NarradorIARepository } from '../../src/repositories/NarradorIARepository';
-import { NarradorIAService } from '../../src/services/narradorVirtual/NarradorIAService';
+import { NarradorIAService } from '../../src/services/sala/NarradorIAService';
 import { Arnes, type Cliente } from './arnes';
 import { conSemilla, guionTroubleBrewing } from './guionDePrueba';
 

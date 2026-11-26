@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from './middlewares/auth';
-import { EstadisticasService } from '../services/estadisticas/EstadisticasService';
+import { EstadisticasService } from '../services/comun/EstadisticasService';
 
 export class EstadisticasController {
   constructor(private service: EstadisticasService) {}

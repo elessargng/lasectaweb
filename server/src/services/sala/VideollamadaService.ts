@@ -1,4 +1,4 @@
-import { ConversacionService } from '../conversaciones/ConversacionService';
+import { ConversacionService } from './ConversacionService';
 import type { SalaDeJuego } from '../../models/SalaDeJuego';
 import type { Sala } from '../../models/sala/Sala';
 import type { Partida } from '../../models/partida/Partida';

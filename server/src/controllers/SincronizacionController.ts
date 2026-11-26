@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { RegistroSincronizacionesService } from '../services/sincronizacion/RegistroSincronizacionesService';
+import { RegistroSincronizacionesService } from '../services/comun/RegistroSincronizacionesService';
 
 /** Rutas HTTP del estado de las sincronizaciones con fuentes externas. Solo traduce HTTP ↔ servicio. */
 export class SincronizacionController {

@@ -12,11 +12,11 @@ import type { Azar } from '../../models/partida/azar';
 import type { Ajustes } from '../../models/partida/Configuracion';
 import type { InstantaneaPartida } from '../../models/partida/Partida';
 import type { RegistroGuardado } from '../../models/partida/Registro';
-import type { NarradorVirtualGuardado } from '../narradorVirtual/NarradorVirtualService';
+import type { NarradorVirtualGuardado } from './NarradorVirtualService';
 import type { Temporizador } from '../../models/narradorVirtual/puertos';
 import type { NarradorIARepository } from '../../repositories/NarradorIARepository';
 import type { PartidaEnCurso } from '../../repositories/PartidaEnCursoRepository';
-import type { ProveedorVideo } from '../videollamada/ProveedorVideo';
+import type { ProveedorVideo } from './ProveedorVideo';
 
 /**
  * Los guiones de la sala (lo implementa GuionService). Si el guion no vale,

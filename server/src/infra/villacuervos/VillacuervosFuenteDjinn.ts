@@ -2,7 +2,7 @@ import { VillacuervosRepository } from '../../repositories/VillacuervosRepositor
 import { ReglaDjinn } from '../../models/guiones';
 import { PublicJinxSchema } from './esquemas';
 import { normalizarIdPersonaje } from '../../models/personajes/idPersonaje';
-import { FuenteDjinn } from '../../services/djinn/FuenteDjinn';
+import { FuenteDjinn } from '../../services/comun/FuenteDjinn';
 
 /**
  * Traduce un «jinx» de Villacuervos a nuestro modelo (con los ids del catálogo);

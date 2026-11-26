@@ -1,4 +1,4 @@
-import type { NarradorVirtualService } from '../../services/narradorVirtual/NarradorVirtualService';
+import type { NarradorVirtualService } from '../../services/sala/NarradorVirtualService';
 import type { Responder } from '../../services/sala/SalaService';
 import type { ResultadoAccion, ResultadoGuionesNarrables } from '../../views/dto/sala';
 import { campos, como, comoAsincrono, type Fallo } from './peticion';

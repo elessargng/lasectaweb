@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SalaDeJuego } from '../../src/models/SalaDeJuego';
-import { ConversacionService } from '../../src/services/conversaciones/ConversacionService';
+import { ConversacionService } from '../../src/services/sala/ConversacionService';
 import { conSemilla, guionDePrueba, invitado } from './guionDePrueba';
 
 const siempreViva = () => true;

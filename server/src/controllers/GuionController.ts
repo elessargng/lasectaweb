@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { GuionService } from '../services/guiones/GuionService';
+import { GuionService } from '../services/comun/GuionService';
 
 /** Rutas HTTP del catálogo de personajes y de los guiones. Solo traduce HTTP ↔ servicio. */
 export class GuionController {

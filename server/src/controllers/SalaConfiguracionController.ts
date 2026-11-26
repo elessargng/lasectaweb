@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from './middlewares/auth';
-import { ConfiguracionError, SalaConfiguracionService } from '../services/SalaConfiguracionService';
+import { ConfiguracionError, SalaConfiguracionService } from '../services/sala/SalaConfiguracionService';
 
 /** Si lo pedido no vale, un 400 con el motivo; si falla otra cosa, un 500 con `mensaje`. */
 function responderError(res: Response, error: unknown, mensaje: string): void {

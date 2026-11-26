@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PerfilSala, SalaConfiguracionRepository } from '../src/repositories/SalaConfiguracionRepository';
-import { ConfiguracionError, SalaConfiguracionService } from '../src/services/SalaConfiguracionService';
+import { ConfiguracionError, SalaConfiguracionService } from '../src/services/sala/SalaConfiguracionService';
 import { MAX_PERFILES } from '../src/models/sala/configuracion';
 
 /** Un repositorio en memoria para un usuario. */

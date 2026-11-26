@@ -1,12 +1,12 @@
 import { GUION_DE_LA_SALA, NARRADORES_VIRTUALES, type EtapaNarradorVirtual, type GuionNarrable, type IdNarradorVirtual } from '../../models/compartido/narradorVirtual';
 import type { GuionResuelto } from '../../models/guiones';
 import { desconocidos, jugadoresDelGuion, noSabeNarrar } from '../../models/narradorVirtual/guionNarrable';
-import type { ServicioGuiones } from '../sala/puertos';
+import type { ServicioGuiones } from './puertos';
 import { opcionesNarradorVirtual, type OpcionesNarradorVirtual } from '../../models/narradorVirtual/NarradorVirtual';
 import { noPuedeNominar, nominoHoy } from '../../models/narradorVirtual/dia/reglasDia';
 import type { Participante } from '../../models/sala/Participantes';
 import type { SalaDeJuego } from '../../models/SalaDeJuego';
-import { UsosSala, type Permiso, type ResultadoUso } from '../sala/UsosSala';
+import { UsosSala, type Permiso, type ResultadoUso } from './UsosSala';
 import type { EstrategiaNarrador } from '../../models/narradorVirtual/estrategias/EstrategiaNarrador';
 import { TontoYTu } from '../../models/narradorVirtual/estrategias/TontoYTu';
 import { EsperandoJugadores } from '../../models/narradorVirtual/etapas/EsperandoJugadores';

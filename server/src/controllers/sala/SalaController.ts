@@ -1,6 +1,6 @@
 import type { SalaLlegada } from '../../models/sala/Participantes';
 import type { Responder, SalaService } from '../../services/sala/SalaService';
-import type { PaseVideo } from '../../services/videollamada/VideollamadaService';
+import type { PaseVideo } from '../../services/sala/VideollamadaService';
 import type { ResultadoAccion } from '../../views/dto/sala';
 import { usuarioDelToken } from '../middlewares/auth';
 
