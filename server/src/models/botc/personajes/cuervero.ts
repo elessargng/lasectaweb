@@ -1,4 +1,4 @@
-import type { AvisoHabilidad } from '../../compartido/despertar';
+import type { AvisoHabilidad } from '../partida/despertar';
 import { EligeYSabe, esteJugadorEs, type ContextoNoche } from '../partida/habilidades/HabilidadNocturna';
 import type { Jugador } from '../partida/Jugador';
 import type { DefinicionPersonaje } from './DefinicionPersonaje';

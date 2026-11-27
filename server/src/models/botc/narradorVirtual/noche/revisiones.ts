@@ -1,4 +1,4 @@
-import type { DesenlaceDespertar, EnvioDespertar } from '../../../compartido/despertar';
+import type { DesenlaceDespertar, EnvioDespertar } from '../../partida/despertar';
 import type { HabilidadNoche } from '../../partida/DespertarGuiado';
 import { habilidadesDelGuion } from '../../partida/habilidades';
 import { OK } from '../../partida/habilidades/HabilidadNocturna';

@@ -1,6 +1,6 @@
 import type { EstadisticasRepository, PartidaGuardada, Participacion } from '../../repositories/EstadisticasRepository';
 import type { PersonajeRepository } from '../../repositories/PersonajeRepository';
-import { causaCuenta } from '../../models/compartido/partida';
+import { CAUSAS_CON_VICTORIA, causaCuenta } from '../../models/botc/partida/causasFin';
 
 /** Cuántas veces sale algo (un rol, una causa, un guion), de más a menos. */
 interface Conteo {
@@ -27,6 +27,8 @@ export interface ResumenEstadisticas {
   narradas: number;
   roles: Conteo[];
   causas: Conteo[];
+  /** Los logros que solo cuentan si se gana la partida. */
+  causasConVictoria: string[];
   guiones: Conteo[];
   /** Nombre e icono de los personajes que salen (roles y causas). */
   personajes: Record<string, { nombre: string; icono: string | null; tipo: string }>;
@@ -93,6 +95,7 @@ export class EstadisticasService {
       narradas: todas.filter((p) => p.papel === 'narrador').length,
       roles,
       causas,
+      causasConVictoria: [...CAUSAS_CON_VICTORIA],
       guiones: contar(jugadas.map((p) => p.guion)),
       personajes,
       ultimas: todas.slice(0, ULTIMAS),
@@ -132,8 +135,8 @@ type AsientoGuardado = NonNullable<PartidaGuardada['mesa']>[number];
 
 /** Una partida del historial, como la ve quien mira (ver EstadisticasService.historial). */
 export interface HistorialPartida extends Omit<PartidaGuardada, 'participantes' | 'mesa'> {
-  /** Lo de la persona cuyo historial es. */
-  propia: ParticipanteGuardado | null;
+  /** Lo de la persona cuyo historial es, con los logros que le cuentan (sus causas; las que exigen ganar, si ganó). */
+  propia: (ParticipanteGuardado & { logros: string[] }) | null;
   /** Los demás con cuenta que se pueden ver. */
   participantes: ParticipanteGuardado[];
   /** Los que no se pueden ver (estadísticas privadas, y quien mira no estuvo). */
@@ -147,9 +150,10 @@ function verPartida(p: PartidaGuardada, userId: string, quienMira: string | null
   const visible = (id: string | null) => estuvo || !id || id === userId || publico(id);
   const otros = p.participantes.filter((x) => x.userId !== userId);
   const todoVisible = estuvo || p.participantes.every((x) => visible(x.userId));
+  const propia = p.participantes.find((x) => x.userId === userId);
   return {
     ...p,
-    propia: p.participantes.find((x) => x.userId === userId) ?? null,
+    propia: propia ? { ...propia, logros: propia.causas.filter((c) => causaCuenta(c, propia.gano)) } : null,
     participantes: otros.filter((x) => visible(x.userId)),
     ocultos: otros.filter((x) => !visible(x.userId)).length,
     mesa:

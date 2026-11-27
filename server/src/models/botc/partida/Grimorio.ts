@@ -5,9 +5,9 @@ import {
   SALA_NOTA_LARGO_MAX,
   SALA_RECORDATORIO_TEXTO_MAX,
   type Recordatorio,
-} from '../../compartido/grimorio';
-import { type Alineamiento } from '../../compartido/jugador';
-import type { AsientoDiario, CausaMuerte, HechoDiario } from '../../compartido/diario';
+} from './recordatorio';
+import { type Alineamiento } from './alineamiento';
+import type { AsientoDiario, CausaMuerte, HechoDiario } from './diario';
 import type { PersonajeDeGuion } from '../../catalogo/PersonajeDeGuion';
 import type { EstadoJugador, Jugador } from './Jugador';
 

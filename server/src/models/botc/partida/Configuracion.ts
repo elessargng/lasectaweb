@@ -1,4 +1,4 @@
-import { MENSAJES_PRIVADOS, type MensajesPrivados } from '../../compartido/chat';
+import { MENSAJES_PRIVADOS, type MensajesPrivados } from '../canalesChat';
 
 /** Lo que tarda la aguja de ficha en ficha al votar, en segundos (de cuarto en cuarto). */
 export const SALA_SEGUNDOS_POR_FICHA = { min: 0.25, max: 2, paso: 0.25, defecto: 1 };

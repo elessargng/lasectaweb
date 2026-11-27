@@ -1,4 +1,4 @@
-import type { AvisoHabilidad } from '../../compartido/despertar';
+import type { AvisoHabilidad } from '../partida/despertar';
 import {
   EligeYMarca,
   listo,

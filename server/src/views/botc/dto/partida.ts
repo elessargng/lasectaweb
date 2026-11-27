@@ -2,8 +2,56 @@
  * La partida tal como se envía: ajustes, nominación, votación, reloj, señalamiento y revelación.
  * Lo que se envía al cliente (alias @views): solo tipos, sin Node ni servicios.
  */
-import type { MensajesPrivados } from '../../../models/compartido/chat';
-import type { Alineamiento } from '../../../models/compartido/jugador';
+import type { MensajesPrivados } from './chat';
+import type { Alineamiento } from './jugador';
+
+/** Los límites de un señalamiento: segundos de la cuenta atrás (10 por defecto) y largo del mensaje. */
+export const SALA_SENALAMIENTO = { minSegundos: 3, maxSegundos: 120, defectoSegundos: 10, mensajeMax: 120 };
+
+/** Cuántos personajes de cada tipo tiene la partida (sin contar los asientos con viajero). */
+export interface Distribucion {
+  /** Asientos que no llevan viajero. */
+  jugadores: number;
+  /** De ellos, los que no están muertos (con sudario). */
+  jugadoresVivos: number;
+  viajeros: number;
+  viajerosVivos: number;
+  /** null si hay menos de 5 jugadores (no hay reparto). */
+  aldeanos: number | null;
+  forasteros: number | null;
+  esbirros: number | null;
+  demonios: number | null;
+}
+
+/** Una nominación del día y, si se votó, su votación, para el registro del narrador. */
+export interface RegistroVotacion {
+  /** Cuándo se nominó (ms). */
+  hora: number;
+  /** El día de la partida en que se nominó. */
+  dia: number;
+  /** «Ana» o, si el asiento está libre, «asiento 1». */
+  nomina: string;
+  nominado: string;
+  /** Los asientos que nominan y que son nominados (no los hay en las partidas guardadas antes). */
+  nominaAsiento?: string;
+  nominadoAsiento?: string;
+  /** Era la expulsión de un viajero, no una nominación. */
+  expulsion?: boolean;
+  /** Nombres de quienes votaron, en el orden en que votaron; null si no se llegó a votar. */
+  votantes: string[] | null;
+  votos: number | null;
+}
+
+/** En qué momento está la partida: la preparación y, después, noche 1, día 1, noche 2… */
+export interface Fase {
+  momento: 'preparacion' | 'noche' | 'dia';
+  /** Número de la noche o del día (0 en la preparación). */
+  numero: number;
+  /** Veces que se ha limpiado el grimorio. */
+  reinicios: number;
+}
+
+export type TurnoNominacion = 'acusacion' | 'defensa' | 'votacion';
 
 /**
  * El reloj del narrador: una cuenta atrás que ven todos, con su mensaje

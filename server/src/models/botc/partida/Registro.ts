@@ -1,10 +1,10 @@
 import { randomUUID } from 'crypto';
-import type { EntradaDiario, HechoDiario } from '../../compartido/diario';
-import type { Fase } from '../../compartido/partida';
+import type { EntradaDiario, HechoDiario } from './diario';
+import type { Fase } from './tiposPartida';
 
 /**
  * El registro de la sala: todo lo que pasa en sus partidas, en orden (el diario,
- * ver models/compartido/diario). Solo se apunta, nunca se cambia lo apuntado; cada
+ * ver partida/diario). Solo se apunta, nunca se cambia lo apuntado; cada
  * partida empieza en su «nuevaPartida» (la primera, al principio). Es parte de la
  * partida: al deshacer, vuelve con ella. Como solo crece, su instantánea es cuánto
  * había apuntado, y volver a ella es quitar lo de después. No comprueba nada.

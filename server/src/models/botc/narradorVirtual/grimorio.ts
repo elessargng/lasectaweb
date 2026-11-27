@@ -1,5 +1,5 @@
-import type { MensajeDespertar, EnvioDespertar, OpcionDespertar } from '../../compartido/despertar';
-import type { RegistroVotacion } from '../../compartido/partida';
+import type { MensajeDespertar, EnvioDespertar, OpcionDespertar } from '../partida/despertar';
+import type { RegistroVotacion } from '../partida/tiposPartida';
 import { droison } from '../personajes/ReglaPersonaje';
 import type { Opcion } from './estrategias/EstrategiaNarrador';
 import type { SalaDeJuego } from '../SalaDeJuego';

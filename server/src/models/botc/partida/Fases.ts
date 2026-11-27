@@ -1,4 +1,4 @@
-import type { Fase } from '../../compartido/partida';
+import type { Fase } from './tiposPartida';
 
 /**
  * En qué momento está la partida: la preparación y, después, noche 1, día 1,

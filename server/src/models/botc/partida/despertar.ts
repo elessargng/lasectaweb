@@ -1,9 +1,9 @@
 /**
  * Los despertares de noche: lo que se dicen el narrador y el jugador despierto, y lo que propone el despertar guiado.
- * Dominio que comparten el servidor y el cliente (alias @models): solo tipos y valores puros.
+ * Lo que viaja al cliente tiene su copia en el contrato (views/botc/dto, ver views/botc/contrato.ts).
  */
-import type { Alineamiento } from './jugador';
-import type { Fase } from './partida';
+import type { Alineamiento } from './alineamiento';
+import type { Fase } from './tiposPartida';
 
 /**
  * Lo que se puede mandar al despertar a alguien de noche. Las fichas las usan

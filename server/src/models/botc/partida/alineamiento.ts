@@ -1,6 +1,6 @@
 /**
  * El alineamiento y los faroles de un jugador.
- * Dominio que comparten el servidor y el cliente (alias @models): solo tipos y valores puros.
+ * Lo que viaja al cliente tiene su copia en el contrato (views/botc/dto, ver views/botc/contrato.ts).
  */
 
 /** Cuántos faroles hay: los del narrador y los de cada jugador. */

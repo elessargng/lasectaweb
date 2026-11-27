@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
-import { type IdNarradorVirtual } from '../../compartido/narradorVirtual';
-import { SALA_ESTILOS_MANO, SALA_PARTIDAS_NOVATO, usuarioDe, type Persona, type FormaMano, type Rol } from '../../compartido/participante';
+import { type IdNarradorVirtual } from '../narradorVirtual/narradores';
+import { SALA_ESTILOS_MANO, SALA_PARTIDAS_NOVATO, usuarioDe, type Persona, type FormaMano, type Rol } from './persona';
 
 /** Margen para volver tras una desconexión (recarga, red caída) sin perder el papel. */
 export const SALA_GRACIA_MS = 20_000;

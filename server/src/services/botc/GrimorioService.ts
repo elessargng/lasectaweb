@@ -1,5 +1,5 @@
-import type { CausaMuerte } from '../../models/compartido/diario';
-import type { Alineamiento } from '../../models/compartido/jugador';
+import type { CausaMuerte } from '../../models/botc/partida/diario';
+import type { Alineamiento } from '../../models/botc/partida/alineamiento';
 import type { BorradorFicha } from '../../models/botc/partida/grimorioEnviado';
 import { NPC_FERRYMAN, NPC_GARDENER } from '../../models/botc/partida/personajesEspeciales';
 import type { Participante } from '../../models/botc/sala/Participantes';

@@ -5,12 +5,12 @@ import type { SalaDto, ResultadoAccion, ResultadoBolsaAlAzar } from '@views/sala
 import type { ConfiguracionDto } from '@views/partida';
 import type { FichaEnviadaDto } from '@views/grimorio';
 import type { MensajeChatDto, SusurroDto } from '@views/chat';
-import type { Alineamiento } from '@models/jugador';
-import type { GuionNarrable } from '@models/narradorVirtual';
+import type { Alineamiento } from '@views/jugador';
+import type { GuionNarrable } from '@views/narradorVirtual';
 import type { GuionResuelto } from './guiones';
 import type { Envio } from './despertar';
 
-// Lo que comparte con el servidor: los Dto que manda (@views) y los valores del dominio (@models).
+// El contrato con el servidor: lo que manda y recibe (@views, en server/src/views/botc/dto).
 // Se reexporta aquí para que la sala lo siga importando de useSala.
 export type {
   MensajeDespertar,
@@ -19,15 +19,15 @@ export type {
   EnvioDespertar,
   OpcionDespertar,
   Registro,
-} from '@models/despertar';
+} from '@views/despertar';
 export type { HabilidadNocheDto, DespertarDto } from '@views/despertar';
-export type { Recordatorio } from '@models/grimorio';
+export type { Recordatorio } from '@views/grimorio';
 export type { FichaEnviadaDto, GrimorioEnviadoDto } from '@views/grimorio';
-export type { Alineamiento } from '@models/jugador';
+export type { Alineamiento } from '@views/jugador';
 export type { JugadorDto } from '@views/jugador';
-export type { Persona, FormaMano, Rol } from '@models/participante';
+export type { Persona, FormaMano, Rol } from '@views/participante';
 export type { ParticipanteDto } from '@views/participante';
-export type { Distribucion, Fase, RegistroVotacion } from '@models/partida';
+export type { Distribucion, Fase, RegistroVotacion } from '@views/partida';
 export type {
   ConfiguracionDto,
   NominacionDto,
@@ -37,8 +37,7 @@ export type {
   VotacionDto,
 } from '@views/partida';
 export type { ConversacionDto, SalaDto, InvitacionDto, RepartoDto, ResultadoAccion, ResultadoBolsaAlAzar } from '@views/sala';
-export { usuarioDe } from '@models/participante';
-export { SALA_SENALAMIENTO as SENALAMIENTO } from '@models/partida';
+export { SALA_SENALAMIENTO as SENALAMIENTO } from '@views/partida';
 
 /** El pase para conectarse al servidor de vídeo. */
 export type PaseVideo = { ok: true; url: string; token: string } | { ok: false; error: string };

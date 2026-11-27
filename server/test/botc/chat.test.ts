@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canalPrivado } from '../../src/models/compartido/chat';
+import { canalPrivado } from '../../src/models/botc/canalesChat';
 import type { ParticipanteDto } from '../../src/views/botc/dto/participante';
 import type { ChatRepository } from '../../src/repositories/ChatRepository';
 import { ChatService } from '../../src/services/botc/ChatService';

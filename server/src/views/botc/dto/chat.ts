@@ -3,6 +3,22 @@
  * Lo que se envía al cliente (alias @views): solo tipos, sin Node ni servicios.
  */
 
+/** Los canales: el general, el de los visitantes y los privados (uno por pareja, el mismo en los dos sentidos). */
+export const CANAL_GENERAL = 'general';
+
+export const CANAL_VISITANTES = 'visitantes';
+
+export const PREFIJO_PRIVADO = 'privado:';
+
+/** El id del canal privado entre dos participantes. */
+export const canalPrivado = (a: string, b: string) => `${PREFIJO_PRIVADO}${[a, b].sort().join(':')}`;
+
+/** Mensajes privados entre jugadores (lo fija el narrador): ninguno, solo con los vecinos de plaza, o con todos. */
+export type MensajesPrivados = 'ninguno' | 'vecinos' | 'todos';
+
+/** Lo más largo que puede ser un mensaje. */
+export const LARGO_MAXIMO_MENSAJE = 500;
+
 export interface MensajeChatDto {
   id: string;
   canal: string;

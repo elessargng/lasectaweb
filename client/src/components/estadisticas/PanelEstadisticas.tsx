@@ -1,6 +1,5 @@
 import { BarChart3, Gem, History, Lock, ScrollText, Trophy, Users } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { causaCuenta } from '@models/partida';
 import { LOGRO_PLATINO, LOGROS, type Logro, type NivelLogro } from '../../data/logros';
 import { reliquiasDe } from '../../data/reliquias';
 import { urlDelServidor } from '../../utils/api';
@@ -53,7 +52,7 @@ const PanelEstadisticas = ({ resumen: r, propias }: { resumen: ResumenEstadistic
             contador: `${conseguidos}/${LOGROS.length}`,
             contadorLector: `${conseguidos} de ${LOGROS.length}`,
             icono: <Trophy className="h-4 w-4" aria-hidden="true" />,
-            contenido: <Logros conseguidos={logros} personajes={personajes} />,
+            contenido: <Logros conseguidos={logros} conVictoria={r.causasConVictoria} personajes={personajes} />,
           },
           ...(reliquias.length > 0
             ? [
@@ -293,7 +292,7 @@ const NOMBRE_NIVEL: Record<NivelLogro, string> = { bronce: 'Bronce', plata: 'Pla
  * ha activado (lo que marca el narrador al revelar el grimorio). Los que faltan se
  * ven en gris; el de platino, al tenerlos todos.
  */
-const Logros = ({ conseguidos, personajes }: { conseguidos: Map<string, number>; personajes: DatosPersonajes }) => {
+const Logros = ({ conseguidos, conVictoria, personajes }: { conseguidos: Map<string, number>; conVictoria: string[]; personajes: DatosPersonajes }) => {
   const total = LOGROS.filter((l) => conseguidos.has(l.id)).length;
   const platino = total === LOGROS.length;
   return (
@@ -321,6 +320,7 @@ const Logros = ({ conseguidos, personajes }: { conseguidos: Map<string, number>;
             key={l.id}
             logro={l}
             veces={l.id === 'platino' ? (platino ? 1 : 0) : (conseguidos.get(l.id) ?? 0)}
+            soloGanando={conVictoria.includes(l.id)}
             personajes={personajes}
           />
         ))}
@@ -329,7 +329,7 @@ const Logros = ({ conseguidos, personajes }: { conseguidos: Map<string, number>;
   );
 };
 
-const TarjetaLogro = ({ logro, veces: n, personajes }: { logro: Logro; veces: number; personajes: DatosPersonajes }) => {
+const TarjetaLogro = ({ logro, veces: n, soloGanando, personajes }: { logro: Logro; veces: number; soloGanando: boolean; personajes: DatosPersonajes }) => {
   const conseguido = n > 0;
   return (
     <li
@@ -349,7 +349,7 @@ const TarjetaLogro = ({ logro, veces: n, personajes }: { logro: Logro; veces: nu
         <span className="block font-display text-on-surface">{logro.nombre}</span>
         <span className="block text-xs text-on-surface-muted">
           <TextoLogro texto={logro.descripcion} personajes={personajes} />
-          {!causaCuenta(logro.id, false) && <span className="italic"> Solo cuenta si ganas.</span>}
+          {soloGanando && <span className="italic"> Solo cuenta si ganas.</span>}
         </span>
         <span className="mt-0.5 block font-ui text-[0.68rem] font-semibold uppercase tracking-[0.15em]">
           <span className={conseguido ? COLOR_NIVEL[logro.nivel] : 'text-on-surface-muted'}>{NOMBRE_NIVEL[logro.nivel]}</span>

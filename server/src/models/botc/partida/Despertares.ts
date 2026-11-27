@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
-import type { MensajeDespertar } from '../../compartido/despertar';
-import type { Fase } from '../../compartido/partida';
+import type { MensajeDespertar } from './despertar';
+import type { Fase } from './tiposPartida';
 import type { Diario } from './eventos';
 import type { Jugador } from './Jugador';
 

@@ -1,7 +1,7 @@
-import type { Alineamiento } from '../../compartido/jugador';
+import type { Alineamiento } from '../partida/alineamiento';
 import type { PersonajeDeGuion } from '../../catalogo/PersonajeDeGuion';
 import type { TipoPersonaje } from '../../catalogo/TipoPersonaje';
-import type { Recordatorio } from '../../compartido/grimorio';
+import type { Recordatorio } from '../partida/recordatorio';
 import type { Azar } from '../partida/azar';
 import type { Jugador } from '../partida/Jugador';
 import type { Objetivo } from './Objetivo';

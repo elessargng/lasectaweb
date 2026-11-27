@@ -1,4 +1,4 @@
-import { NUM_FAROLES } from '../../compartido/jugador';
+import { NUM_FAROLES } from './alineamiento';
 import type { PersonajeDeGuion } from '../../catalogo/PersonajeDeGuion';
 import type { Jugador } from './Jugador';
 import type { Diario } from './eventos';

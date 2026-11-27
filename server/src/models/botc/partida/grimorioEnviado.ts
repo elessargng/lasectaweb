@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
-import { RECORDATORIO_TEXTO, SALA_RECORDATORIO_TEXTO_MAX, type Recordatorio } from '../../compartido/grimorio';
-import { NUM_FAROLES } from '../../compartido/jugador';
+import { RECORDATORIO_TEXTO, SALA_RECORDATORIO_TEXTO_MAX, type Recordatorio } from './recordatorio';
+import { NUM_FAROLES } from './alineamiento';
 import type { PersonajeDeGuion } from '../../catalogo/PersonajeDeGuion';
 import { SALA_ASIENTOS } from '../sala/Sala';
 import type { FichaEnviada } from './Entregas';

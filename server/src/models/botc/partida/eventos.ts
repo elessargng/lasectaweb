@@ -1,4 +1,4 @@
-import type { AsientoDiario, HechoDiario } from '../../compartido/diario';
+import type { AsientoDiario, HechoDiario } from './diario';
 
 /** Donde las piezas de la partida apuntan lo que se hace con ellas (ver Partida.anotar y Registro). */
 export interface Diario {

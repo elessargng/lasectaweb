@@ -3,8 +3,8 @@
  * así no sabe de sockets ni de relojes, y en los tests se le dan unos falsos.
  */
 
-import type { CausaMuerte } from '../../compartido/diario';
-import type { Alineamiento } from '../../compartido/jugador';
+import type { CausaMuerte } from '../partida/diario';
+import type { Alineamiento } from '../partida/alineamiento';
 import type { BorradorDespertar } from '../partida/mensajeDespertar';
 import type { CambiosAjustes } from '../partida/Configuracion';
 import type { CambioAsientos } from '../sala/Sala';

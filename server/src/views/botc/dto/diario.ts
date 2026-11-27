@@ -1,19 +1,13 @@
+/**
+ * El diario de una partida tal como lo envía el servidor (el de las estadísticas):
+ * cada hecho, en orden, con cuándo pasó. Los diarios ya guardados se siguen
+ * leyendo: lo que se ha añadido después es opcional.
+ * Lo que se envía al cliente (alias @views): solo tipos, sin Node ni servicios.
+ */
 import type { RespuestaPregunta } from './preguntaPartida';
 import type { EnvioDespertar, FichaDespertar, TarjetaDespertar } from './despertar';
 import type { Alineamiento } from './jugador';
 import type { Fase } from './partida';
-
-/**
- * El diario de la partida: el registro de todo lo que pasa en ella, en orden. Es
- * lo único que se apunta (ver Partida.anotar y Registro): de él salen las
- * estadísticas, las votaciones, el historial, los logros y lo que se cuenta al
- * narrador virtual (ver models/botc/partida/proyecciones). Se apunta todo, también en la
- * preparación; el historial enseña solo lo que interesa (ver HECHOS_DEL_HISTORIAL).
- * Lo que solo hace el narrador virtual (el disparo del Exterminador, el Patoso, el
- * Artista) solo sale con él.
- *
- * Los diarios ya guardados se siguen leyendo: lo que se ha añadido después es opcional.
- */
 
 /**
  * Un asiento tal como estaba al apuntarlo: su número en la plaza y quien se sentaba
@@ -149,18 +143,3 @@ export type EntradaDiario = HechoDiario & {
   /** ms */
   hora: number;
 };
-
-/**
- * Lo que enseña el historial de una partida: lo que pasa en ella. Lo demás (los
- * cambios de fase, cada voto, el final) sale de otro modo (las votaciones, el
- * resultado) o no interesa. En la preparación, solo los faroles.
- */
-export const HECHOS_DEL_HISTORIAL: readonly HechoDiario['tipo'][] = [
-  'despertar', 'muere', 'revive', 'ejecucion', 'personaje', 'alineamiento', 'recordatorio', 'votoMuerto', 'grimorio',
-  'farol', 'copiaFaroles', 'usaFarol', 'senala', 'exterminador', 'patoso', 'artista',
-];
-const DE_LA_PREPARACION: readonly HechoDiario['tipo'][] = ['farol', 'copiaFaroles', 'usaFarol'];
-
-/** Si el historial enseña esta entrada (ver HECHOS_DEL_HISTORIAL). */
-export const enElHistorial = (e: EntradaDiario): boolean =>
-  HECHOS_DEL_HISTORIAL.includes(e.tipo) && (e.fase.momento !== 'preparacion' || DE_LA_PREPARACION.includes(e.tipo));

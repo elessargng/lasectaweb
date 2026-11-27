@@ -1,6 +1,7 @@
-import { enElHistorial, type EntradaDiario, type FotoAsiento } from '../../../compartido/diario';
-import type { Alineamiento } from '../../../compartido/jugador';
-import { causaCuenta, type RegistroVotacion } from '../../../compartido/partida';
+import { enElHistorial, type EntradaDiario, type FotoAsiento } from '../diario';
+import type { Alineamiento } from '../alineamiento';
+import { causaCuenta } from '../causasFin';
+import type { RegistroVotacion } from '../tiposPartida';
 import { votaciones } from './votaciones';
 
 /** Lo de un jugador en una partida, tal como se guarda. */
@@ -43,7 +44,7 @@ export interface RegistroPartida {
   narradoresNombres: string[];
   npcs: string[];
   votaciones: RegistroVotacion[];
-  /** Lo que se enseña en el historial (ver models/compartido/diario, enElHistorial). */
+  /** Lo que se enseña en el historial (ver partida/diario, enElHistorial). */
   diario: EntradaDiario[];
 }
 

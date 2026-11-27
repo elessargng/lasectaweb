@@ -1,4 +1,4 @@
-import type { DesenlaceDespertar } from '../../compartido/despertar';
+import type { DesenlaceDespertar } from '../partida/despertar';
 import type { Jugador } from '../partida/Jugador';
 import type { Posibles } from './Percepcion';
 

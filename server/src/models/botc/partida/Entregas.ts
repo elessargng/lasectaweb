@@ -1,5 +1,5 @@
-import type { Recordatorio } from '../../compartido/grimorio';
-import type { Alineamiento } from '../../compartido/jugador';
+import type { Recordatorio } from './recordatorio';
+import type { Alineamiento } from './alineamiento';
 import type { Diario } from './eventos';
 import type { Jugador } from './Jugador';
 

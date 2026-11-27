@@ -5,7 +5,7 @@
  * se ve y se lee con el bando ganador.
  *
  * Para añadir uno: aquí (su id, el de la sala: en minúsculas y sin separadores)
- * y en el servidor (CAUSAS_FIN_PARTIDA, server/src/models/compartido/partida.ts).
+ * y en el servidor (CAUSAS_FIN_PARTIDA, server/src/models/botc/partida/causasFin.ts).
  */
 export const CAUSAS_FINAL: {
   personaje: string;

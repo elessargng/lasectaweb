@@ -1,7 +1,7 @@
 /**
  * La sala entera tal como la recibe cada participante (SalaDto) y la respuesta a
- * sus acciones. Los Dto de cada tema están junto a este archivo (alias @views);
- * los valores del dominio que llevan, en models/compartido (alias @models).
+ * sus acciones. Los Dto de cada tema están junto a este archivo (alias @views):
+ * son el contrato con el cliente y no dependen del dominio (ver ../contrato.ts).
  */
 import type { DespertarDto, HabilidadNocheDto } from './despertar';
 import type { CalaveraDto, GrimorioEnviadoDto } from './grimorio';
@@ -9,8 +9,8 @@ import type { JugadorDto } from './jugador';
 import type { NarradorVirtualDto } from './narradorVirtual';
 import type { ParticipanteDto } from './participante';
 import type { ConfiguracionDto, NominacionDto, RelojDto, RevelacionDto, SenalamientoDto } from './partida';
-import type { Distribucion, Fase, RegistroVotacion } from '../../../models/compartido/partida';
-import type { GuionNarrable } from '../../../models/compartido/narradorVirtual';
+import type { Distribucion, Fase, RegistroVotacion } from './partida';
+import type { GuionNarrable } from './narradorVirtual';
 
 /** Una conversación privada (voz y vídeo) entre dos o más jugadores o narradores. */
 export interface ConversacionDto {

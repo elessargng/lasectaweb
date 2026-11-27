@@ -7,7 +7,7 @@ import {
   canalPrivado,
   LARGO_MAXIMO_MENSAJE,
   participantesDePrivado,
-} from '../../models/compartido/chat';
+} from '../../models/botc/canalesChat';
 import type { MensajeChat, Susurro } from '../../models/botc/chat';
 import type { SalaDeJuego } from '../../models/botc/SalaDeJuego';
 import type { Sala } from '../../models/botc/sala/Sala';

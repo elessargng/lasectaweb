@@ -1,5 +1,5 @@
-import { type EnvioDespertar } from '../../../compartido/despertar';
-import { NUM_FAROLES } from '../../../compartido/jugador';
+import { type EnvioDespertar } from '../despertar';
+import { NUM_FAROLES } from '../alineamiento';
 import { falta, listoVarios, tarjeta, tipoDe, type ContextoNoche, type HabilidadNocturna, type Resultado } from './HabilidadNocturna';
 import type { TramoNoche } from './HabilidadNocturna';
 import type { Jugador } from '../Jugador';

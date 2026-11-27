@@ -1,5 +1,5 @@
 import type { HabilidadNoche } from '../../partida/DespertarGuiado';
-import { NUM_FAROLES } from '../../../compartido/jugador';
+import { NUM_FAROLES } from '../../partida/alineamiento';
 import type { ContextoEtapa } from '../etapas/Etapa';
 import { describirPersonaje, opcionesDeAsientos } from '../grimorio';
 import { indiceRecordatorio, tipoReal } from '../plazaDeJuego';

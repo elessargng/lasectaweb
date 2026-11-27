@@ -1,5 +1,5 @@
-import { JUGADORES_NARRADOR_VIRTUAL, NARRADORES_VIRTUALES, type EtapaNarradorVirtual, type IdNarradorVirtual } from '../../compartido/narradorVirtual';
-import type { TurnoNominacion } from '../../compartido/partida';
+import { JUGADORES_NARRADOR_VIRTUAL, NARRADORES_VIRTUALES, type EtapaNarradorVirtual, type IdNarradorVirtual } from './narradores';
+import type { TurnoNominacion } from '../partida/tiposPartida';
 import type { Partida } from '../partida/Partida';
 import type { Sala } from '../sala/Sala';
 

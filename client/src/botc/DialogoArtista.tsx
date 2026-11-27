@@ -1,17 +1,16 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  describirPreguntaPartida,
   MAX_PREGUNTA_LIBRE,
   PREGUNTAS_PARTIDA,
-  RESPUESTAS_PREGUNTA,
   TIPOS_PREGUNTABLES,
   type PreguntaPartida,
   type QuienPregunta,
   type RespuestaPregunta,
   type TipoPreguntable,
   type TipoPreguntaPartida,
-} from '@models/preguntaPartida';
+} from '@views/preguntaPartida';
+import { describirPreguntaPartida, RESPUESTAS_PREGUNTA } from './preguntaPartida';
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario, campo } from './estilos';

@@ -1,4 +1,4 @@
-import type { EnvioDespertar } from '../../../compartido/despertar';
+import type { EnvioDespertar } from '../../partida/despertar';
 import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { Opcion, RasgoOpcion } from '../estrategias/EstrategiaNarrador';
 import { describirEnvio } from '../grimorio';

@@ -1,4 +1,4 @@
-import type { DesenlaceDespertar } from '../../compartido/despertar';
+import type { DesenlaceDespertar } from '../partida/despertar';
 import type { ContextoEtapa } from './etapas/Etapa';
 import { describirAsiento } from './grimorio';
 

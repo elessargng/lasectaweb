@@ -21,7 +21,7 @@ import {
   type RegistroAlNominar,
   type ReglaPersonaje,
 } from './ReglaPersonaje';
-import type { Alineamiento } from '../../compartido/jugador';
+import type { Alineamiento } from '../partida/alineamiento';
 import { santo } from './santo';
 import { borracho } from './borracho';
 import { envenenador } from './envenenador';

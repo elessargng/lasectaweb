@@ -2,13 +2,35 @@
  * Cada participante tal como se envía.
  * Lo que se envía al cliente (alias @views): solo tipos, sin Node ni servicios.
  */
-import type { EstadoAccesoGrimorio, FormaMano, Persona, Rol } from '../../../models/compartido/participante';
+import type { IdNarradorVirtual } from './narradorVirtual';
+
+/** Papel de cada participante en la sala de juego. */
+export type Rol = 'narrador' | 'jugador' | 'visitante';
+
+/** La forma de la mano que levanta: una forma de la sala o el id de un personaje del guion. */
+export type FormaMano = string;
+
+/** Quién es: un usuario de la web, un invitado o un narrador virtual. */
+export type Persona =
+  | {
+      tipo: 'usuario';
+      /** Su id de usuario de la web. */
+      usuarioId: string;
+      /** Ha jugado pocas partidas (lleva el pulpito junto al nombre). */
+      novato: boolean;
+    }
+  | { tipo: 'invitado' }
+  | { tipo: 'virtual'; narrador: IdNarradorVirtual };
+
+export type EstadoAccesoGrimorio = 'ninguno' | 'solicitado' | 'concedido';
 
 export interface ParticipanteDto {
   /** Identificador dentro de la sala (no es el id de usuario de la web). */
   id: string;
   nombre: string;
   persona: Persona;
+  /** Su id de usuario de la web, si entró con su cuenta; si no, null. */
+  usuarioId: string | null;
   /** Ruta del avatar que lleva (el de su cuenta, el elegido para la sala o el logo), o null. */
   avatar: string | null;
   rol: Rol;

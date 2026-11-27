@@ -1,4 +1,4 @@
-import type { Alineamiento } from '../../compartido/jugador';
+import type { Alineamiento } from './alineamiento';
 import type { Jugador } from './Jugador';
 
 /** Cómo va la revelación del final: quién ha ganado, lo que ha pasado y las fichas ya reveladas. */

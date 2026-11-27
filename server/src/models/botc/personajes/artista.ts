@@ -4,7 +4,7 @@ import {
   MAX_PREGUNTA_LIBRE,
   type PreguntaPartida,
   type RespuestaPregunta,
-} from '../../compartido/preguntaPartida';
+} from '../partida/preguntaPartida';
 import { droison } from './ReglaPersonaje';
 import type { ContextoEtapa } from '../narradorVirtual/etapas/Etapa';
 import { contextoNoche, nombreDeAsiento } from '../narradorVirtual/plazaDeJuego';
@@ -22,7 +22,7 @@ import type { DefinicionPersonaje } from './DefinicionPersonaje';
  * con su ficha sí lo cree), una respuesta de broma («broma»). Al que lo es o lo
  * cree: libre (con Jarvis), la contesta su estrategia, que puede pedir que la
  * reformule; «Tonto y tú» siempre lo pide, porque no la entiende. Montada con
- * piezas (ver models/compartido/preguntaPartida): al Artista de verdad y sano se le
+ * piezas (ver partida/preguntaPartida): al Artista de verdad y sano se le
  * contesta la verdad, mirando el grimorio; al envenenado, borracho o Borracho, sí
  * o no, lo que decida su estrategia. Si se contesta, se gasta: quien lleva la ficha
  * del Artista pierde su habilidad («No Ability»).
@@ -101,7 +101,7 @@ export async function preguntarComoArtista(
 /**
  * Preguntar como Artista: de día, vivo, una vez por partida y persona (salvo que
  * le pida que la reformule). En privado: no se cuenta a la plaza. datos: { texto }
- * (libre) o { pregunta } (montada, ver models/compartido/preguntaPartida); contesta en
+ * (libre) o { pregunta } (montada, ver partida/preguntaPartida); contesta en
  * `valor`: 'si', 'no' o 'reformular'.
  */
 const deDia: DeclaracionDia = {

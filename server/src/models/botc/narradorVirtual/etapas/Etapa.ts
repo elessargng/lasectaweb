@@ -1,4 +1,4 @@
-import type { EtapaNarradorVirtual } from '../../../compartido/narradorVirtual';
+import type { EtapaNarradorVirtual } from '../narradores';
 import type { SalaDeJuego } from '../../SalaDeJuego';
 import type { Decision, EstrategiaNarrador, PreguntaSiONo } from '../estrategias/EstrategiaNarrador';
 import { fotoPartida } from '../contexto/FotoPartida';

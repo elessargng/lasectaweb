@@ -1,6 +1,5 @@
 import { BookOpen, ChevronDown, Crown, Feather, Gavel, Skull, Trophy, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { causaCuenta } from '@models/partida';
 import { useAuth } from '../../context/AuthContext';
 import { LOGROS } from '../../data/logros';
 import { CAUSAS_FINAL } from '../../botc/causasFinal';
@@ -236,7 +235,7 @@ const DetallePartida = ({ partida: p, usuario, propias, personajes }: TarjetaPar
     const causa = CAUSAS_FINAL.find((x) => x.personaje === c);
     if (!causa) return [];
     const logro = LOGROS.find((x) => x.id === c);
-    const conseguido = !!logro && !!yo?.causas.includes(c) && causaCuenta(c, yo.gano);
+    const conseguido = !!logro && !!yo?.logros.includes(c);
     return [{ id: c, texto: causa.texto, logro: conseguido ? logro : null }];
   });
   const dias = [...new Set((p.votaciones ?? []).map((v) => v.dia))].sort((a, b) => a - b);

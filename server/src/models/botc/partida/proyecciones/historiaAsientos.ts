@@ -1,5 +1,5 @@
-import type { EnvioDespertar } from '../../../compartido/despertar';
-import type { CausaMuerte, EntradaDiario } from '../../../compartido/diario';
+import type { EnvioDespertar } from '../despertar';
+import type { CausaMuerte, EntradaDiario } from '../diario';
 
 /**
  * Lo que ha pasado a cada asiento (por su id), sacado del diario de la partida: lo

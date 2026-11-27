@@ -5,7 +5,7 @@ import {
   describirPreguntaPartida,
   leerPreguntaPartida,
   type PreguntaPartida,
-} from '../../src/models/compartido/preguntaPartida';
+} from '../../src/models/botc/partida/preguntaPartida';
 import { ficha } from '../../src/models/botc/partida/habilidades/HabilidadNocturna';
 import { contestarPregunta } from '../../src/models/botc/narradorVirtual/contestarPregunta';
 import { cronicaDe } from '../../src/models/botc/narradorVirtual/final/cronica';

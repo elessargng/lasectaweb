@@ -38,18 +38,9 @@ describe('arquitectura', () => {
     expect(fuera, 'Estos archivos usan views/: el Dto se monta en la vista, no aquí').toEqual([]);
   });
 
-  it('lo que comparte el dominio con el cliente (models/compartido) solo usa models/compartido', () => {
-    const fuera = archivos('models/compartido').filter((f) =>
-      importsDe(f).some((i) => !i.startsWith('models/compartido/')),
-    );
-    expect(fuera).toEqual([]);
-  });
-
-  it('los Dto (views/botc/dto) solo usan otros Dto y models/compartido', () => {
-    const fuera = archivos('views/botc/dto').filter((f) =>
-      importsDe(f).some((i) => !i.startsWith('views/botc/dto/') && !i.startsWith('models/compartido/')),
-    );
-    expect(fuera).toEqual([]);
+  it('los Dto (views/botc/dto) son el contrato con el cliente: solo usan otros Dto, nada del dominio (lo comprueba views/botc/contrato.ts)', () => {
+    const fuera = archivos('views/botc/dto').filter((f) => importsDe(f).some((i) => !i.startsWith('views/botc/dto/')));
+    expect(fuera, 'Estos Dto usan algo de fuera del contrato: que copien el tipo y lo comprueben en contrato.ts').toEqual([]);
   });
 
   it('los servicios y los controladores no conocen a ningún personaje: usan la lista de models/botc/personajes', () => {
@@ -76,8 +67,11 @@ describe('arquitectura', () => {
     expect(fuera, 'Estos archivos sacan el azar por su cuenta: que lo reciban').toEqual([]);
   });
 
-  it('las proyecciones del diario (también el resumen de las estadísticas) son funciones puras: solo leen el diario (models/compartido y otras proyecciones)', () => {
-    const fuera = archivos('models/botc/partida/proyecciones').filter((f) => importsDe(f).some((i) => !i.startsWith('models/compartido/') && !i.startsWith('models/botc/partida/proyecciones/')));
+  it('las proyecciones del diario (también el resumen de las estadísticas) son funciones puras: solo leen el diario, sus valores y otras proyecciones', () => {
+    const valores = ['diario', 'despertar', 'alineamiento', 'causasFin', 'tiposPartida', 'preguntaPartida', 'recordatorio'].map((v) => `models/botc/partida/${v}`);
+    const fuera = archivos('models/botc/partida/proyecciones').filter((f) =>
+      importsDe(f).some((i) => !valores.includes(i) && !i.startsWith('models/botc/partida/proyecciones/')),
+    );
     expect(fuera, 'Estas proyecciones dependen de algo con estado').toEqual([]);
   });
 

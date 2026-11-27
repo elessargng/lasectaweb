@@ -1,8 +1,8 @@
 /**
  * Quién está en la sala: su papel y quién es (persona).
- * Dominio que comparten el servidor y el cliente (alias @models): solo tipos y valores puros.
+ * Lo que viaja al cliente tiene su copia en el contrato (views/botc/dto, ver views/botc/contrato.ts).
  */
-import type { IdNarradorVirtual } from './narradorVirtual';
+import type { IdNarradorVirtual } from '../narradorVirtual/narradores';
 
 /** Papel de cada participante en la sala de juego. Todo el que entra es visitante. */
 export type Rol = 'narrador' | 'jugador' | 'visitante';

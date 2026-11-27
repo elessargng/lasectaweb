@@ -1,5 +1,5 @@
-import type { AsientoDiario, EntradaDiario } from '../../../compartido/diario';
-import type { RegistroVotacion } from '../../../compartido/partida';
+import type { AsientoDiario, EntradaDiario } from '../diario';
+import type { RegistroVotacion } from '../tiposPartida';
 
 /** «Bea» o, si estaba libre, «asiento 3», como lo ve el narrador en el registro. */
 const nombre = (a: AsientoDiario) => a.nombre || `asiento ${a.numero}`;

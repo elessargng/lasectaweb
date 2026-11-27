@@ -1,4 +1,4 @@
-import type { Alineamiento } from '../../models/compartido/jugador';
+import type { Alineamiento } from '../../models/botc/partida/alineamiento';
 import type { Participante } from '../../models/botc/sala/Participantes';
 import type { SalaDeJuego } from '../../models/botc/SalaDeJuego';
 import { UsosSala, type Permiso, type ResultadoUso } from './UsosSala';

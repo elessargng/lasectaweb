@@ -1,4 +1,4 @@
-import type { OpcionDespertar } from '../../compartido/despertar';
+import type { OpcionDespertar } from '../partida/despertar';
 import {
   droison,
   esteJugadorEs,

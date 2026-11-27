@@ -1,4 +1,4 @@
-import type { Distribucion } from '../../compartido/partida';
+import type { Distribucion } from './tiposPartida';
 import type { PersonajeDeGuion } from '../../catalogo/PersonajeDeGuion';
 import { barajar, type Azar } from './azar';
 import { repartoPara } from './distribucion';

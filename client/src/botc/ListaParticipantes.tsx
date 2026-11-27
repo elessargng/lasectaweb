@@ -4,7 +4,7 @@ import { IconoGente, IconoLibroSecreto } from './IconosJuego';
 import ConAyuda from './ConAyuda';
 import { useEffect, useRef, useState } from 'react';
 import { botonIcono } from './estilos';
-import { usuarioDe, type ParticipanteDto, type Rol } from './useSala';
+import type { ParticipanteDto, Rol } from './useSala';
 import ImagenAvatar from './ImagenAvatar';
 import VolumenParticipante from './VolumenParticipante';
 
@@ -137,7 +137,7 @@ const ListaParticipantes = ({ participantes, yo, escuchando, volumen = null }: L
                                 {p.id === yo && <span className="sr-only"> (tú)</span>}
                               </>
                             );
-                            const usuarioId = usuarioDe(p.persona);
+                            const usuarioId = p.usuarioId;
                             return usuarioId ? (
                               <a
                                 href={`/perfil/${encodeURIComponent(usuarioId)}`}

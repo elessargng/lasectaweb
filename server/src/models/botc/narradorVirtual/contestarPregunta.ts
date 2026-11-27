@@ -1,4 +1,4 @@
-import type { PreguntaPartida, QuienPregunta } from '../../compartido/preguntaPartida';
+import type { PreguntaPartida, QuienPregunta } from '../partida/preguntaPartida';
 import type { SalaDeJuego } from '../SalaDeJuego';
 import { identidadDe } from '../partida/Grimorio';
 import type { Jugador } from '../partida/Jugador';
@@ -19,7 +19,7 @@ const llana = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCa
 
 /**
  * La respuesta de verdad a una pregunta sobre la partida (ver
- * compartido/preguntaPartida), con el grimorio y lo apuntado en la crónica (quién
+ * partida/preguntaPartida), con el grimorio y lo apuntado en la crónica (quién
  * eligió a quién).
  */
 export function contestarPregunta(juego: SalaDeJuego, cronica: Cronica, p: PreguntaPartida): boolean {

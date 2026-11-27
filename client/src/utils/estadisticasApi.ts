@@ -1,4 +1,4 @@
-import type { EntradaDiario } from '@models/diario';
+import type { EntradaDiario } from '@views/diario';
 import { parseApiResponse } from './api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api';
@@ -50,6 +50,8 @@ export interface ResumenEstadisticas {
   narradas: number;
   roles: Conteo[];
   causas: Conteo[];
+  /** Los logros que solo cuentan si se gana la partida. */
+  causasConVictoria: string[];
   guiones: Conteo[];
   personajes: Record<string, { nombre: string; icono: string | null; tipo: string }>;
   ultimas: Participacion[];
@@ -163,7 +165,7 @@ export interface PartidaHistorial {
   dias: number;
   causas: string[];
   /** Lo de la persona cuyo historial es. */
-  propia: ParticipanteHistorial | null;
+  propia: (ParticipanteHistorial & { logros: string[] }) | null;
   /** Los demás con cuenta que se pueden ver. */
   participantes: ParticipanteHistorial[];
   /** Los que no se pueden ver (estadísticas privadas). */

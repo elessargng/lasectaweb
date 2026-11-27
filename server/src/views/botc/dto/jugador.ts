@@ -2,8 +2,9 @@
  * El jugador de la plaza tal como se envía.
  * Lo que se envía al cliente (alias @views): solo tipos, sin Node ni servicios.
  */
-import type { Recordatorio } from '../../../models/compartido/grimorio';
-import type { Alineamiento } from '../../../models/compartido/jugador';
+import type { Recordatorio } from './grimorio';
+
+export type Alineamiento = 'bueno' | 'malvado';
 
 /**
  * Un jugador de la plaza, lo juegue alguien o no (su silla está libre): su ficha,

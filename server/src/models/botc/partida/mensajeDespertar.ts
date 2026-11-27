@@ -5,7 +5,7 @@ import {
   type EnvioDespertar,
   type FichaDespertar,
   type TarjetaDespertar,
-} from '../../compartido/despertar';
+} from './despertar';
 import type { PersonajeDeGuion } from '../../catalogo/PersonajeDeGuion';
 
 /** Largo máximo del texto «Personalizado» al despertar. */

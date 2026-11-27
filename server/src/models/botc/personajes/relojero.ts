@@ -1,5 +1,5 @@
 import { numero, RecibeInformacion, segunRegistros, type ContextoNoche } from '../partida/habilidades/HabilidadNocturna';
-import type { Registro } from '../../compartido/despertar';
+import type { Registro } from '../partida/despertar';
 import type { Jugador } from '../partida/Jugador';
 import type { DefinicionPersonaje } from './DefinicionPersonaje';
 

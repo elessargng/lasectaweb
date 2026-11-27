@@ -2,7 +2,7 @@ import type { SalaDeJuego } from '../../models/botc/SalaDeJuego';
 import type { Partida } from '../../models/botc/partida/Partida';
 import { identidadDe } from '../../models/botc/partida/Grimorio';
 import type { Participante } from '../../models/botc/sala/Participantes';
-import type { EstadoAccesoGrimorio } from '../../models/compartido/participante';
+import { usuarioDe, type EstadoAccesoGrimorio } from '../../models/botc/sala/persona';
 import type { ParticipanteDto } from './dto/participante';
 import { NPC_TOR } from '../../models/botc/partida/personajesEspeciales';
 import { farolesVacios } from '../../models/botc/partida/Faroles';
@@ -111,6 +111,7 @@ const participanteDto = (p: Participante, accesoGrimorio: EstadoAccesoGrimorio):
   id: p.id,
   nombre: p.nombre,
   persona: { ...p.persona },
+  usuarioId: usuarioDe(p.persona),
   avatar: p.avatar,
   rol: p.rol,
   conectado: p.conectado,

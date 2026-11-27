@@ -1,4 +1,4 @@
-import { FICHAS_DESPERTAR, type EnvioDespertar } from '../../../compartido/despertar';
+import { FICHAS_DESPERTAR, type EnvioDespertar } from '../../partida/despertar';
 import type { PersonajeDeGuion } from '../../../catalogo/PersonajeDeGuion';
 import { ficha, numero, type ContextoNoche, type HabilidadNocturna } from '../../partida/habilidades/HabilidadNocturna';
 

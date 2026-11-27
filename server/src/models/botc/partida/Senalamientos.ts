@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { Participante } from '../sala/Participantes';
-import { SALA_SENALAMIENTO, type Fase } from '../../compartido/partida';
+import { SALA_SENALAMIENTO, type Fase } from './tiposPartida';
 import type { Jugador } from './Jugador';
 
 /**

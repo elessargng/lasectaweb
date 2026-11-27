@@ -1,5 +1,5 @@
-import type { EnvioDespertar } from '../../../compartido/despertar';
-import type { CausaMuerte } from '../../../compartido/diario';
+import type { EnvioDespertar } from '../../partida/despertar';
+import type { CausaMuerte } from '../../partida/diario';
 import type { SalaDeJuego } from '../../SalaDeJuego';
 import { FRASES, type MuerteRevelada, type NocheRevelada } from '../frases';
 import { nombreDeAsiento } from '../plazaDeJuego';

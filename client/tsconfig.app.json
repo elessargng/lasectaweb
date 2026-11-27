@@ -14,7 +14,7 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
-    "paths": { "@models/*": ["../server/src/models/compartido/*"], "@views/*": ["../server/src/views/botc/dto/*"] },
+    "paths": { "@views/*": ["../server/src/views/botc/dto/*"] },
 
     /* Linting */
     "noUnusedLocals": true,

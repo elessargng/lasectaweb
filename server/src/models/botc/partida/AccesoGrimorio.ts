@@ -1,4 +1,4 @@
-import type { EstadoAccesoGrimorio } from '../../compartido/participante';
+import type { EstadoAccesoGrimorio } from '../sala/persona';
 
 /**
  * Quién ha pedido ver el grimorio del narrador y a quién se le ha concedido (ver

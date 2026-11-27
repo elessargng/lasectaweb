@@ -1,7 +1,7 @@
 import { DatabaseRepository } from './DatabaseRepository';
 import type { AsientoPartida, RegistroPartida } from '../models/botc/partida/proyecciones/resumenPartida';
-import type { RegistroVotacion } from '../models/compartido/partida';
-import type { EntradaDiario } from '../models/compartido/diario';
+import type { RegistroVotacion } from '../models/botc/partida/tiposPartida';
+import type { EntradaDiario } from '../models/botc/partida/diario';
 
 /** Lo que ha hecho alguien en una partida (como jugador o como narrador), con la partida. */
 export interface Participacion {

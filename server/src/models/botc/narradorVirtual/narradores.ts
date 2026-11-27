@@ -1,6 +1,6 @@
 /**
  * El narrador virtual: quiénes hay, qué guiones llevan y por dónde va.
- * Dominio que comparten el servidor y el cliente (alias @models): solo tipos y valores puros.
+ * Lo que viaja al cliente tiene su copia en el contrato (views/botc/dto, ver views/botc/contrato.ts).
  */
 
 /**

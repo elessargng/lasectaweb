@@ -1,6 +1,5 @@
 /**
- * Los mensajes de texto de la sala (los canales y sus límites, en
- * compartido/chat, porque los usa también el cliente).
+ * Los mensajes de texto de la sala (los canales y sus límites, en canalesChat).
  */
 
 /** Un mensaje de texto escrito en un canal. */

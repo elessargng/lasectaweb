@@ -1,6 +1,6 @@
 /**
  * Los canales de los mensajes de texto de la sala.
- * Dominio que comparten el servidor y el cliente (alias @models): solo tipos y valores puros.
+ * Lo que viaja al cliente tiene su copia en el contrato (views/botc/dto, ver views/botc/contrato.ts).
  */
 
 export const CANAL_GENERAL = 'general';

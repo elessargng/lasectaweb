@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { GUION_DE_LA_SALA, JUGADORES_NARRADOR_VIRTUAL, NARRADORES_VIRTUALES, type GuionNarrable, type IdNarradorVirtual } from '@models/narradorVirtual';
+import { GUION_DE_LA_SALA, JUGADORES_NARRADOR_VIRTUAL, NARRADORES_VIRTUALES, type GuionNarrable, type IdNarradorVirtual } from '@views/narradorVirtual';
 import Dialog from '../components/Dialog';
 import { useAriaLive } from './avisosConfig';
 import { botonPrincipal, botonSecundario, campo } from './estilos';

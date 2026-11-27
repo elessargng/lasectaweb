@@ -1,11 +1,12 @@
 import { randomUUID } from 'crypto';
 import type { Azar } from './azar';
-import { FICHAS_RESPUESTA_GUIADA, TARJETAS_DE_LOS_MALVADOS, type EleccionDespertar, type EnvioDespertar, type MensajeDespertar } from '../../compartido/despertar';
+import { FICHAS_RESPUESTA_GUIADA, TARJETAS_DE_LOS_MALVADOS, type EleccionDespertar, type EnvioDespertar, type MensajeDespertar } from './despertar';
 import type { FichaEnviada } from './Entregas';
-import { NUM_FAROLES, type Alineamiento } from '../../compartido/jugador';
-import { SALA_FORMAS_MANO, type FormaMano } from '../../compartido/participante';
-import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA, type RegistroVotacion } from '../../compartido/partida';
-import type { AsientoDiario, EntradaDiario, FotoAsiento, HechoDiario } from '../../compartido/diario';
+import { NUM_FAROLES, type Alineamiento } from './alineamiento';
+import { SALA_FORMAS_MANO, type FormaMano } from '../sala/persona';
+import { CAUSAS_DE_ESBIRRO, CAUSAS_FIN_PARTIDA } from './causasFin';
+import type { RegistroVotacion } from './tiposPartida';
+import type { AsientoDiario, EntradaDiario, FotoAsiento, HechoDiario } from './diario';
 import type { GuionResuelto } from '../../catalogo/GuionResuelto';
 import { TIPOS_NPC, type TipoPersonaje } from '../../catalogo/TipoPersonaje';
 import type { Participante } from '../sala/Participantes';
@@ -87,7 +88,7 @@ export class Partida {
 
   /** Por dónde entra todo lo que cambia la partida (ver Historia). */
   readonly historia = new Historia();
-  /** Todo lo que pasa en la partida, en orden (el diario, ver Registro y models/compartido/diario). */
+  /** Todo lo que pasa en la partida, en orden (el diario, ver Registro y partida/diario). */
   readonly registro = new Registro();
   /** El guion de la partida y sus personajes. */
   readonly guion = new Guion();

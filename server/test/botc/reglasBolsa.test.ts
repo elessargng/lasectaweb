@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PoderBolsa } from '../../src/models/botc/partida/Bolsa';
-import type { Distribucion } from '../../src/models/compartido/partida';
+import type { Distribucion } from '../../src/models/botc/partida/tiposPartida';
 import { repartoPara } from '../../src/models/botc/partida/distribucion';
 import { bolsaDePrueba, conSemilla, personaje } from './guionDePrueba';
 

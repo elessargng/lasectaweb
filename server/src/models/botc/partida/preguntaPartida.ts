@@ -4,8 +4,8 @@
  * el grimorio. La hace quien tenga una habilidad para ello (el Artista). Con
  * Jarvis se escribe libre; con «Tonto y tú», que no entiende una pregunta libre,
  * se monta con piezas que el servidor sabe contestar (ver
- * narradorVirtual/contestarPregunta). Lo comparten el servidor (para leerla y
- * contestarla) y el cliente (para montarla y decirla en palabras).
+ * narradorVirtual/contestarPregunta). La lee y la contesta el servidor; el cliente
+ * la monta con su copia del contrato (views/botc/dto).
  */
 
 /** Lo que contesta el narrador: sí, no, o que la reformule (no la puede contestar; no se gasta). */
